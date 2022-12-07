@@ -11,6 +11,9 @@ use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 
+
+const DEPLOY_SYSCALL_CODE: &str = "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
+
 pub struct SyscallHintProcessor<H: SyscallHandler> {
     builtin_hint_processor: BuiltinHintProcessor,
     syscall_handler: H,
@@ -46,11 +49,22 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         &self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
-        hint_data: &dyn Any,
+        hint_data: &Box<dyn Any>,
         constants: &HashMap<String, BigInt>,
     ) -> Result<(), VirtualMachineError> {
         println!("Hello from SyscallHintProcessor");
-        Err(VirtualMachineError::NotImplemented)
+
+        let hint_data = hint_data
+            .downcast_ref::<HintProcessorData>()
+            .ok_or(VirtualMachineError::WrongHintData)?;
+
+        match &*hint_data.code {
+            DEPLOY_SYSCALL_CODE => {
+                println!("Running deploy syscall.");
+                Err(VirtualMachineError::NotImplemented)
+            },
+            _ => Err(VirtualMachineError::NotImplemented)
+        }
     }
 }
 
@@ -59,7 +73,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         &self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
-        hint_data: &Box<dyn std::any::Any>,
+        hint_data: &Box<dyn Any>,
         constants: &HashMap<String, BigInt>,
     ) -> Result<(), VirtualMachineError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
@@ -110,7 +124,7 @@ fn get_ids_data(
 
 pub trait SyscallHandler {}
 
-struct OsSyscallHandler;
+struct OsSyscallHandler {}
 
 pub struct BusinessLogicSyscallHandler;
 
@@ -118,7 +132,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {}
 
 #[cfg(test)]
 mod tests {
-    use crate::core::syscall_handler::SyscallHintProcessor;
+    use crate::core::syscall_handler::{SyscallHintProcessor, DEPLOY_SYSCALL_CODE};
     use crate::utils::test_utils::*;
     use cairo_rs::any_box;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -160,15 +174,8 @@ mod tests {
     // tests that we are executing correctly our syscall hint processor.
     #[test]
     fn cannot_run_syscall_hints() {
-        let hint_code = "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
+        let hint_code = DEPLOY_SYSCALL_CODE;
         let mut vm = vm!();
-        //Add 3 segments to the memory
-        add_segments!(vm, 3);
-        vm.set_ap(6);
-        let key = Relocatable::from((1, 6));
-        //Insert something into ap
-        vm.insert_value(&key, (1, 6)).unwrap();
-        //ids and references are not needed for this test
         assert_eq!(
             run_syscall_hint!(vm, HashMap::new(), hint_code),
             Err(VirtualMachineError::NotImplemented)
