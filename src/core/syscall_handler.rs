@@ -143,7 +143,7 @@ mod tests {
     };
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
     use cairo_rs::types::exec_scope::ExecutionScopes;
-    use cairo_rs::types::relocatable::MaybeRelocatable;
+    use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::vm_core::VirtualMachine;
@@ -206,7 +206,7 @@ mod tests {
     macro_rules! add_segments {
         ($vm:expr, $n:expr) => {
             for _ in 0..$n {
-                $vm.segments.add(&mut $vm.memory);
+                $vm.add_memory_segment();
             }
         };
     }
@@ -279,9 +279,10 @@ mod tests {
         let mut vm = vm!();
         //Add 3 segments to the memory
         add_segments!(vm, 3);
-        vm.run_context.ap = 6;
+        vm.set_ap(6);
         //Insert something into ap
-        vm.memory = memory![((1, 6), (1, 6))];
+        let key = Relocatable::from((1,6));
+        vm.insert_value(&key, (1,6)).unwrap();
         //ids and references are not needed for this test
         assert_eq!(
             run_hint!(vm, HashMap::new(), hint_code),
@@ -302,9 +303,10 @@ mod tests {
         let mut vm = vm!();
         //Add 3 segments to the memory
         add_segments!(vm, 3);
-        vm.run_context.ap = 6;
+        vm.set_ap(6);
+        let key = Relocatable::from((1,6));
         //Insert something into ap
-        vm.memory = memory![((1, 6), (1, 6))];
+        vm.insert_value(&key, (1,6)).unwrap();
         //ids and references are not needed for this test
         assert_eq!(
             run_syscall_hint!(vm, HashMap::new(), hint_code),
