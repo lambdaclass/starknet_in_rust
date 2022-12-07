@@ -7,12 +7,15 @@ use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_def
 };
 use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
 use cairo_rs::types::exec_scope::ExecutionScopes;
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 
 const DEPLOY_SYSCALL_CODE: &str =
     "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
+
+pub struct CairoStructProxy;
 
 pub struct SyscallHintProcessor<H: SyscallHandler> {
     builtin_hint_processor: BuiltinHintProcessor,
@@ -119,13 +122,80 @@ fn get_ids_data(
     Ok(ids_data)
 }
 
-pub trait SyscallHandler {}
+pub trait SyscallHandler {
+    fn emit_message(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
+    fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
+    fn _get_tx_info_ptr(&self, vm: VirtualMachine);
+    fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
+    fn _read_and_validate_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> CairoStructProxy;
+    fn _call_contract(
+        &self,
+        syscall_name: &str,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Vec<i32>;
+    fn _get_caller_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
+    fn _get_contract_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
+    fn _storage_read(&self, address: i32) -> i32;
+    fn _storage_write(&self, address: i32, value: i32);
+    fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable;
+}
 
 struct OsSyscallHandler {}
 
 pub struct BusinessLogicSyscallHandler;
 
-impl SyscallHandler for BusinessLogicSyscallHandler {}
+impl SyscallHandler for BusinessLogicSyscallHandler {
+    fn emit_message(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
+        todo!()
+    }
+    fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
+        todo!()
+    }
+
+    fn _get_tx_info_ptr(&self, vm: VirtualMachine) {
+        todo!()
+    }
+    fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32 {
+        todo!()
+    }
+    fn _read_and_validate_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> CairoStructProxy {
+        todo!()
+    }
+    fn _call_contract(
+        &self,
+        syscall_name: &str,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Vec<i32> {
+        todo!()
+    }
+    fn _get_caller_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32 {
+        todo!()
+    }
+    fn _get_contract_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32 {
+        todo!()
+    }
+    fn _storage_read(&self, address: i32) -> i32 {
+        todo!()
+    }
+    fn _storage_write(&self, address: i32, value: i32) {
+        todo!()
+    }
+    fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable {
+        todo!()
+    }
+}
 
 #[cfg(test)]
 mod tests {
