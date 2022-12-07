@@ -1,0 +1,30 @@
+name: rust-tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '*' ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Install Rust 1.61.0
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: 1.61.0
+          override: true
+          components: rustfmt, clippy
+    - uses: actions/checkout@v3
+    - name: Format
+      run: cargo fmt --all -- --check
+    - name: Build
+      run: cargo c
+    - name: Run clippy
+      run: cargo clippy
+    - name: Run tests
+      run: cargo test
