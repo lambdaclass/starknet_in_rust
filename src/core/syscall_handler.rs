@@ -11,8 +11,8 @@ use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 
-
-const DEPLOY_SYSCALL_CODE: &str = "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
+const DEPLOY_SYSCALL_CODE: &str =
+    "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
 pub struct SyscallHintProcessor<H: SyscallHandler> {
     builtin_hint_processor: BuiltinHintProcessor,
@@ -52,8 +52,6 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, BigInt>,
     ) -> Result<(), VirtualMachineError> {
-        println!("Hello from SyscallHintProcessor");
-
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
             .ok_or(VirtualMachineError::WrongHintData)?;
@@ -62,8 +60,8 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             DEPLOY_SYSCALL_CODE => {
                 println!("Running deploy syscall.");
                 Err(VirtualMachineError::NotImplemented)
-            },
-            _ => Err(VirtualMachineError::NotImplemented)
+            }
+            _ => Err(VirtualMachineError::NotImplemented),
         }
     }
 }
@@ -79,7 +77,6 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)?
         }
-
         Ok(())
     }
 
