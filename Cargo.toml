@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cairo-rs = { path = "../cairo-rs" }
+cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs" }
 num-bigint = { version = "0.4", features = ["serde"] }
