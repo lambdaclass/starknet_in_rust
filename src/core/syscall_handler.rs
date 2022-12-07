@@ -7,6 +7,7 @@ use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_def
 };
 use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
 use cairo_rs::types::exec_scope::ExecutionScopes;
+use cairo_rs::types::relocatable::Relocatable;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
@@ -124,8 +125,54 @@ fn get_ids_data(
 
 pub trait SyscallHandler {}
 
-struct OsSyscallHandler {}
+struct OsSyscallHandler {
+    tx_execution_info_iterator: Box<dyn Iterator<Item= usize>>,
+    call_iterator: Box<dyn Iterator<Item= usize>>,
+    //  A stack that keeps track of the state of the calls being executed now.
+    // The last item is the state of the current call; the one before it, is the
+    // state of the caller (the call the called the current call); and so on.
+    call_stack: Vec<usize>,
+    // An iterator over contract addresses that were deployed during that call.
+    deployed_contracts_iterator: Box<dyn Iterator<Item= usize>>,
+    // An iterator to the retdata of its internal calls.
+    retdata_iterator: Box<dyn Iterator<Item= usize>>,
+    // An iterator to the read_values array which is consumed when the transaction
+    // code is executed.
+    execute_code_read_iterator: Box<dyn Iterator<Item= usize>>,
+    // StarkNet storage members.
+    starknet_storage_by_address: HashMap<usize, usize>,
+    // A pointer to the Cairo TxInfo struct.
+    // This pointer needs to match the TxInfo pointer that is going to be used during the system
+    // call validation by the StarkNet OS.
+    // Set during enter_tx.
+    tx_info_ptr: Option<Relocatable>,
+    // The TransactionExecutionInfo for the transaction currently being executed.
+    tx_execution_info: Option<usize>,
+}
 
+impl OsSyscallHandler {
+    fn skip_tx(&mut self) -> Option<usize> {
+        self.tx_execution_info_iterator.next()
+    }
+
+    fn _storage_read(&mut self) -> Option<usize> {
+        self.execute_code_read_iterator.next()
+    }
+
+    fn _get_tx_info_ptr(self) -> Option<Relocatable> {
+        self.tx_info_ptr
+    }
+
+    fn _call_contract(&mut self) -> Option<usize> {
+        self.retdata_iterator.next()
+    }
+
+    fn _deploy(&mut self) -> Option<usize> {
+        // let constructor_retdata = self.retdata_iterator.next();
+        // assert len(constructor_retdata) == 0, "Unexpected constructor_retdata."
+        self.deployed_contracts_iterator.next()
+    }
+}
 pub struct BusinessLogicSyscallHandler;
 
 impl SyscallHandler for BusinessLogicSyscallHandler {}
