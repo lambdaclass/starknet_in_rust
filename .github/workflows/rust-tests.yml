@@ -25,6 +25,6 @@ jobs:
     # - name: Run clippy
     #   run: make clippy
     - name: Build
-      run: make build
+      run: cargo build
     - name: Run tests
       run: cargo test
