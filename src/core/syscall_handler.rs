@@ -6,10 +6,10 @@ use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_def
     BuiltinHintProcessor, HintProcessorData,
 };
 use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
-use cairo_rs::types::relocatable::{Relocatable, MaybeRelocatable}; 
 use cairo_rs::types::exec_scope::ExecutionScopes;
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-use cairo_rs::vm::vm_core::{VirtualMachine};
+use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 
 const DEPLOY_SYSCALL_CODE: &str =
@@ -146,8 +146,7 @@ pub trait SyscallHandler {
     fn _get_contract_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
     fn _storage_read(&self, address: i32) -> i32;
     fn _storage_write(&self, address: i32, value: i32);
-    fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>)
-        -> Relocatable;
+    fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable;
 }
 
 struct OsSyscallHandler {}
@@ -196,11 +195,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _storage_write(&self, address: i32, value: i32) {
         todo!()
     }
-    fn _allocate_segment(
-        &self,
-        vm: VirtualMachine,
-        data: Vec<MaybeRelocatable>,
-    ) -> Relocatable {
+    fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable {
         todo!()
     }
 }
