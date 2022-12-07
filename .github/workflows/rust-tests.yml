@@ -22,9 +22,9 @@ jobs:
     - uses: actions/checkout@v3
     - name: Format
       run: cargo fmt --all -- --check
-    # - name: Run clippy
-    #   run: make clippy
     - name: Build
-      run: cargo build
+      run: cargo c
+    - name: Run clippy
+      run: cargo clippy
     - name: Run tests
       run: cargo test
