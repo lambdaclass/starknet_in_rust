@@ -137,6 +137,7 @@ macro_rules! vm {
 #[cfg(test)]
 mod tests {
     use crate::core::syscall_handler::SyscallHintProcessor;
+    use crate::utils::test_utils::*;
     use cairo_rs::any_box;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,
@@ -147,131 +148,9 @@ mod tests {
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use cairo_rs::vm::vm_memory::memory::Memory;
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
     use std::collections::HashMap;
-
-    macro_rules! mayberelocatable {
-        ($val1 : expr, $val2 : expr) => {
-            MaybeRelocatable::from(($val1, $val2))
-        };
-        ($val1 : expr) => {
-            MaybeRelocatable::from((bigint!($val1)))
-        };
-    }
-
-    macro_rules! memory_inner {
-        ($mem:expr, ($si:expr, $off:expr), ($sival:expr, $offval: expr)) => {
-            let (k, v) = (
-                &mayberelocatable!($si, $off),
-                &mayberelocatable!($sival, $offval),
-            );
-            let mut res = $mem.insert(k, v);
-            while matches!(res, Err(MemoryError::UnallocatedSegment(_, _))) {
-                $mem.data.push(Vec::new());
-                res = $mem.insert(k, v);
-            }
-        };
-        ($mem:expr, ($si:expr, $off:expr), $val:expr) => {
-            let (k, v) = (&mayberelocatable!($si, $off), &mayberelocatable!($val));
-            let mut res = $mem.insert(k, v);
-            while matches!(res, Err(MemoryError::UnallocatedSegment(_, _))) {
-                $mem.data.push(Vec::new());
-                res = $mem.insert(k, v);
-            }
-        };
-    }
-
-    macro_rules! memory_from_memory {
-        ($mem: expr, ( $( (($si:expr, $off:expr), $val:tt) ),* )) => {
-            {
-                $(
-                    memory_inner!($mem, ($si, $off), $val);
-                )*
-            }
-        };
-    }
-
-    macro_rules! memory {
-        ( $( (($si:expr, $off:expr), $val:tt) ),* ) => {
-            {
-                let mut memory = Memory::new();
-                memory_from_memory!(memory, ( $( (($si, $off), $val) ),* ));
-                memory
-            }
-        };
-    }
-
-    macro_rules! add_segments {
-        ($vm:expr, $n:expr) => {
-            for _ in 0..$n {
-                $vm.add_memory_segment();
-            }
-        };
-    }
-
-    macro_rules! exec_scopes_ref {
-        () => {
-            &mut ExecutionScopes::new()
-        };
-    }
-
-    macro_rules! run_hint {
-        ($vm:expr, $ids_data:expr, $hint_code:expr, $exec_scopes:expr, $constants:expr) => {{
-            let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = BuiltinHintProcessor::new_empty();
-            hint_processor.execute_hint(&mut $vm, $exec_scopes, &any_box!(hint_data), $constants)
-        }};
-        ($vm:expr, $ids_data:expr, $hint_code:expr, $exec_scopes:expr) => {{
-            let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = BuiltinHintProcessor::new_empty();
-            hint_processor.execute_hint(
-                &mut $vm,
-                $exec_scopes,
-                &any_box!(hint_data),
-                &HashMap::new(),
-            )
-        }};
-        ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
-            let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = BuiltinHintProcessor::new_empty();
-            hint_processor.execute_hint(
-                &mut $vm,
-                exec_scopes_ref!(),
-                &any_box!(hint_data),
-                &HashMap::new(),
-            )
-        }};
-    }
-
-    macro_rules! run_syscall_hint {
-        ($vm:expr, $ids_data:expr, $hint_code:expr, $exec_scopes:expr, $constants:expr) => {{
-            let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = BuiltinHintProcessor::new_empty();
-            hint_processor.execute_hint(&mut $vm, $exec_scopes, &any_box!(hint_data), $constants)
-        }};
-        ($vm:expr, $ids_data:expr, $hint_code:expr, $exec_scopes:expr) => {{
-            let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = BuiltinHintProcessor::new_empty();
-            hint_processor.execute_hint(
-                &mut $vm,
-                $exec_scopes,
-                &any_box!(hint_data),
-                &HashMap::new(),
-            )
-        }};
-        ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
-            let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = SyscallHintProcessor::new_empty();
-            hint_processor.execute_hint(
-                &mut $vm,
-                exec_scopes_ref!(),
-                &any_box!(hint_data),
-                &HashMap::new(),
-            )
-        }};
-    }
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -281,8 +160,8 @@ mod tests {
         add_segments!(vm, 3);
         vm.set_ap(6);
         //Insert something into ap
-        let key = Relocatable::from((1,6));
-        vm.insert_value(&key, (1,6)).unwrap();
+        let key = Relocatable::from((1, 6));
+        vm.insert_value(&key, (1, 6)).unwrap();
         //ids and references are not needed for this test
         assert_eq!(
             run_hint!(vm, HashMap::new(), hint_code),
@@ -304,9 +183,9 @@ mod tests {
         //Add 3 segments to the memory
         add_segments!(vm, 3);
         vm.set_ap(6);
-        let key = Relocatable::from((1,6));
+        let key = Relocatable::from((1, 6));
         //Insert something into ap
-        vm.insert_value(&key, (1,6)).unwrap();
+        vm.insert_value(&key, (1, 6)).unwrap();
         //ids and references are not needed for this test
         assert_eq!(
             run_syscall_hint!(vm, HashMap::new(), hint_code),
