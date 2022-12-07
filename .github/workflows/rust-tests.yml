@@ -28,4 +28,3 @@ jobs:
       run: make build
     - name: Run tests
       run: cargo test
-    
