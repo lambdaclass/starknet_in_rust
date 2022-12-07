@@ -17,7 +17,6 @@ pub struct SyscallHintProcessor<H: SyscallHandler> {
 }
 
 impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
-
     pub fn new_empty() -> SyscallHintProcessor<BusinessLogicSyscallHandler> {
         SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
@@ -117,7 +116,6 @@ pub struct BusinessLogicSyscallHandler;
 
 impl SyscallHandler for BusinessLogicSyscallHandler {}
 
-
 macro_rules! vm {
     () => {{
         VirtualMachine::new(
@@ -138,21 +136,21 @@ macro_rules! vm {
 
 #[cfg(test)]
 mod tests {
-    use cairo_rs::vm::vm_core::VirtualMachine;
-    use num_bigint::{BigInt, Sign};
-    use cairo_rs::vm::vm_memory::memory::Memory;
-    use cairo_rs::vm::errors::memory_errors::MemoryError;
-    use cairo_rs::types::relocatable::MaybeRelocatable;
-    use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+    use crate::core::syscall_handler::SyscallHintProcessor;
+    use cairo_rs::any_box;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,
     };
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
-    use cairo_rs::any_box;
-    use std::collections::HashMap;
     use cairo_rs::types::exec_scope::ExecutionScopes;
+    use cairo_rs::types::relocatable::MaybeRelocatable;
+    use cairo_rs::vm::errors::memory_errors::MemoryError;
+    use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+    use cairo_rs::vm::vm_core::VirtualMachine;
+    use cairo_rs::vm::vm_memory::memory::Memory;
+    use num_bigint::{BigInt, Sign};
     use std::any::Any;
-    use crate::core::syscall_handler::SyscallHintProcessor;
+    use std::collections::HashMap;
 
     macro_rules! mayberelocatable {
         ($val1 : expr, $val2 : expr) => {
@@ -204,7 +202,6 @@ mod tests {
             }
         };
     }
-
 
     macro_rules! add_segments {
         ($vm:expr, $n:expr) => {
@@ -314,5 +311,4 @@ mod tests {
             Err(VirtualMachineError::NotImplemented)
         );
     }
-    
 }
