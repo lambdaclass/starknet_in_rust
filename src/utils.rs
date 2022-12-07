@@ -1,6 +1,26 @@
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
+
+    macro_rules! vm {
+        () => {{
+            VirtualMachine::new(
+                BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
+                false,
+                Vec::new(),
+            )
+        }};
+
+        ($use_trace:expr) => {{
+            VirtualMachine::new(
+                BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
+                $use_trace,
+                Vec::new(),
+            )
+        }};
+    }
+    pub(crate) use vm;
+
     #[macro_export]
     macro_rules! add_segments {
         ($vm:expr, $n:expr) => {

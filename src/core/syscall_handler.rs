@@ -116,24 +116,6 @@ pub struct BusinessLogicSyscallHandler;
 
 impl SyscallHandler for BusinessLogicSyscallHandler {}
 
-macro_rules! vm {
-    () => {{
-        VirtualMachine::new(
-            BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
-            false,
-            Vec::new(),
-        )
-    }};
-
-    ($use_trace:expr) => {{
-        VirtualMachine::new(
-            BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
-            $use_trace,
-            Vec::new(),
-        )
-    }};
-}
-
 #[cfg(test)]
 mod tests {
     use crate::core::syscall_handler::SyscallHintProcessor;
