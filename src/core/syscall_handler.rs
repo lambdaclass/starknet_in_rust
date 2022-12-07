@@ -55,8 +55,6 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, BigInt>,
     ) -> Result<(), VirtualMachineError> {
-        println!("Hello from SyscallHintProcessor");
-
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
             .ok_or(VirtualMachineError::WrongHintData)?;
@@ -82,7 +80,6 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)?
         }
-
         Ok(())
     }
 
