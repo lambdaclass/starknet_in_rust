@@ -125,9 +125,25 @@ mod test {
                 },
             }
         };
-        ( @parse extension { $prefix:expr, $type:ident { $( $node:tt )* } } ) => {
+        ( @parse extension { $prefix:literal, $type:ident { $( $node:tt )* } } ) => {
             ExtensionNode {
-                prefix: $prefix,
+                prefix: {
+                    let value = $prefix
+                        .as_bytes()
+                        .chunks(2)
+                        .map(|x| match x.len() {
+                            2 => std::str::from_utf8(x).unwrap().parse::<u8>().unwrap(),
+                            1 => std::str::from_utf8(x).unwrap().parse::<u8>().unwrap() * 0x10,
+                            _ => unreachable!(),
+                        })
+                        .collect::<Vec<u8>>();
+
+                    match $prefix.len() % 2 {
+                        0 => (value, false),
+                        1 => (value, true),
+                        _ => unreachable!(),
+                    }
+                },
                 child: Box::new(pm_tree!(@parse $type { $( $node )* }).into()),
             }
         };
@@ -208,7 +224,7 @@ mod test {
         assert_eq!(
             pm_tree,
             pm_tree! {
-                extension { (vec![0], true), branch {
+                extension { "0", branch {
                     0 => leaf { key_a.to_vec() => () },
                     1 => leaf { key_b.to_vec() => () }
                 } }
@@ -298,25 +314,124 @@ mod test {
     /// Test that `PatriciaMerkleTree::insert()` works by overwriting an existing branch's child.
     #[test]
     fn patricia_tree_insert_branch_overwrite() {
-        todo!()
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a.to_vec() => 0u8 },
+                1 => leaf { key_b.to_vec() => 1u8 },
+            }
+        };
+
+        assert_eq!(pm_tree.insert(&key_b, 2u8), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                branch {
+                    0 => leaf { key_a.to_vec() => 0u8 },
+                    1 => leaf { key_b.to_vec() => 2u8 },
+                }
+            }
+        );
     }
 
     /// Test that `PatriciaMerkleTree::insert()` works by splitting an extension in the beginning.
     #[test]
     fn patricia_tree_insert_extension_beginning() {
-        todo!()
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0001000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            extension { "000", branch {
+                0 => leaf { key_a.to_vec() => () },
+                1 => leaf { key_b.to_vec() => () },
+            } }
+        };
+
+        assert_eq!(pm_tree.insert(&key_c, ()), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                branch {
+                    0 => extension { "00", branch {
+                        0 => leaf { key_a.to_vec() => () },
+                        1 => leaf { key_b.to_vec() => () },
+                    } },
+                    1 => leaf { key_c.to_vec() => () },
+                }
+            }
+        );
     }
 
     /// Test that `PatriciaMerkleTree::insert()` works by splitting an extension in the middle.
     #[test]
     fn patricia_tree_insert_extension_middle() {
-        todo!()
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0001000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            extension { "000", branch {
+                0 => leaf { key_a.to_vec() => () },
+                1 => leaf { key_b.to_vec() => () },
+            } }
+        };
+
+        assert_eq!(pm_tree.insert(&key_c, ()), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                extension { "0", branch {
+                    0 => extension { "0", branch {
+                        0 => leaf { key_a.to_vec() => () },
+                        1 => leaf { key_b.to_vec() => () },
+                    } },
+                    1 => leaf { key_c.to_vec() => () },
+                } }
+            }
+        );
     }
 
     /// Test that `PatriciaMerkleTree::insert()` works by splitting an extension in the end.
     #[test]
     fn patricia_tree_insert_extension_end() {
-        todo!()
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0001000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("0010000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            extension { "000", branch {
+                0 => leaf { key_a.to_vec() => () },
+                1 => leaf { key_b.to_vec() => () },
+            } }
+        };
+
+        assert_eq!(pm_tree.insert(&key_c, ()), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                extension { "00", branch {
+                    0 => branch {
+                        0 => leaf { key_a.to_vec() => () },
+                        0 => leaf { key_b.to_vec() => () },
+                    },
+                    1 => leaf { key_c.to_vec() => () },
+                } }
+            }
+        );
     }
 
     // TODO: Design and implement tests for `PatriciaMerkleTree::remove()`.
