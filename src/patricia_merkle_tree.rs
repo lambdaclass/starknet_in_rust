@@ -9,7 +9,7 @@ pub struct PatriciaMerkleTree<V> {
 impl<V> PatriciaMerkleTree<V> {
     /// Create an empty tree.
     pub fn new() -> Self {
-        todo!()
+        Self { root_node: None }
     }
 
     /// Check if the tree is empty.
