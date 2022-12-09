@@ -38,7 +38,7 @@ impl<V> PatriciaMerkleTree<V> {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Node<V> {
+enum Node<V> {
     Branch(BranchNode<V>),
     Extension(ExtensionNode<V>),
     Leaf(LeafNode<V>),
@@ -63,19 +63,21 @@ impl<V> From<LeafNode<V>> for Node<V> {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct BranchNode<V> {
+struct BranchNode<V> {
     choices: [Option<Box<Node<V>>>; 16],
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct ExtensionNode<V> {
+struct ExtensionNode<V> {
     // Boolean flag is true if last value in prefix is a nibble (not a byte).
     prefix: (Vec<u8>, bool),
-    child: Box<Node<V>>,
+    // The only child type that makes sense here is a branch node, therefore there's no need to wrap
+    // it in a `Node<V>`.
+    child: BranchNode<V>,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct LeafNode<V> {
+struct LeafNode<V> {
     key: Vec<u8>,
     value: V,
 }
@@ -144,7 +146,7 @@ mod test {
                         _ => unreachable!(),
                     }
                 },
-                child: Box::new(pm_tree!(@parse $type { $( $node )* }).into()),
+                child: pm_tree!(@parse $type { $( $node )* }).into(),
             }
         };
         ( @parse leaf { $key:expr => $value:expr } ) => {
