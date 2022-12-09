@@ -84,6 +84,21 @@ pub struct LeafNode<V> {
 mod test {
     use super::*;
 
+    macro_rules! pm_tree_key {
+        ( $key:literal ) => {{
+            assert_eq!($key.len(), 64);
+            let key: [u8; 32] = $key
+                .as_bytes()
+                .chunks_exact(2)
+                .map(|x| std::str::from_utf8(x).unwrap().parse::<u8>().unwrap())
+                .collect::<Vec<u8>>()
+                .try_into()
+                .unwrap();
+
+            key
+        }};
+    }
+
     macro_rules! pm_tree {
         () => {
             PatriciaMerkleTree {
@@ -101,7 +116,7 @@ mod test {
             }
         };
 
-        ( @parse branch { $( $key:literal => $type:ident { $( $node:tt )* } ),* } ) => {
+        ( @parse branch { $( $key:literal => $type:ident { $( $node:tt )* } ),* $(,)? } ) => {
             BranchNode {
                 choices: {
                     let mut choices: [Option<Box<Node<_>>>; 16] = Default::default();
@@ -139,8 +154,8 @@ mod test {
     /// Test that `PatriciaMerkleTree::insert()` works when the tree is empty.
     #[test]
     fn patricia_tree_insert_empty() {
+        let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
         let mut pm_tree = pm_tree!();
-        let key = Default::default();
 
         assert_eq!(pm_tree.insert(&key, ()), None);
         assert_eq!(
@@ -155,9 +170,10 @@ mod test {
     /// character is differing.
     #[test]
     fn patricia_tree_insert_leaf_beginning() {
-        let key_a: [u8; 32] = Default::default();
-        let mut key_b: [u8; 32] = Default::default();
-        key_b[0] += 0x10;
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
 
         let mut pm_tree = pm_tree! {
             leaf { key_a.to_vec() => () }
@@ -169,7 +185,7 @@ mod test {
             pm_tree! {
                 branch {
                     0 => leaf { key_a.to_vec() => () },
-                    1 => leaf { key_b.to_vec() => () }
+                    1 => leaf { key_b.to_vec() => () },
                 }
             }
         );
@@ -179,33 +195,104 @@ mod test {
     /// differing character is in the middle.
     #[test]
     fn patricia_tree_insert_leaf_middle() {
-        let key_a: [u8; 32] = Default::default();
-        let mut key_b: [u8; 32] = Default::default();
-        key_b[4] += 0x01;
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
 
         let mut pm_tree = pm_tree! {
             leaf { key_a.to_vec() => () }
         };
 
         assert_eq!(pm_tree.insert(&key_b, ()), None);
-        assert_eq!(pm_tree, pm_tree! {
-            extension { (vec![0], true), branch {
-                0 => leaf { key_a.to_vec() => () },
-                1 => leaf { key_b.to_vec() => () }
-            } }
-        });
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                extension { (vec![0], true), branch {
+                    0 => leaf { key_a.to_vec() => () },
+                    1 => leaf { key_b.to_vec() => () }
+                } }
+            }
+        );
     }
 
     /// Test that `PatriciaMerkleTree::insert()` overwrites a leaf value.
     #[test]
     fn patricia_tree_insert_leaf_overwrite() {
-        todo!()
+        let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let mut pm_tree = pm_tree! {
+            leaf { key.to_vec() => 0u8 }
+        };
+
+        assert_eq!(pm_tree.insert(&key, 1u8), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                leaf { key.to_vec() => 1u8 }
+            }
+        );
+    }
+
+    /// Test that `PatriciaMerkleTree::insert()` works by inserting a new branch.
+    #[test]
+    fn patricia_tree_insert_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("2000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a.to_vec() => () },
+                1 => leaf { key_b.to_vec() => () },
+            }
+        };
+
+        assert_eq!(pm_tree.insert(&key_c, ()), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                branch {
+                    0 => leaf { key_a.to_vec() => () },
+                    1 => leaf { key_b.to_vec() => () },
+                    2 => leaf { key_c.to_vec() => () },
+                }
+            }
+        );
     }
 
     /// Test that `PatriciaMerkleTree::insert()` works by inserting into an existing branch.
     #[test]
-    fn patricia_tree_insert_branch() {
-        todo!()
+    fn patricia_tree_extend_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a.to_vec() => () },
+                1 => leaf { key_b.to_vec() => () },
+            }
+        };
+
+        assert_eq!(pm_tree.insert(&key_c, ()), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                branch {
+                    0 => branch {
+                        0 => leaf { key_a.to_vec() => () },
+                        1 => leaf { key_c.to_vec() => () },
+                    },
+                    1 => leaf { key_b.to_vec() => () },
+                }
+            }
+        );
     }
 
     /// Test that `PatriciaMerkleTree::insert()` works by overwriting an existing branch's child.
