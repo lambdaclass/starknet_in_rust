@@ -1,3 +1,4 @@
+use starknet::core::syscall_info;
 fn main() {
-    println!("Hello, world!");
+    syscall_info::program_json();
 }

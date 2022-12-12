@@ -1,0 +1,390 @@
+
+("__main__.deploy.constructor_calldata", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.constructor_calldata"), members: None })
+
+("__main__.DELEGATE_L1_HANDLER_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(23274015802972845247556842986379118667122), full_name: None, members: None })
+
+("__main__.GetTxInfoResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetTxInfoResponse"), members: Some({"tx_info": Member { cairo_type: "__main__.TxInfo*", offset: 0 }}) })
+
+("__main__.library_call_l1_handler.function_selector", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.function_selector"), members: None })
+
+("__main__.storage_read.__temp10", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_read.__temp10"), members: None })
+
+("__main__.storage_write.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.LIBRARY_CALL_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(92376026794327011772951660), full_name: None, members: None })
+
+("__main__.get_caller_address.__temp4", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_caller_address.__temp4"), members: None })
+
+("__main__.call_contract.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.call_contract.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.get_tx_info", Identifier { pc: Some(117), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.library_call.calldata_size", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.calldata_size"), members: None })
+
+("__main__.library_call.__temp1", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.__temp1"), members: None })
+
+("__main__.CallContractResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.CallContractResponse"), members: Some({"retdata_size": Member { cairo_type: "felt", offset: 0 }, "retdata": Member { cairo_type: "felt*", offset: 1 }}) })
+
+("__main__.get_tx_info.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_tx_info.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.get_block_timestamp.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_block_timestamp.syscall"), members: None })
+
+("__main__.get_block_number.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_block_number.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.GetCallerAddressResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetCallerAddressResponse"), members: Some({"caller_address": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.call_contract.function_selector", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.function_selector"), members: None })
+
+("__main__.get_sequencer_address.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_sequencer_address.syscall"), members: None })
+
+("__main__.library_call_l1_handler.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.library_call_l1_handler.Args"), members: Some({"calldata": Member { cairo_type: "felt*", offset: 3 }, "function_selector": Member { cairo_type: "felt", offset: 1 }, "calldata_size": Member { cairo_type: "felt", offset: 2 }, "class_hash": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_block_number.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_block_number.syscall"), members: None })
+
+("__main__.StorageReadRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.StorageReadRequest"), members: Some({"address": Member { cairo_type: "felt", offset: 1 }, "selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_sequencer_address.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_sequencer_address.Args"), members: Some({}) })
+
+("__main__.storage_read.address", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_read.address"), members: None })
+
+("__main__.CallContractRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.CallContractRequest"), members: Some({"calldata": Member { cairo_type: "felt*", offset: 4 }, "contract_address": Member { cairo_type: "felt", offset: 1 }, "calldata_size": Member { cairo_type: "felt", offset: 3 }, "selector": Member { cairo_type: "felt", offset: 0 }, "function_selector": Member { cairo_type: "felt", offset: 2 }}) })
+
+("__main__.GetContractAddressResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetContractAddressResponse"), members: Some({"contract_address": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.call_contract.contract_address", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.contract_address"), members: None })
+
+("__main__.SendMessageToL1SysCall", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.SendMessageToL1SysCall"), members: Some({"payload_size": Member { cairo_type: "felt", offset: 2 }, "to_address": Member { cairo_type: "felt", offset: 1 }, "selector": Member { cairo_type: "felt", offset: 0 }, "payload_ptr": Member { cairo_type: "felt*", offset: 3 }}) })
+
+("__main__.deploy.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.deploy.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.get_tx_signature.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.GetBlockTimestamp", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetBlockTimestamp"), members: Some({"request": Member { cairo_type: "__main__.GetBlockTimestampRequest", offset: 0 }, "response": Member { cairo_type: "__main__.GetBlockTimestampResponse", offset: 1 }}) })
+
+("__main__.library_call.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.syscall"), members: None })
+
+("__main__.storage_write", Identifier { pc: Some(99), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.GetSequencerAddressResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetSequencerAddressResponse"), members: Some({"sequencer_address": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_block_number.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.get_contract_address.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name:me o None, members: None })
+
+("__main__.get_tx_info.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_tx_info.Args"), members: Some({}) })
+
+("__main__.get_tx_info.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_tx_info.syscall"), members: None })
+
+("__main__.get_sequencer_address.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.get_block_timestamp.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.library_call_l1_handler.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.library_call_l1_handler.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.deploy.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.syscall"), members: None })
+
+("__main__.call_contract.calldata_size", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.calldata_size"), members: None })
+
+("__main__.GetContractAddressRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetContractAddressRequest"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.GET_BLOCK_TIMESTAMP_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(24294903732626645868215235778792757751152), full_name: None, members: None })
+
+("__main__.DEPLOY_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(75202468540281), full_name: None, members: None })
+
+("__main__.emit_event.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.emit_event.Args"), members: Some({"data": Member { cairo_type: "felt*", offset: 3 }, "keys": Member { cairo_type: "felt*", offset: 1 }, "data_len": Member { cairo_type: "felt", offset: 2 }, "keys_len": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_block_number.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_block_number.Args"), members: Some({}) })
+
+("__main__.get_caller_address.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_caller_address.syscall_ptr"), members: None })
+
+("__main__.library_call.response", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.response"), members: None })
+
+("__main__.DeployResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.DeployResponse"), members: Some({"constructor_retdata_size": Member { cairo_type: "felt", offset: 1 }, "constructor_retdata": Member { cairo_type: "felt*", offset: 2 }, "contract_address": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_block_timestamp.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_block_timestamp.syscall_ptr"), members: None })
+
+("__main__.get_6qQQqqqqqqtx_info.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.storage_read.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.storage_read.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.storage_read.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_read.syscall"), members: None })
+
+("__main__.emit_event.keys", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.emit_event.keys"), members: None })
+
+("__main__.GetBlockTimestampResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetBlockTimestampResponse"), members: Some({"block_timestamp": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.SEND_MESSAGE_TO_L1_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(433017908768303439907196859243777073), full_name: None, members: None })
+
+("__main__.get_block_number", Identifier { pc: Some(62), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.get_sequencer_address.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_sequencer_address.syscall_ptr"), members: None })
+
+("__main__.get_caller_address.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_caller_address.Args"), members: Some({}) })
+
+("__main__.get_caller_address.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_caller_address.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.get_tx_signature.__temp9", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_tx_signature.__temp9"), members: None })
+
+("__main__.storage_write.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.CallContract", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.CallContract"), members: Some({"request": Member { cairo_type: "__main__.CallContractRequest", offset: 0 }, "response": Member { cairo_type: "__main__.CallContractResponse", offset: 5 }}) })
+
+("__main__.library_call_l1_handler.class_hash", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.class_hash"), members: None })
+
+("__main__.get_tx_info.response", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_tx_info.response"), members: None })
+
+("__main__.GetBlockNumberResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetBlockNumberResponse"), members: Some({"block_number": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.TxInfo", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.TxInfo"), members: Some({"chain_id": Member { cairo_type: "felt", offset: 6 }, "version": Member { cairo_type: "felt", offset: 0 }, "signature_len": Member { cairo_type: "felt", offset: 3 }, "transaction_hash": Member { cairo_type: "felt", offset: 5 }, "account_contract_address": Member { cairo_type: "felt", offset: 1 }, "signature": Member { cairo_type: "felt*", offset: 4 }, "max_fee": Member { cairo_type: "felt", offset: 2 }, "nonce": Member { cairo_type: "felt", offset: 7 }}) })
+
+("__main__.storage_write.__temp11", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_write.__temp11"), members: None })
+
+("__main__.STORAGE_WRITE_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(25828017502874050592466629733), full_name: None, members: None })
+
+("__main__.CALL_CONTRACT_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(20853273475220472486191784820), full_name: None, members: None })
+
+("__main__.get_tx_signature", Identifier { pc: Some(83), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.call_contract.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.syscall"), members: None })
+
+("__main__.deploy.__temp3", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.__temp3"), members: None })
+
+("__main__.DeployRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.DeployRequest"), members: Some({"constructor_calldata": Member { cairo_type: "felt*", offset: 4 }, "selector": Member { cairo_type: "felt", offset: 0 }, "constructor_calldata_size": Member { cairo_type: "felt", offset: 3 }, "class_hash": Member { cairo_type: "felt", offset: 1 }, "contract_address_salt": Member { cairo_type: "felt", offset: 2 }, "deploy_from_zero": Member { cairo_type: "felt", offset: 5 }}) })
+
+("__main__.library_call_l1_handler.__temp2", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.__temp2"), members: None })
+
+("starkware.cairo.common.dict_access.DictAccess", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("starkware.cairo.common.dict_access.DictAccess"), members: Some({"key": Member { cairo_type: "felt", offset: 0 }, "new_value": Member { cairo_type: "felt", offset: 2 }, "prev_value": Member { cairo_type: "felt", offset: 1 }}) })
+
+("__main__.GetSequencerAddress", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetSequencerAddress"), members: Some({"request": Member { cairo_type: "__main__.GetSequencerAddressRequest", offset: 0 }, "response": Member { cairo_type: "__main__.GetSequencerAddressResponse", offset: 1 }}) })
+
+("__main__.GetCallerAddress", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetCallerAddress"), members: Some({"request": Member { cairo_type: "__main__.GetCallerAddressRequest", offset: 0 }, "response": Member { cairo_type: "__main__.GetCallerAddressResponse", offset: 1 }}) })
+
+("__main__.get_sequencer_address.__temp5", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_sequencer_address.__temp5"), members: None })
+
+("__main__.GetCallerAddressRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetCallerAddressRequest"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.emit_event.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.storage_write.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.storage_write.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.library_call.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.library_call.Args"), members: Some({"class_hash": Member { cairo_type: "felt", offset: 0 }, "calldata": Member { cairo_type: "felt*", offset: 3 }, "calldata_size": Member { cairo_type: "felt", offset: 2 }, "function_selector": Member { cairo_type: "felt", offset: 1 }}) })
+
+("__main__.deploy.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.deploy.Args"), members: Some({"constructor_calldata_size": Member { cairo_type: "felt", offset: 2 }, "constructor_calldata": Member { cairo_type: "felt*", offset: 3 }, "deploy_from_zero": Member { cairo_type: "felt", offset: 4 }, "class_hash": Member { cairo_type: "felt", offset: 0 }, "contract_address_salt": Member { cairo_type: "felt", offset: 1 }}) })
+
+("__main__.call_contract.response", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.response"), members: None })
+
+("__main__.call_contract.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.call_contract.Args"), members: Some({"function_selector": Member { cairo_type: "felt", offset: 1 }, "calldata_size": Member { cairo_type: "felt", offset: 2 }, "calldata": Member { cairo_type: "felt*", offset: 3 }, "contract_address": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.library_call_l1_handler.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.get_tx_info.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_tx_info.syscall_ptr"), members: None })
+
+("__main__.get_block_timestamp.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_block_timestamp.Args"), members: Some({}) })
+
+("__main__.get_caller_address.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.deploy.class_hash", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.class_hash"), members: None })
+
+("__main__.get_sequencer_address", Identifier { pc: Some(55), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.storage_write.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.storage_write.Args"), members: Some({"value": Member { cairo_type: "felt", offset: 1 }, "address": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_sequencer_address.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_sequencer_address.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.library_call.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.storage_write.address", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_write.address"), members: None })
+
+("__main__.get_contract_address.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_contract_address.syscall"), members: None })
+
+("__main__.GetTxInfo", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetTxInfo"), members: Some({"request": Member { cairo_type: "__main__.GetTxInfoRequest", offset: 0 }, "response": Member { cairo_type: "__main__.GetTxInfoResponse", offset: 1 }}) })
+
+("__main__.storage_read.response", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_read.response"), members: None })
+
+("__main__.StorageRead", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.StorageRead"), members: Some({"request": Member { cairo_type: "__main__.StorageReadRequest", offset: 0 }, "response": Member { cairo_type: "__main__.StorageReadResponse", offset: 2 }}) })
+
+("__main__.deploy", Identifier { pc: Some(36), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.LibraryCallRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.LibraryCallRequest"), members: Some({"function_selector": Member { cairo_type: "felt", offset: 2 }, "calldata": Member { cairo_type: "felt*", offset: 4 }, "calldata_size": Member { cairo_type: "felt", offset: 3 }, "class_hash": Member { cairo_type: "felt", offset: 1 }, "selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_block_timestamp.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_block_timestamp.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.get_tx_signature.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_tx_signature.syscall_ptr"), members: None })
+
+("__main__.storage_write.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_write.syscall_ptr"), members: None })
+
+("__main__.library_call_l1_handler.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.syscall_ptr"), members: None })
+
+("__main__.GetTxSignature", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetTxSignature"), members: Some({"response": Member { cairo_type: "__main__.GetTxSignatureResponse", offset: 1 }, "request": Member { cairo_type: "__main__.GetTxSignatureRequest", offset: 0 }}) })
+
+("__main__.emit_event.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.emit_event.syscall_ptr"), members: None })
+
+("__main__.emit_event.__temp12", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.emit_event.__temp12"), members: None })
+
+("__main__.deploy.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.get_block_timestamp", Identifier { pc: Some(76), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.emit_event.data", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.emit_event.data"), members: None })
+
+("__main__.get_contract_address.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_contract_address.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.storage_read.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.storage_read.Args"), members: Some({"address": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_contract_address.__temp7", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_contract_address.__temp7"), members: None })
+
+("__main__.deploy.contract_address_salt", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.contract_address_salt"), members: None })
+
+("__main__.get_caller_address", Identifier { pc: Some(48), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.call_contract.calldata", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.calldata"), members: None })
+
+("__main__.emit_event", Identifier { pc: Some(107), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.GET_TX_INFO_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(1317029390204112103023), full_name: None, members: None })
+
+("__main__.GetSequencerAddressRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetSequencerAddressRequest"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.GET_CONTRACT_ADDRESS_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(6219495360805491471215297013070624192820083), full_name: None, members: None })
+
+("__main__.get_tx_signature.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_tx_signature.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.GetContractAddress", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetContractAddress"), members: Some({"request": Member { cairo_type: "__main__.GetContractAddressRequest", offset: 0 }, "response": Member { cairo_type: "__main__.GetContractAddressResponse", offset: 1 }}) })
+
+("__main__.deploy.deploy_from_zero", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.deploy_from_zero"), members: None })
+
+("__main__.get_sequencer_address.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.call_contract.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.get_tx_info.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.GetBlockNumberRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetBlockNumberRequest"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.GET_BLOCK_NUMBER_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(1448089106835523001438702345020786), full_name: None, members: None })
+
+("__main__.DictAccess", Identifier { pc: None, type_: Some("alias"), value: None, full_name: None, members: None })
+
+("__main__.GetTxSignatureRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetTxSignatureRequest"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.call_contract.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.syscall_ptr"), members: None })
+
+("__main__.GET_SEQUENCER_ADDRESS_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(1592190833581991703053805829594610833820054387), full_name: None, members: None })
+
+("__main__.call_contract.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.get_contract_address.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_contract_address.Args"), members: Some({}) })
+
+("__main__.EmitEvent", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.EmitEvent"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }, "keys_len": Member { cairo_type: "felt", offset: 1 }, "data": Member { cairo_type: "felt*", offset: 4 }, "keys": Member { cairo_type: "felt*", offset: 2 }, "data_len": Member { cairo_type: "felt", offset: 3 }}) })
+
+("__main__.emit_event.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.emit_event.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.GetBlockTimestampRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetBlockTimestampRequest"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_contract_address", Identifier { pc: Some(69), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.library_call.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.library_call.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
+
+("__main__.library_call.class_hash", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.class_hash"), members: None })
+
+("__main__.library_call_l1_handler.response", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.response"), members: None })
+
+("__main__.GetBlockNumber", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetBlockNumber"), members: Some({"request": Member { cairo_type: "__main__.GetBlockNumberRequest", offset: 0 }, "response": Member { cairo_type: "__main__.GetBlockNumberResponse", offset: 1 }}) })
+
+("__main__.GetTxSignatureResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetTxSignatureResponse"), members: Some({"signature_len": Member { cairo_type: "felt", offset: 0 }, "signature": Member { cairo_type: "felt*", offset: 1 }}) })
+
+("__main__.call_contract.__temp0", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.call_contract.__temp0"), members: None })
+
+("__main__.get_tx_signature.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.deploy.constructor_calldata_size", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.constructor_calldata_size"), members: None })
+
+("__main__.deploy.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.syscall_ptr"), members: None })
+
+("__main__.library_call", Identifier { pc: Some(12), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.library_call.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.syscall_ptr"), members: None })
+
+("__main__.EMIT_EVENT_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(1280709301550335749748), full_name: None, members: None })
+
+("__main__.library_call_l1_handler.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.syscall"), members: None })
+
+("__main__.get_block_number.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.get_block_timestamp.__temp8", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_block_timestamp.__temp8"), members: None })
+
+("__main__.storage_read.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.storage_read.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_read.syscall_ptr"), members: None })
+
+("__main__.get_caller_address.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.Deploy", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.Deploy"), members: Some({"request": Member { cairo_type: "__main__.DeployRequest", offset: 0 }, "response": Member { cairo_type: "__main__.DeployResponse", offset: 6 }}) })
+
+("__main__.DELEGATE_CALL_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(21167594061783206823196716140), full_name: None, members: None })
+
+("__main__.emit_event.keys_len", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.emit_event.keys_len"), members: None })
+
+("__main__.get_tx_signature.Args", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.get_tx_signature.Args"), members: Some({}) })
+
+("__main__.library_call.calldata", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.calldata"), members: None })
+
+("__main__.library_call_l1_handler.calldata", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.calldata"), members: None })
+
+("__main__.storage_read", Identifier { pc: Some(91), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.storage_read.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.get_block_number.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_block_number.syscall_ptr"), members: None })
+
+("__main__.emit_event.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.call_contract", Identifier { pc: Some(0), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.library_call.function_selector", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call.function_selector"), members: None })
+
+("__main__.StorageWrite", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.StorageWrite"), members: Some({"value": Member { cairo_type: "felt", offset: 2 }, "address": Member { cairo_type: "felt", offset: 1 }, "selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.get_tx_info.__temp13", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_tx_info.__temp13"), members: None })
+
+("__main__.library_call.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.library_call_l1_handler.calldata_size", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.library_call_l1_handler.calldata_size"), members: None })
+
+("__main__.storage_write.value", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.storage_write.value"), members: None })
+
+("__main__.GET_TX_SIGNATURE_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(1448089128652340074717162277007973), full_name: None, members: None })
+
+("__main__.get_contract_address.syscall_ptr", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_contract_address.syscall_ptr"), members: None })
+
+("__main__.get_tx_signature.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_tx_signature.syscall"), members: None })
+
+("__main__.library_call_l1_handler", Identifier { pc: Some(24), type_: Some("function"), value: None, full_name: None, members: None })
+
+("__main__.get_contract_address.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.emit_event.data_len", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.emit_event.data_len"), members: None })
+
+("__main__.StorageReadResponse", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.StorageReadResponse"), members: Some({"value": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.library_call_l1_handler.Return", Identifier { pc: None, type_: Some("type_definition"), value: None, full_name: None, members: None })
+
+("__main__.get_block_timestamp.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.GetTxInfoRequest", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.GetTxInfoRequest"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }}) })
+
+("__main__.deploy.response", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.deploy.response"), members: None })
+
+("__main__.get_block_number.__temp6", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_block_number.__temp6"), members: None })
+
+("__main__.GET_CALLER_ADDRESS_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(94901967781393078444254803017658102643), full_name: None, members: None })
+
+("__main__.get_caller_address.syscall", Identifier { pc: None, type_: Some("reference"), value: None, full_name: Some("__main__.get_caller_address.syscall"), members: None })
+
+("__main__.LibraryCall", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.LibraryCall"), members: Some({"request": Member { cairo_type: "__main__.LibraryCallRequest", offset: 0 }, "response": Member { cairo_type: "__main__.CallContractResponse", offset: 5 }}) })
+
+("__main__.deploy.SIZEOF_LOCALS", Identifier { pc: None, type_: Some("const"), value: Some(0), full_name: None, members: None })
+
+("__main__.STORAGE_READ_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(100890693370601760042082660), full_name: None, members: None })
+
+("__main__.LIBRARY_CALL_L1_HANDLER_SELECTOR", Identifier { pc: None, type_: Some("const"), value: Some(436233452754198157705746250789557519228244616562), full_name: None, members: None })

@@ -708,6 +708,7 @@ version = "0.1.0"
 dependencies = [
  "cairo-rs",
  "num-bigint",
+ "serde_json",
 ]
 
 [[package]]
