@@ -1,3 +1,5 @@
+use std::mem::swap;
+
 /// Patricia Merkle Tree implementation.
 ///
 /// For now, keys are always `[u8; 32]`, which represent `KECCAK256` hashes.
@@ -21,7 +23,22 @@ impl<V> PatriciaMerkleTree<V> {
     ///
     /// Overwrites and returns the previous value.
     pub fn insert(&mut self, key: &[u8; 32], value: V) -> Option<V> {
-        todo!()
+        if let Some(root_node) = self.root_node.take() {
+            let (root_node, old_value) = root_node.insert(key, value);
+            self.root_node = Some(root_node);
+
+            old_value
+        } else {
+            self.root_node = Some(
+                LeafNode {
+                    key: key.to_owned(),
+                    value,
+                }
+                .into(),
+            );
+
+            None
+        }
     }
 
     /// Remove a value given its key.
@@ -42,6 +59,27 @@ enum Node<V> {
     Branch(BranchNode<V>),
     Extension(ExtensionNode<V>),
     Leaf(LeafNode<V>),
+}
+
+impl<V> Node<V> {
+    pub fn insert(self, key: &[u8; 32], value: V) -> (Self, Option<V>) {
+        let (new_node, old_value): (Node<V>, Option<V>) = match self {
+            Node::Branch(branch_node) => {
+                let (new_node, old_value) = branch_node.insert(key, value);
+                (new_node.into(), old_value)
+            }
+            Node::Extension(extension_node) => {
+                let (new_node, old_value) = extension_node.insert(key, value);
+                (new_node.into(), old_value)
+            }
+            Node::Leaf(leaf_node) => {
+                let (new_node, old_value) = leaf_node.insert(key, value);
+                (new_node.into(), old_value)
+            }
+        };
+
+        (new_node, old_value)
+    }
 }
 
 impl<V> From<BranchNode<V>> for Node<V> {
@@ -67,6 +105,12 @@ struct BranchNode<V> {
     choices: [Option<Box<Node<V>>>; 16],
 }
 
+impl<V> BranchNode<V> {
+    fn insert(self, key: &[u8; 32], value: V) -> (Self, Option<V>) {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ExtensionNode<V> {
     // Boolean flag is true if last value in prefix is a nibble (not a byte).
@@ -76,10 +120,105 @@ struct ExtensionNode<V> {
     child: BranchNode<V>,
 }
 
+impl<V> ExtensionNode<V> {
+    fn insert(self, key: &[u8; 32], value: V) -> (Self, Option<V>) {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct LeafNode<V> {
-    key: Vec<u8>,
+    key: [u8; 32],
     value: V,
+}
+
+impl<V> LeafNode<V> {
+    fn insert(mut self, key: &[u8; 32], value: V) -> (Node<V>, Option<V>) {
+        match KeySegmentIterator::new(key)
+            .zip(self.key.iter().copied())
+            .enumerate()
+            .find_map(|(idx, (a, b))| (a != b).then_some((idx, a, b)))
+        {
+            Some((prefix_len, value_b, value_a)) => {
+                let leaf_a = self;
+                let leaf_b = LeafNode {
+                    key: key.to_owned(),
+                    value,
+                };
+
+                let branch_node = BranchNode {
+                    choices: {
+                        let mut choices: [Option<Box<Node<V>>>; 16] = Default::default();
+
+                        choices[value_a as usize] = Some(Box::new(leaf_a.into()));
+                        choices[value_b as usize] = Some(Box::new(leaf_b.into()));
+
+                        choices
+                    },
+                };
+
+                let node: Node<V> = if prefix_len == 0 {
+                    branch_node.into()
+                } else {
+                    ExtensionNode {
+                        prefix: (key[..(prefix_len + 1) >> 1].to_vec(), prefix_len % 2 != 0),
+                        child: branch_node,
+                    }
+                    .into()
+                };
+
+                (node, None)
+            }
+            _ => {
+                let mut value = value;
+                swap(&mut value, &mut self.value);
+                (self.into(), Some(value))
+            }
+        }
+    }
+}
+
+struct KeySegmentIterator<'a> {
+    data: &'a [u8; 32],
+    pos: usize,
+    half: bool,
+}
+
+impl<'a> KeySegmentIterator<'a> {
+    pub fn new(data: &'a [u8; 32]) -> Self {
+        Self {
+            data,
+            pos: 0,
+            half: false,
+        }
+    }
+}
+
+impl<'a> Iterator for KeySegmentIterator<'a> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos == 32 {
+            return None;
+        }
+
+        match (self.pos, self.half) {
+            (32, _) => None,
+            _ => {
+                let mut value = self.data[self.pos];
+
+                if self.half {
+                    self.pos += 1;
+                    value &= 0xF;
+                } else {
+                    value >>= 4;
+                }
+
+                self.half = !self.half;
+                Some(value)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -92,7 +231,7 @@ mod test {
             let key: [u8; 32] = $key
                 .as_bytes()
                 .chunks_exact(2)
-                .map(|x| std::str::from_utf8(x).unwrap().parse::<u8>().unwrap())
+                .map(|x| u8::from_str_radix(std::str::from_utf8(x).unwrap(), 16).unwrap())
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
@@ -179,7 +318,7 @@ mod test {
         assert_eq!(
             pm_tree,
             pm_tree! {
-                leaf { key.to_vec() => () }
+                leaf { key => () }
             },
         );
     }
@@ -194,7 +333,7 @@ mod test {
             pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
 
         let mut pm_tree = pm_tree! {
-            leaf { key_a.to_vec() => () }
+            leaf { key_a => () }
         };
 
         assert_eq!(pm_tree.insert(&key_b, ()), None);
@@ -202,8 +341,8 @@ mod test {
             pm_tree,
             pm_tree! {
                 branch {
-                    0 => leaf { key_a.to_vec() => () },
-                    1 => leaf { key_b.to_vec() => () },
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_b => () },
                 }
             }
         );
@@ -219,7 +358,7 @@ mod test {
             pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
 
         let mut pm_tree = pm_tree! {
-            leaf { key_a.to_vec() => () }
+            leaf { key_a => () }
         };
 
         assert_eq!(pm_tree.insert(&key_b, ()), None);
@@ -227,8 +366,8 @@ mod test {
             pm_tree,
             pm_tree! {
                 extension { "0", branch {
-                    0 => leaf { key_a.to_vec() => () },
-                    1 => leaf { key_b.to_vec() => () }
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_b => () }
                 } }
             }
         );
@@ -239,14 +378,14 @@ mod test {
     fn patricia_tree_insert_leaf_overwrite() {
         let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
         let mut pm_tree = pm_tree! {
-            leaf { key.to_vec() => 0u8 }
+            leaf { key => 0u8 }
         };
 
-        assert_eq!(pm_tree.insert(&key, 1u8), None);
+        assert_eq!(pm_tree.insert(&key, 1u8), Some(0));
         assert_eq!(
             pm_tree,
             pm_tree! {
-                leaf { key.to_vec() => 1u8 }
+                leaf { key => 1u8 }
             }
         );
     }
@@ -263,8 +402,8 @@ mod test {
 
         let mut pm_tree = pm_tree! {
             branch {
-                0 => leaf { key_a.to_vec() => () },
-                1 => leaf { key_b.to_vec() => () },
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
             }
         };
 
@@ -273,9 +412,9 @@ mod test {
             pm_tree,
             pm_tree! {
                 branch {
-                    0 => leaf { key_a.to_vec() => () },
-                    1 => leaf { key_b.to_vec() => () },
-                    2 => leaf { key_c.to_vec() => () },
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_b => () },
+                    2 => leaf { key_c => () },
                 }
             }
         );
@@ -293,8 +432,8 @@ mod test {
 
         let mut pm_tree = pm_tree! {
             branch {
-                0 => leaf { key_a.to_vec() => () },
-                1 => leaf { key_b.to_vec() => () },
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
             }
         };
 
@@ -304,10 +443,10 @@ mod test {
             pm_tree! {
                 branch {
                     0 => branch {
-                        0 => leaf { key_a.to_vec() => () },
-                        1 => leaf { key_c.to_vec() => () },
+                        0 => leaf { key_a => () },
+                        1 => leaf { key_c => () },
                     },
-                    1 => leaf { key_b.to_vec() => () },
+                    1 => leaf { key_b => () },
                 }
             }
         );
@@ -323,8 +462,8 @@ mod test {
 
         let mut pm_tree = pm_tree! {
             branch {
-                0 => leaf { key_a.to_vec() => 0u8 },
-                1 => leaf { key_b.to_vec() => 1u8 },
+                0 => leaf { key_a => 0u8 },
+                1 => leaf { key_b => 1u8 },
             }
         };
 
@@ -333,8 +472,8 @@ mod test {
             pm_tree,
             pm_tree! {
                 branch {
-                    0 => leaf { key_a.to_vec() => 0u8 },
-                    1 => leaf { key_b.to_vec() => 2u8 },
+                    0 => leaf { key_a => 0u8 },
+                    1 => leaf { key_b => 2u8 },
                 }
             }
         );
@@ -352,8 +491,8 @@ mod test {
 
         let mut pm_tree = pm_tree! {
             extension { "000", branch {
-                0 => leaf { key_a.to_vec() => () },
-                1 => leaf { key_b.to_vec() => () },
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
             } }
         };
 
@@ -363,10 +502,10 @@ mod test {
             pm_tree! {
                 branch {
                     0 => extension { "00", branch {
-                        0 => leaf { key_a.to_vec() => () },
-                        1 => leaf { key_b.to_vec() => () },
+                        0 => leaf { key_a => () },
+                        1 => leaf { key_b => () },
                     } },
-                    1 => leaf { key_c.to_vec() => () },
+                    1 => leaf { key_c => () },
                 }
             }
         );
@@ -384,8 +523,8 @@ mod test {
 
         let mut pm_tree = pm_tree! {
             extension { "000", branch {
-                0 => leaf { key_a.to_vec() => () },
-                1 => leaf { key_b.to_vec() => () },
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
             } }
         };
 
@@ -395,10 +534,10 @@ mod test {
             pm_tree! {
                 extension { "0", branch {
                     0 => extension { "0", branch {
-                        0 => leaf { key_a.to_vec() => () },
-                        1 => leaf { key_b.to_vec() => () },
+                        0 => leaf { key_a => () },
+                        1 => leaf { key_b => () },
                     } },
-                    1 => leaf { key_c.to_vec() => () },
+                    1 => leaf { key_c => () },
                 } }
             }
         );
@@ -416,8 +555,8 @@ mod test {
 
         let mut pm_tree = pm_tree! {
             extension { "000", branch {
-                0 => leaf { key_a.to_vec() => () },
-                1 => leaf { key_b.to_vec() => () },
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
             } }
         };
 
@@ -427,10 +566,10 @@ mod test {
             pm_tree! {
                 extension { "00", branch {
                     0 => branch {
-                        0 => leaf { key_a.to_vec() => () },
-                        0 => leaf { key_b.to_vec() => () },
+                        0 => leaf { key_a => () },
+                        0 => leaf { key_b => () },
                     },
-                    1 => leaf { key_c.to_vec() => () },
+                    1 => leaf { key_c => () },
                 } }
             }
         );
@@ -438,4 +577,12 @@ mod test {
 
     // TODO: Design and implement tests for `PatriciaMerkleTree::remove()`.
     // TODO: Design and implement tests for `PatriciaMerkleTree::get()`.
+
+    #[test]
+    fn key_segment_iterator() {
+        let key = pm_tree_key!("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+        let segment_iter = KeySegmentIterator::new(&key);
+
+        assert!(segment_iter.enumerate().all(|(i, x)| i % 16 == x as usize));
+    }
 }
