@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 
+use crate::core::syscall_info::*;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -26,7 +27,7 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
     pub fn new_empty() -> SyscallHintProcessor<BusinessLogicSyscallHandler> {
         SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler,
+            syscall_handler: BusinessLogicSyscallHandler::new(),
         }
     }
 }
@@ -123,7 +124,7 @@ fn get_ids_data(
 }
 
 pub trait SyscallHandler {
-    fn emit_message(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
+    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
@@ -148,10 +149,30 @@ pub trait SyscallHandler {
 
 struct OsSyscallHandler {}
 
-pub struct BusinessLogicSyscallHandler;
+pub struct BusinessLogicSyscallHandler {
+    syscalls_info: HashMap<String, SyscallInfo>,
+}
+
+impl BusinessLogicSyscallHandler {
+    pub fn new() -> Self {
+        let json = program_json();
+        let identifier = json
+            .identifiers
+            .get("__main__.EmitEvent")
+            .unwrap()
+            .to_owned();
+        let mut syscalls_info: HashMap<String, SyscallInfo> = HashMap::new();
+        syscalls_info.insert(
+            "emit_event".to_string(),
+            SyscallInfo::emit_event(identifier),
+        );
+
+        BusinessLogicSyscallHandler { syscalls_info }
+    }
+}
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
-    fn emit_message(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
+    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
         todo!()
     }
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
