@@ -69,8 +69,8 @@ impl<V> Node<V> {
                 (new_node.into(), old_value)
             }
             Node::Extension(extension_node) => {
-                let (new_node, old_value) = extension_node.insert(key, value);
-                (new_node.into(), old_value)
+                let (new_node, old_value) = extension_node.insert(key, value, 0);
+                (new_node, old_value)
             }
             Node::Leaf(leaf_node) => {
                 let (new_node, old_value) = leaf_node.insert(key, value);
@@ -121,11 +121,17 @@ struct ExtensionNode<V> {
 }
 
 impl<V> ExtensionNode<V> {
-    fn insert(mut self, key: &[u8; 32], value: V) -> (Node<V>, Option<V>) {
+    fn insert(
+        mut self,
+        key: &[u8; 32],
+        value: V,
+        current_key_offset: usize,
+    ) -> (Node<V>, Option<V>) {
         match KeySegmentIterator::new(key)
-            .zip(self.prefix.iter().copied())
+            .skip(current_key_offset)
             .enumerate()
-            .find_map(|(idx, (a, b))| (a != b).then_some((idx, a, b)))
+            .zip(self.prefix.iter().copied())
+            .find_map(|((idx, a), b)| (a != b).then_some((idx, a, b)))
         {
             Some((prefix_len, value_b, value_a)) => {
                 if prefix_len == 0 {
