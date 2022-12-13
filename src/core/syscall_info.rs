@@ -1,7 +1,7 @@
 use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
 use crate::core::errors::syscall_hadler_errors::SyscallHandlerError::*;
 use cairo_rs::serde::deserialize_program::*;
-use num_bigint::{BigInt, Sign};
+use num_bigint::BigInt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -91,14 +91,13 @@ pub fn program_json() -> Result<ProgramJson, SyscallHandlerError> {
 #[cfg(test)]
 mod tests {
 
-    use std::str::FromStr;
-
     use super::program_json;
     use super::SyscallInfo;
     use crate::core::syscall_info::SyscallType;
     use crate::utils::test_utils::*;
     use cairo_rs::serde::deserialize_program::*;
     use num_bigint::BigInt;
+    use std::str::FromStr;
 
     #[test]
     fn create_syscall_info_emit_event() {
