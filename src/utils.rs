@@ -2,6 +2,14 @@
 #[macro_use]
 pub mod test_utils {
 
+    #[macro_export]
+    macro_rules! bigint {
+        ($val : expr) => {
+            Into::<BigInt>::into($val)
+        };
+    }
+    pub(crate) use num_bigint;
+
     macro_rules! vm {
         () => {{
             VirtualMachine::new(

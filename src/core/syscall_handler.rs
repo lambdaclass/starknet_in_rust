@@ -1,13 +1,14 @@
 use std::any::Any;
 use std::collections::HashMap;
 
+use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
 use crate::core::syscall_info::*;
+
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
 };
 use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
-use cairo_rs::serde::deserialize_program::Identifier;
 use cairo_rs::types::exec_scope::ExecutionScopes;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
@@ -25,7 +26,8 @@ pub struct SyscallHintProcessor<H: SyscallHandler> {
 }
 
 impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
-    pub fn new_empty() -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, String> {
+    pub fn new_empty(
+    ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: BusinessLogicSyscallHandler::new()?,
@@ -155,8 +157,8 @@ pub struct BusinessLogicSyscallHandler {
 }
 
 impl BusinessLogicSyscallHandler {
-    pub fn new() -> Result<Self, String> {
-        let identifiers = program_json().identifiers;
+    pub fn new() -> Result<Self, SyscallHandlerError> {
+        let identifiers = program_json()?.identifiers;
 
         let mut syscalls_info: HashMap<String, SyscallInfo> = HashMap::new();
         let emit_event = SyscallInfo::emit_event(&identifiers)?;
