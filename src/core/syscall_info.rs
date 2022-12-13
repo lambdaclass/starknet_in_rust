@@ -98,8 +98,7 @@ mod tests {
     use crate::core::syscall_info::SyscallType;
     use crate::utils::test_utils::*;
     use cairo_rs::serde::deserialize_program::*;
-    use num_bigint::{BigInt, Sign};
-    use num_traits::cast::FromPrimitive;
+    use num_bigint::BigInt;
 
     #[test]
     fn create_syscall_info_emit_event() {
@@ -109,7 +108,7 @@ mod tests {
 
         assert_eq!(
             SyscallInfo {
-                selector:  BigInt::from_str("1280709301550335749748").unwrap(),
+                selector: BigInt::from_str("1280709301550335749748").unwrap(),
                 syscall_size: 5,
                 syscall_struct: SyscallType::EmitEvent {
                     selector: Some(Member {
