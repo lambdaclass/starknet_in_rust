@@ -74,7 +74,7 @@ impl<V> Node<V> {
             }
             Node::Leaf(leaf_node) => {
                 let (new_node, old_value) = leaf_node.insert(key, value);
-                (new_node.into(), old_value)
+                (new_node, old_value)
             }
         };
 
@@ -114,15 +114,88 @@ impl<V> BranchNode<V> {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ExtensionNode<V> {
     // Boolean flag is true if last value in prefix is a nibble (not a byte).
-    prefix: (Vec<u8>, bool),
+    prefix: Vec<u8>,
     // The only child type that makes sense here is a branch node, therefore there's no need to wrap
     // it in a `Node<V>`.
     child: BranchNode<V>,
 }
 
 impl<V> ExtensionNode<V> {
-    fn insert(self, key: &[u8; 32], value: V) -> (Self, Option<V>) {
-        todo!()
+    fn insert(mut self, key: &[u8; 32], value: V) -> (Node<V>, Option<V>) {
+        match KeySegmentIterator::new(key)
+            .zip(self.prefix.iter().copied())
+            .enumerate()
+            .find_map(|(idx, (a, b))| (a != b).then_some((idx, a, b)))
+        {
+            Some((prefix_len, value_b, value_a)) => {
+                if prefix_len == 0 {
+                    self.prefix.remove(0);
+
+                    (
+                        BranchNode {
+                            choices: {
+                                let mut choices: [Option<Box<Node<V>>>; 16] = Default::default();
+
+                                choices[value_a as usize] = Some(Box::new(self.into()));
+                                choices[value_b as usize] = Some(Box::new(
+                                    LeafNode {
+                                        key: key.to_owned(),
+                                        value,
+                                    }
+                                    .into(),
+                                ));
+
+                                choices
+                            },
+                        }
+                        .into(),
+                        None,
+                    )
+                } else {
+                    let branch_node = BranchNode {
+                        choices: {
+                            let mut choices: [Option<Box<Node<V>>>; 16] = Default::default();
+
+                            choices[value_a as usize] =
+                                Some(Box::new(if prefix_len == self.prefix.len() - 1 {
+                                    let (_, new_prefix) = self.prefix.split_at(prefix_len);
+                                    ExtensionNode {
+                                        prefix: new_prefix.to_vec(),
+                                        child: self.child,
+                                    }
+                                    .into()
+                                } else {
+                                    self.child.into()
+                                }));
+                            choices[value_b as usize] = Some(Box::new(
+                                LeafNode {
+                                    key: key.to_owned(),
+                                    value,
+                                }
+                                .into(),
+                            ));
+
+                            choices
+                        },
+                    };
+
+                    self.prefix.truncate(prefix_len);
+                    (
+                        ExtensionNode {
+                            prefix: self.prefix,
+                            child: branch_node,
+                        }
+                        .into(),
+                        None,
+                    )
+                }
+            }
+            None => {
+                let old_value;
+                (self.child, old_value) = self.child.insert(key, value);
+                (self.into(), old_value)
+            }
+        }
     }
 }
 
@@ -161,7 +234,25 @@ impl<V> LeafNode<V> {
                     branch_node.into()
                 } else {
                     ExtensionNode {
-                        prefix: (key[..(prefix_len + 1) >> 1].to_vec(), prefix_len % 2 != 0),
+                        prefix: {
+                            let mut prefix = Vec::with_capacity((prefix_len >> 1) + prefix_len % 2);
+                            let mut last_value = 0;
+                            for (idx, segment) in
+                                KeySegmentIterator::new(key).take(prefix_len).enumerate()
+                            {
+                                if idx % 2 == 0 {
+                                    last_value = segment << 4;
+                                } else {
+                                    last_value |= segment;
+                                    prefix.push(last_value);
+                                }
+                            }
+                            if prefix_len % 2 != 0 {
+                                prefix.push(last_value);
+                            }
+
+                            prefix
+                        },
                         child: branch_node,
                     }
                     .into()
@@ -178,13 +269,13 @@ impl<V> LeafNode<V> {
     }
 }
 
-struct KeySegmentIterator<'a> {
-    data: &'a [u8; 32],
+struct KeySegmentIterator<T> {
+    data: T,
     pos: usize,
     half: bool,
 }
 
-impl<'a> KeySegmentIterator<'a> {
+impl<'a> KeySegmentIterator<&'a [u8; 32]> {
     pub fn new(data: &'a [u8; 32]) -> Self {
         Self {
             data,
@@ -194,30 +285,25 @@ impl<'a> KeySegmentIterator<'a> {
     }
 }
 
-impl<'a> Iterator for KeySegmentIterator<'a> {
+impl<'a> Iterator for KeySegmentIterator<&'a [u8; 32]> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos == 32 {
+        if self.pos >= 32 {
             return None;
         }
 
-        match (self.pos, self.half) {
-            (32, _) => None,
-            _ => {
-                let mut value = self.data[self.pos];
+        let mut value = self.data[self.pos];
 
-                if self.half {
-                    self.pos += 1;
-                    value &= 0xF;
-                } else {
-                    value >>= 4;
-                }
-
-                self.half = !self.half;
-                Some(value)
-            }
+        if self.half {
+            self.pos += 1;
+            value &= 0xF;
+        } else {
+            value >>= 4;
         }
+
+        self.half = !self.half;
+        Some(value)
     }
 }
 
@@ -279,11 +365,7 @@ mod test {
                         })
                         .collect::<Vec<u8>>();
 
-                    match $prefix.len() % 2 {
-                        0 => (value, false),
-                        1 => (value, true),
-                        _ => unreachable!(),
-                    }
+                    value
                 },
                 child: pm_tree!(@parse $type { $( $node )* }).into(),
             }
@@ -398,36 +480,6 @@ mod test {
         let key_b =
             pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
         let key_c =
-            pm_tree_key!("2000000000000000000000000000000000000000000000000000000000000000");
-
-        let mut pm_tree = pm_tree! {
-            branch {
-                0 => leaf { key_a => () },
-                1 => leaf { key_b => () },
-            }
-        };
-
-        assert_eq!(pm_tree.insert(&key_c, ()), None);
-        assert_eq!(
-            pm_tree,
-            pm_tree! {
-                branch {
-                    0 => leaf { key_a => () },
-                    1 => leaf { key_b => () },
-                    2 => leaf { key_c => () },
-                }
-            }
-        );
-    }
-
-    /// Test that `PatriciaMerkleTree::insert()` works by inserting into an existing branch.
-    #[test]
-    fn patricia_tree_extend_branch() {
-        let key_a =
-            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        let key_b =
-            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
-        let key_c =
             pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
 
         let mut pm_tree = pm_tree! {
@@ -447,6 +499,36 @@ mod test {
                         1 => leaf { key_c => () },
                     },
                     1 => leaf { key_b => () },
+                }
+            }
+        );
+    }
+
+    /// Test that `PatriciaMerkleTree::insert()` works by inserting into an existing branch.
+    #[test]
+    fn patricia_tree_extend_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("2000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+            }
+        };
+
+        assert_eq!(pm_tree.insert(&key_c, ()), None);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                branch {
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_b => () },
+                    2 => leaf { key_c => () },
                 }
             }
         );
