@@ -1,5 +1,7 @@
-build:
-	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json 
+compile_cairo:
+	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json
+	
+build: 
 	cargo build --release
 
 clean: 
