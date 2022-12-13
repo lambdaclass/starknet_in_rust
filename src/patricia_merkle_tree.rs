@@ -63,22 +63,29 @@ enum Node<V> {
 
 impl<V> Node<V> {
     pub fn insert(self, key: &[u8; 32], value: V) -> (Self, Option<V>) {
-        let (new_node, old_value): (Node<V>, Option<V>) = match self {
+        self.insert_inner(key, value, 0)
+    }
+
+    fn insert_inner(
+        self,
+        key: &[u8; 32],
+        value: V,
+        current_key_offset: usize,
+    ) -> (Self, Option<V>) {
+        match self {
             Node::Branch(branch_node) => {
-                let (new_node, old_value) = branch_node.insert(key, value);
+                let (new_node, old_value) = branch_node.insert(key, value, current_key_offset);
                 (new_node.into(), old_value)
             }
             Node::Extension(extension_node) => {
-                let (new_node, old_value) = extension_node.insert(key, value, 0);
+                let (new_node, old_value) = extension_node.insert(key, value, current_key_offset);
                 (new_node, old_value)
             }
             Node::Leaf(leaf_node) => {
-                let (new_node, old_value) = leaf_node.insert(key, value);
+                let (new_node, old_value) = leaf_node.insert(key, value, current_key_offset);
                 (new_node, old_value)
             }
-        };
-
-        (new_node, old_value)
+        }
     }
 }
 
@@ -106,14 +113,39 @@ struct BranchNode<V> {
 }
 
 impl<V> BranchNode<V> {
-    fn insert(self, key: &[u8; 32], value: V) -> (Self, Option<V>) {
-        todo!()
+    fn insert(mut self, key: &[u8; 32], value: V, current_key_offset: usize) -> (Self, Option<V>) {
+        let mut old_value = None;
+        self.choices[KeySegmentIterator::new(key)
+            .nth(current_key_offset)
+            .unwrap() as usize] = Some(
+            match self.choices[KeySegmentIterator::new(key)
+                .nth(current_key_offset)
+                .unwrap() as usize]
+                .take()
+            {
+                Some(mut x) => {
+                    let new_node;
+                    (new_node, old_value) = x.insert_inner(key, value, current_key_offset + 1);
+                    *x = new_node;
+                    x
+                }
+                None => Box::new(
+                    LeafNode {
+                        key: key.to_owned(),
+                        value,
+                    }
+                    .into(),
+                ),
+            },
+        );
+
+        (self, old_value)
     }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct ExtensionNode<V> {
-    // Boolean flag is true if last value in prefix is a nibble (not a byte).
+    // Each value is a nibble.
     prefix: Vec<u8>,
     // The only child type that makes sense here is a branch node, therefore there's no need to wrap
     // it in a `Node<V>`.
@@ -163,8 +195,8 @@ impl<V> ExtensionNode<V> {
                             let mut choices: [Option<Box<Node<V>>>; 16] = Default::default();
 
                             choices[value_a as usize] =
-                                Some(Box::new(if prefix_len == self.prefix.len() - 1 {
-                                    let (_, new_prefix) = self.prefix.split_at(prefix_len);
+                                Some(Box::new(if prefix_len != self.prefix.len() - 1 {
+                                    let (_, new_prefix) = self.prefix.split_at(prefix_len + 1);
                                     ExtensionNode {
                                         prefix: new_prefix.to_vec(),
                                         child: self.child,
@@ -198,7 +230,9 @@ impl<V> ExtensionNode<V> {
             }
             None => {
                 let old_value;
-                (self.child, old_value) = self.child.insert(key, value);
+                (self.child, old_value) =
+                    self.child
+                        .insert(key, value, current_key_offset + self.prefix.len());
                 (self.into(), old_value)
             }
         }
@@ -212,9 +246,15 @@ struct LeafNode<V> {
 }
 
 impl<V> LeafNode<V> {
-    fn insert(mut self, key: &[u8; 32], value: V) -> (Node<V>, Option<V>) {
+    fn insert(
+        mut self,
+        key: &[u8; 32],
+        value: V,
+        current_key_offset: usize,
+    ) -> (Node<V>, Option<V>) {
         match KeySegmentIterator::new(key)
-            .zip(self.key.iter().copied())
+            .zip(KeySegmentIterator::new(&self.key))
+            .skip(current_key_offset)
             .enumerate()
             .find_map(|(idx, (a, b))| (a != b).then_some((idx, a, b)))
         {
@@ -240,25 +280,7 @@ impl<V> LeafNode<V> {
                     branch_node.into()
                 } else {
                     ExtensionNode {
-                        prefix: {
-                            let mut prefix = Vec::with_capacity((prefix_len >> 1) + prefix_len % 2);
-                            let mut last_value = 0;
-                            for (idx, segment) in
-                                KeySegmentIterator::new(key).take(prefix_len).enumerate()
-                            {
-                                if idx % 2 == 0 {
-                                    last_value = segment << 4;
-                                } else {
-                                    last_value |= segment;
-                                    prefix.push(last_value);
-                                }
-                            }
-                            if prefix_len % 2 != 0 {
-                                prefix.push(last_value);
-                            }
-
-                            prefix
-                        },
+                        prefix: KeySegmentIterator::new(key).take(prefix_len).collect(),
                         child: branch_node,
                     }
                     .into()
@@ -363,12 +385,8 @@ mod test {
                 prefix: {
                     let value = $prefix
                         .as_bytes()
-                        .chunks(2)
-                        .map(|x| match x.len() {
-                            2 => std::str::from_utf8(x).unwrap().parse::<u8>().unwrap(),
-                            1 => std::str::from_utf8(x).unwrap().parse::<u8>().unwrap() * 0x10,
-                            _ => unreachable!(),
-                        })
+                        .into_iter()
+                        .map(|x| (*x as char).to_digit(16).unwrap() as u8)
                         .collect::<Vec<u8>>();
 
                     value
@@ -555,7 +573,7 @@ mod test {
             }
         };
 
-        assert_eq!(pm_tree.insert(&key_b, 2u8), None);
+        assert_eq!(pm_tree.insert(&key_b, 2u8), Some(1));
         assert_eq!(
             pm_tree,
             pm_tree! {
@@ -655,7 +673,7 @@ mod test {
                 extension { "00", branch {
                     0 => branch {
                         0 => leaf { key_a => () },
-                        0 => leaf { key_b => () },
+                        1 => leaf { key_b => () },
                     },
                     1 => leaf { key_c => () },
                 } }
