@@ -279,7 +279,7 @@
 
 ("__main__.EmitEvent", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.EmitEvent"), members: Some({"selector": Member { cairo_type: "felt", offset: 0 }, "keys_len": Member { cairo_type: "felt", offset: 1 }, "data": Member { cairo_type: "felt*", offset: 4 }, "keys": Member { cairo_type: "felt*", offset: 2 }, "data_len": Member { cairo_type: "felt", offset: 3 }}) })
 
-
+§
 
 ("__main__.emit_event.ImplicitArgs", Identifier { pc: None, type_: Some("struct"), value: None, full_name: Some("__main__.emit_event.ImplicitArgs"), members: Some({"syscall_ptr": Member { cairo_type: "felt*", offset: 0 }}) })
 

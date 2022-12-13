@@ -7,6 +7,7 @@ use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_def
     BuiltinHintProcessor, HintProcessorData,
 };
 use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
+use cairo_rs::serde::deserialize_program::Identifier;
 use cairo_rs::types::exec_scope::ExecutionScopes;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
@@ -24,11 +25,11 @@ pub struct SyscallHintProcessor<H: SyscallHandler> {
 }
 
 impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
-    pub fn new_empty() -> SyscallHintProcessor<BusinessLogicSyscallHandler> {
-        SyscallHintProcessor {
+    pub fn new_empty() -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, String> {
+        Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler::new(),
-        }
+            syscall_handler: BusinessLogicSyscallHandler::new()?,
+        })
     }
 }
 impl<H: SyscallHandler> SyscallHintProcessor<H> {
@@ -154,20 +155,15 @@ pub struct BusinessLogicSyscallHandler {
 }
 
 impl BusinessLogicSyscallHandler {
-    pub fn new() -> Self {
-        let json = program_json();
-        let identifier = json
-            .identifiers
-            .get("__main__.EmitEvent")
-            .unwrap()
-            .to_owned();
-        let mut syscalls_info: HashMap<String, SyscallInfo> = HashMap::new();
-        syscalls_info.insert(
-            "emit_event".to_string(),
-            SyscallInfo::emit_event(identifier),
-        );
+    pub fn new() -> Result<Self, String> {
+        let identifiers = program_json().identifiers;
 
-        BusinessLogicSyscallHandler { syscalls_info }
+        let mut syscalls_info: HashMap<String, SyscallInfo> = HashMap::new();
+        let emit_event = SyscallInfo::emit_event(&identifiers)?;
+
+        syscalls_info.insert("emit_event".to_string(), emit_event);
+
+        Ok(BusinessLogicSyscallHandler { syscalls_info })
     }
 }
 

@@ -88,7 +88,7 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = SyscallHintProcessor::new_empty();
+            let hint_processor = SyscallHintProcessor::new_empty().unwrap();
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
