@@ -710,8 +710,6 @@ dependencies = [
  "num-bigint",
  "serde_json",
 ]
-
-[[package]]
 name = "starknet-crypto"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -766,6 +764,14 @@ dependencies = [
  "num-bigint",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "starknet-rs"
+version = "0.1.0"
+dependencies = [
+ "cairo-rs",
+ "num-bigint",
 ]
 
 [[package]]
