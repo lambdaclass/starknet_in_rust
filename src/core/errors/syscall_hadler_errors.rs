@@ -10,4 +10,8 @@ pub enum SyscallHandlerError {
     MissingSelector,
     #[error("Missing file syscalls.json")]
     MissingSyscallsJsonFile,
+    #[error("Unknown syscall")]
+    UnknownSyscall,
+    #[error("invalid pointer")]
+    SegmentationFault,
 }

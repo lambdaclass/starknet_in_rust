@@ -2,7 +2,7 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
-use crate::core::syscall_info::*;
+use crate::core::syscall_request::*;
 
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -18,7 +18,10 @@ use num_bigint::BigInt;
 const DEPLOY_SYSCALL_CODE: &str =
     "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
-pub struct CairoStructProxy;
+pub struct OrderedEvent{
+    keys: Vec<BigInt>,
+    data: Vec<BigInt>,
+}
 
 pub struct SyscallHintProcessor<H: SyscallHandler> {
     builtin_hint_processor: BuiltinHintProcessor,
@@ -127,7 +130,11 @@ fn get_ids_data(
 }
 
 pub trait SyscallHandler {
-    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
+    fn emit_event(
+        &self,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
@@ -136,7 +143,7 @@ pub trait SyscallHandler {
         syscall_name: &str,
         vm: VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> CairoStructProxy;
+    ) -> Result<SyscallRequest, SyscallHandlerError>;
     fn _call_contract(
         &self,
         syscall_name: &str,
@@ -148,30 +155,46 @@ pub trait SyscallHandler {
     fn _storage_read(&self, address: i32) -> i32;
     fn _storage_write(&self, address: i32, value: i32);
     fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable;
+    
+    fn read_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
+            _ => Err(SyscallHandlerError::UnknownSyscall),
+        }
+    }
 }
 
 struct OsSyscallHandler {}
 
 pub struct BusinessLogicSyscallHandler {
-    syscalls_info: HashMap<String, SyscallInfo>,
+    // syscalls_info: HashMap<String, SyscallInfo>,
 }
 
 impl BusinessLogicSyscallHandler {
     pub fn new() -> Result<Self, SyscallHandlerError> {
-        let identifiers = program_json()?.identifiers;
-
-        let mut syscalls_info: HashMap<String, SyscallInfo> = HashMap::new();
-        let emit_event = SyscallInfo::emit_event(&identifiers)?;
-
-        syscalls_info.insert("emit_event".to_string(), emit_event);
-
-        Ok(BusinessLogicSyscallHandler { syscalls_info })
+        Ok(BusinessLogicSyscallHandler {})
     }
 }
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
-    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
-        todo!()
+    // trait functions
+    fn emit_event(
+        &self,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let SyscallRequest::EmitEvent(request) =
+            self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?;
+
+        let keys = vm.get_integer_range(&request.keys, request.keys_len);
+        let data = vm.get_integer_range(&request.data, request.data_len);
+
+        Ok(())
     }
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
         todo!()
@@ -188,8 +211,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         syscall_name: &str,
         vm: VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> CairoStructProxy {
-        todo!()
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        //self._count_syscall(syscall_name);
+
+        self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
     fn _call_contract(
         &self,
