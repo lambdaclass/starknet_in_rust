@@ -52,7 +52,14 @@ impl<V> PatriciaMerkleTree<V> {
     ///
     /// Returns the removed value.
     pub fn remove(&mut self, key: &[u8; 32]) -> Option<V> {
-        todo!()
+        if let Some(root_node) = self.root_node.take() {
+            let (root_node, old_value) = root_node.remove(key, 0);
+            self.root_node = root_node;
+
+            old_value
+        } else {
+            None
+        }
     }
 }
 
@@ -102,6 +109,14 @@ impl<V> Node<V> {
                 let (new_node, old_value) = leaf_node.insert(key, value, current_key_offset);
                 (new_node, old_value)
             }
+        }
+    }
+
+    fn remove(self, key: &[u8; 32], current_key_offset: usize) -> (Option<Self>, Option<V>) {
+        match self {
+            Node::Branch(branch_node) => branch_node.remove(key, current_key_offset),
+            Node::Extension(extension_node) => extension_node.remove(key, current_key_offset),
+            Node::Leaf(leaf_node) => leaf_node.remove(key, current_key_offset),
         }
     }
 }
@@ -165,6 +180,58 @@ impl<V> BranchNode<V> {
         );
 
         (self, old_value)
+    }
+
+    fn remove(mut self, key: &[u8; 32], current_key_offset: usize) -> (Option<Node<V>>, Option<V>) {
+        let index = KeySegmentIterator::new(key)
+            .nth(current_key_offset)
+            .unwrap() as usize;
+
+        match self.choices[index].take() {
+            Some(mut child_node) => {
+                let (new_child, old_value) = child_node.remove(key, current_key_offset + 1);
+                if let Some(new_child) = new_child {
+                    *child_node = new_child;
+                    self.choices[index] = Some(child_node);
+                }
+
+                let mut single_child = None;
+                for child in self.choices.iter_mut() {
+                    if child.is_none() {
+                        continue;
+                    }
+
+                    match single_child {
+                        Some(_) => return (Some(self.into()), old_value),
+                        None => single_child = Some(child),
+                    }
+                }
+
+                (
+                    match single_child {
+                        Some(x) => match x.take() {
+                            Some(x) => Some(*x),
+                            None => unreachable!(),
+                        },
+                        None => None,
+                    },
+                    old_value,
+                )
+            }
+            None => (Some(self.into()), None),
+        }
+
+        // match self.choices[KeySegmentIterator::new(key)
+        //     .nth(current_key_offset)
+        //     .unwrap() as usize]
+        //     .take()
+        // {
+        //     Some(child_node) => {
+        //         let mut (new_child) = child_node.remove(key, current_key_offset);
+
+        //     }
+        //     None => (Some(self.into()), None),
+        // }
     }
 }
 
@@ -262,6 +329,29 @@ impl<V> ExtensionNode<V> {
             }
         }
     }
+
+    fn remove(mut self, key: &[u8; 32], current_key_offset: usize) -> (Option<Node<V>>, Option<V>) {
+        let (new_child, old_value) = self
+            .child
+            .remove(key, current_key_offset + self.prefix.len());
+
+        (
+            match new_child {
+                Some(Node::Branch(branch_node)) => {
+                    self.child = branch_node;
+                    Some(self.into())
+                }
+                Some(Node::Extension(extension_node)) => {
+                    self.prefix.extend(extension_node.prefix.into_iter());
+                    self.child = extension_node.child;
+                    Some(self.into())
+                }
+                Some(Node::Leaf(leaf_node)) => Some(leaf_node.into()),
+                None => None,
+            },
+            old_value,
+        )
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -318,6 +408,14 @@ impl<V> LeafNode<V> {
                 swap(&mut value, &mut self.value);
                 (self.into(), Some(value))
             }
+        }
+    }
+
+    fn remove(self, key: &[u8; 32], current_key_offset: usize) -> (Option<Node<V>>, Option<V>) {
+        if *key == self.key {
+            (None, Some(self.value))
+        } else {
+            (Some(self.into()), None)
         }
     }
 }
@@ -770,6 +868,82 @@ mod test {
     }
 
     // TODO: Design and implement tests for `PatriciaMerkleTree::remove()`.
+    #[test]
+    fn patricia_tree_remove_root() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            leaf { key_a => () }
+        };
+
+        assert_eq!(pm_tree.remove(&key_b), None);
+        assert_eq!(pm_tree.remove(&key_a), Some(()));
+        assert_eq!(pm_tree, pm_tree!());
+    }
+
+    #[test]
+    fn patricia_tree_remove_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+            }
+        };
+
+        assert_eq!(pm_tree.remove(&key_a), Some(()));
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                leaf { key_b => () }
+            }
+        );
+    }
+
+    #[test]
+    fn patricia_tree_remove_last_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+            }
+        };
+
+        assert_eq!(pm_tree.remove(&key_a), Some(()));
+        assert_eq!(pm_tree.remove(&key_b), Some(()));
+        assert_eq!(pm_tree, pm_tree!());
+    }
+
+    #[test]
+    fn patricia_tree_remove_extension() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            extension { "0", branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+            } }
+        };
+
+        assert_eq!(pm_tree.remove(&key_a), Some(()));
+        assert_eq!(pm_tree.remove(&key_b), Some(()));
+        assert_eq!(pm_tree, pm_tree!());
+    }
 
     #[test]
     fn key_segment_iterator() {
