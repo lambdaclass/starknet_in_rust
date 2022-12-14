@@ -220,18 +220,6 @@ impl<V> BranchNode<V> {
             }
             None => (Some(self.into()), None),
         }
-
-        // match self.choices[KeySegmentIterator::new(key)
-        //     .nth(current_key_offset)
-        //     .unwrap() as usize]
-        //     .take()
-        // {
-        //     Some(child_node) => {
-        //         let mut (new_child) = child_node.remove(key, current_key_offset);
-
-        //     }
-        //     None => (Some(self.into()), None),
-        // }
     }
 }
 
@@ -420,13 +408,15 @@ impl<V> LeafNode<V> {
     }
 }
 
-struct KeySegmentIterator<T> {
-    data: T,
+/// `KECCAK256` key nibble iterator.
+struct KeySegmentIterator<'a> {
+    data: &'a [u8; 32],
     pos: usize,
     half: bool,
 }
 
-impl<'a> KeySegmentIterator<&'a [u8; 32]> {
+impl<'a> KeySegmentIterator<'a> {
+    /// Create a new nibble iterator.
     pub fn new(data: &'a [u8; 32]) -> Self {
         Self {
             data,
@@ -436,7 +426,7 @@ impl<'a> KeySegmentIterator<&'a [u8; 32]> {
     }
 }
 
-impl<'a> Iterator for KeySegmentIterator<&'a [u8; 32]> {
+impl<'a> Iterator for KeySegmentIterator<'a> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -462,6 +452,7 @@ impl<'a> Iterator for KeySegmentIterator<&'a [u8; 32]> {
 mod test {
     use super::*;
 
+    /// Create a new Patricia Merkle tree key.
     macro_rules! pm_tree_key {
         ( $key:literal ) => {{
             assert_eq!($key.len(), 64);
@@ -477,23 +468,28 @@ mod test {
         }};
     }
 
+    /// Create a new Patricia Merkle Tree.
     macro_rules! pm_tree {
+        // Create an empty tree (with deduced value type).
         () => {
             PatriciaMerkleTree {
                 root_node: None,
             }
         };
+        // Create an empty tree (with explicit value type).
         ( < $t:ty > ) => {
             PatriciaMerkleTree::<$t> {
                 root_node: None,
             }
         };
+        // Create a new tree.
         ( $type:ident { $( $root_node:tt )* } ) => {
             PatriciaMerkleTree {
                 root_node: Some(pm_tree!(@parse $type { $( $root_node )* }).into()),
             }
         };
 
+        // Internal.
         ( @parse branch { $( $key:literal => $type:ident { $( $node:tt )* } ),* $(,)? } ) => {
             BranchNode {
                 choices: {
@@ -503,6 +499,7 @@ mod test {
                 },
             }
         };
+        // Internal.
         ( @parse extension { $prefix:literal, $type:ident { $( $node:tt )* } } ) => {
             ExtensionNode {
                 prefix: {
@@ -517,6 +514,7 @@ mod test {
                 child: pm_tree!(@parse $type { $( $node )* }).into(),
             }
         };
+        // Internal.
         ( @parse leaf { $key:expr => $value:expr } ) => {
             LeafNode {
                 key: $key,
@@ -537,6 +535,7 @@ mod test {
         assert!(pm_tree!(<()>).is_empty());
     }
 
+    /// Test that `PatriciaMerkleTree::get()` works when the tree is empty.
     #[test]
     fn patricia_tree_get_empty() {
         let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
@@ -545,6 +544,7 @@ mod test {
         assert_eq!(pm_tree.get(&key).copied(), None);
     }
 
+    /// Test that `PatriciaMerkleTree::get()` works across with leaf nodes.
     #[test]
     fn patricia_tree_get_leaf() {
         let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
@@ -555,6 +555,7 @@ mod test {
         assert_eq!(pm_tree.get(&key).copied(), Some(42));
     }
 
+    /// Test that `PatriciaMerkleTree::get()` works across extension nodes.
     #[test]
     fn patricia_tree_get_extension() {
         let key_a =
@@ -579,6 +580,7 @@ mod test {
         assert_eq!(pm_tree.get(&key_d).copied(), None);
     }
 
+    /// Test that `PatriciaMerkleTree::get()` works across branch nodes.
     #[test]
     fn patricia_tree_get_branch() {
         let key_a =
@@ -867,7 +869,7 @@ mod test {
         );
     }
 
-    // TODO: Design and implement tests for `PatriciaMerkleTree::remove()`.
+    /// Test that `PatriciaMerkleTree::remove()` removes the root node.
     #[test]
     fn patricia_tree_remove_root() {
         let key_a =
@@ -884,6 +886,7 @@ mod test {
         assert_eq!(pm_tree, pm_tree!());
     }
 
+    /// Test that `PatriciaMerkleTree::remove()` removes branch nodes' children.
     #[test]
     fn patricia_tree_remove_branch() {
         let key_a =
@@ -907,6 +910,7 @@ mod test {
         );
     }
 
+    /// Test that `PatriciaMerkleTree::remove()` removes branch nodes.
     #[test]
     fn patricia_tree_remove_last_branch() {
         let key_a =
@@ -926,6 +930,7 @@ mod test {
         assert_eq!(pm_tree, pm_tree!());
     }
 
+    /// Test that `PatriciaMerkleTree::remove()` removes extension nodes.
     #[test]
     fn patricia_tree_remove_extension() {
         let key_a =
@@ -945,6 +950,7 @@ mod test {
         assert_eq!(pm_tree, pm_tree!());
     }
 
+    /// Test that `KeySegmentIterator` works as intended.
     #[test]
     fn key_segment_iterator() {
         let key = pm_tree_key!("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
