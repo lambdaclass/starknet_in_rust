@@ -243,30 +243,27 @@ impl<V> ExtensionNode<V> {
             .zip(self.prefix.iter().copied())
             .find_map(|((idx, a), b)| (a != b).then_some((idx, a, b)))
         {
-            Some((prefix_len, value_b, value_a)) => {
+            Some((prefix_len, value_b, value_a)) => (
                 if prefix_len == 0 {
                     self.prefix.remove(0);
 
-                    (
-                        BranchNode {
-                            choices: {
-                                let mut choices: [Option<Box<Node<V>>>; 16] = Default::default();
+                    BranchNode {
+                        choices: {
+                            let mut choices: [Option<Box<Node<V>>>; 16] = Default::default();
 
-                                choices[value_a as usize] = Some(Box::new(self.into()));
-                                choices[value_b as usize] = Some(Box::new(
-                                    LeafNode {
-                                        key: key.to_owned(),
-                                        value,
-                                    }
-                                    .into(),
-                                ));
+                            choices[value_a as usize] = Some(Box::new(self.into()));
+                            choices[value_b as usize] = Some(Box::new(
+                                LeafNode {
+                                    key: key.to_owned(),
+                                    value,
+                                }
+                                .into(),
+                            ));
 
-                                choices
-                            },
-                        }
-                        .into(),
-                        None,
-                    )
+                            choices
+                        },
+                    }
+                    .into()
                 } else {
                     let branch_node = BranchNode {
                         choices: {
@@ -296,16 +293,14 @@ impl<V> ExtensionNode<V> {
                     };
 
                     self.prefix.truncate(prefix_len);
-                    (
-                        ExtensionNode {
-                            prefix: self.prefix,
-                            child: branch_node,
-                        }
-                        .into(),
-                        None,
-                    )
-                }
-            }
+                    ExtensionNode {
+                        prefix: self.prefix,
+                        child: branch_node,
+                    }
+                    .into()
+                },
+                None,
+            ),
             None => {
                 let old_value;
                 (self.child, old_value) =
