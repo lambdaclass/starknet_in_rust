@@ -1,3 +1,11 @@
+//! # Patricia Merkle Tree
+//!
+//! This module implements a Patricia Merkle tree. Hashing is done externally to
+//! keep different modules separated and ease testing.
+//!
+//! By default, values are stored in memory. If storage is required, the value
+//! can be made to be a pointer to the item in the storage.
+
 use std::mem::swap;
 
 /// Patricia Merkle Tree implementation.
