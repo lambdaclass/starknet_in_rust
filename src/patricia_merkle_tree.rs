@@ -154,47 +154,37 @@ struct BranchNode<V> {
 
 impl<V> BranchNode<V> {
     fn get(&self, key: &[u8; 32], current_key_offset: usize) -> Option<&V> {
-        self.choices[KeySegmentIterator::new(key)
-            .nth(current_key_offset)
-            .unwrap() as usize]
+        self.choices[KeySegmentIterator::nth(key, current_key_offset) as usize]
             .as_ref()
             .and_then(|node| node.get(key, current_key_offset + 1))
     }
 
     fn insert(mut self, key: &[u8; 32], value: V, current_key_offset: usize) -> (Self, Option<V>) {
         let mut old_value = None;
-        self.choices[KeySegmentIterator::new(key)
-            .nth(current_key_offset)
-            .unwrap() as usize] = Some(
-            match self.choices[KeySegmentIterator::new(key)
-                .nth(current_key_offset)
-                .unwrap() as usize]
-                .take()
-            {
-                Some(mut x) => {
-                    let new_node;
-                    (new_node, old_value) = x.insert(key, value, current_key_offset + 1);
-                    *x = new_node;
-                    x
+        self.choices[KeySegmentIterator::nth(key, current_key_offset) as usize] = Some(match self
+            .choices[KeySegmentIterator::nth(key, current_key_offset) as usize]
+            .take()
+        {
+            Some(mut x) => {
+                let new_node;
+                (new_node, old_value) = x.insert(key, value, current_key_offset + 1);
+                *x = new_node;
+                x
+            }
+            None => Box::new(
+                LeafNode {
+                    key: key.to_owned(),
+                    value,
                 }
-                None => Box::new(
-                    LeafNode {
-                        key: key.to_owned(),
-                        value,
-                    }
-                    .into(),
-                ),
-            },
-        );
+                .into(),
+            ),
+        });
 
         (self, old_value)
     }
 
     fn remove(mut self, key: &[u8; 32], current_key_offset: usize) -> (Option<Node<V>>, Option<V>) {
-        let index = KeySegmentIterator::new(key)
-            .nth(current_key_offset)
-            .unwrap() as usize;
-
+        let index = KeySegmentIterator::nth(key, current_key_offset) as usize;
         match self.choices[index].take() {
             Some(mut child_node) => {
                 let (new_child, old_value) = child_node.remove(key, current_key_offset + 1);
@@ -432,6 +422,15 @@ impl<'a> KeySegmentIterator<'a> {
             half: false,
         }
     }
+
+    /// Shortcut to the `nth()` method of a new iterator.
+    ///
+    /// Panics when n is out of the range [0, 64).
+    pub fn nth(data: &'a [u8; 32], n: usize) -> u8 {
+        KeySegmentIterator::new(data)
+            .nth(n)
+            .expect("Key index out of range, value should be in [0, 64).")
+    }
 }
 
 impl<'a> Iterator for KeySegmentIterator<'a> {
@@ -463,11 +462,14 @@ mod test {
     /// Create a new Patricia Merkle tree key.
     macro_rules! pm_tree_key {
         ( $key:literal ) => {{
-            assert_eq!($key.len(), 64);
+            assert_eq!($key.len(), 64, "Tree keys must be 64 nibbles in length.");
             let key: [u8; 32] = $key
                 .as_bytes()
                 .chunks_exact(2)
-                .map(|x| u8::from_str_radix(std::str::from_utf8(x).unwrap(), 16).unwrap())
+                .map(|x| {
+                    u8::from_str_radix(std::str::from_utf8(x).unwrap(), 16)
+                        .expect("Key contains non-hexadecimal characters.")
+                })
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
@@ -514,7 +516,11 @@ mod test {
                     let value = $prefix
                         .as_bytes()
                         .into_iter()
-                        .map(|x| (*x as char).to_digit(16).unwrap() as u8)
+                        .map(|x| {
+                            (*x as char)
+                                .to_digit(16)
+                                .expect("Prefix contains non-hexadecimal characters.") as u8
+                        })
                         .collect::<Vec<u8>>();
 
                     value
