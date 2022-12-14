@@ -8,4 +8,7 @@ edition = "2021"
 [dependencies]
 cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs" }
 num-bigint = { version = "0.4", features = ["serde"] }
-
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+thiserror = { version = "1.0.32" }
+num-traits = "0.2.15"
+num-integer = "0.1.45"

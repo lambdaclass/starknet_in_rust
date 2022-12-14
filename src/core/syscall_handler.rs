@@ -1,6 +1,9 @@
 use std::any::Any;
 use std::collections::HashMap;
 
+use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
+use crate::core::syscall_info::*;
+
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -23,11 +26,12 @@ pub struct SyscallHintProcessor<H: SyscallHandler> {
 }
 
 impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
-    pub fn new_empty() -> SyscallHintProcessor<BusinessLogicSyscallHandler> {
-        SyscallHintProcessor {
+    pub fn new_empty(
+    ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
+        Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler,
-        }
+            syscall_handler: BusinessLogicSyscallHandler::new()?,
+        })
     }
 }
 impl<H: SyscallHandler> SyscallHintProcessor<H> {
@@ -123,7 +127,7 @@ fn get_ids_data(
 }
 
 pub trait SyscallHandler {
-    fn emit_message(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
+    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
@@ -148,10 +152,25 @@ pub trait SyscallHandler {
 
 struct OsSyscallHandler {}
 
-pub struct BusinessLogicSyscallHandler;
+pub struct BusinessLogicSyscallHandler {
+    syscalls_info: HashMap<String, SyscallInfo>,
+}
+
+impl BusinessLogicSyscallHandler {
+    pub fn new() -> Result<Self, SyscallHandlerError> {
+        let identifiers = program_json()?.identifiers;
+
+        let mut syscalls_info: HashMap<String, SyscallInfo> = HashMap::new();
+        let emit_event = SyscallInfo::emit_event(&identifiers)?;
+
+        syscalls_info.insert("emit_event".to_string(), emit_event);
+
+        Ok(BusinessLogicSyscallHandler { syscalls_info })
+    }
+}
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
-    fn emit_message(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
+    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
         todo!()
     }
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
