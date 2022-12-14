@@ -23,7 +23,6 @@ venv-test:
 	. starknet-in-rs-venv/bin/activate && \
 	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json
 	cargo test
-	deactivate
 
 test:
 	cargo test
