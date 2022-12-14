@@ -19,12 +19,19 @@ impl<V> PatriciaMerkleTree<V> {
         self.root_node.is_none()
     }
 
+    /// Retrieves a value given its key.
+    pub fn get(&self, key: &[u8; 32]) -> Option<&V> {
+        self.root_node
+            .as_ref()
+            .and_then(|root_node| root_node.get(key, 0))
+    }
+
     /// Insert a key-value into the tree.
     ///
     /// Overwrites and returns the previous value.
     pub fn insert(&mut self, key: &[u8; 32], value: V) -> Option<V> {
         if let Some(root_node) = self.root_node.take() {
-            let (root_node, old_value) = root_node.insert(key, value);
+            let (root_node, old_value) = root_node.insert(key, value, 0);
             self.root_node = Some(root_node);
 
             old_value
@@ -47,11 +54,6 @@ impl<V> PatriciaMerkleTree<V> {
     pub fn remove(&mut self, key: &[u8; 32]) -> Option<V> {
         todo!()
     }
-
-    /// Retrieves a value given its key.
-    pub fn get(&self, key: &[u8; 32]) -> Option<V> {
-        todo!()
-    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -62,16 +64,31 @@ enum Node<V> {
 }
 
 impl<V> Node<V> {
-    pub fn insert(self, key: &[u8; 32], value: V) -> (Self, Option<V>) {
-        self.insert_inner(key, value, 0)
+    pub fn get(&self, key: &[u8; 32], current_key_offset: usize) -> Option<&V> {
+        match self {
+            Node::Branch(branch_node) => return branch_node.get(key, current_key_offset),
+            Node::Extension(extension_node) => {
+                if KeySegmentIterator::new(key)
+                    .skip(current_key_offset)
+                    .zip(extension_node.prefix.iter().copied())
+                    .all(|(a, b)| a == b)
+                {
+                    return extension_node
+                        .child
+                        .get(key, current_key_offset + extension_node.prefix.len());
+                }
+            }
+            Node::Leaf(leaf_node) => {
+                if leaf_node.key == *key {
+                    return Some(&leaf_node.value);
+                }
+            }
+        }
+
+        None
     }
 
-    fn insert_inner(
-        self,
-        key: &[u8; 32],
-        value: V,
-        current_key_offset: usize,
-    ) -> (Self, Option<V>) {
+    fn insert(self, key: &[u8; 32], value: V, current_key_offset: usize) -> (Self, Option<V>) {
         match self {
             Node::Branch(branch_node) => {
                 let (new_node, old_value) = branch_node.insert(key, value, current_key_offset);
@@ -113,6 +130,14 @@ struct BranchNode<V> {
 }
 
 impl<V> BranchNode<V> {
+    fn get(&self, key: &[u8; 32], current_key_offset: usize) -> Option<&V> {
+        self.choices[KeySegmentIterator::new(key)
+            .nth(current_key_offset)
+            .unwrap() as usize]
+            .as_ref()
+            .and_then(|node| node.get(key, current_key_offset + 1))
+    }
+
     fn insert(mut self, key: &[u8; 32], value: V, current_key_offset: usize) -> (Self, Option<V>) {
         let mut old_value = None;
         self.choices[KeySegmentIterator::new(key)
@@ -125,7 +150,7 @@ impl<V> BranchNode<V> {
             {
                 Some(mut x) => {
                     let new_node;
-                    (new_node, old_value) = x.insert_inner(key, value, current_key_offset + 1);
+                    (new_node, old_value) = x.insert(key, value, current_key_offset + 1);
                     *x = new_node;
                     x
                 }
@@ -414,6 +439,69 @@ mod test {
         assert!(pm_tree!(<()>).is_empty());
     }
 
+    #[test]
+    fn patricia_tree_get_empty() {
+        let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let pm_tree = pm_tree!(<()>);
+
+        assert_eq!(pm_tree.get(&key).copied(), None);
+    }
+
+    #[test]
+    fn patricia_tree_get_leaf() {
+        let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let pm_tree = pm_tree! {
+            leaf { key => 42 }
+        };
+
+        assert_eq!(pm_tree.get(&key).copied(), Some(42));
+    }
+
+    #[test]
+    fn patricia_tree_get_extension() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0001000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("0002000000000000000000000000000000000000000000000000000000000000");
+        let key_d =
+            pm_tree_key!("0200000000000000000000000000000000000000000000000000000000000000");
+
+        let pm_tree = pm_tree! {
+            extension { "000", branch {
+                0 => leaf { key_a => 42 },
+                1 => leaf { key_b => 43 },
+            } }
+        };
+
+        assert_eq!(pm_tree.get(&key_a).copied(), Some(42));
+        assert_eq!(pm_tree.get(&key_b).copied(), Some(43));
+        assert_eq!(pm_tree.get(&key_c).copied(), None);
+        assert_eq!(pm_tree.get(&key_d).copied(), None);
+    }
+
+    #[test]
+    fn patricia_tree_get_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("2000000000000000000000000000000000000000000000000000000000000000");
+
+        let pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => 42 },
+                1 => leaf { key_b => 43 },
+            }
+        };
+
+        assert_eq!(pm_tree.get(&key_a).copied(), Some(42));
+        assert_eq!(pm_tree.get(&key_b).copied(), Some(43));
+        assert_eq!(pm_tree.get(&key_c).copied(), None);
+    }
+
     /// Test that `PatriciaMerkleTree::insert()` works when the tree is empty.
     #[test]
     fn patricia_tree_insert_empty() {
@@ -682,7 +770,6 @@ mod test {
     }
 
     // TODO: Design and implement tests for `PatriciaMerkleTree::remove()`.
-    // TODO: Design and implement tests for `PatriciaMerkleTree::get()`.
 
     #[test]
     fn key_segment_iterator() {
