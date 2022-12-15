@@ -56,11 +56,11 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
 
     fn execute_syscall_hint(
         &self,
-        _vm: &mut VirtualMachine,
+        vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         _constants: &HashMap<String, BigInt>,
-    ) -> Result<(), VirtualMachineError> {
+    ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
             .ok_or(VirtualMachineError::WrongHintData)?;
@@ -68,9 +68,12 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         match &*hint_data.code {
             DEPLOY_SYSCALL_CODE => {
                 println!("Running deploy syscall.");
-                Err(VirtualMachineError::NotImplemented)
+                Err(SyscallHandlerError::NotImplemented)
             }
-            _ => Err(VirtualMachineError::NotImplemented),
+            EMIT_EVENT_CODE => {
+                self.syscall_handler.emit_event(&vm, hint_data.ap_tracking)
+            }
+            _ => Err(SyscallHandlerError::NotImplemented),
         }
     }
 }
