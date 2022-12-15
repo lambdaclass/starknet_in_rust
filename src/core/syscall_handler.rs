@@ -1,6 +1,5 @@
 use std::any::Any;
 use std::collections::HashMap;
-use std::option::Iter;
 
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -130,12 +129,12 @@ fn get_ids_data(
 pub trait SyscallHandler {}
 
 #[derive(Clone)]
-struct CallInfo<'a> {
+struct CallInfo<T: Iterator<Item = u32>> {
     caller_address: u32,
     contract_address: u32,
-    internal_calls: Vec<CallInfo<'a>>,
+    internal_calls: Vec<CallInfo<T>>,
     entry_point_type: Option<EntryPointType>,
-    storage_read_values: Iter<'a, u32>,
+    storage_read_values: T, // U32
     retadata: Vec<u32>,
 }
 
@@ -164,20 +163,26 @@ impl OsSingleStarknetStorage {
     }
 }
 
-struct OsSyscallHandler<'a> {
-    tx_execution_info_iterator: Box<dyn Iterator<Item = TransactionExecutionInfo>>,
-    call_iterator: Box<dyn Iterator<Item = CallInfo<'a>>>,
+struct OsSyscallHandler<
+    T: Iterator<Item = u32>,
+    G: Iterator<Item = CallInfo<T>>,
+    Z: Iterator<Item = TransactionExecutionInfo>,
+    X: Iterator<Item = Vec<u32>>,
+> {
+    tx_execution_info_iterator: Z, //TRANSACTION EXECUTION INFO
+    call_iterator: G,              // CALLINFO
+
     //  A stack that keeps track of the state of the calls being executed now.
     // The last item is the state of the current call; the one before it, is the
     // state of the caller (the call the called the current call); and so on.
-    call_stack: Vec<CallInfo<'a>>,
+    call_stack: Vec<CallInfo<T>>,
     // An iterator over contract addresses that were deployed during that call.
-    deployed_contracts_iterator: Box<dyn Iterator<Item = u32>>,
+    deployed_contracts_iterator: T, // U32
     // An iterator to the retdata of its internal calls.
-    retdata_iterator: Box<dyn Iterator<Item = Vec<u32>>>,
+    retdata_iterator: X, //VEC<U32>
     // An iterator to the read_values array which is consumed when the transaction
     // code is executed.
-    execute_code_read_iterator: Box<dyn Iterator<Item = u32>>,
+    execute_code_read_iterator: T, //u32
     // StarkNet storage members.
     starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
     // A pointer to the Cairo TxInfo struct.
@@ -189,7 +194,13 @@ struct OsSyscallHandler<'a> {
     tx_execution_info: Option<TransactionExecutionInfo>,
 }
 
-impl OsSyscallHandler<'_> {
+impl<
+        T: Iterator<Item = u32>,
+        G: Iterator<Item = CallInfo<T>>,
+        Z: Iterator<Item = TransactionExecutionInfo>,
+        X: Iterator<Item = Vec<u32>>,
+    > OsSyscallHandler<T, G, Z, X>
+{
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), StarknetError> {
@@ -260,7 +271,7 @@ impl OsSyscallHandler<'_> {
         Ok(())
     }
 
-    fn exit_call(&mut self) -> Result<Option<CallInfo>, StarknetError> {
+    fn exit_call(&mut self) -> Result<Option<CallInfo<T>>, StarknetError> {
         self.assert_interators_exhausted()?;
         Ok(self.call_stack.pop())
     }
@@ -337,24 +348,20 @@ impl OsSyscallHandler<'_> {
             .ok_or(StarknetError::IteratorEmpty)?;
         self.call_stack.push(call_info);
 
-        self.deployed_contracts_iterator = Box::new(
-            call_info
-                .internal_calls
-                .iter()
-                .filter(|call_info_internal| {
-                    call_info_internal.entry_point_type == Some(EntryPointType::Constructor)
-                })
-                .map(|call_info_internal| call_info_internal.contract_address)
-                .into_iter(),
-        );
+        self.deployed_contracts_iterator = call_info
+            .internal_calls
+            .iter()
+            .filter(|call_info_internal| {
+                call_info_internal.entry_point_type == Some(EntryPointType::Constructor)
+            })
+            .map(|call_info_internal| call_info_internal.contract_address)
+            .into_iter();
 
-        self.retdata_iterator = Box::new(
-            call_info
-                .internal_calls
-                .iter()
-                .map(|call_info_internal| call_info_internal.retadata.clone())
-                .into_iter(),
-        );
+        self.retdata_iterator = call_info
+            .internal_calls
+            .iter()
+            .map(|call_info_internal| call_info_internal.retadata.clone())
+            .into_iter();
 
         self.execute_code_read_iterator = call_info.storage_read_values;
 
