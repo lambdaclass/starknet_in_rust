@@ -69,6 +69,13 @@ impl<V> PatriciaMerkleTree<V> {
             None
         }
     }
+
+    pub fn iter(&self) -> TreeIterator<V> {
+        match &self.root_node {
+            Some(root_node) => TreeIterator::new(root_node),
+            None => TreeIterator::new_empty(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -124,7 +131,7 @@ impl<V> Node<V> {
         match self {
             Node::Branch(branch_node) => branch_node.remove(key, current_key_offset),
             Node::Extension(extension_node) => extension_node.remove(key, current_key_offset),
-            Node::Leaf(leaf_node) => leaf_node.remove(key, current_key_offset),
+            Node::Leaf(leaf_node) => leaf_node.remove(key),
         }
     }
 }
@@ -392,7 +399,7 @@ impl<V> LeafNode<V> {
         }
     }
 
-    fn remove(self, key: &[u8; 32], current_key_offset: usize) -> (Option<Node<V>>, Option<V>) {
+    fn remove(self, key: &[u8; 32]) -> (Option<Node<V>>, Option<V>) {
         if *key == self.key {
             (None, Some(self.value))
         } else {
@@ -447,6 +454,97 @@ impl<'a> Iterator for KeySegmentIterator<'a> {
 
         self.half = !self.half;
         Some(value)
+    }
+}
+
+/// Node reference for the (public) tree iterator.
+///
+/// The `Node<V>` enum can't be used because it doesn't have an `Empty` variant, and by having the
+/// three variants instead of a single `Node<V>`, special cases such as the `ExtensionNode`'s child
+/// can be handled appropiately as well.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+enum NodeRef<'a, V> {
+    Empty,
+    Branch(&'a BranchNode<V>),
+    Extension(&'a ExtensionNode<V>),
+    Leaf(&'a LeafNode<V>),
+}
+
+impl<'a, V> From<&'a Node<V>> for NodeRef<'a, V> {
+    fn from(value: &'a Node<V>) -> Self {
+        match value {
+            Node::Branch(x) => NodeRef::Branch(x),
+            Node::Extension(x) => NodeRef::Extension(x),
+            Node::Leaf(x) => NodeRef::Leaf(x),
+        }
+    }
+}
+
+/// Public tree iterator.
+///
+/// The iterator returns a new iterator for each child in a node. Leaf nodes won't have any children
+/// and its contained value may be extracted using `TreeIterator::extract`. Any other node types
+/// will have at least one child.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct TreeIterator<'a, V> {
+    node: NodeRef<'a, V>,
+    state: usize,
+}
+
+impl<'a, V> TreeIterator<'a, V> {
+    /// Create a tree iterator from a node.
+    fn new(node: impl Into<NodeRef<'a, V>>) -> Self {
+        Self {
+            node: node.into(),
+            state: 0,
+        }
+    }
+
+    /// Create an empty tree iterator. Only used when the tree is empty.
+    fn new_empty() -> Self {
+        Self {
+            node: NodeRef::Empty,
+            state: 0,
+        }
+    }
+
+    /// If the node is a leaf, then extract its value.
+    pub fn extract(&self) -> Option<(&[u8; 32], &V)> {
+        match self.node {
+            NodeRef::Leaf(leaf_node) => Some((&leaf_node.key, &leaf_node.value)),
+            _ => None,
+        }
+    }
+}
+
+impl<'a, V> Iterator for TreeIterator<'a, V> {
+    type Item = Self;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.node {
+            NodeRef::Branch(branch_node) => match self.state {
+                index if index < branch_node.choices.len() => loop {
+                    if let Some(child) = &branch_node.choices[index] {
+                        break Some(Self {
+                            node: child.as_ref().into(),
+                            state: 0,
+                        });
+                    }
+                },
+                _ => None,
+            },
+            NodeRef::Extension(extension_node) => match self.state {
+                0 => {
+                    self.state = 1;
+                    Some(Self {
+                        node: NodeRef::Branch(&extension_node.child),
+                        state: 0,
+                    })
+                }
+                _ => None,
+            },
+            _ => None,
+        }
     }
 }
 
