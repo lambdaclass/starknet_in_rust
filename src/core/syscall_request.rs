@@ -1,4 +1,4 @@
-use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::types::relocatable::Relocatable;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
@@ -8,6 +8,7 @@ pub(crate) enum SyscallRequest {
 }
 
 pub(crate) struct EmitEventStruct {
+    #[allow(unused)] // TODO: Remove once used.
     pub(crate) selector: BigInt,
     pub(crate) keys_len: BigInt,
     pub(crate) keys: Relocatable,
@@ -55,11 +56,11 @@ impl FromPtr for EmitEventStruct {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_integer(&vm, &(syscall_ptr))?;
-        let keys_len = get_integer(&vm, &(&syscall_ptr + 1))?;
-        let keys = get_relocatable(&vm, &(&syscall_ptr + 2))?;
-        let data_len = get_integer(&vm, &(&syscall_ptr + 3))?;
-        let data = get_relocatable(&vm, &(&syscall_ptr + 4))?;
+        let selector = get_integer(vm, &(syscall_ptr))?;
+        let keys_len = get_integer(vm, &(&syscall_ptr + 1))?;
+        let keys = get_relocatable(vm, &(&syscall_ptr + 2))?;
+        let data_len = get_integer(vm, &(&syscall_ptr + 3))?;
+        let data = get_relocatable(vm, &(&syscall_ptr + 4))?;
 
         Ok(EmitEventStruct {
             selector,

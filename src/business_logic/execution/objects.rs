@@ -1,8 +1,12 @@
 use num_bigint::BigInt;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedEvent {
+    #[allow(unused)] // TODO: remove once used
     order: u32,
+    #[allow(unused)] // TODO: remove once used
     keys: Vec<BigInt>,
+    #[allow(unused)] // TODO: remove once used
     data: Vec<BigInt>,
 }
 
