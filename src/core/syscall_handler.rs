@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::collections::HashMap;
+use std::option::Iter;
 
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -10,10 +11,13 @@ use cairo_rs::types::exec_scope::ExecutionScopes;
 use cairo_rs::types::relocatable::Relocatable;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
+use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
 use num_bigint::BigInt;
 
+use crate::errors::StarknetError;
 
-const DEPLOY_SYSCALL_CODE: &str = "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
+const DEPLOY_SYSCALL_CODE: &str =
+    "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
 pub struct SyscallHintProcessor<H: SyscallHandler> {
     builtin_hint_processor: BuiltinHintProcessor,
@@ -63,8 +67,8 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             DEPLOY_SYSCALL_CODE => {
                 println!("Running deploy syscall.");
                 Err(VirtualMachineError::NotImplemented)
-            },
-            _ => Err(VirtualMachineError::NotImplemented)
+            }
+            _ => Err(VirtualMachineError::NotImplemented),
         }
     }
 }
@@ -125,37 +129,95 @@ fn get_ids_data(
 
 pub trait SyscallHandler {}
 
-struct OsSyscallHandler {
-    tx_execution_info_iterator: Box<dyn Iterator<Item= usize>>,
-    call_iterator: Box<dyn Iterator<Item= usize>>,
+#[derive(Clone)]
+struct CallInfo<'a> {
+    caller_address: u32,
+    contract_address: u32,
+    internal_calls: Vec<CallInfo<'a>>,
+    entry_point_type: Option<EntryPointType>,
+    storage_read_values: Iter<'a, u32>,
+    retadata: Vec<u32>,
+}
+
+#[derive(PartialEq, Clone)]
+enum EntryPointType {
+    External,
+    L1Handler,
+    Constructor,
+}
+
+struct OsSingleStarknetStorage;
+
+pub struct BusinessLogicSyscallHandler;
+
+pub struct TransactionExecutionInfo;
+
+impl SyscallHandler for BusinessLogicSyscallHandler {}
+
+impl OsSingleStarknetStorage {
+    // Writes the given value in the given key in ongoing_storage_changes and returns the
+    // previous value. This value is needed to create the DictAccess while executing the
+    // corresponding storage_write system call.
+    fn write(&self, _key: u32, _value: u32) -> u32 {
+        // TO BE IMPLEMENTED
+        0
+    }
+}
+
+struct OsSyscallHandler<'a> {
+    tx_execution_info_iterator: Box<dyn Iterator<Item = TransactionExecutionInfo>>,
+    call_iterator: Box<dyn Iterator<Item = CallInfo<'a>>>,
     //  A stack that keeps track of the state of the calls being executed now.
     // The last item is the state of the current call; the one before it, is the
     // state of the caller (the call the called the current call); and so on.
-    call_stack: Vec<usize>,
+    call_stack: Vec<CallInfo<'a>>,
     // An iterator over contract addresses that were deployed during that call.
-    deployed_contracts_iterator: Box<dyn Iterator<Item= usize>>,
+    deployed_contracts_iterator: Box<dyn Iterator<Item = u32>>,
     // An iterator to the retdata of its internal calls.
-    retdata_iterator: Box<dyn Iterator<Item= usize>>,
+    retdata_iterator: Box<dyn Iterator<Item = Vec<u32>>>,
     // An iterator to the read_values array which is consumed when the transaction
     // code is executed.
-    execute_code_read_iterator: Box<dyn Iterator<Item= usize>>,
+    execute_code_read_iterator: Box<dyn Iterator<Item = u32>>,
     // StarkNet storage members.
-    starknet_storage_by_address: HashMap<usize, usize>,
+    starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
     // A pointer to the Cairo TxInfo struct.
     // This pointer needs to match the TxInfo pointer that is going to be used during the system
     // call validation by the StarkNet OS.
     // Set during enter_tx.
     tx_info_ptr: Option<Relocatable>,
     // The TransactionExecutionInfo for the transaction currently being executed.
-    tx_execution_info: Option<usize>,
+    tx_execution_info: Option<TransactionExecutionInfo>,
 }
 
-impl OsSyscallHandler {
-    fn skip_tx(&mut self) -> Option<usize> {
+impl OsSyscallHandler<'_> {
+    // Called when starting the execution of a transaction.
+    // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
+    fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), StarknetError> {
+        match self.tx_info_ptr {
+            None => (),
+            Some(_) => Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))?,
+        }
+
+        self.tx_info_ptr = Some(tx_info_ptr);
+
+        match self.tx_execution_info {
+            None => (),
+            Some(_) => Err(StarknetError::ShouldBeNone(String::from(
+                "tx_execution_info",
+            )))?,
+        }
+
+        self.tx_execution_info = self.tx_execution_info_iterator.next();
+        // TO BE IMPLEMENTED
+        // self.call_iterator = self.tx_execution_info.gen_call_iterator(); TO BE IMPLEMENTED
+        Ok(())
+    }
+
+    fn skip_tx(&mut self) -> Option<TransactionExecutionInfo> {
         self.tx_execution_info_iterator.next()
     }
 
-    fn _storage_read(&mut self) -> Option<usize> {
+    fn _storage_read(&mut self) -> Option<u32> {
         self.execute_code_read_iterator.next()
     }
 
@@ -163,19 +225,153 @@ impl OsSyscallHandler {
         self.tx_info_ptr
     }
 
-    fn _call_contract(&mut self) -> Option<usize> {
+    fn _call_contract(&mut self) -> Option<Vec<u32>> {
         self.retdata_iterator.next()
     }
 
-    fn _deploy(&mut self) -> Option<usize> {
-        // let constructor_retdata = self.retdata_iterator.next();
-        // assert len(constructor_retdata) == 0, "Unexpected constructor_retdata."
-        self.deployed_contracts_iterator.next()
+    fn _deploy(&mut self) -> Result<Option<u32>, StarknetError> {
+        let constructor_retdata = self.retdata_iterator.next().unwrap();
+        match constructor_retdata.len() {
+            0 => (),
+            _ => Err(StarknetError::UnexpectedConstructorRetdata)?,
+        }
+        Ok(self.deployed_contracts_iterator.next())
+    }
+
+    // Advance execute_code_read_iterators since the previous storage value is written
+    // in each write operation. See BusinessLogicSysCallHandler._storage_write().
+    fn _storage_write(&mut self) -> Option<u32> {
+        self.execute_code_read_iterator.next()
+    }
+
+    fn assert_interators_exhausted(&self) -> Result<(), StarknetError> {
+        match self.deployed_contracts_iterator.peekable().peek() {
+            None => (),
+            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
+        };
+        match self.retdata_iterator.peekable().peek() {
+            None => (),
+            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
+        };
+        match self.execute_code_read_iterator.peekable().peek() {
+            None => (),
+            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
+        };
+        Ok(())
+    }
+
+    fn exit_call(&mut self) -> Result<Option<CallInfo>, StarknetError> {
+        self.assert_interators_exhausted()?;
+        Ok(self.call_stack.pop())
+    }
+
+    fn _get_caller_address(self) -> Result<u32, StarknetError> {
+        match self.call_stack.last() {
+            None => Err(StarknetError::ListIsEmpty)?,
+            Some(call_info) => return Ok(call_info.caller_address),
+        }
+    }
+
+    fn _get_contract_address(self) -> Result<u32, StarknetError> {
+        match self.call_stack.last() {
+            None => Err(StarknetError::ListIsEmpty)?,
+            Some(call_info) => return Ok(call_info.contract_address),
+        }
+    }
+
+    /// Called after the execution of the current transaction complete.
+    fn end_tx(&mut self) -> Result<(), StarknetError> {
+        match self.execute_code_read_iterator.peekable().peek() {
+            None => (),
+            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
+        };
+        match self.tx_info_ptr {
+            None => (),
+            Some(_) => Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))?,
+        }
+        self.tx_info_ptr = None;
+
+        match self.tx_execution_info {
+            None => (),
+            Some(_) => Err(StarknetError::ShouldBeNone(String::from(
+                "tx_execution_info",
+            )))?,
+        }
+        self.tx_execution_info = None;
+        Ok(())
+    }
+
+    /// Allocates and returns a new temporary segment.
+    fn _allocate_segment(
+        self,
+        mut vm: VirtualMachine,
+        data: &dyn Any,
+    ) -> Result<Relocatable, StarknetError> {
+        let segment_start = vm.add_temporary_segment();
+        vm.write_arg(&segment_start, data)
+            .map_err(|_| StarknetError::WriteArg)?;
+        Ok(segment_start)
+    }
+
+    /// Updates the cached storage and returns the storage value before
+    /// the write operation.
+    fn execute_syscall_storage_write(
+        self,
+        contract_address: &u32,
+        key: u32,
+        value: u32,
+    ) -> Result<u32, StarknetError> {
+        Ok(self
+            .starknet_storage_by_address
+            .get(contract_address)
+            .ok_or(StarknetError::KeyNotFound)?
+            .write(key, value))
+    }
+
+    fn enter_call(&mut self) -> Result<(), StarknetError> {
+        self.assert_interators_exhausted()?;
+
+        let call_info = self
+            .call_iterator
+            .next()
+            .ok_or(StarknetError::IteratorEmpty)?;
+        self.call_stack.push(call_info);
+
+        self.deployed_contracts_iterator = Box::new(
+            call_info
+                .internal_calls
+                .iter()
+                .filter(|call_info_internal| {
+                    call_info_internal.entry_point_type == Some(EntryPointType::Constructor)
+                })
+                .map(|call_info_internal| call_info_internal.contract_address)
+                .into_iter(),
+        );
+
+        self.retdata_iterator = Box::new(
+            call_info
+                .internal_calls
+                .iter()
+                .map(|call_info_internal| call_info_internal.retadata.clone())
+                .into_iter(),
+        );
+
+        self.execute_code_read_iterator = call_info.storage_read_values;
+
+        Ok(())
+    }
+
+    /// Returns the system call request written in the syscall segment, starting at syscall_ptr.
+    /// Does not perform validations on the request, since it was validated in the BL.
+    fn _read_and_validate_syscall_request(
+        &self,
+        _syscall_name: String,
+        _segments: MemorySegmentManager,
+        _syscall_ptr: Relocatable,
+    ) {
+        todo!()
     }
 }
-pub struct BusinessLogicSyscallHandler;
-
-impl SyscallHandler for BusinessLogicSyscallHandler {}
 
 #[cfg(test)]
 mod tests {
