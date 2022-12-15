@@ -1,5 +1,8 @@
+use starknet_rs::core::syscall_info;
+
 mod patricia_merkle_tree;
 
 fn main() {
-    println!("Hello, world!");
+    let p = syscall_info::program_json().unwrap().identifiers;
+    println!("{:?}", p);
 }
