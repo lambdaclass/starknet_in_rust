@@ -522,13 +522,19 @@ impl<'a, V> Iterator for TreeIterator<'a, V> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.node {
-            NodeRef::Branch(branch_node) => match self.state {
-                index if index < branch_node.choices.len() => loop {
-                    if let Some(child) = &branch_node.choices[index] {
+            NodeRef::Branch(branch_node) => match &mut self.state {
+                index if *index < branch_node.choices.len() => loop {
+                    if let Some(child) = &branch_node.choices[*index] {
+                        *index += 1;
                         break Some(Self {
                             node: child.as_ref().into(),
                             state: 0,
                         });
+                    }
+
+                    *index += 1;
+                    if *index >= branch_node.choices.len() {
+                        break None;
                     }
                 },
                 _ => None,
@@ -1064,5 +1070,105 @@ mod test {
         let segment_iter = KeySegmentIterator::new(&key);
 
         assert!(segment_iter.enumerate().all(|(i, x)| i % 16 == x as usize));
+    }
+
+    /// Test that an iterator over an empty tree works as intended.
+    #[test]
+    fn patricia_tree_iter_empty() {
+        let pm_tree = pm_tree!(<()>);
+        assert_eq!(pm_tree.iter().next(), None);
+    }
+
+    /// Test that an iterator over a leaf node has multiple children and no data can be extracted.
+    #[test]
+    fn patricia_tree_iter_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("8000000000000000000000000000000000000000000000000000000000000000");
+        let key_d =
+            pm_tree_key!("f000000000000000000000000000000000000000000000000000000000000000");
+
+        let pm_tree = pm_tree! {
+            branch {
+                0x00 => leaf { key_a => 0x00u8 },
+                0x01 => leaf { key_b => 0x01u8 },
+                0x08 => leaf { key_c => 0x08u8 },
+                0x0F => leaf { key_d => 0x0Fu8 },
+            }
+        };
+
+        let mut iter = pm_tree.iter();
+
+        {
+            let mut node_iter = iter.next().expect("node should have a value");
+            assert_eq!(node_iter.next(), None);
+            assert_eq!(node_iter.extract(), Some((&key_a, &0x00)));
+        }
+        {
+            let mut node_iter = iter.next().expect("node should have a value");
+            assert_eq!(node_iter.next(), None);
+            assert_eq!(node_iter.extract(), Some((&key_b, &0x01)));
+        }
+        {
+            let mut node_iter = iter.next().expect("node should have a value");
+            assert_eq!(node_iter.next(), None);
+            assert_eq!(node_iter.extract(), Some((&key_c, &0x08)));
+        }
+        {
+            let mut node_iter = iter.next().expect("node should have a value");
+            assert_eq!(node_iter.next(), None);
+            assert_eq!(node_iter.extract(), Some((&key_d, &0x0F)));
+        }
+
+        assert_eq!(iter.next(), None);
+    }
+
+    /// Test that an iterator over a leaf node has one child and no data can be extracted.
+    #[test]
+    fn patricia_tree_iter_extension() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0001000000000000000000000000000000000000000000000000000000000000");
+
+        let pm_tree = pm_tree! {
+            extension { "000", branch {
+                0 => leaf { key_a => 0u8 },
+                1 => leaf { key_b => 1u8 },
+            } }
+        };
+
+        let mut iter = pm_tree.iter();
+        let mut iter2 = iter.next().expect("extension must have a children");
+
+        {
+            let mut node_iter = iter2.next().expect("node should have a value");
+            assert_eq!(node_iter.next(), None);
+            assert_eq!(node_iter.extract(), Some((&key_a, &0x00)));
+        }
+        {
+            let mut node_iter = iter2.next().expect("node should have a value");
+            assert_eq!(node_iter.next(), None);
+            assert_eq!(node_iter.extract(), Some((&key_b, &0x01)));
+        }
+
+        assert_eq!(iter2.next(), None);
+        assert_eq!(iter.next(), None);
+    }
+
+    /// Test that an iterator over a leaf node has no children and allows data to be extracted.
+    #[test]
+    fn patricia_tree_iter_leaf() {
+        let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let pm_tree = pm_tree! {
+            leaf { key => () }
+        };
+
+        let mut iter = pm_tree.iter();
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.extract(), Some((&key, &())));
     }
 }
