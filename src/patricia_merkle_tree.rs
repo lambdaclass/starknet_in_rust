@@ -71,10 +71,7 @@ impl<V> PatriciaMerkleTree<V> {
     }
 
     pub fn iter(&self) -> TreeIterator<V> {
-        match &self.root_node {
-            Some(root_node) => TreeIterator::new(root_node),
-            None => TreeIterator::new_empty(),
-        }
+        TreeIterator::new(self)
     }
 }
 
@@ -457,99 +454,77 @@ impl<'a> Iterator for KeySegmentIterator<'a> {
     }
 }
 
-/// Node reference for the (public) tree iterator.
+/// Iterator state (for each node, like a stack).
 ///
-/// The `Node<V>` enum can't be used because it doesn't have an `Empty` variant, and by having the
-/// three variants instead of a single `Node<V>`, special cases such as the `ExtensionNode`'s child
-/// can be handled appropiately as well.
+/// The `Node<V>` enum can't be used because it doesn't handle special cases such as the
+/// `ExtensionNode`'s child well.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-enum NodeRef<'a, V> {
-    Empty,
-    Branch(&'a BranchNode<V>),
-    Extension(&'a ExtensionNode<V>),
-    Leaf(&'a LeafNode<V>),
-}
-
-impl<'a, V> From<&'a Node<V>> for NodeRef<'a, V> {
-    fn from(value: &'a Node<V>) -> Self {
-        match value {
-            Node::Branch(x) => NodeRef::Branch(x),
-            Node::Extension(x) => NodeRef::Extension(x),
-            Node::Leaf(x) => NodeRef::Leaf(x),
-        }
-    }
-}
-
-/// Public tree iterator.
-///
-/// The iterator returns a new iterator for each child in a node. Leaf nodes won't have any children
-/// and its contained value may be extracted using `TreeIterator::extract`. Any other node types
-/// will have at least one child.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct TreeIterator<'a, V> {
-    node: NodeRef<'a, V>,
+struct NodeState<'a, V> {
+    node: &'a BranchNode<V>,
     state: usize,
 }
 
+pub struct TreeIterator<'a, V> {
+    tree: Option<&'a PatriciaMerkleTree<V>>,
+    state: Vec<NodeState<'a, V>>,
+}
+
 impl<'a, V> TreeIterator<'a, V> {
-    /// Create a tree iterator from a node.
-    fn new(node: impl Into<NodeRef<'a, V>>) -> Self {
+    fn new(tree: &'a PatriciaMerkleTree<V>) -> Self {
         Self {
-            node: node.into(),
-            state: 0,
-        }
-    }
-
-    /// Create an empty tree iterator. Only used when the tree is empty.
-    fn new_empty() -> Self {
-        Self {
-            node: NodeRef::Empty,
-            state: 0,
-        }
-    }
-
-    /// If the node is a leaf, then extract its value.
-    pub fn extract(&self) -> Option<(&[u8; 32], &V)> {
-        match self.node {
-            NodeRef::Leaf(leaf_node) => Some((&leaf_node.key, &leaf_node.value)),
-            _ => None,
+            tree: Some(tree),
+            state: vec![],
         }
     }
 }
 
 impl<'a, V> Iterator for TreeIterator<'a, V> {
-    type Item = Self;
+    type Item = (&'a [u8; 32], &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.node {
-            NodeRef::Branch(branch_node) => match &mut self.state {
-                index if *index < branch_node.choices.len() => loop {
-                    if let Some(child) = &branch_node.choices[*index] {
-                        *index += 1;
-                        break Some(Self {
-                            node: child.as_ref().into(),
+        loop {
+            if let Some(tree) = self.tree.take() {
+                self.state.push(match &tree.root_node {
+                    Some(root_node) => {
+                        let current_node = root_node;
+                        NodeState {
+                            node: match current_node {
+                                Node::Branch(branch_node) => branch_node,
+                                Node::Extension(extension_node) => &extension_node.child,
+                                Node::Leaf(leaf_node) => {
+                                    break Some((&leaf_node.key, &leaf_node.value))
+                                }
+                            },
+                            state: 0,
+                        }
+                    }
+                    None => break None,
+                });
+            }
+
+            match self.state.pop() {
+                Some(last_state) if last_state.state < last_state.node.choices.len() => {
+                    self.state.push(NodeState {
+                        node: last_state.node,
+                        state: last_state.state + 1,
+                    });
+
+                    if let Some(choice) = &last_state.node.choices[last_state.state] {
+                        self.state.push(NodeState {
+                            node: match choice.as_ref() {
+                                Node::Branch(branch_node) => branch_node,
+                                Node::Extension(extension_node) => &extension_node.child,
+                                Node::Leaf(leaf_node) => {
+                                    break Some((&leaf_node.key, &leaf_node.value))
+                                }
+                            },
                             state: 0,
                         });
                     }
-
-                    *index += 1;
-                    if *index >= branch_node.choices.len() {
-                        break None;
-                    }
-                },
-                _ => None,
-            },
-            NodeRef::Extension(extension_node) => match self.state {
-                0 => {
-                    self.state = 1;
-                    Some(Self {
-                        node: NodeRef::Branch(&extension_node.child),
-                        state: 0,
-                    })
                 }
-                _ => None,
-            },
-            _ => None,
+                None => break None,
+                _ => {}
+            }
         }
     }
 }
@@ -1076,7 +1051,7 @@ mod test {
     #[test]
     fn patricia_tree_iter_empty() {
         let pm_tree = pm_tree!(<()>);
-        assert_eq!(pm_tree.iter().next(), None);
+        assert_eq!(pm_tree.iter().collect::<Vec<_>>(), vec![]);
     }
 
     /// Test that an iterator over a leaf node has multiple children and no data can be extracted.
@@ -1100,30 +1075,15 @@ mod test {
             }
         };
 
-        let mut iter = pm_tree.iter();
-
-        {
-            let mut node_iter = iter.next().expect("node should have a value");
-            assert_eq!(node_iter.next(), None);
-            assert_eq!(node_iter.extract(), Some((&key_a, &0x00)));
-        }
-        {
-            let mut node_iter = iter.next().expect("node should have a value");
-            assert_eq!(node_iter.next(), None);
-            assert_eq!(node_iter.extract(), Some((&key_b, &0x01)));
-        }
-        {
-            let mut node_iter = iter.next().expect("node should have a value");
-            assert_eq!(node_iter.next(), None);
-            assert_eq!(node_iter.extract(), Some((&key_c, &0x08)));
-        }
-        {
-            let mut node_iter = iter.next().expect("node should have a value");
-            assert_eq!(node_iter.next(), None);
-            assert_eq!(node_iter.extract(), Some((&key_d, &0x0F)));
-        }
-
-        assert_eq!(iter.next(), None);
+        assert_eq!(
+            pm_tree.iter().collect::<Vec<_>>(),
+            vec![
+                (&key_a, &0x00),
+                (&key_b, &0x01),
+                (&key_c, &0x08),
+                (&key_d, &0x0F),
+            ],
+        );
     }
 
     /// Test that an iterator over a leaf node has one child and no data can be extracted.
@@ -1141,22 +1101,10 @@ mod test {
             } }
         };
 
-        let mut iter = pm_tree.iter();
-        let mut iter2 = iter.next().expect("extension must have a children");
-
-        {
-            let mut node_iter = iter2.next().expect("node should have a value");
-            assert_eq!(node_iter.next(), None);
-            assert_eq!(node_iter.extract(), Some((&key_a, &0x00)));
-        }
-        {
-            let mut node_iter = iter2.next().expect("node should have a value");
-            assert_eq!(node_iter.next(), None);
-            assert_eq!(node_iter.extract(), Some((&key_b, &0x01)));
-        }
-
-        assert_eq!(iter2.next(), None);
-        assert_eq!(iter.next(), None);
+        assert_eq!(
+            pm_tree.iter().collect::<Vec<_>>(),
+            vec![(&key_a, &0), (&key_b, &1)],
+        );
     }
 
     /// Test that an iterator over a leaf node has no children and allows data to be extracted.
@@ -1167,8 +1115,6 @@ mod test {
             leaf { key => () }
         };
 
-        let mut iter = pm_tree.iter();
-        assert_eq!(iter.next(), None);
-        assert_eq!(iter.extract(), Some((&key, &())));
+        assert_eq!(pm_tree.iter().collect::<Vec<_>>(), vec![(&key, &())]);
     }
 }
