@@ -172,9 +172,7 @@ pub(crate) trait SyscallHandler {
 
 struct OsSyscallHandler {}
 
-pub struct BusinessLogicSyscallHandler {
-        
-}
+pub struct BusinessLogicSyscallHandler {}
 
 impl BusinessLogicSyscallHandler {
     pub fn new() -> Result<Self, SyscallHandlerError> {
