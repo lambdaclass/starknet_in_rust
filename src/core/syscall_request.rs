@@ -2,7 +2,6 @@ use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
 use cairo_rs::types::relocatable::Relocatable;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
-use std::collections::HashMap;
 
 pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
