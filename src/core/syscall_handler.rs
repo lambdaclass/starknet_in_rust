@@ -2,7 +2,7 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
-use crate::core::syscall_info::*;
+use crate::core::syscall_request::*;
 
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -14,13 +14,17 @@ use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
+use num_traits::ToPrimitive;
 
 const DEPLOY_SYSCALL_CODE: &str =
     "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
-pub struct CairoStructProxy;
+pub struct OrderedEvent {
+    keys: Vec<BigInt>,
+    data: Vec<BigInt>,
+}
 
-pub struct SyscallHintProcessor<H: SyscallHandler> {
+pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
     builtin_hint_processor: BuiltinHintProcessor,
     syscall_handler: H,
 }
@@ -126,17 +130,21 @@ fn get_ids_data(
     Ok(ids_data)
 }
 
-pub trait SyscallHandler {
-    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
+pub(crate) trait SyscallHandler {
+    fn emit_event(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
     fn _read_and_validate_syscall_request(
         &self,
         syscall_name: &str,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> CairoStructProxy;
+    ) -> Result<SyscallRequest, SyscallHandlerError>;
     fn _call_contract(
         &self,
         syscall_name: &str,
@@ -148,30 +156,64 @@ pub trait SyscallHandler {
     fn _storage_read(&self, address: i32) -> i32;
     fn _storage_write(&self, address: i32, value: i32);
     fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable;
+
+    fn read_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
+            _ => Err(SyscallHandlerError::UnknownSyscall),
+        }
+    }
 }
 
 struct OsSyscallHandler {}
 
-pub struct BusinessLogicSyscallHandler {
-    syscalls_info: HashMap<String, SyscallInfo>,
-}
+pub struct BusinessLogicSyscallHandler {}
 
 impl BusinessLogicSyscallHandler {
     pub fn new() -> Result<Self, SyscallHandlerError> {
-        let identifiers = program_json()?.identifiers;
-
-        let mut syscalls_info: HashMap<String, SyscallInfo> = HashMap::new();
-        let emit_event = SyscallInfo::emit_event(&identifiers)?;
-
-        syscalls_info.insert("emit_event".to_string(), emit_event);
-
-        Ok(BusinessLogicSyscallHandler { syscalls_info })
+        Ok(BusinessLogicSyscallHandler {})
     }
 }
 
+pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
+    bigint
+        .to_usize()
+        .ok_or(SyscallHandlerError::BigintToUsizeFail)
+}
+
 impl SyscallHandler for BusinessLogicSyscallHandler {
-    fn emit_event(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
-        todo!()
+    // trait functions
+    fn emit_event(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let SyscallRequest::EmitEvent(request) =
+            self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?;
+
+        let keys_len = bigint_to_usize(&request.keys_len)?;
+        let data_len = bigint_to_usize(&request.data_len)?;
+
+        let keys: Vec<BigInt> = vm
+            .get_integer_range(&request.keys, keys_len)
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?
+            .into_iter()
+            .map(|c| c.into_owned())
+            .collect();
+
+        let data: Vec<BigInt> = vm
+            .get_integer_range(&request.data, data_len)
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?
+            .into_iter()
+            .map(|c| c.into_owned())
+            .collect();
+
+        Ok(())
     }
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
         todo!()
@@ -183,14 +225,16 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32 {
         todo!()
     }
+
     fn _read_and_validate_syscall_request(
         &self,
         syscall_name: &str,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> CairoStructProxy {
-        todo!()
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
+
     fn _call_contract(
         &self,
         syscall_name: &str,
