@@ -283,13 +283,12 @@ fn get_integer_range(
     addr: &Relocatable,
     size: usize,
 ) -> Result<Vec<BigInt>, SyscallHandlerError> {
-    let range: Vec<BigInt> = vm
+    Ok(vm
         .get_integer_range(addr, size)
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
         .into_iter()
         .map(|c| c.into_owned())
-        .collect();
-    Ok(range)
+        .collect::<Vec<BigInt>>())
 }
 
 #[cfg(test)]
