@@ -17,5 +17,9 @@ pub enum SyscallHandlerError {
     #[error("Couldn't convert BigInt to usize")]
     BigintToUsizeFail,
     #[error("Hint Not implemented")]
-    NotImplemented
+    NotImplemented,
+    #[error("HintData is incorrect")]
+    WrongHintData,
+    #[error("Unknow Hint")]
+    UnknownHint
 }

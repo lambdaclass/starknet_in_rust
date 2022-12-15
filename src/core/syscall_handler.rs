@@ -9,7 +9,9 @@ use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
 };
+use cairo_rs::hint_processor::builtin_hint_processor::hint_utils::get_relocatable_from_var_name;
 use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
+use cairo_rs::serde::deserialize_program::ApTracking;
 use cairo_rs::types::exec_scope::ExecutionScopes;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
@@ -38,7 +40,7 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
 }
 impl<H: SyscallHandler> SyscallHintProcessor<H> {
     pub fn should_run_syscall_hint(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
@@ -55,7 +57,7 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
     }
 
     fn execute_syscall_hint(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
@@ -63,7 +65,7 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
     ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
-            .ok_or(VirtualMachineError::WrongHintData)?;
+            .ok_or(SyscallHandlerError::WrongHintData)?;
 
         match &*hint_data.code {
             DEPLOY_SYSCALL_CODE => {
@@ -71,23 +73,33 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
                 Err(SyscallHandlerError::NotImplemented)
             }
             EMIT_EVENT_CODE => {
-                self.syscall_handler.emit_event(&vm, hint_data.ap_tracking)
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.emit_event(&vm, syscall_ptr)
             }
             _ => Err(SyscallHandlerError::NotImplemented),
         }
     }
 }
 
+pub fn get_syscall_ptr(
+    vm: &VirtualMachine,
+    ids_data: &HashMap<String, HintReference>,
+    ap_tracking: &ApTracking,
+) -> Result<Relocatable, SyscallHandlerError> {
+    let syscall_ptr = get_relocatable_from_var_name("syscall_ptr", vm, ids_data, ap_tracking).map_err(|_| SyscallHandlerError::SegmentationFault)?;
+    Ok(syscall_ptr)
+}
+
 impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     fn execute_hint(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, BigInt>,
     ) -> Result<(), VirtualMachineError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
-            self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)?;
+            self.execute_syscall_hint(vm, exec_scopes, hint_data, constants).map_err(|_| VirtualMachineError::UnknownHint("hint data".to_string()))?;
         }
         Ok(())
     }
