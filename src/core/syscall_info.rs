@@ -1,5 +1,5 @@
-use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
-use crate::core::errors::syscall_hadler_errors::SyscallHandlerError::*;
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError::*;
 use cairo_rs::serde::deserialize_program::*;
 use num_bigint::BigInt;
 use std::collections::HashMap;
@@ -8,6 +8,7 @@ use std::path::Path;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum SyscallType {
+    #[allow(unused)] // TODO: Remove once used.
     EmitEvent {
         selector: Option<Member>,
         keys_len: Option<Member>,
@@ -24,6 +25,7 @@ pub(crate) struct SyscallInfo {
     syscall_struct: SyscallType,
 }
 
+#[allow(unused)] // TODO: Remove once used.
 fn get_selector(
     selector: &str,
     identifiers: &HashMap<String, Identifier>,
@@ -31,26 +33,26 @@ fn get_selector(
     identifiers
         .get(selector)
         .ok_or(MissingMember)?
-        .to_owned()
+        .clone()
         .value
         .ok_or(MissingSelector)
 }
 
+#[allow(unused)] // TODO: Remove once used.
 fn get_identifier(
     syscall: &str,
     identifiers: &HashMap<String, Identifier>,
 ) -> Result<Identifier, SyscallHandlerError> {
-    Ok(identifiers
-        .get(syscall)
-        .ok_or(MissingIdentifiers)?
-        .to_owned())
+    Ok(identifiers.get(syscall).ok_or(MissingIdentifiers)?.clone())
 }
 
+#[allow(unused)] // TODO: Remove once used.
 fn get_member(key: &str, members: &HashMap<String, Member>) -> Option<Member> {
     members.get(key).map(ToOwned::to_owned)
 }
 
 impl SyscallInfo {
+    #[allow(unused)] // TODO: Remove once used.
     pub fn emit_event(
         identifiers: &HashMap<String, Identifier>,
     ) -> Result<SyscallInfo, SyscallHandlerError> {

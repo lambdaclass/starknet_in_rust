@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 
-use crate::core::errors::syscall_hadler_errors::SyscallHandlerError;
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscall_request::*;
 
 use cairo_rs::any_box;
@@ -20,16 +20,20 @@ const DEPLOY_SYSCALL_CODE: &str =
     "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
 pub struct OrderedEvent {
+    #[allow(unused)] // TODO: Remove once used.
     keys: Vec<BigInt>,
+    #[allow(unused)] // TODO: Remove once used.
     data: Vec<BigInt>,
 }
 
 pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
     builtin_hint_processor: BuiltinHintProcessor,
+    #[allow(unused)] // TODO: remove after using.
     syscall_handler: H,
 }
 
 impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
+    #[allow(unused)] // TODO: Remove once used.
     pub fn new_empty(
     ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
@@ -58,10 +62,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
 
     fn execute_syscall_hint(
         &self,
-        vm: &mut VirtualMachine,
-        exec_scopes: &mut ExecutionScopes,
+        _vm: &mut VirtualMachine,
+        _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, BigInt>,
+        _constants: &HashMap<String, BigInt>,
     ) -> Result<(), VirtualMachineError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
@@ -86,7 +90,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         constants: &HashMap<String, BigInt>,
     ) -> Result<(), VirtualMachineError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
-            self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)?
+            self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)?;
         }
         Ok(())
     }
@@ -170,6 +174,7 @@ pub(crate) trait SyscallHandler {
     }
 }
 
+#[allow(unused)] // TODO: remove after using.
 struct OsSyscallHandler {}
 
 pub struct BusinessLogicSyscallHandler {}
@@ -199,6 +204,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let keys_len = bigint_to_usize(&request.keys_len)?;
         let data_len = bigint_to_usize(&request.data_len)?;
 
+        #[allow(unused)] // TODO: Remove once used.
         let keys: Vec<BigInt> = vm
             .get_integer_range(&request.keys, keys_len)
             .map_err(|_| SyscallHandlerError::SegmentationFault)?
@@ -206,6 +212,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             .map(|c| c.into_owned())
             .collect();
 
+        #[allow(unused)] // TODO: Remove once used.
         let data: Vec<BigInt> = vm
             .get_integer_range(&request.data, data_len)
             .map_err(|_| SyscallHandlerError::SegmentationFault)?
@@ -215,14 +222,14 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
         Ok(())
     }
-    fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
+    fn send_message_to_l1(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) {
         todo!()
     }
 
-    fn _get_tx_info_ptr(&self, vm: VirtualMachine) {
+    fn _get_tx_info_ptr(&self, _vm: VirtualMachine) {
         todo!()
     }
-    fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32 {
+    fn _deploy(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
         todo!()
     }
 
@@ -237,25 +244,25 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
     fn _call_contract(
         &self,
-        syscall_name: &str,
-        vm: VirtualMachine,
-        syscall_ptr: Relocatable,
+        _syscall_name: &str,
+        _vm: VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Vec<i32> {
         todo!()
     }
-    fn _get_caller_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32 {
+    fn _get_caller_address(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
         todo!()
     }
-    fn _get_contract_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32 {
+    fn _get_contract_address(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
         todo!()
     }
-    fn _storage_read(&self, address: i32) -> i32 {
+    fn _storage_read(&self, _address: i32) -> i32 {
         todo!()
     }
-    fn _storage_write(&self, address: i32, value: i32) {
+    fn _storage_write(&self, _address: i32, _value: i32) {
         todo!()
     }
-    fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable {
+    fn _allocate_segment(&self, _vm: VirtualMachine, _data: Vec<MaybeRelocatable>) -> Relocatable {
         todo!()
     }
 }

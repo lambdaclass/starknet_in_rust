@@ -1,1 +1,1 @@
-pub mod syscall_hadler_errors;
+pub mod syscall_handler_errors;
