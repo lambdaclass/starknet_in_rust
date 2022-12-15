@@ -73,6 +73,19 @@ impl<V> PatriciaMerkleTree<V> {
     pub fn iter(&self) -> TreeIterator<V> {
         TreeIterator::new(self)
     }
+
+    pub fn drain_filter<F>(&mut self, mut filter: F) -> Vec<([u8; 32], V)>
+    where
+        F: FnMut(&[u8; 32], &mut V) -> bool,
+    {
+        if let Some(root_node) = self.root_node.take() {
+            let mut drained_items = Vec::new();
+            self.root_node = root_node.drain_filter(&mut filter, &mut drained_items, 0);
+            drained_items
+        } else {
+            Vec::new()
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -129,6 +142,26 @@ impl<V> Node<V> {
             Node::Branch(branch_node) => branch_node.remove(key, current_key_offset),
             Node::Extension(extension_node) => extension_node.remove(key, current_key_offset),
             Node::Leaf(leaf_node) => leaf_node.remove(key),
+        }
+    }
+
+    fn drain_filter<F>(
+        self,
+        filter: &mut F,
+        drained_items: &mut Vec<([u8; 32], V)>,
+        current_key_offset: usize,
+    ) -> Option<Self>
+    where
+        F: FnMut(&[u8; 32], &mut V) -> bool,
+    {
+        match self {
+            Node::Branch(branch_node) => {
+                branch_node.drain_filter(filter, drained_items, current_key_offset)
+            }
+            Node::Extension(extension_node) => {
+                extension_node.drain_filter(filter, drained_items, current_key_offset)
+            }
+            Node::Leaf(leaf_node) => leaf_node.drain_filter(filter, drained_items),
         }
     }
 }
@@ -221,6 +254,45 @@ impl<V> BranchNode<V> {
                 )
             }
             None => (Some(self.into()), None),
+        }
+    }
+
+    fn drain_filter<F>(
+        mut self,
+        filter: &mut F,
+        drained_items: &mut Vec<([u8; 32], V)>,
+        current_key_offset: usize,
+    ) -> Option<Node<V>>
+    where
+        F: FnMut(&[u8; 32], &mut V) -> bool,
+    {
+        enum SingleChild {
+            NoChildren,
+            Single(usize),
+            Multiple,
+        }
+
+        let mut single_child = SingleChild::NoChildren;
+        for (index, choice) in self.choices.iter_mut().enumerate() {
+            *choice = match choice.take() {
+                Some(old_node) => old_node
+                    .drain_filter(filter, drained_items, current_key_offset + 1)
+                    .map(|new_node| {
+                        single_child = match single_child {
+                            SingleChild::NoChildren => SingleChild::Single(index),
+                            _ => SingleChild::Multiple,
+                        };
+
+                        Box::new(new_node)
+                    }),
+                None => None,
+            };
+        }
+
+        match single_child {
+            SingleChild::NoChildren => None,
+            SingleChild::Single(index) => self.choices[index].take().map(|x| *x),
+            SingleChild::Multiple => Some(self.into()),
         }
     }
 }
@@ -337,6 +409,36 @@ impl<V> ExtensionNode<V> {
             old_value,
         )
     }
+
+    fn drain_filter<F>(
+        mut self,
+        filter: &mut F,
+        drained_items: &mut Vec<([u8; 32], V)>,
+        current_key_offset: usize,
+    ) -> Option<Node<V>>
+    where
+        F: FnMut(&[u8; 32], &mut V) -> bool,
+    {
+        let new_child = self.child.drain_filter(
+            filter,
+            drained_items,
+            current_key_offset + self.prefix.len(),
+        );
+
+        match new_child {
+            Some(Node::Branch(branch_node)) => {
+                self.child = branch_node;
+                Some(self.into())
+            }
+            Some(Node::Extension(extension_node)) => {
+                self.prefix.extend(extension_node.prefix.into_iter());
+                self.child = extension_node.child;
+                Some(self.into())
+            }
+            Some(Node::Leaf(leaf_node)) => Some(leaf_node.into()),
+            None => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -401,6 +503,22 @@ impl<V> LeafNode<V> {
             (None, Some(self.value))
         } else {
             (Some(self.into()), None)
+        }
+    }
+
+    fn drain_filter<F>(
+        mut self,
+        filter: &mut F,
+        drained_items: &mut Vec<([u8; 32], V)>,
+    ) -> Option<Node<V>>
+    where
+        F: FnMut(&[u8; 32], &mut V) -> bool,
+    {
+        if filter(&self.key, &mut self.value) {
+            drained_items.push((self.key, self.value));
+            None
+        } else {
+            Some(self.into())
         }
     }
 }
@@ -998,6 +1116,36 @@ mod test {
         );
     }
 
+    /// Test that `PatriciaMerkleTree::remove()` removes branch nodes' children.
+    #[test]
+    fn patricia_tree_remove_branch2() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("2000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+                2 => leaf { key_c => () },
+            }
+        };
+
+        assert_eq!(pm_tree.remove(&key_a), Some(()));
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                branch {
+                    1 => leaf { key_b => () },
+                    2 => leaf { key_c => () },
+                }
+            }
+        );
+    }
+
     /// Test that `PatriciaMerkleTree::remove()` removes branch nodes.
     #[test]
     fn patricia_tree_remove_last_branch() {
@@ -1036,6 +1184,38 @@ mod test {
         assert_eq!(pm_tree.remove(&key_a), Some(()));
         assert_eq!(pm_tree.remove(&key_b), Some(()));
         assert_eq!(pm_tree, pm_tree!());
+    }
+
+    /// Test that `PatriciaMerkleTree::remove()` combines extensions correctly.
+    #[test]
+    fn patricia_tree_remove_extension_combine() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("0001000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            extension { "0", branch {
+                0 => extension { "00", branch {
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_c => () },
+                } },
+                1 => leaf { key_b => () },
+            } }
+        };
+
+        assert_eq!(pm_tree.remove(&key_b), Some(()));
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                extension { "000", branch {
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_c => () },
+                } }
+            },
+        );
     }
 
     /// Test that `KeySegmentIterator` works as intended.
@@ -1116,5 +1296,148 @@ mod test {
         };
 
         assert_eq!(pm_tree.iter().collect::<Vec<_>>(), vec![(&key, &())]);
+    }
+
+    /// Test that `PatriciaMerkleTree::drain_filter()` removes the root node.
+    #[test]
+    fn patricia_tree_drain_filter_root() {
+        let key = pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            leaf { key => () }
+        };
+
+        assert_eq!(pm_tree.drain_filter(|_, _| true), vec![(key, ())]);
+        assert_eq!(pm_tree, pm_tree!());
+    }
+
+    /// Test that `PatriciaMerkleTree::drain_filter()` removes branch nodes' children.
+    #[test]
+    fn patricia_tree_drain_filter_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+            }
+        };
+
+        assert_eq!(pm_tree.drain_filter(|k, _| k == &key_a), vec![(key_a, ())]);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                leaf { key_b => () }
+            }
+        );
+    }
+
+    /// Test that `PatriciaMerkleTree::drain_filter()` removes branch nodes' children.
+    #[test]
+    fn patricia_tree_drain_filter_branch2() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("2000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+                2 => leaf { key_c => () },
+            }
+        };
+
+        assert_eq!(pm_tree.drain_filter(|k, _| k == &key_a), vec![(key_a, ())]);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                branch {
+                    1 => leaf { key_b => () },
+                    2 => leaf { key_c => () },
+                }
+            }
+        );
+    }
+
+    /// Test that `PatriciaMerkleTree::drain_filter()` removes branch nodes.
+    #[test]
+    fn patricia_tree_drain_filter_last_branch() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("1000000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+            }
+        };
+
+        assert_eq!(
+            pm_tree.drain_filter(|_, _| true),
+            vec![(key_a, ()), (key_b, ())],
+        );
+        assert_eq!(pm_tree, pm_tree!());
+    }
+
+    /// Test that `PatriciaMerkleTree::drain_filter()` removes extension nodes.
+    #[test]
+    fn patricia_tree_drain_filter_extension() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            extension { "0", branch {
+                0 => leaf { key_a => () },
+                1 => leaf { key_b => () },
+            } }
+        };
+
+        assert_eq!(
+            pm_tree.drain_filter(|_, _| true),
+            vec![(key_a, ()), (key_b, ())],
+        );
+        assert_eq!(pm_tree, pm_tree!());
+    }
+
+    /// Test that `PatriciaMerkleTree::drain_filter()` combines extensions correctly.
+    #[test]
+    fn patricia_tree_drain_filter_extension_combine() {
+        let key_a =
+            pm_tree_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key_b =
+            pm_tree_key!("0100000000000000000000000000000000000000000000000000000000000000");
+        let key_c =
+            pm_tree_key!("0001000000000000000000000000000000000000000000000000000000000000");
+
+        let mut pm_tree = pm_tree! {
+            extension { "0", branch {
+                0 => extension { "00", branch {
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_c => () },
+                } },
+                1 => leaf { key_b => () },
+            } }
+        };
+
+        assert_eq!(pm_tree.drain_filter(|k, _| k == &key_b), vec![(key_b, ())],);
+        assert_eq!(
+            pm_tree,
+            pm_tree! {
+                extension { "000", branch {
+                    0 => leaf { key_a => () },
+                    1 => leaf { key_c => () },
+                } }
+            },
+        );
     }
 }
