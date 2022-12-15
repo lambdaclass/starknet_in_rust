@@ -14,7 +14,7 @@ use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
-use num_traits::ToPrimitive;
+use num_traits::{One, ToPrimitive, Zero};
 
 const DEPLOY_SYSCALL_CODE: &str =
     "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
@@ -142,7 +142,11 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError>;
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
-    fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
+    fn _deploy(
+        &self,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<i32, SyscallHandlerError>;
     fn _read_and_validate_syscall_request(
         &self,
         syscall_name: &str,
@@ -169,6 +173,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
+            "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
@@ -177,11 +182,15 @@ pub(crate) trait SyscallHandler {
 #[allow(unused)] // TODO: remove after using.
 struct OsSyscallHandler {}
 
-pub struct BusinessLogicSyscallHandler {}
+pub struct BusinessLogicSyscallHandler {
+    contract_address: u64,
+}
 
 impl BusinessLogicSyscallHandler {
     pub fn new() -> Result<Self, SyscallHandlerError> {
-        Ok(BusinessLogicSyscallHandler {})
+        Ok(BusinessLogicSyscallHandler {
+            contract_address: 0,
+        })
     }
 }
 
@@ -198,9 +207,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let SyscallRequest::EmitEvent(request) =
-            self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?;
-
+        let request = if let SyscallRequest::EmitEvent(request) =
+            self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            panic!()
+        };
         let keys_len = bigint_to_usize(&request.keys_len)?;
         let data_len = bigint_to_usize(&request.data_len)?;
 
@@ -229,7 +242,37 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _get_tx_info_ptr(&self, _vm: VirtualMachine) {
         todo!()
     }
-    fn _deploy(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
+    fn _deploy(
+        &self,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<i32, SyscallHandlerError> {
+        let request = if let SyscallRequest::Deploy(request) =
+            self._read_and_validate_syscall_request("emit_event", &vm, syscall_ptr)?
+        {
+            request
+        } else {
+            panic!()
+        };
+
+        if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
+            // "The deploy_from_zero field in the deploy system call must be 0 or 1."
+            panic!();
+        };
+
+        let constructor_calldata = vm.get_integer_range(
+            &request.constructor_calldata,
+            bigint_to_usize(&request.constructor_calldata_size)?,
+        );
+
+        let class_hash = &request.class_hash;
+
+        let deployer_address = if request.deploy_from_zero.is_zero() {
+            self.contract_address
+        } else {
+            0
+        };
+
         todo!()
     }
 
