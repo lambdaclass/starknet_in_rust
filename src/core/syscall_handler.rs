@@ -145,7 +145,7 @@ pub(crate) trait SyscallHandler {
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(
         &self,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<i32, SyscallHandlerError>;
     fn _read_and_validate_syscall_request(
@@ -244,7 +244,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
     fn _deploy(
         &self,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<i32, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
@@ -260,10 +260,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             panic!();
         };
 
-        let constructor_calldata = vm.get_integer_range(
+        let constructor_calldata = get_integer_range(
+            vm,
             &request.constructor_calldata,
             bigint_to_usize(&request.constructor_calldata_size)?,
-        );
+        )?;
 
         let class_hash = &request.class_hash;
 
