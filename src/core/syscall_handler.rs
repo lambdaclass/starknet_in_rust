@@ -16,6 +16,8 @@ use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive, Zero};
 
+use super::os::contact_address::calculate_contract_address_from_hash;
+
 const DEPLOY_SYSCALL_CODE: &str =
     "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
@@ -272,6 +274,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         } else {
             0
         };
+
+        let contract_address = calculate_contract_address_from_hash(
+            &request.contract_address_salt,
+            class_hash,
+            constructor_calldata,
+            deployer_address,
+        )?;
 
         todo!()
     }
