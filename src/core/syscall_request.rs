@@ -5,6 +5,7 @@ use num_bigint::BigInt;
 
 pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
+    Deploy(DeployRequestStruct),
 }
 
 pub(crate) struct EmitEventStruct {
@@ -14,6 +15,21 @@ pub(crate) struct EmitEventStruct {
     pub(crate) keys: Relocatable,
     pub(crate) data_len: BigInt,
     pub(crate) data: Relocatable,
+}
+
+pub(crate) struct DeployRequestStruct {
+    // The system call selector (= DEPLOY_SELECTOR).
+    pub(crate) selector: BigInt,
+    // The hash of the class to deploy.
+    pub(crate) class_hash: BigInt,
+    // A salt for the new contract address calculation.
+    pub(crate) contract_address_salt: BigInt,
+    // The size of the calldata for the constructor.
+    pub(crate) constructor_calldata_size: BigInt,
+    // The calldata for the constructor.
+    pub(crate) constructor_calldata: Relocatable,
+    // Used for deterministic contract address deployment.
+    pub(crate) deploy_from_zero: BigInt,
 }
 
 pub(crate) trait FromPtr {
@@ -26,6 +42,12 @@ pub(crate) trait FromPtr {
 impl From<EmitEventStruct> for SyscallRequest {
     fn from(emit_event_struct: EmitEventStruct) -> SyscallRequest {
         SyscallRequest::EmitEvent(emit_event_struct)
+    }
+}
+
+impl From<DeployRequestStruct> for SyscallRequest {
+    fn from(deploy_request_struct: DeployRequestStruct) -> SyscallRequest {
+        SyscallRequest::Deploy(deploy_request_struct)
     }
 }
 
@@ -70,5 +92,28 @@ impl FromPtr for EmitEventStruct {
             data,
         }
         .into())
+    }
+}
+
+impl FromPtr for DeployRequestStruct {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_integer(vm, &(&syscall_ptr))?;
+        let class_hash = get_integer(vm, &(&syscall_ptr + 1))?;
+        let contract_address_salt = get_integer(vm, &(&syscall_ptr + 2))?;
+        let constructor_calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
+        let constructor_calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
+        let deploy_from_zero = get_integer(vm, &(&syscall_ptr + 5))?;
+
+        Ok(SyscallRequest::Deploy(DeployRequestStruct {
+            selector,
+            class_hash,
+            contract_address_salt,
+            constructor_calldata_size,
+            constructor_calldata,
+            deploy_from_zero,
+        }))
     }
 }
