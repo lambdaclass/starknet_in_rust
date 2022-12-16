@@ -1,6 +1,47 @@
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
+    #[macro_export]
+    macro_rules! any_box {
+        ($val : expr) => {
+            Box::new($val) as Box<dyn Any>
+        };
+    }
+    pub(crate) use any_box;
+
+    macro_rules! references {
+        ($num: expr) => {{
+            let mut references = HashMap::<
+                usize,
+                cairo_rs::hint_processor::hint_processor_definition::HintReference,
+            >::new();
+            for i in 0..$num {
+                references.insert(
+                    i as usize,
+                    cairo_rs::hint_processor::hint_processor_definition::HintReference::new_simple(
+                        (i as i32),
+                    ),
+                );
+            }
+            references
+        }};
+    }
+    pub(crate) use references;
+
+    macro_rules! ids_data {
+        ( $( $name: expr ),* ) => {
+            {
+                let ids_names = vec![$( $name ),*];
+                let references = references!(ids_names.len() as i32);
+                let mut ids_data = HashMap::<String, cairo_rs::hint_processor::hint_processor_definition::HintReference>::new();
+                for (i, name) in ids_names.iter().enumerate() {
+                    ids_data.insert(name.to_string(), references.get(&i).unwrap().clone());
+                }
+                ids_data
+            }
+        };
+    }
+    pub(crate) use ids_data;
 
     #[macro_export]
     macro_rules! bigint {

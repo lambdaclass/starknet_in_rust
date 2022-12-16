@@ -7,6 +7,7 @@ pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
 }
 
+#[derive(Clone, Debug)]
 pub(crate) struct EmitEventStruct {
     #[allow(unused)] // TODO: Remove once used.
     pub(crate) selector: BigInt,
@@ -36,8 +37,7 @@ fn get_integer(
     Ok(vm
         .get_integer(syscall_ptr)
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .as_ref()
-        .to_owned())
+        .into_owned())
 }
 
 fn get_relocatable(
@@ -47,8 +47,7 @@ fn get_relocatable(
     Ok(vm
         .get_relocatable(syscall_ptr)
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .as_ref()
-        .to_owned())
+        .into_owned())
 }
 
 impl FromPtr for EmitEventStruct {

@@ -16,6 +16,9 @@ deps:
 clean: 
 	rm cairo_syscalls/*json
 
+compile_cairo:
+	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json
+
 clippy:
 	cargo clippy  -- -D warnings
 

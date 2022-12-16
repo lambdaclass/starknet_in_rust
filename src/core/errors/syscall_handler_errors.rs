@@ -21,5 +21,5 @@ pub enum SyscallHandlerError {
     #[error("HintData is incorrect")]
     WrongHintData,
     #[error("Unknow Hint")]
-    UnknownHint
+    UnknownHint,
 }

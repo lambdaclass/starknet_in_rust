@@ -84,7 +84,7 @@ pub fn program_json() -> Result<ProgramJson, SyscallHandlerError> {
     let path = Path::new(file!())
         .parent()
         .ok_or(MissingSyscallsJsonFile)?
-        .join("../../cairo_syscalls/syscalls.json");
+        .join("../../../cairo_syscalls/syscalls.json");
 
     let file = fs::read_to_string(path).unwrap();
     serde_json::from_str(&file).map_err(|_| MissingSyscallsJsonFile)
@@ -93,11 +93,9 @@ pub fn program_json() -> Result<ProgramJson, SyscallHandlerError> {
 #[cfg(test)]
 mod tests {
 
-    use super::program_json;
     use super::SyscallInfo;
-    use crate::core::syscall_info::SyscallType;
+    use super::*;
     use crate::utils::test_utils::*;
-    use cairo_rs::serde::deserialize_program::*;
     use num_bigint::BigInt;
     use std::str::FromStr;
 
