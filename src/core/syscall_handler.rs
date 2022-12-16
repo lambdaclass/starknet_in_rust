@@ -245,17 +245,14 @@ impl OsSyscallHandler {
     }
 
     fn assert_iterators_exhausted(&self) -> Result<(), StarknetError> {
-        match self.deployed_contracts_iterator.front() {
-            None => (),
-            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
+        if let Some(_) = self.deployed_contracts_iterator.front() {
+            return Err(StarknetError::IteratorNotEmpty);
         };
-        match self.retdata_iterator.front() {
-            None => (),
-            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
+        if let Some(_) = self.retdata_iterator.front() {
+            return Err(StarknetError::IteratorNotEmpty);
         };
-        match self.execute_code_read_iterator.front() {
-            None => (),
-            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
+        if let Some(_) = self.execute_code_read_iterator.front() {
+            return Err(StarknetError::IteratorNotEmpty);
         };
         Ok(())
     }
@@ -281,21 +278,22 @@ impl OsSyscallHandler {
 
     /// Called after the execution of the current transaction complete.
     fn end_tx(&mut self) -> Result<(), StarknetError> {
-        match self.execute_code_read_iterator.front() {
-            None => (),
-            Some(_) => Err(StarknetError::IteratorNotEmpty)?,
-        };
-        match self.tx_info_ptr {
-            None => (),
-            Some(_) => Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))?,
+        if let Some(_) = self.execute_code_read_iterator.front() {
+            return Err(StarknetError::IteratorNotEmpty);
         }
+        if let Some(_) = self.execute_code_read_iterator.front() {
+            return Err(StarknetError::IteratorNotEmpty);
+        };
+
+        if let Some(_) = self.tx_info_ptr {
+            return Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")));
+        };
         self.tx_info_ptr = None;
 
-        match self.tx_execution_info {
-            None => (),
-            Some(_) => Err(StarknetError::ShouldBeNone(String::from(
+        if let Some(_) = self.tx_execution_info {
+            return Err(StarknetError::ShouldBeNone(String::from(
                 "tx_execution_info",
-            )))?,
+            )));
         }
         self.tx_execution_info = None;
         Ok(())
