@@ -1,29 +1,49 @@
+use std::vec;
+
 use num_bigint::{BigInt, Sign};
+use num_integer::Integer;
 use starknet_crypto::{pedersen_hash, FieldElement};
 
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::{bigint, core::errors::syscall_handler_errors::SyscallHandlerError};
 
 pub fn calculate_contract_address_from_hash(
     salt: &BigInt,
     class_hash: &BigInt,
-    constructor_calldata: Vec<BigInt>,
+    constructor_calldata: &Vec<BigInt>,
     deployer_address: u64,
 ) -> Result<BigInt, SyscallHandlerError> {
-    // pedersen_hash(x, y)
-    todo!()
+    // Define constants
+    let l2_address_upper_bound = bigint!(2).pow(251) - 256;
+    let contract_address_prefix =
+        BigInt::from_bytes_be(Sign::Plus, "STARKNET_CONTRACT_ADDRESS".as_bytes());
+
+    let constructor_calldata_hash = compute_hash_on_elements(constructor_calldata)?;
+    let raw_address_vec = vec![
+        contract_address_prefix,
+        bigint!(deployer_address),
+        salt.to_owned(),
+        class_hash.to_owned(),
+        constructor_calldata_hash,
+    ];
+    let raw_address = compute_hash_on_elements(&raw_address_vec)?;
+
+    Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-fn compute_hash_on_elements(vec: Vec<BigInt>) -> Result<BigInt, SyscallHandlerError> {
-    let mut felt_vec: Vec<FieldElement> = vec
+fn compute_hash_on_elements(vec: &Vec<BigInt>) -> Result<BigInt, SyscallHandlerError> {
+    let mut felt_vec = vec
         .into_iter()
-        .map(|num| FieldElement::from_dec_str(&num.to_str_radix(10)).unwrap())
-        .collect();
+        .map(|num| {
+            FieldElement::from_dec_str(&num.to_str_radix(10))
+                .map_err(|_| SyscallHandlerError::FailToComputegHash)
+        })
+        .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
     felt_vec.push(FieldElement::from(felt_vec.len()));
     felt_vec.insert(0, FieldElement::from(0_u16));
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
-        .unwrap();
+        .ok_or(SyscallHandlerError::FailToComputegHash)?;
     let result = BigInt::from_bytes_be(Sign::Plus, &felt_result.to_bytes_be());
     Ok(result)
 }
@@ -31,64 +51,26 @@ fn compute_hash_on_elements(vec: Vec<BigInt>) -> Result<BigInt, SyscallHandlerEr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairo_rs::bigint_str;
 
     #[test]
     fn test_compute_hash_on_elements() {
-        let v1 = vec![BigInt::from(1)];
-        let result1 = compute_hash_on_elements(v1).unwrap();
-        let v2 = vec![
-            BigInt::from(1),
-            BigInt::from(2),
-            BigInt::from(3),
-            BigInt::from(4),
-        ];
-        let result2 = compute_hash_on_elements(v2).unwrap();
+        let v1 = vec![bigint!(1)];
+        let result1 = compute_hash_on_elements(&v1);
+        let v2 = vec![bigint!(1), bigint!(2), bigint!(3), bigint!(4)];
+        let result2 = compute_hash_on_elements(&v2);
 
         assert_eq!(
             result1,
-            BigInt::parse_bytes(
-                b"3416122613774376552656914666405609308365843021349846777564025639164215424932",
-                10
-            )
-            .unwrap()
+            Ok(bigint_str!(
+                b"3416122613774376552656914666405609308365843021349846777564025639164215424932"
+            ))
         );
         assert_eq!(
             result2,
-            BigInt::parse_bytes(
-                b"2904394281987469213428308031512088126582033652660815761074595741628288213124",
-                10
-            )
-            .unwrap()
+            Ok(bigint_str!(
+                b"2904394281987469213428308031512088126582033652660815761074595741628288213124"
+            ))
         );
     }
 }
-
-/*
-def calculate_contract_address_from_hash(
-    salt: int,
-    class_hash: int,
-    constructor_calldata: Sequence[int],
-    deployer_address: int,
-    hash_function: Callable[[int, int], int] = pedersen_hash,
-) -> int:
-    """
-    Same as calculate_contract_address(), except that it gets class_hash instead of
-    contract_class.
-    """
-    constructor_calldata_hash = compute_hash_on_elements(
-        data=constructor_calldata, hash_func=hash_function
-    )
-    raw_address = compute_hash_on_elements(
-        data=[
-            CONTRACT_ADDRESS_PREFIX,
-            deployer_address,
-            salt,
-            class_hash,
-            constructor_calldata_hash,
-        ],
-        hash_func=hash_function,
-    )
-
-    return raw_address % L2_ADDRESS_UPPER_BOUND
-
-*/
