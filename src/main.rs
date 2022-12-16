@@ -1,3 +1,6 @@
+#![allow(unused)]
+#![deny(warnings)]
+
 use starknet_rs::core::syscall_info;
 
 mod patricia_merkle_tree;
