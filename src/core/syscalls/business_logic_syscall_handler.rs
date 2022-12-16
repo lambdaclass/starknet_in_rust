@@ -5,10 +5,10 @@ use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
+use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
-use num_traits::ToPrimitive;
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
@@ -31,7 +31,6 @@ impl BusinessLogicSyscallHandler {
 }
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
-    // trait functions
     fn emit_event(
         &self,
         vm: &VirtualMachine,
@@ -40,8 +39,8 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let SyscallRequest::EmitEvent(request) =
             self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?;
 
-        let keys_len = bigint_to_usize(&request.keys_len)?;
-        let data_len = bigint_to_usize(&request.data_len)?;
+        let keys_len = request.keys_len;
+        let data_len = request.data_len;
 
         let order = self.tx_execution_context.borrow_mut().n_emitted_events;
         let keys: Vec<BigInt> = get_integer_range(vm, &request.keys, keys_len)?;
@@ -99,29 +98,6 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _allocate_segment(&self, _vm: VirtualMachine, _data: Vec<MaybeRelocatable>) -> Relocatable {
         todo!()
     }
-}
-
-//* -------------------
-//* Helper Functions
-//* -------------------
-
-pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
-    bigint
-        .to_usize()
-        .ok_or(SyscallHandlerError::BigintToUsizeFail)
-}
-
-fn get_integer_range(
-    vm: &VirtualMachine,
-    addr: &Relocatable,
-    size: usize,
-) -> Result<Vec<BigInt>, SyscallHandlerError> {
-    Ok(vm
-        .get_integer_range(addr, size)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .into_iter()
-        .map(|c| c.into_owned())
-        .collect::<Vec<BigInt>>())
 }
 
 #[cfg(test)]
@@ -229,7 +205,7 @@ mod tests {
         vm.insert_value(&Relocatable::from((3, 4)), data2).unwrap();
 
         // syscall_ptr
-        let mut ids_data = ids_data!["syscall_ptr"];
+        let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(EMIT_EVENT_CODE.to_string(), ids_data);
         // invoke syscall

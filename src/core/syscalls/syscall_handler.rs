@@ -118,12 +118,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
         match &*hint_data.code {
-            DEPLOY_SYSCALL_CODE => {
-                println!("Running deploy syscall.");
-                Err(SyscallHandlerError::NotImplemented)
-            }
+            DEPLOY_SYSCALL_CODE => Err(SyscallHandlerError::NotImplemented),
             EMIT_EVENT_CODE => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                println!("pasa");
                 self.syscall_handler.emit_event(vm, syscall_ptr)
             }
             _ => Err(SyscallHandlerError::NotImplemented),
@@ -185,7 +183,7 @@ fn get_ids_data(
     Ok(ids_data)
 }
 
-pub fn get_syscall_ptr(
+fn get_syscall_ptr(
     vm: &VirtualMachine,
     ids_data: &HashMap<String, HintReference>,
     ap_tracking: &ApTracking,

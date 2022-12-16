@@ -1,3 +1,62 @@
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use num_bigint::BigInt;
+use num_traits::ToPrimitive;
+
+//* -------------------
+//* Helper Functions
+//* -------------------
+
+pub fn get_integer(
+    vm: &VirtualMachine,
+    syscall_ptr: &Relocatable,
+) -> Result<usize, SyscallHandlerError> {
+    vm.get_integer(syscall_ptr)
+        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+        .as_ref()
+        .to_usize()
+        .ok_or(SyscallHandlerError::BigintToUsizeFail)
+}
+
+pub fn get_big_int(
+    vm: &VirtualMachine,
+    syscall_ptr: &Relocatable,
+) -> Result<BigInt, SyscallHandlerError> {
+    Ok(vm
+        .get_integer(syscall_ptr)
+        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+        .into_owned())
+}
+
+pub fn get_relocatable(
+    vm: &VirtualMachine,
+    syscall_ptr: &Relocatable,
+) -> Result<Relocatable, SyscallHandlerError> {
+    Ok(vm
+        .get_relocatable(syscall_ptr)
+        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+        .into_owned())
+}
+
+pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
+    bigint
+        .to_usize()
+        .ok_or(SyscallHandlerError::BigintToUsizeFail)
+}
+
+pub fn get_integer_range(
+    vm: &VirtualMachine,
+    addr: &Relocatable,
+    size: usize,
+) -> Result<Vec<BigInt>, SyscallHandlerError> {
+    Ok(vm
+        .get_integer_range(addr, size)
+        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+        .into_iter()
+        .map(|c| c.into_owned())
+        .collect::<Vec<BigInt>>())
+}
+
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
