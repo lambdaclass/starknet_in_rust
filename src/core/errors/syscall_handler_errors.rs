@@ -20,6 +20,6 @@ pub enum SyscallHandlerError {
     NotImplemented,
     #[error("HintData is incorrect")]
     WrongHintData,
-    #[error("Unknow hint")]
+    #[error("Unknown hint")]
     UnknownHint,
 }

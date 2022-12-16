@@ -121,7 +121,6 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             DEPLOY_SYSCALL_CODE => Err(SyscallHandlerError::NotImplemented),
             EMIT_EVENT_CODE => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                println!("pasa");
                 self.syscall_handler.emit_event(vm, syscall_ptr)
             }
             _ => Err(SyscallHandlerError::NotImplemented),
