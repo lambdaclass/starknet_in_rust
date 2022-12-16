@@ -174,7 +174,7 @@ impl OsSingleStarknetStorage {
     // corresponding storage_write system call.
     fn write(&self, _key: u32, _value: u32) -> u32 {
         // TO BE IMPLEMENTED
-        0
+        todo!()
     }
 }
 
@@ -339,7 +339,6 @@ impl OsSyscallHandler {
         Ok(())
     }
 
-    // TODO TEST
     /// Allocates and returns a new temporary segment.
     fn _allocate_segment(
         &self,
@@ -347,12 +346,15 @@ impl OsSyscallHandler {
         data: &dyn Any,
     ) -> Result<Relocatable, StarknetError> {
         let segment_start = vm.add_temporary_segment();
+        println!("segment start: {:?}", segment_start);
         vm.write_arg(&segment_start, data)
             .map_err(|_| StarknetError::WriteArg)?;
         Ok(segment_start)
     }
 
     // TODO TEST
+    // This cannot be tested until OsSingleStarknetStorage::write/3 is implemented.
+
     /// Updates the cached storage and returns the storage value before
     /// the write operation.
     fn execute_syscall_storage_write(
@@ -368,7 +370,6 @@ impl OsSyscallHandler {
             .write(key, value))
     }
 
-    // TODO TEST
     fn enter_call(&mut self) -> Result<(), StarknetError> {
         self.assert_iterators_exhausted()?;
 
@@ -1006,5 +1007,94 @@ mod tests {
         );
 
         assert_eq!(handler.exit_call(), Ok(Some(CallInfo::default())))
+    }
+
+    #[test]
+    fn os_syscall_handler_enter_call_err() {
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler.enter_call(), Err(StarknetError::IteratorEmpty))
+    }
+
+    #[test]
+    fn os_syscall_handler_enter_call() {
+        let mut call_iterator = VecDeque::new();
+        call_iterator.push_back(CallInfo::default());
+
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            call_iterator,
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler.enter_call(), Ok(()))
+    }
+
+    #[test]
+    fn os_syscall_handler_allocate_segment() {
+        let vm = vm!();
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        let data = vec![
+            Relocatable::from((0, 1)),
+            Relocatable::from((0, 2)),
+            Relocatable::from((0, 3)),
+        ];
+
+        assert_eq!(
+            handler._allocate_segment(vm, &data),
+            Ok(Relocatable {
+                segment_index: -1,
+                offset: 0
+            })
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_allocate_segment_err() {
+        let vm = vm!();
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        let data = &12 as &dyn Any;
+        assert_eq!(
+            handler._allocate_segment(vm, data),
+            Err(StarknetError::WriteArg)
+        )
     }
 }
