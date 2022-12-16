@@ -35,7 +35,7 @@ fn compute_hash_on_elements(vec: &Vec<BigInt>) -> Result<BigInt, SyscallHandlerE
         .into_iter()
         .map(|num| {
             FieldElement::from_dec_str(&num.to_str_radix(10))
-                .map_err(|_| SyscallHandlerError::FailToComputegHash)
+                .map_err(|_| SyscallHandlerError::FailToComputeHash)
         })
         .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
     felt_vec.push(FieldElement::from(felt_vec.len()));
@@ -43,7 +43,7 @@ fn compute_hash_on_elements(vec: &Vec<BigInt>) -> Result<BigInt, SyscallHandlerE
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
-        .ok_or(SyscallHandlerError::FailToComputegHash)?;
+        .ok_or(SyscallHandlerError::FailToComputeHash)?;
     let result = BigInt::from_bytes_be(Sign::Plus, &felt_result.to_bytes_be());
     Ok(result)
 }

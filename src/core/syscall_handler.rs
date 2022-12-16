@@ -277,9 +277,12 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let contract_address = calculate_contract_address_from_hash(
             &request.contract_address_salt,
             class_hash,
-            constructor_calldata,
+            &constructor_calldata,
             deployer_address,
         )?;
+
+        // Initialize the contract.
+        let (_sign, class_hash_bytes) = request.class_hash.to_bytes_be();
 
         todo!()
     }
