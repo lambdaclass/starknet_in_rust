@@ -40,7 +40,6 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let SyscallRequest::EmitEvent(request) =
             self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?;
 
-        println!("syscall request: {:?}", request);
         let keys_len = bigint_to_usize(&request.keys_len)?;
         let data_len = bigint_to_usize(&request.data_len)?;
 

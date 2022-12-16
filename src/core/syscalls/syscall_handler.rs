@@ -117,14 +117,12 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             .downcast_ref::<HintProcessorData>()
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
-        println!("name {:?}", &*hint_data.code);
         match &*hint_data.code {
             DEPLOY_SYSCALL_CODE => {
                 println!("Running deploy syscall.");
                 Err(SyscallHandlerError::NotImplemented)
             }
             EMIT_EVENT_CODE => {
-                println!("entro");
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.emit_event(vm, syscall_ptr)
             }
