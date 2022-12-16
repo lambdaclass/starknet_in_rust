@@ -16,4 +16,10 @@ pub enum SyscallHandlerError {
     SegmentationFault,
     #[error("Couldn't convert BigInt to usize")]
     BigintToUsizeFail,
+    #[error("Hint not implemented")]
+    NotImplemented,
+    #[error("HintData is incorrect")]
+    WrongHintData,
+    #[error("Unknown hint")]
+    UnknownHint,
 }
