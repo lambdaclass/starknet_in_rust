@@ -128,9 +128,9 @@ fn get_ids_data(
 
 pub trait SyscallHandler {}
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
-    _caller_address: u32,
+    caller_address: u32,
     contract_address: u32,
     internal_calls: Vec<CallInfo>,
     entry_point_type: Option<EntryPointType>,
@@ -138,17 +138,32 @@ struct CallInfo {
     retadata: VecDeque<u32>,
 }
 
-#[derive(PartialEq, Clone)]
+impl Default for CallInfo {
+    fn default() -> Self {
+        Self {
+            caller_address: 0,
+            contract_address: 0,
+            internal_calls: Vec::new(),
+            entry_point_type: Some(EntryPointType::Constructor),
+            _storage_read_values: VecDeque::new(),
+            retadata: VecDeque::new(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 enum EntryPointType {
     External,
     L1Handler,
     Constructor,
 }
 
+#[derive(Debug)]
 struct OsSingleStarknetStorage;
 
 pub struct BusinessLogicSyscallHandler;
 
+#[derive(Debug, PartialEq)]
 pub struct TransactionExecutionInfo;
 
 impl SyscallHandler for BusinessLogicSyscallHandler {}
@@ -163,9 +178,10 @@ impl OsSingleStarknetStorage {
     }
 }
 
+#[derive(Debug)]
 struct OsSyscallHandler {
-    tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>, //TRANSACTION EXECUTION INFO
-    call_iterator: VecDeque<CallInfo>,                              // CALLINFO
+    tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
+    call_iterator: VecDeque<CallInfo>,
 
     //  A stack that keeps track of the state of the calls being executed now.
     // The last item is the state of the current call; the one before it, is the
@@ -190,6 +206,30 @@ struct OsSyscallHandler {
 }
 
 impl OsSyscallHandler {
+    fn new(
+        tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
+        call_iterator: VecDeque<CallInfo>,
+        call_stack: VecDeque<CallInfo>,
+        deployed_contracts_iterator: VecDeque<u32>,
+        retdata_iterator: VecDeque<VecDeque<u32>>,
+        execute_code_read_iterator: VecDeque<u32>,
+        starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
+        tx_info_ptr: Option<Relocatable>,
+        tx_execution_info: Option<TransactionExecutionInfo>,
+    ) -> Self {
+        Self {
+            tx_execution_info_iterator,
+            call_iterator,
+            call_stack,
+            deployed_contracts_iterator,
+            retdata_iterator,
+            execute_code_read_iterator,
+            starknet_storage_by_address,
+            tx_info_ptr,
+            tx_execution_info,
+        }
+    }
+
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), StarknetError> {
@@ -221,8 +261,8 @@ impl OsSyscallHandler {
         self.execute_code_read_iterator.pop_front()
     }
 
-    fn _get_tx_info_ptr(self) -> Option<Relocatable> {
-        self.tx_info_ptr
+    fn _get_tx_info_ptr(&self) -> &Option<Relocatable> {
+        &self.tx_info_ptr
     }
 
     fn _call_contract(&mut self) -> Option<VecDeque<u32>> {
@@ -230,7 +270,10 @@ impl OsSyscallHandler {
     }
 
     fn _deploy(&mut self) -> Result<Option<u32>, StarknetError> {
-        let constructor_retdata = self.retdata_iterator.pop_front().unwrap();
+        let constructor_retdata = self
+            .retdata_iterator
+            .pop_front()
+            .ok_or(StarknetError::IteratorEmpty)?;
         match constructor_retdata.len() {
             0 => (),
             _ => Err(StarknetError::UnexpectedConstructorRetdata)?,
@@ -263,13 +306,13 @@ impl OsSyscallHandler {
     }
 
     fn _get_caller_address(self) -> Result<u32, StarknetError> {
-        match self.call_stack.front() {
+        match self.call_stack.back() {
             None => Err(StarknetError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info._caller_address),
+            Some(call_info) => Ok(call_info.caller_address),
         }
     }
 
-    fn _get_contract_address(self) -> Result<u32, StarknetError> {
+    fn _get_contract_address(&self) -> Result<u32, StarknetError> {
         match self.call_stack.front() {
             None => Err(StarknetError::ListIsEmpty)?,
             Some(call_info) => Ok(call_info.contract_address),
@@ -278,9 +321,6 @@ impl OsSyscallHandler {
 
     /// Called after the execution of the current transaction complete.
     fn end_tx(&mut self) -> Result<(), StarknetError> {
-        if let Some(_) = self.execute_code_read_iterator.front() {
-            return Err(StarknetError::IteratorNotEmpty);
-        }
         if let Some(_) = self.execute_code_read_iterator.front() {
             return Err(StarknetError::IteratorNotEmpty);
         };
@@ -299,9 +339,10 @@ impl OsSyscallHandler {
         Ok(())
     }
 
+    // TODO TEST
     /// Allocates and returns a new temporary segment.
     fn _allocate_segment(
-        self,
+        &self,
         mut vm: VirtualMachine,
         data: &dyn Any,
     ) -> Result<Relocatable, StarknetError> {
@@ -311,10 +352,11 @@ impl OsSyscallHandler {
         Ok(segment_start)
     }
 
+    // TODO TEST
     /// Updates the cached storage and returns the storage value before
     /// the write operation.
     fn execute_syscall_storage_write(
-        self,
+        &self,
         contract_address: &u32,
         key: u32,
         value: u32,
@@ -326,6 +368,7 @@ impl OsSyscallHandler {
             .write(key, value))
     }
 
+    // TODO TEST
     fn enter_call(&mut self) -> Result<(), StarknetError> {
         self.assert_iterators_exhausted()?;
 
@@ -370,6 +413,7 @@ impl OsSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::core::syscall_handler::{SyscallHintProcessor, DEPLOY_SYSCALL_CODE};
+    use crate::errors::StarknetError;
     use crate::utils::test_utils::*;
     use cairo_rs::any_box;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -383,7 +427,9 @@ mod tests {
     use cairo_rs::vm::vm_core::VirtualMachine;
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, VecDeque};
+
+    use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -417,5 +463,548 @@ mod tests {
             run_syscall_hint!(vm, HashMap::new(), hint_code),
             Err(VirtualMachineError::NotImplemented)
         );
+    }
+
+    #[test]
+    fn os_syscall_handler_get_contract_address() {
+        let mut call_stack = VecDeque::new();
+        let call_info = CallInfo {
+            contract_address: 5,
+            caller_address: 1,
+            internal_calls: Vec::new(),
+            entry_point_type: None,
+            _storage_read_values: VecDeque::new(),
+            retadata: VecDeque::new(),
+        };
+        call_stack.push_back(call_info);
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            call_stack,
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            Some(Relocatable {
+                segment_index: 0,
+                offset: 0,
+            }),
+            None,
+        );
+        let get_contract_address = handler._get_contract_address();
+        assert_eq!(get_contract_address, Ok(5))
+    }
+
+    #[test]
+    fn os_syscall_handler_get_contract_address_err() {
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            Some(Relocatable {
+                segment_index: 0,
+                offset: 0,
+            }),
+            None,
+        );
+        let get_contract_address = handler._get_contract_address().unwrap_err();
+        assert_eq!(get_contract_address, StarknetError::ListIsEmpty)
+    }
+
+    #[test]
+    fn os_syscall_handler_end_tx_err_execute_code_read_iterator() {
+        let mut execute_code_read_iterator = VecDeque::new();
+        execute_code_read_iterator.push_back(12);
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            execute_code_read_iterator,
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler.end_tx(), Err(StarknetError::IteratorNotEmpty))
+    }
+    #[test]
+    fn os_syscall_handler_end_tx_err_tx_info_ptr() {
+        let tx_info_ptr = Some(Relocatable {
+            segment_index: 0,
+            offset: 0,
+        });
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            tx_info_ptr,
+            None,
+        );
+
+        assert_eq!(
+            handler.end_tx(),
+            Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_end_tx_err_tx_execution_info() {
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            Some(TransactionExecutionInfo),
+        );
+
+        assert_eq!(
+            handler.end_tx(),
+            Err(StarknetError::ShouldBeNone(String::from(
+                "tx_execution_info",
+            )))
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_end_tx() {
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler.end_tx(), Ok(()))
+    }
+
+    #[test]
+    fn os_syscall_handler_start_tx_err_tx_info_ptr() {
+        let tx_info_ptr = Some(Relocatable {
+            segment_index: 0,
+            offset: 0,
+        });
+
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            tx_info_ptr,
+            None,
+        );
+
+        let reloc = Relocatable {
+            segment_index: 1,
+            offset: 1,
+        };
+
+        assert_eq!(
+            handler.start_tx(reloc),
+            Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_start_tx_err_tx_execution_info() {
+        let tx_execution_info = Some(TransactionExecutionInfo);
+
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            tx_execution_info,
+        );
+
+        let reloc = Relocatable {
+            segment_index: 1,
+            offset: 1,
+        };
+
+        assert_eq!(
+            handler.start_tx(reloc),
+            Err(StarknetError::ShouldBeNone(String::from(
+                "tx_execution_info",
+            )))
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_start_tx() {
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        let reloc = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
+
+        assert_eq!(handler.start_tx(reloc), Ok(()))
+    }
+
+    #[test]
+    fn os_syscall_handler_skip_tx() {
+        let mut tx_execution_info_iterator = VecDeque::new();
+        tx_execution_info_iterator.push_back(TransactionExecutionInfo);
+        let mut handler = OsSyscallHandler::new(
+            tx_execution_info_iterator,
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler.skip_tx(), Some(TransactionExecutionInfo));
+        assert_eq!(handler.skip_tx(), None)
+    }
+
+    #[test]
+    fn os_syscall_handler_get_tx_info_ptr_reloc() {
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            Some(Relocatable {
+                segment_index: 0,
+                offset: 0,
+            }),
+            None,
+        );
+
+        assert_eq!(
+            handler._get_tx_info_ptr(),
+            &Some(Relocatable {
+                segment_index: 0,
+                offset: 0,
+            })
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_get_tx_info_ptr_none() {
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler._get_tx_info_ptr(), &None)
+    }
+
+    #[test]
+    fn os_syscall_handler_call_contract() {
+        let mut retdata_iterator = VecDeque::new();
+        retdata_iterator.push_back(VecDeque::new());
+        retdata_iterator.push_back(VecDeque::new());
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            retdata_iterator,
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler._call_contract(), Some(VecDeque::new()));
+        assert_eq!(handler._call_contract(), Some(VecDeque::new()));
+        assert_eq!(handler._call_contract(), None)
+    }
+
+    #[test]
+    fn os_syscall_handler_storage_deploy() {
+        let mut retdata_iterator = VecDeque::new();
+        retdata_iterator.push_back(VecDeque::new());
+        let mut deployed_contract_iterator = VecDeque::new();
+        deployed_contract_iterator.push_back(12);
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            deployed_contract_iterator,
+            retdata_iterator,
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler._deploy(), Ok(Some(12)));
+    }
+
+    #[test]
+    fn os_syscall_handler_storage_deploy_err_retdata_iterator_multiple() {
+        let mut retdata_iterator = VecDeque::new();
+        let mut retdata_construct = VecDeque::new();
+        retdata_construct.push_back(12);
+        retdata_iterator.push_back(retdata_construct);
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            retdata_iterator,
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(
+            handler._deploy(),
+            Err(StarknetError::UnexpectedConstructorRetdata)
+        );
+    }
+    #[test]
+    fn os_syscall_handler_storage_deploy_err_retdata_iterator() {
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler._deploy(), Err(StarknetError::IteratorEmpty));
+    }
+
+    #[test]
+    fn os_syscall_handler_storage_read() {
+        let mut execute_code_read_iterator = VecDeque::new();
+        execute_code_read_iterator.push_back(12);
+        execute_code_read_iterator.push_back(1444);
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            execute_code_read_iterator,
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler._storage_read(), Some(12));
+        assert_eq!(handler._storage_read(), Some(1444));
+        assert_eq!(handler._storage_read(), None)
+    }
+
+    #[test]
+    fn os_syscall_handler_storage_write() {
+        let mut execute_code_read_iterator = VecDeque::new();
+        execute_code_read_iterator.push_back(12);
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            execute_code_read_iterator,
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler._storage_write(), Some(12));
+        assert_eq!(handler._storage_write(), None)
+    }
+
+    #[test]
+    fn os_syscall_handler_assert_iterators_exhausted_err_deployed() {
+        let mut deployed_contracts_iterator = VecDeque::new();
+        deployed_contracts_iterator.push_back(12);
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            deployed_contracts_iterator,
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(
+            handler.assert_iterators_exhausted(),
+            Err(StarknetError::IteratorNotEmpty)
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_assert_iterators_exhausted_err_retdata() {
+        let mut retdata_iter = VecDeque::new();
+        retdata_iter.push_back(VecDeque::new());
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            retdata_iter,
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(
+            handler.assert_iterators_exhausted(),
+            Err(StarknetError::IteratorNotEmpty)
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_assert_iterators_exhausted_err_execute() {
+        let mut execute_code_read_iter = VecDeque::new();
+        execute_code_read_iter.push_back(12);
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            execute_code_read_iter,
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(
+            handler.assert_iterators_exhausted(),
+            Err(StarknetError::IteratorNotEmpty)
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_assert_iterators_exhausted() {
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler.assert_iterators_exhausted(), Ok(()))
+    }
+
+    #[test]
+    fn os_syscall_handler_get_caller_address_err() {
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(
+            handler._get_caller_address(),
+            Err(StarknetError::ListIsEmpty)
+        )
+    }
+    #[test]
+    fn os_syscall_handler_get_caller_address() {
+        let mut call_stack = VecDeque::new();
+        call_stack.push_back(CallInfo::default());
+        let handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            call_stack,
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(
+            handler._get_caller_address(),
+            Ok(CallInfo::default().caller_address)
+        )
+    }
+
+    #[test]
+    fn os_syscall_handler_exit_call() {
+        let mut call_stack = VecDeque::new();
+        call_stack.push_back(CallInfo::default());
+        let mut handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            call_stack,
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+        );
+
+        assert_eq!(handler.exit_call(), Ok(Some(CallInfo::default())))
     }
 }
