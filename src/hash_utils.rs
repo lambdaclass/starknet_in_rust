@@ -9,7 +9,7 @@ use crate::{bigint, core::errors::syscall_handler_errors::SyscallHandlerError};
 pub fn calculate_contract_address_from_hash(
     salt: &BigInt,
     class_hash: &BigInt,
-    constructor_calldata: &Vec<BigInt>,
+    constructor_calldata: &[BigInt],
     deployer_address: u64,
 ) -> Result<BigInt, SyscallHandlerError> {
     // Define constants
@@ -30,9 +30,9 @@ pub fn calculate_contract_address_from_hash(
     Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-fn compute_hash_on_elements(vec: &Vec<BigInt>) -> Result<BigInt, SyscallHandlerError> {
+fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
     let mut felt_vec = vec
-        .into_iter()
+        .iter()
         .map(|num| {
             FieldElement::from_dec_str(&num.to_str_radix(10))
                 .map_err(|_| SyscallHandlerError::FailToComputeHash)
