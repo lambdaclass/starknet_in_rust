@@ -19,7 +19,7 @@ pub(crate) struct EmitEventStruct {
 
 pub(crate) struct DeployRequestStruct {
     // The system call selector (= DEPLOY_SELECTOR).
-    pub(crate) selector: BigInt,
+    pub(crate) _selector: BigInt,
     // The hash of the class to deploy.
     pub(crate) class_hash: BigInt,
     // A salt for the new contract address calculation.
@@ -100,7 +100,7 @@ impl FromPtr for DeployRequestStruct {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_integer(vm, &(&syscall_ptr))?;
+        let _selector = get_integer(vm, &syscall_ptr)?;
         let class_hash = get_integer(vm, &(&syscall_ptr + 1))?;
         let contract_address_salt = get_integer(vm, &(&syscall_ptr + 2))?;
         let constructor_calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
@@ -108,7 +108,7 @@ impl FromPtr for DeployRequestStruct {
         let deploy_from_zero = get_integer(vm, &(&syscall_ptr + 5))?;
 
         Ok(SyscallRequest::Deploy(DeployRequestStruct {
-            selector,
+            _selector,
             class_hash,
             contract_address_salt,
             constructor_calldata_size,

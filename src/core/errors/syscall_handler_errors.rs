@@ -18,4 +18,10 @@ pub enum SyscallHandlerError {
     BigintToUsizeFail,
     #[error("Couldn't compure hash")]
     FailToComputeHash,
+    #[error("Expected DesployRequestStruct")]
+    ExpectedDeployRequestStruct,
+    #[error("Expected EmitEventStruct")]
+    ExpectedEmitEventStruct,
+    #[error("The deploy_from_zero field in the deploy system call must be 0 or 1")]
+    DeployFromZero,
 }

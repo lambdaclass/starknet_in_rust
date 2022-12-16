@@ -17,7 +17,7 @@ use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 use num_traits::{One, ToPrimitive, Zero};
 
-use super::os::contact_address::calculate_contract_address_from_hash;
+use crate::hash_utils::calculate_contract_address_from_hash;
 
 const DEPLOY_SYSCALL_CODE: &str =
     "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
@@ -219,7 +219,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         {
             request
         } else {
-            panic!()
+            return Err(SyscallHandlerError::ExpectedEmitEventStruct);
         };
         let keys_len = bigint_to_usize(&request.keys_len)?;
         let data_len = bigint_to_usize(&request.data_len)?;
@@ -248,16 +248,15 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<i32, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
-            self._read_and_validate_syscall_request("emit_event", &vm, syscall_ptr)?
+            self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
             request
         } else {
-            panic!()
+            return Err(SyscallHandlerError::ExpectedDeployRequestStruct);
         };
 
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
-            // "The deploy_from_zero field in the deploy system call must be 0 or 1."
-            panic!();
+            return Err(SyscallHandlerError::DeployFromZero);
         };
 
         let constructor_calldata = get_integer_range(
@@ -274,7 +273,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             0
         };
 
-        let contract_address = calculate_contract_address_from_hash(
+        let _contract_address = calculate_contract_address_from_hash(
             &request.contract_address_salt,
             class_hash,
             &constructor_calldata,
@@ -282,7 +281,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         )?;
 
         // Initialize the contract.
-        let (_sign, class_hash_bytes) = request.class_hash.to_bytes_be();
+        let (_sign, _class_hash_bytes) = request.class_hash.to_bytes_be();
 
         todo!()
     }
