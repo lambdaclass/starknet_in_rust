@@ -58,6 +58,20 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
+    fn get_tx_info(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                SyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        todo!()
+    }
+
     fn send_message_to_l1(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) {
         todo!()
     }

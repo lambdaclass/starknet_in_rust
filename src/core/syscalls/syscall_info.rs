@@ -16,6 +16,17 @@ pub(crate) enum SyscallType {
         data_len: Option<Member>,
         data: Option<Member>,
     },
+    #[allow(unused)] // TODO: Remove once used.
+    GetTxInfo {
+        version: Option<Member>,
+        account_contract_address: Option<Member>,
+        max_fee: Option<Member>,
+        signature_len: Option<Member>,
+        signature: Option<Member>,
+        transaction_hash: Option<Member>,
+        chain_id: Option<Member>,
+        nonce: Option<Member>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -75,6 +86,39 @@ impl SyscallInfo {
                 keys,
                 data_len,
                 data,
+            },
+        })
+    }
+
+    #[allow(unused)] // TODO: Remove once used.
+    pub fn get_tx_info(
+        identifiers: &HashMap<String, Identifier>,
+    ) -> Result<SyscallInfo, SyscallHandlerError> {
+        let identifier = get_identifier("__main__.TxInfo", identifiers)?;
+        let selector = get_selector("__main__.GET_TX_INFO_SELECTOR", identifiers)?;
+        let members = identifier.members.ok_or(MissingMember)?;
+
+        let version = get_member("selector", &members);
+        let account_contract_address = get_member("account_contract_address", &members);
+        let max_fee = get_member("max_fee", &members);
+        let signature_len = get_member("signature_len", &members);
+        let signature = get_member("signature", &members);
+        let transaction_hash = get_member("transaction_hash", &members);
+        let chain_id = get_member("chain_id", &members);
+        let nonce = get_member("nonce", &members);
+
+        Ok(SyscallInfo {
+            selector,
+            syscall_size: 8,
+            syscall_struct: SyscallType::GetTxInfo {
+                version,
+                account_contract_address,
+                max_fee,
+                signature_len,
+                signature,
+                transaction_hash,
+                chain_id,
+                nonce
             },
         })
     }
