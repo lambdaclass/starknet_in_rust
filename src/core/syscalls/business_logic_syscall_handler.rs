@@ -17,7 +17,7 @@ use num_bigint::BigInt;
 
 pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
-    general_config: Rc<RefCell<StarknetGeneralConfig>>,
+    general_config: RefCell<StarknetGeneralConfig>,
     events: Rc<RefCell<Vec<OrderedEvent>>>,
     tx_info_ptr: RefCell<Option<MaybeRelocatable>>,
 }
@@ -26,7 +26,7 @@ impl BusinessLogicSyscallHandler {
     pub fn new() -> Result<Self, SyscallHandlerError> {
         let events = Rc::new(RefCell::new(Vec::new()));
         let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
-        let general_config = Rc::new(RefCell::new(StarknetGeneralConfig::new()));
+        let general_config = RefCell::new(StarknetGeneralConfig::new());
         let tx_info_ptr = RefCell::new(None);
 
         Ok(BusinessLogicSyscallHandler {
