@@ -88,7 +88,7 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
     ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler::new()?,
+            syscall_handler: BusinessLogicSyscallHandler::new(),
         })
     }
 }
@@ -212,7 +212,7 @@ mod tests {
 
     #[test]
     fn read_deploy_syscall_request() {
-        let syscall = BusinessLogicSyscallHandler::new().unwrap();
+        let syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();
         vm.add_memory_segment();
         vm.add_memory_segment();

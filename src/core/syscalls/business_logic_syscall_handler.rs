@@ -23,14 +23,20 @@ pub struct BusinessLogicSyscallHandler {
 }
 
 impl BusinessLogicSyscallHandler {
-    pub fn new() -> Result<Self, SyscallHandlerError> {
+    pub fn new() -> Self {
         let events = Rc::new(RefCell::new(Vec::new()));
         let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
-        Ok(BusinessLogicSyscallHandler {
+        BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
             contract_address: 0,
-        })
+        }
+    }
+}
+
+impl Default for BusinessLogicSyscallHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
