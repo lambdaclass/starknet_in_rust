@@ -19,6 +19,7 @@ pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
     general_config: Rc<RefCell<StarknetGeneralConfig>>,
     events: Rc<RefCell<Vec<OrderedEvent>>>,
+    tx_info_ptr: RefCell<Option<MaybeRelocatable>>,
 }
 
 impl BusinessLogicSyscallHandler {
@@ -26,11 +27,13 @@ impl BusinessLogicSyscallHandler {
         let events = Rc::new(RefCell::new(Vec::new()));
         let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
         let general_config = Rc::new(RefCell::new(StarknetGeneralConfig::new()));
+        let tx_info_ptr = RefCell::new(None);
 
         Ok(BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
             general_config,
+            tx_info_ptr,
         })
     }
 }
@@ -85,40 +88,48 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &self,
         vm: &mut VirtualMachine,
     ) -> Result<MaybeRelocatable, SyscallHandlerError> {
-        let tx = self.tx_execution_context.borrow();
+        let mut tx_info_ptr = self.tx_info_ptr.borrow_mut();
 
-        let version = tx.version.clone();
-        let account_contract_address = tx.account_contract_address.clone();
-        let max_fee = tx.max_fee.clone();
-        let transaction_hash = tx.transaction_hash.clone();
-        let nonce = tx.nonce.clone();
-        let signature = vm.add_memory_segment();
-        let signature = vm
-            .write_arg(&signature, &tx.signature)
-            .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
-        let signature = signature.get_relocatable()?.clone();
-        let signature_len = signature.offset;
+        if let Some(ptr) = &*tx_info_ptr {
+            Ok(ptr.clone())
+        } else {
+            let tx = self.tx_execution_context.borrow();
 
-        let chain_id = self.general_config.borrow().starknet_os_config.chain_id as usize;
+            let version = tx.version.clone();
+            let account_contract_address = tx.account_contract_address.clone();
+            let max_fee = tx.max_fee.clone();
+            let transaction_hash = tx.transaction_hash.clone();
+            let nonce = tx.nonce.clone();
+            let signature = vm.add_memory_segment();
+            let signature = vm
+                .write_arg(&signature, &tx.signature)
+                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
+            let signature = signature.get_relocatable()?.clone();
+            let signature_len = signature.offset;
 
-        let tx_info = TxInfoStruct {
-            version,
-            account_contract_address,
-            max_fee,
-            transaction_hash,
-            nonce,
-            signature,
-            signature_len,
-            chain_id,
-        };
+            let chain_id = self.general_config.borrow().starknet_os_config.chain_id as usize;
 
-        let segment = vm.add_memory_segment();
+            let tx_info = TxInfoStruct {
+                version,
+                account_contract_address,
+                max_fee,
+                transaction_hash,
+                nonce,
+                signature,
+                signature_len,
+                chain_id,
+            };
 
-        let tx_info_ptr = vm
-            .write_arg(&segment, &tx_info)
-            .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
+            let segment = vm.add_memory_segment();
 
-        Ok(tx_info_ptr)
+            let tx_info_ptr_temp = vm
+                .write_arg(&segment, &tx_info)
+                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
+
+            *tx_info_ptr = Some(tx_info_ptr_temp.clone());
+
+            Ok(tx_info_ptr_temp)
+        }
     }
     fn _deploy(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
         todo!()
