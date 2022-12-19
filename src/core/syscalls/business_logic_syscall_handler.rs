@@ -56,6 +56,15 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
+    fn library_call(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._call_contract_and_write_response("library_call", vm, syscall_ptr);
+        Ok(())
+    }
+
     fn send_message_to_l1(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) {
         todo!()
     }
@@ -76,10 +85,21 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
 
+    fn _call_contract_and_write_response(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) {
+        let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone());
+        // TODO: Should we build a response struct to pass to _write_syscall_response?
+        self._write_syscall_response(response_data, vm, syscall_ptr);
+    }
+
     fn _call_contract(
         &self,
         _syscall_name: &str,
-        _vm: VirtualMachine,
+        _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
     ) -> Vec<i32> {
         todo!()
@@ -97,6 +117,14 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         todo!()
     }
     fn _allocate_segment(&self, _vm: VirtualMachine, _data: Vec<MaybeRelocatable>) -> Relocatable {
+        todo!()
+    }
+    fn _write_syscall_response(
+        &self,
+        _response: Vec<i32>,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) {
         todo!()
     }
 }
