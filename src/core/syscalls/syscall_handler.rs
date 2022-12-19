@@ -200,3 +200,41 @@ fn get_syscall_ptr(
         .into_owned();
     Ok(syscall_ptr)
 }
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{bigint, utils::test_utils::vm};
+    use cairo_rs::relocatable;
+    use num_bigint::{BigInt, Sign};
+
+    use super::*;
+
+    #[test]
+    fn read_deploy_syscall_request() {
+        let syscall = BusinessLogicSyscallHandler::new().unwrap();
+        let mut vm = vm!();
+        vm.add_memory_segment();
+        vm.add_memory_segment();
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 3), bigint!(3)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(1, 20))
+            .unwrap();
+        vm.insert_value(&relocatable!(1, 5), bigint!(4)).unwrap();
+
+        assert_eq!(
+            syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
+            Ok(SyscallRequest::Deploy(DeployRequestStruct {
+                _selector: bigint!(0),
+                class_hash: bigint!(1),
+                contract_address_salt: bigint!(2),
+                constructor_calldata_size: bigint!(3),
+                constructor_calldata: relocatable!(1, 20),
+                deploy_from_zero: bigint!(4),
+            }))
+        )
+    }
+}
