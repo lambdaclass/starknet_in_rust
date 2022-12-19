@@ -1,4 +1,5 @@
 use num_bigint::BigInt;
+use num_traits::Zero;
 
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
@@ -34,6 +35,11 @@ pub(crate) struct StarknetGeneralConfig {
 
 impl StarknetGeneralConfig {
     pub(crate) fn new() -> Self {
-        todo!()
+        Self {
+            starknet_os_config: StarknetOsConfig {
+                chain_id: StarknetChainId::TestNet,
+                fee_token_address: BigInt::zero(),
+            },
+        }
     }
 }
