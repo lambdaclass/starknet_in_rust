@@ -98,7 +98,7 @@ impl SyscallInfo {
         let selector = get_selector("__main__.GET_TX_INFO_SELECTOR", identifiers)?;
         let members = identifier.members.ok_or(MissingMember)?;
 
-        let version = get_member("selector", &members);
+        let version = get_member("version", &members);
         let account_contract_address = get_member("account_contract_address", &members);
         let max_fee = get_member("max_fee", &members);
         let signature_len = get_member("signature_len", &members);
