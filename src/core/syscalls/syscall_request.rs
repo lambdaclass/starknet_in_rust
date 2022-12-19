@@ -4,12 +4,13 @@ use cairo_rs::types::relocatable::Relocatable;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 
+#[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
     Deploy(DeployRequestStruct),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventStruct {
     #[allow(unused)] // TODO: Remove once used.
     pub(crate) selector: BigInt,
@@ -19,6 +20,7 @@ pub(crate) struct EmitEventStruct {
     pub(crate) data: Relocatable,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeployRequestStruct {
     // The system call selector (= DEPLOY_SELECTOR).
     pub(crate) _selector: BigInt,
