@@ -37,7 +37,10 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError>;
 
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
-    fn _get_tx_info_ptr(&self, vm: &mut VirtualMachine) -> Result<MaybeRelocatable, SyscallHandlerError>;
+    fn _get_tx_info_ptr(
+        &self,
+        vm: &mut VirtualMachine,
+    ) -> Result<MaybeRelocatable, SyscallHandlerError>;
     fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
 
     fn _read_and_validate_syscall_request(
@@ -133,7 +136,7 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             GET_TX_INFO => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_tx_info(vm, syscall_ptr)
-            },
+            }
             _ => Err(SyscallHandlerError::NotImplemented),
         }
     }

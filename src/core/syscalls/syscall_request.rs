@@ -86,7 +86,7 @@ impl FromPtr for TxInfoStruct {
         let transaction_hash = get_big_int(vm, &(&syscall_ptr + 5))?;
         let chain_id = get_integer(vm, &(&syscall_ptr + 6))?;
         let nonce = get_big_int(vm, &(&syscall_ptr + 7))?;
-        
+
         Ok(TxInfoStruct {
             version,
             account_contract_address,

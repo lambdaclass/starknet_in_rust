@@ -118,7 +118,7 @@ impl SyscallInfo {
                 signature,
                 transaction_hash,
                 chain_id,
-                nonce
+                nonce,
             },
         })
     }
