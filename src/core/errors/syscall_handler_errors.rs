@@ -22,4 +22,6 @@ pub enum SyscallHandlerError {
     WrongHintData,
     #[error("Unknown hint")]
     UnknownHint,
+    #[error("The requested syscall read was not of the expected type")]
+    InvalidSyscallReadRequest,
 }
