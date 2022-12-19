@@ -36,8 +36,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let SyscallRequest::EmitEvent(request) =
-            self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?;
+        let request =
+            match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)? {
+                SyscallRequest::EmitEvent(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
 
         let keys_len = request.keys_len;
         let data_len = request.data_len;
