@@ -32,7 +32,11 @@ pub(crate) trait SyscallHandler {
 
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
-    fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
+    fn _deploy(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<i32, SyscallHandlerError>;
 
     fn _read_and_validate_syscall_request(
         &self,

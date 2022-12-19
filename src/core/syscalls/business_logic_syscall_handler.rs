@@ -5,10 +5,12 @@ use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
+use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
+use num_traits::{One, Zero};
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
@@ -17,6 +19,7 @@ use num_bigint::BigInt;
 pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
     events: Rc<RefCell<Vec<OrderedEvent>>>,
+    contract_address: u64,
 }
 
 impl BusinessLogicSyscallHandler {
@@ -26,6 +29,7 @@ impl BusinessLogicSyscallHandler {
         Ok(BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
+            contract_address: 0,
         })
     }
 }
@@ -67,7 +71,48 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _get_tx_info_ptr(&self, _vm: VirtualMachine) {
         todo!()
     }
-    fn _deploy(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
+
+    fn _deploy(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<i32, SyscallHandlerError> {
+        let request = if let SyscallRequest::Deploy(request) =
+            self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedDeployRequestStruct);
+        };
+
+        if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
+            return Err(SyscallHandlerError::DeployFromZero);
+        };
+
+        let constructor_calldata = get_integer_range(
+            vm,
+            &request.constructor_calldata,
+            bigint_to_usize(&request.constructor_calldata_size)?,
+        )?;
+
+        let class_hash = &request.class_hash;
+
+        let deployer_address = if request.deploy_from_zero.is_zero() {
+            self.contract_address
+        } else {
+            0
+        };
+
+        let _contract_address = calculate_contract_address_from_hash(
+            &request.contract_address_salt,
+            class_hash,
+            &constructor_calldata,
+            deployer_address,
+        )?;
+
+        // Initialize the contract.
+        let (_sign, _class_hash_bytes) = request.class_hash.to_bytes_be();
+
         todo!()
     }
 
