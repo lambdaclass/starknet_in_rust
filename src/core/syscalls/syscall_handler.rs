@@ -66,6 +66,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
+            "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
