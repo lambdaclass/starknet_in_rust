@@ -6,7 +6,7 @@ use num_bigint::BigInt;
 
 pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
-    GetTxInfo(GetTxInfoStruct),
+    GetTxInfo(TxInfoStruct),
 }
 
 #[derive(Clone, Debug)]
@@ -56,24 +56,24 @@ impl FromPtr for EmitEventStruct {
 
 #[allow(unused)] // TODO: Remove once used.
 #[derive(Debug, Clone)]
-pub(crate) struct GetTxInfoStruct {
+pub(crate) struct TxInfoStruct {
     pub(crate) version: BigInt,
     pub(crate) account_contract_address: BigInt,
     pub(crate) max_fee: BigInt,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
     pub(crate) transaction_hash: BigInt,
-    pub(crate) chain_id: BigInt,
+    pub(crate) chain_id: usize,
     pub(crate) nonce: BigInt,
 }
 
-impl From<GetTxInfoStruct> for SyscallRequest {
-    fn from(get_tx_info_struct: GetTxInfoStruct) -> SyscallRequest {
-        SyscallRequest::GetTxInfo(get_tx_info_struct)
+impl From<TxInfoStruct> for SyscallRequest {
+    fn from(tx_info_struct: TxInfoStruct) -> SyscallRequest {
+        SyscallRequest::GetTxInfo(tx_info_struct)
     }
 }
 
-impl FromPtr for GetTxInfoStruct {
+impl FromPtr for TxInfoStruct {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -84,10 +84,10 @@ impl FromPtr for GetTxInfoStruct {
         let signature_len = get_integer(vm, &(&syscall_ptr + 3))?;
         let signature = get_relocatable(vm, &(&syscall_ptr + 4))?;
         let transaction_hash = get_big_int(vm, &(&syscall_ptr + 5))?;
-        let chain_id = get_big_int(vm, &(&syscall_ptr + 6))?;
+        let chain_id = get_integer(vm, &(&syscall_ptr + 6))?;
         let nonce = get_big_int(vm, &(&syscall_ptr + 7))?;
         
-        Ok(GetTxInfoStruct {
+        Ok(TxInfoStruct {
             version,
             account_contract_address,
             max_fee,
