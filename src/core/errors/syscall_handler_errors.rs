@@ -24,4 +24,10 @@ pub enum SyscallHandlerError {
     ExpectedEmitEventStruct,
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1")]
     DeployFromZero,
+    #[error("Hint not implemented")]
+    NotImplemented,
+    #[error("HintData is incorrect")]
+    WrongHintData,
+    #[error("Unknown hint")]
+    UnknownHint,
 }
