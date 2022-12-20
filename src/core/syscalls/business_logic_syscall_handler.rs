@@ -92,7 +92,9 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         };
 
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
-            return Err(SyscallHandlerError::DeployFromZero);
+            return Err(SyscallHandlerError::DeployFromZero(
+                request.deploy_from_zero,
+            ));
         };
 
         let constructor_calldata = get_integer_range(
@@ -158,7 +160,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
 #[cfg(test)]
 mod tests {
+    use crate::bigint;
     use crate::business_logic::execution::objects::OrderedEvent;
+    use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+    use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE};
     use crate::core::syscalls::syscall_handler::*;
     use crate::utils::test_utils::*;
@@ -166,6 +171,7 @@ mod tests {
         BuiltinHintProcessor, HintProcessorData,
     };
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
+    use cairo_rs::relocatable;
     use cairo_rs::types::exec_scope::ExecutionScopes;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
@@ -305,5 +311,26 @@ mod tests {
                 .n_emitted_events,
             1
         );
+    }
+
+    #[test]
+    fn deploy_from_zero_error() {
+        let syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 3), bigint!(3)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(1, 20))
+            .unwrap();
+        vm.insert_value(&relocatable!(1, 5), bigint!(4)).unwrap();
+
+        assert_eq!(
+            syscall._deploy(&vm, relocatable!(1, 0)),
+            Err(SyscallHandlerError::DeployFromZero(4))
+        )
     }
 }

@@ -204,7 +204,7 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
 
-    use crate::{bigint, utils::test_utils::vm};
+    use crate::{add_segments, bigint, utils::test_utils::vm};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
 
@@ -214,8 +214,7 @@ mod tests {
     fn read_deploy_syscall_request() {
         let syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();
-        vm.add_memory_segment();
-        vm.add_memory_segment();
+        add_segments!(vm, 2);
 
         vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
         vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
@@ -233,7 +232,7 @@ mod tests {
                 contract_address_salt: bigint!(2),
                 constructor_calldata_size: bigint!(3),
                 constructor_calldata: relocatable!(1, 20),
-                deploy_from_zero: bigint!(4),
+                deploy_from_zero: 4,
             }))
         )
     }

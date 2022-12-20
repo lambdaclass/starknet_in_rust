@@ -33,7 +33,7 @@ pub(crate) struct DeployRequestStruct {
     // The calldata for the constructor.
     pub(crate) constructor_calldata: Relocatable,
     // Used for deterministic contract address deployment.
-    pub(crate) deploy_from_zero: BigInt,
+    pub(crate) deploy_from_zero: usize,
 }
 
 pub(crate) trait FromPtr {
@@ -87,7 +87,7 @@ impl FromPtr for DeployRequestStruct {
         let contract_address_salt = get_big_int(vm, &(&syscall_ptr + 2))?;
         let constructor_calldata_size = get_big_int(vm, &(&syscall_ptr + 3))?;
         let constructor_calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
-        let deploy_from_zero = get_big_int(vm, &(&syscall_ptr + 5))?;
+        let deploy_from_zero = get_integer(vm, &(&syscall_ptr + 5))?;
 
         Ok(SyscallRequest::Deploy(DeployRequestStruct {
             _selector,
