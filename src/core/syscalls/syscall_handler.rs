@@ -30,6 +30,12 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
+    fn library_call(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
+
     fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(
@@ -45,10 +51,17 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
+    fn _call_contract_and_write_response(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    );
+
     fn _call_contract(
         &self,
         syscall_name: &str,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Vec<i32>;
 
@@ -57,6 +70,12 @@ pub(crate) trait SyscallHandler {
     fn _storage_read(&self, address: i32) -> i32;
     fn _storage_write(&self, address: i32, value: i32);
     fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable;
+    fn _write_syscall_response(
+        &self,
+        response: Vec<i32>,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    );
 
     fn read_syscall_request(
         &self,
@@ -67,6 +86,7 @@ pub(crate) trait SyscallHandler {
         match syscall_name {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
+            "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
@@ -143,7 +163,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     ) -> Result<(), VirtualMachineError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|_| VirtualMachineError::UnknownHint("Unknown Hint".to_string()))?;
+                .map_err(|e| VirtualMachineError::UnknownHint(e.to_string()))?;
         }
         Ok(())
     }

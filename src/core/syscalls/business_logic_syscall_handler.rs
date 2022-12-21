@@ -46,12 +46,9 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::EmitEvent(request) =
-            self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedEmitEventStruct);
+        let request = match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
+            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
+            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
 
         let keys_len = request.keys_len;
@@ -67,6 +64,15 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
         // Update events count.
         self.tx_execution_context.borrow_mut().n_emitted_events += 1;
+        Ok(())
+    }
+
+    fn library_call(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._call_contract_and_write_response("library_call", vm, syscall_ptr);
         Ok(())
     }
 
@@ -133,10 +139,21 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
 
+    fn _call_contract_and_write_response(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) {
+        let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone());
+        // TODO: Should we build a response struct to pass to _write_syscall_response?
+        self._write_syscall_response(response_data, vm, syscall_ptr);
+    }
+
     fn _call_contract(
         &self,
         _syscall_name: &str,
-        _vm: VirtualMachine,
+        _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
     ) -> Vec<i32> {
         todo!()
@@ -154,6 +171,14 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         todo!()
     }
     fn _allocate_segment(&self, _vm: VirtualMachine, _data: Vec<MaybeRelocatable>) -> Relocatable {
+        todo!()
+    }
+    fn _write_syscall_response(
+        &self,
+        _response: Vec<i32>,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) {
         todo!()
     }
 }
@@ -213,7 +238,7 @@ mod tests {
         let mut vm = vm!();
         assert_eq!(
             run_syscall_hint!(vm, HashMap::new(), hint_code),
-            Err(UnknownHint("Unknown Hint".to_string()))
+            Err(UnknownHint("Hint not implemented".to_string()))
         );
     }
 
@@ -223,49 +248,39 @@ mod tests {
 
         let mut vm = vm!();
         add_segments!(vm, 4);
-        //println!("vm fp: {:?}");
-
-        // insert syscall_ptr
-        let syscall_ptr = Relocatable::from((2, 0));
-        vm.insert_value(&Relocatable::from((1, 0)), syscall_ptr)
-            .unwrap();
 
         // insert selector of syscall
         let selector = BigInt::from_str("1280709301550335749748").unwrap();
-        vm.insert_value(&Relocatable::from((2, 0)), selector)
-            .unwrap();
 
         // keys_len
         let keys_len = BigInt::from_str("2").unwrap();
-        vm.insert_value(&Relocatable::from((2, 1)), keys_len)
-            .unwrap();
-
-        // keys
-        let keys = Relocatable::from((3, 0));
-        vm.insert_value(&Relocatable::from((2, 2)), keys).unwrap();
-
         // data_len
         let data_len = BigInt::from_str("2").unwrap();
-        vm.insert_value(&Relocatable::from((2, 3)), data_len)
-            .unwrap();
-
-        // data
-        let data = Relocatable::from((3, 3));
-        vm.insert_value(&Relocatable::from((2, 4)), data).unwrap();
 
         // insert keys and data to generate the event
         // keys points to (2,0)
         let key1 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 0)), key1).unwrap();
         let key2 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 1)), key2).unwrap();
 
         // data points to (2,3)
         let data1 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 3)), data1).unwrap();
         let data2 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 4)), data2).unwrap();
 
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)),
+                ((2, 0), selector),
+                ((2, 1), (keys_len)),
+                ((2, 2), (3, 0)),
+                ((2, 3), data_len),
+                ((2, 4), (3, 3)),
+                ((3, 0), key1),
+                ((3, 1), key2),
+                ((3, 3), data1),
+                ((3, 4), data2)
+            ]
+        );
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
