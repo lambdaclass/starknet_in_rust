@@ -30,6 +30,7 @@ impl TransactionExecutionContext {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedL2ToL1Message {
     pub(crate) _order: usize,
     pub(crate) _to_address: usize,

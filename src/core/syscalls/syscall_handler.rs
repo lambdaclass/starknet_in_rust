@@ -237,6 +237,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn read_send_message_to_l1_request() {
+        let syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(2, 0))
+            .unwrap();
+
+        assert_eq!(
+            syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
+            Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+                _selector: bigint!(0),
+                to_address: 1,
+                payload_size: 2,
+                payload_ptr: relocatable!(2, 0)
+            }))
+        )
+    }
+
     fn read_deploy_syscall_request() {
         let syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();

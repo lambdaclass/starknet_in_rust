@@ -209,7 +209,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::bigint;
-    use crate::business_logic::execution::objects::OrderedEvent;
+    use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE};
@@ -370,5 +370,36 @@ mod tests {
             syscall._deploy(&vm, relocatable!(1, 0)),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
+    }
+
+    #[test]
+    fn test_send_message_to_l1_ok() {
+        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+
+        add_segments!(vm, 3);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(2, 0))
+            .unwrap();
+        vm.insert_value(&relocatable!(2, 0), bigint!(18)).unwrap();
+        vm.insert_value(&relocatable!(2, 1), bigint!(12)).unwrap();
+
+        assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 0);
+        assert_eq!(syscall.l2_to_l1_messages, Vec::new());
+
+        syscall.send_message_to_l1(&vm, relocatable!(1, 0));
+
+        assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 1);
+        assert_eq!(
+            syscall.l2_to_l1_messages,
+            vec![OrderedL2ToL1Message::new(
+                syscall.tx_execution_context.borrow().n_sent_messages - 1,
+                1,
+                vec![bigint!(18), bigint!(12)],
+            )]
+        );
     }
 }
