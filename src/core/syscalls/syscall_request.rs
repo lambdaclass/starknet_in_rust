@@ -57,7 +57,7 @@ impl FromPtr for EmitEventStruct {
 #[allow(unused)] // TODO: Remove once used.
 #[derive(Debug, Clone)]
 pub(crate) struct TxInfoStruct {
-    pub(crate) version: BigInt,
+    pub(crate) version: usize,
     pub(crate) account_contract_address: BigInt,
     pub(crate) max_fee: BigInt,
     pub(crate) signature_len: usize,
@@ -78,7 +78,7 @@ impl FromPtr for TxInfoStruct {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let version = get_big_int(vm, &(syscall_ptr))?;
+        let version = get_integer(vm, &(syscall_ptr))?;
         let account_contract_address = get_big_int(vm, &(&syscall_ptr + 1))?;
         let max_fee = get_big_int(vm, &(&syscall_ptr + 2))?;
         let signature_len = get_integer(vm, &(&syscall_ptr + 3))?;

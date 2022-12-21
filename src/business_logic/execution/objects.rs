@@ -13,7 +13,7 @@ pub(crate) struct OrderedEvent {
 
 pub(crate) struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u32,
-    pub(crate) version: BigInt,
+    pub(crate) version: usize,
     pub(crate) account_contract_address: BigInt,
     pub(crate) max_fee: BigInt,
     pub(crate) transaction_hash: BigInt,
@@ -36,7 +36,7 @@ impl TransactionExecutionContext {
             nonce: BigInt::zero(),
             signature: Vec::new(),
             transaction_hash: BigInt::zero(),
-            version: BigInt::zero(),
+            version: 0,
         }
     }
 }

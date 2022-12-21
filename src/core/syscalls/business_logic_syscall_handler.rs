@@ -17,7 +17,7 @@ use num_bigint::BigInt;
 
 pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
-    general_config: RefCell<StarknetGeneralConfig>,
+    general_config: StarknetGeneralConfig,
     events: Rc<RefCell<Vec<OrderedEvent>>>,
     tx_info_ptr: RefCell<Option<MaybeRelocatable>>,
 }
@@ -26,7 +26,7 @@ impl BusinessLogicSyscallHandler {
     pub fn new() -> Result<Self, SyscallHandlerError> {
         let events = Rc::new(RefCell::new(Vec::new()));
         let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
-        let general_config = RefCell::new(StarknetGeneralConfig::new());
+        let general_config = StarknetGeneralConfig::new();
         let tx_info_ptr = RefCell::new(None);
 
         Ok(BusinessLogicSyscallHandler {
@@ -95,7 +95,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         } else {
             let tx = self.tx_execution_context.borrow();
 
-            let version = tx.version.clone();
+            let version = tx.version;
             let account_contract_address = tx.account_contract_address.clone();
             let max_fee = tx.max_fee.clone();
             let transaction_hash = tx.transaction_hash.clone();
@@ -107,7 +107,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             let signature = signature.get_relocatable()?.clone();
             let signature_len = signature.offset;
 
-            let chain_id = self.general_config.borrow().starknet_os_config.chain_id as usize;
+            let chain_id = self.general_config.starknet_os_config.chain_id as usize;
 
             let tx_info = TxInfoStruct {
                 version,
