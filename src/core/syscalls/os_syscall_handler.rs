@@ -5,7 +5,7 @@ use cairo_rs::types::relocatable::Relocatable;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
 
-use crate::errors::StarknetError;
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
@@ -107,17 +107,17 @@ impl OsSyscallHandler {
 
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
-    fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), StarknetError> {
+    fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
         match self.tx_info_ptr {
             None => (),
-            Some(_) => Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))?,
+            Some(_) => Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")))?,
         }
 
         self.tx_info_ptr = Some(tx_info_ptr);
 
         match self.tx_execution_info {
             None => (),
-            Some(_) => Err(StarknetError::ShouldBeNone(String::from(
+            Some(_) => Err(SyscallHandlerError::ShouldBeNone(String::from(
                 "tx_execution_info",
             )))?,
         }
@@ -144,14 +144,14 @@ impl OsSyscallHandler {
         self.retdata_iterator.pop_front()
     }
 
-    fn _deploy(&mut self) -> Result<Option<u32>, StarknetError> {
+    fn _deploy(&mut self) -> Result<Option<u32>, SyscallHandlerError> {
         let constructor_retdata = self
             .retdata_iterator
             .pop_front()
-            .ok_or(StarknetError::IteratorEmpty)?;
+            .ok_or(SyscallHandlerError::IteratorEmpty)?;
         match constructor_retdata.len() {
             0 => (),
-            _ => Err(StarknetError::UnexpectedConstructorRetdata)?,
+            _ => Err(SyscallHandlerError::UnexpectedConstructorRetdata)?,
         }
         Ok(self.deployed_contracts_iterator.pop_front())
     }
@@ -162,51 +162,51 @@ impl OsSyscallHandler {
         self.execute_code_read_iterator.pop_front()
     }
 
-    fn assert_iterators_exhausted(&self) -> Result<(), StarknetError> {
+    fn assert_iterators_exhausted(&self) -> Result<(), SyscallHandlerError> {
         if let Some(_) = self.deployed_contracts_iterator.front() {
-            return Err(StarknetError::IteratorNotEmpty);
+            return Err(SyscallHandlerError::IteratorNotEmpty);
         };
         if let Some(_) = self.retdata_iterator.front() {
-            return Err(StarknetError::IteratorNotEmpty);
+            return Err(SyscallHandlerError::IteratorNotEmpty);
         };
         if let Some(_) = self.execute_code_read_iterator.front() {
-            return Err(StarknetError::IteratorNotEmpty);
+            return Err(SyscallHandlerError::IteratorNotEmpty);
         };
         Ok(())
     }
 
-    fn exit_call(&mut self) -> Result<Option<CallInfo>, StarknetError> {
+    fn exit_call(&mut self) -> Result<Option<CallInfo>, SyscallHandlerError> {
         self.assert_iterators_exhausted()?;
         Ok(self.call_stack.pop_front())
     }
 
-    fn _get_caller_address(self) -> Result<u32, StarknetError> {
+    fn _get_caller_address(self) -> Result<u32, SyscallHandlerError> {
         match self.call_stack.back() {
-            None => Err(StarknetError::ListIsEmpty)?,
+            None => Err(SyscallHandlerError::ListIsEmpty)?,
             Some(call_info) => Ok(call_info.caller_address),
         }
     }
 
-    fn _get_contract_address(&self) -> Result<u32, StarknetError> {
+    fn _get_contract_address(&self) -> Result<u32, SyscallHandlerError> {
         match self.call_stack.front() {
-            None => Err(StarknetError::ListIsEmpty)?,
+            None => Err(SyscallHandlerError::ListIsEmpty)?,
             Some(call_info) => Ok(call_info.contract_address),
         }
     }
 
     /// Called after the execution of the current transaction complete.
-    fn end_tx(&mut self) -> Result<(), StarknetError> {
+    fn end_tx(&mut self) -> Result<(), SyscallHandlerError> {
         if let Some(_) = self.execute_code_read_iterator.front() {
-            return Err(StarknetError::IteratorNotEmpty);
+            return Err(SyscallHandlerError::IteratorNotEmpty);
         };
 
         if let Some(_) = self.tx_info_ptr {
-            return Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")));
+            return Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")));
         };
         self.tx_info_ptr = None;
 
         if let Some(_) = self.tx_execution_info {
-            return Err(StarknetError::ShouldBeNone(String::from(
+            return Err(SyscallHandlerError::ShouldBeNone(String::from(
                 "tx_execution_info",
             )));
         }
@@ -219,11 +219,11 @@ impl OsSyscallHandler {
         &self,
         mut vm: VirtualMachine,
         data: &dyn Any,
-    ) -> Result<Relocatable, StarknetError> {
+    ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_temporary_segment();
         println!("segment start: {:?}", segment_start);
         vm.write_arg(&segment_start, data)
-            .map_err(|_| StarknetError::WriteArg)?;
+            .map_err(|_| SyscallHandlerError::WriteArg)?;
         Ok(segment_start)
     }
 
@@ -237,21 +237,21 @@ impl OsSyscallHandler {
         contract_address: &u32,
         key: u32,
         value: u32,
-    ) -> Result<u32, StarknetError> {
+    ) -> Result<u32, SyscallHandlerError> {
         Ok(self
             .starknet_storage_by_address
             .get(contract_address)
-            .ok_or(StarknetError::KeyNotFound)?
+            .ok_or(SyscallHandlerError::KeyNotFound)?
             .write(key, value))
     }
 
-    fn enter_call(&mut self) -> Result<(), StarknetError> {
+    fn enter_call(&mut self) -> Result<(), SyscallHandlerError> {
         self.assert_iterators_exhausted()?;
 
         let call_info = self
             .call_iterator
             .pop_front()
-            .ok_or(StarknetError::IteratorEmpty)?;
+            .ok_or(SyscallHandlerError::IteratorEmpty)?;
         self.call_stack.push_back(call_info.clone());
 
         self.deployed_contracts_iterator = call_info
@@ -288,7 +288,7 @@ impl OsSyscallHandler {
 
 #[cfg(test)]
 mod tests {
-    use crate::errors::StarknetError;
+    use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::utils::test_utils::*;
     use cairo_rs::types::relocatable::Relocatable;
     use cairo_rs::vm::vm_core::VirtualMachine;
@@ -345,7 +345,7 @@ mod tests {
             None,
         );
         let get_contract_address = handler._get_contract_address().unwrap_err();
-        assert_eq!(get_contract_address, StarknetError::ListIsEmpty)
+        assert_eq!(get_contract_address, SyscallHandlerError::ListIsEmpty)
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler.end_tx(), Err(StarknetError::IteratorNotEmpty))
+        assert_eq!(handler.end_tx(), Err(SyscallHandlerError::IteratorNotEmpty))
     }
     #[test]
     fn os_syscall_handler_end_tx_err_tx_info_ptr() {
@@ -386,7 +386,7 @@ mod tests {
 
         assert_eq!(
             handler.end_tx(),
-            Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))
+            Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")))
         )
     }
 
@@ -406,7 +406,7 @@ mod tests {
 
         assert_eq!(
             handler.end_tx(),
-            Err(StarknetError::ShouldBeNone(String::from(
+            Err(SyscallHandlerError::ShouldBeNone(String::from(
                 "tx_execution_info",
             )))
         )
@@ -455,7 +455,7 @@ mod tests {
 
         assert_eq!(
             handler.start_tx(reloc),
-            Err(StarknetError::ShouldBeNone(String::from("tx_info_ptr")))
+            Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")))
         )
     }
 
@@ -482,7 +482,7 @@ mod tests {
 
         assert_eq!(
             handler.start_tx(reloc),
-            Err(StarknetError::ShouldBeNone(String::from(
+            Err(SyscallHandlerError::ShouldBeNone(String::from(
                 "tx_execution_info",
             )))
         )
@@ -636,7 +636,7 @@ mod tests {
 
         assert_eq!(
             handler._deploy(),
-            Err(StarknetError::UnexpectedConstructorRetdata)
+            Err(SyscallHandlerError::UnexpectedConstructorRetdata)
         );
     }
     #[test]
@@ -653,7 +653,7 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler._deploy(), Err(StarknetError::IteratorEmpty));
+        assert_eq!(handler._deploy(), Err(SyscallHandlerError::IteratorEmpty));
     }
 
     #[test]
@@ -716,7 +716,7 @@ mod tests {
 
         assert_eq!(
             handler.assert_iterators_exhausted(),
-            Err(StarknetError::IteratorNotEmpty)
+            Err(SyscallHandlerError::IteratorNotEmpty)
         )
     }
 
@@ -738,7 +738,7 @@ mod tests {
 
         assert_eq!(
             handler.assert_iterators_exhausted(),
-            Err(StarknetError::IteratorNotEmpty)
+            Err(SyscallHandlerError::IteratorNotEmpty)
         )
     }
 
@@ -760,7 +760,7 @@ mod tests {
 
         assert_eq!(
             handler.assert_iterators_exhausted(),
-            Err(StarknetError::IteratorNotEmpty)
+            Err(SyscallHandlerError::IteratorNotEmpty)
         )
     }
 
@@ -797,7 +797,7 @@ mod tests {
 
         assert_eq!(
             handler._get_caller_address(),
-            Err(StarknetError::ListIsEmpty)
+            Err(SyscallHandlerError::ListIsEmpty)
         )
     }
     #[test]
@@ -855,7 +855,7 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler.enter_call(), Err(StarknetError::IteratorEmpty))
+        assert_eq!(handler.enter_call(), Err(SyscallHandlerError::IteratorEmpty))
     }
 
     #[test]
@@ -926,7 +926,7 @@ mod tests {
         let data = &12 as &dyn Any;
         assert_eq!(
             handler._allocate_segment(vm, data),
-            Err(StarknetError::WriteArg)
+            Err(SyscallHandlerError::WriteArg)
         )
     }
 }

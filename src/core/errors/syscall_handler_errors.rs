@@ -22,4 +22,18 @@ pub enum SyscallHandlerError {
     WrongHintData,
     #[error("Unknown hint")]
     UnknownHint,
+    #[error("Iterator is not empty")]
+    IteratorNotEmpty,
+    #[error("Iterator is empty")]
+    IteratorEmpty,
+    #[error("List is empty")]
+    ListIsEmpty,
+    #[error("{0} should be None")]
+    ShouldBeNone(String),
+    #[error("Unexpected construct retdata")]
+    UnexpectedConstructorRetdata,
+    #[error("Error writing arguments")]
+    WriteArg,
+    #[error("Key not found")]
+    KeyNotFound,
 }
