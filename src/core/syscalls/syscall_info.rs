@@ -179,4 +179,53 @@ mod tests {
             syscall.unwrap()
         )
     }
+
+    #[test]
+    fn create_syscall_get_tx_info() {
+        let identifiers = program_json().unwrap().identifiers;
+        let syscall = SyscallInfo::get_tx_info(&identifiers);
+        assert!(syscall.is_ok());
+
+        assert_eq!(
+            SyscallInfo {
+                selector: BigInt::from_str("1317029390204112103023").unwrap(),
+                syscall_size: 8,
+                syscall_struct: SyscallType::GetTxInfo {
+                    account_contract_address: Some(Member {
+                        cairo_type: "felt".to_string(),
+                        offset: 1
+                    }),
+                    chain_id: Some(Member {
+                        cairo_type: "felt".to_string(),
+                        offset: 6
+                    }),
+                    max_fee: Some(Member {
+                        cairo_type: "felt".to_string(),
+                        offset: 2
+                    }),
+                    nonce: Some(Member {
+                        cairo_type: "felt".to_string(),
+                        offset: 7
+                    }),
+                    signature: Some(Member {
+                        cairo_type: "felt*".to_string(),
+                        offset: 4
+                    }),
+                    signature_len: Some(Member {
+                        cairo_type: "felt".to_string(),
+                        offset: 3
+                    }),
+                    transaction_hash: Some(Member {
+                        cairo_type: "felt".to_string(),
+                        offset: 5
+                    }),
+                    version: Some(Member {
+                        cairo_type: "felt".to_string(),
+                        offset: 0
+                    }),
+                }
+            },
+            syscall.unwrap()
+        )
+    }
 }
