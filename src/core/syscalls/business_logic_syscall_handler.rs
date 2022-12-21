@@ -151,7 +151,7 @@ mod tests {
         let mut vm = vm!();
         assert_eq!(
             run_syscall_hint!(vm, HashMap::new(), hint_code),
-            Err(UnknownHint("Unknown Hint".to_string()))
+            Err(UnknownHint("Hint not implemented".to_string()))
         );
     }
 
@@ -161,49 +161,51 @@ mod tests {
 
         let mut vm = vm!();
         add_segments!(vm, 4);
-        //println!("vm fp: {:?}");
-
-        // insert syscall_ptr
-        let syscall_ptr = Relocatable::from((2, 0));
-        vm.insert_value(&Relocatable::from((1, 0)), syscall_ptr)
-            .unwrap();
+        // let selector = BigInt::from_str("1280709301550335749748").unwrap();
+        // // insert syscall_ptr
+        // let syscall_ptr = Relocatable::from((2, 0));
+        // vm.insert_value(&Relocatable::from((1, 0)), syscall_ptr)
+        //     .unwrap();
 
         // insert selector of syscall
         let selector = BigInt::from_str("1280709301550335749748").unwrap();
-        vm.insert_value(&Relocatable::from((2, 0)), selector)
-            .unwrap();
 
         // keys_len
         let keys_len = BigInt::from_str("2").unwrap();
-        vm.insert_value(&Relocatable::from((2, 1)), keys_len)
-            .unwrap();
 
         // keys
         let keys = Relocatable::from((3, 0));
-        vm.insert_value(&Relocatable::from((2, 2)), keys).unwrap();
 
         // data_len
         let data_len = BigInt::from_str("2").unwrap();
-        vm.insert_value(&Relocatable::from((2, 3)), data_len)
-            .unwrap();
 
         // data
         let data = Relocatable::from((3, 3));
-        vm.insert_value(&Relocatable::from((2, 4)), data).unwrap();
 
         // insert keys and data to generate the event
         // keys points to (2,0)
         let key1 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 0)), key1).unwrap();
         let key2 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 1)), key2).unwrap();
 
         // data points to (2,3)
         let data1 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 3)), data1).unwrap();
         let data2 = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((3, 4)), data2).unwrap();
 
+        let memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)),
+                ((2, 0), selector),
+                ((2, 1), (keys_len)),
+                ((2, 2), (3, 0)),
+                ((2, 3), data_len),
+                ((2, 4), (3, 3)),
+                ((3, 0), key1),
+                ((3, 1), key2),
+                ((3, 3), data1),
+                ((3, 4), data2)
+            ]
+        );
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 

@@ -60,6 +60,8 @@ pub fn get_integer_range(
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
+    use cairo_rs::types::relocatable::Relocatable;
+
     #[macro_export]
     macro_rules! any_box {
         ($val : expr) => {
@@ -85,6 +87,7 @@ pub mod test_utils {
             references
         }};
     }
+    use cairo_rs::types::relocatable;
     pub(crate) use references;
 
     macro_rules! ids_data {
@@ -138,6 +141,28 @@ pub mod test_utils {
         };
     }
     pub(crate) use add_segments;
+
+    #[macro_export]
+    macro_rules! memory_insert {
+        ($vm:expr, [ $( (($si:expr, $off:expr), $val:tt) ),* ] ) => {
+            $( allocate_values!($vm, $si, $off, $val) )*
+        };
+    }
+    pub(crate) use memory_insert;
+
+    #[macro_export]
+    macro_rules! allocate_values {
+        ($vm: expr, $si:expr, $off:expr, ($sival:expr, $offval:expr)) => {
+            let k = relocatable!($si, $off);
+            let v = relocatable!($sival, $offval);
+            vm.insert_value(k, v);
+        };
+        ($vm: expr, ($si:expr, $off:expr), $val:expr) => {
+            let k = relocatable!($si, $off);
+            vm.insert_value(&k, val);
+        };
+    }
+    pub(crate) use allocate_values;
 
     #[macro_export]
     macro_rules! exec_scopes_ref {
