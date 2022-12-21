@@ -81,6 +81,7 @@ struct OsSyscallHandler {
 }
 
 impl OsSyscallHandler {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
         call_iterator: VecDeque<CallInfo>,
@@ -110,7 +111,9 @@ impl OsSyscallHandler {
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
         match self.tx_info_ptr {
             None => (),
-            Some(_) => Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")))?,
+            Some(_) => Err(SyscallHandlerError::ShouldBeNone(String::from(
+                "tx_info_ptr",
+            )))?,
         }
 
         self.tx_info_ptr = Some(tx_info_ptr);
@@ -163,13 +166,13 @@ impl OsSyscallHandler {
     }
 
     fn assert_iterators_exhausted(&self) -> Result<(), SyscallHandlerError> {
-        if let Some(_) = self.deployed_contracts_iterator.front() {
+        if self.deployed_contracts_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
         };
-        if let Some(_) = self.retdata_iterator.front() {
+        if self.retdata_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
         };
-        if let Some(_) = self.execute_code_read_iterator.front() {
+        if self.execute_code_read_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
         };
         Ok(())
@@ -196,16 +199,19 @@ impl OsSyscallHandler {
 
     /// Called after the execution of the current transaction complete.
     fn end_tx(&mut self) -> Result<(), SyscallHandlerError> {
-        if let Some(_) = self.execute_code_read_iterator.front() {
+        
+        if self.execute_code_read_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
         };
 
-        if let Some(_) = self.tx_info_ptr {
-            return Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")));
+        if self.tx_info_ptr.is_some() {
+            return Err(SyscallHandlerError::ShouldBeNone(String::from(
+                "tx_info_ptr",
+            )));
         };
         self.tx_info_ptr = None;
 
-        if let Some(_) = self.tx_execution_info {
+        if self.tx_execution_info.is_some() {
             return Err(SyscallHandlerError::ShouldBeNone(String::from(
                 "tx_execution_info",
             )));
@@ -386,7 +392,9 @@ mod tests {
 
         assert_eq!(
             handler.end_tx(),
-            Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")))
+            Err(SyscallHandlerError::ShouldBeNone(String::from(
+                "tx_info_ptr"
+            )))
         )
     }
 
@@ -455,7 +463,9 @@ mod tests {
 
         assert_eq!(
             handler.start_tx(reloc),
-            Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")))
+            Err(SyscallHandlerError::ShouldBeNone(String::from(
+                "tx_info_ptr"
+            )))
         )
     }
 
@@ -855,7 +865,10 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler.enter_call(), Err(SyscallHandlerError::IteratorEmpty))
+        assert_eq!(
+            handler.enter_call(),
+            Err(SyscallHandlerError::IteratorEmpty)
+        )
     }
 
     #[test]
