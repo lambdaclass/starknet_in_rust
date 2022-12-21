@@ -344,31 +344,31 @@ mod tests {
             .unwrap();
 
         let max_fee = BigInt::from_str("2").unwrap();
-        vm.insert_value(&Relocatable::from((2, 1)), max_fee)
+        vm.insert_value(&Relocatable::from((2, 2)), max_fee)
             .unwrap();
 
         let signature_len = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 2)), signature_len)
-            .unwrap();
-
-        let signature_len = BigInt::from_str("2").unwrap();
         vm.insert_value(&Relocatable::from((2, 3)), signature_len)
             .unwrap();
 
+        let signature_len = BigInt::from_str("2").unwrap();
+        vm.insert_value(&Relocatable::from((2, 4)), signature_len)
+            .unwrap();
+
         let signature = Relocatable::from((3, 0));
-        vm.insert_value(&Relocatable::from((2, 4)), signature)
+        vm.insert_value(&Relocatable::from((2, 5)), signature)
             .unwrap();
 
         let transaction_hash = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 5)), transaction_hash)
+        vm.insert_value(&Relocatable::from((2, 6)), transaction_hash)
             .unwrap();
 
         let chain_id = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 6)), chain_id)
+        vm.insert_value(&Relocatable::from((2, 7)), chain_id)
             .unwrap();
 
         let nonce = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 7)), nonce).unwrap();
+        vm.insert_value(&Relocatable::from((2, 8)), nonce).unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
