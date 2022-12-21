@@ -30,7 +30,11 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
-    fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
+    fn send_message_to_l1(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(
         &self,

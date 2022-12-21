@@ -20,6 +20,7 @@ pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
     events: Rc<RefCell<Vec<OrderedEvent>>>,
     contract_address: u64,
+    l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
 }
 
 impl BusinessLogicSyscallHandler {
@@ -30,6 +31,7 @@ impl BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
             contract_address: 0,
+            l2_to_l1_messages: Vec::new(),
         }
     }
 }
@@ -70,8 +72,30 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn send_message_to_l1(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) {
-        todo!()
+    fn send_message_to_l1(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::SendMessageToL1(request) =
+            self._read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedSendMessageToL1);
+        };
+
+        let payload = get_integer_range(vm, &request.payload_ptr, request.payload_size)?;
+
+        self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
+            self.tx_execution_context.borrow().n_sent_messages,
+            request.to_address,
+            payload,
+        ));
+
+        // Update messages count.
+        self.tx_execution_context.borrow_mut().n_sent_messages += 1;
+        Ok(())
     }
 
     fn _get_tx_info_ptr(&self, _vm: VirtualMachine) {
