@@ -199,7 +199,6 @@ impl OsSyscallHandler {
 
     /// Called after the execution of the current transaction complete.
     fn end_tx(&mut self) -> Result<(), SyscallHandlerError> {
-        
         if self.execute_code_read_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
         };
