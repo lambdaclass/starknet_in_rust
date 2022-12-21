@@ -1,4 +1,4 @@
-.PHONY: build check test clippy compile_cairo clean
+.PHONY: build check deps deps-macos clean compile_cairo clippy remove-venv venv-test test clean
 	
 build: 
 	cargo build --release
@@ -7,17 +7,28 @@ check:
 	cargo check 
 
 deps:
-	pip install cairo-lang==0.10.1 
 	python3 -m venv starknet-in-rs-venv
 	. starknet-in-rs-venv/bin/activate && \
 	pip install cairo_lang==0.10.1 && \
 	deactivate
 
+deps-macos:
+	python3 -m venv starknet-in-rs-venv
+	. starknet-in-rs-venv/bin/activate && \
+	CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install fastecdsa cairo_lang==0.10.1 && \
+	deactivate
+
 clean: 
 	rm cairo_syscalls/*json
 
+compile_cairo:
+	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json
+
 clippy:
 	cargo clippy  -- -D warnings
+
+remove-venv:
+	rm -rf starknet-in-rs-venv
 
 venv-test:
 	. starknet-in-rs-venv/bin/activate && \
