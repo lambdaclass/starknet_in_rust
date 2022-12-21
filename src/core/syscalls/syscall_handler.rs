@@ -138,7 +138,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     ) -> Result<(), VirtualMachineError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|_| VirtualMachineError::UnknownHint("Unknown Hint".to_string()))?;
+                .map_err(|e| VirtualMachineError::UnknownHint(e.to_string()))?;
         }
         Ok(())
     }
