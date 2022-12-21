@@ -172,7 +172,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::business_logic::execution::objects::OrderedEvent;
-    use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE};
+    use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::syscalls::syscall_handler::*;
     use crate::utils::test_utils::*;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -318,5 +318,73 @@ mod tests {
                 .n_emitted_events,
             1
         );
+    }
+
+    #[test]
+    fn get_tx_info_test() {
+        // create data and variables to execute hint
+
+        let mut vm = vm!();
+        add_segments!(vm, 4);
+        //println!("vm fp: {:?}");
+
+        // insert syscall_ptr
+        let syscall_ptr = Relocatable::from((2, 0));
+        vm.insert_value(&Relocatable::from((1, 0)), syscall_ptr)
+            .unwrap();
+
+        // insert version
+        let version = BigInt::from_str("1").unwrap();
+        vm.insert_value(&Relocatable::from((2, 0)), version)
+            .unwrap();
+
+        // insert account_contract_address
+        let account_contract_address = BigInt::from_str("1").unwrap();
+        vm.insert_value(&Relocatable::from((2, 1)), account_contract_address)
+            .unwrap();
+
+        let max_fee = BigInt::from_str("2").unwrap();
+        vm.insert_value(&Relocatable::from((2, 1)), max_fee)
+            .unwrap();
+
+        let signature_len = BigInt::from_str("1").unwrap();
+        vm.insert_value(&Relocatable::from((2, 2)), signature_len)
+            .unwrap();
+
+        let signature_len = BigInt::from_str("2").unwrap();
+        vm.insert_value(&Relocatable::from((2, 3)), signature_len)
+            .unwrap();
+
+        let signature = Relocatable::from((3, 0));
+        vm.insert_value(&Relocatable::from((2, 4)), signature)
+            .unwrap();
+
+        let transaction_hash = BigInt::from_str("1").unwrap();
+        vm.insert_value(&Relocatable::from((2, 5)), transaction_hash)
+            .unwrap();
+
+        let chain_id = BigInt::from_str("1").unwrap();
+        vm.insert_value(&Relocatable::from((2, 6)), chain_id)
+            .unwrap();
+
+        let nonce = BigInt::from_str("1").unwrap();
+        vm.insert_value(&Relocatable::from((2, 7)), nonce).unwrap();
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        // invoke syscall
+        let syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        syscall_handler
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .unwrap();
+        
+        // TODO: Fix the test
     }
 }
