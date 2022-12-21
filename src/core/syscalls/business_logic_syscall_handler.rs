@@ -161,26 +161,14 @@ mod tests {
 
         let mut vm = vm!();
         add_segments!(vm, 4);
-        // let selector = BigInt::from_str("1280709301550335749748").unwrap();
-        // // insert syscall_ptr
-        // let syscall_ptr = Relocatable::from((2, 0));
-        // vm.insert_value(&Relocatable::from((1, 0)), syscall_ptr)
-        //     .unwrap();
 
         // insert selector of syscall
         let selector = BigInt::from_str("1280709301550335749748").unwrap();
 
         // keys_len
         let keys_len = BigInt::from_str("2").unwrap();
-
-        // keys
-        let keys = Relocatable::from((3, 0));
-
         // data_len
         let data_len = BigInt::from_str("2").unwrap();
-
-        // data
-        let data = Relocatable::from((3, 3));
 
         // insert keys and data to generate the event
         // keys points to (2,0)
@@ -191,7 +179,7 @@ mod tests {
         let data1 = BigInt::from_str("1").unwrap();
         let data2 = BigInt::from_str("1").unwrap();
 
-        let memory_insert!(
+        memory_insert!(
             vm,
             [
                 ((1, 0), (2, 0)),

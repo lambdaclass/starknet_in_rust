@@ -60,7 +60,6 @@ pub fn get_integer_range(
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
-    use cairo_rs::types::relocatable::Relocatable;
 
     #[macro_export]
     macro_rules! any_box {
@@ -87,7 +86,6 @@ pub mod test_utils {
             references
         }};
     }
-    use cairo_rs::types::relocatable;
     pub(crate) use references;
 
     macro_rules! ids_data {
@@ -145,7 +143,7 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! memory_insert {
         ($vm:expr, [ $( (($si:expr, $off:expr), $val:tt) ),* ] ) => {
-            $( allocate_values!($vm, $si, $off, $val) )*
+            $( allocate_values!($vm, $si, $off, $val); )*
         };
     }
     pub(crate) use memory_insert;
@@ -153,16 +151,27 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_values {
         ($vm: expr, $si:expr, $off:expr, ($sival:expr, $offval:expr)) => {
-            let k = relocatable!($si, $off);
-            let v = relocatable!($sival, $offval);
-            vm.insert_value(k, v);
+            let k = relocatable_value!($si, $off);
+            let v = relocatable_value!($sival, $offval);
+            $vm.insert_value(&k, &v).unwrap();
         };
-        ($vm: expr, ($si:expr, $off:expr), $val:expr) => {
-            let k = relocatable!($si, $off);
-            vm.insert_value(&k, val);
+        ($vm: expr, $si:expr, $off:expr, $val:expr) => {
+            let k = relocatable_value!($si, $off);
+            $vm.insert_value(&k, $val).unwrap();
         };
     }
     pub(crate) use allocate_values;
+
+    #[macro_export]
+    macro_rules! relocatable_value {
+        ($val1 : expr, $val2 : expr) => {
+            Relocatable {
+                segment_index: ($val1),
+                offset: ($val2),
+            }
+        };
+    }
+    pub(crate) use relocatable_value;
 
     #[macro_export]
     macro_rules! exec_scopes_ref {
