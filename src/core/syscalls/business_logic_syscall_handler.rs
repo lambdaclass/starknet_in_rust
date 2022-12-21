@@ -380,7 +380,7 @@ mod tests {
                 &HashMap::new(),
             )
             .unwrap();
-        
+
         // TODO: Fix the test
     }
 }
