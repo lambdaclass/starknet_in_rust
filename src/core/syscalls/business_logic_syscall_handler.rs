@@ -16,17 +16,57 @@ use num_bigint::BigInt;
 
 pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
+    /// Events emitted by the current contract call.
     events: Rc<RefCell<Vec<OrderedEvent>>>,
+    /// A list of dynamically allocated segments that are expected to be read-only.
+    read_only_segments: Rc<RefCell<Vec<(Relocatable, MaybeRelocatable)>>>,
+    resources_manager: Rc<RefCell<ExecutionResourcesManager>>,
 }
 
 impl BusinessLogicSyscallHandler {
     pub fn new() -> Result<Self, SyscallHandlerError> {
         let events = Rc::new(RefCell::new(Vec::new()));
         let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
+        let read_only_segments = Rc::new(RefCell::new(Vec::new()));
+        let resources_manager = Rc::new(RefCell::new(ExecutionResourcesManager::default()));
+
         Ok(BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
+            read_only_segments,
+            resources_manager,
         })
+    }
+
+    pub fn allocate_segment(
+        &mut self,
+        vm: &mut VirtualMachine,
+        data: Vec<MaybeRelocatable>,
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        let segment_start = vm.add_memory_segment();
+        let segment_end = vm
+            .write_arg(&segment_start, &data)
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let prime = BigInt::parse_bytes(
+            b"3618502788666131213697322783095070105623107215331596699973092056135872020481",
+            10,
+        )
+        .ok_or(SyscallHandlerError::SegmentationFault)?;
+
+        let sub = segment_end
+            .sub(&segment_start.to_owned().into(), &prime)
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let segment = (segment_start.to_owned(), sub);
+        self.read_only_segments.borrow_mut().push(segment);
+
+        Ok(segment_start)
+    }
+
+    /// Increments the syscall count for a given `syscall_name` by 1.
+    fn increment_syscall_count(&self, syscall_name: &str) {
+        self.resources_manager
+            .borrow_mut()
+            .increment_syscall_counter(syscall_name, 1);
     }
 }
 
@@ -72,6 +112,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
+        self.increment_syscall_count(syscall_name);
         self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
 
