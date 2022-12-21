@@ -5,10 +5,12 @@ use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
+use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
+use num_traits::{One, Zero};
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
@@ -17,16 +19,24 @@ use num_bigint::BigInt;
 pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
     events: Rc<RefCell<Vec<OrderedEvent>>>,
+    contract_address: u64,
 }
 
 impl BusinessLogicSyscallHandler {
-    pub fn new() -> Result<Self, SyscallHandlerError> {
+    pub fn new() -> Self {
         let events = Rc::new(RefCell::new(Vec::new()));
         let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
-        Ok(BusinessLogicSyscallHandler {
+        BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
-        })
+            contract_address: 0,
+        }
+    }
+}
+
+impl Default for BusinessLogicSyscallHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -73,7 +83,50 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _get_tx_info_ptr(&self, _vm: VirtualMachine) {
         todo!()
     }
-    fn _deploy(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
+
+    fn _deploy(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<i32, SyscallHandlerError> {
+        let request = if let SyscallRequest::Deploy(request) =
+            self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedDeployRequestStruct);
+        };
+
+        if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
+            return Err(SyscallHandlerError::DeployFromZero(
+                request.deploy_from_zero,
+            ));
+        };
+
+        let constructor_calldata = get_integer_range(
+            vm,
+            &request.constructor_calldata,
+            bigint_to_usize(&request.constructor_calldata_size)?,
+        )?;
+
+        let class_hash = &request.class_hash;
+
+        let deployer_address = if request.deploy_from_zero.is_zero() {
+            self.contract_address
+        } else {
+            0
+        };
+
+        let _contract_address = calculate_contract_address_from_hash(
+            &request.contract_address_salt,
+            class_hash,
+            &constructor_calldata,
+            deployer_address,
+        )?;
+
+        // Initialize the contract.
+        let (_sign, _class_hash_bytes) = request.class_hash.to_bytes_be();
+
         todo!()
     }
 
@@ -132,7 +185,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
 #[cfg(test)]
 mod tests {
+    use crate::bigint;
     use crate::business_logic::execution::objects::OrderedEvent;
+    use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+    use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE};
     use crate::core::syscalls::syscall_handler::*;
     use crate::utils::test_utils::*;
@@ -140,6 +196,7 @@ mod tests {
         BuiltinHintProcessor, HintProcessorData,
     };
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
+    use cairo_rs::relocatable;
     use cairo_rs::types::exec_scope::ExecutionScopes;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
@@ -269,5 +326,26 @@ mod tests {
                 .n_emitted_events,
             1
         );
+    }
+
+    #[test]
+    fn deploy_from_zero_error() {
+        let syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 3), bigint!(3)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(1, 20))
+            .unwrap();
+        vm.insert_value(&relocatable!(1, 5), bigint!(4)).unwrap();
+
+        assert_eq!(
+            syscall._deploy(&vm, relocatable!(1, 0)),
+            Err(SyscallHandlerError::DeployFromZero(4))
+        )
     }
 }

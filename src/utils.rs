@@ -57,6 +57,27 @@ pub fn get_integer_range(
         .collect::<Vec<BigInt>>())
 }
 
+//* -------------------
+//* Macros
+//* -------------------
+
+#[macro_export]
+macro_rules! bigint {
+    ($val : expr) => {
+        Into::<BigInt>::into($val)
+    };
+}
+
+#[macro_export]
+macro_rules! bigint_str {
+    ($val: expr) => {
+        BigInt::parse_bytes($val, 10).unwrap()
+    };
+    ($val: expr, $opt: expr) => {
+        BigInt::parse_bytes($val, $opt).unwrap()
+    };
+}
+
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
@@ -102,14 +123,6 @@ pub mod test_utils {
         };
     }
     pub(crate) use ids_data;
-
-    #[macro_export]
-    macro_rules! bigint {
-        ($val : expr) => {
-            Into::<BigInt>::into($val)
-        };
-    }
-    pub(crate) use num_bigint;
 
     macro_rules! vm {
         () => {{
