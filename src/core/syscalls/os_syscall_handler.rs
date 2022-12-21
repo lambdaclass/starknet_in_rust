@@ -1,132 +1,11 @@
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 
-use cairo_rs::any_box;
-use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
-    BuiltinHintProcessor, HintProcessorData,
-};
-use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
-use cairo_rs::types::exec_scope::ExecutionScopes;
 use cairo_rs::types::relocatable::Relocatable;
-use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
-use num_bigint::BigInt;
 
 use crate::errors::StarknetError;
-
-const DEPLOY_SYSCALL_CODE: &str =
-    "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)";
-
-pub struct SyscallHintProcessor<H: SyscallHandler> {
-    builtin_hint_processor: BuiltinHintProcessor,
-    _syscall_handler: H,
-}
-
-impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
-    pub fn new_empty() -> SyscallHintProcessor<BusinessLogicSyscallHandler> {
-        SyscallHintProcessor {
-            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            _syscall_handler: BusinessLogicSyscallHandler,
-        }
-    }
-}
-impl<H: SyscallHandler> SyscallHintProcessor<H> {
-    pub fn should_run_syscall_hint(
-        &self,
-        vm: &mut VirtualMachine,
-        exec_scopes: &mut ExecutionScopes,
-        hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, BigInt>,
-    ) -> Result<bool, VirtualMachineError> {
-        match self
-            .builtin_hint_processor
-            .execute_hint(vm, exec_scopes, hint_data, constants)
-        {
-            Ok(()) => Ok(false),
-            Err(VirtualMachineError::UnknownHint(_)) => Ok(true),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn execute_syscall_hint(
-        &self,
-        _vm: &mut VirtualMachine,
-        _exec_scopes: &mut ExecutionScopes,
-        hint_data: &Box<dyn Any>,
-        _constants: &HashMap<String, BigInt>,
-    ) -> Result<(), VirtualMachineError> {
-        println!("Hello from SyscallHintProcessor");
-
-        let hint_data = hint_data
-            .downcast_ref::<HintProcessorData>()
-            .ok_or(VirtualMachineError::WrongHintData)?;
-
-        match &*hint_data.code {
-            DEPLOY_SYSCALL_CODE => {
-                println!("Running deploy syscall.");
-                Err(VirtualMachineError::NotImplemented)
-            }
-            _ => Err(VirtualMachineError::NotImplemented),
-        }
-    }
-}
-
-impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
-    fn execute_hint(
-        &self,
-        vm: &mut VirtualMachine,
-        exec_scopes: &mut ExecutionScopes,
-        hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, BigInt>,
-    ) -> Result<(), VirtualMachineError> {
-        if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
-            self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)?
-        }
-
-        Ok(())
-    }
-
-    fn compile_hint(
-        &self,
-        hint_code: &str,
-        ap_tracking_data: &cairo_rs::serde::deserialize_program::ApTracking,
-        reference_ids: &std::collections::HashMap<String, usize>,
-        references: &std::collections::HashMap<
-            usize,
-            cairo_rs::hint_processor::hint_processor_definition::HintReference,
-        >,
-    ) -> Result<Box<dyn Any>, VirtualMachineError> {
-        Ok(any_box!(HintProcessorData {
-            code: hint_code.to_string(),
-            ap_tracking: ap_tracking_data.clone(),
-            ids_data: get_ids_data(reference_ids, references)?,
-        }))
-    }
-}
-
-fn get_ids_data(
-    reference_ids: &HashMap<String, usize>,
-    references: &HashMap<usize, HintReference>,
-) -> Result<HashMap<String, HintReference>, VirtualMachineError> {
-    let mut ids_data = HashMap::<String, HintReference>::new();
-    for (path, ref_id) in reference_ids {
-        let name = path
-            .rsplit('.')
-            .next()
-            .ok_or(VirtualMachineError::FailedToGetIds)?;
-        ids_data.insert(
-            name.to_string(),
-            references
-                .get(ref_id)
-                .ok_or(VirtualMachineError::FailedToGetIds)?
-                .clone(),
-        );
-    }
-    Ok(ids_data)
-}
-
-pub trait SyscallHandler {}
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
@@ -161,12 +40,8 @@ enum EntryPointType {
 #[derive(Debug)]
 struct OsSingleStarknetStorage;
 
-pub struct BusinessLogicSyscallHandler;
-
 #[derive(Debug, PartialEq)]
 pub struct TransactionExecutionInfo;
-
-impl SyscallHandler for BusinessLogicSyscallHandler {}
 
 impl OsSingleStarknetStorage {
     // Writes the given value in the given key in ongoing_storage_changes and returns the
@@ -413,58 +288,15 @@ impl OsSyscallHandler {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::syscall_handler::{SyscallHintProcessor, DEPLOY_SYSCALL_CODE};
     use crate::errors::StarknetError;
     use crate::utils::test_utils::*;
-    use cairo_rs::any_box;
-    use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
-        BuiltinHintProcessor, HintProcessorData,
-    };
-    use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
-    use cairo_rs::types::exec_scope::ExecutionScopes;
-    use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-    use cairo_rs::vm::errors::memory_errors::MemoryError;
-    use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+    use cairo_rs::types::relocatable::Relocatable;
     use cairo_rs::vm::vm_core::VirtualMachine;
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
 
     use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
-
-    #[test]
-    fn run_alloc_hint_ap_is_not_empty() {
-        let hint_code = "memory[ap] = segments.add()";
-        let mut vm = vm!();
-        //Add 3 segments to the memory
-        add_segments!(vm, 3);
-        vm.set_ap(6);
-        //Insert something into ap
-        let key = Relocatable::from((1, 6));
-        vm.insert_value(&key, (1, 6)).unwrap();
-        //ids and references are not needed for this test
-        assert_eq!(
-            run_hint!(vm, HashMap::new(), hint_code),
-            Err(VirtualMachineError::MemoryError(
-                MemoryError::InconsistentMemory(
-                    MaybeRelocatable::from((1, 6)),
-                    MaybeRelocatable::from((1, 6)),
-                    MaybeRelocatable::from((3, 0))
-                )
-            ))
-        );
-    }
-
-    // tests that we are executing correctly our syscall hint processor.
-    #[test]
-    fn cannot_run_syscall_hints() {
-        let hint_code = DEPLOY_SYSCALL_CODE;
-        let mut vm = vm!();
-        assert_eq!(
-            run_syscall_hint!(vm, HashMap::new(), hint_code),
-            Err(VirtualMachineError::NotImplemented)
-        );
-    }
 
     #[test]
     fn os_syscall_handler_get_contract_address() {
