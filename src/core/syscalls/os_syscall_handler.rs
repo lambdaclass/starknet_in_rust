@@ -299,7 +299,7 @@ mod tests {
     use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
 
     #[test]
-    fn os_syscall_handler_get_contract_address() {
+    fn get_contract_address() {
         let mut call_stack = VecDeque::new();
         let call_info = CallInfo {
             contract_address: 5,
@@ -329,7 +329,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_get_contract_address_err() {
+    fn get_contract_address_err() {
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -349,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_end_tx_err_execute_code_read_iterator() {
+    fn end_tx_err_execute_code_read_iterator() {
         let mut execute_code_read_iterator = VecDeque::new();
         execute_code_read_iterator.push_back(12);
         let mut handler = OsSyscallHandler::new(
@@ -367,7 +367,7 @@ mod tests {
         assert_eq!(handler.end_tx(), Err(SyscallHandlerError::IteratorNotEmpty))
     }
     #[test]
-    fn os_syscall_handler_end_tx_err_tx_info_ptr() {
+    fn end_tx_err_tx_info_ptr() {
         let tx_info_ptr = Some(Relocatable {
             segment_index: 0,
             offset: 0,
@@ -391,7 +391,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_end_tx_err_tx_execution_info() {
+    fn end_tx_err_tx_execution_info() {
         let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_end_tx() {
+    fn end_tx() {
         let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -430,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_start_tx_err_tx_info_ptr() {
+    fn start_tx_err_tx_info_ptr() {
         let tx_info_ptr = Some(Relocatable {
             segment_index: 0,
             offset: 0,
@@ -460,7 +460,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_start_tx_err_tx_execution_info() {
+    fn start_tx_err_tx_execution_info() {
         let tx_execution_info = Some(TransactionExecutionInfo);
 
         let mut handler = OsSyscallHandler::new(
@@ -489,7 +489,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_start_tx() {
+    fn start_tx() {
         let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -511,7 +511,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_skip_tx() {
+    fn skip_tx() {
         let mut tx_execution_info_iterator = VecDeque::new();
         tx_execution_info_iterator.push_back(TransactionExecutionInfo);
         let mut handler = OsSyscallHandler::new(
@@ -531,7 +531,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_get_tx_info_ptr_reloc() {
+    fn get_tx_info_ptr_reloc() {
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -557,7 +557,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_get_tx_info_ptr_none() {
+    fn get_tx_info_ptr_none() {
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -574,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_call_contract() {
+    fn call_contract() {
         let mut retdata_iterator = VecDeque::new();
         retdata_iterator.push_back(VecDeque::new());
         retdata_iterator.push_back(VecDeque::new());
@@ -596,7 +596,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_storage_deploy() {
+    fn storage_deploy() {
         let mut retdata_iterator = VecDeque::new();
         retdata_iterator.push_back(VecDeque::new());
         let mut deployed_contract_iterator = VecDeque::new();
@@ -617,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_storage_deploy_err_retdata_iterator_multiple() {
+    fn storage_deploy_err_retdata_iterator_multiple() {
         let mut retdata_iterator = VecDeque::new();
         let mut retdata_construct = VecDeque::new();
         retdata_construct.push_back(12);
@@ -640,7 +640,7 @@ mod tests {
         );
     }
     #[test]
-    fn os_syscall_handler_storage_deploy_err_retdata_iterator() {
+    fn storage_deploy_err_retdata_iterator() {
         let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -657,7 +657,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_storage_read() {
+    fn storage_read() {
         let mut execute_code_read_iterator = VecDeque::new();
         execute_code_read_iterator.push_back(12);
         execute_code_read_iterator.push_back(1444);
@@ -679,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_storage_write() {
+    fn storage_write() {
         let mut execute_code_read_iterator = VecDeque::new();
         execute_code_read_iterator.push_back(12);
         let mut handler = OsSyscallHandler::new(
@@ -699,7 +699,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_assert_iterators_exhausted_err_deployed() {
+    fn assert_iterators_exhausted_err_deployed() {
         let mut deployed_contracts_iterator = VecDeque::new();
         deployed_contracts_iterator.push_back(12);
         let handler = OsSyscallHandler::new(
@@ -721,7 +721,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_assert_iterators_exhausted_err_retdata() {
+    fn assert_iterators_exhausted_err_retdata() {
         let mut retdata_iter = VecDeque::new();
         retdata_iter.push_back(VecDeque::new());
         let handler = OsSyscallHandler::new(
@@ -743,7 +743,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_assert_iterators_exhausted_err_execute() {
+    fn assert_iterators_exhausted_err_execute() {
         let mut execute_code_read_iter = VecDeque::new();
         execute_code_read_iter.push_back(12);
         let handler = OsSyscallHandler::new(
@@ -765,7 +765,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_assert_iterators_exhausted() {
+    fn assert_iterators_exhausted() {
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -782,7 +782,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_get_caller_address_err() {
+    fn get_caller_address_err() {
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -801,7 +801,7 @@ mod tests {
         )
     }
     #[test]
-    fn os_syscall_handler_get_caller_address() {
+    fn get_caller_address() {
         let mut call_stack = VecDeque::new();
         call_stack.push_back(CallInfo::default());
         let handler = OsSyscallHandler::new(
@@ -823,7 +823,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_exit_call() {
+    fn exit_call() {
         let mut call_stack = VecDeque::new();
         call_stack.push_back(CallInfo::default());
         let mut handler = OsSyscallHandler::new(
@@ -842,7 +842,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_enter_call_err() {
+    fn enter_call_err() {
         let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -859,7 +859,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_enter_call() {
+    fn enter_call() {
         let mut call_iterator = VecDeque::new();
         call_iterator.push_back(CallInfo::default());
 
@@ -879,7 +879,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_allocate_segment() {
+    fn allocate_segment() {
         let vm = vm!();
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
@@ -909,7 +909,7 @@ mod tests {
     }
 
     #[test]
-    fn os_syscall_handler_allocate_segment_err() {
+    fn allocate_segment_err() {
         let vm = vm!();
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
