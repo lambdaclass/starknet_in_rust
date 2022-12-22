@@ -109,20 +109,16 @@ impl OsSyscallHandler {
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
-        match self.tx_info_ptr {
-            None => (),
-            Some(_) => Err(SyscallHandlerError::ShouldBeNone(String::from(
-                "tx_info_ptr",
-            )))?,
+        if self.tx_info_ptr.is_some() {
+            return Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")));
         }
 
         self.tx_info_ptr = Some(tx_info_ptr);
 
-        match self.tx_execution_info {
-            None => (),
-            Some(_) => Err(SyscallHandlerError::ShouldBeNone(String::from(
+        if self.tx_execution_info.is_some() {
+            return Err(SyscallHandlerError::ShouldBeNone(String::from(
                 "tx_execution_info",
-            )))?,
+            )))
         }
 
         self.tx_execution_info = self.tx_execution_info_iterator.pop_front();
