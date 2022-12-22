@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
+use crate::business_logic::execution::state::ExecutionResourcesManager;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
 use crate::hash_utils::calculate_contract_address_from_hash;
@@ -18,7 +19,11 @@ use num_traits::{One, Zero};
 
 pub struct BusinessLogicSyscallHandler {
     tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
+    /// Events emitted by the current contract call.
     events: Rc<RefCell<Vec<OrderedEvent>>>,
+    /// A list of dynamically allocated segments that are expected to be read-only.
+    read_only_segments: Rc<RefCell<Vec<(Relocatable, MaybeRelocatable)>>>,
+    resources_manager: Rc<RefCell<ExecutionResourcesManager>>,
     contract_address: u64,
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
 }
@@ -27,18 +32,24 @@ impl BusinessLogicSyscallHandler {
     pub fn new() -> Self {
         let events = Rc::new(RefCell::new(Vec::new()));
         let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
+        let read_only_segments = Rc::new(RefCell::new(Vec::new()));
+        let resources_manager = Rc::new(RefCell::new(ExecutionResourcesManager::default()));
+
         BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
+            read_only_segments,
+            resources_manager,
             contract_address: 0,
             l2_to_l1_messages: Vec::new(),
         }
     }
-}
 
-impl Default for BusinessLogicSyscallHandler {
-    fn default() -> Self {
-        Self::new()
+    /// Increments the syscall count for a given `syscall_name` by 1.
+    fn increment_syscall_count(&self, syscall_name: &str) {
+        self.resources_manager
+            .borrow_mut()
+            .increment_syscall_counter(syscall_name, 1);
     }
 }
 
@@ -159,6 +170,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
+        self.increment_syscall_count(syscall_name);
         self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
 
@@ -205,9 +217,25 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _storage_write(&self, _address: i32, _value: i32) {
         todo!()
     }
-    fn _allocate_segment(&self, _vm: VirtualMachine, _data: Vec<MaybeRelocatable>) -> Relocatable {
-        todo!()
+
+    fn allocate_segment(
+        &self,
+        vm: &mut VirtualMachine,
+        data: Vec<MaybeRelocatable>,
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        let segment_start = vm.add_memory_segment();
+        let segment_end = vm
+            .write_arg(&segment_start, &data)
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let sub = segment_end
+            .sub(&segment_start.to_owned().into(), vm.get_prime())
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let segment = (segment_start.to_owned(), sub);
+        self.read_only_segments.borrow_mut().push(segment);
+
+        Ok(segment_start)
     }
+
     fn _write_syscall_response(
         &self,
         _response: Vec<i32>,
@@ -215,6 +243,12 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         _syscall_ptr: Relocatable,
     ) {
         todo!()
+    }
+}
+
+impl Default for BusinessLogicSyscallHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -382,6 +416,21 @@ mod tests {
             syscall._deploy(&vm, relocatable!(1, 0)),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
+    }
+
+    #[test]
+    fn can_allocate_segment() {
+        let mut syscall_handler = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+        let data = vec![MaybeRelocatable::Int(7.into())];
+
+        let segment_start = syscall_handler.allocate_segment(&mut vm, data).unwrap();
+        let expected_value = vm
+            .get_integer(&Relocatable::from((0, 0)))
+            .unwrap()
+            .into_owned();
+        assert_eq!(Relocatable::from((0, 0)), segment_start);
+        assert_eq!(expected_value, 7.into());
     }
 
     #[test]
