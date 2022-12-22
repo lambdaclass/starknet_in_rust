@@ -30,13 +30,18 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
+    fn send_message_to_l1(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
+
     fn library_call(
         &self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
-    fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable);
     fn _get_tx_info_ptr(&self, vm: VirtualMachine);
     fn _deploy(
         &self,
@@ -86,6 +91,7 @@ pub(crate) trait SyscallHandler {
         match syscall_name {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
@@ -231,6 +237,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn read_send_message_to_l1_request() {
+        let syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(2, 0))
+            .unwrap();
+
+        assert_eq!(
+            syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
+            Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+                _selector: bigint!(0),
+                to_address: 1,
+                payload_size: 2,
+                payload_ptr: relocatable!(2, 0)
+            }))
+        )
+    }
+
     fn read_deploy_syscall_request() {
         let syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();
