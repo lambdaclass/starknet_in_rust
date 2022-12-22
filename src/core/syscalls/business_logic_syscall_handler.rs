@@ -25,6 +25,7 @@ pub struct BusinessLogicSyscallHandler {
     read_only_segments: Rc<RefCell<Vec<(Relocatable, MaybeRelocatable)>>>,
     resources_manager: Rc<RefCell<ExecutionResourcesManager>>,
     contract_address: u64,
+    l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
 }
 
 impl BusinessLogicSyscallHandler {
@@ -40,6 +41,7 @@ impl BusinessLogicSyscallHandler {
             read_only_segments,
             resources_manager,
             contract_address: 0,
+            l2_to_l1_messages: Vec::new(),
         }
     }
 
@@ -78,6 +80,31 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
+    fn send_message_to_l1(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::SendMessageToL1(request) =
+            self._read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedSendMessageToL1);
+        };
+
+        let payload = get_integer_range(vm, &request.payload_ptr, request.payload_size)?;
+
+        self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
+            self.tx_execution_context.borrow().n_sent_messages,
+            request.to_address,
+            payload,
+        ));
+
+        // Update messages count.
+        self.tx_execution_context.borrow_mut().n_sent_messages += 1;
+        Ok(())
+    }
     fn library_call(
         &self,
         vm: &VirtualMachine,
@@ -85,10 +112,6 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         self._call_contract_and_write_response("library_call", vm, syscall_ptr);
         Ok(())
-    }
-
-    fn send_message_to_l1(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) {
-        todo!()
     }
 
     fn _get_tx_info_ptr(&self, _vm: VirtualMachine) {
@@ -220,7 +243,7 @@ impl Default for BusinessLogicSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::bigint;
-    use crate::business_logic::execution::objects::OrderedEvent;
+    use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE};
@@ -396,5 +419,36 @@ mod tests {
             .into_owned();
         assert_eq!(Relocatable::from((0, 0)), segment_start);
         assert_eq!(expected_value, 7.into());
+    }
+
+    #[test]
+    fn test_send_message_to_l1_ok() {
+        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+
+        add_segments!(vm, 3);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(2, 0))
+            .unwrap();
+        vm.insert_value(&relocatable!(2, 0), bigint!(18)).unwrap();
+        vm.insert_value(&relocatable!(2, 1), bigint!(12)).unwrap();
+
+        assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 0);
+        assert_eq!(syscall.l2_to_l1_messages, Vec::new());
+
+        syscall.send_message_to_l1(&vm, relocatable!(1, 0));
+
+        assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 1);
+        assert_eq!(
+            syscall.l2_to_l1_messages,
+            vec![OrderedL2ToL1Message::new(
+                syscall.tx_execution_context.borrow().n_sent_messages - 1,
+                1,
+                vec![bigint!(18), bigint!(12)],
+            )]
+        );
     }
 }

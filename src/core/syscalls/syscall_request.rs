@@ -8,6 +8,7 @@ use num_bigint::BigInt;
 pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
     Deploy(DeployRequestStruct),
+    SendMessageToL1(SendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
 }
 
@@ -36,6 +37,15 @@ pub(crate) struct DeployRequestStruct {
     // Used for deterministic contract address deployment.
     pub(crate) deploy_from_zero: usize,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct SendMessageToL1SysCall {
+    pub(crate) _selector: BigInt,
+    pub(crate) to_address: usize,
+    pub(crate) payload_size: usize,
+    pub(crate) payload_ptr: Relocatable,
+}
+
 #[allow(unused)] // TODO: Remove once used.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LibraryCallStruct {
@@ -64,6 +74,13 @@ impl From<DeployRequestStruct> for SyscallRequest {
         SyscallRequest::Deploy(deploy_request_struct)
     }
 }
+
+impl From<SendMessageToL1SysCall> for SyscallRequest {
+    fn from(send_message_to_l1_sys_call: SendMessageToL1SysCall) -> SyscallRequest {
+        SyscallRequest::SendMessageToL1(send_message_to_l1_sys_call)
+    }
+}
+
 impl From<LibraryCallStruct> for SyscallRequest {
     fn from(library_call_struct: LibraryCallStruct) -> SyscallRequest {
         SyscallRequest::LibraryCall(library_call_struct)
@@ -132,6 +149,24 @@ impl FromPtr for DeployRequestStruct {
             constructor_calldata_size,
             constructor_calldata,
             deploy_from_zero,
+        }))
+    }
+}
+impl FromPtr for SendMessageToL1SysCall {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+        let to_address = get_integer(vm, &(&syscall_ptr + 1))?;
+        let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
+        let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 4))?;
+
+        Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+            _selector,
+            to_address,
+            payload_size,
+            payload_ptr,
         }))
     }
 }
