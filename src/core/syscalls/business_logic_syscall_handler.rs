@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
+use crate::business_logic::execution::state::ExecutionResourcesManager;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
 use crate::hash_utils::calculate_contract_address_from_hash;
