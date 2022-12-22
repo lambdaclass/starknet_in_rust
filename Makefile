@@ -42,3 +42,4 @@ test:
 
 coverage:
 	cargo tarpaulin
+	rm -f default.profraw
