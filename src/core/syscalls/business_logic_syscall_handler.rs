@@ -404,41 +404,30 @@ mod tests {
 
         // insert syscall_ptr
         let syscall_ptr = Relocatable::from((2, 0));
-        vm.insert_value(&Relocatable::from((1, 0)), syscall_ptr)
-            .unwrap();
 
-        // insert version
         let version = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 0)), version)
-            .unwrap();
-
-        // insert account_contract_address
         let account_contract_address = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 1)), account_contract_address)
-            .unwrap();
-
         let max_fee = BigInt::from_str("2").unwrap();
-        vm.insert_value(&Relocatable::from((2, 2)), max_fee)
-            .unwrap();
-
         let signature_len = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 3)), signature_len)
-            .unwrap();
-
         let signature = Relocatable::from((3, 0));
-        vm.insert_value(&Relocatable::from((2, 4)), signature)
-            .unwrap();
-
         let transaction_hash = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 5)), transaction_hash)
-            .unwrap();
-
         let chain_id = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 6)), chain_id)
-            .unwrap();
-
         let nonce = BigInt::from_str("1").unwrap();
-        vm.insert_value(&Relocatable::from((2, 7)), nonce).unwrap();
+
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), syscall_ptr),
+                ((2, 0), version),
+                ((2, 1), account_contract_address),
+                ((2, 2), max_fee),
+                ((2, 3), signature_len),
+                ((2, 4), signature),
+                ((2, 5), transaction_hash),
+                ((2, 6), chain_id),
+                ((2, 7), nonce)
+            ]
+        );
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
