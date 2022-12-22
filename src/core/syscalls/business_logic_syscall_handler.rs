@@ -253,9 +253,9 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 mod tests {
     use crate::bigint;
     use crate::business_logic::execution::objects::OrderedEvent;
-    use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
+    use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::syscalls::syscall_handler::*;
     use crate::utils::test_utils::*;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -435,15 +435,19 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
         // invoke syscall
         let syscall_handler = SyscallHintProcessor::new_empty().unwrap();
-        let err = syscall_handler
-            .execute_hint(
-                &mut vm,
-                &mut ExecutionScopes::new(),
-                &any_box!(hint_data),
-                &HashMap::new(),
-            );
+        let err = syscall_handler.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
 
-        assert_eq!(err, Err(VirtualMachineError::UnknownHint("Hint not implemented".to_string())))
+        assert_eq!(
+            err,
+            Err(VirtualMachineError::UnknownHint(
+                "Hint not implemented".to_string()
+            ))
+        )
     }
 
     fn deploy_from_zero_error() {
