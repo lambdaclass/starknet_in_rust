@@ -212,6 +212,12 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 }
 
+impl Default for BusinessLogicSyscallHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::bigint;
