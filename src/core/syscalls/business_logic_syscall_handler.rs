@@ -51,14 +51,8 @@ impl BusinessLogicSyscallHandler {
         let segment_end = vm
             .write_arg(&segment_start, &data)
             .map_err(|_| SyscallHandlerError::SegmentationFault)?;
-        let prime = BigInt::parse_bytes(
-            b"3618502788666131213697322783095070105623107215331596699973092056135872020481",
-            10,
-        )
-        .ok_or(SyscallHandlerError::SegmentationFault)?;
-
         let sub = segment_end
-            .sub(&segment_start.to_owned().into(), &prime)
+            .sub(&segment_start.to_owned().into(), vm.get_prime())
             .map_err(|_| SyscallHandlerError::SegmentationFault)?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.borrow_mut().push(segment);
