@@ -43,24 +43,6 @@ impl BusinessLogicSyscallHandler {
         }
     }
 
-    pub fn allocate_segment(
-        &mut self,
-        vm: &mut VirtualMachine,
-        data: Vec<MaybeRelocatable>,
-    ) -> Result<Relocatable, SyscallHandlerError> {
-        let segment_start = vm.add_memory_segment();
-        let segment_end = vm
-            .write_arg(&segment_start, &data)
-            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
-        let sub = segment_end
-            .sub(&segment_start.to_owned().into(), vm.get_prime())
-            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
-        let segment = (segment_start.to_owned(), sub);
-        self.read_only_segments.borrow_mut().push(segment);
-
-        Ok(segment_start)
-    }
-
     /// Increments the syscall count for a given `syscall_name` by 1.
     fn increment_syscall_count(&self, syscall_name: &str) {
         self.resources_manager
@@ -200,9 +182,25 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _storage_write(&self, _address: i32, _value: i32) {
         todo!()
     }
-    fn _allocate_segment(&self, _vm: VirtualMachine, _data: Vec<MaybeRelocatable>) -> Relocatable {
-        todo!()
+
+    fn allocate_segment(
+        &self,
+        vm: &mut VirtualMachine,
+        data: Vec<MaybeRelocatable>,
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        let segment_start = vm.add_memory_segment();
+        let segment_end = vm
+            .write_arg(&segment_start, &data)
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let sub = segment_end
+            .sub(&segment_start.to_owned().into(), vm.get_prime())
+            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let segment = (segment_start.to_owned(), sub);
+        self.read_only_segments.borrow_mut().push(segment);
+
+        Ok(segment_start)
     }
+
     fn _write_syscall_response(
         &self,
         _response: Vec<i32>,
@@ -383,5 +381,20 @@ mod tests {
             syscall._deploy(&vm, relocatable!(1, 0)),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
+    }
+
+    #[test]
+    fn can_allocate_segment() {
+        let mut syscall_handler = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+        let data = vec![MaybeRelocatable::Int(7.into())];
+
+        let segment_start = syscall_handler.allocate_segment(&mut vm, data).unwrap();
+        let expected_value = vm
+            .get_integer(&Relocatable::from((0, 0)))
+            .unwrap()
+            .into_owned();
+        assert_eq!(Relocatable::from((0, 0)), segment_start);
+        assert_eq!(expected_value, 7.into());
     }
 }

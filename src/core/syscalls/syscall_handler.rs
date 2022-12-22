@@ -69,7 +69,13 @@ pub(crate) trait SyscallHandler {
     fn _get_contract_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
     fn _storage_read(&self, address: i32) -> i32;
     fn _storage_write(&self, address: i32, value: i32);
-    fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable;
+
+    fn allocate_segment(
+        &self,
+        vm: &mut VirtualMachine,
+        data: Vec<MaybeRelocatable>,
+    ) -> Result<Relocatable, SyscallHandlerError>;
+
     fn _write_syscall_response(
         &self,
         response: Vec<i32>,
