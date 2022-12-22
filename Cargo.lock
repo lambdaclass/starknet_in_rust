@@ -768,6 +768,7 @@ dependencies = [
  "num-integer",
  "num-traits",
  "serde_json",
+ "starknet-crypto",
  "thiserror",
 ]
 

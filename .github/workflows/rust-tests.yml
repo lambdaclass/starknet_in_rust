@@ -27,6 +27,6 @@ jobs:
     - name: Build
       run: make build
     - name: Run clippy
-      run: cargo clippy -- -D warnings
+      run: make clippy
     - name: Run tests
       run: make venv-test
