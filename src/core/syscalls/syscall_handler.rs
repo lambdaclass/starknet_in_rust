@@ -32,7 +32,13 @@ pub(crate) trait SyscallHandler {
 
     fn get_tx_info(
         &self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
+
+    fn library_call(
+        &self,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
@@ -41,7 +47,11 @@ pub(crate) trait SyscallHandler {
         &self,
         vm: &mut VirtualMachine,
     ) -> Result<MaybeRelocatable, SyscallHandlerError>;
-    fn _deploy(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
+    fn _deploy(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<i32, SyscallHandlerError>;
 
     fn _read_and_validate_syscall_request(
         &self,
@@ -50,10 +60,17 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
+    fn _call_contract_and_write_response(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    );
+
     fn _call_contract(
         &self,
         syscall_name: &str,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Vec<i32>;
 
@@ -62,6 +79,12 @@ pub(crate) trait SyscallHandler {
     fn _storage_read(&self, address: i32) -> i32;
     fn _storage_write(&self, address: i32, value: i32);
     fn _allocate_segment(&self, vm: VirtualMachine, data: Vec<MaybeRelocatable>) -> Relocatable;
+    fn _write_syscall_response(
+        &self,
+        response: Vec<i32>,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    );
 
     fn read_syscall_request(
         &self,
@@ -72,6 +95,8 @@ pub(crate) trait SyscallHandler {
         match syscall_name {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
             "get_tx_info" => TxInfoStruct::from_ptr(vm, syscall_ptr),
+            "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
+            "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
@@ -93,7 +118,7 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
     ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler::new()?,
+            syscall_handler: BusinessLogicSyscallHandler::new(),
         })
     }
 }
@@ -152,7 +177,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     ) -> Result<(), VirtualMachineError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|_| VirtualMachineError::UnknownHint("Unknown Hint".to_string()))?;
+                .map_err(|e| VirtualMachineError::UnknownHint(e.to_string()))?;
         }
         Ok(())
     }
@@ -208,4 +233,41 @@ fn get_syscall_ptr(
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
         .into_owned();
     Ok(syscall_ptr)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{add_segments, bigint, utils::test_utils::vm};
+    use cairo_rs::relocatable;
+    use num_bigint::{BigInt, Sign};
+
+    use super::*;
+
+    #[test]
+    fn read_deploy_syscall_request() {
+        let syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
+        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
+        vm.insert_value(&relocatable!(1, 3), bigint!(3)).unwrap();
+        vm.insert_value(&relocatable!(1, 4), relocatable!(1, 20))
+            .unwrap();
+        vm.insert_value(&relocatable!(1, 5), bigint!(4)).unwrap();
+
+        assert_eq!(
+            syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
+            Ok(SyscallRequest::Deploy(DeployRequestStruct {
+                _selector: bigint!(0),
+                class_hash: bigint!(1),
+                contract_address_salt: bigint!(2),
+                constructor_calldata_size: bigint!(3),
+                constructor_calldata: relocatable!(1, 20),
+                deploy_from_zero: 4,
+            }))
+        )
+    }
 }

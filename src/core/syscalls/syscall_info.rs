@@ -139,7 +139,6 @@ mod tests {
 
     use super::SyscallInfo;
     use super::*;
-    use crate::utils::test_utils::*;
     use num_bigint::BigInt;
     use std::str::FromStr;
 

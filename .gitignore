@@ -1,2 +1,4 @@
 /target
 deps/
+starknet-in-rs-venv/
+**/*.json
