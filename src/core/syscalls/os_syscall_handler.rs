@@ -100,7 +100,11 @@ impl SyscallHandler for OsSyscallHandler {
         todo!()
     }
 
-    fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
+    fn send_message_to_l1(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
         todo!()
     }
 
@@ -169,12 +173,12 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn _get_caller_address(
         &self,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         match self.call_stack.back() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info.caller_address),
+            Some(call_info) => Ok(call_info.caller_address.into()),
         }
     }
 
@@ -940,7 +944,7 @@ mod tests {
         };
 
         assert_eq!(
-            handler._get_caller_address(vm, ptr),
+            handler._get_caller_address(&vm, ptr),
             Err(SyscallHandlerError::ListIsEmpty)
         )
     }
@@ -965,8 +969,8 @@ mod tests {
             offset: 0,
         };
         assert_eq!(
-            handler._get_caller_address(vm, ptr),
-            Ok(CallInfo::default().caller_address)
+            handler._get_caller_address(&vm, ptr),
+            Ok(CallInfo::default().caller_address.into())
         )
     }
 
