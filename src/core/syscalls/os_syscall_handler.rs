@@ -132,10 +132,9 @@ impl SyscallHandler for OsSyscallHandler {
             0 => (),
             _ => Err(SyscallHandlerError::UnexpectedConstructorRetdata)?,
         }
-        Ok(self
-            .deployed_contracts_iterator
+        self.deployed_contracts_iterator
             .pop_front()
-            .ok_or(SyscallHandlerError::IteratorEmpty)?)
+            .ok_or(SyscallHandlerError::IteratorEmpty)
     }
 
     /// Returns the system call request written in the syscall segment, starting at syscall_ptr.
@@ -194,10 +193,9 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError> {
-        Ok(self
-            .execute_code_read_iterator
+        self.execute_code_read_iterator
             .pop_front()
-            .ok_or(SyscallHandlerError::IteratorEmpty)?)
+            .ok_or(SyscallHandlerError::IteratorEmpty)
     }
 
     // Advance execute_code_read_iterators since the previous storage value is written
@@ -207,9 +205,9 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     /// Allocates and returns a new temporary segment.
-    fn _allocate_segment(
+    fn allocate_segment(
         &self,
-        mut vm: VirtualMachine,
+        vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_temporary_segment();
@@ -1035,7 +1033,7 @@ mod tests {
 
     #[test]
     fn allocate_segment() {
-        let vm = vm!();
+        let mut vm = vm!();
         let handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -1055,7 +1053,7 @@ mod tests {
         ];
 
         assert_eq!(
-            handler._allocate_segment(vm, data),
+            handler.allocate_segment(&mut vm, data),
             Ok(Relocatable {
                 segment_index: -1,
                 offset: 0

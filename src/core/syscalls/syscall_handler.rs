@@ -85,9 +85,9 @@ pub(crate) trait SyscallHandler {
     ) -> Result<u32, SyscallHandlerError>;
     fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError>;
     fn _storage_write(&mut self, address: u32, value: u32);
-    fn _allocate_segment(
+    fn allocate_segment(
         &self,
-        vm: VirtualMachine,
+        vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
     fn _write_syscall_response(
