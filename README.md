@@ -18,6 +18,12 @@ $ make build
 
 Check the [Makefile](/Makefile) for additional targets.
 
+## Test
+Run the following command:
+```bash
+$ make test
+```
+
 ## Related projects
 
 - [cairo-rs](https://github.com/lambdaclass/cairo-rs): A fast implementation of the Cairo VM in Rust.
