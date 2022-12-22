@@ -1,11 +1,14 @@
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 
-use cairo_rs::types::relocatable::Relocatable;
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
 
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+
+use super::syscall_handler::SyscallHandler;
+use super::syscall_request::SyscallRequest;
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
@@ -80,6 +83,148 @@ struct OsSyscallHandler {
     tx_execution_info: Option<TransactionExecutionInfo>,
 }
 
+impl SyscallHandler for OsSyscallHandler {
+    fn emit_event(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+
+    fn library_call(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+
+    fn send_message_to_l1(&self, vm: VirtualMachine, syscall_ptr: Relocatable) {
+        todo!()
+    }
+
+    fn _get_tx_info_ptr(
+        &self,
+        vm: &mut VirtualMachine,
+    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
+        Ok(MaybeRelocatable::from(
+            self.tx_info_ptr
+                .as_ref()
+                .ok_or(SyscallHandlerError::TxInfoPtrIsNone)?,
+        ))
+    }
+
+    fn _deploy(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u32, SyscallHandlerError> {
+        let constructor_retdata = self
+            .retdata_iterator
+            .pop_front()
+            .ok_or(SyscallHandlerError::IteratorEmpty)?;
+        match constructor_retdata.len() {
+            0 => (),
+            _ => Err(SyscallHandlerError::UnexpectedConstructorRetdata)?,
+        }
+        Ok(self
+            .deployed_contracts_iterator
+            .pop_front()
+            .ok_or(SyscallHandlerError::IteratorEmpty)?)
+    }
+
+    /// Returns the system call request written in the syscall segment, starting at syscall_ptr.
+    /// Does not perform validations on the request, since it was validated in the BL.
+    fn _read_and_validate_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        todo!()
+    }
+
+    fn _call_contract_and_write_response(
+        &mut self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+
+    fn _call_contract(
+        &mut self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<Vec<u32>, SyscallHandlerError> {
+        Ok(self
+            .retdata_iterator
+            .pop_front()
+            .ok_or(SyscallHandlerError::IteratorEmpty)?
+            .into())
+    }
+
+    fn _get_caller_address(
+        &self,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u32, SyscallHandlerError> {
+        match self.call_stack.back() {
+            None => Err(SyscallHandlerError::ListIsEmpty)?,
+            Some(call_info) => Ok(call_info.caller_address),
+        }
+    }
+
+    fn _get_contract_address(
+        &self,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u32, SyscallHandlerError> {
+        match self.call_stack.front() {
+            None => Err(SyscallHandlerError::ListIsEmpty)?,
+            Some(call_info) => Ok(call_info.contract_address),
+        }
+    }
+
+    fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError> {
+        Ok(self
+            .execute_code_read_iterator
+            .pop_front()
+            .ok_or(SyscallHandlerError::IteratorEmpty)?)
+    }
+
+    // Advance execute_code_read_iterators since the previous storage value is written
+    // in each write operation. See BusinessLogicSysCallHandler._storage_write().
+    fn _storage_write(&mut self, address: u32, value: u32) {
+        self.execute_code_read_iterator.pop_front();
+    }
+
+    /// Allocates and returns a new temporary segment.
+    fn _allocate_segment(
+        &self,
+        mut vm: VirtualMachine,
+        data: Vec<MaybeRelocatable>,
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        let segment_start = vm.add_temporary_segment();
+
+        vm.write_arg(&segment_start, &data)
+            .map_err(|_| SyscallHandlerError::WriteArg)?;
+        Ok(segment_start)
+    }
+
+    fn _write_syscall_response(
+        &self,
+        response: Vec<u32>,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) {
+        todo!()
+    }
+}
+
 impl OsSyscallHandler {
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -110,7 +255,9 @@ impl OsSyscallHandler {
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
         if self.tx_info_ptr.is_some() {
-            return Err(SyscallHandlerError::ShouldBeNone(String::from("tx_info_ptr")));
+            return Err(SyscallHandlerError::ShouldBeNone(String::from(
+                "tx_info_ptr",
+            )));
         }
 
         self.tx_info_ptr = Some(tx_info_ptr);
@@ -118,7 +265,7 @@ impl OsSyscallHandler {
         if self.tx_execution_info.is_some() {
             return Err(SyscallHandlerError::ShouldBeNone(String::from(
                 "tx_execution_info",
-            )))
+            )));
         }
 
         self.tx_execution_info = self.tx_execution_info_iterator.pop_front();
@@ -129,36 +276,6 @@ impl OsSyscallHandler {
 
     fn skip_tx(&mut self) -> Option<TransactionExecutionInfo> {
         self.tx_execution_info_iterator.pop_front()
-    }
-
-    fn _storage_read(&mut self) -> Option<u32> {
-        self.execute_code_read_iterator.pop_front()
-    }
-
-    fn _get_tx_info_ptr(&self) -> &Option<Relocatable> {
-        &self.tx_info_ptr
-    }
-
-    fn _call_contract(&mut self) -> Option<VecDeque<u32>> {
-        self.retdata_iterator.pop_front()
-    }
-
-    fn _deploy(&mut self) -> Result<Option<u32>, SyscallHandlerError> {
-        let constructor_retdata = self
-            .retdata_iterator
-            .pop_front()
-            .ok_or(SyscallHandlerError::IteratorEmpty)?;
-        match constructor_retdata.len() {
-            0 => (),
-            _ => Err(SyscallHandlerError::UnexpectedConstructorRetdata)?,
-        }
-        Ok(self.deployed_contracts_iterator.pop_front())
-    }
-
-    // Advance execute_code_read_iterators since the previous storage value is written
-    // in each write operation. See BusinessLogicSysCallHandler._storage_write().
-    fn _storage_write(&mut self) -> Option<u32> {
-        self.execute_code_read_iterator.pop_front()
     }
 
     fn assert_iterators_exhausted(&self) -> Result<(), SyscallHandlerError> {
@@ -177,20 +294,6 @@ impl OsSyscallHandler {
     fn exit_call(&mut self) -> Result<Option<CallInfo>, SyscallHandlerError> {
         self.assert_iterators_exhausted()?;
         Ok(self.call_stack.pop_front())
-    }
-
-    fn _get_caller_address(self) -> Result<u32, SyscallHandlerError> {
-        match self.call_stack.back() {
-            None => Err(SyscallHandlerError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info.caller_address),
-        }
-    }
-
-    fn _get_contract_address(&self) -> Result<u32, SyscallHandlerError> {
-        match self.call_stack.front() {
-            None => Err(SyscallHandlerError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info.contract_address),
-        }
     }
 
     /// Called after the execution of the current transaction complete.
@@ -213,19 +316,6 @@ impl OsSyscallHandler {
         }
         self.tx_execution_info = None;
         Ok(())
-    }
-
-    /// Allocates and returns a new temporary segment.
-    fn _allocate_segment(
-        &self,
-        mut vm: VirtualMachine,
-        data: &dyn Any,
-    ) -> Result<Relocatable, SyscallHandlerError> {
-        let segment_start = vm.add_temporary_segment();
-        println!("segment start: {:?}", segment_start);
-        vm.write_arg(&segment_start, data)
-            .map_err(|_| SyscallHandlerError::WriteArg)?;
-        Ok(segment_start)
     }
 
     // TODO TEST
@@ -274,24 +364,14 @@ impl OsSyscallHandler {
 
         Ok(())
     }
-
-    /// Returns the system call request written in the syscall segment, starting at syscall_ptr.
-    /// Does not perform validations on the request, since it was validated in the BL.
-    fn _read_and_validate_syscall_request(
-        &self,
-        _syscall_name: String,
-        _segments: MemorySegmentManager,
-        _syscall_ptr: Relocatable,
-    ) {
-        todo!()
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+    use crate::core::syscalls::syscall_handler::SyscallHandler;
     use crate::utils::test_utils::*;
-    use cairo_rs::types::relocatable::Relocatable;
+    use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::vm_core::VirtualMachine;
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
@@ -325,7 +405,13 @@ mod tests {
             }),
             None,
         );
-        let get_contract_address = handler._get_contract_address();
+
+        let vm = vm!();
+        let reloc = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
+        let get_contract_address = handler._get_contract_address(vm, reloc);
         assert_eq!(get_contract_address, Ok(5))
     }
 
@@ -345,7 +431,13 @@ mod tests {
             }),
             None,
         );
-        let get_contract_address = handler._get_contract_address().unwrap_err();
+
+        let vm = vm!();
+        let reloc = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
+        let get_contract_address = handler._get_contract_address(vm, reloc).unwrap_err();
         assert_eq!(get_contract_address, SyscallHandlerError::ListIsEmpty)
     }
 
@@ -552,12 +644,13 @@ mod tests {
             None,
         );
 
+        let mut vm = vm!();
         assert_eq!(
-            handler._get_tx_info_ptr(),
-            &Some(Relocatable {
+            handler._get_tx_info_ptr(&mut vm),
+            Ok(MaybeRelocatable::from(Relocatable {
                 segment_index: 0,
                 offset: 0,
-            })
+            }))
         )
     }
 
@@ -575,7 +668,12 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler._get_tx_info_ptr(), &None)
+        let mut vm = vm!();
+
+        assert_eq!(
+            handler._get_tx_info_ptr(&mut vm),
+            Err(SyscallHandlerError::TxInfoPtrIsNone)
+        )
     }
 
     #[test]
@@ -595,9 +693,18 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler._call_contract(), Some(VecDeque::new()));
-        assert_eq!(handler._call_contract(), Some(VecDeque::new()));
-        assert_eq!(handler._call_contract(), None)
+        let vm = vm!();
+        let ptr = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
+
+        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
+        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
+        assert_eq!(
+            handler._call_contract("", &vm, ptr),
+            Err(SyscallHandlerError::IteratorEmpty)
+        )
     }
 
     #[test]
@@ -618,7 +725,13 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler._deploy(), Ok(Some(12)));
+        let vm = vm!();
+        let ptr = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
+
+        assert_eq!(handler._deploy(&vm, ptr), Ok(12));
     }
 
     #[test]
@@ -638,9 +751,14 @@ mod tests {
             None,
             None,
         );
+        let vm = vm!();
+        let ptr = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
 
         assert_eq!(
-            handler._deploy(),
+            handler._deploy(&vm, ptr),
             Err(SyscallHandlerError::UnexpectedConstructorRetdata)
         );
     }
@@ -657,8 +775,16 @@ mod tests {
             None,
             None,
         );
+        let vm = vm!();
+        let ptr = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
 
-        assert_eq!(handler._deploy(), Err(SyscallHandlerError::IteratorEmpty));
+        assert_eq!(
+            handler._deploy(&vm, ptr),
+            Err(SyscallHandlerError::IteratorEmpty)
+        );
     }
 
     #[test]
@@ -678,9 +804,13 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler._storage_read(), Some(12));
-        assert_eq!(handler._storage_read(), Some(1444));
-        assert_eq!(handler._storage_read(), None)
+        let addr = 0;
+        assert_eq!(handler._storage_read(addr), Ok(12));
+        assert_eq!(handler._storage_read(addr), Ok(1444));
+        assert_eq!(
+            handler._storage_read(addr),
+            Err(SyscallHandlerError::IteratorEmpty)
+        );
     }
 
     #[test]
@@ -699,8 +829,11 @@ mod tests {
             None,
         );
 
-        assert_eq!(handler._storage_write(), Some(12));
-        assert_eq!(handler._storage_write(), None)
+        let addr = 0;
+        let val = 0;
+
+        assert_eq!(handler._storage_write(addr, val), ());
+        assert_eq!(handler._storage_write(addr, val), ())
     }
 
     #[test]
@@ -800,8 +933,14 @@ mod tests {
             None,
         );
 
+        let vm = vm!();
+        let ptr = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
+
         assert_eq!(
-            handler._get_caller_address(),
+            handler._get_caller_address(vm, ptr),
             Err(SyscallHandlerError::ListIsEmpty)
         )
     }
@@ -820,9 +959,13 @@ mod tests {
             None,
             None,
         );
-
+        let vm = vm!();
+        let ptr = Relocatable {
+            segment_index: 0,
+            offset: 0,
+        };
         assert_eq!(
-            handler._get_caller_address(),
+            handler._get_caller_address(vm, ptr),
             Ok(CallInfo::default().caller_address)
         )
     }
@@ -902,39 +1045,17 @@ mod tests {
         );
 
         let data = vec![
-            Relocatable::from((0, 1)),
-            Relocatable::from((0, 2)),
-            Relocatable::from((0, 3)),
+            MaybeRelocatable::from((0, 1)),
+            MaybeRelocatable::from((0, 2)),
+            MaybeRelocatable::from((0, 3)),
         ];
 
         assert_eq!(
-            handler._allocate_segment(vm, &data),
+            handler._allocate_segment(vm, data),
             Ok(Relocatable {
                 segment_index: -1,
                 offset: 0
             })
-        )
-    }
-
-    #[test]
-    fn allocate_segment_err() {
-        let vm = vm!();
-        let handler = OsSyscallHandler::new(
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            HashMap::new(),
-            None,
-            None,
-        );
-
-        let data = &12 as &dyn Any;
-        assert_eq!(
-            handler._allocate_segment(vm, data),
-            Err(SyscallHandlerError::WriteArg)
         )
     }
 }

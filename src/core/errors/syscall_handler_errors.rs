@@ -46,4 +46,6 @@ pub enum SyscallHandlerError {
     KeyNotFound,
     #[error("The requested syscall read was not of the expected type")]
     InvalidSyscallReadRequest,
+    #[error("tx_info_ptr is None")]
+    TxInfoPtrIsNone,
 }

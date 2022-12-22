@@ -68,7 +68,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn library_call(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -80,15 +80,18 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         todo!()
     }
 
-    fn _get_tx_info_ptr(&self, _vm: VirtualMachine) {
+    fn _get_tx_info_ptr(
+        &self,
+        _vm: &mut VirtualMachine,
+    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
         todo!()
     }
 
     fn _deploy(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<i32, SyscallHandlerError> {
+    ) -> Result<u32, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -140,42 +143,55 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn _call_contract_and_write_response(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone());
+    ) -> Result<(), SyscallHandlerError> {
+        let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone())?;
         // TODO: Should we build a response struct to pass to _write_syscall_response?
         self._write_syscall_response(response_data, vm, syscall_ptr);
+        Ok(())
     }
 
     fn _call_contract(
-        &self,
+        &mut self,
         _syscall_name: &str,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
-    ) -> Vec<i32> {
+    ) -> Result<Vec<u32>, SyscallHandlerError> {
         todo!()
     }
-    fn _get_caller_address(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
+    fn _get_caller_address(
+        &self,
+        _vm: VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<u32, SyscallHandlerError> {
         todo!()
     }
-    fn _get_contract_address(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
+    fn _get_contract_address(
+        &self,
+        _vm: VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<u32, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_read(&self, _address: i32) -> i32 {
+    fn _storage_read(&mut self, _address: u32) -> Result<u32, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&self, _address: i32, _value: i32) {
+    fn _storage_write(&mut self, _address: u32, _value: u32) {
         todo!()
     }
-    fn _allocate_segment(&self, _vm: VirtualMachine, _data: Vec<MaybeRelocatable>) -> Relocatable {
+    fn _allocate_segment(
+        &self,
+        _vm: VirtualMachine,
+        _data: Vec<MaybeRelocatable>,
+    ) -> Result<Relocatable, SyscallHandlerError> {
         todo!()
     }
     fn _write_syscall_response(
         &self,
-        _response: Vec<i32>,
+        _response: Vec<u32>,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
     ) {
@@ -330,7 +346,7 @@ mod tests {
 
     #[test]
     fn deploy_from_zero_error() {
-        let syscall = BusinessLogicSyscallHandler::new();
+        let mut syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();
 
         add_segments!(vm, 2);
