@@ -1,6 +1,6 @@
 # Starknet in Rust
 
-`starknet_in_rust` is a implentation of [Starknet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
+`starknet_in_rust` is an implentation of [Starknet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
 It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust implementation of the Cairo virtual machine.
 
 ## Requisites
