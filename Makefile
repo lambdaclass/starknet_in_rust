@@ -1,4 +1,4 @@
-.PHONY: build check deps deps-macos clean compile_cairo clippy remove-venv venv-test test clean
+.PHONY: build check deps deps-macos clean compile_cairo clippy remove-venv venv-test test clean coverage
 	
 build: 
 	cargo build --release
@@ -37,3 +37,6 @@ venv-test:
 
 test:
 	cargo test
+
+coverage:
+	cargo tarpaulin
