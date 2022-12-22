@@ -2,3 +2,4 @@
 deps/
 starknet-in-rs-venv/
 **/*.json
+default.profraw
