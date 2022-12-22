@@ -18,16 +18,19 @@ pub struct PatriciaMerkleTree<V> {
 
 impl<V> PatriciaMerkleTree<V> {
     /// Create an empty tree.
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self { root_node: None }
     }
 
     /// Check if the tree is empty.
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.root_node.is_none()
     }
 
     /// Retrieves a value given its key.
+    #[allow(dead_code)]
     pub fn get(&self, key: &[u8; 32]) -> Option<&V> {
         self.root_node
             .as_ref()
@@ -37,6 +40,7 @@ impl<V> PatriciaMerkleTree<V> {
     /// Insert a key-value into the tree.
     ///
     /// Overwrites and returns the previous value.
+    #[allow(dead_code)]
     pub fn insert(&mut self, key: &[u8; 32], value: V) -> Option<V> {
         if let Some(root_node) = self.root_node.take() {
             let (root_node, old_value) = root_node.insert(key, value, 0);
@@ -59,6 +63,7 @@ impl<V> PatriciaMerkleTree<V> {
     /// Remove a value given its key.
     ///
     /// Returns the removed value.
+    #[allow(dead_code)]
     pub fn remove(&mut self, key: &[u8; 32]) -> Option<V> {
         if let Some(root_node) = self.root_node.take() {
             let (root_node, old_value) = root_node.remove(key, 0);
@@ -70,10 +75,12 @@ impl<V> PatriciaMerkleTree<V> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn iter(&self) -> TreeIterator<V> {
         TreeIterator::new(self)
     }
 
+    #[allow(dead_code)]
     pub fn drain_filter<F>(&mut self, mut filter: F) -> Vec<([u8; 32], V)>
     where
         F: FnMut(&[u8; 32], &mut V) -> bool,
