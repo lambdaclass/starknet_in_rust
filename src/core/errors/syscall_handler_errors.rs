@@ -22,6 +22,8 @@ pub enum SyscallHandlerError {
     ExpectedDeployRequestStruct,
     #[error("Expected EmitEventStruct")]
     ExpectedEmitEventStruct,
+    #[error("Expected GetCallerAddressRequest")]
+    ExpectedGetCallerAddressRequest,
     #[error("Expected SendMessageToL1")]
     ExpectedSendMessageToL1,
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1, found: {0}")]

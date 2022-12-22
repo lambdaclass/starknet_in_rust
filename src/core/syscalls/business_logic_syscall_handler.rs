@@ -181,8 +181,20 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     ) -> Vec<i32> {
         todo!()
     }
-    fn _get_caller_address(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
-        todo!()
+    fn _get_caller_address(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u64, SyscallHandlerError> {
+        let request = if let SyscallRequest::GetCallerAddress(request) =
+            self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
+        };
+
+        Ok(self.contract_address)
     }
     fn _get_contract_address(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
         todo!()
@@ -401,5 +413,20 @@ mod tests {
                 vec![bigint!(18), bigint!(12)],
             )]
         );
+    }
+
+    #[test]
+    fn test_get_caller_address_ok() {
+        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall._get_caller_address(&vm, relocatable!(1, 0)),
+            Ok(syscall.contract_address)
+        )
     }
 }

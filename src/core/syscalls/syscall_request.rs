@@ -10,6 +10,7 @@ pub(crate) enum SyscallRequest {
     Deploy(DeployRequestStruct),
     SendMessageToL1(SendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
+    GetCallerAddress(GetCallerAddressRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -56,6 +57,11 @@ pub(crate) struct LibraryCallStruct {
     pub(crate) calldata: Relocatable,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetCallerAddressRequest {
+    pub(crate) _selector: BigInt,
+}
+
 pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -84,6 +90,12 @@ impl From<SendMessageToL1SysCall> for SyscallRequest {
 impl From<LibraryCallStruct> for SyscallRequest {
     fn from(library_call_struct: LibraryCallStruct) -> SyscallRequest {
         SyscallRequest::LibraryCall(library_call_struct)
+    }
+}
+
+impl From<GetCallerAddressRequest> for SyscallRequest {
+    fn from(get_caller_address_request: GetCallerAddressRequest) -> SyscallRequest {
+        SyscallRequest::GetCallerAddress(get_caller_address_request)
     }
 }
 
@@ -167,6 +179,19 @@ impl FromPtr for SendMessageToL1SysCall {
             to_address,
             payload_size,
             payload_ptr,
+        }))
+    }
+}
+
+impl FromPtr for GetCallerAddressRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetCallerAddress(GetCallerAddressRequest {
+            _selector,
         }))
     }
 }

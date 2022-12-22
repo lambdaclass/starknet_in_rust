@@ -70,7 +70,11 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Vec<i32>;
 
-    fn _get_caller_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
+    fn _get_caller_address(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u64, SyscallHandlerError>;
     fn _get_contract_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
     fn _storage_read(&self, address: i32) -> i32;
     fn _storage_write(&self, address: i32, value: i32);
@@ -93,6 +97,7 @@ pub(crate) trait SyscallHandler {
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
+            "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
