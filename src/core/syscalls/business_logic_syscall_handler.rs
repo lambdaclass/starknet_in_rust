@@ -18,22 +18,22 @@ use num_traits::{One, Zero};
 //* -----------------------------------
 
 pub struct BusinessLogicSyscallHandler {
-    tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
+    tx_execution_context: RefCell<TransactionExecutionContext>,
     /// Events emitted by the current contract call.
-    events: Rc<RefCell<Vec<OrderedEvent>>>,
+    events: RefCell<Vec<OrderedEvent>>,
     /// A list of dynamically allocated segments that are expected to be read-only.
-    read_only_segments: Rc<RefCell<Vec<(Relocatable, MaybeRelocatable)>>>,
-    resources_manager: Rc<RefCell<ExecutionResourcesManager>>,
+    read_only_segments: RefCell<Vec<(Relocatable, MaybeRelocatable)>>,
+    resources_manager: RefCell<ExecutionResourcesManager>,
     contract_address: u64,
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
 }
 
 impl BusinessLogicSyscallHandler {
     pub fn new() -> Self {
-        let events = Rc::new(RefCell::new(Vec::new()));
-        let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
-        let read_only_segments = Rc::new(RefCell::new(Vec::new()));
-        let resources_manager = Rc::new(RefCell::new(ExecutionResourcesManager::default()));
+        let events = RefCell::new(Vec::new());
+        let tx_execution_context = RefCell::new(TransactionExecutionContext::new());
+        let read_only_segments = RefCell::new(Vec::new());
+        let resources_manager = RefCell::new(ExecutionResourcesManager::default());
 
         BusinessLogicSyscallHandler {
             events,
