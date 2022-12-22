@@ -6,6 +6,28 @@ use std::str;
 //*   Storage Trait
 //* ------------------
 
+/* -----------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------
+
+    This module implements the trait for the the storages operations.
+    The trait default functions handle the different data types that can be stored,
+    some assumptions and work arounds have been taken for this.
+
+    * All data types are turned into Vec<u8> before being passed to the set_value function.
+    This is due to rust restrictions on parameter types for the functions in traits.
+
+    * The same is true for get_value but this returns an Option because there may be nothing in the storage for a given key.
+
+    * float types are assumed to be f32, in case of needing to store f64, get_double and set_double functions can be implemented.
+
+    * Strings are assumed to be UTF-8 valid encoding, using a different format falls in an error.
+
+    * get_str returns a String type rather than a str to avoid lifetimes or reference issues.
+
+  -----------------------------------------------------------------------------------
+  -----------------------------------------------------------------------------------
+*/
+
 pub(crate) trait Storage {
     type T;
     fn set_value(&mut self, key: &[u8; 32], value: Vec<u8>) -> Result<(), StorageError>;
