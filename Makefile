@@ -7,14 +7,14 @@ check:
 	cargo check 
 
 deps:
-	cargo install cargo-tarpaulin && \
+	cargo install cargo-tarpaulin --version 0.23.1 && \
 	python3 -m venv starknet-in-rs-venv
 	. starknet-in-rs-venv/bin/activate && \
 	pip install cairo_lang==0.10.1 && \
 	deactivate
 
 deps-macos:
-	cargo install cargo-tarpaulin && \
+	cargo install cargo-tarpaulin --version 0.23.1 && \
 	python3 -m venv starknet-in-rs-venv
 	. starknet-in-rs-venv/bin/activate && \
 	CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install fastecdsa cairo_lang==0.10.1 && \
@@ -42,4 +42,3 @@ test:
 
 coverage:
 	cargo tarpaulin
-	rm default.profraw
