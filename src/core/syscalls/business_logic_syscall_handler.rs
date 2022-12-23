@@ -468,19 +468,18 @@ mod tests {
 
         let mut vm = vm!();
         add_segments!(vm, 3);
-        //println!("vm fp: {:?}");
 
         // insert syscall_ptr
-        let syscall_ptr = Relocatable::from((2, 0));
+        let syscall_ptr = relocatable!(2, 0);
 
-        let version = BigInt::from_str("1").unwrap();
-        let account_contract_address = BigInt::from_str("1").unwrap();
-        let max_fee = BigInt::from_str("2").unwrap();
-        let signature_len = BigInt::from_str("1").unwrap();
+        let version = bigint!(1);
+        let account_contract_address = bigint!(1);
+        let max_fee = bigint!(2);
+        let signature_len = bigint!(1);
         let signature = Relocatable::from((3, 0));
-        let transaction_hash = BigInt::from_str("1").unwrap();
-        let chain_id = BigInt::from_str("1").unwrap();
-        let nonce = BigInt::from_str("1").unwrap();
+        let transaction_hash = bigint!(1);
+        let chain_id = bigint!(1);
+        let nonce = bigint!(1);
 
         memory_insert!(
             vm,
