@@ -134,7 +134,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self._call_contract_and_write_response("library_call", vm, syscall_ptr);
         Ok(())
     }
-    
+
     fn _get_tx_info_ptr(
         &self,
         vm: &mut VirtualMachine,
