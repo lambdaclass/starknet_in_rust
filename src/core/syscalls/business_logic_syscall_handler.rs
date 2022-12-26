@@ -388,35 +388,26 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 4);
 
-        // insert selector of syscall
-        let selector = bigint_str!("1280709301550335749748".as_bytes());
-        // keys_len
-        let keys_len = bigint!(2);
-        // data_len
-        let data_len = bigint!(2);
-
         // insert keys and data to generate the event
-        // keys points to (2,0)
-        let key1 = bigint!(1);
-        let key2 = bigint!(1);
+        // keys ptr points to (3,0)
+        // data ptr points to (3,3)
 
-        // data points to (2,3)
-        let data1 = bigint!(1);
-        let data2 = bigint!(1);
+        // selector of syscall
+        let selector = "1280709301550335749748";
 
+        allocate_selector!(vm, ((2, 0), selector.as_bytes()));
         memory_insert!(
             vm,
             [
-                ((1, 0), (2, 0)),
-                ((2, 0), selector),
-                ((2, 1), (keys_len)),
-                ((2, 2), (3, 0)),
-                ((2, 3), data_len),
-                ((2, 4), (3, 3)),
-                ((3, 0), key1),
-                ((3, 1), key2),
-                ((3, 3), data1),
-                ((3, 4), data2)
+                ((1, 0), (2, 0)), // syscall ptr
+                ((2, 1), 2),      // keys len
+                ((2, 2), (3, 0)), // keys ptr
+                ((2, 3), 2),      // data len
+                ((2, 4), (3, 3)), // data ptr
+                ((3, 0), 1),      // keys pointed by key ptr
+                ((3, 1), 1),
+                ((3, 3), 1), // data pointed by data ptr
+                ((3, 4), 1)
             ]
         );
         // syscall_ptr
@@ -462,35 +453,22 @@ mod tests {
 
     #[test]
     fn get_tx_info_test() {
-        // create data and variables to execute hint
-
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        // insert syscall_ptr
-        let syscall_ptr = relocatable!(2, 0);
-
-        let version = bigint!(1);
-        let account_contract_address = bigint!(1);
-        let max_fee = bigint!(2);
-        let signature_len = bigint!(1);
-        let signature = Relocatable::from((3, 0));
-        let transaction_hash = bigint!(1);
-        let chain_id = bigint!(1);
-        let nonce = bigint!(1);
-
+        // insert data to form the request
         memory_insert!(
             vm,
             [
-                ((1, 0), syscall_ptr),
-                ((2, 0), version),
-                ((2, 1), account_contract_address),
-                ((2, 2), max_fee),
-                ((2, 3), signature_len),
-                ((2, 4), signature),
-                ((2, 5), transaction_hash),
-                ((2, 6), chain_id),
-                ((2, 7), nonce)
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 1),      //  version
+                ((2, 1), 1),      //  account_contract_address
+                ((2, 2), 2),      //  max_fee
+                ((2, 3), 1),      //  signature_len
+                ((2, 4), (3, 0)), //  signature
+                ((2, 5), 1),      //  transaction_hash
+                ((2, 6), 1),      //  chain_id
+                ((2, 7), 1)       //  nonce
             ]
         );
 
@@ -521,21 +499,15 @@ mod tests {
 
         add_segments!(vm, 2);
 
-        let data0 = bigint!(0);
-        let data1 = bigint!(1);
-        let data2 = bigint!(2);
-        let data3 = bigint!(3);
-        let data4 = bigint!(4);
-
         memory_insert!(
             vm,
             [
-                ((1, 0), data0),
-                ((1, 1), data1),
-                ((1, 2), data2),
-                ((1, 3), data3),
+                ((1, 0), 0),
+                ((1, 1), 1),
+                ((1, 2), 2),
+                ((1, 3), 3),
                 ((1, 4), (1, 20)),
-                ((1, 5), data4)
+                ((1, 5), 4)
             ]
         );
 
@@ -567,13 +539,17 @@ mod tests {
 
         add_segments!(vm, 3);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
-        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
-        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
-        vm.insert_value(&relocatable!(1, 4), relocatable!(2, 0))
-            .unwrap();
-        vm.insert_value(&relocatable!(2, 0), bigint!(18)).unwrap();
-        vm.insert_value(&relocatable!(2, 1), bigint!(12)).unwrap();
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), 0),
+                ((1, 1), 1),
+                ((1, 2), 2),
+                ((1, 4), (2, 0)),
+                ((2, 0), 18),
+                ((2, 1), 12)
+            ]
+        );
 
         assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 0);
         assert_eq!(syscall.l2_to_l1_messages, Vec::new());
