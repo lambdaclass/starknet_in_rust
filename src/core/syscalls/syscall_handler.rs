@@ -43,7 +43,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError>;
 
     fn library_call(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
@@ -54,10 +54,10 @@ pub(crate) trait SyscallHandler {
     ) -> Result<MaybeRelocatable, SyscallHandlerError>;
 
     fn _deploy(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<i32, SyscallHandlerError>;
+    ) -> Result<u32, SyscallHandlerError>;
 
     fn _read_and_validate_syscall_request(
         &self,
@@ -67,37 +67,39 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
     fn _call_contract_and_write_response(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    );
+    ) -> Result<(), SyscallHandlerError>;
 
     fn _call_contract(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Vec<i32>;
+    ) -> Result<Vec<u32>, SyscallHandlerError>;
 
     fn _get_caller_address(
         &self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError>;
-    fn _get_contract_address(&self, vm: VirtualMachine, syscall_ptr: Relocatable) -> i32;
-    fn _storage_read(&self, address: i32) -> i32;
-    fn _storage_write(&self, address: i32, value: i32);
-
+    fn _get_contract_address(
+        &self,
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u32, SyscallHandlerError>;
+    fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError>;
+    fn _storage_write(&mut self, address: u32, value: u32);
     fn allocate_segment(
         &self,
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
-
     fn _write_syscall_response(
         &self,
-        response: Vec<i32>,
+        response: Vec<u32>,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     );
