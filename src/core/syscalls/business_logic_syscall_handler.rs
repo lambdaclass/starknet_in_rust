@@ -404,9 +404,9 @@ mod tests {
                 ((2, 2), (3, 0)), // keys ptr
                 ((2, 3), 2),      // data len
                 ((2, 4), (3, 3)), // data ptr
-                ((3, 0), 1),      // aleatory data
+                ((3, 0), 1),      // keys pointed by key ptr
                 ((3, 1), 1),
-                ((3, 3), 1),
+                ((3, 3), 1), // data pointed by data ptr
                 ((3, 4), 1)
             ]
         );
