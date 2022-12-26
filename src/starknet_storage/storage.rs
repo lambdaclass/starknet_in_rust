@@ -29,7 +29,6 @@ use std::str;
 */
 
 pub(crate) trait Storage {
-    type T;
     fn set_value(&mut self, key: &[u8; 32], value: Vec<u8>) -> Result<(), StorageError>;
     fn get_value(&self, key: &[u8; 32]) -> Option<Vec<u8>>;
     fn delete_value(&mut self, key: &[u8; 32]) -> Result<(), StorageError>;
@@ -71,18 +70,18 @@ pub(crate) trait Storage {
         Ok(i32::from_ne_bytes(slice))
     }
 
-    fn set_float(&mut self, key: &[u8; 32], value: f32) -> Result<(), StorageError> {
+    fn set_float(&mut self, key: &[u8; 32], value: f64) -> Result<(), StorageError> {
         let val = value.to_bits().to_be_bytes().to_vec();
         self.set_value(key, val)
     }
 
-    fn get_float(&self, key: &[u8; 32]) -> Result<f32, StorageError> {
+    fn get_float(&self, key: &[u8; 32]) -> Result<f64, StorageError> {
         let val = self.get_value(key).ok_or(StorageError::ErrorFetchingData)?;
-        let float_bytes: [u8; 4] = val
+        let float_bytes: [u8; 8] = val
             .try_into()
             .map_err(|_| StorageError::IncorrectDataSize)?;
 
-        Ok(f32::from_bits(u32::from_be_bytes(float_bytes)))
+        Ok(f64::from_bits(u64::from_be_bytes(float_bytes)))
     }
 
     fn set_str(&mut self, key: &[u8; 32], value: &str) -> Result<(), StorageError> {
