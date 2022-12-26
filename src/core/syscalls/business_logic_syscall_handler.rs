@@ -128,7 +128,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
     fn library_call(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -185,10 +185,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn _deploy(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<i32, SyscallHandlerError> {
+    ) -> Result<u32, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -241,22 +241,23 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn _call_contract_and_write_response(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone());
+    ) -> Result<(), SyscallHandlerError> {
+        let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone())?;
         // TODO: Should we build a response struct to pass to _write_syscall_response?
         // self._write_syscall_response(response_data, vm, syscall_ptr);
+        todo!()
     }
 
     fn _call_contract(
-        &self,
+        &mut self,
         _syscall_name: &str,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
-    ) -> Vec<i32> {
+    ) -> Result<Vec<u32>, SyscallHandlerError> {
         todo!()
     }
     fn _get_caller_address(
@@ -274,13 +275,17 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
         Ok(self.contract_address)
     }
-    fn _get_contract_address(&self, _vm: VirtualMachine, _syscall_ptr: Relocatable) -> i32 {
+    fn _get_contract_address(
+        &self,
+        _vm: VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<u32, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_read(&self, _address: i32) -> i32 {
+    fn _storage_read(&mut self, _address: u32) -> Result<u32, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&self, _address: i32, _value: i32) {
+    fn _storage_write(&mut self, _address: u32, _value: u32) {
         todo!()
     }
 
@@ -331,13 +336,13 @@ mod tests {
         BuiltinHintProcessor, HintProcessorData,
     };
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
-    use cairo_rs::relocatable;
     use cairo_rs::types::exec_scope::ExecutionScopes;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError::UnknownHint;
     use cairo_rs::vm::vm_core::VirtualMachine;
+    use cairo_rs::{bigint_str, relocatable};
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
     use std::collections::HashMap;
@@ -385,21 +390,20 @@ mod tests {
         add_segments!(vm, 4);
 
         // insert selector of syscall
-        let selector = BigInt::from_str("1280709301550335749748").unwrap();
-
+        let selector = bigint_str!("1280709301550335749748".as_bytes());
         // keys_len
-        let keys_len = BigInt::from_str("2").unwrap();
+        let keys_len = bigint!(2);
         // data_len
-        let data_len = BigInt::from_str("2").unwrap();
+        let data_len = bigint!(2);
 
         // insert keys and data to generate the event
         // keys points to (2,0)
-        let key1 = BigInt::from_str("1").unwrap();
-        let key2 = BigInt::from_str("1").unwrap();
+        let key1 = bigint!(1);
+        let key2 = bigint!(1);
 
         // data points to (2,3)
-        let data1 = BigInt::from_str("1").unwrap();
-        let data2 = BigInt::from_str("1").unwrap();
+        let data1 = bigint!(1);
+        let data2 = bigint!(1);
 
         memory_insert!(
             vm,
@@ -442,14 +446,8 @@ mod tests {
         assert_eq!(
             OrderedEvent::new(
                 0,
-                Vec::from([
-                    BigInt::from_str("1").unwrap(),
-                    BigInt::from_str("1").unwrap()
-                ]),
-                Vec::from([
-                    BigInt::from_str("1").unwrap(),
-                    BigInt::from_str("1").unwrap()
-                ])
+                Vec::from([bigint!(1), bigint!(1)]),
+                Vec::from([bigint!(1), bigint!(1)])
             ),
             event
         );
@@ -519,18 +517,28 @@ mod tests {
     }
 
     fn deploy_from_zero_error() {
-        let syscall = BusinessLogicSyscallHandler::new();
+        let mut syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();
 
         add_segments!(vm, 2);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
-        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
-        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
-        vm.insert_value(&relocatable!(1, 3), bigint!(3)).unwrap();
-        vm.insert_value(&relocatable!(1, 4), relocatable!(1, 20))
-            .unwrap();
-        vm.insert_value(&relocatable!(1, 5), bigint!(4)).unwrap();
+        let data0 = bigint!(0);
+        let data1 = bigint!(1);
+        let data2 = bigint!(2);
+        let data3 = bigint!(3);
+        let data4 = bigint!(4);
+
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), data0),
+                ((1, 1), data1),
+                ((1, 2), data2),
+                ((1, 3), data3),
+                ((1, 4), (1, 20)),
+                ((1, 5), data4)
+            ]
+        );
 
         assert_eq!(
             syscall._deploy(&vm, relocatable!(1, 0)),
