@@ -1,4 +1,5 @@
 # Starknet in Rust
+[![codecov](https://codecov.io/github/lambdaclass/starknet_in_rust/branch/main/graph/badge.svg?token=98QY5B0VAR)](https://codecov.io/gh/lambdaclass/starknet_in_rust)
 
 `starknet_in_rust` is an implentation of [Starknet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
 It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust implementation of the Cairo virtual machine.
