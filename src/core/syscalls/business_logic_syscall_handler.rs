@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::syscall_request::*;
+use super::syscall_response::WriteSyscallResponse;
 use crate::business_logic::execution::objects::*;
 use crate::business_logic::execution::state::ExecutionResourcesManager;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
@@ -247,7 +248,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     ) {
         let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone());
         // TODO: Should we build a response struct to pass to _write_syscall_response?
-        self._write_syscall_response(response_data, vm, syscall_ptr);
+        // self._write_syscall_response(response_data, vm, syscall_ptr);
     }
 
     fn _call_contract(
@@ -301,12 +302,12 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(segment_start)
     }
 
-    fn _write_syscall_response(
+    fn _write_syscall_response<T: WriteSyscallResponse>(
         &self,
-        _response: Vec<i32>,
+        _response: T,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
-    ) {
+    ) -> Result<(), SyscallHandlerError> {
         todo!()
     }
 }
