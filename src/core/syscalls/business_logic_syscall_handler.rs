@@ -383,13 +383,6 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 4);
 
-        // order of insertion
-        // syscall ptr
-        // keys len
-        // keys ptr
-        // data len
-        // data ptr
-
         // insert keys and data to generate the event
         // keys ptr points to (3,0)
         // data ptr points to (3,3)
@@ -401,12 +394,12 @@ mod tests {
         memory_insert!(
             vm,
             [
-                ((1, 0), (2, 0)),
-                ((2, 1), 2),
-                ((2, 2), (3, 0)),
-                ((2, 3), 2),
-                ((2, 4), (3, 3)),
-                ((3, 0), 1),
+                ((1, 0), (2, 0)), // syscall ptr
+                ((2, 1), 2),      // keys len
+                ((2, 2), (3, 0)), // keys ptr
+                ((2, 3), 2),      // data len
+                ((2, 4), (3, 3)), // data ptr
+                ((3, 0), 1),      // aleatory data
                 ((3, 1), 1),
                 ((3, 3), 1),
                 ((3, 4), 1)
@@ -455,35 +448,22 @@ mod tests {
 
     #[test]
     fn get_tx_info_test() {
-        // create data and variables to execute hint
-
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        // insertion order
-
-        //  syscall_ptr
-        //  version
-        //  account_contract_address
-        //  max_fee
-        //  signature_len
-        //  signature
-        //  transaction_hash
-        //  chain_id
-        //  nonce
-
+        // insert data to form the request
         memory_insert!(
             vm,
             [
-                ((1, 0), (2, 0)),
-                ((2, 0), 1),
-                ((2, 1), 1),
-                ((2, 2), 2),
-                ((2, 3), 1),
-                ((2, 4), (3, 0)),
-                ((2, 5), 1),
-                ((2, 6), 1),
-                ((2, 7), 1)
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 1),      //  version
+                ((2, 1), 1),      //  account_contract_address
+                ((2, 2), 2),      //  max_fee
+                ((2, 3), 1),      //  signature_len
+                ((2, 4), (3, 0)), //  signature
+                ((2, 5), 1),      //  transaction_hash
+                ((2, 6), 1),      //  chain_id
+                ((2, 7), 1)       //  nonce
             ]
         );
 
