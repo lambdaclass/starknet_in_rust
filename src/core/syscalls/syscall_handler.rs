@@ -102,9 +102,11 @@ pub(crate) trait SyscallHandler {
     fn _write_syscall_response<T: WriteSyscallResponse>(
         &self,
         response: T,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<(), SyscallHandlerError> {
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 
     fn read_syscall_request(
         &self,

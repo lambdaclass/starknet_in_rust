@@ -306,15 +306,6 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
         Ok(segment_start)
     }
-
-    fn _write_syscall_response<T: WriteSyscallResponse>(
-        &self,
-        _response: T,
-        _vm: &VirtualMachine,
-        _syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        todo!()
-    }
 }
 
 impl Default for BusinessLogicSyscallHandler {

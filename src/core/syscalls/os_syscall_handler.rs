@@ -225,15 +225,6 @@ impl SyscallHandler for OsSyscallHandler {
             .map_err(|_| SyscallHandlerError::WriteArg)?;
         Ok(segment_start)
     }
-
-    fn _write_syscall_response<T: WriteSyscallResponse>(
-        &self,
-        response: T,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        todo!()
-    }
 }
 
 impl OsSyscallHandler {
