@@ -246,7 +246,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr.clone())?;
+        let response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
         // TODO: Should we build a response struct to pass to _write_syscall_response?
         // self._write_syscall_response(response_data, vm, syscall_ptr);
         todo!()
