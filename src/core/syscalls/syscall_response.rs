@@ -31,3 +31,39 @@ impl WriteSyscallResponse for GetCallerAddressResponse {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cairo_rs::relocatable;
+
+    use crate::{
+        add_segments,
+        core::syscalls::{
+            business_logic_syscall_handler::BusinessLogicSyscallHandler,
+            syscall_handler::SyscallHandler,
+        },
+        utils::test_utils::vm,
+    };
+    use num_bigint::{BigInt, Sign};
+
+    #[test]
+    fn write_get_caller_address_response() {
+        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        let response = GetCallerAddressResponse {
+            caller_address: bigint!(3),
+        };
+
+        assert!(syscall
+            ._write_syscall_response(&response, &mut vm, relocatable!(1, 0))
+            .is_ok());
+
+        // Check Vm inserts
+        assert!(vm.insert_value(&relocatable!(1, 1), bigint!(8)).is_err());
+        assert!(vm.insert_value(&relocatable!(1, 1), bigint!(3)).is_ok())
+    }
+}
