@@ -63,7 +63,11 @@ mod tests {
             .is_ok());
 
         // Check Vm inserts
+        // Since we can't access the vm.memory, these inserts should check the ._write_syscall_response inserts
+        // The ._write_syscall_response should insert the response.caller_address in the position (1,1)
+        // Because the vm memory is write once, trying to insert an 8 in that position should return an error
         assert!(vm.insert_value(&relocatable!(1, 1), bigint!(8)).is_err());
+        // Inserting a 3 should be OK because is the value inserted by ._write_syscall_response
         assert!(vm.insert_value(&relocatable!(1, 1), bigint!(3)).is_ok())
     }
 }
