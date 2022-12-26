@@ -1,6 +1,7 @@
+use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Eq, Error)]
+#[derive(Debug, PartialEq, Error)]
 pub enum SyscallHandlerError {
     #[error("Missing Member")]
     MissingMember,
@@ -52,4 +53,6 @@ pub enum SyscallHandlerError {
     InvalidSyscallReadRequest,
     #[error("tx_info_ptr is None")]
     TxInfoPtrIsNone,
+    #[error("Virtual machine error: {0}")]
+    VirtualMachineError(#[from] VirtualMachineError),
 }

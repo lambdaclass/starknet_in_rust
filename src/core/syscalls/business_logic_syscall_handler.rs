@@ -6,6 +6,7 @@ use crate::business_logic::execution::objects::*;
 use crate::business_logic::execution::state::ExecutionResourcesManager;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
+use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
@@ -18,26 +19,32 @@ use num_traits::{One, Zero};
 //* -----------------------------------
 
 pub struct BusinessLogicSyscallHandler {
-    tx_execution_context: Rc<RefCell<TransactionExecutionContext>>,
+    tx_execution_context: RefCell<TransactionExecutionContext>,
     /// Events emitted by the current contract call.
-    events: Rc<RefCell<Vec<OrderedEvent>>>,
+    events: RefCell<Vec<OrderedEvent>>,
     /// A list of dynamically allocated segments that are expected to be read-only.
-    read_only_segments: Rc<RefCell<Vec<(Relocatable, MaybeRelocatable)>>>,
-    resources_manager: Rc<RefCell<ExecutionResourcesManager>>,
+    read_only_segments: RefCell<Vec<(Relocatable, MaybeRelocatable)>>,
+    resources_manager: RefCell<ExecutionResourcesManager>,
     contract_address: u64,
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    general_config: StarknetGeneralConfig,
+    tx_info_ptr: RefCell<Option<MaybeRelocatable>>,
 }
 
 impl BusinessLogicSyscallHandler {
     pub fn new() -> Self {
-        let events = Rc::new(RefCell::new(Vec::new()));
-        let tx_execution_context = Rc::new(RefCell::new(TransactionExecutionContext::new()));
-        let read_only_segments = Rc::new(RefCell::new(Vec::new()));
-        let resources_manager = Rc::new(RefCell::new(ExecutionResourcesManager::default()));
+        let events = RefCell::new(Vec::new());
+        let tx_execution_context = RefCell::new(TransactionExecutionContext::new());
+        let read_only_segments = RefCell::new(Vec::new());
+        let resources_manager = RefCell::new(ExecutionResourcesManager::default());
+        let general_config = StarknetGeneralConfig::new();
+        let tx_info_ptr = RefCell::new(None);
 
         BusinessLogicSyscallHandler {
             events,
             tx_execution_context,
+            general_config,
+            tx_info_ptr,
             read_only_segments,
             resources_manager,
             contract_address: 0,
@@ -80,6 +87,20 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
+    fn get_tx_info(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                SyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        Err(SyscallHandlerError::NotImplemented)
+    }
+
     fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
@@ -116,9 +137,50 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
     fn _get_tx_info_ptr(
         &self,
-        _vm: &mut VirtualMachine,
+        vm: &mut VirtualMachine,
     ) -> Result<MaybeRelocatable, SyscallHandlerError> {
-        todo!()
+        let mut tx_info_ptr = self.tx_info_ptr.borrow_mut();
+
+        if let Some(ptr) = &*tx_info_ptr {
+            Ok(ptr.clone())
+        } else {
+            let tx = self.tx_execution_context.borrow();
+
+            let version = tx.version;
+            let account_contract_address = tx.account_contract_address.clone();
+            let max_fee = tx.max_fee.clone();
+            let transaction_hash = tx.transaction_hash.clone();
+            let nonce = tx.nonce.clone();
+            let signature = vm.add_memory_segment();
+            let signature = vm
+                .write_arg(&signature, &tx.signature)
+                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
+            let signature = signature.get_relocatable()?.clone();
+            let signature_len = signature.offset;
+
+            let chain_id = self.general_config.starknet_os_config.chain_id as usize;
+
+            let tx_info = TxInfoStruct {
+                version,
+                account_contract_address,
+                max_fee,
+                transaction_hash,
+                nonce,
+                signature,
+                signature_len,
+                chain_id,
+            };
+
+            let segment = vm.add_memory_segment();
+
+            let tx_info_ptr_temp = vm
+                .write_arg(&segment, &tx_info)
+                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
+
+            *tx_info_ptr = Some(tx_info_ptr_temp.clone());
+
+            Ok(tx_info_ptr_temp)
+        }
     }
 
     fn _deploy(
@@ -266,7 +328,7 @@ mod tests {
     use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-    use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE};
+    use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::syscalls::syscall_handler::*;
     use crate::utils::test_utils::*;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -406,6 +468,60 @@ mod tests {
     }
 
     #[test]
+    fn get_tx_info_test() {
+        // create data and variables to execute hint
+
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        // insert syscall_ptr
+        let syscall_ptr = relocatable!(2, 0);
+
+        let version = bigint!(1);
+        let account_contract_address = bigint!(1);
+        let max_fee = bigint!(2);
+        let signature_len = bigint!(1);
+        let signature = Relocatable::from((3, 0));
+        let transaction_hash = bigint!(1);
+        let chain_id = bigint!(1);
+        let nonce = bigint!(1);
+
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), syscall_ptr),
+                ((2, 0), version),
+                ((2, 1), account_contract_address),
+                ((2, 2), max_fee),
+                ((2, 3), signature_len),
+                ((2, 4), signature),
+                ((2, 5), transaction_hash),
+                ((2, 6), chain_id),
+                ((2, 7), nonce)
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        // invoke syscall
+        let syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        let err = syscall_handler.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(
+            err,
+            Err(VirtualMachineError::UnknownHint(
+                "Hint not implemented".to_string()
+            ))
+        )
+    }
+
     fn deploy_from_zero_error() {
         let mut syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();
