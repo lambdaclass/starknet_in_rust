@@ -62,19 +62,23 @@ pub fn get_integer_range(
 //* -------------------
 
 #[macro_export]
-macro_rules! bigint {
-    ($val : expr) => {
-        Into::<BigInt>::into($val)
-    };
-}
+#[macro_use]
 
-#[macro_export]
 macro_rules! bigint_str {
     ($val: expr) => {
         BigInt::parse_bytes($val, 10).unwrap()
     };
     ($val: expr, $opt: expr) => {
         BigInt::parse_bytes($val, $opt).unwrap()
+    };
+}
+pub(crate) use bigint_str;
+
+#[macro_export]
+#[macro_use]
+macro_rules! bigint {
+    ($val : expr) => {
+        Into::<BigInt>::into($val)
     };
 }
 
@@ -169,11 +173,22 @@ pub mod test_utils {
             $vm.insert_value(&k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
+            let v = bigint!($val);
             let k = relocatable_value!($si, $off);
-            $vm.insert_value(&k, $val).unwrap();
+            $vm.insert_value(&k, v).unwrap();
         };
     }
     pub(crate) use allocate_values;
+
+    #[macro_export]
+    macro_rules! allocate_selector {
+        ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
+            let v = super::bigint_str!($val);
+            let k = relocatable_value!($si, $off);
+            $vm.insert_value(&k, v).unwrap();
+        };
+    }
+    pub(crate) use allocate_selector;
 
     #[macro_export]
     macro_rules! relocatable_value {
