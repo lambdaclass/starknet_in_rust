@@ -90,7 +90,7 @@ mod tests {
         let mut storage = DictStorage::new();
 
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        let ikey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let ikey = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
 
         storage.set_float(&fkey, 534.0002);
         storage.delete_value(&fkey);
