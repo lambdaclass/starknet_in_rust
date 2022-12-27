@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct BlockInfo {
     // The sequence number of the last block created.
     block_number: u64,

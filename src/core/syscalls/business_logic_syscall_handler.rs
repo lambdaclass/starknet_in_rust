@@ -600,4 +600,19 @@ mod tests {
             Ok(syscall.contract_address)
         )
     }
+
+    #[test]
+    fn test_get_sequencer_address_ok() {
+        let block_info = BlockInfo::default();
+        let mut syscall = BusinessLogicSyscallHandler::new(block_info.clone());
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall._get_sequencer_address(&vm, relocatable!(1, 0)),
+            Ok(block_info.get_sequencer_address())
+        )
+    }
 }

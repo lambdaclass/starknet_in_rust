@@ -16,7 +16,9 @@ pub(crate) enum SyscallRequest {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetSequencerAddressRequest {}
+pub(crate) struct GetSequencerAddressRequest {
+    _selector: BigInt,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventStruct {
@@ -101,6 +103,12 @@ impl From<LibraryCallStruct> for SyscallRequest {
 impl From<GetCallerAddressRequest> for SyscallRequest {
     fn from(get_caller_address_request: GetCallerAddressRequest) -> SyscallRequest {
         SyscallRequest::GetCallerAddress(get_caller_address_request)
+    }
+}
+
+impl From<GetSequencerAddressRequest> for SyscallRequest {
+    fn from(get_sequencer_address_request: GetSequencerAddressRequest) -> SyscallRequest {
+        SyscallRequest::GetSequencerAddress(get_sequencer_address_request)
     }
 }
 
@@ -253,8 +261,9 @@ impl FromPtr for GetSequencerAddressRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
         Ok(SyscallRequest::GetSequencerAddress(
-            GetSequencerAddressRequest {},
+            GetSequencerAddressRequest { _selector },
         ))
     }
 }
