@@ -2,6 +2,7 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use super::syscall_request::*;
+use super::syscall_response::WriteSyscallResponse;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
@@ -98,12 +99,15 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
-    fn _write_syscall_response(
+
+    fn _write_syscall_response<T: WriteSyscallResponse>(
         &self,
-        response: Vec<u32>,
-        vm: &VirtualMachine,
+        response: &T,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    );
+    ) -> Result<(), SyscallHandlerError> {
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 
     fn _get_sequencer_address(
         &self,

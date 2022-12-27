@@ -76,6 +76,11 @@ pub(crate) trait FromPtr {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
+pub(crate) trait CountFields {
+    /// Returns the amount of fields of a struct
+    fn count_fields() -> usize;
+}
+
 impl From<EmitEventStruct> for SyscallRequest {
     fn from(emit_event_struct: EmitEventStruct) -> SyscallRequest {
         SyscallRequest::EmitEvent(emit_event_struct)
@@ -265,5 +270,10 @@ impl FromPtr for GetSequencerAddressRequest {
         Ok(SyscallRequest::GetSequencerAddress(
             GetSequencerAddressRequest { _selector },
         ))
+    }
+}
+impl CountFields for GetCallerAddressRequest {
+    fn count_fields() -> usize {
+        1
     }
 }

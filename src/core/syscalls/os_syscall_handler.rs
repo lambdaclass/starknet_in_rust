@@ -9,6 +9,7 @@ use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
+use super::syscall_response::WriteSyscallResponse;
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
@@ -223,15 +224,6 @@ impl SyscallHandler for OsSyscallHandler {
         vm.write_arg(&segment_start, &data)
             .map_err(|_| SyscallHandlerError::WriteArg)?;
         Ok(segment_start)
-    }
-
-    fn _write_syscall_response(
-        &self,
-        response: Vec<u32>,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) {
-        todo!()
     }
 
     fn _get_sequencer_address(
