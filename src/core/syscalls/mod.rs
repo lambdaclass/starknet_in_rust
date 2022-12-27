@@ -7,3 +7,4 @@ pub mod os_syscall_handler;
 pub mod syscall_handler;
 pub mod syscall_info;
 pub mod syscall_request;
+pub mod syscall_response;
