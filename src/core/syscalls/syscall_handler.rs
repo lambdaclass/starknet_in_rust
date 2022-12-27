@@ -315,6 +315,7 @@ mod tests {
         )
     }
 
+    #[test]
     fn read_deploy_syscall_request() {
         let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
@@ -339,5 +340,31 @@ mod tests {
                 deploy_from_zero: 4,
             }))
         )
+    }
+
+    #[test]
+    fn get_block_timestamp_for_business_logic() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(18)).unwrap();
+        assert!(syscall
+            .get_block_timestamp(&mut vm, relocatable!(1, 0))
+            .is_ok());
+
+        // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,1) position
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().block_timestamp + 10)
+            )
+            .is_err());
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().block_timestamp)
+            )
+            .is_ok())
     }
 }
