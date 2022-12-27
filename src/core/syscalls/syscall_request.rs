@@ -12,7 +12,11 @@ pub(crate) enum SyscallRequest {
     SendMessageToL1(SendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
+    GetSequencerAddress(GetSequencerAddressRequest),
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetSequencerAddressRequest {}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventStruct {
@@ -241,5 +245,16 @@ impl FromPtr for GetCallerAddressRequest {
         Ok(SyscallRequest::GetCallerAddress(GetCallerAddressRequest {
             _selector,
         }))
+    }
+}
+
+impl FromPtr for GetSequencerAddressRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        Ok(SyscallRequest::GetSequencerAddress(
+            GetSequencerAddressRequest {},
+        ))
     }
 }

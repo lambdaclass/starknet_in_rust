@@ -233,6 +233,14 @@ impl SyscallHandler for OsSyscallHandler {
     ) {
         todo!()
     }
+
+    fn _get_sequencer_address(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u64, SyscallHandlerError> {
+        todo!()
+    }
 }
 
 impl OsSyscallHandler {

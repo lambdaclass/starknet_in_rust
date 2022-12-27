@@ -8,6 +8,7 @@ use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
+use crate::state::state_api_objects::BlockInfo;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
@@ -29,10 +30,11 @@ pub struct BusinessLogicSyscallHandler {
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     general_config: StarknetGeneralConfig,
     tx_info_ptr: RefCell<Option<MaybeRelocatable>>,
+    block_info: BlockInfo,
 }
 
 impl BusinessLogicSyscallHandler {
-    pub fn new() -> Self {
+    pub fn new(block_info: BlockInfo) -> Self {
         let events = RefCell::new(Vec::new());
         let tx_execution_context = RefCell::new(TransactionExecutionContext::new());
         let read_only_segments = RefCell::new(Vec::new());
@@ -49,6 +51,7 @@ impl BusinessLogicSyscallHandler {
             resources_manager,
             contract_address: 0,
             l2_to_l1_messages: Vec::new(),
+            block_info,
         }
     }
 
@@ -61,6 +64,21 @@ impl BusinessLogicSyscallHandler {
 }
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
+    fn _get_sequencer_address(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u64, SyscallHandlerError> {
+        let request = if let SyscallRequest::GetSequencerAddress(request) =
+            self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
+        };
+
+        Ok(self.block_info.get_sequencer_address())
+    }
     fn emit_event(
         &self,
         vm: &VirtualMachine,
@@ -318,7 +336,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
 impl Default for BusinessLogicSyscallHandler {
     fn default() -> Self {
-        Self::new()
+        Self::new(BlockInfo::default())
     }
 }
 
@@ -330,6 +348,7 @@ mod tests {
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::syscalls::syscall_handler::*;
+    use crate::state::state_api_objects::BlockInfo;
     use crate::utils::test_utils::*;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,
@@ -494,7 +513,7 @@ mod tests {
     }
 
     fn deploy_from_zero_error() {
-        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -519,7 +538,7 @@ mod tests {
 
     #[test]
     fn can_allocate_segment() {
-        let mut syscall_handler = BusinessLogicSyscallHandler::new();
+        let mut syscall_handler = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
 
@@ -534,7 +553,7 @@ mod tests {
 
     #[test]
     fn test_send_message_to_l1_ok() {
-        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 3);
@@ -569,7 +588,7 @@ mod tests {
 
     #[test]
     fn test_get_caller_address_ok() {
-        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);
