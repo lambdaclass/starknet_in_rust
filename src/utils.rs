@@ -268,4 +268,23 @@ pub mod test_utils {
         }};
     }
     pub(crate) use run_syscall_hint;
+
+    macro_rules! storage_key {
+        ( $key:literal ) => {{
+            assert_eq!($key.len(), 64, "keys must be 64 nibbles in length.");
+            let key: [u8; 32] = $key
+                .as_bytes()
+                .chunks_exact(2)
+                .map(|x| {
+                    u8::from_str_radix(std::str::from_utf8(x).unwrap(), 16)
+                        .expect("Key contains non-hexadecimal characters.")
+                })
+                .collect::<Vec<u8>>()
+                .try_into()
+                .unwrap();
+
+            key
+        }};
+    }
+    pub(crate) use storage_key;
 }
