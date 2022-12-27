@@ -125,6 +125,17 @@ pub(crate) trait SyscallHandler {
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
+
+    fn get_block_info(&self) -> &BlockInfo;
+
+    fn get_block_timestamp(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _block_timestamp = self.get_block_info().block_timestamp;
+        todo!()
+    }
 }
 
 //* ------------------------

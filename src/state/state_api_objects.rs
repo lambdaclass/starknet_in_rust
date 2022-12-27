@@ -4,7 +4,7 @@ pub struct BlockInfo {
     block_number: u64,
 
     // Timestamp of the beginning of the last block creation attempt.
-    block_timestamp: u64,
+    pub(crate) block_timestamp: u64,
 
     // L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
     gas_price: u64,
