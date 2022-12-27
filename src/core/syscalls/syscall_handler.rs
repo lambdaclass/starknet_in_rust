@@ -122,6 +122,7 @@ pub(crate) trait SyscallHandler {
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
@@ -133,7 +134,16 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::GetBlockTimestamp(request) =
+            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
         let _block_timestamp = self.get_block_info().block_timestamp;
+
         todo!()
     }
 }
