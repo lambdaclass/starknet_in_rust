@@ -7,7 +7,7 @@ use crate::business_logic::execution::objects::*;
 use crate::business_logic::execution::state::ExecutionResourcesManager;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
-use crate::definitions::general_config::StarknetGeneralConfig;
+use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::state::state_api_objects::BlockInfo;
 use crate::utils::*;
@@ -31,36 +31,29 @@ pub struct BusinessLogicSyscallHandler {
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     general_config: StarknetGeneralConfig,
     tx_info_ptr: Option<MaybeRelocatable>,
-}
-
-impl BusinessLogicSyscallHandler {
-    pub fn new() -> Self {
-        let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext::new();
-        let read_only_segments = Vec::new();
-        let resources_manager = ExecutionResourcesManager::default();
-    tx_info_ptr: Option<MaybeRelocatable>,
     block_info: BlockInfo,
 }
 
 impl BusinessLogicSyscallHandler {
     pub fn new(block_info: BlockInfo) -> Self {
-        let events = RefCell::new(Vec::new());
-        let tx_execution_context = RefCell::new(TransactionExecutionContext::new());
-        let read_only_segments = RefCell::new(Vec::new());
-        let resources_manager = RefCell::new(ExecutionResourcesManager::default());
+        let events = Vec::new();
+        let tx_execution_context = TransactionExecutionContext::new();
+        let read_only_segments = Vec::new();
+        let resources_manager = ExecutionResourcesManager::default();
+        let contract_address = 0;
+        let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::new();
         let tx_info_ptr = None;
 
         BusinessLogicSyscallHandler {
-            events,
             tx_execution_context,
-            general_config,
-            tx_info_ptr,
+            events,
             read_only_segments,
             resources_manager,
-            contract_address: 0,
-            l2_to_l1_messages: Vec::new(),
+            contract_address,
+            l2_to_l1_messages,
+            general_config,
+            tx_info_ptr,
             block_info,
         }
     }
