@@ -132,12 +132,7 @@ pub(crate) trait SyscallHandler {
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr.clone())?;
-
-        self._write_syscall_response(&GetBlockNumberResponse::new(todo!()), vm, syscall_ptr)?;
-        Ok(())
-    }
+    ) -> Result<(), SyscallHandlerError>;
 
     fn get_block_info(&self) -> &BlockInfo;
 

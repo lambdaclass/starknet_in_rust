@@ -10,7 +10,7 @@ use crate::state::state_api_objects::BlockInfo;
 
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
-use super::syscall_response::WriteSyscallResponse;
+use super::syscall_response::{WriteSyscallResponse, GetBlockNumberResponse};
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
@@ -230,6 +230,21 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn get_block_info(&self) -> &BlockInfo {
         &self.block_info
+    }
+
+    fn get_block_number(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr.clone())?;
+
+        self._write_syscall_response(
+            &GetBlockNumberResponse::new(self.block_info.block_number),
+            vm,
+            syscall_ptr,
+        )?;
+        Ok(())
     }
 }
 
