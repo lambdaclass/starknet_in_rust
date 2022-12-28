@@ -1,9 +1,9 @@
+use super::syscall_request::{
+    CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
+};
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_bigint::BigInt;
-
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-
-use super::syscall_request::{CountFields, GetBlockTimestampRequest, GetCallerAddressRequest};
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -26,6 +26,17 @@ pub(crate) struct GetBlockTimestampResponse {
 impl GetBlockTimestampResponse {
     pub(crate) fn new(block_timestamp: u64) -> Self {
         GetBlockTimestampResponse { block_timestamp }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberResponse {
+    block_number: u64,
+}
+
+impl GetBlockNumberResponse {
+    pub(crate) fn new(block_number: u64) -> Self {
+        Self { block_number }
     }
 }
 
@@ -52,6 +63,20 @@ impl WriteSyscallResponse for GetBlockTimestampResponse {
         vm.insert_value(
             &(syscall_ptr + GetBlockTimestampRequest::count_fields()),
             bigint!(self.block_timestamp),
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetBlockNumberResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetBlockNumberRequest::count_fields()),
+            bigint!(self.block_number),
         )?;
         Ok(())
     }
