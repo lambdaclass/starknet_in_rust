@@ -180,7 +180,6 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let caller_address = self._get_caller_address(vm, syscall_ptr)?;
-        println!("{:?}", caller_address);
         let response = GetCallerAddressResponse::new(caller_address);
         self._write_syscall_response(&response, vm, syscall_ptr)
     }
