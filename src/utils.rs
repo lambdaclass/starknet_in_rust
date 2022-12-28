@@ -34,8 +34,7 @@ pub fn get_relocatable(
 ) -> Result<Relocatable, SyscallHandlerError> {
     Ok(vm
         .get_relocatable(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .into_owned())
+        .map_err(|_| SyscallHandlerError::SegmentationFault)?)
 }
 
 pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
@@ -228,7 +227,7 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = BuiltinHintProcessor::new_empty();
+            let mut hint_processor = BuiltinHintProcessor::new_empty();
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
@@ -258,7 +257,7 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = SyscallHintProcessor::new_empty().unwrap();
+            let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),

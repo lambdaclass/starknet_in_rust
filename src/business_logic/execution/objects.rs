@@ -10,7 +10,7 @@ pub(crate) struct OrderedEvent {
     #[allow(unused)] // TODO: remove once used
     data: Vec<BigInt>,
 }
-
+#[derive(Clone)]
 pub(crate) struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u32,
     pub(crate) version: usize,
