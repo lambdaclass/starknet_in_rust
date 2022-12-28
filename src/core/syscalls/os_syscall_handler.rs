@@ -834,8 +834,8 @@ mod tests {
         let addr = 0;
         let val = 0;
 
-        assert_eq!(handler._storage_write(addr, val), ());
-        assert_eq!(handler._storage_write(addr, val), ())
+        handler._storage_write(addr, val);
+        handler._storage_write(addr, val);
     }
 
     #[test]
