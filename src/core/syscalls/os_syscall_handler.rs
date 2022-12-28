@@ -6,6 +6,7 @@ use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
 
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::state::state_api_objects::BlockInfo;
 
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
@@ -82,6 +83,7 @@ struct OsSyscallHandler {
     tx_info_ptr: Option<Relocatable>,
     // The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
+    block_info: BlockInfo,
 }
 
 impl SyscallHandler for OsSyscallHandler {
@@ -239,6 +241,7 @@ impl OsSyscallHandler {
         starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
+        block_info: BlockInfo,
     ) -> Self {
         Self {
             tx_execution_info_iterator,
@@ -250,6 +253,7 @@ impl OsSyscallHandler {
             starknet_storage_by_address,
             tx_info_ptr,
             tx_execution_info,
+            block_info,
         }
     }
 
@@ -372,6 +376,7 @@ impl OsSyscallHandler {
 mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::SyscallHandler;
+    use crate::state::state_api_objects::BlockInfo;
     use crate::utils::test_utils::*;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::vm_core::VirtualMachine;
@@ -406,6 +411,7 @@ mod tests {
                 offset: 0,
             }),
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -432,6 +438,7 @@ mod tests {
                 offset: 0,
             }),
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -457,6 +464,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.end_tx(), Err(SyscallHandlerError::IteratorNotEmpty))
@@ -477,6 +485,7 @@ mod tests {
             HashMap::new(),
             tx_info_ptr,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -499,6 +508,7 @@ mod tests {
             HashMap::new(),
             None,
             Some(TransactionExecutionInfo),
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -521,6 +531,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.end_tx(), Ok(()))
@@ -543,6 +554,7 @@ mod tests {
             HashMap::new(),
             tx_info_ptr,
             None,
+            BlockInfo::default(),
         );
 
         let reloc = Relocatable {
@@ -572,6 +584,7 @@ mod tests {
             HashMap::new(),
             None,
             tx_execution_info,
+            BlockInfo::default(),
         );
 
         let reloc = Relocatable {
@@ -599,6 +612,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let reloc = Relocatable {
@@ -623,6 +637,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.skip_tx(), Some(TransactionExecutionInfo));
@@ -644,6 +659,7 @@ mod tests {
                 offset: 0,
             }),
             None,
+            BlockInfo::default(),
         );
 
         let mut vm = vm!();
@@ -668,6 +684,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let mut vm = vm!();
@@ -693,6 +710,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -725,6 +743,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -752,6 +771,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
         let vm = vm!();
         let ptr = Relocatable {
@@ -776,6 +796,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
         let vm = vm!();
         let ptr = Relocatable {
@@ -804,6 +825,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let addr = 0;
@@ -829,6 +851,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let addr = 0;
@@ -852,6 +875,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -874,6 +898,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -896,6 +921,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -916,6 +942,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.assert_iterators_exhausted(), Ok(()))
@@ -933,6 +960,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -960,6 +988,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
         let vm = vm!();
         let ptr = Relocatable {
@@ -986,6 +1015,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.exit_call(), Ok(Some(CallInfo::default())))
@@ -1003,6 +1033,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -1026,6 +1057,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.enter_call(), Ok(()))
@@ -1044,6 +1076,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let data = vec![
