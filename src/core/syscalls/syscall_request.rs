@@ -12,6 +12,7 @@ pub(crate) enum SyscallRequest {
     SendMessageToL1(SendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
+    GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
 }
 
@@ -66,6 +67,17 @@ pub(crate) struct GetBlockTimestampRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressRequest {
     pub(crate) _selector: BigInt,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberRequest {
+    pub(crate) _selector: BigInt,
+}
+
+impl CountFields for GetBlockNumberRequest {
+    fn count_fields() -> usize {
+        1
+    }
 }
 
 pub(crate) trait FromPtr {
