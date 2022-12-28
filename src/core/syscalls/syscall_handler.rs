@@ -320,6 +320,7 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
 
+    use crate::utils::get_integer;
     use crate::{add_segments, bigint, utils::test_utils::vm};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
@@ -428,7 +429,6 @@ mod tests {
             .is_ok())
     }
 
-    use crate::utils::get_integer;
     #[test]
     fn get_caller_address_test() {
         let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
