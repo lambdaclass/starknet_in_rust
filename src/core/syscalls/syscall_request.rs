@@ -12,6 +12,7 @@ pub(crate) enum SyscallRequest {
     SendMessageToL1(SendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
+    GetContractAddress(GetContractAddressRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -63,6 +64,10 @@ pub(crate) struct GetCallerAddressRequest {
     pub(crate) _selector: BigInt,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetContractAddressRequest {
+    pub(crate) _selector: BigInt,
+}
 pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,

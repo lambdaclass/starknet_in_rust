@@ -27,6 +27,7 @@ pub struct BusinessLogicSyscallHandler {
     read_only_segments: RefCell<Vec<(Relocatable, MaybeRelocatable)>>,
     resources_manager: RefCell<ExecutionResourcesManager>,
     contract_address: u64,
+    caller_address: u64,
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     general_config: StarknetGeneralConfig,
     tx_info_ptr: RefCell<Option<MaybeRelocatable>>,
@@ -49,6 +50,7 @@ impl BusinessLogicSyscallHandler {
             read_only_segments,
             resources_manager,
             contract_address: 0,
+            caller_address: 0,
             l2_to_l1_messages: Vec::new(),
         }
     }
@@ -188,7 +190,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -257,7 +259,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         _syscall_name: &str,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
-    ) -> Result<Vec<u32>, SyscallHandlerError> {
+    ) -> Result<Vec<u64>, SyscallHandlerError> {
         todo!()
     }
     fn _get_caller_address(
@@ -273,19 +275,27 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
         };
 
-        Ok(self.contract_address)
+        Ok(self.caller_address)
     }
     fn _get_contract_address(
         &self,
-        _vm: VirtualMachine,
-        _syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+        vm: VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u64, SyscallHandlerError> {
+        if let SyscallRequest::GetContractAddress(request) =
+            self._read_and_validate_syscall_request("get_contract_address", &vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetContractAddressRequest);
+        };
+
+        Ok(self.contract_address)
+    }
+    fn _storage_read(&mut self, _address: u64) -> Result<u64, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_read(&mut self, _address: u32) -> Result<u32, SyscallHandlerError> {
-        todo!()
-    }
-    fn _storage_write(&mut self, _address: u32, _value: u32) {
+    fn _storage_write(&mut self, _address: u64, _value: u64) {
         todo!()
     }
 
@@ -570,7 +580,21 @@ mod tests {
 
         assert_eq!(
             syscall._get_caller_address(&vm, relocatable!(1, 0)),
-            Ok(syscall.contract_address)
+            Ok(syscall.caller_address)
         )
     }
+
+    fn test_get_contract_address_ok() {
+        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall._get_caller_address(&vm, relocatable!(1, 0)),
+            Ok(syscall.contract_address)
+        )
+    }    
 }

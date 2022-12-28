@@ -13,12 +13,12 @@ use super::syscall_response::WriteSyscallResponse;
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
-    caller_address: u32,
-    contract_address: u32,
+    caller_address: u64,
+    contract_address: u64,
     internal_calls: Vec<CallInfo>,
     entry_point_type: Option<EntryPointType>,
-    _storage_read_values: VecDeque<u32>, // U32
-    retadata: VecDeque<u32>,
+    _storage_read_values: VecDeque<u64>, // u64
+    retadata: VecDeque<u64>,
 }
 
 impl Default for CallInfo {
@@ -51,7 +51,7 @@ impl OsSingleStarknetStorage {
     // Writes the given value in the given key in ongoing_storage_changes and returns the
     // previous value. This value is needed to create the DictAccess while executing the
     // corresponding storage_write system call.
-    fn write(&self, _key: u32, _value: u32) -> u32 {
+    fn write(&self, _key: u64, _value: u64) -> u64 {
         // TO BE IMPLEMENTED
         todo!()
     }
@@ -67,14 +67,14 @@ struct OsSyscallHandler {
     // state of the caller (the call the called the current call); and so on.
     call_stack: VecDeque<CallInfo>,
     // An iterator over contract addresses that were deployed during that call.
-    deployed_contracts_iterator: VecDeque<u32>, // U32
+    deployed_contracts_iterator: VecDeque<u64>, // u64
     // An iterator to the retdata of its internal calls.
-    retdata_iterator: VecDeque<VecDeque<u32>>, //VEC<U32>
+    retdata_iterator: VecDeque<VecDeque<u64>>, //VEC<u64>
     // An iterator to the read_values array which is consumed when the transaction
     // code is executed.
-    execute_code_read_iterator: VecDeque<u32>, //u32
+    execute_code_read_iterator: VecDeque<u64>, //u64
     // StarkNet storage members.
-    starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
+    starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
     // A pointer to the Cairo TxInfo struct.
     // This pointer needs to match the TxInfo pointer that is going to be used during the system
     // call validation by the StarkNet OS.
@@ -132,7 +132,7 @@ impl SyscallHandler for OsSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         let constructor_retdata = self
             .retdata_iterator
             .pop_front()
@@ -171,7 +171,7 @@ impl SyscallHandler for OsSyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<u32>, SyscallHandlerError> {
+    ) -> Result<Vec<u64>, SyscallHandlerError> {
         Ok(self
             .retdata_iterator
             .pop_front()
@@ -186,7 +186,7 @@ impl SyscallHandler for OsSyscallHandler {
     ) -> Result<u64, SyscallHandlerError> {
         match self.call_stack.back() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info.caller_address.into()),
+            Some(call_info) => Ok(call_info.caller_address),
         }
     }
 
@@ -194,14 +194,14 @@ impl SyscallHandler for OsSyscallHandler {
         &self,
         vm: VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         match self.call_stack.front() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
             Some(call_info) => Ok(call_info.contract_address),
         }
     }
 
-    fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError> {
+    fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError> {
         self.execute_code_read_iterator
             .pop_front()
             .ok_or(SyscallHandlerError::IteratorEmpty)
@@ -209,7 +209,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     // Advance execute_code_read_iterators since the previous storage value is written
     // in each write operation. See BusinessLogicSysCallHandler._storage_write().
-    fn _storage_write(&mut self, address: u32, value: u32) {
+    fn _storage_write(&mut self, address: u64, value: u64) {
         self.execute_code_read_iterator.pop_front();
     }
 
@@ -233,10 +233,10 @@ impl OsSyscallHandler {
         tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
-        deployed_contracts_iterator: VecDeque<u32>,
-        retdata_iterator: VecDeque<VecDeque<u32>>,
-        execute_code_read_iterator: VecDeque<u32>,
-        starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
+        deployed_contracts_iterator: VecDeque<u64>,
+        retdata_iterator: VecDeque<VecDeque<u64>>,
+        execute_code_read_iterator: VecDeque<u64>,
+        starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
     ) -> Self {
@@ -327,10 +327,10 @@ impl OsSyscallHandler {
     /// the write operation.
     fn execute_syscall_storage_write(
         &self,
-        contract_address: &u32,
-        key: u32,
-        value: u32,
-    ) -> Result<u32, SyscallHandlerError> {
+        contract_address: &u64,
+        key: u64,
+        value: u64,
+    ) -> Result<u64, SyscallHandlerError> {
         Ok(self
             .starknet_storage_by_address
             .get(contract_address)
@@ -354,13 +354,13 @@ impl OsSyscallHandler {
                 call_info_internal.entry_point_type == Some(EntryPointType::Constructor)
             })
             .map(|call_info_internal| call_info_internal.contract_address)
-            .collect::<VecDeque<u32>>();
+            .collect::<VecDeque<u64>>();
 
         self.retdata_iterator = call_info
             .internal_calls
             .iter()
             .map(|call_info_internal| call_info_internal.retadata.clone())
-            .collect::<VecDeque<VecDeque<u32>>>();
+            .collect::<VecDeque<VecDeque<u64>>>();
 
         self.execute_code_read_iterator = call_info._storage_read_values;
 

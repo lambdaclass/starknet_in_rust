@@ -58,7 +58,7 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError>;
+    ) -> Result<u64, SyscallHandlerError>;
 
     fn _read_and_validate_syscall_request(
         &self,
@@ -79,7 +79,7 @@ pub(crate) trait SyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<u32>, SyscallHandlerError>;
+    ) -> Result<Vec<u64>, SyscallHandlerError>;
 
     fn _get_caller_address(
         &self,
@@ -90,9 +90,9 @@ pub(crate) trait SyscallHandler {
         &self,
         vm: VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError>;
-    fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError>;
-    fn _storage_write(&mut self, address: u32, value: u32);
+    ) -> Result<u64, SyscallHandlerError>;
+    fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError>;
+    fn _storage_write(&mut self, address: u64, value: u64);
     fn allocate_segment(
         &self,
         vm: &mut VirtualMachine,
