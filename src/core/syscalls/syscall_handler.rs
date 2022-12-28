@@ -390,4 +390,30 @@ mod tests {
             )
             .is_ok())
     }
+
+    #[test]
+    fn get_sequencer_address_for_business_logic() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(18)).unwrap();
+        assert!(syscall
+            .get_sequencer_address(&mut vm, relocatable!(1, 0))
+            .is_ok());
+
+        // Check that syscall.get_sequencer insert syscall.get_block_info().sequencer_address in the (1,1) position
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().sequencer_address + 10)
+            )
+            .is_err());
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().sequencer_address)
+            )
+            .is_ok())
+    }
 }
