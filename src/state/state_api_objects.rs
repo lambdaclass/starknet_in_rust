@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockInfo {
     // The sequence number of the last block created.
     block_number: u64,
@@ -16,11 +16,6 @@ pub struct BlockInfo {
     starknet_version: String,
 }
 
-impl BlockInfo {
-    pub(crate) fn get_sequencer_address(&self) -> u64 {
-        self.sequencer_address
-    }
-}
 impl Default for BlockInfo {
     fn default() -> Self {
         Self {
