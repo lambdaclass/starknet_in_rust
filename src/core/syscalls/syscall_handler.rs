@@ -2,7 +2,9 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use super::syscall_request::*;
-use super::syscall_response::{GetBlockTimestampResponse, WriteSyscallResponse};
+use super::syscall_response::{
+    GetBlockTimestampResponse, GetSequencerAddressResponse, WriteSyscallResponse,
+};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
@@ -111,18 +113,22 @@ pub(crate) trait SyscallHandler {
 
     fn get_sequencer_address(
         &self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
-        let request = if let SyscallRequest::GetSequencerAddress(request) =
-            self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::GetSequencerAddress(request) = self
+            ._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr.clone())?
         {
             request
         } else {
             return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
         };
 
-        Ok(self.get_block_info().sequencer_address)
+        let sequencer_address = self.get_block_info().sequencer_address;
+
+        let response = GetSequencerAddressResponse::new(sequencer_address);
+
+        response.write_syscall_response(vm, syscall_ptr)
     }
 
     fn read_syscall_request(

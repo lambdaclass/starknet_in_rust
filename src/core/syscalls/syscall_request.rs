@@ -287,6 +287,13 @@ impl CountFields for GetCallerAddressRequest {
         1
     }
 }
+
+impl CountFields for GetSequencerAddressRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
 impl FromPtr for GetBlockTimestampRequest {
     fn from_ptr(
         vm: &VirtualMachine,

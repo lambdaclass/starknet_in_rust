@@ -3,7 +3,9 @@ use num_bigint::BigInt;
 
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 
-use super::syscall_request::{CountFields, GetBlockTimestampRequest, GetCallerAddressRequest};
+use super::syscall_request::{
+    CountFields, GetBlockTimestampRequest, GetCallerAddressRequest, GetSequencerAddressRequest,
+};
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -19,6 +21,11 @@ pub(crate) struct GetCallerAddressResponse {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetSequencerAddressResponse {
+    sequencer_address: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampResponse {
     block_timestamp: u64,
 }
@@ -26,6 +33,12 @@ pub(crate) struct GetBlockTimestampResponse {
 impl GetBlockTimestampResponse {
     pub(crate) fn new(block_timestamp: u64) -> Self {
         GetBlockTimestampResponse { block_timestamp }
+    }
+}
+
+impl GetSequencerAddressResponse {
+    pub(crate) fn new(sequencer_address: u64) -> Self {
+        Self { sequencer_address }
     }
 }
 
@@ -52,6 +65,20 @@ impl WriteSyscallResponse for GetBlockTimestampResponse {
         vm.insert_value(
             &(syscall_ptr + GetBlockTimestampRequest::count_fields()),
             bigint!(self.block_timestamp),
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetSequencerAddressResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
+            bigint!(self.sequencer_address),
         )?;
         Ok(())
     }
