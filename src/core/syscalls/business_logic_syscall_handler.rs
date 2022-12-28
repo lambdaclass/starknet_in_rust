@@ -156,7 +156,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             let signature = vm
                 .write_arg(&signature, &tx.signature)
                 .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
-            let signature = signature.get_relocatable()?.clone();
+            let signature = signature.get_relocatable()?;
             let signature_len = signature.offset;
 
             let chain_id = self.general_config.starknet_os_config.chain_id as usize;

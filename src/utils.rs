@@ -32,9 +32,8 @@ pub fn get_relocatable(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<Relocatable, SyscallHandlerError> {
-    Ok(vm
-        .get_relocatable(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?)
+    vm.get_relocatable(syscall_ptr)
+        .map_err(|_| SyscallHandlerError::SegmentationFault)
 }
 
 pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
