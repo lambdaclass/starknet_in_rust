@@ -1,6 +1,7 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
 use super::hint_code::*;
 use super::syscall_request::*;
+use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetSequencerAddressResponse, WriteSyscallResponse,
 };
@@ -153,7 +154,16 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<(), SyscallHandlerError> {
+        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
+
+        self._write_syscall_response(
+            &GetBlockNumberResponse::new(self.get_block_info().block_number),
+            vm,
+            syscall_ptr,
+        )?;
+        Ok(())
+    }
 
     fn get_block_info(&self) -> &BlockInfo;
 
