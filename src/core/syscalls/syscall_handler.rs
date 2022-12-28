@@ -181,7 +181,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         let caller_address = self._get_caller_address(vm, syscall_ptr)?;
         let response = GetCallerAddressResponse::new(caller_address);
-        self._write_syscall_response(&response, vm, syscall_ptr)
+        response.write_syscall_response(vm, syscall_ptr)
     }
 }
 
