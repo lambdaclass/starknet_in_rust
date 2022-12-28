@@ -116,7 +116,7 @@ impl SyscallHandler for OsSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        todo!()
+        Ok(())
     }
 
     fn _get_tx_info_ptr(
