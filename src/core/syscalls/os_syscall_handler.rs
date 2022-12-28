@@ -156,7 +156,7 @@ impl SyscallHandler for OsSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        todo!()
+        self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
 
     fn _call_contract_and_write_response(
