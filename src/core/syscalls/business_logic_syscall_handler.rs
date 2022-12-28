@@ -584,6 +584,7 @@ mod tests {
         )
     }
 
+    #[test]
     fn test_get_contract_address_ok() {
         let mut syscall = BusinessLogicSyscallHandler::new();
         let mut vm = vm!();
@@ -593,7 +594,7 @@ mod tests {
         vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
 
         assert_eq!(
-            syscall._get_caller_address(&vm, relocatable!(1, 0)),
+            syscall._get_contract_address(vm, relocatable!(1, 0)),
             Ok(syscall.contract_address)
         )
     }    

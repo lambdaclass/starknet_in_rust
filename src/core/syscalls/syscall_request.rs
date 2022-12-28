@@ -254,6 +254,19 @@ impl FromPtr for GetCallerAddressRequest {
     }
 }
 
+impl FromPtr for GetContractAddressRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetContractAddress(GetContractAddressRequest {
+            _selector,
+        }))
+    }
+}
+
 impl CountFields for GetCallerAddressRequest {
     fn count_fields() -> usize {
         1

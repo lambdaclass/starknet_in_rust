@@ -121,6 +121,7 @@ pub(crate) trait SyscallHandler {
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_contract_address" => GetContractAddressRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
