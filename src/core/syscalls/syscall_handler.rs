@@ -113,7 +113,17 @@ pub(crate) trait SyscallHandler {
         &self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError>;
+    ) -> Result<u64, SyscallHandlerError> {
+        let request = if let SyscallRequest::GetSequencerAddress(request) =
+            self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
+        };
+
+        Ok(self.get_block_info().sequencer_address)
+    }
 
     fn read_syscall_request(
         &self,

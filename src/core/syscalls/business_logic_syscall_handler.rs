@@ -65,21 +65,6 @@ impl BusinessLogicSyscallHandler {
 }
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
-    fn _get_sequencer_address(
-        &self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
-        let request = if let SyscallRequest::GetSequencerAddress(request) =
-            self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
-        };
-
-        Ok(self.block_info.sequencer_address)
-    }
     fn emit_event(
         &self,
         vm: &VirtualMachine,
