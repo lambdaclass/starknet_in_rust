@@ -42,6 +42,13 @@ impl GetSequencerAddressResponse {
     }
 }
 
+impl GetCallerAddressResponse {
+    pub fn new(caller_addr: u64) -> Self {
+        let caller_address = bigint!(caller_addr);
+        GetCallerAddressResponse { caller_address }
+    }
+}
+
 impl WriteSyscallResponse for GetCallerAddressResponse {
     fn write_syscall_response(
         &self,
