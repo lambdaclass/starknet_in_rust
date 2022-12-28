@@ -1,8 +1,9 @@
-use std::any::Any;
-use std::collections::HashMap;
-
+use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
+use super::hint_code::*;
 use super::syscall_request::*;
-use super::syscall_response::{GetBlockTimestampResponse, WriteSyscallResponse};
+use super::syscall_response::{
+    GetBlockNumberResponse, GetBlockTimestampResponse, WriteSyscallResponse,
+};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
@@ -17,9 +18,8 @@ use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
-
-use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use super::hint_code::*;
+use std::any::Any;
+use std::collections::HashMap;
 
 //* ---------------------
 //* SyscallHandler Trait
@@ -122,9 +122,21 @@ pub(crate) trait SyscallHandler {
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
+    }
+
+    fn get_block_number(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr.clone())?;
+
+        self._write_syscall_response(&GetBlockNumberResponse::new(todo!()), vm, syscall_ptr)?;
+        Ok(())
     }
 
     fn get_block_info(&self) -> &BlockInfo;
