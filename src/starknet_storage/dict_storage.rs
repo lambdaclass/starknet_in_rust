@@ -54,6 +54,23 @@ mod tests {
     }
 
     #[test]
+    fn get_int_not_default() {
+        let mut storage = DictStorage::new();
+        let default = 0;
+        let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        storage.set_int(&key, 1234);
+        assert_eq!(storage.get_int_or_default(&key, default).unwrap(), 1234)
+    }
+
+    #[test]
+    fn get_int_default() {
+        let storage = DictStorage::new();
+        let default = 0;
+        let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+
+        assert_eq!(storage.get_int_or_default(&key, default).unwrap(), default)
+    }
+    #[test]
     fn error_after_inserting_different_data_under_same_key() {
         let mut storage = DictStorage::new();
 
