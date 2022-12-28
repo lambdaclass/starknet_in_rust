@@ -228,13 +228,6 @@ impl SyscallHandler for OsSyscallHandler {
         Ok(segment_start)
     }
 
-    fn _get_sequencer_address(
-        &self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
-        todo!()
-    }
     fn get_block_info(&self) -> &BlockInfo {
         &self.block_info
     }

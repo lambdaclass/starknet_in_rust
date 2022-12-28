@@ -592,7 +592,7 @@ mod tests {
         vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
 
         assert_eq!(
-            syscall._get_sequencer_address(&vm, relocatable!(1, 0)),
+            syscall.get_sequencer_address(&vm, relocatable!(1, 0)),
             Ok(block_info.sequencer_address)
         )
     }

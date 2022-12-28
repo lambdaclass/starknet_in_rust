@@ -109,7 +109,7 @@ pub(crate) trait SyscallHandler {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
-    fn _get_sequencer_address(
+    fn get_sequencer_address(
         &self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
