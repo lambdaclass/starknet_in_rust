@@ -130,12 +130,12 @@ pub(crate) trait SyscallHandler {
     fn get_block_info(&self) -> &BlockInfo;
 
     fn get_block_timestamp(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request = if let SyscallRequest::GetBlockTimestamp(request) =
-            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr.clone())?
+            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
         {
             request
         } else {
