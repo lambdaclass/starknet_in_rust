@@ -18,6 +18,10 @@ pub(crate) struct GetCallerAddressResponse {
     caller_address: BigInt,
 }
 
+pub(crate) struct GetContractAddressResponse {
+    contract_address: BigInt,
+}
+
 impl WriteSyscallResponse for GetCallerAddressResponse {
     fn write_syscall_response(
         &self,

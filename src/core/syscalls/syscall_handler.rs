@@ -49,6 +49,14 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
+    fn get_contract_address(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+
     fn _get_tx_info_ptr(
         &self,
         vm: &mut VirtualMachine,
