@@ -27,7 +27,7 @@ use super::hint_code::*;
 
 pub(crate) trait SyscallHandler {
     fn emit_event(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
@@ -39,7 +39,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError>;
 
     fn get_tx_info(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
@@ -51,7 +51,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError>;
 
     fn _get_tx_info_ptr(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
     ) -> Result<MaybeRelocatable, SyscallHandlerError>;
 
@@ -62,7 +62,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<u32, SyscallHandlerError>;
 
     fn _read_and_validate_syscall_request(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -83,7 +83,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<Vec<u32>, SyscallHandlerError>;
 
     fn _get_caller_address(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError>;
@@ -95,7 +95,7 @@ pub(crate) trait SyscallHandler {
     fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError>;
     fn _storage_write(&mut self, address: u32, value: u32);
     fn allocate_segment(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
@@ -173,7 +173,7 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
 
 impl<H: SyscallHandler> SyscallHintProcessor<H> {
     pub fn should_run_syscall_hint(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
@@ -190,7 +190,7 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
     }
 
     fn execute_syscall_hint(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
@@ -217,7 +217,7 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
 
 impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     fn execute_hint(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
@@ -278,8 +278,7 @@ fn get_syscall_ptr(
         .map_err(|_| SyscallHandlerError::SegmentationFault)?;
     let syscall_ptr = vm
         .get_relocatable(&location)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .into_owned();
+        .map_err(|_| SyscallHandlerError::SegmentationFault)?;
     Ok(syscall_ptr)
 }
 

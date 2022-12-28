@@ -88,7 +88,7 @@ struct OsSyscallHandler {
 
 impl SyscallHandler for OsSyscallHandler {
     fn get_tx_info(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -96,7 +96,7 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn emit_event(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -120,7 +120,7 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn _get_tx_info_ptr(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
     ) -> Result<MaybeRelocatable, SyscallHandlerError> {
         Ok(MaybeRelocatable::from(
@@ -151,7 +151,7 @@ impl SyscallHandler for OsSyscallHandler {
     /// Returns the system call request written in the syscall segment, starting at syscall_ptr.
     /// Does not perform validations on the request, since it was validated in the BL.
     fn _read_and_validate_syscall_request(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -182,7 +182,7 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn _get_caller_address(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
@@ -217,7 +217,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     /// Allocates and returns a new temporary segment.
     fn allocate_segment(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
@@ -650,7 +650,7 @@ mod tests {
 
     #[test]
     fn get_tx_info_ptr_reloc() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -678,7 +678,7 @@ mod tests {
 
     #[test]
     fn get_tx_info_ptr_none() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -954,7 +954,7 @@ mod tests {
 
     #[test]
     fn get_caller_address_err() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -982,7 +982,7 @@ mod tests {
     fn get_caller_address() {
         let mut call_stack = VecDeque::new();
         call_stack.push_back(CallInfo::default());
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             call_stack,
@@ -1070,7 +1070,7 @@ mod tests {
     #[test]
     fn allocate_segment() {
         let mut vm = vm!();
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
