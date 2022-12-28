@@ -309,6 +309,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
         Ok(segment_start)
     }
+
+    fn get_block_info(&self) -> &BlockInfo {
+        &self.block_info
+    }
 }
 
 impl Default for BusinessLogicSyscallHandler {

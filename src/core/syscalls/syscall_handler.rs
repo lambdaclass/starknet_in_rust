@@ -2,7 +2,7 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use super::syscall_request::*;
-use super::syscall_response::WriteSyscallResponse;
+use super::syscall_response::{GetBlockTimestampResponse, WriteSyscallResponse};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
@@ -122,8 +122,31 @@ pub(crate) trait SyscallHandler {
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
+    }
+
+    fn get_block_info(&self) -> &BlockInfo;
+
+    fn get_block_timestamp(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request = if let SyscallRequest::GetBlockTimestamp(request) =
+            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr.clone())?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        let block_timestamp = self.get_block_info().block_timestamp;
+
+        let response = GetBlockTimestampResponse::new(block_timestamp);
+
+        response.write_syscall_response(vm, syscall_ptr)
     }
 }
 
@@ -292,6 +315,7 @@ mod tests {
         )
     }
 
+    #[test]
     fn read_deploy_syscall_request() {
         let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
@@ -316,5 +340,31 @@ mod tests {
                 deploy_from_zero: 4,
             }))
         )
+    }
+
+    #[test]
+    fn get_block_timestamp_for_business_logic() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(18)).unwrap();
+        assert!(syscall
+            .get_block_timestamp(&mut vm, relocatable!(1, 0))
+            .is_ok());
+
+        // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,1) position
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().block_timestamp + 10)
+            )
+            .is_err());
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().block_timestamp)
+            )
+            .is_ok())
     }
 }

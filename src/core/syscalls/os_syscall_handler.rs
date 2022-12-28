@@ -227,6 +227,10 @@ impl SyscallHandler for OsSyscallHandler {
             .map_err(|_| SyscallHandlerError::WriteArg)?;
         Ok(segment_start)
     }
+
+    fn get_block_info(&self) -> &BlockInfo {
+        &self.block_info
+    }
 }
 
 impl OsSyscallHandler {
