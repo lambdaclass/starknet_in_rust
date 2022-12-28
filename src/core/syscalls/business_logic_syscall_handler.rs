@@ -78,7 +78,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
         };
 
-        Ok(self.block_info.get_sequencer_address())
+        Ok(self.block_info.sequencer_address)
     }
     fn emit_event(
         &self,
@@ -323,6 +323,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.read_only_segments.borrow_mut().push(segment);
 
         Ok(segment_start)
+    }
+
+    fn get_block_info(&self) -> &BlockInfo {
+        &self.block_info
     }
 }
 
@@ -604,7 +608,7 @@ mod tests {
 
         assert_eq!(
             syscall._get_sequencer_address(&vm, relocatable!(1, 0)),
-            Ok(block_info.get_sequencer_address())
+            Ok(block_info.sequencer_address)
         )
     }
 }
