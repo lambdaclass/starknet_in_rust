@@ -12,59 +12,59 @@ use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
-use std::cell::RefCell;
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
 //* -----------------------------------
 
 pub struct BusinessLogicSyscallHandler {
-    tx_execution_context: RefCell<TransactionExecutionContext>,
+    tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
-    events: RefCell<Vec<OrderedEvent>>,
+    events: Vec<OrderedEvent>,
     /// A list of dynamically allocated segments that are expected to be read-only.
-    read_only_segments: RefCell<Vec<(Relocatable, MaybeRelocatable)>>,
-    resources_manager: RefCell<ExecutionResourcesManager>,
+    read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
+    resources_manager: ExecutionResourcesManager,
     contract_address: u64,
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     general_config: StarknetGeneralConfig,
-    tx_info_ptr: RefCell<Option<MaybeRelocatable>>,
+    tx_info_ptr: Option<MaybeRelocatable>,
     block_info: BlockInfo,
 }
 
 impl BusinessLogicSyscallHandler {
     pub fn new(block_info: BlockInfo) -> Self {
-        let events = RefCell::new(Vec::new());
-        let tx_execution_context = RefCell::new(TransactionExecutionContext::new());
-        let read_only_segments = RefCell::new(Vec::new());
-        let resources_manager = RefCell::new(ExecutionResourcesManager::default());
+        let events = Vec::new();
+        let tx_execution_context = TransactionExecutionContext::new();
+        let read_only_segments = Vec::new();
+        let resources_manager = ExecutionResourcesManager::default();
+        let contract_address = 0;
+        let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::new();
-        let tx_info_ptr = RefCell::new(None);
+        let tx_info_ptr = None;
 
         BusinessLogicSyscallHandler {
-            events,
             tx_execution_context,
-            general_config,
-            tx_info_ptr,
+            events,
             read_only_segments,
             resources_manager,
-            contract_address: 0,
-            l2_to_l1_messages: Vec::new(),
+            contract_address,
+            l2_to_l1_messages,
+            general_config,
+            tx_info_ptr,
             block_info,
         }
     }
 
     /// Increments the syscall count for a given `syscall_name` by 1.
-    fn increment_syscall_count(&self, syscall_name: &str) {
+    fn increment_syscall_count(&mut self, syscall_name: &str) {
         self.resources_manager
-            .borrow_mut()
             .increment_syscall_counter(syscall_name, 1);
     }
 }
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
     fn emit_event(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -76,21 +76,19 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let keys_len = request.keys_len;
         let data_len = request.data_len;
 
-        let order = self.tx_execution_context.borrow_mut().n_emitted_events;
+        let order = self.tx_execution_context.n_emitted_events;
         let keys: Vec<BigInt> = get_integer_range(vm, &request.keys, keys_len)?;
         let data: Vec<BigInt> = get_integer_range(vm, &request.data, data_len)?;
 
-        self.events
-            .borrow_mut()
-            .push(OrderedEvent::new(order, keys, data));
+        self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.
-        self.tx_execution_context.borrow_mut().n_emitted_events += 1;
+        self.tx_execution_context.n_emitted_events += 1;
         Ok(())
     }
 
     fn get_tx_info(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -119,13 +117,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let payload = get_integer_range(vm, &request.payload_ptr, request.payload_size)?;
 
         self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
-            self.tx_execution_context.borrow().n_sent_messages,
+            self.tx_execution_context.n_sent_messages,
             request.to_address,
             payload,
         ));
 
         // Update messages count.
-        self.tx_execution_context.borrow_mut().n_sent_messages += 1;
+        self.tx_execution_context.n_sent_messages += 1;
         Ok(())
     }
 
@@ -139,15 +137,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn _get_tx_info_ptr(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
     ) -> Result<MaybeRelocatable, SyscallHandlerError> {
-        let mut tx_info_ptr = self.tx_info_ptr.borrow_mut();
-
-        if let Some(ptr) = &*tx_info_ptr {
+        if let Some(ptr) = &self.tx_info_ptr {
             Ok(ptr.clone())
         } else {
-            let tx = self.tx_execution_context.borrow();
+            let tx = self.tx_execution_context.clone();
 
             let version = tx.version;
             let account_contract_address = tx.account_contract_address.clone();
@@ -158,7 +154,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             let signature = vm
                 .write_arg(&signature, &tx.signature)
                 .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
-            let signature = signature.get_relocatable()?.clone();
+            let signature = signature.get_relocatable()?;
             let signature_len = signature.offset;
 
             let chain_id = self.general_config.starknet_os_config.chain_id as usize;
@@ -180,7 +176,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
                 .write_arg(&segment, &tx_info)
                 .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
 
-            *tx_info_ptr = Some(tx_info_ptr_temp.clone());
+            self.tx_info_ptr = Some(tx_info_ptr_temp.clone());
 
             Ok(tx_info_ptr_temp)
         }
@@ -233,7 +229,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn _read_and_validate_syscall_request(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -263,7 +259,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         todo!()
     }
     fn _get_caller_address(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
@@ -292,7 +288,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn allocate_segment(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
@@ -304,7 +300,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             .sub(&segment_start.to_owned().into(), vm.get_prime())
             .map_err(|_| SyscallHandlerError::SegmentationFault)?;
         let segment = (segment_start.to_owned(), sub);
-        self.read_only_segments.borrow_mut().push(segment);
+        self.read_only_segments.push(segment);
 
         Ok(segment_start)
     }
@@ -343,7 +339,6 @@ mod tests {
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::syscalls::syscall_handler::*;
-    use crate::core::syscalls::syscall_response::GetBlockNumberResponse;
     use crate::state::state_api_objects::BlockInfo;
     use crate::utils::test_utils::*;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -430,7 +425,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(EMIT_EVENT_CODE.to_string(), ids_data);
         // invoke syscall
-        let syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -443,7 +438,6 @@ mod tests {
         let event = syscall_handler
             .syscall_handler
             .events
-            .borrow()
             .get(0)
             .unwrap()
             .clone();
@@ -460,7 +454,6 @@ mod tests {
             syscall_handler
                 .syscall_handler
                 .tx_execution_context
-                .borrow()
                 .n_emitted_events,
             1
         );
@@ -492,7 +485,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
         // invoke syscall
-        let syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
         let err = syscall_handler.execute_hint(
             &mut vm,
             &mut ExecutionScopes::new(),
@@ -535,7 +528,7 @@ mod tests {
 
     #[test]
     fn can_allocate_segment() {
-        let syscall_handler = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall_handler = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
 
@@ -567,18 +560,18 @@ mod tests {
             ]
         );
 
-        assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 0);
+        assert_eq!(syscall.tx_execution_context.n_sent_messages, 0);
         assert_eq!(syscall.l2_to_l1_messages, Vec::new());
 
         syscall
             .send_message_to_l1(&vm, relocatable!(1, 0))
             .expect("Failed to send message to L1");
 
-        assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 1);
+        assert_eq!(syscall.tx_execution_context.n_sent_messages, 1);
         assert_eq!(
             syscall.l2_to_l1_messages,
             vec![OrderedL2ToL1Message::new(
-                syscall.tx_execution_context.borrow().n_sent_messages - 1,
+                syscall.tx_execution_context.n_sent_messages - 1,
                 1,
                 vec![bigint!(18), bigint!(12)],
             )]
@@ -587,7 +580,7 @@ mod tests {
 
     #[test]
     fn test_get_caller_address_ok() {
-        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);

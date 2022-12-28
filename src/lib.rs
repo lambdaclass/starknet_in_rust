@@ -1,4 +1,4 @@
-#![allow(unused)]
+// #![allow(unused)]
 #![deny(warnings)]
 
 pub mod business_logic;

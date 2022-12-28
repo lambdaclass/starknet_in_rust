@@ -57,4 +57,6 @@ pub enum SyscallHandlerError {
     TxInfoPtrIsNone,
     #[error("Virtual machine error: {0}")]
     VirtualMachineError(#[from] VirtualMachineError),
+    #[error("Expected GetSequencerAddressRequest")]
+    ExpectedGetSequencerAddressRequest,
 }
