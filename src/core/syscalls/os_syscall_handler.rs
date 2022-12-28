@@ -87,14 +87,6 @@ struct OsSyscallHandler {
 }
 
 impl SyscallHandler for OsSyscallHandler {
-    fn get_tx_info(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        todo!()
-    }
-
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,

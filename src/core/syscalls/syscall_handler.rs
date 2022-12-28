@@ -42,9 +42,18 @@ pub(crate) trait SyscallHandler {
 
     fn get_tx_info(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                SyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        let x = self._get_tx_info_ptr(vm)?;
+        todo!()
+    }
 
     fn library_call(
         &mut self,
