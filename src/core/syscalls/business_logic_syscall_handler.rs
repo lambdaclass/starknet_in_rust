@@ -1,8 +1,5 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::syscall_request::*;
-use super::syscall_response::{GetBlockNumberResponse, WriteSyscallResponse};
+use super::syscall_response::GetBlockNumberResponse;
 use crate::business_logic::execution::objects::*;
 use crate::business_logic::execution::state::ExecutionResourcesManager;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
@@ -15,6 +12,7 @@ use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 use num_traits::{One, Zero};
+use std::cell::RefCell;
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
@@ -130,12 +128,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.tx_execution_context.borrow_mut().n_sent_messages += 1;
         Ok(())
     }
+
     fn library_call(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("library_call", vm, syscall_ptr);
+        self._call_contract_and_write_response("library_call", vm, syscall_ptr)?;
         Ok(())
     }
 
@@ -249,7 +248,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
+        let _response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
         // TODO: Should we build a response struct to pass to _write_syscall_response?
         // self._write_syscall_response(response_data, vm, syscall_ptr);
         todo!()
@@ -268,7 +267,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
-        let request = if let SyscallRequest::GetCallerAddress(request) =
+        let _request = if let SyscallRequest::GetCallerAddress(request) =
             self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)?
         {
             request
@@ -350,17 +349,16 @@ mod tests {
         BuiltinHintProcessor, HintProcessorData,
     };
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
+    use cairo_rs::relocatable;
     use cairo_rs::types::exec_scope::ExecutionScopes;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError::UnknownHint;
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use cairo_rs::{bigint_str, relocatable};
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
     use std::collections::HashMap;
-    use std::str::FromStr;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -508,6 +506,7 @@ mod tests {
         )
     }
 
+    #[test]
     fn deploy_from_zero_error() {
         let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
@@ -534,7 +533,7 @@ mod tests {
 
     #[test]
     fn can_allocate_segment() {
-        let mut syscall_handler = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall_handler = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
 
@@ -569,7 +568,9 @@ mod tests {
         assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 0);
         assert_eq!(syscall.l2_to_l1_messages, Vec::new());
 
-        syscall.send_message_to_l1(&vm, relocatable!(1, 0));
+        syscall
+            .send_message_to_l1(&vm, relocatable!(1, 0))
+            .expect("Failed to send message to L1");
 
         assert_eq!(syscall.tx_execution_context.borrow().n_sent_messages, 1);
         assert_eq!(
@@ -584,7 +585,7 @@ mod tests {
 
     #[test]
     fn test_get_caller_address_ok() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);

@@ -1,9 +1,7 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
 use super::hint_code::*;
 use super::syscall_request::*;
-use super::syscall_response::{
-    GetBlockNumberResponse, GetBlockTimestampResponse, WriteSyscallResponse,
-};
+use super::syscall_response::{GetBlockTimestampResponse, WriteSyscallResponse};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
@@ -351,7 +349,7 @@ mod tests {
 
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
         add_segments!(vm, 2);
 

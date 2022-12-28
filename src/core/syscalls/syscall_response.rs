@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn write_get_caller_address_response() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);

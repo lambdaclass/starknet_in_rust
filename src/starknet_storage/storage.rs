@@ -1,5 +1,4 @@
 use super::errors::storage_errors::StorageError;
-use cairo_rs::types::instruction::Res;
 use std::str;
 
 //* ------------------
