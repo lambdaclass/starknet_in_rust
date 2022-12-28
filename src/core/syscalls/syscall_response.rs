@@ -43,13 +43,14 @@ mod tests {
             business_logic_syscall_handler::BusinessLogicSyscallHandler,
             syscall_handler::SyscallHandler,
         },
+        state::state_api_objects::BlockInfo,
         utils::test_utils::vm,
     };
     use num_bigint::{BigInt, Sign};
 
     #[test]
     fn write_get_caller_address_response() {
-        let mut syscall = BusinessLogicSyscallHandler::new();
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);

@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use super::syscall_request::*;
 use super::syscall_response::WriteSyscallResponse;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -142,7 +143,7 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
     ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler::new(),
+            syscall_handler: BusinessLogicSyscallHandler::new(BlockInfo::default()),
         })
     }
 }
@@ -270,7 +271,7 @@ mod tests {
 
     #[test]
     fn read_send_message_to_l1_request() {
-        let syscall = BusinessLogicSyscallHandler::new();
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -292,7 +293,7 @@ mod tests {
     }
 
     fn read_deploy_syscall_request() {
-        let syscall = BusinessLogicSyscallHandler::new();
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
         add_segments!(vm, 2);
 
