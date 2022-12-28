@@ -80,6 +80,19 @@ impl CountFields for GetBlockNumberRequest {
     }
 }
 
+impl FromPtr for GetBlockNumberRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
+            _selector,
+        }))
+    }
+}
+
 pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -240,6 +253,7 @@ impl FromPtr for DeployRequestStruct {
         }))
     }
 }
+
 impl FromPtr for SendMessageToL1SysCall {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -277,6 +291,7 @@ impl CountFields for GetCallerAddressRequest {
         1
     }
 }
+
 impl FromPtr for GetBlockTimestampRequest {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -288,6 +303,7 @@ impl FromPtr for GetBlockTimestampRequest {
         ))
     }
 }
+
 impl CountFields for GetBlockTimestampRequest {
     fn count_fields() -> usize {
         1
