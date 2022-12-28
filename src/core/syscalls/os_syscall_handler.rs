@@ -10,7 +10,7 @@ use crate::state::state_api_objects::BlockInfo;
 
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
-use super::syscall_response::{WriteSyscallResponse, GetBlockNumberResponse};
+use super::syscall_response::{GetBlockNumberResponse, WriteSyscallResponse};
 
 #[derive(Debug, Clone, PartialEq)]
 struct CallInfo {
