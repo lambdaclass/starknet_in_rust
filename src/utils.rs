@@ -60,8 +60,6 @@ pub fn get_integer_range(
 //* -------------------
 
 #[macro_export]
-#[macro_use]
-
 macro_rules! bigint_str {
     ($val: expr) => {
         BigInt::parse_bytes($val, 10).unwrap()
@@ -73,7 +71,6 @@ macro_rules! bigint_str {
 pub(crate) use bigint_str;
 
 #[macro_export]
-#[macro_use]
 macro_rules! bigint {
     ($val : expr) => {
         Into::<BigInt>::into($val)

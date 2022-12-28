@@ -233,11 +233,11 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn get_block_number(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr.clone())?;
+        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
 
         self._write_syscall_response(
             &GetBlockNumberResponse::new(self.block_info.block_number),
@@ -741,8 +741,8 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
-        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
+        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
+        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
         assert_eq!(
             handler._call_contract("", &vm, ptr),
             Err(SyscallHandlerError::IteratorEmpty)
@@ -1118,7 +1118,7 @@ mod tests {
 
     #[test]
     fn test_get_block_number() {
-        let syscall = OsSyscallHandler::new(
+        let mut syscall = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),

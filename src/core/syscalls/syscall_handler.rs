@@ -150,7 +150,7 @@ pub(crate) trait SyscallHandler {
     }
 
     fn get_block_number(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;

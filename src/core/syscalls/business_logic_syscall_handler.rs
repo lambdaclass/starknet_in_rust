@@ -310,11 +310,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 
     fn get_block_number(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr.clone())?;
+        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
 
         self._write_syscall_response(
             &GetBlockNumberResponse::new(self.block_info.block_number),
@@ -595,7 +595,7 @@ mod tests {
 
     #[test]
     fn test_get_block_number() {
-        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);
