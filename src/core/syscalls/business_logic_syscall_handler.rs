@@ -343,6 +343,7 @@ mod tests {
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::syscalls::syscall_handler::*;
+    use crate::core::syscalls::syscall_response::GetBlockNumberResponse;
     use crate::state::state_api_objects::BlockInfo;
     use crate::utils::test_utils::*;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -358,6 +359,7 @@ mod tests {
     use cairo_rs::vm::vm_core::VirtualMachine;
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
+    use std::borrow::Cow;
     use std::collections::HashMap;
 
     #[test]
@@ -596,5 +598,23 @@ mod tests {
             syscall._get_caller_address(&vm, relocatable!(1, 0)),
             Ok(syscall.contract_address)
         )
+    }
+
+    #[test]
+    fn test_get_block_number() {
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall.get_block_number(&mut vm, relocatable!(1, 0)),
+            Ok(()),
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
+            Ok(bigint!(0)),
+        );
     }
 }

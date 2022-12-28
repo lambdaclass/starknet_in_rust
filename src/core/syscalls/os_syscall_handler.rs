@@ -404,6 +404,9 @@ mod tests {
     use std::collections::{HashMap, VecDeque};
 
     use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
+    use crate::bigint;
+    use cairo_rs::relocatable;
+    use std::borrow::Cow;
 
     #[test]
     fn get_contract_address() {
@@ -1111,5 +1114,34 @@ mod tests {
                 offset: 0
             })
         )
+    }
+
+    #[test]
+    fn test_get_block_number() {
+        let syscall = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+            BlockInfo::default(),
+        );
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall.get_block_number(&mut vm, relocatable!(1, 0)),
+            Ok(()),
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
+            Ok(bigint!(0)),
+        );
     }
 }
