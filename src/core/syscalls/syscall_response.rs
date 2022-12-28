@@ -30,6 +30,11 @@ pub(crate) struct GetBlockTimestampResponse {
     block_timestamp: u64,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetTxInfoResponse {
+    tx_info: Relocatable,
+}
+
 impl GetBlockTimestampResponse {
     pub(crate) fn new(block_timestamp: u64) -> Self {
         GetBlockTimestampResponse { block_timestamp }
