@@ -2,7 +2,9 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use super::syscall_request::*;
-use super::syscall_response::{GetBlockTimestampResponse, WriteSyscallResponse};
+use super::syscall_response::{
+    GetBlockTimestampResponse, GetSequencerAddressResponse, WriteSyscallResponse,
+};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
@@ -109,6 +111,26 @@ pub(crate) trait SyscallHandler {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    fn get_sequencer_address(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::GetSequencerAddress(request) =
+            self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
+        };
+
+        let sequencer_address = self.get_block_info().sequencer_address;
+
+        let response = GetSequencerAddressResponse::new(sequencer_address);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
     fn read_syscall_request(
         &self,
         syscall_name: &str,
@@ -122,6 +144,7 @@ pub(crate) trait SyscallHandler {
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
@@ -130,12 +153,12 @@ pub(crate) trait SyscallHandler {
     fn get_block_info(&self) -> &BlockInfo;
 
     fn get_block_timestamp(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request = if let SyscallRequest::GetBlockTimestamp(request) =
-            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr.clone())?
+            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
         {
             request
         } else {
@@ -363,6 +386,32 @@ mod tests {
             .insert_value(
                 &relocatable!(1, 1),
                 bigint!(syscall.get_block_info().block_timestamp)
+            )
+            .is_ok())
+    }
+
+    #[test]
+    fn get_sequencer_address_for_business_logic() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(18)).unwrap();
+        assert!(syscall
+            .get_sequencer_address(&mut vm, relocatable!(1, 0))
+            .is_ok());
+
+        // Check that syscall.get_sequencer insert syscall.get_block_info().sequencer_address in the (1,1) position
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().sequencer_address + 10)
+            )
+            .is_err());
+        assert!(vm
+            .insert_value(
+                &relocatable!(1, 1),
+                bigint!(syscall.get_block_info().sequencer_address)
             )
             .is_ok())
     }

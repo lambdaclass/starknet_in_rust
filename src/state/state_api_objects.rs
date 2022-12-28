@@ -10,7 +10,7 @@ pub struct BlockInfo {
     gas_price: u64,
 
     // The sequencer address of this block.
-    sequencer_address: u64,
+    pub(crate) sequencer_address: u64,
 
     // The version of StarkNet system (e.g. "0.10.3").
     starknet_version: String,
