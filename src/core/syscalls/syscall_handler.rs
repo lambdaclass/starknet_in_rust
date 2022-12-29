@@ -335,7 +335,15 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
 
-    use crate::{add_segments, bigint, utils::{test_utils::{vm, ids_data}, get_integer}, core::syscalls::os_syscall_handler::OsSyscallHandler, memory_insert};
+    use crate::{
+        add_segments, bigint,
+        core::syscalls::os_syscall_handler::OsSyscallHandler,
+        memory_insert,
+        utils::{
+            get_integer,
+            test_utils::{ids_data, vm},
+        },
+    };
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
 
@@ -475,10 +483,13 @@ mod tests {
         let mut vm = vm!();
 
         add_segments!(vm, 4);
-        memory_insert!(vm, [
-            ((1, 0), (2, 0)), // Syscall pointer.
-            ((2, 0), 0)       // selector
-        ]);
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), // Syscall pointer.
+                ((2, 0), 0)       // selector
+            ]
+        );
 
         let mut hint_processor =
             SyscallHintProcessor::new_empty().expect("Could not create the syscall hint processor");
