@@ -41,6 +41,13 @@ impl GetSequencerAddressResponse {
     }
 }
 
+impl GetCallerAddressResponse {
+    pub fn new(caller_addr: u64) -> Self {
+        let caller_address = bigint!(caller_addr);
+        GetCallerAddressResponse { caller_address }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockNumberResponse {
     block_number: u64,

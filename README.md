@@ -32,6 +32,10 @@ $ make test
 - [cairo-rs](https://github.com/lambdaclass/cairo-rs): A fast implementation of the Cairo VM in Rust.
 - [cairo-rs-py](https://github.com/lambdaclass/cairo-rs-py): Bindings for using cairo-rs from Python code.
 
+## Documentation
+
+### StarkNet
+- [StarkNet's Architecture Review](https://david-barreto.com/starknets-architecture-review/)
 
 ## License
 

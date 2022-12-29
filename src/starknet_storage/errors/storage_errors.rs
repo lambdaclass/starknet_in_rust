@@ -8,4 +8,6 @@ pub enum StorageError {
     IncorrectDataSize,
     #[error("Incorrect utf8 enconding")]
     IncorrectUtf8Enconding,
+    #[error("Attempt to remove missing key")]
+    RemoveMissingKey,
 }
