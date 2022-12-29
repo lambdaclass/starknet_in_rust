@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use super::syscall_request::*;
 use super::syscall_response::{
-    GetBlockTimestampResponse, GetSequencerAddressResponse, WriteSyscallResponse,
+    GetBlockTimestampResponse, GetSequencerAddressResponse, GetTxInfoResponse, WriteSyscallResponse,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::state::state_api_objects::BlockInfo;
@@ -51,8 +51,10 @@ pub(crate) trait SyscallHandler {
                 _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
             };
 
-        let x = self._get_tx_info_ptr(vm)?;
-        todo!()
+        let tx_info = self._get_tx_info_ptr(vm)?;
+
+        let response = GetTxInfoResponse::new(tx_info);
+        response.write_syscall_response(vm, syscall_ptr)
     }
 
     fn library_call(
@@ -148,7 +150,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
-            "get_tx_info" => TxInfoStruct::from_ptr(vm, syscall_ptr),
+            "get_tx_info" => GetTxInfoRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
