@@ -2,10 +2,6 @@ use super::errors::storage_errors::StorageError;
 use cairo_rs::types::instruction::Res;
 use std::str;
 
-//* ------------------
-//*   Storage Trait
-//* ------------------
-
 /* -----------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------
 
@@ -28,10 +24,14 @@ use std::str;
   -----------------------------------------------------------------------------------
 */
 
+//* ------------------
+//*   Storage Trait
+//* ------------------
+
 pub(crate) trait Storage {
     fn set_value(&mut self, key: &[u8; 32], value: Vec<u8>) -> Result<(), StorageError>;
     fn get_value(&self, key: &[u8; 32]) -> Option<Vec<u8>>;
-    fn delete_value(&mut self, key: &[u8; 32]) -> Result<(), StorageError>;
+    fn delete_value(&mut self, key: &[u8; 32]) -> Result<Vec<u8>, StorageError>;
 
     fn get_value_or_fail(&self, key: &[u8; 32]) -> Result<Vec<u8>, StorageError> {
         self.get_value(key).ok_or(StorageError::ErrorFetchingData)
