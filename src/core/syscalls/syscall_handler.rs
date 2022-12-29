@@ -64,7 +64,7 @@ pub(crate) trait SyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError>;
+    ) -> Result<Relocatable, SyscallHandlerError>;
 
     fn _deploy(
         &mut self,

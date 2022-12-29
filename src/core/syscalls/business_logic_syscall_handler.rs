@@ -127,9 +127,9 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
+    ) -> Result<Relocatable, SyscallHandlerError> {
         if let Some(ptr) = &self.tx_info_ptr {
-            Ok(ptr.clone())
+            Ok(ptr.get_relocatable()?)
         } else {
             let tx = self.tx_execution_context.clone();
 
@@ -166,7 +166,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
             self.tx_info_ptr = Some(tx_info_ptr_temp.clone());
 
-            Ok(tx_info_ptr_temp)
+            Ok(tx_info_ptr_temp.get_relocatable()?)
         }
     }
 

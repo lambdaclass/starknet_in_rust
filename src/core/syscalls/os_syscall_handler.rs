@@ -114,12 +114,11 @@ impl SyscallHandler for OsSyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
-        Ok(MaybeRelocatable::from(
-            self.tx_info_ptr
-                .as_ref()
-                .ok_or(SyscallHandlerError::TxInfoPtrIsNone)?,
-        ))
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        Ok(*self
+            .tx_info_ptr
+            .as_ref()
+            .ok_or(SyscallHandlerError::TxInfoPtrIsNone)?)
     }
 
     fn _deploy(
@@ -661,10 +660,10 @@ mod tests {
         let mut vm = vm!();
         assert_eq!(
             handler._get_tx_info_ptr(&mut vm),
-            Ok(MaybeRelocatable::from(Relocatable {
+            Ok(Relocatable {
                 segment_index: 0,
                 offset: 0,
-            }))
+            })
         )
     }
 
