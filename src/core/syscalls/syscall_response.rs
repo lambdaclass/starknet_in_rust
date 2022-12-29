@@ -16,6 +16,12 @@ pub(crate) trait WriteSyscallResponse {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractResponse {
+    retdata_size: usize,
+    retdata: Relocatable
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressResponse {
     caller_address: BigInt,
 }
@@ -28,6 +34,12 @@ pub(crate) struct GetSequencerAddressResponse {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampResponse {
     block_timestamp: u64,
+}
+
+impl CallContractResponse {
+    pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
+        Self { retdata_size, retdata }
+    }
 }
 
 impl GetBlockTimestampResponse {
@@ -48,6 +60,21 @@ impl GetCallerAddressResponse {
         GetCallerAddressResponse { caller_address }
     }
 }
+
+impl WriteSyscallResponse for CallContractResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr), // + CallContractRequest::count_fields(), but I'm not sure
+            &self.retdata,
+        )?;
+        Ok(())
+    }
+}
+
 
 impl WriteSyscallResponse for GetCallerAddressResponse {
     fn write_syscall_response(

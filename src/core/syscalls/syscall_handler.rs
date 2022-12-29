@@ -4,8 +4,9 @@ use std::collections::HashMap;
 use super::syscall_request::*;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
-    WriteSyscallResponse,
+    WriteSyscallResponse, CallContractResponse,
 };
+use crate::bigint;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::state::state_api_objects::BlockInfo;
@@ -72,12 +73,33 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
+    // Executes the contract call and fills the CallContractResponse struct.
     fn _call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<(), SyscallHandlerError> {
+        let retdata = self._call_contract(
+            syscall_name, vm, syscall_ptr
+        ).unwrap();
+
+        let retdata_maybe_reloc = retdata
+            .into_iter()
+            .map(| item| MaybeRelocatable::from(bigint!(item)))
+            .collect::<Vec<MaybeRelocatable>>();
+
+        let response = CallContractResponse::new(
+            retdata.len().try_into().unwrap(),
+            self.allocate_segment(vm, retdata_maybe_reloc).unwrap(),
+        );
+
+        self._write_syscall_response(
+            &response,
+            vm,
+            syscall_ptr,
+        )
+    }
 
     fn _call_contract(
         &mut self,
