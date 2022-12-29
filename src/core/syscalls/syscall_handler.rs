@@ -3,9 +3,11 @@ use std::collections::HashMap;
 
 use super::syscall_request::*;
 use super::syscall_response::{
-    GetBlockTimestampResponse, GetSequencerAddressResponse, WriteSyscallResponse,
+    GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
+    WriteSyscallResponse,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -171,6 +173,16 @@ pub(crate) trait SyscallHandler {
 
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn get_caller_address(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let caller_address = self._get_caller_address(vm, syscall_ptr)?;
+        let response = GetCallerAddressResponse::new(caller_address);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 }
 
 //* ------------------------
@@ -308,6 +320,7 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
 
+    use crate::utils::get_integer;
     use crate::{add_segments, bigint, utils::test_utils::vm};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
@@ -414,5 +427,19 @@ mod tests {
                 bigint!(syscall.get_block_info().sequencer_address)
             )
             .is_ok())
+    }
+
+    #[test]
+    fn get_caller_address_test() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(18)).unwrap();
+        // check that it wrote the response in the correct place
+        assert!(syscall
+            .get_caller_address(&mut vm, relocatable!(1, 0))
+            .is_ok());
+        assert_eq!(get_integer(&vm, &relocatable!(1, 1)).unwrap(), 0)
     }
 }
