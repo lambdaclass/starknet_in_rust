@@ -5,6 +5,7 @@ use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 
 use super::syscall_request::{
     CountFields, GetBlockTimestampRequest, GetCallerAddressRequest, GetSequencerAddressRequest,
+    GetTxInfoRequest,
 };
 
 pub(crate) trait WriteSyscallResponse {
@@ -33,6 +34,12 @@ pub(crate) struct GetBlockTimestampResponse {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetTxInfoResponse {
     tx_info: Relocatable,
+}
+
+impl GetTxInfoResponse {
+    pub fn new(tx_info: Relocatable) -> Self {
+        GetTxInfoResponse { tx_info }
+    }
 }
 
 impl GetBlockTimestampResponse {
@@ -84,6 +91,20 @@ impl WriteSyscallResponse for GetSequencerAddressResponse {
         vm.insert_value(
             &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
             bigint!(self.sequencer_address),
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetTxInfoResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetTxInfoRequest::count_fields()),
+            self.tx_info,
         )?;
         Ok(())
     }
