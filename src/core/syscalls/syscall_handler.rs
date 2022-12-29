@@ -157,12 +157,8 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
 
-        self._write_syscall_response(
-            &GetBlockNumberResponse::new(self.get_block_info().block_number),
-            vm,
-            syscall_ptr,
-        )?;
-        Ok(())
+        GetBlockNumberResponse::new(self.get_block_info().block_number)
+            .write_syscall_response(vm, syscall_ptr)
     }
 
     fn get_block_info(&self) -> &BlockInfo;
