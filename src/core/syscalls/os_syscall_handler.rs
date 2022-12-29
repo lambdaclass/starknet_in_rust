@@ -378,7 +378,7 @@ mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::SyscallHandler;
     use crate::state::state_api_objects::BlockInfo;
-    use crate::utils::test_utils::*;
+    use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::vm_core::VirtualMachine;
     use num_bigint::{BigInt, Sign};
@@ -1121,9 +1121,6 @@ mod tests {
             syscall.get_block_number(&mut vm, relocatable!(1, 0)),
             Ok(()),
         );
-        assert_eq!(
-            vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
-            Ok(bigint!(0)),
-        );
+        assert_eq!(get_integer(&vm, &relocatable!(1, 1)), Ok(0));
     }
 }
