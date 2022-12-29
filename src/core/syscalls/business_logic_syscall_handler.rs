@@ -137,7 +137,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             tx.signature.iter().map(|num| num.into()).collect();
         let signature = self.allocate_segment(vm, signature_data)?;
 
-        let chain_id = self.general_config.starknet_os_config.chain_id as usize;
+        let chain_id = self.general_config.starknet_os_config.chain_id.to_bigint();
 
         let tx_info = TxInfoStruct {
             version: tx.version,
@@ -429,14 +429,7 @@ mod tests {
             vm,
             [
                 ((1, 0), (2, 0)), //  syscall_ptr
-                ((2, 0), 1),      //  version
-                ((2, 1), 1),      //  account_contract_address
-                ((2, 2), 2),      //  max_fee
-                ((2, 3), 1),      //  signature_len
-                ((2, 4), (3, 0)), //  signature
-                ((2, 5), 1),      //  transaction_hash
-                ((2, 6), 1),      //  chain_id
-                ((2, 7), 1)       //  nonce
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
             ]
         );
 
@@ -445,20 +438,39 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
         // invoke syscall
-        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
-        let err = syscall_handler.execute_hint(
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        let signature = vec![bigint!(18), bigint!(12)];
+        syscall_handler_hint_processor
+            .syscall_handler
+            .tx_execution_context
+            .signature = signature.clone();
+
+        let result = syscall_handler_hint_processor.execute_hint(
             &mut vm,
             &mut ExecutionScopes::new(),
             &any_box!(hint_data),
             &HashMap::new(),
         );
 
+        assert_eq!(result, Ok(()));
+
         assert_eq!(
-            err,
-            Err(VirtualMachineError::UnknownHint(
-                "Hint not implemented".to_string()
-            ))
-        )
+            vm.get_relocatable(&relocatable!(2, 1)),
+            Ok(relocatable!(4, 0))
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(3, 0)).unwrap().into_owned(),
+            signature[0]
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(3, 1)).unwrap().into_owned(),
+            signature[1]
+        );
+
+        // TODO
+        // Check _get_tx_info_ptr TxInfoStruct inserts in (4,0) segment
+        // ADD a test with OsSyscallHandler
     }
 
     fn deploy_from_zero_error() {
