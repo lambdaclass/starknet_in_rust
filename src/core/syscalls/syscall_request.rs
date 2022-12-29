@@ -1,6 +1,7 @@
+use crate::bigint;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::utils::{get_big_int, get_integer, get_relocatable};
-use cairo_rs::types::relocatable::Relocatable;
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
 
@@ -171,6 +172,21 @@ pub(crate) struct TxInfoStruct {
     pub(crate) transaction_hash: BigInt,
     pub(crate) chain_id: usize,
     pub(crate) nonce: BigInt,
+}
+
+impl TxInfoStruct {
+    pub(crate) fn to_vec(&self) -> Vec<MaybeRelocatable> {
+        vec![
+            MaybeRelocatable::from(bigint!(self.version)),
+            MaybeRelocatable::from(&self.account_contract_address),
+            MaybeRelocatable::from(&self.max_fee),
+            MaybeRelocatable::from(bigint!(self.signature_len)),
+            MaybeRelocatable::from(&self.signature),
+            MaybeRelocatable::from(&self.transaction_hash),
+            MaybeRelocatable::from(bigint!(self.chain_id)),
+            MaybeRelocatable::from(&self.nonce),
+        ]
+    }
 }
 
 impl FromPtr for GetTxInfoRequest {
