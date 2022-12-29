@@ -261,6 +261,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_sequencer_address(vm, syscall_ptr)
             }
+            LIBRARY_CALL => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.library_call(vm, syscall_ptr)
+            }
             SEND_MESSAGE_TO_L1 => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
