@@ -1,13 +1,9 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use super::syscall_request::*;
-use super::syscall_response::WriteSyscallResponse;
 use crate::business_logic::execution::objects::*;
 use crate::business_logic::execution::state::ExecutionResourcesManager;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::syscalls::syscall_handler::SyscallHandler;
-use crate::definitions::general_config::{self, StarknetGeneralConfig};
+use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::state::state_api_objects::BlockInfo;
 use crate::utils::*;
@@ -129,12 +125,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.tx_execution_context.n_sent_messages += 1;
         Ok(())
     }
+
     fn library_call(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("library_call", vm, syscall_ptr);
+        self._call_contract_and_write_response("library_call", vm, syscall_ptr)?;
         Ok(())
     }
 
@@ -246,7 +243,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
+        let _response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
         // TODO: Should we build a response struct to pass to _write_syscall_response?
         // self._write_syscall_response(response_data, vm, syscall_ptr);
         todo!()
@@ -265,7 +262,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
-        let request = if let SyscallRequest::GetCallerAddress(request) =
+        let _request = if let SyscallRequest::GetCallerAddress(request) =
             self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)?
         {
             request
@@ -332,17 +329,17 @@ mod tests {
         BuiltinHintProcessor, HintProcessorData,
     };
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
+    use cairo_rs::relocatable;
     use cairo_rs::types::exec_scope::ExecutionScopes;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError::UnknownHint;
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use cairo_rs::{bigint_str, relocatable};
     use num_bigint::{BigInt, Sign};
     use std::any::Any;
+    use std::borrow::Cow;
     use std::collections::HashMap;
-    use std::str::FromStr;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -488,6 +485,7 @@ mod tests {
         )
     }
 
+    #[test]
     fn deploy_from_zero_error() {
         let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
@@ -549,7 +547,9 @@ mod tests {
         assert_eq!(syscall.tx_execution_context.n_sent_messages, 0);
         assert_eq!(syscall.l2_to_l1_messages, Vec::new());
 
-        syscall.send_message_to_l1(&vm, relocatable!(1, 0));
+        syscall
+            .send_message_to_l1(&vm, relocatable!(1, 0))
+            .expect("Failed to send message to L1");
 
         assert_eq!(syscall.tx_execution_context.n_sent_messages, 1);
         assert_eq!(
@@ -575,5 +575,23 @@ mod tests {
             syscall._get_caller_address(&vm, relocatable!(1, 0)),
             Ok(syscall.contract_address)
         )
+    }
+
+    #[test]
+    fn test_get_block_number() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall.get_block_number(&mut vm, relocatable!(1, 0)),
+            Ok(()),
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
+            Ok(bigint!(0)),
+        );
     }
 }
