@@ -112,7 +112,7 @@ pub mod test_utils {
         ( $( $name: expr ),* ) => {
             {
                 let ids_names = vec![$( $name ),*];
-                let references = references!(ids_names.len() as i32);
+                let references = $crate::utils::test_utils::references!(ids_names.len() as i32);
                 let mut ids_data = HashMap::<String, cairo_rs::hint_processor::hint_processor_definition::HintReference>::new();
                 for (i, name) in ids_names.iter().enumerate() {
                     ids_data.insert(name.to_string(), references.get(&i).unwrap().clone());
@@ -155,7 +155,7 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! memory_insert {
         ($vm:expr, [ $( (($si:expr, $off:expr), $val:tt) ),* ] ) => {
-            $( allocate_values!($vm, $si, $off, $val); )*
+            $( $crate::allocate_values!($vm, $si, $off, $val); )*
         };
     }
     pub(crate) use memory_insert;
@@ -163,13 +163,13 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_values {
         ($vm: expr, $si:expr, $off:expr, ($sival:expr, $offval:expr)) => {
-            let k = relocatable_value!($si, $off);
-            let v = relocatable_value!($sival, $offval);
+            let k = $crate::relocatable_value!($si, $off);
+            let v = $crate::relocatable_value!($sival, $offval);
             $vm.insert_value(&k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
             let v = bigint!($val);
-            let k = relocatable_value!($si, $off);
+            let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
     }

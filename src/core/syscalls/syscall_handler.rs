@@ -240,6 +240,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.emit_event(vm, syscall_ptr)
             }
+            GET_BLOCK_NUMBER => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_block_number(vm, syscall_ptr)
+            }
             GET_TX_INFO => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_tx_info(vm, syscall_ptr)
@@ -319,11 +323,12 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
 
-    use crate::{add_segments, bigint, utils::test_utils::vm};
+    use crate::{add_segments, bigint, utils::{test_utils::{vm, ids_data}, get_integer}, core::syscalls::os_syscall_handler::OsSyscallHandler, memory_insert};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
 
     use super::*;
+    use std::collections::VecDeque;
 
     #[test]
     fn read_send_message_to_l1_request() {
@@ -425,5 +430,44 @@ mod tests {
                 bigint!(syscall.get_block_info().sequencer_address)
             )
             .is_ok())
+    }
+
+    #[test]
+    fn test_get_block_number() {
+        let mut syscall = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+            BlockInfo::default(),
+        );
+        let mut vm = vm!();
+
+        add_segments!(vm, 4);
+        memory_insert!(vm, [
+            ((1, 0), (2, 0)), // Syscall pointer.
+            ((2, 0), 0)       // selector
+        ]);
+
+        let mut hint_processor =
+            SyscallHintProcessor::new_empty().expect("Could not create the syscall hint processor");
+
+        let hint_data =
+            HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
+        assert_eq!(
+            hint_processor.execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            ),
+            Ok(()),
+        );
+        assert_eq!(get_integer(&vm, &relocatable!(2, 1)), Ok(0));
     }
 }

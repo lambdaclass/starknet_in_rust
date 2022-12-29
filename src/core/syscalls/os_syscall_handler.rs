@@ -10,7 +10,7 @@ use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug, Clone, PartialEq)]
-struct CallInfo {
+pub(crate) struct CallInfo {
     caller_address: u32,
     contract_address: u32,
     internal_calls: Vec<CallInfo>,
@@ -40,7 +40,7 @@ enum EntryPointType {
 }
 
 #[derive(Debug)]
-struct OsSingleStarknetStorage;
+pub(crate) struct OsSingleStarknetStorage;
 
 #[derive(Debug, PartialEq)]
 pub struct TransactionExecutionInfo;
@@ -56,7 +56,7 @@ impl OsSingleStarknetStorage {
 }
 
 #[derive(Debug)]
-struct OsSyscallHandler {
+pub(crate) struct OsSyscallHandler {
     tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
     call_iterator: VecDeque<CallInfo>,
 
@@ -232,7 +232,7 @@ impl SyscallHandler for OsSyscallHandler {
 
 impl OsSyscallHandler {
     #[allow(clippy::too_many_arguments)]
-    fn new(
+    pub(crate) fn new(
         tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
@@ -376,7 +376,7 @@ impl OsSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-    use crate::core::syscalls::syscall_handler::SyscallHandler;
+    use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
     use crate::state::state_api_objects::BlockInfo;
     use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
@@ -387,7 +387,11 @@ mod tests {
 
     use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
     use crate::bigint;
+    use crate::core::syscalls::hint_code::GET_BLOCK_NUMBER;
+    use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::HintProcessorData;
+    use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
     use cairo_rs::relocatable;
+    use cairo_rs::types::exec_scope::ExecutionScopes;
     use std::borrow::Cow;
 
     #[test]
@@ -1096,31 +1100,5 @@ mod tests {
                 offset: 0
             })
         )
-    }
-
-    #[test]
-    fn test_get_block_number() {
-        let mut syscall = OsSyscallHandler::new(
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            HashMap::new(),
-            None,
-            None,
-            BlockInfo::default(),
-        );
-        let mut vm = vm!();
-
-        add_segments!(vm, 2);
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
-
-        assert_eq!(
-            syscall.get_block_number(&mut vm, relocatable!(1, 0)),
-            Ok(()),
-        );
-        assert_eq!(get_integer(&vm, &relocatable!(1, 1)), Ok(0));
     }
 }
