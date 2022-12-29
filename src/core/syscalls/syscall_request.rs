@@ -170,7 +170,7 @@ pub(crate) struct TxInfoStruct {
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
     pub(crate) transaction_hash: BigInt,
-    pub(crate) chain_id: usize,
+    pub(crate) chain_id: BigInt,
     pub(crate) nonce: BigInt,
 }
 
@@ -183,7 +183,7 @@ impl TxInfoStruct {
             MaybeRelocatable::from(bigint!(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),
-            MaybeRelocatable::from(bigint!(self.chain_id)),
+            MaybeRelocatable::from(&self.chain_id),
             MaybeRelocatable::from(&self.nonce),
         ]
     }
