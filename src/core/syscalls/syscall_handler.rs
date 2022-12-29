@@ -4,11 +4,12 @@ use std::collections::HashMap;
 use super::syscall_request::*;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
-    WriteSyscallResponse,
+    GetTxSignatureResponse, WriteSyscallResponse,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::state::state_api_objects::BlockInfo;
+use crate::utils::get_big_int;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -133,6 +134,32 @@ pub(crate) trait SyscallHandler {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    fn get_tx_signature(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request =
+            match self._read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
+                SyscallRequest::GetTxSignature(request) => request,
+                _ => return Err(SyscallHandlerError::ExpectedTxStruct),
+            };
+
+        let tx_info_pr = match self._get_tx_info_ptr(vm)? {
+            MaybeRelocatable::RelocatableValue(relocatable) => relocatable,
+            _ => {
+                return Err(SyscallHandlerError::InvalidTxInfoPtr);
+            }
+        };
+        let tx_info = match TxInfoStruct::from_ptr(vm, syscall_ptr)? {
+            SyscallRequest::GetTxInfo(info) => info,
+            _ => return Err(SyscallHandlerError::InvalidTxInfoPtr),
+        };
+        let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
     fn read_syscall_request(
         &self,
         syscall_name: &str,
@@ -148,6 +175,7 @@ pub(crate) trait SyscallHandler {
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
@@ -244,6 +272,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             GET_TX_INFO => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_tx_info(vm, syscall_ptr)
+            }
+            GET_TX_SIGNATURE => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_tx_signature(vm, syscall_ptr)
             }
             _ => Err(SyscallHandlerError::NotImplemented),
         }

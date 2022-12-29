@@ -14,6 +14,7 @@ pub(crate) enum SyscallRequest {
     GetCallerAddress(GetCallerAddressRequest),
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    GetTxSignature(GetTxSignatureRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -74,6 +75,24 @@ pub(crate) struct GetCallerAddressRequest {
     pub(crate) _selector: BigInt,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetTxSignatureRequest {
+    pub(crate) _selector: BigInt,
+}
+
+#[allow(unused)] // TODO: Remove once used.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TxInfoStruct {
+    pub(crate) version: usize,
+    pub(crate) account_contract_address: BigInt,
+    pub(crate) max_fee: BigInt,
+    pub(crate) signature_len: usize,
+    pub(crate) signature: Relocatable,
+    pub(crate) transaction_hash: BigInt,
+    pub(crate) chain_id: usize,
+    pub(crate) nonce: BigInt,
+}
+
 pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -127,6 +146,22 @@ impl From<GetBlockTimestampRequest> for SyscallRequest {
     }
 }
 
+impl From<GetTxSignatureRequest> for SyscallRequest {
+    fn from(get_tx_signature_request: GetTxSignatureRequest) -> SyscallRequest {
+        SyscallRequest::GetTxSignature(get_tx_signature_request)
+    }
+}
+
+impl From<TxInfoStruct> for SyscallRequest {
+    fn from(tx_info_struct: TxInfoStruct) -> SyscallRequest {
+        SyscallRequest::GetTxInfo(tx_info_struct)
+    }
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//  FromPtr implementations
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+
 impl FromPtr for EmitEventStruct {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -146,25 +181,6 @@ impl FromPtr for EmitEventStruct {
             data,
         }
         .into())
-    }
-}
-
-#[allow(unused)] // TODO: Remove once used.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct TxInfoStruct {
-    pub(crate) version: usize,
-    pub(crate) account_contract_address: BigInt,
-    pub(crate) max_fee: BigInt,
-    pub(crate) signature_len: usize,
-    pub(crate) signature: Relocatable,
-    pub(crate) transaction_hash: BigInt,
-    pub(crate) chain_id: usize,
-    pub(crate) nonce: BigInt,
-}
-
-impl From<TxInfoStruct> for SyscallRequest {
-    fn from(tx_info_struct: TxInfoStruct) -> SyscallRequest {
-        SyscallRequest::GetTxInfo(tx_info_struct)
     }
 }
 
@@ -271,6 +287,18 @@ impl FromPtr for GetCallerAddressRequest {
     }
 }
 
+impl FromPtr for GetBlockTimestampRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, &syscall_ptr)?;
+        Ok(SyscallRequest::GetBlockTimestamp(
+            GetBlockTimestampRequest { selector },
+        ))
+    }
+}
+
 impl FromPtr for GetSequencerAddressRequest {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -282,6 +310,23 @@ impl FromPtr for GetSequencerAddressRequest {
         ))
     }
 }
+
+impl FromPtr for GetTxSignatureRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+        Ok(SyscallRequest::GetTxSignature(GetTxSignatureRequest {
+            _selector,
+        }))
+    }
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//  CountFields implementations
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+
 impl CountFields for GetCallerAddressRequest {
     fn count_fields() -> usize {
         1
@@ -294,18 +339,12 @@ impl CountFields for GetSequencerAddressRequest {
     }
 }
 
-impl FromPtr for GetBlockTimestampRequest {
-    fn from_ptr(
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &syscall_ptr)?;
-        Ok(SyscallRequest::GetBlockTimestamp(
-            GetBlockTimestampRequest { selector },
-        ))
+impl CountFields for GetBlockTimestampRequest {
+    fn count_fields() -> usize {
+        1
     }
 }
-impl CountFields for GetBlockTimestampRequest {
+impl CountFields for GetTxSignatureRequest {
     fn count_fields() -> usize {
         1
     }

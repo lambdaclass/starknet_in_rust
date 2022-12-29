@@ -5,6 +5,7 @@ use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 
 use super::syscall_request::{
     CountFields, GetBlockTimestampRequest, GetCallerAddressRequest, GetSequencerAddressRequest,
+    GetTxSignatureRequest,
 };
 
 pub(crate) trait WriteSyscallResponse {
@@ -30,6 +31,11 @@ pub(crate) struct GetBlockTimestampResponse {
     block_timestamp: u64,
 }
 
+pub(crate) struct GetTxSignatureResponse {
+    signature_len: usize,
+    signature: Relocatable,
+}
+
 impl GetBlockTimestampResponse {
     pub(crate) fn new(block_timestamp: u64) -> Self {
         GetBlockTimestampResponse { block_timestamp }
@@ -46,6 +52,15 @@ impl GetCallerAddressResponse {
     pub fn new(caller_addr: u64) -> Self {
         let caller_address = bigint!(caller_addr);
         GetCallerAddressResponse { caller_address }
+    }
+}
+
+impl GetTxSignatureResponse {
+    pub fn new(signature: Relocatable, signature_len: usize) -> Self {
+        GetTxSignatureResponse {
+            signature,
+            signature_len,
+        }
     }
 }
 
@@ -86,6 +101,24 @@ impl WriteSyscallResponse for GetSequencerAddressResponse {
         vm.insert_value(
             &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
             bigint!(self.sequencer_address),
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetTxSignatureResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetTxSignatureRequest::count_fields()),
+            bigint!(self.signature_len),
+        )?;
+        vm.insert_value(
+            &(syscall_ptr + GetTxSignatureRequest::count_fields() + 1),
+            self.signature,
         )?;
         Ok(())
     }

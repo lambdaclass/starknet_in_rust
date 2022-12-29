@@ -59,4 +59,8 @@ pub enum SyscallHandlerError {
     VirtualMachineError(#[from] VirtualMachineError),
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
+    #[error("Expected TxStruct")]
+    ExpectedTxStruct,
+    #[error("Expected a ptr but received invalid data")]
+    InvalidTxInfoPtr,
 }
