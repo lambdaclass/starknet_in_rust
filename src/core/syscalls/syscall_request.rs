@@ -13,6 +13,7 @@ pub(crate) enum SyscallRequest {
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
     GetSequencerAddress(GetSequencerAddressRequest),
+    GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
 }
 
@@ -72,6 +73,30 @@ pub(crate) struct GetBlockTimestampRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressRequest {
     pub(crate) _selector: BigInt,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberRequest {
+    pub(crate) _selector: BigInt,
+}
+
+impl CountFields for GetBlockNumberRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl FromPtr for GetBlockNumberRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
+            _selector,
+        }))
+    }
 }
 
 pub(crate) trait FromPtr {
@@ -239,6 +264,7 @@ impl FromPtr for DeployRequestStruct {
         }))
     }
 }
+
 impl FromPtr for SendMessageToL1SysCall {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -305,6 +331,7 @@ impl FromPtr for GetBlockTimestampRequest {
         ))
     }
 }
+
 impl CountFields for GetBlockTimestampRequest {
     fn count_fields() -> usize {
         1

@@ -1,7 +1,7 @@
-use std::any::Any;
-use std::collections::HashMap;
-
+use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
+use super::hint_code::*;
 use super::syscall_request::*;
+use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
     WriteSyscallResponse,
@@ -21,9 +21,8 @@ use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
-
-use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use super::hint_code::*;
+use std::any::Any;
+use std::collections::HashMap;
 
 //* ---------------------
 //* SyscallHandler Trait
@@ -117,6 +116,17 @@ pub(crate) trait SyscallHandler {
 
     fn get_block_info(&self) -> &BlockInfo;
 
+    fn get_block_number(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
+
+        GetBlockNumberResponse::new(self.get_block_info().block_number)
+            .write_syscall_response(vm, syscall_ptr)
+    }
+
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ***********************************
     //  Implementation of Default methods
@@ -158,7 +168,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::GetSequencerAddress(request) =
+        let _request = if let SyscallRequest::GetSequencerAddress(request) =
             self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
         {
             request
@@ -187,6 +197,7 @@ pub(crate) trait SyscallHandler {
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
@@ -248,6 +259,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             EMIT_EVENT_CODE => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.emit_event(vm, syscall_ptr)
+            }
+            GET_BLOCK_NUMBER => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_block_number(vm, syscall_ptr)
             }
             GET_BLOCK_TIMESTAMP => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -347,12 +362,16 @@ mod tests {
     use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
     use crate::utils::test_utils::ids_data;
     use crate::utils::{get_big_int, get_integer, get_relocatable};
-    use crate::{add_segments, bigint, utils::test_utils::vm};
+    use crate::{
+        add_segments, bigint, core::syscalls::os_syscall_handler::OsSyscallHandler,
+        utils::test_utils::vm,
+    };
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
 
     use super::*;
+    use std::collections::VecDeque;
 
     #[test]
     fn read_send_message_to_l1_request() {
@@ -663,5 +682,47 @@ mod tests {
                 vec![bigint!(18), bigint!(12)],
             )]
         );
+    }
+
+    #[test]
+    fn test_get_block_number() {
+        let mut syscall = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+            BlockInfo::default(),
+        );
+        let mut vm = vm!();
+
+        add_segments!(vm, 4);
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), // Syscall pointer.
+                ((2, 0), 0)       // selector
+            ]
+        );
+
+        let mut hint_processor =
+            SyscallHintProcessor::new_empty().expect("Could not create the syscall hint processor");
+
+        let hint_data =
+            HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
+        assert_eq!(
+            hint_processor.execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            ),
+            Ok(()),
+        );
+        assert_eq!(get_integer(&vm, &relocatable!(2, 1)), Ok(0));
     }
 }
