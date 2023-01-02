@@ -18,7 +18,7 @@ pub(crate) struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: usize,
     pub(crate) account_contract_address: BigInt,
-    pub(crate) max_fee: BigInt,
+    pub(crate) max_fee: u64,
     pub(crate) transaction_hash: BigInt,
     pub(crate) signature: Vec<BigInt>,
     pub(crate) nonce: BigInt,
@@ -36,7 +36,7 @@ impl TransactionExecutionContext {
         TransactionExecutionContext {
             n_emitted_events: 0,
             account_contract_address: BigInt::zero(),
-            max_fee: BigInt::zero(),
+            max_fee: 0,
             nonce: BigInt::zero(),
             signature: Vec::new(),
             transaction_hash: BigInt::zero(),
@@ -68,7 +68,7 @@ impl OrderedL2ToL1Message {
 pub(crate) struct TxInfoStruct {
     pub(crate) version: usize,
     pub(crate) account_contract_address: BigInt,
-    pub(crate) max_fee: BigInt,
+    pub(crate) max_fee: u64,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
     pub(crate) transaction_hash: BigInt,
@@ -97,7 +97,7 @@ impl TxInfoStruct {
         vec![
             MaybeRelocatable::from(bigint!(self.version)),
             MaybeRelocatable::from(&self.account_contract_address),
-            MaybeRelocatable::from(&self.max_fee),
+            MaybeRelocatable::from(bigint!(self.max_fee)),
             MaybeRelocatable::from(bigint!(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),

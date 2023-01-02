@@ -618,7 +618,7 @@ mod tests {
             n_emitted_events: 50,
             version: 51,
             account_contract_address: bigint!(260),
-            max_fee: bigint!(261),
+            max_fee: 261,
             transaction_hash: bigint!(262),
             signature: vec![bigint!(300), bigint!(301)],
             nonce: bigint!(263),
@@ -659,8 +659,8 @@ mod tests {
             Ok(tx_execution_context.account_contract_address)
         );
         assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 2)),
-            Ok(tx_execution_context.max_fee)
+            get_integer(&vm, &relocatable!(4, 2)),
+            Ok(tx_execution_context.max_fee as usize)
         );
         assert_eq!(
             get_integer(&vm, &relocatable!(4, 3)),
