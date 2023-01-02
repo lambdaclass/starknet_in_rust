@@ -32,7 +32,7 @@ pub(crate) enum SyscallType {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct SyscallInfo {
     selector: BigInt,
-    syscall_size: u32,
+    syscall_size: u64,
     syscall_struct: SyscallType,
 }
 

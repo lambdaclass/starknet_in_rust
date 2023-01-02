@@ -4,7 +4,7 @@ use num_traits::Zero;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedEvent {
     #[allow(unused)] // TODO: remove once used
-    order: u32,
+    order: u64,
     #[allow(unused)] // TODO: remove once used
     keys: Vec<BigInt>,
     #[allow(unused)] // TODO: remove once used
@@ -12,7 +12,7 @@ pub(crate) struct OrderedEvent {
 }
 #[derive(Clone)]
 pub(crate) struct TransactionExecutionContext {
-    pub(crate) n_emitted_events: u32,
+    pub(crate) n_emitted_events: u64,
     pub(crate) version: usize,
     pub(crate) account_contract_address: BigInt,
     pub(crate) max_fee: BigInt,
@@ -23,7 +23,7 @@ pub(crate) struct TransactionExecutionContext {
 }
 
 impl OrderedEvent {
-    pub fn new(order: u32, keys: Vec<BigInt>, data: Vec<BigInt>) -> Self {
+    pub fn new(order: u64, keys: Vec<BigInt>, data: Vec<BigInt>) -> Self {
         OrderedEvent { order, keys, data }
     }
 }

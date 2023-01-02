@@ -24,6 +24,7 @@ pub struct BusinessLogicSyscallHandler {
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) resources_manager: ExecutionResourcesManager,
     pub(crate) contract_address: u64,
+    pub(crate) caller_address: u64,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
@@ -39,6 +40,7 @@ impl BusinessLogicSyscallHandler {
             "send_message_to_l1".to_string(),
             "library_call".to_string(),
             "get_caller_address".to_string(),
+            "get_contract_address".to_string(),
             "get_sequencer_address".to_string(),
             "get_block_timestamp".to_string(),
         ]);
@@ -46,7 +48,8 @@ impl BusinessLogicSyscallHandler {
         let tx_execution_context = TransactionExecutionContext::new();
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls);
-        let contract_address = 0;
+        let contract_address = 1;
+        let caller_address = 0;
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::new();
         let tx_info_ptr = None;
@@ -57,6 +60,7 @@ impl BusinessLogicSyscallHandler {
             read_only_segments,
             resources_manager,
             contract_address,
+            caller_address,
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
@@ -95,7 +99,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         _syscall_name: &str,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
-    ) -> Result<Vec<u32>, SyscallHandlerError> {
+    ) -> Result<Vec<u64>, SyscallHandlerError> {
         todo!()
     }
 
@@ -115,7 +119,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -198,14 +202,22 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
         };
 
-        Ok(self.contract_address)
+        Ok(self.caller_address)
     }
     fn _get_contract_address(
-        &self,
-        _vm: VirtualMachine,
-        _syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
-        todo!()
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<u64, SyscallHandlerError> {
+        if let SyscallRequest::GetContractAddress(request) =
+            self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetContractAddressRequest);
+        };
+
+        Ok(self.contract_address)
     }
 
     fn get_tx_info(
@@ -303,10 +315,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: u32) -> Result<u32, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: u64) -> Result<u64, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&mut self, _address: u32, _value: u32) {
+    fn _storage_write(&mut self, _address: u64, _value: u64) {
         todo!()
     }
 
@@ -441,5 +453,20 @@ mod tests {
             vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
             Ok(bigint!(0)),
         );
+    }
+
+    #[test]
+    fn test_get_contract_address_ok() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall._get_contract_address(&vm, relocatable!(1, 0)),
+            Ok(syscall.contract_address)
+        )
     }
 }
