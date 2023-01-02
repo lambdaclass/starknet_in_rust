@@ -97,7 +97,7 @@ mod tests {
         let result_1 = calculate_contract_address_from_hash(
             &bigint!(1),
             &bigint!(2),
-            &vec![bigint!(3), bigint!(4)],
+            &[bigint!(3), bigint!(4)],
             5,
         );
 
@@ -111,7 +111,7 @@ mod tests {
         let result_2 = calculate_contract_address_from_hash(
             &bigint!(756),
             &bigint!(543),
-            &vec![bigint!(124543), bigint!(5345345), bigint!(89)],
+            &[bigint!(124543), bigint!(5345345), bigint!(89)],
             87123,
         );
 

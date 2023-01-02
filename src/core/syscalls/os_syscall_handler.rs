@@ -1,19 +1,16 @@
-use std::any::Any;
-use std::collections::{HashMap, VecDeque};
-
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-use cairo_rs::vm::vm_core::VirtualMachine;
-use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
-
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::state::state_api_objects::BlockInfo;
-
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::state::state_api_objects::BlockInfo;
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::vm::vm_core::VirtualMachine;
+use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
+use std::any::Any;
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug, Clone, PartialEq)]
-struct CallInfo {
+pub(crate) struct CallInfo {
     caller_address: u32,
     contract_address: u32,
     internal_calls: Vec<CallInfo>,
@@ -43,7 +40,7 @@ enum EntryPointType {
 }
 
 #[derive(Debug)]
-struct OsSingleStarknetStorage;
+pub(crate) struct OsSingleStarknetStorage;
 
 #[derive(Debug, PartialEq)]
 pub struct TransactionExecutionInfo;
@@ -59,7 +56,7 @@ impl OsSingleStarknetStorage {
 }
 
 #[derive(Debug)]
-struct OsSyscallHandler {
+pub(crate) struct OsSyscallHandler {
     tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
     call_iterator: VecDeque<CallInfo>,
 
@@ -108,7 +105,7 @@ impl SyscallHandler for OsSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        todo!()
+        Ok(())
     }
 
     fn _get_tx_info_ptr(
@@ -226,7 +223,7 @@ impl SyscallHandler for OsSyscallHandler {
 
 impl OsSyscallHandler {
     #[allow(clippy::too_many_arguments)]
-    fn new(
+    pub(crate) fn new(
         tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
@@ -370,9 +367,9 @@ impl OsSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-    use crate::core::syscalls::syscall_handler::SyscallHandler;
+    use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
     use crate::state::state_api_objects::BlockInfo;
-    use crate::utils::test_utils::*;
+    use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::vm_core::VirtualMachine;
     use num_bigint::{BigInt, Sign};
@@ -380,6 +377,13 @@ mod tests {
     use std::collections::{HashMap, VecDeque};
 
     use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
+    use crate::bigint;
+    use crate::core::syscalls::hint_code::GET_BLOCK_NUMBER;
+    use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::HintProcessorData;
+    use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
+    use cairo_rs::relocatable;
+    use cairo_rs::types::exec_scope::ExecutionScopes;
+    use std::borrow::Cow;
 
     #[test]
     fn get_contract_address() {
@@ -714,8 +718,8 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
-        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
+        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
+        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
         assert_eq!(
             handler._call_contract("", &vm, ptr),
             Err(SyscallHandlerError::IteratorEmpty)
@@ -852,8 +856,8 @@ mod tests {
         let addr = 0;
         let val = 0;
 
-        assert_eq!(handler._storage_write(addr, val), ());
-        assert_eq!(handler._storage_write(addr, val), ())
+        handler._storage_write(addr, val);
+        handler._storage_write(addr, val);
     }
 
     #[test]

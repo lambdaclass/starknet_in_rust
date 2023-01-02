@@ -1,11 +1,13 @@
-use std::any::Any;
-use std::collections::HashMap;
-
+use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
+use super::hint_code::*;
 use super::syscall_request::*;
+use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::{
-    GetBlockTimestampResponse, GetSequencerAddressResponse, GetTxInfoResponse, WriteSyscallResponse,
+    GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
+    GetTxInfoResponse, WriteSyscallResponse,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -19,9 +21,8 @@ use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use num_bigint::BigInt;
-
-use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use super::hint_code::*;
+use std::any::Any;
+use std::collections::HashMap;
 
 //* ---------------------
 //* SyscallHandler Trait
@@ -106,7 +107,9 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<u32, SyscallHandlerError>;
     fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError>;
+
     fn _storage_write(&mut self, address: u32, value: u32);
+
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -122,12 +125,61 @@ pub(crate) trait SyscallHandler {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    fn get_block_info(&self) -> &BlockInfo;
+
+    fn get_block_number(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
+
+        GetBlockNumberResponse::new(self.get_block_info().block_number)
+            .write_syscall_response(vm, syscall_ptr)
+    }
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ***********************************
+    //  Implementation of Default methods
+    // ***********************************
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    fn get_block_timestamp(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request = if let SyscallRequest::GetBlockTimestamp(request) =
+            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        let block_timestamp = self.get_block_info().block_timestamp;
+
+        let response = GetBlockTimestampResponse::new(block_timestamp);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    fn get_caller_address(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let caller_address = self._get_caller_address(vm, syscall_ptr)?;
+        let response = GetCallerAddressResponse::new(caller_address);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
     fn get_sequencer_address(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::GetSequencerAddress(request) =
+        let _request = if let SyscallRequest::GetSequencerAddress(request) =
             self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
         {
             request
@@ -156,31 +208,10 @@ pub(crate) trait SyscallHandler {
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
-    }
-
-    fn get_block_info(&self) -> &BlockInfo;
-
-    fn get_block_timestamp(
-        &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let _request = if let SyscallRequest::GetBlockTimestamp(request) =
-            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
-        };
-
-        let block_timestamp = self.get_block_info().block_timestamp;
-
-        let response = GetBlockTimestampResponse::new(block_timestamp);
-
-        response.write_syscall_response(vm, syscall_ptr)
     }
 }
 
@@ -235,10 +266,34 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
         match &*hint_data.code {
-            DEPLOY_SYSCALL_CODE => Err(SyscallHandlerError::NotImplemented),
+            DEPLOY => Err(SyscallHandlerError::NotImplemented),
             EMIT_EVENT_CODE => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.emit_event(vm, syscall_ptr)
+            }
+            GET_BLOCK_NUMBER => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_block_number(vm, syscall_ptr)
+            }
+            GET_BLOCK_TIMESTAMP => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_block_timestamp(vm, syscall_ptr)
+            }
+            GET_CALLER_ADDRESS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_caller_address(vm, syscall_ptr)
+            }
+            GET_SEQUENCER_ADDRESS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_sequencer_address(vm, syscall_ptr)
+            }
+            LIBRARY_CALL => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.library_call(vm, syscall_ptr)
+            }
+            SEND_MESSAGE_TO_L1 => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
             }
             GET_TX_INFO => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -319,11 +374,21 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
 
-    use crate::{add_segments, bigint, utils::test_utils::vm};
+    use crate::business_logic::execution::objects::{
+        OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+    };
+    use crate::utils::test_utils::ids_data;
+    use crate::utils::{get_big_int, get_integer, get_relocatable};
+    use crate::{
+        add_segments, bigint, core::syscalls::os_syscall_handler::OsSyscallHandler,
+        utils::test_utils::vm,
+    };
+    use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
 
     use super::*;
+    use std::collections::VecDeque;
 
     #[test]
     fn read_send_message_to_l1_request() {
@@ -331,12 +396,10 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
-        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
-        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
-        vm.insert_value(&relocatable!(1, 4), relocatable!(2, 0))
-            .unwrap();
-
+        memory_insert!(
+            vm,
+            [((1, 0), 0), ((1, 1), 1), ((1, 2), 2), ((1, 4), (2, 0))]
+        );
         assert_eq!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
             Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
@@ -354,13 +417,17 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 2);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
-        vm.insert_value(&relocatable!(1, 1), bigint!(1)).unwrap();
-        vm.insert_value(&relocatable!(1, 2), bigint!(2)).unwrap();
-        vm.insert_value(&relocatable!(1, 3), bigint!(3)).unwrap();
-        vm.insert_value(&relocatable!(1, 4), relocatable!(1, 20))
-            .unwrap();
-        vm.insert_value(&relocatable!(1, 5), bigint!(4)).unwrap();
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), 0),
+                ((1, 1), 1),
+                ((1, 2), 2),
+                ((1, 3), 3),
+                ((1, 4), (1, 20)),
+                ((1, 5), 4)
+            ]
+        );
 
         assert_eq!(
             syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
@@ -381,24 +448,33 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 2);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(18)).unwrap();
-        assert!(syscall
-            .get_block_timestamp(&mut vm, relocatable!(1, 0))
-            .is_ok());
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (1, 1)), // syscall_ptr
+                ((1, 1), 18)
+            ]
+        );
 
-        // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,1) position
-        assert!(vm
-            .insert_value(
-                &relocatable!(1, 1),
-                bigint!(syscall.get_block_info().block_timestamp + 10)
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        syscall_handler
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
             )
-            .is_err());
-        assert!(vm
-            .insert_value(
-                &relocatable!(1, 1),
-                bigint!(syscall.get_block_info().block_timestamp)
-            )
-            .is_ok())
+            .unwrap();
+
+        // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,2) position
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            bigint!(syscall.get_block_info().block_timestamp)
+        );
     }
 
     #[test]
@@ -407,23 +483,324 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 2);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(18)).unwrap();
-        assert!(syscall
-            .get_sequencer_address(&mut vm, relocatable!(1, 0))
-            .is_ok());
+        memory_insert!(vm, [((1, 0), (1, 1)), ((1, 1), 18)]);
+
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        syscall_handler
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .unwrap();
 
         // Check that syscall.get_sequencer insert syscall.get_block_info().sequencer_address in the (1,1) position
-        assert!(vm
-            .insert_value(
-                &relocatable!(1, 1),
-                bigint!(syscall.get_block_info().sequencer_address + 10)
+        assert_eq!(get_big_int(&vm, &relocatable!(1, 2)).unwrap(), bigint!(0))
+    }
+
+    #[test]
+    fn emit_event_test() {
+        // create data and variables to execute hint
+
+        let mut vm = vm!();
+        add_segments!(vm, 4);
+
+        // insert keys and data to generate the event
+        // keys ptr points to (3,0)
+        // data ptr points to (3,3)
+
+        // selector of syscall
+        let selector = "1280709301550335749748";
+
+        allocate_selector!(vm, ((2, 0), selector.as_bytes()));
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), // syscall ptr
+                ((2, 1), 2),      // keys len
+                ((2, 2), (3, 0)), // keys ptr
+                ((2, 3), 2),      // data len
+                ((2, 4), (3, 3)), // data ptr
+                ((3, 0), 1),      // keys pointed by key ptr
+                ((3, 1), 1),
+                ((3, 3), 1), // data pointed by data ptr
+                ((3, 4), 1)
+            ]
+        );
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(EMIT_EVENT_CODE.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        syscall_handler
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
             )
-            .is_err());
-        assert!(vm
-            .insert_value(
-                &relocatable!(1, 1),
-                bigint!(syscall.get_block_info().sequencer_address)
+            .unwrap();
+
+        let event = syscall_handler
+            .syscall_handler
+            .events
+            .get(0)
+            .unwrap()
+            .clone();
+
+        assert_eq!(
+            OrderedEvent::new(
+                0,
+                Vec::from([bigint!(1), bigint!(1)]),
+                Vec::from([bigint!(1), bigint!(1)])
+            ),
+            event
+        );
+        assert_eq!(
+            syscall_handler
+                .syscall_handler
+                .tx_execution_context
+                .n_emitted_events,
+            1
+        );
+    }
+
+    #[test]
+    fn get_tx_info_test() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        let tx_execution_context = TransactionExecutionContext {
+            n_emitted_events: 50,
+            version: 51,
+            account_contract_address: bigint!(260),
+            max_fee: bigint!(261),
+            transaction_hash: bigint!(262),
+            signature: vec![bigint!(300), bigint!(301)],
+            nonce: bigint!(263),
+            n_sent_messages: 52,
+        };
+        syscall_handler_hint_processor
+            .syscall_handler
+            .tx_execution_context = tx_execution_context.clone();
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(result, Ok(()));
+
+        // Check VM inserts
+
+        // TransactionExecutionContext.signature
+        assert_eq!(
+            vm.get_integer(&relocatable!(3, 0)).unwrap().into_owned(),
+            tx_execution_context.signature[0]
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(3, 1)).unwrap().into_owned(),
+            tx_execution_context.signature[1]
+        );
+
+        // TxInfoStruct
+        assert_eq!(
+            get_integer(&vm, &relocatable!(4, 0)),
+            Ok(tx_execution_context.version)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 1)),
+            Ok(tx_execution_context.account_contract_address)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 2)),
+            Ok(tx_execution_context.max_fee)
+        );
+        assert_eq!(
+            get_integer(&vm, &relocatable!(4, 3)),
+            Ok(tx_execution_context.signature.len())
+        );
+        assert_eq!(
+            get_relocatable(&vm, &relocatable!(4, 4)),
+            Ok(relocatable!(3, 0))
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 5)),
+            Ok(tx_execution_context.transaction_hash)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 6)),
+            Ok(syscall_handler_hint_processor
+                .syscall_handler
+                .general_config
+                .starknet_os_config
+                .chain_id
+                .to_bigint())
+        );
+
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 7)),
+            Ok(tx_execution_context.nonce)
+        );
+
+        // GetTxInfoResponse
+        assert_eq!(
+            vm.get_relocatable(&relocatable!(2, 1)),
+            Ok(relocatable!(4, 0))
+        );
+    }
+
+    #[test]
+    fn test_get_caller_address_ok() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        // direction (1,0) is the sycall_ptr
+        memory_insert!(vm, [((1, 0), (1, 1)), ((1, 1), 0)]);
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_CALLER_ADDRESS.to_string(), ids_data);
+        // invoke syscall
+        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        hint_processor
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
             )
-            .is_ok())
+            .unwrap();
+
+        // response is written in direction (1,2)
+        assert_eq!(
+            get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
+            hint_processor.syscall_handler.contract_address
+        )
+    }
+
+    #[test]
+    fn test_send_message_to_l1_ok() {
+        let mut vm = vm!();
+
+        add_segments!(vm, 3);
+
+        // parameters are read from memory location (1,1)
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (1, 1)), // syscall_ptr
+                ((1, 1), 0),
+                ((1, 2), 1),
+                ((1, 3), 2),
+                ((1, 5), (2, 0)),
+                ((2, 0), 18),
+                ((2, 1), 12)
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(SEND_MESSAGE_TO_L1.to_string(), ids_data);
+        // invoke syscall
+        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        hint_processor
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .unwrap();
+
+        assert_eq!(
+            hint_processor
+                .syscall_handler
+                .tx_execution_context
+                .n_sent_messages,
+            1
+        );
+        assert_eq!(
+            hint_processor.syscall_handler.l2_to_l1_messages,
+            vec![OrderedL2ToL1Message::new(
+                hint_processor
+                    .syscall_handler
+                    .tx_execution_context
+                    .n_sent_messages
+                    - 1,
+                1,
+                vec![bigint!(18), bigint!(12)],
+            )]
+        );
+    }
+
+    #[test]
+    fn test_get_block_number() {
+        let mut syscall = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+            BlockInfo::default(),
+        );
+        let mut vm = vm!();
+
+        add_segments!(vm, 4);
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), // Syscall pointer.
+                ((2, 0), 0)       // selector
+            ]
+        );
+
+        let mut hint_processor =
+            SyscallHintProcessor::new_empty().expect("Could not create the syscall hint processor");
+
+        let hint_data =
+            HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
+        assert_eq!(
+            hint_processor.execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            ),
+            Ok(()),
+        );
+        assert_eq!(get_integer(&vm, &relocatable!(2, 1)), Ok(0));
     }
 }
