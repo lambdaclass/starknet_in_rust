@@ -13,6 +13,7 @@ pub(crate) enum SyscallRequest {
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
     GetSequencerAddress(GetSequencerAddressRequest),
+    GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
     GetTxSignature(GetTxSignatureRequest),
 }
@@ -91,6 +92,11 @@ pub(crate) struct TxInfoStruct {
     pub(crate) transaction_hash: BigInt,
     pub(crate) chain_id: usize,
     pub(crate) nonce: BigInt,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct GetBlockNumberRequest {
+    pub(crate) _selector: BigInt,
 }
 
 pub(crate) trait FromPtr {
@@ -255,6 +261,7 @@ impl FromPtr for DeployRequestStruct {
         }))
     }
 }
+
 impl FromPtr for SendMessageToL1SysCall {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -323,9 +330,22 @@ impl FromPtr for GetTxSignatureRequest {
     }
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
+impl FromPtr for GetBlockNumberRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
+            _selector,
+        }))
+    }
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  CountFields implementations
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 impl CountFields for GetCallerAddressRequest {
     fn count_fields() -> usize {
@@ -345,6 +365,12 @@ impl CountFields for GetBlockTimestampRequest {
     }
 }
 impl CountFields for GetTxSignatureRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl CountFields for GetBlockNumberRequest {
     fn count_fields() -> usize {
         1
     }
