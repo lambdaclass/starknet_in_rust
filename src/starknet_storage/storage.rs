@@ -98,7 +98,7 @@ pub(crate) trait Storage {
 //* -------------------------
 //*   FactFetching contract
 //* -------------------------
-
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct FactFetchingContext<T> {
     storage: T,
     n_workers: Option<usize>,
