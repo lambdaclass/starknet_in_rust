@@ -2,7 +2,6 @@ use super::{errors::storage_errors::StorageError, storage::Storage};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-
 pub(crate) struct DictStorage {
     storage: HashMap<[u8; 32], Vec<u8>>,
 }
