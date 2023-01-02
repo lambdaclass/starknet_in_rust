@@ -1,5 +1,6 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
 use super::hint_code::*;
+use super::os_syscall_handler::OsSyscallHandler;
 use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::{
@@ -232,6 +233,13 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: BusinessLogicSyscallHandler::new(BlockInfo::default()),
+        })
+    }
+
+    pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
+        Ok(SyscallHintProcessor {
+            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
+            syscall_handler: OsSyscallHandler::default(),
         })
     }
 }
@@ -711,6 +719,46 @@ mod tests {
         assert_eq!(
             vm.get_relocatable(&relocatable!(2, 1)),
             Ok(relocatable!(7, 0))
+        );
+    }
+
+    #[test]
+    fn get_tx_info_for_os_syscall_test() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
+
+        syscall_handler_hint_processor.syscall_handler.tx_info_ptr = Some(relocatable!(18, 12));
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(result, Ok(()));
+
+        // Check VM inserts
+        // GetTxInfoResponse
+        assert_eq!(
+            vm.get_relocatable(&relocatable!(2, 1)),
+            Ok(relocatable!(18, 12))
         );
     }
 

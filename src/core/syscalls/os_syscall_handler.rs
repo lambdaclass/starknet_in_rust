@@ -77,7 +77,7 @@ pub(crate) struct OsSyscallHandler {
     // This pointer needs to match the TxInfo pointer that is going to be used during the system
     // call validation by the StarkNet OS.
     // Set during enter_tx.
-    tx_info_ptr: Option<Relocatable>,
+    pub(crate) tx_info_ptr: Option<Relocatable>,
     // The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
     block_info: BlockInfo,
@@ -249,6 +249,20 @@ impl OsSyscallHandler {
         }
     }
 
+    pub(crate) fn default() -> Self {
+        Self::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+            BlockInfo::default(),
+        )
+    }
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
