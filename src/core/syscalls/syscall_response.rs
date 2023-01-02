@@ -1,7 +1,7 @@
-use super::syscall_request::GetSequencerAddressRequest;
 use super::syscall_request::{
     CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
 };
+use super::syscall_request::{GetContractAddressRequest, GetSequencerAddressRequest};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_bigint::BigInt;
@@ -17,6 +17,10 @@ pub(crate) trait WriteSyscallResponse {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressResponse {
     caller_address: BigInt,
+}
+
+pub(crate) struct GetContractAddressResponse {
+    contract_address: BigInt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -68,6 +72,20 @@ impl WriteSyscallResponse for GetCallerAddressResponse {
         vm.insert_value(
             &(syscall_ptr + GetCallerAddressRequest::count_fields()),
             &self.caller_address,
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetContractAddressResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetContractAddressRequest::count_fields()),
+            &self.contract_address,
         )?;
         Ok(())
     }
