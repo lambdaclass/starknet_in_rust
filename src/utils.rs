@@ -32,10 +32,8 @@ pub fn get_relocatable(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<Relocatable, SyscallHandlerError> {
-    Ok(vm
-        .get_relocatable(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .into_owned())
+    vm.get_relocatable(syscall_ptr)
+        .map_err(|_| SyscallHandlerError::SegmentationFault)
 }
 
 pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
@@ -62,8 +60,6 @@ pub fn get_integer_range(
 //* -------------------
 
 #[macro_export]
-#[macro_use]
-
 macro_rules! bigint_str {
     ($val: expr) => {
         BigInt::parse_bytes($val, 10).unwrap()
@@ -75,7 +71,6 @@ macro_rules! bigint_str {
 pub(crate) use bigint_str;
 
 #[macro_export]
-#[macro_use]
 macro_rules! bigint {
     ($val : expr) => {
         Into::<BigInt>::into($val)
@@ -117,7 +112,7 @@ pub mod test_utils {
         ( $( $name: expr ),* ) => {
             {
                 let ids_names = vec![$( $name ),*];
-                let references = references!(ids_names.len() as i32);
+                let references = $crate::utils::test_utils::references!(ids_names.len() as i32);
                 let mut ids_data = HashMap::<String, cairo_rs::hint_processor::hint_processor_definition::HintReference>::new();
                 for (i, name) in ids_names.iter().enumerate() {
                     ids_data.insert(name.to_string(), references.get(&i).unwrap().clone());
@@ -160,7 +155,7 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! memory_insert {
         ($vm:expr, [ $( (($si:expr, $off:expr), $val:tt) ),* ] ) => {
-            $( allocate_values!($vm, $si, $off, $val); )*
+            $( $crate::allocate_values!($vm, $si, $off, $val); )*
         };
     }
     pub(crate) use memory_insert;
@@ -168,13 +163,13 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_values {
         ($vm: expr, $si:expr, $off:expr, ($sival:expr, $offval:expr)) => {
-            let k = relocatable_value!($si, $off);
-            let v = relocatable_value!($sival, $offval);
+            let k = $crate::relocatable_value!($si, $off);
+            let v = $crate::relocatable_value!($sival, $offval);
             $vm.insert_value(&k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
             let v = bigint!($val);
-            let k = relocatable_value!($si, $off);
+            let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
     }
@@ -183,8 +178,8 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            let v = super::bigint_str!($val);
-            let k = relocatable_value!($si, $off);
+            let v = crate::bigint_str!($val);
+            let k = crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
     }
@@ -228,7 +223,7 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = BuiltinHintProcessor::new_empty();
+            let mut hint_processor = BuiltinHintProcessor::new_empty();
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
@@ -258,7 +253,7 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let hint_processor = SyscallHintProcessor::new_empty().unwrap();
+            let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
@@ -268,4 +263,23 @@ pub mod test_utils {
         }};
     }
     pub(crate) use run_syscall_hint;
+
+    macro_rules! storage_key {
+        ( $key:literal ) => {{
+            assert_eq!($key.len(), 64, "keys must be 64 nibbles in length.");
+            let key: [u8; 32] = $key
+                .as_bytes()
+                .chunks_exact(2)
+                .map(|x| {
+                    u8::from_str_radix(std::str::from_utf8(x).unwrap(), 16)
+                        .expect("Key contains non-hexadecimal characters.")
+                })
+                .collect::<Vec<u8>>()
+                .try_into()
+                .unwrap();
+
+            key
+        }};
+    }
+    pub(crate) use storage_key;
 }

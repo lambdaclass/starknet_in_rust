@@ -13,6 +13,14 @@ pub(crate) enum SyscallRequest {
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
     GetContractAddress(GetContractAddressRequest),
+    GetSequencerAddress(GetSequencerAddressRequest),
+    GetBlockNumber(GetBlockNumberRequest),
+    GetBlockTimestamp(GetBlockTimestampRequest),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetSequencerAddressRequest {
+    _selector: BigInt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -58,6 +66,10 @@ pub(crate) struct LibraryCallStruct {
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
 }
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockTimestampRequest {
+    pub(crate) selector: BigInt,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressRequest {
@@ -68,6 +80,31 @@ pub(crate) struct GetCallerAddressRequest {
 pub(crate) struct GetContractAddressRequest {
     pub(crate) _selector: BigInt,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberRequest {
+    pub(crate) _selector: BigInt,
+}
+
+impl CountFields for GetBlockNumberRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl FromPtr for GetBlockNumberRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
+            _selector,
+        }))
+    }
+}
+
 pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -107,6 +144,17 @@ impl From<LibraryCallStruct> for SyscallRequest {
 impl From<GetCallerAddressRequest> for SyscallRequest {
     fn from(get_caller_address_request: GetCallerAddressRequest) -> SyscallRequest {
         SyscallRequest::GetCallerAddress(get_caller_address_request)
+    }
+}
+
+impl From<GetSequencerAddressRequest> for SyscallRequest {
+    fn from(get_sequencer_address_request: GetSequencerAddressRequest) -> SyscallRequest {
+        SyscallRequest::GetSequencerAddress(get_sequencer_address_request)
+    }
+}
+impl From<GetBlockTimestampRequest> for SyscallRequest {
+    fn from(get_block_timestamp_request: GetBlockTimestampRequest) -> SyscallRequest {
+        SyscallRequest::GetBlockTimestamp(get_block_timestamp_request)
     }
 }
 
@@ -222,6 +270,7 @@ impl FromPtr for DeployRequestStruct {
         }))
     }
 }
+
 impl FromPtr for SendMessageToL1SysCall {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -261,13 +310,48 @@ impl FromPtr for GetContractAddressRequest {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, &syscall_ptr)?;
 
-        Ok(SyscallRequest::GetContractAddress(GetContractAddressRequest {
-            _selector,
-        }))
+        Ok(SyscallRequest::GetContractAddress(
+            GetContractAddressRequest { _selector },
+        ))
     }
 }
 
+impl FromPtr for GetSequencerAddressRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+        Ok(SyscallRequest::GetSequencerAddress(
+            GetSequencerAddressRequest { _selector },
+        ))
+    }
+}
 impl CountFields for GetCallerAddressRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl CountFields for GetSequencerAddressRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl FromPtr for GetBlockTimestampRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, &syscall_ptr)?;
+        Ok(SyscallRequest::GetBlockTimestamp(
+            GetBlockTimestampRequest { selector },
+        ))
+    }
+}
+
+impl CountFields for GetBlockTimestampRequest {
     fn count_fields() -> usize {
         1
     }

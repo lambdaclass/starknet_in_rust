@@ -1,9 +1,10 @@
+use super::syscall_request::GetSequencerAddressRequest;
+use super::syscall_request::{
+    CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
+};
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_bigint::BigInt;
-
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-
-use super::syscall_request::{CountFields, GetCallerAddressRequest};
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -18,8 +19,49 @@ pub(crate) struct GetCallerAddressResponse {
     caller_address: BigInt,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetContractAddressResponse {
     contract_address: BigInt,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetSequencerAddressResponse {
+    sequencer_address: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockTimestampResponse {
+    block_timestamp: u64,
+}
+
+impl GetBlockTimestampResponse {
+    pub(crate) fn new(block_timestamp: u64) -> Self {
+        GetBlockTimestampResponse { block_timestamp }
+    }
+}
+
+impl GetSequencerAddressResponse {
+    pub(crate) fn new(sequencer_address: u64) -> Self {
+        Self { sequencer_address }
+    }
+}
+
+impl GetCallerAddressResponse {
+    pub fn new(caller_addr: u64) -> Self {
+        let caller_address = bigint!(caller_addr);
+        GetCallerAddressResponse { caller_address }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberResponse {
+    block_number: u64,
+}
+
+impl GetBlockNumberResponse {
+    pub(crate) fn new(block_number: u64) -> Self {
+        Self { block_number }
+    }
 }
 
 impl WriteSyscallResponse for GetCallerAddressResponse {
@@ -36,6 +78,48 @@ impl WriteSyscallResponse for GetCallerAddressResponse {
     }
 }
 
+impl WriteSyscallResponse for GetBlockTimestampResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetBlockTimestampRequest::count_fields()),
+            bigint!(self.block_timestamp),
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetSequencerAddressResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
+            bigint!(self.sequencer_address),
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetBlockNumberResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetBlockNumberRequest::count_fields()),
+            bigint!(self.block_number),
+        )?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,13 +131,14 @@ mod tests {
             business_logic_syscall_handler::BusinessLogicSyscallHandler,
             syscall_handler::SyscallHandler,
         },
+        state::state_api_objects::BlockInfo,
         utils::test_utils::vm,
     };
     use num_bigint::{BigInt, Sign};
 
     #[test]
     fn write_get_caller_address_response() {
-        let mut syscall = BusinessLogicSyscallHandler::new();
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);

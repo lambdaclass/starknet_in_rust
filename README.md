@@ -13,7 +13,9 @@ It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust im
 Run the following make targets to have a working environment:
 ```bash
 $ make deps
+$ source starknet-in-rs-venv/bin/activate
 $ make compile_cairo
+$ deactivate
 $ make build
 ```
 
@@ -30,6 +32,12 @@ $ make test
 - [cairo-rs](https://github.com/lambdaclass/cairo-rs): A fast implementation of the Cairo VM in Rust.
 - [cairo-rs-py](https://github.com/lambdaclass/cairo-rs-py): Bindings for using cairo-rs from Python code.
 
+## Documentation
+
+### StarkNet
+- [StarkNet's Architecture Review](https://david-barreto.com/starknets-architecture-review/)
+- [StarkNet State](https://docs.starknet.io/documentation/architecture_and_concepts/State/starknet-state/)
+- [Array Hashing](https://docs.starknet.io/documentation/architecture_and_concepts/Hashing/hash-functions/#array_hashing)
 
 ## License
 

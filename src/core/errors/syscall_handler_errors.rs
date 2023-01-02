@@ -27,6 +27,8 @@ pub enum SyscallHandlerError {
     ExpectedGetCallerAddressRequest,
     #[error("Expected SendMessageToL1")]
     ExpectedSendMessageToL1,
+    #[error("Expected GetBlockTimestampRequest")]
+    ExpectedGetBlockTimestampRequest,
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1, found: {0}")]
     DeployFromZero(usize),
     #[error("Hint not implemented")]
@@ -57,4 +59,6 @@ pub enum SyscallHandlerError {
     VirtualMachineError(#[from] VirtualMachineError),
     #[error("Expected GetContractAddressRequest")]
     ExpectedGetContractAddressRequest,
+    #[error("Expected GetSequencerAddressRequest")]
+    ExpectedGetSequencerAddressRequest,
 }

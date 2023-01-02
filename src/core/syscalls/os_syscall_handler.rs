@@ -1,18 +1,16 @@
-use std::any::Any;
-use std::collections::{HashMap, VecDeque};
-
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-use cairo_rs::vm::vm_core::VirtualMachine;
-use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
-
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::state::state_api_objects::BlockInfo;
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::vm::vm_core::VirtualMachine;
+use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
+use std::any::Any;
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug, Clone, PartialEq)]
-struct CallInfo {
+pub(crate) struct CallInfo {
     caller_address: u64,
     contract_address: u64,
     internal_calls: Vec<CallInfo>,
@@ -42,7 +40,7 @@ enum EntryPointType {
 }
 
 #[derive(Debug)]
-struct OsSingleStarknetStorage;
+pub(crate) struct OsSingleStarknetStorage;
 
 #[derive(Debug, PartialEq)]
 pub struct TransactionExecutionInfo;
@@ -58,7 +56,7 @@ impl OsSingleStarknetStorage {
 }
 
 #[derive(Debug)]
-struct OsSyscallHandler {
+pub(crate) struct OsSyscallHandler {
     tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
     call_iterator: VecDeque<CallInfo>,
 
@@ -82,11 +80,12 @@ struct OsSyscallHandler {
     tx_info_ptr: Option<Relocatable>,
     // The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
+    block_info: BlockInfo,
 }
 
 impl SyscallHandler for OsSyscallHandler {
     fn get_tx_info(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -94,7 +93,7 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn emit_event(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
@@ -114,11 +113,11 @@ impl SyscallHandler for OsSyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        todo!()
+        Ok(())
     }
 
     fn _get_tx_info_ptr(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
     ) -> Result<MaybeRelocatable, SyscallHandlerError> {
         Ok(MaybeRelocatable::from(
@@ -149,12 +148,12 @@ impl SyscallHandler for OsSyscallHandler {
     /// Returns the system call request written in the syscall segment, starting at syscall_ptr.
     /// Does not perform validations on the request, since it was validated in the BL.
     fn _read_and_validate_syscall_request(
-        &self,
+        &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        todo!()
+        self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
 
     fn _call_contract_and_write_response(
@@ -180,7 +179,7 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn _get_caller_address(
-        &self,
+        &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
@@ -191,7 +190,7 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     fn _get_contract_address(
-        &self,
+        &mut self,
         vm: VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
@@ -215,7 +214,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     /// Allocates and returns a new temporary segment.
     fn allocate_segment(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
@@ -225,11 +224,15 @@ impl SyscallHandler for OsSyscallHandler {
             .map_err(|_| SyscallHandlerError::WriteArg)?;
         Ok(segment_start)
     }
+
+    fn get_block_info(&self) -> &BlockInfo {
+        &self.block_info
+    }
 }
 
 impl OsSyscallHandler {
     #[allow(clippy::too_many_arguments)]
-    fn new(
+    pub(crate) fn new(
         tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
@@ -239,6 +242,7 @@ impl OsSyscallHandler {
         starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
+        block_info: BlockInfo,
     ) -> Self {
         Self {
             tx_execution_info_iterator,
@@ -250,6 +254,7 @@ impl OsSyscallHandler {
             starknet_storage_by_address,
             tx_info_ptr,
             tx_execution_info,
+            block_info,
         }
     }
 
@@ -371,8 +376,9 @@ impl OsSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-    use crate::core::syscalls::syscall_handler::SyscallHandler;
-    use crate::utils::test_utils::*;
+    use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
+    use crate::state::state_api_objects::BlockInfo;
+    use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::vm_core::VirtualMachine;
     use num_bigint::{BigInt, Sign};
@@ -380,6 +386,13 @@ mod tests {
     use std::collections::{HashMap, VecDeque};
 
     use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
+    use crate::bigint;
+    use crate::core::syscalls::hint_code::GET_BLOCK_NUMBER;
+    use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::HintProcessorData;
+    use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
+    use cairo_rs::relocatable;
+    use cairo_rs::types::exec_scope::ExecutionScopes;
+    use std::borrow::Cow;
 
     #[test]
     fn get_contract_address() {
@@ -393,7 +406,7 @@ mod tests {
             retadata: VecDeque::new(),
         };
         call_stack.push_back(call_info);
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             call_stack,
@@ -406,6 +419,7 @@ mod tests {
                 offset: 0,
             }),
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -419,7 +433,7 @@ mod tests {
 
     #[test]
     fn get_contract_address_err() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -432,6 +446,7 @@ mod tests {
                 offset: 0,
             }),
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -457,6 +472,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.end_tx(), Err(SyscallHandlerError::IteratorNotEmpty))
@@ -477,6 +493,7 @@ mod tests {
             HashMap::new(),
             tx_info_ptr,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -499,6 +516,7 @@ mod tests {
             HashMap::new(),
             None,
             Some(TransactionExecutionInfo),
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -521,6 +539,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.end_tx(), Ok(()))
@@ -543,6 +562,7 @@ mod tests {
             HashMap::new(),
             tx_info_ptr,
             None,
+            BlockInfo::default(),
         );
 
         let reloc = Relocatable {
@@ -572,6 +592,7 @@ mod tests {
             HashMap::new(),
             None,
             tx_execution_info,
+            BlockInfo::default(),
         );
 
         let reloc = Relocatable {
@@ -599,6 +620,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let reloc = Relocatable {
@@ -623,6 +645,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.skip_tx(), Some(TransactionExecutionInfo));
@@ -631,7 +654,7 @@ mod tests {
 
     #[test]
     fn get_tx_info_ptr_reloc() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -644,6 +667,7 @@ mod tests {
                 offset: 0,
             }),
             None,
+            BlockInfo::default(),
         );
 
         let mut vm = vm!();
@@ -658,7 +682,7 @@ mod tests {
 
     #[test]
     fn get_tx_info_ptr_none() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -668,6 +692,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let mut vm = vm!();
@@ -693,6 +718,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -701,8 +727,8 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
-        assert_eq!(handler._call_contract("", &vm, ptr.clone()), Ok(Vec::new()));
+        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
+        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
         assert_eq!(
             handler._call_contract("", &vm, ptr),
             Err(SyscallHandlerError::IteratorEmpty)
@@ -725,6 +751,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -752,6 +779,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
         let vm = vm!();
         let ptr = Relocatable {
@@ -776,6 +804,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
         let vm = vm!();
         let ptr = Relocatable {
@@ -804,6 +833,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let addr = 0;
@@ -829,13 +859,14 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let addr = 0;
         let val = 0;
 
-        assert_eq!(handler._storage_write(addr, val), ());
-        assert_eq!(handler._storage_write(addr, val), ())
+        handler._storage_write(addr, val);
+        handler._storage_write(addr, val);
     }
 
     #[test]
@@ -852,6 +883,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -874,6 +906,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -896,6 +929,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -916,6 +950,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.assert_iterators_exhausted(), Ok(()))
@@ -923,7 +958,7 @@ mod tests {
 
     #[test]
     fn get_caller_address_err() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -933,6 +968,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let vm = vm!();
@@ -950,7 +986,7 @@ mod tests {
     fn get_caller_address() {
         let mut call_stack = VecDeque::new();
         call_stack.push_back(CallInfo::default());
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             call_stack,
@@ -960,6 +996,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
         let vm = vm!();
         let ptr = Relocatable {
@@ -986,6 +1023,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.exit_call(), Ok(Some(CallInfo::default())))
@@ -1003,6 +1041,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(
@@ -1026,6 +1065,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         assert_eq!(handler.enter_call(), Ok(()))
@@ -1034,7 +1074,7 @@ mod tests {
     #[test]
     fn allocate_segment() {
         let mut vm = vm!();
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -1044,6 +1084,7 @@ mod tests {
             HashMap::new(),
             None,
             None,
+            BlockInfo::default(),
         );
 
         let data = vec![

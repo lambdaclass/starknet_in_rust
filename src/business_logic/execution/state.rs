@@ -4,6 +4,14 @@ use std::collections::HashMap;
 pub struct ExecutionResourcesManager(HashMap<String, u64>);
 
 impl ExecutionResourcesManager {
+    pub fn new(syscalls: Vec<String>) -> Self {
+        let mut manager = HashMap::new();
+        for syscall in syscalls {
+            manager.insert(syscall, 0);
+        }
+        ExecutionResourcesManager(manager)
+    }
+
     pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) -> Option<()> {
         self.0.get_mut(syscall_name).map(|val| *val += amount)
     }
