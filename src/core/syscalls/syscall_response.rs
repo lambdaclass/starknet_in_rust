@@ -1,7 +1,7 @@
-use super::syscall_request::{GetSequencerAddressRequest, GetContractAddressRequest};
 use super::syscall_request::{
     CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
 };
+use super::syscall_request::{GetContractAddressRequest, GetSequencerAddressRequest};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_bigint::BigInt;

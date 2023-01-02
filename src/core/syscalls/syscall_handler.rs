@@ -739,34 +739,34 @@ mod tests {
         assert_eq!(get_integer(&vm, &relocatable!(2, 1)), Ok(0));
     }
 
-        #[test]
-        fn test_get_contract_address_ok() {
-            let mut vm = vm!();
+    #[test]
+    fn test_get_contract_address_ok() {
+        let mut vm = vm!();
 
-            add_segments!(vm, 2);
+        add_segments!(vm, 2);
 
-            // direction (1,0) is the sycall_ptr
-            memory_insert!(vm, [((1, 0), (1, 1)), ((1, 1), 0)]);
+        // direction (1,0) is the sycall_ptr
+        memory_insert!(vm, [((1, 0), (1, 1)), ((1, 1), 0)]);
 
-            // syscall_ptr
-            let ids_data = ids_data!["syscall_ptr"];
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
 
-            let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
-            // invoke syscall
-            let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
-            hint_processor
-                .execute_hint(
-                    &mut vm,
-                    &mut ExecutionScopes::new(),
-                    &any_box!(hint_data),
-                    &HashMap::new(),
-                )
-                .unwrap();
+        let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
+        // invoke syscall
+        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        hint_processor
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .unwrap();
 
-            // response is written in direction (1,2)
-            assert_eq!(
-                get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
-                hint_processor.syscall_handler.contract_address
-            ) 
-        }
+        // response is written in direction (1,2)
+        assert_eq!(
+            get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
+            hint_processor.syscall_handler.contract_address
+        )
+    }
 }
