@@ -287,13 +287,15 @@ impl Default for BusinessLogicSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::bigint;
-    use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
+    use crate::business_logic::execution::objects::{
+        OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+    };
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::{DEPLOY_SYSCALL_CODE, EMIT_EVENT_CODE, GET_TX_INFO};
     use crate::core::syscalls::syscall_handler::*;
     use crate::state::state_api_objects::BlockInfo;
-    use crate::utils::test_utils::*;
+    use crate::utils::{get_big_int, get_integer, get_relocatable, test_utils::*};
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,
     };
@@ -433,11 +435,19 @@ mod tests {
         // invoke syscall
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
 
-        let signature = vec![bigint!(18), bigint!(12)];
+        let tx_execution_context = TransactionExecutionContext {
+            n_emitted_events: 50,
+            version: 51,
+            account_contract_address: bigint!(260),
+            max_fee: bigint!(261),
+            transaction_hash: bigint!(262),
+            signature: vec![bigint!(300), bigint!(301)],
+            nonce: bigint!(263),
+            n_sent_messages: 52,
+        };
         syscall_handler_hint_processor
             .syscall_handler
-            .tx_execution_context
-            .signature = signature.clone();
+            .tx_execution_context = tx_execution_context.clone();
 
         let result = syscall_handler_hint_processor.execute_hint(
             &mut vm,
@@ -448,22 +458,63 @@ mod tests {
 
         assert_eq!(result, Ok(()));
 
+        // Check VM inserts
+
+        // TransactionExecutionContext.signature
+        assert_eq!(
+            vm.get_integer(&relocatable!(3, 0)).unwrap().into_owned(),
+            tx_execution_context.signature[0]
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(3, 1)).unwrap().into_owned(),
+            tx_execution_context.signature[1]
+        );
+
+        // TxInfoStruct
+        assert_eq!(
+            get_integer(&vm, &relocatable!(4, 0)),
+            Ok(tx_execution_context.version)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 1)),
+            Ok(tx_execution_context.account_contract_address)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 2)),
+            Ok(tx_execution_context.max_fee)
+        );
+        assert_eq!(
+            get_integer(&vm, &relocatable!(4, 3)),
+            Ok(tx_execution_context.signature.len())
+        );
+        assert_eq!(
+            get_relocatable(&vm, &relocatable!(4, 4)),
+            Ok(relocatable!(3, 0))
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 5)),
+            Ok(tx_execution_context.transaction_hash)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 6)),
+            Ok(syscall_handler_hint_processor
+                .syscall_handler
+                .general_config
+                .starknet_os_config
+                .chain_id
+                .to_bigint())
+        );
+
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 7)),
+            Ok(tx_execution_context.nonce)
+        );
+
+        // GetTxInfoResponse
         assert_eq!(
             vm.get_relocatable(&relocatable!(2, 1)),
             Ok(relocatable!(4, 0))
         );
-        assert_eq!(
-            vm.get_integer(&relocatable!(3, 0)).unwrap().into_owned(),
-            signature[0]
-        );
-        assert_eq!(
-            vm.get_integer(&relocatable!(3, 1)).unwrap().into_owned(),
-            signature[1]
-        );
-
-        // TODO
-        // Check _get_tx_info_ptr TxInfoStruct inserts in (4,0) segment
-        // ADD a test with OsSyscallHandler
     }
 
     fn deploy_from_zero_error() {
