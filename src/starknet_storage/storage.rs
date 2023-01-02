@@ -99,12 +99,12 @@ pub(crate) trait Storage {
 //*   FactFetching contract
 //* -------------------------
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct FactFetchingContext<T> {
+pub(crate) struct FactFetchingContext<T: Storage> {
     storage: T,
     n_workers: Option<usize>,
 }
 
-impl<T> FactFetchingContext<T> {
+impl<T: Storage> FactFetchingContext<T> {
     pub fn new(storage: T, n_workers: Option<usize>) -> Self {
         FactFetchingContext { storage, n_workers }
     }
