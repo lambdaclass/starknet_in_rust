@@ -2,6 +2,7 @@ use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
 use super::hint_code::*;
 use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
+use super::syscall_response::GetContractAddressResponse;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
     WriteSyscallResponse,
@@ -53,14 +54,6 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
-    fn get_contract_address(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        todo!()
-    }
-
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
@@ -100,7 +93,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<u64, SyscallHandlerError>;
     fn _get_contract_address(
         &mut self,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError>;
     fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError>;
@@ -166,6 +159,16 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         let caller_address = self._get_caller_address(vm, syscall_ptr)?;
         let response = GetCallerAddressResponse::new(caller_address);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    fn get_contract_address(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let contract_address = self._get_contract_address(vm, syscall_ptr)?;
+        let response = GetContractAddressResponse::new(contract_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
 
@@ -290,6 +293,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             SEND_MESSAGE_TO_L1 => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
+            }
+            GET_CONTRACT_ADDRESS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_contract_address(vm, syscall_ptr)
             }
             _ => Err(SyscallHandlerError::NotImplemented),
         }
@@ -605,7 +612,6 @@ mod tests {
 
     #[test]
     fn test_get_caller_address_ok() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -631,7 +637,7 @@ mod tests {
         // response is written in direction (1,2)
         assert_eq!(
             get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
-            hint_processor.syscall_handler.contract_address
+            hint_processor.syscall_handler.caller_address
         )
     }
 
@@ -732,4 +738,35 @@ mod tests {
         );
         assert_eq!(get_integer(&vm, &relocatable!(2, 1)), Ok(0));
     }
+
+        #[test]
+        fn test_get_contract_address_ok() {
+            let mut vm = vm!();
+
+            add_segments!(vm, 2);
+
+            // direction (1,0) is the sycall_ptr
+            memory_insert!(vm, [((1, 0), (1, 1)), ((1, 1), 0)]);
+
+            // syscall_ptr
+            let ids_data = ids_data!["syscall_ptr"];
+
+            let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
+            // invoke syscall
+            let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+            hint_processor
+                .execute_hint(
+                    &mut vm,
+                    &mut ExecutionScopes::new(),
+                    &any_box!(hint_data),
+                    &HashMap::new(),
+                )
+                .unwrap();
+
+            // response is written in direction (1,2)
+            assert_eq!(
+                get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
+                hint_processor.syscall_handler.contract_address
+            ) 
+        }
 }

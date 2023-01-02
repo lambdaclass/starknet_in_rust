@@ -191,7 +191,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn _get_contract_address(
         &mut self,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
         match self.call_stack.front() {
@@ -427,7 +427,7 @@ mod tests {
             segment_index: 0,
             offset: 0,
         };
-        let get_contract_address = handler._get_contract_address(vm, reloc);
+        let get_contract_address = handler._get_contract_address(&vm, reloc);
         assert_eq!(get_contract_address, Ok(5))
     }
 
@@ -454,7 +454,7 @@ mod tests {
             segment_index: 0,
             offset: 0,
         };
-        let get_contract_address = handler._get_contract_address(vm, reloc).unwrap_err();
+        let get_contract_address = handler._get_contract_address(&vm, reloc).unwrap_err();
         assert_eq!(get_contract_address, SyscallHandlerError::ListIsEmpty)
     }
 

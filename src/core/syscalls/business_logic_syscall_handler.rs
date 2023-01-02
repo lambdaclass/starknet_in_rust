@@ -48,7 +48,7 @@ impl BusinessLogicSyscallHandler {
         let tx_execution_context = TransactionExecutionContext::new();
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls);
-        let contract_address = 0;
+        let contract_address = 1;
         let caller_address = 0;
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::new();
@@ -202,15 +202,15 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
         };
 
-        Ok(self.contract_address)
+        Ok(self.caller_address)
     }
     fn _get_contract_address(
         &mut self,
-        vm: VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError> {
         if let SyscallRequest::GetContractAddress(request) =
-            self._read_and_validate_syscall_request("get_contract_address", &vm, syscall_ptr)?
+            self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)?
         {
             request
         } else {
@@ -465,7 +465,7 @@ mod tests {
         vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
 
         assert_eq!(
-            syscall._get_contract_address(vm, relocatable!(1, 0)),
+            syscall._get_contract_address(&vm, relocatable!(1, 0)),
             Ok(syscall.contract_address)
         )
     }
