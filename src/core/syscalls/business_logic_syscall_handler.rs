@@ -137,18 +137,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             tx.signature.iter().map(|num| num.into()).collect();
         let signature = self.allocate_segment(vm, signature_data)?;
 
-        let chain_id = self.general_config.starknet_os_config.chain_id.to_bigint();
-
-        let tx_info = TxInfoStruct {
-            version: tx.version,
-            account_contract_address: tx.account_contract_address,
-            max_fee: tx.max_fee,
-            transaction_hash: tx.transaction_hash,
-            nonce: tx.nonce,
+        let tx_info = TxInfoStruct::new(
+            tx,
             signature,
-            signature_len: tx.signature.len(),
-            chain_id,
-        };
+            self.general_config.starknet_os_config.chain_id,
+        );
 
         let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
 

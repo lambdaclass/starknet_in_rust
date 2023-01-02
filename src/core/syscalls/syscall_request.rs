@@ -1,5 +1,7 @@
 use crate::bigint;
+use crate::business_logic::execution::objects::TransactionExecutionContext;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::definitions::general_config::StarknetChainId;
 use crate::utils::{get_big_int, get_integer, get_relocatable};
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
@@ -175,6 +177,22 @@ pub(crate) struct TxInfoStruct {
 }
 
 impl TxInfoStruct {
+    pub(crate) fn new(
+        tx: TransactionExecutionContext,
+        signature: Relocatable,
+        chain_id: StarknetChainId,
+    ) -> TxInfoStruct {
+        TxInfoStruct {
+            version: tx.version,
+            account_contract_address: tx.account_contract_address,
+            max_fee: tx.max_fee,
+            signature_len: tx.signature.len(),
+            signature,
+            transaction_hash: tx.transaction_hash,
+            chain_id: chain_id.to_bigint(),
+            nonce: tx.nonce,
+        }
+    }
     pub(crate) fn to_vec(&self) -> Vec<MaybeRelocatable> {
         vec![
             MaybeRelocatable::from(bigint!(self.version)),
