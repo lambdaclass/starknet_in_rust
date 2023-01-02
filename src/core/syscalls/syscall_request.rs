@@ -15,6 +15,7 @@ pub(crate) enum SyscallRequest {
     SendMessageToL1(SendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
+    GetContractAddress(GetContractAddressRequest),
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
@@ -84,14 +85,13 @@ pub(crate) struct GetTxInfoRequest {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetBlockNumberRequest {
+pub(crate) struct GetContractAddressRequest {
     pub(crate) _selector: BigInt,
 }
 
-impl CountFields for GetBlockNumberRequest {
-    fn count_fields() -> usize {
-        1
-    }
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberRequest {
+    pub(crate) _selector: BigInt,
 }
 
 impl FromPtr for GetBlockNumberRequest {
@@ -112,11 +112,6 @@ pub(crate) trait FromPtr {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
-}
-
-pub(crate) trait CountFields {
-    /// Returns the amount of fields of a struct
-    fn count_fields() -> usize;
 }
 
 impl From<EmitEventStruct> for SyscallRequest {
@@ -319,6 +314,19 @@ impl FromPtr for GetCallerAddressRequest {
     }
 }
 
+impl FromPtr for GetContractAddressRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetContractAddress(
+            GetContractAddressRequest { _selector },
+        ))
+    }
+}
+
 impl FromPtr for GetSequencerAddressRequest {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -328,17 +336,6 @@ impl FromPtr for GetSequencerAddressRequest {
         Ok(SyscallRequest::GetSequencerAddress(
             GetSequencerAddressRequest { _selector },
         ))
-    }
-}
-impl CountFields for GetCallerAddressRequest {
-    fn count_fields() -> usize {
-        1
-    }
-}
-
-impl CountFields for GetSequencerAddressRequest {
-    fn count_fields() -> usize {
-        1
     }
 }
 
@@ -354,7 +351,36 @@ impl FromPtr for GetBlockTimestampRequest {
     }
 }
 
+pub(crate) trait CountFields {
+    /// Returns the amount of fields of a struct
+    fn count_fields() -> usize;
+}
+
+impl CountFields for GetCallerAddressRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl CountFields for GetSequencerAddressRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
 impl CountFields for GetBlockTimestampRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl CountFields for GetBlockNumberRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl CountFields for GetContractAddressRequest {
     fn count_fields() -> usize {
         1
     }
