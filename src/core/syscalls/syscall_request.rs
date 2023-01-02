@@ -183,50 +183,6 @@ impl FromPtr for EmitEventStruct {
     }
 }
 
-#[allow(unused)] // TODO: Remove once used.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct TxInfoStruct {
-    pub(crate) version: usize,
-    pub(crate) account_contract_address: BigInt,
-    pub(crate) max_fee: BigInt,
-    pub(crate) signature_len: usize,
-    pub(crate) signature: Relocatable,
-    pub(crate) transaction_hash: BigInt,
-    pub(crate) chain_id: BigInt,
-    pub(crate) nonce: BigInt,
-}
-
-impl TxInfoStruct {
-    pub(crate) fn new(
-        tx: TransactionExecutionContext,
-        signature: Relocatable,
-        chain_id: StarknetChainId,
-    ) -> TxInfoStruct {
-        TxInfoStruct {
-            version: tx.version,
-            account_contract_address: tx.account_contract_address,
-            max_fee: tx.max_fee,
-            signature_len: tx.signature.len(),
-            signature,
-            transaction_hash: tx.transaction_hash,
-            chain_id: chain_id.to_bigint(),
-            nonce: tx.nonce,
-        }
-    }
-    pub(crate) fn to_vec(&self) -> Vec<MaybeRelocatable> {
-        vec![
-            MaybeRelocatable::from(bigint!(self.version)),
-            MaybeRelocatable::from(&self.account_contract_address),
-            MaybeRelocatable::from(&self.max_fee),
-            MaybeRelocatable::from(bigint!(self.signature_len)),
-            MaybeRelocatable::from(&self.signature),
-            MaybeRelocatable::from(&self.transaction_hash),
-            MaybeRelocatable::from(&self.chain_id),
-            MaybeRelocatable::from(&self.nonce),
-        ]
-    }
-}
-
 impl FromPtr for GetTxInfoRequest {
     fn from_ptr(
         vm: &VirtualMachine,
