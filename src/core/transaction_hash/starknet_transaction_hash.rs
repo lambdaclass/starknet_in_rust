@@ -27,6 +27,7 @@ impl TransactionHashPrefix {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: u64,
@@ -53,7 +54,7 @@ pub fn calculate_transaction_hash_common(
     let calldata_hash = compute_hash_on_elements(calldata)?;
 
     let mut data_to_hash: Vec<BigInt> = vec![
-        tx_hash_prefix.get_prefix() ,
+        tx_hash_prefix.get_prefix(),
         bigint!(version),
         bigint!(contract_address),
         bigint!(entry_point_selector),
@@ -64,7 +65,7 @@ pub fn calculate_transaction_hash_common(
 
     data_to_hash.extend(additional_data.iter().map(|n| bigint!(*n)));
 
-    Ok(compute_hash_on_elements(&data_to_hash)?)
+    compute_hash_on_elements(&data_to_hash)
 }
 
 pub fn calculate_deploy_transaction_hash(
@@ -88,6 +89,7 @@ pub fn calculate_deploy_transaction_hash(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
     version: u64,
     contract_address: u64,
@@ -109,7 +111,7 @@ pub fn calculate_deploy_account_transaction_hash(
         &calldata,
         max_fee,
         chain_id,
-        &vec![nonce],
+        &[nonce],
     )
 }
 
