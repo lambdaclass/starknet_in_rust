@@ -11,12 +11,12 @@ use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CallInfo {
-    caller_address: u32,
-    contract_address: u32,
+    caller_address: u64,
+    contract_address: u64,
     internal_calls: Vec<CallInfo>,
     entry_point_type: Option<EntryPointType>,
-    _storage_read_values: VecDeque<u32>, // U32
-    retadata: VecDeque<u32>,
+    _storage_read_values: VecDeque<u64>, // u64
+    retadata: VecDeque<u64>,
 }
 
 impl Default for CallInfo {
@@ -49,7 +49,7 @@ impl OsSingleStarknetStorage {
     // Writes the given value in the given key in ongoing_storage_changes and returns the
     // previous value. This value is needed to create the DictAccess while executing the
     // corresponding storage_write system call.
-    fn write(&self, _key: u32, _value: u32) -> u32 {
+    fn write(&self, _key: u64, _value: u64) -> u64 {
         // TO BE IMPLEMENTED
         todo!()
     }
@@ -65,33 +65,25 @@ pub(crate) struct OsSyscallHandler {
     // state of the caller (the call the called the current call); and so on.
     call_stack: VecDeque<CallInfo>,
     // An iterator over contract addresses that were deployed during that call.
-    deployed_contracts_iterator: VecDeque<u32>, // U32
+    deployed_contracts_iterator: VecDeque<u64>, // u64
     // An iterator to the retdata of its internal calls.
-    retdata_iterator: VecDeque<VecDeque<u32>>, //VEC<U32>
+    retdata_iterator: VecDeque<VecDeque<u64>>, //VEC<u64>
     // An iterator to the read_values array which is consumed when the transaction
     // code is executed.
-    execute_code_read_iterator: VecDeque<u32>, //u32
+    execute_code_read_iterator: VecDeque<u64>, //u64
     // StarkNet storage members.
-    starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
+    starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
     // A pointer to the Cairo TxInfo struct.
     // This pointer needs to match the TxInfo pointer that is going to be used during the system
     // call validation by the StarkNet OS.
     // Set during enter_tx.
-    tx_info_ptr: Option<Relocatable>,
+    pub(crate) tx_info_ptr: Option<Relocatable>,
     // The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
     block_info: BlockInfo,
 }
 
 impl SyscallHandler for OsSyscallHandler {
-    fn get_tx_info(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        todo!()
-    }
-
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -119,19 +111,18 @@ impl SyscallHandler for OsSyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
-        Ok(MaybeRelocatable::from(
-            self.tx_info_ptr
-                .as_ref()
-                .ok_or(SyscallHandlerError::TxInfoPtrIsNone)?,
-        ))
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        Ok(*self
+            .tx_info_ptr
+            .as_ref()
+            .ok_or(SyscallHandlerError::TxInfoPtrIsNone)?)
     }
 
     fn _deploy(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         let constructor_retdata = self
             .retdata_iterator
             .pop_front()
@@ -170,7 +161,7 @@ impl SyscallHandler for OsSyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<u32>, SyscallHandlerError> {
+    ) -> Result<Vec<u64>, SyscallHandlerError> {
         Ok(self
             .retdata_iterator
             .pop_front()
@@ -185,22 +176,22 @@ impl SyscallHandler for OsSyscallHandler {
     ) -> Result<u64, SyscallHandlerError> {
         match self.call_stack.back() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info.caller_address.into()),
+            Some(call_info) => Ok(call_info.caller_address),
         }
     }
 
     fn _get_contract_address(
-        &self,
-        vm: VirtualMachine,
+        &mut self,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         match self.call_stack.front() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
             Some(call_info) => Ok(call_info.contract_address),
         }
     }
 
-    fn _storage_read(&mut self, address: u32) -> Result<u32, SyscallHandlerError> {
+    fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError> {
         self.execute_code_read_iterator
             .pop_front()
             .ok_or(SyscallHandlerError::IteratorEmpty)
@@ -208,7 +199,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     // Advance execute_code_read_iterators since the previous storage value is written
     // in each write operation. See BusinessLogicSysCallHandler._storage_write().
-    fn _storage_write(&mut self, address: u32, value: u32) {
+    fn _storage_write(&mut self, address: u64, value: u64) {
         self.execute_code_read_iterator.pop_front();
     }
 
@@ -236,10 +227,10 @@ impl OsSyscallHandler {
         tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
-        deployed_contracts_iterator: VecDeque<u32>,
-        retdata_iterator: VecDeque<VecDeque<u32>>,
-        execute_code_read_iterator: VecDeque<u32>,
-        starknet_storage_by_address: HashMap<u32, OsSingleStarknetStorage>,
+        deployed_contracts_iterator: VecDeque<u64>,
+        retdata_iterator: VecDeque<VecDeque<u64>>,
+        execute_code_read_iterator: VecDeque<u64>,
+        starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
         block_info: BlockInfo,
@@ -258,6 +249,20 @@ impl OsSyscallHandler {
         }
     }
 
+    pub(crate) fn default() -> Self {
+        Self::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+            BlockInfo::default(),
+        )
+    }
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
@@ -332,10 +337,10 @@ impl OsSyscallHandler {
     /// the write operation.
     fn execute_syscall_storage_write(
         &self,
-        contract_address: &u32,
-        key: u32,
-        value: u32,
-    ) -> Result<u32, SyscallHandlerError> {
+        contract_address: &u64,
+        key: u64,
+        value: u64,
+    ) -> Result<u64, SyscallHandlerError> {
         Ok(self
             .starknet_storage_by_address
             .get(contract_address)
@@ -359,13 +364,13 @@ impl OsSyscallHandler {
                 call_info_internal.entry_point_type == Some(EntryPointType::Constructor)
             })
             .map(|call_info_internal| call_info_internal.contract_address)
-            .collect::<VecDeque<u32>>();
+            .collect::<VecDeque<u64>>();
 
         self.retdata_iterator = call_info
             .internal_calls
             .iter()
             .map(|call_info_internal| call_info_internal.retadata.clone())
-            .collect::<VecDeque<VecDeque<u32>>>();
+            .collect::<VecDeque<VecDeque<u64>>>();
 
         self.execute_code_read_iterator = call_info._storage_read_values;
 
@@ -406,7 +411,7 @@ mod tests {
             retadata: VecDeque::new(),
         };
         call_stack.push_back(call_info);
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             call_stack,
@@ -427,13 +432,13 @@ mod tests {
             segment_index: 0,
             offset: 0,
         };
-        let get_contract_address = handler._get_contract_address(vm, reloc);
+        let get_contract_address = handler._get_contract_address(&vm, reloc);
         assert_eq!(get_contract_address, Ok(5))
     }
 
     #[test]
     fn get_contract_address_err() {
-        let handler = OsSyscallHandler::new(
+        let mut handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
             VecDeque::new(),
@@ -454,7 +459,7 @@ mod tests {
             segment_index: 0,
             offset: 0,
         };
-        let get_contract_address = handler._get_contract_address(vm, reloc).unwrap_err();
+        let get_contract_address = handler._get_contract_address(&vm, reloc).unwrap_err();
         assert_eq!(get_contract_address, SyscallHandlerError::ListIsEmpty)
     }
 
@@ -673,10 +678,10 @@ mod tests {
         let mut vm = vm!();
         assert_eq!(
             handler._get_tx_info_ptr(&mut vm),
-            Ok(MaybeRelocatable::from(Relocatable {
+            Ok(Relocatable {
                 segment_index: 0,
                 offset: 0,
-            }))
+            })
         )
     }
 

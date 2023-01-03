@@ -498,6 +498,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d01a5bd0424d00070b0098dd17ebca6f961a959dead1dbcbbbc1d1cd8d3deeba"
 
 [[package]]
+name = "patricia-tree"
+version = "0.1.0"
+source = "git+https://github.com/lambdaclass/patricia-tree#9437e2f8c253a85724db467dc0b047cc45fe632c"
+
+[[package]]
 name = "pest"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -767,6 +772,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
+ "patricia-tree",
  "serde_json",
  "starknet-crypto",
  "thiserror",

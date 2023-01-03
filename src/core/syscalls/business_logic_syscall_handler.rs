@@ -24,6 +24,7 @@ pub struct BusinessLogicSyscallHandler {
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) resources_manager: ExecutionResourcesManager,
     pub(crate) contract_address: u64,
+    pub(crate) caller_address: u64,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
@@ -39,6 +40,7 @@ impl BusinessLogicSyscallHandler {
             "send_message_to_l1".to_string(),
             "library_call".to_string(),
             "get_caller_address".to_string(),
+            "get_contract_address".to_string(),
             "get_sequencer_address".to_string(),
             "get_block_timestamp".to_string(),
         ]);
@@ -46,7 +48,8 @@ impl BusinessLogicSyscallHandler {
         let tx_execution_context = TransactionExecutionContext::new();
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls);
-        let contract_address = 0;
+        let contract_address = 1;
+        let caller_address = 0;
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::new();
         let tx_info_ptr = None;
@@ -57,6 +60,7 @@ impl BusinessLogicSyscallHandler {
             read_only_segments,
             resources_manager,
             contract_address,
+            caller_address,
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
@@ -95,7 +99,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         _syscall_name: &str,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
-    ) -> Result<Vec<u32>, SyscallHandlerError> {
+    ) -> Result<Vec<u64>, SyscallHandlerError> {
         todo!()
     }
 
@@ -115,7 +119,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
+    ) -> Result<u64, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -198,28 +202,22 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
         };
 
-        Ok(self.contract_address)
+        Ok(self.caller_address)
     }
     fn _get_contract_address(
-        &self,
-        _vm: VirtualMachine,
-        _syscall_ptr: Relocatable,
-    ) -> Result<u32, SyscallHandlerError> {
-        todo!()
-    }
-
-    fn get_tx_info(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let _request =
-            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
-                SyscallRequest::GetTxInfo(request) => request,
-                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
-            };
+    ) -> Result<u64, SyscallHandlerError> {
+        if let SyscallRequest::GetContractAddress(request) =
+            self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetContractAddressRequest);
+        };
 
-        Err(SyscallHandlerError::NotImplemented)
+        Ok(self.contract_address)
     }
 
     fn send_message_to_l1(
@@ -251,47 +249,27 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
+    ) -> Result<Relocatable, SyscallHandlerError> {
         if let Some(ptr) = &self.tx_info_ptr {
-            Ok(ptr.clone())
-        } else {
-            let tx = self.tx_execution_context.clone();
-
-            let version = tx.version;
-            let account_contract_address = tx.account_contract_address.clone();
-            let max_fee = tx.max_fee.clone();
-            let transaction_hash = tx.transaction_hash.clone();
-            let nonce = tx.nonce.clone();
-            let signature = vm.add_memory_segment();
-            let signature = vm
-                .write_arg(&signature, &tx.signature)
-                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
-            let signature = signature.get_relocatable()?;
-            let signature_len = signature.offset;
-
-            let chain_id = self.general_config.starknet_os_config.chain_id as usize;
-
-            let tx_info = TxInfoStruct {
-                version,
-                account_contract_address,
-                max_fee,
-                transaction_hash,
-                nonce,
-                signature,
-                signature_len,
-                chain_id,
-            };
-
-            let segment = vm.add_memory_segment();
-
-            let tx_info_ptr_temp = vm
-                .write_arg(&segment, &tx_info)
-                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
-
-            self.tx_info_ptr = Some(tx_info_ptr_temp.clone());
-
-            Ok(tx_info_ptr_temp)
+            return Ok(ptr.get_relocatable()?);
         }
+        let tx = self.tx_execution_context.clone();
+
+        let signature_data: Vec<MaybeRelocatable> =
+            tx.signature.iter().map(|num| num.into()).collect();
+        let signature = self.allocate_segment(vm, signature_data)?;
+
+        let tx_info = TxInfoStruct::new(
+            tx,
+            signature,
+            self.general_config.starknet_os_config.chain_id,
+        );
+
+        let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
+
+        self.tx_info_ptr = Some(tx_info_ptr_temp.into());
+
+        Ok(tx_info_ptr_temp)
     }
 
     fn library_call(
@@ -303,10 +281,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: u32) -> Result<u32, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: u64) -> Result<u64, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&mut self, _address: u32, _value: u32) {
+    fn _storage_write(&mut self, _address: u64, _value: u64) {
         todo!()
     }
 
@@ -330,7 +308,9 @@ impl Default for BusinessLogicSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::bigint;
-    use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
+    use crate::business_logic::execution::objects::{
+        OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+    };
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::*;
@@ -441,5 +421,20 @@ mod tests {
             vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
             Ok(bigint!(0)),
         );
+    }
+
+    #[test]
+    fn test_get_contract_address_ok() {
+        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+
+        assert_eq!(
+            syscall._get_contract_address(&vm, relocatable!(1, 0)),
+            Ok(syscall.contract_address)
+        )
     }
 }

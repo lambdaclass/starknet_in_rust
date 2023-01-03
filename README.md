@@ -36,6 +36,8 @@ $ make test
 
 ### StarkNet
 - [StarkNet's Architecture Review](https://david-barreto.com/starknets-architecture-review/)
+- [StarkNet State](https://docs.starknet.io/documentation/architecture_and_concepts/State/starknet-state/)
+- [Array Hashing](https://docs.starknet.io/documentation/architecture_and_concepts/Hashing/hash-functions/#array_hashing)
 
 ## License
 

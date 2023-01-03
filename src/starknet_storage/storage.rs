@@ -94,3 +94,35 @@ pub(crate) trait Storage {
         Ok(String::from(str))
     }
 }
+
+//* -------------------------
+//*   FactFetching contract
+//* -------------------------
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct FactFetchingContext<T: Storage> {
+    storage: T,
+    n_workers: Option<usize>,
+}
+
+impl<T: Storage> FactFetchingContext<T> {
+    pub fn new(storage: T, n_workers: Option<usize>) -> Self {
+        FactFetchingContext { storage, n_workers }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key};
+
+    use super::*;
+
+    #[test]
+    fn new_ffc() {
+        let mut ffc = FactFetchingContext::new(DictStorage::new(), Some(2));
+
+        let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        ffc.storage.set_float(&fkey, 4.0);
+
+        assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0)
+    }
+}

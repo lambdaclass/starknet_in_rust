@@ -1,6 +1,6 @@
 use super::syscall_request::{
     CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
-    GetSequencerAddressRequest, GetTxSignatureRequest,
+    GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
@@ -20,6 +20,11 @@ pub(crate) struct GetCallerAddressResponse {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetContractAddressResponse {
+    contract_address: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetSequencerAddressResponse {
     sequencer_address: u64,
 }
@@ -32,6 +37,16 @@ pub(crate) struct GetBlockTimestampResponse {
 pub(crate) struct GetTxSignatureResponse {
     signature_len: usize,
     signature: Relocatable,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetTxInfoResponse {
+    tx_info: Relocatable,
+}
+
+impl GetTxInfoResponse {
+    pub fn new(tx_info: Relocatable) -> Self {
+        GetTxInfoResponse { tx_info }
+    }
 }
 
 impl GetBlockTimestampResponse {
@@ -61,6 +76,12 @@ impl GetTxSignatureResponse {
         }
     }
 }
+impl GetContractAddressResponse {
+    pub fn new(contract_address: u64) -> Self {
+        GetContractAddressResponse { contract_address }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockNumberResponse {
     block_number: u64,
@@ -127,6 +148,20 @@ impl WriteSyscallResponse for GetBlockNumberResponse {
         Ok(())
     }
 }
+
+impl WriteSyscallResponse for GetContractAddressResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetContractAddressRequest::count_fields()),
+            bigint!(self.contract_address),
+        )?;
+        Ok(())
+    }
+}
 impl WriteSyscallResponse for GetTxSignatureResponse {
     fn write_syscall_response(
         &self,
@@ -144,6 +179,21 @@ impl WriteSyscallResponse for GetTxSignatureResponse {
         Ok(())
     }
 }
+
+impl WriteSyscallResponse for GetTxInfoResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetTxInfoRequest::count_fields()),
+            self.tx_info,
+        )?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
