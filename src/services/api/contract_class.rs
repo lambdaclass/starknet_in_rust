@@ -21,6 +21,7 @@ pub(crate) struct ContractEntryPoint {
     pub(crate) offset: BigInt,
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct ContractClass {
     pub(crate) program: Program,
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,

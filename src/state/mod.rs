@@ -7,8 +7,9 @@ use num_bigint::BigInt;
 
 use crate::services::api::contract_class::ContractClass;
 
-use state_api::SyncStateReader;
 use state_api_objects::BlockInfo;
+
+use self::state_api::StateReader;
 
 /// (contract_address, key)
 pub(crate) type StorageEntry = (BigInt, [u8; 32]);
@@ -53,17 +54,17 @@ impl StateCache {
     }
 }
 
-pub(crate) struct CachedSyncState {
+pub(crate) struct CachedState<T: StateReader> {
     block_info: BlockInfo,
-    pub(crate) state_reader: SyncStateReader,
+    pub(crate) state_reader: T,
     pub(crate) cache: StateCache,
     contract_classes: Option<ContractClassCache>,
 }
 
-impl CachedSyncState {
+impl<T: StateReader> CachedState<T> {
     pub(crate) fn new(
         block_info: BlockInfo,
-        state_reader: SyncStateReader,
+        state_reader: T,
         contract_class_cache: ContractClassCache,
     ) -> Self {
         Self {
