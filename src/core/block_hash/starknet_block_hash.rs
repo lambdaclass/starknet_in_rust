@@ -10,6 +10,13 @@ use num_bigint::{BigInt, Sign};
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::iter::zip;
 
+// --------------------------------------------------------------
+// TODO:
+//  * calculate_block_hash
+//  * calculate_patricia_root
+//  there is missing structures yet to implement this functions
+// -------------------------------------------------------------
+
 pub fn calculate_tx_hashes_with_signatures(
     tx_hashes: Vec<BigInt>,
     tx_signatures: Vec<Vec<BigInt>>,
