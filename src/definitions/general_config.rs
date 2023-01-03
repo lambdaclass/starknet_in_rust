@@ -43,7 +43,20 @@ pub(crate) struct StarknetGeneralConfig {
 }
 
 impl StarknetGeneralConfig {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(
+        starknet_os_config: StarknetOsConfig,
+        contract_storage_commitment_tree_height: u64,
+        global_state_commitment_tree_height: u64,
+        sequencer_address: u64,
+    ) -> Self {
+        Self {
+            starknet_os_config,
+            contract_storage_commitment_tree_height,
+            global_state_commitment_tree_height,
+            sequencer_address,
+        }
+    }
+    pub(crate) fn default() -> Self {
         Self {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
