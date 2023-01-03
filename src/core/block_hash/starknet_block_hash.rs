@@ -1,5 +1,3 @@
-use std::iter::zip;
-
 use crate::{
     core::{
         errors::syscall_handler_errors::SyscallHandlerError,
@@ -10,6 +8,7 @@ use crate::{
 };
 use num_bigint::{BigInt, Sign};
 use starknet_crypto::{pedersen_hash, FieldElement};
+use std::iter::zip;
 
 pub fn calculate_tx_hashes_with_signatures(
     tx_hashes: Vec<BigInt>,
@@ -53,4 +52,42 @@ pub fn calculate_event_hash(
     let key_hash = compute_hash_on_elements(&keys)?;
     let data_hash = compute_hash_on_elements(&data)?;
     compute_hash_on_elements(&[from_address, key_hash, data_hash])
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        bigint, starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key,
+    };
+
+    use super::*;
+
+    #[test]
+    fn calculate_event_hash_test() {
+        let from_address = bigint!(1);
+        let keys = vec![bigint!(300), bigint!(301)];
+        let data = vec![bigint!(302), bigint!(303)];
+
+        assert!(calculate_event_hash(from_address, keys, data).is_ok());
+    }
+
+    #[test]
+    fn calculate_single_tx_hash_test() {
+        let tx_hash = bigint!(21325412);
+        let signatures = vec![bigint!(300), bigint!(301)];
+
+        assert!(calculate_single_tx_hash_with_signature(tx_hash, signatures).is_ok());
+    }
+
+    #[test]
+    fn calculate_tx_hashes_with_signatures_test() {
+        let tx_hash = vec![bigint!(21325412), bigint!(21322), bigint!(212)];
+        let signatures = vec![
+            vec![bigint!(300), bigint!(301)],
+            vec![bigint!(30), bigint!(32)],
+            vec![bigint!(500), bigint!(400)],
+        ];
+
+        assert!(calculate_tx_hashes_with_signatures(tx_hash, signatures).is_ok());
+    }
 }
