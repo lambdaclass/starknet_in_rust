@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
 
 use super::syscall_request::*;
@@ -28,6 +29,7 @@ pub struct BusinessLogicSyscallHandler {
     read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     resources_manager: ExecutionResourcesManager,
     contract_address: u64,
+    caller_address: u64,
     l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     general_config: StarknetGeneralConfig,
     tx_info_ptr: Option<MaybeRelocatable>,
@@ -41,6 +43,7 @@ impl BusinessLogicSyscallHandler {
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::default();
         let contract_address = 0;
+        let caller_address = 1;
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::new();
         let tx_info_ptr = None;
@@ -51,6 +54,7 @@ impl BusinessLogicSyscallHandler {
             read_only_segments,
             resources_manager,
             contract_address,
+            caller_address,
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
@@ -90,20 +94,6 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn get_tx_info(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let _request =
-            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
-                SyscallRequest::GetTxInfo(request) => request,
-                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
-            };
-
-        Err(SyscallHandlerError::NotImplemented)
-    }
-
     fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
@@ -129,9 +119,23 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.tx_execution_context.n_sent_messages += 1;
         Ok(())
     }
-    fn library_call(
+
+    fn get_tx_info(
         &mut self,
         vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                SyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        Err(SyscallHandlerError::NotImplemented)
+    }
+    fn library_call(
+        &mut self,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._call_contract_and_write_response("library_call", vm, syscall_ptr);
@@ -240,25 +244,97 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.read_syscall_request(syscall_name, vm, syscall_ptr)
     }
 
-    fn _call_contract_and_write_response(
+    fn _call_contract(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
-        // TODO: Should we build a response struct to pass to _write_syscall_response?
-        // self._write_syscall_response(response_data, vm, syscall_ptr);
-        todo!()
-    }
-
-    fn _call_contract(
-        &mut self,
-        _syscall_name: &str,
-        _vm: &VirtualMachine,
-        _syscall_ptr: Relocatable,
     ) -> Result<Vec<u32>, SyscallHandlerError> {
-        todo!()
+        // Parse request and prepare the call.
+        let request = match self
+            ._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)
+            .unwrap()
+        {
+            SyscallRequest::CallContract(request) => request,
+            _ => return Err(SyscallHandlerError::ExpectedCallContract),
+        };
+
+        let mut calldata = Vec::new();
+
+        // TODO review this.
+        for maybe_reloc_option in vm
+            .get_range(
+                &MaybeRelocatable::from(&request.calldata),
+                request.calldata_size,
+            )
+            .unwrap()
+        {
+            match maybe_reloc_option {
+                None => return Err(SyscallHandlerError::ExpectedMaybeRelocatable),
+                Some(maybe_reloc_cow) => match maybe_reloc_cow.deref() {
+                    MaybeRelocatable::Int(int) => calldata.push(int.clone()),
+                    _ => return Err(SyscallHandlerError::ExpectedMaybeRelocatableInt),
+                },
+            }
+        }
+
+        let mut code_address = None; // Optional[int]
+        let mut class_hash = None; // Optional[bytes]
+
+        match syscall_name {
+            "call_contract" => {
+                code_address = Some(request.contract_address);
+                let contract_address = code_address;
+                let caller_address = self.contract_address;
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Call;
+            }
+            "delegate_call" => {
+                code_address = Some(request.contract_address);
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Delegate;
+            }
+            "delegate_l1_handler" => {
+                code_address = Some(request.contract_address);
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::L1Handler;
+                let call_type = CallType::Delegate;
+            }
+            "library_call" => {
+                class_hash = Some(request.class_hash.to_be_bytes());
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Delegate;
+            }
+            "library_call_l1_handler" => {
+                class_hash = Some(request.class_hash.to_be_bytes());
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::L1Handler;
+                let call_type = CallType::Delegate;
+            }
+            _ => return Err(SyscallHandlerError::UnknownSyscall), // TODO add some message to this error.
+        }
+
+        // let call = self.execute_entry_point(
+        //     call_type,
+        //     class_hash,
+        //     contract_address,
+        //     code_address,
+        //     request.selector,
+        //     entry_point_type,
+        //     calldata,
+        //     caller_address,
+        // )
+
+        // return self.execute_entry_point(call=call)
+
+        // TODO, remove this once used the commented code.
+        Ok(Vec::new())
     }
     fn _get_caller_address(
         &mut self,

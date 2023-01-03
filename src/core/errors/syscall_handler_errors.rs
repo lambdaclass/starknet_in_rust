@@ -59,4 +59,10 @@ pub enum SyscallHandlerError {
     VirtualMachineError(#[from] VirtualMachineError),
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
+    #[error("Expected CallContractRequest")]
+    ExpectedCallContract,
+    #[error("Expected MaybeRelocatable")]
+    ExpectedMaybeRelocatable,
+    #[error("Expected MaybeRelocatable::Int")]
+    ExpectedMaybeRelocatableInt,
 }

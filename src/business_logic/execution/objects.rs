@@ -1,6 +1,17 @@
 use num_bigint::BigInt;
 use num_traits::Zero;
 
+pub(crate) enum CallType {
+    Call,
+    Delegate,
+}
+
+pub(crate) enum EntryPointType {
+    External,
+    L1Handler,
+    Constructor,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedEvent {
     #[allow(unused)] // TODO: remove once used

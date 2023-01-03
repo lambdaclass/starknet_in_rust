@@ -14,6 +14,16 @@ pub(crate) enum SyscallRequest {
     GetCallerAddress(GetCallerAddressRequest),
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    CallContract(CallContractRequest),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractRequest {
+    pub(crate) selector: BigInt,
+    pub(crate) calldata: BigInt,
+    pub(crate) calldata_size: usize,
+    pub(crate) contract_address: u64,
+    pub(crate) class_hash: u64,
 }
 
 #[derive(Clone, Debug, PartialEq)]

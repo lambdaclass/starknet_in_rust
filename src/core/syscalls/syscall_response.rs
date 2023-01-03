@@ -18,7 +18,7 @@ pub(crate) trait WriteSyscallResponse {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallContractResponse {
     retdata_size: usize,
-    retdata: Relocatable
+    retdata: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -38,7 +38,10 @@ pub(crate) struct GetBlockTimestampResponse {
 
 impl CallContractResponse {
     pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
-        Self { retdata_size, retdata }
+        Self {
+            retdata_size,
+            retdata,
+        }
     }
 }
 
@@ -74,7 +77,6 @@ impl WriteSyscallResponse for CallContractResponse {
         Ok(())
     }
 }
-
 
 impl WriteSyscallResponse for GetCallerAddressResponse {
     fn write_syscall_response(
