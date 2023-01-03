@@ -4,7 +4,11 @@ use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
 use starknet_crypto::{pedersen_hash, FieldElement};
 
-use crate::{bigint, core::errors::syscall_handler_errors::SyscallHandlerError};
+use crate::{
+    bigint,
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    utils::{bigint_to_felt, felt_to_bigint},
+};
 
 pub fn calculate_contract_address_from_hash(
     salt: &BigInt,
@@ -30,13 +34,10 @@ pub fn calculate_contract_address_from_hash(
     Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
+pub(crate) fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
     let mut felt_vec = vec
         .iter()
-        .map(|num| {
-            FieldElement::from_dec_str(&num.to_str_radix(10))
-                .map_err(|_| SyscallHandlerError::FailToComputeHash)
-        })
+        .map(|num| bigint_to_felt(&num))
         .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
     felt_vec.push(FieldElement::from(felt_vec.len()));
     felt_vec.insert(0, FieldElement::from(0_u16));
@@ -44,7 +45,7 @@ fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerErro
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
         .ok_or(SyscallHandlerError::FailToComputeHash)?;
-    let result = BigInt::from_bytes_be(Sign::Plus, &felt_result.to_bytes_be());
+    let result = felt_to_bigint(Sign::Plus, &felt_result);
     Ok(result)
 }
 
