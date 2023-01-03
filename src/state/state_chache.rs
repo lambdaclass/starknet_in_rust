@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use num_bigint::BigInt;
 
+use crate::core::errors::state_errors::StateError;
 use crate::services::api::contract_class::ContractClass;
 
 use super::state_api_objects::BlockInfo;
@@ -72,12 +73,12 @@ impl<T: StateReader> CachedState<T> {
     pub(crate) fn new(
         block_info: BlockInfo,
         state_reader: T,
-        contract_class_cache: ContractClassCache,
+        contract_class_cache: Option<ContractClassCache>,
     ) -> Self {
         Self {
             block_info,
             cache: StateCache::default(),
-            contract_classes: None,
+            contract_classes: contract_class_cache,
             state_reader,
         }
     }
@@ -86,19 +87,25 @@ impl<T: StateReader> CachedState<T> {
         &self.block_info
     }
 
-    pub(crate) fn contract_classes(&self) -> &ContractClassCache {
+    pub(crate) fn contract_classes(&self) -> Result<&ContractClassCache, StateError> {
         self.contract_classes
             .as_ref()
-            .expect("contract_classes is not initialized")
+            .ok_or(StateError::MissingContractClassCache)
     }
 
     pub(crate) fn update_block_info(&mut self, block_info: BlockInfo) {
         self.block_info = block_info;
     }
 
-    pub(crate) fn set_contract_class_cache(&mut self, contract_classes: ContractClassCache) {
-        // TODO: assert self._contract_classes is None, "contract_classes mapping is already initialized."
+    pub(crate) fn set_contract_class_cache(
+        &mut self,
+        contract_classes: ContractClassCache,
+    ) -> Result<(), StateError> {
+        if self.contract_classes.is_some() {
+            return Err(StateError::AssignedContractClassCache);
+        }
         self.contract_classes = Some(contract_classes);
+        Ok(())
     }
 
     pub(crate) fn get_contract_class(&self, class_hash: &[u8]) -> ContractClass {
