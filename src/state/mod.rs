@@ -18,39 +18,49 @@ pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct StateCache {
-    class_hash_initial_values: HashMap<BigInt, Vec<u8>>,
-    nonce_initial_values: HashMap<BigInt, BigInt>,
-    storage_initial_values: HashMap<StorageEntry, i32>,
+    //class_hash_initial_values: HashMap<BigInt, Vec<u8>>,
+    //nonce_initial_values: HashMap<BigInt, BigInt>,
+    //storage_initial_values: HashMap<StorageEntry, i32>,
     class_hash_writes: HashMap<BigInt, Vec<u8>>,
     nonce_writes: HashMap<BigInt, BigInt>,
     storage_writes: HashMap<StorageEntry, BigInt>,
 }
 
 impl StateCache {
-    pub(crate) fn update_writes_from_other(&self, other: &str) {
-        todo!()
+    pub(crate) fn update_writes_from_other(&mut self, other: &Self) {
+        self.class_hash_writes
+            .extend(other.class_hash_writes.clone());
+        self.nonce_writes.extend(other.nonce_writes.clone());
+        self.storage_writes.extend(other.storage_writes.clone());
     }
 
     pub(crate) fn update_writes(
-        &self,
-        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
-        address_to_nonce: &HashMap<BigInt, BigInt>,
-        storage_updates: &HashMap<StorageEntry, i32>,
+        &mut self,
+        address_to_class_hash: HashMap<BigInt, Vec<u8>>,
+        address_to_nonce: HashMap<BigInt, BigInt>,
+        storage_updates: HashMap<StorageEntry, BigInt>,
     ) {
-        todo!()
+        self.class_hash_writes.extend(address_to_class_hash);
+        self.nonce_writes.extend(address_to_nonce);
+        self.storage_writes.extend(storage_updates);
     }
 
+    #[inline]
     pub(crate) fn set_initial_values(
-        &self,
-        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
-        address_to_nonce: &HashMap<BigInt, BigInt>,
-        storage_updates: &HashMap<StorageEntry, i32>,
+        &mut self,
+        address_to_class_hash: HashMap<BigInt, Vec<u8>>,
+        address_to_nonce: HashMap<BigInt, BigInt>,
+        storage_updates: HashMap<StorageEntry, BigInt>,
     ) {
-        todo!()
+        self.update_writes(address_to_class_hash, address_to_nonce, storage_updates)
     }
 
     pub(crate) fn get_accessed_contract_addresses(&self) -> HashSet<BigInt> {
-        todo!()
+        let mut set: HashSet<BigInt> = HashSet::with_capacity(self.class_hash_writes.len());
+        set.extend(self.class_hash_writes.keys().cloned());
+        set.extend(self.nonce_writes.keys().cloned());
+        set.extend(self.storage_writes.keys().map(|x| x.0.clone()));
+        set
     }
 }
 
