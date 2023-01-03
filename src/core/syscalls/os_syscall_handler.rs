@@ -77,21 +77,13 @@ pub(crate) struct OsSyscallHandler {
     // This pointer needs to match the TxInfo pointer that is going to be used during the system
     // call validation by the StarkNet OS.
     // Set during enter_tx.
-    tx_info_ptr: Option<Relocatable>,
+    pub(crate) tx_info_ptr: Option<Relocatable>,
     // The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
     block_info: BlockInfo,
 }
 
 impl SyscallHandler for OsSyscallHandler {
-    fn get_tx_info(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        todo!()
-    }
-
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -119,12 +111,11 @@ impl SyscallHandler for OsSyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
-        Ok(MaybeRelocatable::from(
-            self.tx_info_ptr
-                .as_ref()
-                .ok_or(SyscallHandlerError::TxInfoPtrIsNone)?,
-        ))
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        Ok(*self
+            .tx_info_ptr
+            .as_ref()
+            .ok_or(SyscallHandlerError::TxInfoPtrIsNone)?)
     }
 
     fn _deploy(
@@ -258,6 +249,20 @@ impl OsSyscallHandler {
         }
     }
 
+    pub(crate) fn default() -> Self {
+        Self::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            HashMap::new(),
+            None,
+            None,
+            BlockInfo::default(),
+        )
+    }
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
@@ -673,10 +678,10 @@ mod tests {
         let mut vm = vm!();
         assert_eq!(
             handler._get_tx_info_ptr(&mut vm),
-            Ok(MaybeRelocatable::from(Relocatable {
+            Ok(Relocatable {
                 segment_index: 0,
                 offset: 0,
-            }))
+            })
         )
     }
 

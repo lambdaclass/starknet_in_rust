@@ -220,20 +220,6 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(self.contract_address)
     }
 
-    fn get_tx_info(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let _request =
-            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
-                SyscallRequest::GetTxInfo(request) => request,
-                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
-            };
-
-        Err(SyscallHandlerError::NotImplemented)
-    }
-
     fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
@@ -263,47 +249,27 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError> {
+    ) -> Result<Relocatable, SyscallHandlerError> {
         if let Some(ptr) = &self.tx_info_ptr {
-            Ok(ptr.clone())
-        } else {
-            let tx = self.tx_execution_context.clone();
-
-            let version = tx.version;
-            let account_contract_address = tx.account_contract_address.clone();
-            let max_fee = tx.max_fee.clone();
-            let transaction_hash = tx.transaction_hash.clone();
-            let nonce = tx.nonce.clone();
-            let signature = vm.add_memory_segment();
-            let signature = vm
-                .write_arg(&signature, &tx.signature)
-                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
-            let signature = signature.get_relocatable()?;
-            let signature_len = signature.offset;
-
-            let chain_id = self.general_config.starknet_os_config.chain_id as usize;
-
-            let tx_info = TxInfoStruct {
-                version,
-                account_contract_address,
-                max_fee,
-                transaction_hash,
-                nonce,
-                signature,
-                signature_len,
-                chain_id,
-            };
-
-            let segment = vm.add_memory_segment();
-
-            let tx_info_ptr_temp = vm
-                .write_arg(&segment, &tx_info)
-                .map_err(|x| SyscallHandlerError::VirtualMachineError(x.into()))?;
-
-            self.tx_info_ptr = Some(tx_info_ptr_temp.clone());
-
-            Ok(tx_info_ptr_temp)
+            return Ok(ptr.get_relocatable()?);
         }
+        let tx = self.tx_execution_context.clone();
+
+        let signature_data: Vec<MaybeRelocatable> =
+            tx.signature.iter().map(|num| num.into()).collect();
+        let signature = self.allocate_segment(vm, signature_data)?;
+
+        let tx_info = TxInfoStruct::new(
+            tx,
+            signature,
+            self.general_config.starknet_os_config.chain_id,
+        );
+
+        let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
+
+        self.tx_info_ptr = Some(tx_info_ptr_temp.into());
+
+        Ok(tx_info_ptr_temp)
     }
 
     fn library_call(
@@ -342,7 +308,9 @@ impl Default for BusinessLogicSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::bigint;
-    use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
+    use crate::business_logic::execution::objects::{
+        OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+    };
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::*;

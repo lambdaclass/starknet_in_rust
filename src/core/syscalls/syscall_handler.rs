@@ -1,11 +1,12 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
 use super::hint_code::*;
+use super::os_syscall_handler::OsSyscallHandler;
 use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::GetContractAddressResponse;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
-    WriteSyscallResponse,
+    GetTxInfoResponse, WriteSyscallResponse,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
@@ -44,9 +45,20 @@ pub(crate) trait SyscallHandler {
 
     fn get_tx_info(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                SyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        let tx_info = self._get_tx_info_ptr(vm)?;
+
+        let response = GetTxInfoResponse::new(tx_info);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 
     fn library_call(
         &mut self,
@@ -57,7 +69,7 @@ pub(crate) trait SyscallHandler {
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
-    ) -> Result<MaybeRelocatable, SyscallHandlerError>;
+    ) -> Result<Relocatable, SyscallHandlerError>;
 
     fn _deploy(
         &mut self,
@@ -200,7 +212,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
-            "get_tx_info" => TxInfoStruct::from_ptr(vm, syscall_ptr),
+            "get_tx_info" => GetTxInfoRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
@@ -231,6 +243,13 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: BusinessLogicSyscallHandler::new(BlockInfo::default()),
+        })
+    }
+
+    pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
+        Ok(SyscallHintProcessor {
+            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
+            syscall_handler: OsSyscallHandler::default(),
         })
     }
 }
@@ -293,6 +312,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             SEND_MESSAGE_TO_L1 => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
+            }
+            GET_TX_INFO => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_tx_info(vm, syscall_ptr)
             }
             GET_CONTRACT_ADDRESS => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -373,7 +396,9 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
 
-    use crate::business_logic::execution::objects::{OrderedEvent, OrderedL2ToL1Message};
+    use crate::business_logic::execution::objects::{
+        OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+    };
     use crate::utils::test_utils::ids_data;
     use crate::utils::{get_big_int, get_integer, get_relocatable};
     use crate::{
@@ -569,7 +594,7 @@ mod tests {
     }
 
     #[test]
-    fn get_tx_info_test() {
+    fn get_tx_info_for_business_logic_test() {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -578,14 +603,7 @@ mod tests {
             vm,
             [
                 ((1, 0), (2, 0)), //  syscall_ptr
-                ((2, 0), 1),      //  version
-                ((2, 1), 1),      //  account_contract_address
-                ((2, 2), 2),      //  max_fee
-                ((2, 3), 1),      //  signature_len
-                ((2, 4), (3, 0)), //  signature
-                ((2, 5), 1),      //  transaction_hash
-                ((2, 6), 1),      //  chain_id
-                ((2, 7), 1)       //  nonce
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
             ]
         );
 
@@ -594,20 +612,168 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
         // invoke syscall
-        let mut hint_procesor = SyscallHintProcessor::new_empty().unwrap();
-        let err = hint_procesor.execute_hint(
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        let tx_execution_context = TransactionExecutionContext {
+            n_emitted_events: 50,
+            version: 51,
+            account_contract_address: bigint!(260),
+            max_fee: 261,
+            transaction_hash: bigint!(262),
+            signature: vec![bigint!(300), bigint!(301)],
+            nonce: bigint!(263),
+            n_sent_messages: 52,
+        };
+        syscall_handler_hint_processor
+            .syscall_handler
+            .tx_execution_context = tx_execution_context.clone();
+
+        let result = syscall_handler_hint_processor.execute_hint(
             &mut vm,
             &mut ExecutionScopes::new(),
             &any_box!(hint_data),
             &HashMap::new(),
         );
 
+        assert_eq!(result, Ok(()));
+
+        // Check VM inserts
+
+        // TransactionExecutionContext.signature
         assert_eq!(
-            err,
-            Err(VirtualMachineError::UnknownHint(
-                "Hint not implemented".to_string()
-            ))
-        )
+            vm.get_integer(&relocatable!(3, 0)).unwrap().into_owned(),
+            tx_execution_context.signature[0]
+        );
+        assert_eq!(
+            vm.get_integer(&relocatable!(3, 1)).unwrap().into_owned(),
+            tx_execution_context.signature[1]
+        );
+
+        // TxInfoStruct
+        assert_eq!(
+            get_integer(&vm, &relocatable!(4, 0)),
+            Ok(tx_execution_context.version)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 1)),
+            Ok(tx_execution_context.account_contract_address)
+        );
+        assert_eq!(
+            get_integer(&vm, &relocatable!(4, 2)),
+            Ok(tx_execution_context.max_fee as usize)
+        );
+        assert_eq!(
+            get_integer(&vm, &relocatable!(4, 3)),
+            Ok(tx_execution_context.signature.len())
+        );
+        assert_eq!(
+            get_relocatable(&vm, &relocatable!(4, 4)),
+            Ok(relocatable!(3, 0))
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 5)),
+            Ok(tx_execution_context.transaction_hash)
+        );
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 6)),
+            Ok(syscall_handler_hint_processor
+                .syscall_handler
+                .general_config
+                .starknet_os_config
+                .chain_id
+                .to_bigint())
+        );
+
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(4, 7)),
+            Ok(tx_execution_context.nonce)
+        );
+
+        // GetTxInfoResponse
+        assert_eq!(
+            vm.get_relocatable(&relocatable!(2, 1)),
+            Ok(relocatable!(4, 0))
+        );
+    }
+
+    #[test]
+    fn get_tx_info_for_business_logic_with_tx_info_ptr() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        syscall_handler_hint_processor.syscall_handler.tx_info_ptr =
+            Some(relocatable!(7, 0).into());
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(result, Ok(()));
+
+        // GetTxInfoResponse
+        assert_eq!(
+            vm.get_relocatable(&relocatable!(2, 1)),
+            Ok(relocatable!(7, 0))
+        );
+    }
+
+    #[test]
+    fn get_tx_info_for_os_syscall_test() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
+
+        syscall_handler_hint_processor.syscall_handler.tx_info_ptr = Some(relocatable!(18, 12));
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(result, Ok(()));
+
+        // Check VM inserts
+        // GetTxInfoResponse
+        assert_eq!(
+            vm.get_relocatable(&relocatable!(2, 1)),
+            Ok(relocatable!(18, 12))
+        );
     }
 
     #[test]
