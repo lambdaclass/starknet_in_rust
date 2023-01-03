@@ -4,6 +4,7 @@ use crate::{
 };
 use num_bigint::BigInt;
 
+#[derive(Debug)]
 pub enum TransactionHashPrefix {
     Declare,
     Deploy,
@@ -128,6 +129,7 @@ mod tests {
         let chain_id = 1;
         let additional_data: Vec<u64> = Vec::new();
 
+        // Expected value taken from Python implementation of calculate_transaction_hash_common function
         let expected = bigint_str!(
             b"2401716064129505935860131145275652294383308751137512921151718435935971973354"
         );
