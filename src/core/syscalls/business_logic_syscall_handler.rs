@@ -51,7 +51,7 @@ impl BusinessLogicSyscallHandler {
         let contract_address = 1;
         let caller_address = 0;
         let l2_to_l1_messages = Vec::new();
-        let general_config = StarknetGeneralConfig::new();
+        let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
 
         BusinessLogicSyscallHandler {
