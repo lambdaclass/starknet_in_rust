@@ -2,6 +2,7 @@ use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::services::api::contract_class::EntryPointType;
 use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
@@ -30,13 +31,6 @@ impl Default for CallInfo {
             retadata: VecDeque::new(),
         }
     }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-enum EntryPointType {
-    External,
-    L1Handler,
-    Constructor,
 }
 
 #[derive(Debug)]
