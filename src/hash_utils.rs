@@ -37,14 +37,20 @@ pub fn calculate_contract_address_from_hash(
 pub(crate) fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
     let mut felt_vec = vec
         .iter()
-        .map(|num| bigint_to_felt(&num))
+        .map(|num| {
+            FieldElement::from_dec_str(&num.to_str_radix(10))
+                .map_err(|_| SyscallHandlerError::FailToComputeHash)
+        })
         .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
+
     felt_vec.push(FieldElement::from(felt_vec.len()));
     felt_vec.insert(0, FieldElement::from(0_u16));
+
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
         .ok_or(SyscallHandlerError::FailToComputeHash)?;
+
     let result = felt_to_bigint(Sign::Plus, &felt_result);
     Ok(result)
 }
