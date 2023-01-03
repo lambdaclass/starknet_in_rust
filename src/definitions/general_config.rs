@@ -37,6 +37,9 @@ pub(crate) struct StarknetOsConfig {
 #[derive(Debug, Clone)]
 pub(crate) struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
+    contract_storage_commitment_tree_height: u64,
+    global_state_commitment_tree_height: u64,
+    sequencer_address: u64,
 }
 
 impl StarknetGeneralConfig {
@@ -46,6 +49,9 @@ impl StarknetGeneralConfig {
                 chain_id: StarknetChainId::TestNet,
                 fee_token_address: BigInt::zero(),
             },
+            contract_storage_commitment_tree_height: 0,
+            global_state_commitment_tree_height: 0,
+            sequencer_address: 0,
         }
     }
 }
