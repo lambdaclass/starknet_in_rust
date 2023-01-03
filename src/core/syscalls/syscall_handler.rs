@@ -122,7 +122,6 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
-        println!("asdsadasd");
         GetBlockNumberResponse::new(self.get_block_info().block_number)
             .write_syscall_response(vm, syscall_ptr)
     }
@@ -160,7 +159,7 @@ pub(crate) trait SyscallHandler {
                 SyscallRequest::GetTxSignature(request) => request,
                 _ => return Err(SyscallHandlerError::ExpectedTxStruct),
             };
-            
+
         let tx_info_pr = self._get_tx_info_ptr(vm)?;
         let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
         let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
@@ -244,6 +243,7 @@ pub(crate) trait SyscallHandler {
             "get_contract_address" => GetContractAddressRequest::from_ptr(vm, syscall_ptr),
             "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
@@ -436,6 +436,7 @@ mod tests {
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
+    use num_traits::ToPrimitive;
 
     use super::*;
     use std::collections::VecDeque;
@@ -962,5 +963,58 @@ mod tests {
             get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
             hint_processor.syscall_handler.contract_address
         )
+    }
+
+    #[test]
+    fn test_gt_tx_signature() {
+        let mut vm = vm!();
+
+        add_segments!(vm, 3);
+
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        let tx_execution_context = TransactionExecutionContext {
+            n_emitted_events: 50,
+            version: 51,
+            account_contract_address: bigint!(260),
+            max_fee: 261,
+            transaction_hash: bigint!(262),
+            signature: vec![bigint!(300), bigint!(301)],
+            nonce: bigint!(263),
+            n_sent_messages: 52,
+        };
+        syscall_handler_hint_processor
+            .syscall_handler
+            .tx_execution_context = tx_execution_context.clone();
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            get_integer(&vm, &relocatable!(2, 1)).unwrap(),
+            tx_execution_context.signature.len()
+        );
+        assert_eq!(
+            vm.get_relocatable(&relocatable!(2, 2)).unwrap(),
+            relocatable!(3, 0)
+        );
     }
 }
