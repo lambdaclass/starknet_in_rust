@@ -178,8 +178,8 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            let v = crate::bigint_str!($val);
-            let k = crate::relocatable_value!($si, $off);
+            let v = $crate::bigint_str!($val);
+            let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
     }

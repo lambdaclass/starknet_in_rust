@@ -27,7 +27,7 @@ compile_cairo:
 	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json
 
 clippy:
-	cargo clippy  -- -D warnings
+	cargo clippy --all-targets -- -D warnings
 
 remove-venv:
 	rm -rf starknet-in-rs-venv

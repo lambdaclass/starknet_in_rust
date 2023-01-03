@@ -1005,7 +1005,7 @@ mod tests {
         };
         assert_eq!(
             handler._get_caller_address(&vm, ptr),
-            Ok(CallInfo::default().caller_address.into())
+            Ok(CallInfo::default().caller_address)
         )
     }
 
