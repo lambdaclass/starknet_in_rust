@@ -139,3 +139,30 @@ impl<T: StateReader> CachedState<T> {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::bigint;
+
+    use super::*;
+
+    #[test]
+    fn test_statecache() {
+        let mut cache = StateCache::default();
+        cache.set_initial_values(
+            HashMap::from([(bigint!(1), Vec::new())]),
+            HashMap::from([(bigint!(2), bigint!(2))]),
+            HashMap::from([((bigint!(3), [0; 32]), bigint!(2))]),
+        );
+
+        assert!(cache.class_hash_writes.get(&bigint!(1)).is_some());
+        assert!(cache.nonce_writes.get(&bigint!(2)).is_some());
+        assert!(cache.storage_writes.get(&(bigint!(3), [0; 32])).is_some());
+
+        let set = cache.get_accessed_contract_addresses();
+
+        assert!(set.contains(&bigint!(1)));
+        assert!(set.contains(&bigint!(2)));
+        assert!(set.contains(&bigint!(3)));
+    }
+}
