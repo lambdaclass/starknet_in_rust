@@ -251,13 +251,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<Vec<u32>, SyscallHandlerError> {
         // Parse request and prepare the call.
-        let request = match self
-            ._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)
-            .unwrap()
-        {
-            SyscallRequest::CallContract(request) => request,
-            _ => return Err(SyscallHandlerError::ExpectedCallContract),
-        };
+        let request =
+            match self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)? {
+                SyscallRequest::CallContract(request) => request,
+                _ => return Err(SyscallHandlerError::ExpectedCallContract),
+            };
 
         let mut calldata = Vec::new();
 
@@ -267,7 +265,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
                 &MaybeRelocatable::from(&request.calldata),
                 request.calldata_size,
             )
-            .unwrap()
+            .map_err(|err| SyscallHandlerError::MemoryError(err.to_string()))?
         {
             match maybe_reloc_option {
                 None => return Err(SyscallHandlerError::ExpectedMaybeRelocatable),

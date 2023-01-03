@@ -65,4 +65,6 @@ pub enum SyscallHandlerError {
     ExpectedMaybeRelocatable,
     #[error("Expected MaybeRelocatable::Int")]
     ExpectedMaybeRelocatableInt,
+    #[error("Memory error: {0}")]
+    MemoryError(String),
 }
