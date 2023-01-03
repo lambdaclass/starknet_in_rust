@@ -17,6 +17,8 @@ pub enum SyscallHandlerError {
     SegmentationFault,
     #[error("Couldn't convert BigInt to usize")]
     BigintToUsizeFail,
+    #[error("Couldn't convert BigInt to u64")]
+    BigintToU64Fail,
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]

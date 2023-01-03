@@ -8,6 +8,7 @@ use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
     GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
 };
+use crate::business_logic::execution::objects::TxInfoStruct;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::state::state_api_objects::BlockInfo;
@@ -43,23 +44,6 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
-
-    fn get_tx_info(
-        &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let _request =
-            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
-                SyscallRequest::GetTxInfo(request) => request,
-                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
-            };
-
-        let tx_info = self._get_tx_info_ptr(vm)?;
-
-        let response = GetTxInfoResponse::new(tx_info);
-        response.write_syscall_response(vm, syscall_ptr)
-    }
 
     fn library_call(
         &mut self,
@@ -104,13 +88,17 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError>;
+
     fn _get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError>;
+
     fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError>;
+
     fn _storage_write(&mut self, address: u64, value: u64);
+
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -145,6 +133,23 @@ pub(crate) trait SyscallHandler {
     // ***********************************
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    fn get_tx_info(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                SyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        let tx_info = self._get_tx_info_ptr(vm)?;
+
+        let response = GetTxInfoResponse::new(tx_info);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
     fn get_tx_signature(
         &mut self,
         vm: &mut VirtualMachine,
@@ -155,13 +160,9 @@ pub(crate) trait SyscallHandler {
                 SyscallRequest::GetTxSignature(request) => request,
                 _ => return Err(SyscallHandlerError::ExpectedTxStruct),
             };
-
+            
         let tx_info_pr = self._get_tx_info_ptr(vm)?;
-
-        let tx_info = match GetTxInfoRequest::from_ptr(vm, syscall_ptr)? {
-            SyscallRequest::GetTxInfo(info) => info,
-            _ => return Err(SyscallHandlerError::InvalidTxInfoPtr),
-        };
+        let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
         let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
 
         response.write_syscall_response(vm, syscall_ptr)
