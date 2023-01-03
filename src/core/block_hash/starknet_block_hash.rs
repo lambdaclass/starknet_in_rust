@@ -14,7 +14,7 @@ use std::iter::zip;
 // TODO:
 //  * calculate_block_hash
 //  * calculate_patricia_root
-//  there is missing structures yet to implement this functions
+//  there are missing structures yet to implement this functions
 // -------------------------------------------------------------
 
 pub fn calculate_tx_hashes_with_signatures(
