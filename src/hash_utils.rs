@@ -30,7 +30,7 @@ pub fn calculate_contract_address_from_hash(
     Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
+pub fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
     let mut felt_vec = vec
         .iter()
         .map(|num| {
