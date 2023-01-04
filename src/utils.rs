@@ -1,4 +1,9 @@
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use std::{collections::HashMap, hash::Hash};
+
+use crate::{
+    business_logic::state::{state_api::State, state_cache::StorageEntry},
+    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+};
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
@@ -63,6 +68,38 @@ pub fn bigint_to_felt(value: &BigInt) -> Result<FieldElement, SyscallHandlerErro
 pub fn felt_to_bigint(sign: Sign, felt: &FieldElement) -> BigInt {
     BigInt::from_bytes_be(sign, &felt.to_bytes_be())
 }
+
+// -------------------
+// ~~~~~~~~~~~~~~~~~~~
+//    STATE UTILS
+// ~~~~~~~~~~~~~~~~~~~
+// -------------------
+
+/// Converts CachedState storage mapping to StateDiff storage mapping.
+/// See to_cached_state_storage_mapping documentation.
+///
+pub fn to_state_diff_storage_mapping(
+    storage_writes: HashMap<StorageEntry, BigInt>,
+) -> Result<HashMap<BigInt, HashMap<[u8; 32], BigInt>>, StateError> {
+    let mut storage_updates: HashMap<BigInt, HashMap<[u8; 32], BigInt>> = HashMap::new();
+    for ((address, key), value) in storage_writes {
+        if storage_updates.contains_key(&address) {
+            let mut map = storage_updates
+                .get(&address)
+                .ok_or(StateError::EmptyKeyInStorage)?
+                .to_owned();
+            map.insert(key, value);
+            storage_updates.insert(address, map);
+        } else {
+            let mut new_map = HashMap::new();
+            new_map.insert(key, value);
+            storage_updates.insert(address, new_map);
+        }
+    }
+
+    Ok(storage_updates)
+}
+
 //* -------------------
 //* Macros
 //* -------------------

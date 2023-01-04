@@ -201,11 +201,11 @@ mod tests {
 
     use crate::{
         add_segments,
+        business_logic::state::state_api_objects::BlockInfo,
         core::syscalls::{
             business_logic_syscall_handler::BusinessLogicSyscallHandler,
             syscall_handler::SyscallHandler,
         },
-        state::state_api_objects::BlockInfo,
         utils::test_utils::vm,
     };
     use num_bigint::{BigInt, Sign};

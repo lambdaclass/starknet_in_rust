@@ -19,9 +19,9 @@ pub(crate) struct StateCache {
     //class_hash_initial_values: HashMap<BigInt, Vec<u8>>,
     //nonce_initial_values: HashMap<BigInt, BigInt>,
     //storage_initial_values: HashMap<StorageEntry, i32>,
-    class_hash_writes: HashMap<BigInt, Vec<u8>>,
-    nonce_writes: HashMap<BigInt, BigInt>,
-    storage_writes: HashMap<StorageEntry, BigInt>,
+    pub(crate) class_hash_writes: HashMap<BigInt, Vec<u8>>,
+    pub(crate) nonce_writes: HashMap<BigInt, BigInt>,
+    pub(crate) storage_writes: HashMap<StorageEntry, BigInt>,
 }
 
 impl StateCache {
@@ -63,10 +63,10 @@ impl StateCache {
 }
 
 pub(crate) struct CachedState<T: StateReader> {
-    block_info: BlockInfo,
+    pub(crate) block_info: BlockInfo,
     pub(crate) state_reader: T,
     pub(crate) cache: StateCache,
-    contract_classes: Option<ContractClassCache>,
+    pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
 impl<T: StateReader> CachedState<T> {

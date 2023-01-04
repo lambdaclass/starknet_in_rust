@@ -9,9 +9,9 @@ use super::syscall_response::{
     GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
 };
 use crate::business_logic::execution::objects::TxInfoStruct;
+use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
-use crate::state::state_api_objects::BlockInfo;
 use crate::utils::get_big_int;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
