@@ -19,6 +19,7 @@ pub(crate) enum SyscallRequest {
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    GetTxSignature(GetTxSignatureRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -80,6 +81,12 @@ pub(crate) struct GetCallerAddressRequest {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetTxSignatureRequest {
+    pub(crate) _selector: BigInt,
+}
+
+#[allow(unused)] // TODO: Remove once used.
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct GetTxInfoRequest {
     pub(crate) selector: BigInt,
 }
@@ -92,26 +99,6 @@ pub(crate) struct GetContractAddressRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockNumberRequest {
     pub(crate) _selector: BigInt,
-}
-
-impl FromPtr for GetBlockNumberRequest {
-    fn from_ptr(
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
-
-        Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
-            _selector,
-        }))
-    }
-}
-
-pub(crate) trait FromPtr {
-    fn from_ptr(
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
 impl From<EmitEventStruct> for SyscallRequest {
@@ -155,10 +142,26 @@ impl From<GetBlockTimestampRequest> for SyscallRequest {
     }
 }
 
+impl From<GetTxSignatureRequest> for SyscallRequest {
+    fn from(get_tx_signature_request: GetTxSignatureRequest) -> SyscallRequest {
+        SyscallRequest::GetTxSignature(get_tx_signature_request)
+    }
+}
+
 impl From<GetTxInfoRequest> for SyscallRequest {
     fn from(get_tx_info_request: GetTxInfoRequest) -> SyscallRequest {
         SyscallRequest::GetTxInfo(get_tx_info_request)
     }
+}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//  FromPtr implementations
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+pub(crate) trait FromPtr {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
 impl FromPtr for EmitEventStruct {
@@ -270,15 +273,14 @@ impl FromPtr for GetCallerAddressRequest {
     }
 }
 
-impl FromPtr for GetContractAddressRequest {
+impl FromPtr for GetBlockTimestampRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
-
-        Ok(SyscallRequest::GetContractAddress(
-            GetContractAddressRequest { _selector },
+        let selector = get_big_int(vm, &syscall_ptr)?;
+        Ok(SyscallRequest::GetBlockTimestamp(
+            GetBlockTimestampRequest { selector },
         ))
     }
 }
@@ -295,17 +297,47 @@ impl FromPtr for GetSequencerAddressRequest {
     }
 }
 
-impl FromPtr for GetBlockTimestampRequest {
+impl FromPtr for GetTxSignatureRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &syscall_ptr)?;
-        Ok(SyscallRequest::GetBlockTimestamp(
-            GetBlockTimestampRequest { selector },
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+        Ok(SyscallRequest::GetTxSignature(GetTxSignatureRequest {
+            _selector,
+        }))
+    }
+}
+
+impl FromPtr for GetBlockNumberRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
+            _selector,
+        }))
+    }
+}
+
+impl FromPtr for GetContractAddressRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::GetContractAddress(
+            GetContractAddressRequest { _selector },
         ))
     }
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  CountFields implementations
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 pub(crate) trait CountFields {
     /// Returns the amount of fields of a struct
@@ -325,6 +357,11 @@ impl CountFields for GetSequencerAddressRequest {
 }
 
 impl CountFields for GetBlockTimestampRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+impl CountFields for GetTxSignatureRequest {
     fn count_fields() -> usize {
         1
     }

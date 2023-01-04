@@ -17,6 +17,8 @@ pub enum SyscallHandlerError {
     SegmentationFault,
     #[error("Couldn't convert BigInt to usize")]
     BigintToUsizeFail,
+    #[error("Couldn't convert BigInt to u64")]
+    BigintToU64Fail,
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
@@ -61,4 +63,8 @@ pub enum SyscallHandlerError {
     ExpectedGetContractAddressRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
+    #[error("Expected GetTxSignatureRequest")]
+    ExpectedGetTxSignatureRequest,
+    #[error("Expected a ptr but received invalid data")]
+    InvalidTxInfoPtr,
 }

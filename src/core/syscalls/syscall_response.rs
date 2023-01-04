@@ -1,8 +1,7 @@
 use super::syscall_request::{
     CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
-    GetTxInfoRequest,
+    GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
 };
-use super::syscall_request::{GetContractAddressRequest, GetSequencerAddressRequest};
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_bigint::BigInt;
@@ -35,6 +34,10 @@ pub(crate) struct GetBlockTimestampResponse {
     block_timestamp: u64,
 }
 
+pub(crate) struct GetTxSignatureResponse {
+    signature_len: usize,
+    signature: Relocatable,
+}
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetTxInfoResponse {
     tx_info: Relocatable,
@@ -65,6 +68,14 @@ impl GetCallerAddressResponse {
     }
 }
 
+impl GetTxSignatureResponse {
+    pub fn new(signature: Relocatable, signature_len: usize) -> Self {
+        GetTxSignatureResponse {
+            signature,
+            signature_len,
+        }
+    }
+}
 impl GetContractAddressResponse {
     pub fn new(contract_address: u64) -> Self {
         GetContractAddressResponse { contract_address }
@@ -147,6 +158,23 @@ impl WriteSyscallResponse for GetContractAddressResponse {
         vm.insert_value(
             &(syscall_ptr + GetContractAddressRequest::count_fields()),
             bigint!(self.contract_address),
+        )?;
+        Ok(())
+    }
+}
+impl WriteSyscallResponse for GetTxSignatureResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetTxSignatureRequest::count_fields()),
+            bigint!(self.signature_len),
+        )?;
+        vm.insert_value(
+            &(syscall_ptr + GetTxSignatureRequest::count_fields() + 1),
+            self.signature,
         )?;
         Ok(())
     }
