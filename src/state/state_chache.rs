@@ -16,15 +16,36 @@ pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct StateCache {
-    //class_hash_initial_values: HashMap<BigInt, Vec<u8>>,
-    //nonce_initial_values: HashMap<BigInt, BigInt>,
-    //storage_initial_values: HashMap<StorageEntry, i32>,
+    // Reader's cached information; initial values, read before any write operation (per cell)
+    class_hash_initial_values: HashMap<BigInt, Vec<u8>>,
+    nonce_initial_values: HashMap<BigInt, BigInt>,
+    storage_initial_values: HashMap<StorageEntry, BigInt>,
+
+    // Writer's cached information.
     class_hash_writes: HashMap<BigInt, Vec<u8>>,
     nonce_writes: HashMap<BigInt, BigInt>,
     storage_writes: HashMap<StorageEntry, BigInt>,
 }
 
 impl StateCache {
+    pub(crate) fn get_address_to_class_hash(&self) -> HashMap<BigInt, Vec<u8>> {
+        let mut address_to_class_hash = self.class_hash_initial_values.clone();
+        address_to_class_hash.extend(self.class_hash_writes.clone());
+        address_to_class_hash
+    }
+
+    pub(crate) fn get_address_to_nonce(&self) -> HashMap<BigInt, BigInt> {
+        let mut address_to_nonce = self.nonce_initial_values.clone();
+        address_to_nonce.extend(self.nonce_writes.clone());
+        address_to_nonce
+    }
+
+    pub(crate) fn get_storage_view(&self) -> HashMap<StorageEntry, BigInt> {
+        let mut storage_view = self.storage_initial_values.clone();
+        storage_view.extend(self.storage_writes.clone());
+        storage_view
+    }
+
     pub(crate) fn update_writes_from_other(&mut self, other: &Self) {
         self.class_hash_writes
             .extend(other.class_hash_writes.clone());
@@ -43,14 +64,20 @@ impl StateCache {
         self.storage_writes.extend(storage_updates);
     }
 
-    #[inline]
     pub(crate) fn set_initial_values(
         &mut self,
         address_to_class_hash: HashMap<BigInt, Vec<u8>>,
         address_to_nonce: HashMap<BigInt, BigInt>,
         storage_updates: HashMap<StorageEntry, BigInt>,
-    ) {
-        self.update_writes(address_to_class_hash, address_to_nonce, storage_updates)
+    ) -> Result<(), StateError> {
+        if !(self.get_address_to_class_hash().is_empty()
+            && self.get_address_to_nonce().is_empty()
+            && self.get_storage_view().is_empty())
+        {
+            return Err(StateError::StateCacheAlreadyInitialized);
+        }
+        self.update_writes(address_to_class_hash, address_to_nonce, storage_updates);
+        Ok(())
     }
 
     pub(crate) fn get_accessed_contract_addresses(&self) -> HashSet<BigInt> {

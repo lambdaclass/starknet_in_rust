@@ -6,4 +6,6 @@ pub enum StateError {
     MissingContractClassCache,
     #[error("ContractClassCache must be None")]
     AssignedContractClassCache,
+    #[error("Cache already initialized")]
+    StateCacheAlreadyInitialized,
 }
