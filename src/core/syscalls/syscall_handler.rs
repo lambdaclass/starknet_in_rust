@@ -6,11 +6,13 @@ use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::GetContractAddressResponse;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
-    GetTxInfoResponse, WriteSyscallResponse,
+    GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
 };
+use crate::business_logic::execution::objects::TxInfoStruct;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::state::state_api_objects::BlockInfo;
+use crate::utils::get_big_int;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -42,23 +44,6 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
-
-    fn get_tx_info(
-        &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let _request =
-            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
-                SyscallRequest::GetTxInfo(request) => request,
-                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
-            };
-
-        let tx_info = self._get_tx_info_ptr(vm)?;
-
-        let response = GetTxInfoResponse::new(tx_info);
-        response.write_syscall_response(vm, syscall_ptr)
-    }
 
     fn library_call(
         &mut self,
@@ -103,13 +88,17 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError>;
+
     fn _get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<u64, SyscallHandlerError>;
+
     fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError>;
+
     fn _storage_write(&mut self, address: u64, value: u64);
+
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -133,7 +122,6 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
-
         GetBlockNumberResponse::new(self.get_block_info().block_number)
             .write_syscall_response(vm, syscall_ptr)
     }
@@ -143,6 +131,41 @@ pub(crate) trait SyscallHandler {
     //  Implementation of Default methods
     // ***********************************
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    fn get_tx_info(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                SyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        let tx_info = self._get_tx_info_ptr(vm)?;
+
+        let response = GetTxInfoResponse::new(tx_info);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    fn get_tx_signature(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request =
+            match self._read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
+                SyscallRequest::GetTxSignature(request) => request,
+                _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
+            };
+
+        let tx_info_pr = self._get_tx_info_ptr(vm)?;
+        let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
+        let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 
     fn get_block_timestamp(
         &mut self,
@@ -220,6 +243,7 @@ pub(crate) trait SyscallHandler {
             "get_contract_address" => GetContractAddressRequest::from_ptr(vm, syscall_ptr),
             "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
@@ -312,6 +336,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             SEND_MESSAGE_TO_L1 => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
+            }
+            GET_TX_SIGNATURE => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_tx_signature(vm, syscall_ptr)
             }
             GET_TX_INFO => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -408,6 +436,7 @@ mod tests {
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
     use num_bigint::{BigInt, Sign};
+    use num_traits::ToPrimitive;
 
     use super::*;
     use std::collections::VecDeque;
@@ -934,5 +963,58 @@ mod tests {
             get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
             hint_processor.syscall_handler.contract_address
         )
+    }
+
+    #[test]
+    fn test_gt_tx_signature() {
+        let mut vm = vm!();
+
+        add_segments!(vm, 3);
+
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 8)       //  GetTxInfoRequest.selector
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        let tx_execution_context = TransactionExecutionContext {
+            n_emitted_events: 50,
+            version: 51,
+            account_contract_address: bigint!(260),
+            max_fee: 261,
+            transaction_hash: bigint!(262),
+            signature: vec![bigint!(300), bigint!(301)],
+            nonce: bigint!(263),
+            n_sent_messages: 52,
+        };
+        syscall_handler_hint_processor
+            .syscall_handler
+            .tx_execution_context = tx_execution_context.clone();
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert!(result.is_ok());
+        assert_eq!(
+            get_integer(&vm, &relocatable!(2, 1)).unwrap(),
+            tx_execution_context.signature.len()
+        );
+        assert_eq!(
+            vm.get_relocatable(&relocatable!(2, 2)).unwrap(),
+            relocatable!(3, 0)
+        );
     }
 }

@@ -1,8 +1,20 @@
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::vm_core::VirtualMachine,
+};
 use num_bigint::BigInt;
-use num_traits::Zero;
+use num_traits::{ToPrimitive, Zero};
 
-use crate::{bigint, definitions::general_config::StarknetChainId};
+use crate::{
+    bigint,
+    core::{
+        errors::syscall_handler_errors::SyscallHandlerError, syscalls::syscall_request::FromPtr,
+    },
+    definitions::general_config::StarknetChainId,
+    utils::{get_big_int, get_integer, get_relocatable},
+};
+
+use super::execution_errors::ExecutionError;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedEvent {
@@ -104,5 +116,33 @@ impl TxInfoStruct {
             MaybeRelocatable::from(&self.chain_id),
             MaybeRelocatable::from(&self.nonce),
         ]
+    }
+
+    pub(crate) fn from_ptr(
+        vm: &VirtualMachine,
+        tx_info_ptr: Relocatable,
+    ) -> Result<TxInfoStruct, SyscallHandlerError> {
+        let version = get_integer(vm, &tx_info_ptr)?;
+
+        let account_contract_address = get_big_int(vm, &(&tx_info_ptr + 1))?;
+        let max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
+            .to_u64()
+            .ok_or(SyscallHandlerError::BigintToU64Fail)?;
+        let signature_len = get_integer(vm, &(&tx_info_ptr + 3))?;
+        let signature = get_relocatable(vm, &(&tx_info_ptr + 4))?;
+        let transaction_hash = get_big_int(vm, &(&tx_info_ptr + 5))?;
+        let chain_id = get_big_int(vm, &(&tx_info_ptr + 6))?;
+        let nonce = get_big_int(vm, &(&tx_info_ptr + 7))?;
+
+        Ok(TxInfoStruct {
+            version,
+            account_contract_address,
+            max_fee,
+            signature_len,
+            signature,
+            transaction_hash,
+            chain_id,
+            nonce,
+        })
     }
 }
