@@ -114,14 +114,23 @@ impl<T: StateReader> CachedState<T> {
         &self.block_info
     }
 
-    pub(crate) fn contract_classes(&self) -> Result<&ContractClassCache, StateError> {
+    pub(crate) fn get_contract_classes(&self) -> Result<&ContractClassCache, StateError> {
         self.contract_classes
             .as_ref()
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    pub(crate) fn update_block_info(&mut self, block_info: BlockInfo) {
-        self.block_info = block_info;
+    pub(crate) fn insert_contract_class(
+        &mut self,
+        key: Vec<u8>,
+        value: ContractClass,
+    ) -> Result<(), StateError> {
+        self.contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingContractClassCache)?
+            .insert(key, value);
+
+        Ok(())
     }
 
     pub(crate) fn set_contract_class_cache(
@@ -135,20 +144,8 @@ impl<T: StateReader> CachedState<T> {
         Ok(())
     }
 
-    pub(crate) fn get_contract_class(&self, class_hash: &[u8]) -> ContractClass {
-        todo!()
-    }
-
-    pub(crate) fn get_class_hash_at(&self, contract_address: &BigInt) -> Vec<u8> {
-        todo!()
-    }
-
-    pub(crate) fn get_nonce_at(&self, contract_address: &BigInt) -> BigInt {
-        todo!()
-    }
-
-    pub(crate) fn get_storage_at(&self, contract_address: &BigInt, key: &[u8; 32]) -> BigInt {
-        todo!()
+    pub(crate) fn update_block_info(&mut self, block_info: BlockInfo) {
+        self.block_info = block_info;
     }
 
     pub(crate) fn set_contract_class(&mut self, class_hash: &[u8], contract_class: ContractClass) {
@@ -171,6 +168,73 @@ impl<T: StateReader> CachedState<T> {
     }
 }
 
+impl<T: StateReader> StateReader for CachedState<T> {
+    fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<ContractClass, StateError> {
+        if !(self.get_contract_classes()?.contains_key(class_hash)) {
+            let contract_class = &self.state_reader.get_contract_class(class_hash)?;
+            self.insert_contract_class(class_hash.to_vec(), contract_class.to_owned());
+        }
+        self.get_contract_class(class_hash)
+    }
+
+    fn get_class_hash_at(&mut self, contract_address: &BigInt) -> Result<Vec<u8>, StateError> {
+        if !(self
+            .cache
+            .get_address_to_class_hash()
+            .contains_key(contract_address))
+        {
+            let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
+            self.cache
+                .class_hash_initial_values
+                .insert(contract_address.clone(), class_hash);
+        }
+
+        // Safe unwrap
+        Ok(self
+            .cache
+            .get_address_to_class_hash()
+            .get(contract_address)
+            .unwrap()
+            .to_vec())
+    }
+
+    fn get_nonce_at(&mut self, contract_address: &BigInt) -> Result<BigInt, StateError> {
+        if !(self
+            .cache
+            .get_address_to_nonce()
+            .contains_key(contract_address))
+        {
+            let nonce = self.state_reader.get_nonce_at(contract_address)?;
+            self.cache
+                .nonce_initial_values
+                .insert(contract_address.clone(), nonce);
+        }
+        // Safe unwrap
+        Ok(self
+            .cache
+            .get_address_to_nonce()
+            .get(contract_address)
+            .unwrap()
+            .to_owned())
+    }
+
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<BigInt, StateError> {
+        if !(self.cache.get_storage_view().contains_key(storage_entry)) {
+            let value = self.state_reader.get_storage_at(storage_entry)?;
+            self.cache
+                .storage_initial_values
+                .insert(storage_entry.clone(), value);
+        }
+
+        // Safe unwrap
+        Ok(self
+            .cache
+            .get_storage_view()
+            .get(storage_entry)
+            .unwrap()
+            .clone())
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate::bigint;
