@@ -1,18 +1,18 @@
 use num_bigint::BigInt;
 
-use crate::services::api::contract_class::ContractClass;
+use crate::{core::errors::state_errors::StateError, services::api::contract_class::ContractClass};
 
-use super::state_api_objects::BlockInfo;
+use super::{state_api_objects::BlockInfo, state_chache::StorageEntry};
 
 pub(crate) trait StateReader {
     /// Returns the contract class of the given class hash.
-    fn get_contract_class(&self, class_hash: &[u8]) -> ContractClass;
+    fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<ContractClass, StateError>;
     /// Returns the class hash of the contract class at the given address.
-    fn get_class_hash_at(&self, contract_address: &BigInt) -> Vec<u8>;
+    fn get_class_hash_at(&mut self, contract_address: &BigInt) -> Result<Vec<u8>, StateError>;
     /// Returns the nonce of the given contract instance.
-    fn get_nonce_at(&self, contract_address: &BigInt) -> BigInt;
+    fn get_nonce_at(&mut self, contract_address: &BigInt) -> Result<BigInt, StateError>;
     /// Returns the storage value under the given key in the given contract instance.
-    fn get_storage_at(&self, contract_address: &BigInt, key: &BigInt) -> BigInt;
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<BigInt, StateError>;
 }
 
 pub(crate) trait State {
