@@ -32,10 +32,10 @@ pub fn calculate_tx_hashes_with_signatures(
     Ok(hashes)
 }
 
-// """
-// Hashes the signature with the given transaction hash, to get a hash that takes into account the
-// entire transaction, as the original hash does not include the signature.
-// """
+///
+/// Hashes the signature with the given transaction hash, to get a hash that takes into account the
+/// entire transaction, as the original hash does not include the signature.
+///
 
 pub fn calculate_single_tx_hash_with_signature(
     tx_hash: BigInt,
@@ -48,9 +48,9 @@ pub fn calculate_single_tx_hash_with_signature(
     Ok(felt_to_bigint(Sign::Plus, &new_hash))
 }
 
-// Calculates and returns the hash of an event, given its separate fields.
-// I.e., H(from_address, H(keys), H(data)), where each hash chain computation begins
-// with 0 as initialization and ends with its length appended.
+/// Calculates and returns the hash of an event, given its separate fields.
+/// I.e., H(from_address, H(keys), H(data)), where each hash chain computation begins
+/// with 0 as initialization and ends with its length appended.
 pub fn calculate_event_hash(
     from_address: BigInt,
     keys: Vec<BigInt>,
