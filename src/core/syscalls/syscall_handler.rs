@@ -157,7 +157,7 @@ pub(crate) trait SyscallHandler {
         let request =
             match self._read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
                 SyscallRequest::GetTxSignature(request) => request,
-                _ => return Err(SyscallHandlerError::ExpectedTxStruct),
+                _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
             };
 
         let tx_info_pr = self._get_tx_info_ptr(vm)?;
