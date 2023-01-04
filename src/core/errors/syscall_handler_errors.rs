@@ -63,8 +63,8 @@ pub enum SyscallHandlerError {
     ExpectedGetContractAddressRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
-    #[error("Expected TxStruct")]
-    ExpectedTxStruct,
+    #[error("Expected GetTxSignatureRequest")]
+    ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
 }

@@ -9,6 +9,6 @@ pub enum ExecutionError {
     NotABigIntValue,
     #[error("Expected a relocatable value but get wrong data type")]
     NotARelocatableValue,
-    #[error("Error trying to cast data to other type")]
-    ErrorInDataConversion,
+    #[error("Error converting from {0} to {1}")]
+    ErrorInDataConversion(String, String),
 }
