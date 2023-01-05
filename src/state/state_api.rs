@@ -16,10 +16,14 @@ pub(crate) trait StateReader {
 }
 
 pub(crate) trait State {
-    fn block_info(&self) -> BlockInfo;
+    fn get_block_info(&self) -> &BlockInfo;
     fn set_contract_class(&mut self, class_hash: &[u8], contract_class: &ContractClass);
-    fn deploy_contract(&self, contract_address: &BigInt, class_hash: &[u8]);
-    fn increment_nonce(&mut self, contract_address: &BigInt);
-    fn update_block_info(&mut self, block_info: &BlockInfo);
-    fn set_storage_at(&mut self, contract_address: &BigInt, key: &BigInt, value: BigInt);
+    fn deploy_contract(
+        &mut self,
+        contract_address: BigInt,
+        class_hash: Vec<u8>,
+    ) -> Result<(), StateError>;
+    fn increment_nonce(&mut self, contract_address: &BigInt) -> Result<(), StateError>;
+    fn update_block_info(&mut self, block_info: BlockInfo);
+    fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: BigInt);
 }
