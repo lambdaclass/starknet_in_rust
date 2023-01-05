@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 use patricia_tree::PatriciaTree;
-use std::{collections::HashMap, hash, thread::current};
+use std::{collections::HashMap, hash, rc::Rc, thread::current};
 
 use crate::{
     business_logic::state::{
@@ -40,13 +40,28 @@ impl ExecutionResourcesManager {
 //      SHARED STATE
 // ----------------------
 // ~~~~~~~~~~~~~~~~~~~~~~
-
+#[derive(Debug, Clone)]
 pub(crate) struct CarriedState<T>
 where
-    T: StateReader,
+    T: StateReader + Clone,
 {
-    parent_state: Option<u64>,
+    parent_state: Option<Rc<CarriedState<T>>>,
     state: CachedState<T>,
+}
+
+impl<T: StateReader + Clone> CarriedState<T> {
+    pub fn create_from_parent_state(parent_state: CarriedState<T>) -> Self {
+        let cached_state = parent_state.state.clone();
+        let new_state = Some(Rc::new(parent_state));
+        CarriedState {
+            parent_state: new_state,
+            state: cached_state,
+        }
+    }
+
+    pub fn block_info(&self) -> BlockInfo {
+        self.state.block_info.clone()
+    }
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~
@@ -71,7 +86,7 @@ impl<T> SharedState<T> {
     pub fn to_carried_state<S, R>(&self, ffc: FactFetchingContext<S>) -> CarriedState<R>
     where
         S: Storage,
-        R: StateReader,
+        R: StateReader + Clone,
     {
         // let state_reader = "Patricia_state_reader"; // TODO: change it to patricia reader once it is available
         // let state = CachedState::new(self.block_info, state_reader, None);
@@ -91,7 +106,7 @@ impl<T> SharedState<T> {
     ) -> Result<Self, StateError>
     where
         S: Storage,
-        R: StateReader,
+        R: StateReader + Clone,
     {
         let state_cache = current_carried_state.state.cache;
         Ok(self.apply_updates(

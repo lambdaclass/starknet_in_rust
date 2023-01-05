@@ -77,7 +77,7 @@ pub fn felt_to_bigint(sign: Sign, felt: &FieldElement) -> BigInt {
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
 /// See to_cached_state_storage_mapping documentation.
-///
+
 pub fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, BigInt>,
 ) -> Result<HashMap<BigInt, HashMap<[u8; 32], BigInt>>, StateError> {

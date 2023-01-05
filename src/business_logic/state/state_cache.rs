@@ -7,7 +7,7 @@ use crate::services::api::contract_class::ContractClass;
 
 use super::state_api_objects::BlockInfo;
 
-use super::state_api::StateReader;
+use super::state_api::{State, StateReader};
 
 /// (contract_address, key)
 pub(crate) type StorageEntry = (BigInt, [u8; 32]);
@@ -62,6 +62,7 @@ impl StateCache {
     }
 }
 
+#[derive(Debug, Default, Clone)]
 pub(crate) struct CachedState<T: StateReader> {
     pub(crate) block_info: BlockInfo,
     pub(crate) state_reader: T,
@@ -69,7 +70,7 @@ pub(crate) struct CachedState<T: StateReader> {
     pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
-impl<T: StateReader> CachedState<T> {
+impl<T: StateReader + Clone> CachedState<T> {
     pub(crate) fn new(
         block_info: BlockInfo,
         state_reader: T,
