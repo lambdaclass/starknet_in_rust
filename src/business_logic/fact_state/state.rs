@@ -59,24 +59,23 @@ impl<T: StateReader + Clone> CarriedState<T> {
         }
     }
 
-    pub fn crate_child_state_for_querying(self) -> Result<Self, StateError> {
-        match self.parent_state {
+    pub fn crate_child_state_for_querying(&self) -> Result<Self, StateError> {
+        match &self.parent_state {
             Some(parent_state) => Ok(CarriedState::create_from_parent_state(
                 parent_state.deref().clone(),
             )),
-            None => return Err(StateError::ParentCarriedStateIsNone),
+            None => Err(StateError::ParentCarriedStateIsNone),
         }
     }
 
-    pub fn apply(&mut self) -> Result<(), StateError> {
+    fn apply(&mut self) -> Result<(), StateError> {
         match &self.parent_state {
             Some(parent_state) => {
                 self.state.apply(parent_state.state.clone());
+                Ok(())
             }
-            None => return Err(StateError::ParentCarriedStateIsNone),
+            None => Err(StateError::ParentCarriedStateIsNone),
         }
-
-        Ok(())
     }
 
     pub fn block_info(&self) -> BlockInfo {
