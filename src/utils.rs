@@ -1,6 +1,6 @@
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 
 //* -------------------
@@ -55,6 +55,14 @@ pub fn get_integer_range(
         .collect::<Vec<BigInt>>())
 }
 
+pub fn bigint_to_felt(value: &BigInt) -> Result<FieldElement, SyscallHandlerError> {
+    FieldElement::from_dec_str(&value.to_str_radix(10))
+        .map_err(|_| SyscallHandlerError::FailToComputeHash)
+}
+
+pub fn felt_to_bigint(sign: Sign, felt: &FieldElement) -> BigInt {
+    BigInt::from_bytes_be(sign, &felt.to_bytes_be())
+}
 //* -------------------
 //* Macros
 //* -------------------
@@ -69,6 +77,7 @@ macro_rules! bigint_str {
     };
 }
 pub(crate) use bigint_str;
+use starknet_crypto::FieldElement;
 
 #[macro_export]
 macro_rules! bigint {
