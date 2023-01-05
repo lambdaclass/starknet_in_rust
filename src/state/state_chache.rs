@@ -247,27 +247,68 @@ impl<T: StateReader> StateReader for CachedState<T> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::bigint;
+    use crate::{bigint, state};
 
     use super::*;
 
     #[test]
-    fn test_statecache() {
-        let mut cache = StateCache::default();
-        cache.set_initial_values(
-            HashMap::from([(bigint!(1), Vec::new())]),
-            HashMap::from([(bigint!(2), bigint!(2))]),
-            HashMap::from([((bigint!(3), [0; 32]), bigint!(2))]),
+    fn state_chache_set_initial_values() {
+        let mut state_cache = StateCache::new();
+        let address_to_class_hash = HashMap::from([(bigint!(10), b"pedersen".to_vec())]);
+        let address_to_nonce = HashMap::from([(bigint!(9), bigint!(12))]);
+        let storage_updates = HashMap::from([((bigint!(20), [1; 32]), bigint!(18))]);
+        assert!(state_cache
+            .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
+            .is_ok());
+
+        assert_eq!(state_cache.class_hash_writes, address_to_class_hash);
+        assert_eq!(state_cache.nonce_writes, address_to_nonce);
+        assert_eq!(state_cache.storage_writes, storage_updates);
+
+        assert_eq!(
+            state_cache.get_accessed_contract_addresses(),
+            HashSet::from([bigint!(10), bigint!(9), bigint!(20)])
         );
+    }
 
-        assert!(cache.class_hash_writes.get(&bigint!(1)).is_some());
-        assert!(cache.nonce_writes.get(&bigint!(2)).is_some());
-        assert!(cache.storage_writes.get(&(bigint!(3), [0; 32])).is_some());
+    #[test]
+    fn state_chache_update_writes_from_other() {
+        let mut state_cache = StateCache::new();
+        let address_to_class_hash = HashMap::from([(bigint!(10), b"pedersen".to_vec())]);
+        let address_to_nonce = HashMap::from([(bigint!(9), bigint!(12))]);
+        let storage_updates = HashMap::from([((bigint!(20), [1; 32]), bigint!(18))]);
+        state_cache
+            .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
+            .expect("Error setting StateCache values");
 
-        let set = cache.get_accessed_contract_addresses();
+        let mut other_state_cache = StateCache::new();
+        let other_address_to_class_hash = HashMap::from([(bigint!(10), b"sha-3".to_vec())]);
+        let other_address_to_nonce = HashMap::from([(bigint!(401), bigint!(100))]);
+        let other_storage_updates = HashMap::from([((bigint!(4002), [2; 32]), bigint!(101))]);
+        other_state_cache
+            .set_initial_values(
+                &other_address_to_class_hash,
+                &other_address_to_nonce,
+                &other_storage_updates,
+            )
+            .expect("Error setting StateCache values");
 
-        assert!(set.contains(&bigint!(1)));
-        assert!(set.contains(&bigint!(2)));
-        assert!(set.contains(&bigint!(3)));
+        state_cache.update_writes_from_other(&other_state_cache);
+
+        assert_eq!(
+            state_cache.get_address_to_class_hash(),
+            other_address_to_class_hash
+        );
+        assert_eq!(
+            state_cache.get_address_to_nonce(),
+            HashMap::from([(bigint!(9), bigint!(12)), (bigint!(401), bigint!(100))])
+        );
+        assert_eq!(
+            state_cache.get_storage_view(),
+            HashMap::from([
+                ((bigint!(20), [1; 32]), bigint!(18)),
+                ((bigint!(4002), [2; 32]), bigint!(101))
+            ])
+        );
     }
 }
