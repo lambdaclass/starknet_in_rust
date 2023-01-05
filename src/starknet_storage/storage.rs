@@ -1,5 +1,4 @@
 use super::errors::storage_errors::StorageError;
-use cairo_rs::types::instruction::Res;
 use std::str;
 
 /* -----------------------------------------------------------------------------------
@@ -93,5 +92,37 @@ pub(crate) trait Storage {
         let val = self.get_value(key).ok_or(StorageError::ErrorFetchingData)?;
         let str = str::from_utf8(&val[..]).map_err(|_| StorageError::IncorrectUtf8Enconding)?;
         Ok(String::from(str))
+    }
+}
+
+//* -------------------------
+//*   FactFetching contract
+//* -------------------------
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct FactFetchingContext<T: Storage> {
+    storage: T,
+    n_workers: Option<usize>,
+}
+
+impl<T: Storage> FactFetchingContext<T> {
+    pub fn new(storage: T, n_workers: Option<usize>) -> Self {
+        FactFetchingContext { storage, n_workers }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key};
+
+    use super::*;
+
+    #[test]
+    fn new_ffc() {
+        let mut ffc = FactFetchingContext::new(DictStorage::new(), Some(2));
+
+        let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        ffc.storage.set_float(&fkey, 4.0);
+
+        assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0)
     }
 }

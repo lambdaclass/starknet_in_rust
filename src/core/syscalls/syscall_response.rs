@@ -1,11 +1,10 @@
+use super::syscall_request::{
+    CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
+    GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
+};
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_bigint::BigInt;
-
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-
-use super::syscall_request::{
-    CountFields, GetBlockTimestampRequest, GetCallerAddressRequest, GetSequencerAddressRequest,
-};
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -27,6 +26,11 @@ pub(crate) struct GetCallerAddressResponse {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetContractAddressResponse {
+    contract_address: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetSequencerAddressResponse {
     sequencer_address: u64,
 }
@@ -36,12 +40,33 @@ pub(crate) struct GetBlockTimestampResponse {
     block_timestamp: u64,
 }
 
+pub(crate) struct GetTxSignatureResponse {
+    signature_len: usize,
+    signature: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberResponse {
+    block_number: u64,
+}
+
 impl CallContractResponse {
     pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
         Self {
             retdata_size,
             retdata,
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetTxInfoResponse {
+    tx_info: Relocatable,
+}
+
+impl GetTxInfoResponse {
+    pub fn new(tx_info: Relocatable) -> Self {
+        GetTxInfoResponse { tx_info }
     }
 }
 
@@ -61,6 +86,26 @@ impl GetCallerAddressResponse {
     pub fn new(caller_addr: u64) -> Self {
         let caller_address = bigint!(caller_addr);
         GetCallerAddressResponse { caller_address }
+    }
+}
+
+impl GetTxSignatureResponse {
+    pub fn new(signature: Relocatable, signature_len: usize) -> Self {
+        GetTxSignatureResponse {
+            signature,
+            signature_len,
+        }
+    }
+}
+impl GetContractAddressResponse {
+    pub fn new(contract_address: u64) -> Self {
+        GetContractAddressResponse { contract_address }
+    }
+}
+
+impl GetBlockNumberResponse {
+    pub(crate) fn new(block_number: u64) -> Self {
+        Self { block_number }
     }
 }
 
@@ -120,6 +165,65 @@ impl WriteSyscallResponse for GetSequencerAddressResponse {
     }
 }
 
+impl WriteSyscallResponse for GetBlockNumberResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetBlockNumberRequest::count_fields()),
+            bigint!(self.block_number),
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetContractAddressResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetContractAddressRequest::count_fields()),
+            bigint!(self.contract_address),
+        )?;
+        Ok(())
+    }
+}
+impl WriteSyscallResponse for GetTxSignatureResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetTxSignatureRequest::count_fields()),
+            bigint!(self.signature_len),
+        )?;
+        vm.insert_value(
+            &(syscall_ptr + GetTxSignatureRequest::count_fields() + 1),
+            self.signature,
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for GetTxInfoResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + GetTxInfoRequest::count_fields()),
+            self.tx_info,
+        )?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,7 +242,7 @@ mod tests {
 
     #[test]
     fn write_get_caller_address_response() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
         let mut vm = vm!();
 
         add_segments!(vm, 2);

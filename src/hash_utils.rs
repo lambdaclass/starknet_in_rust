@@ -4,7 +4,11 @@ use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
 use starknet_crypto::{pedersen_hash, FieldElement};
 
-use crate::{bigint, core::errors::syscall_handler_errors::SyscallHandlerError};
+use crate::{
+    bigint,
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    utils::{bigint_to_felt, felt_to_bigint},
+};
 
 pub fn calculate_contract_address_from_hash(
     salt: &BigInt,
@@ -30,7 +34,7 @@ pub fn calculate_contract_address_from_hash(
     Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
+pub(crate) fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerError> {
     let mut felt_vec = vec
         .iter()
         .map(|num| {
@@ -38,13 +42,16 @@ fn compute_hash_on_elements(vec: &[BigInt]) -> Result<BigInt, SyscallHandlerErro
                 .map_err(|_| SyscallHandlerError::FailToComputeHash)
         })
         .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
+
     felt_vec.push(FieldElement::from(felt_vec.len()));
     felt_vec.insert(0, FieldElement::from(0_u16));
+
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
         .ok_or(SyscallHandlerError::FailToComputeHash)?;
-    let result = BigInt::from_bytes_be(Sign::Plus, &felt_result.to_bytes_be());
+
+    let result = felt_to_bigint(Sign::Plus, &felt_result);
     Ok(result)
 }
 
@@ -97,7 +104,7 @@ mod tests {
         let result_1 = calculate_contract_address_from_hash(
             &bigint!(1),
             &bigint!(2),
-            &vec![bigint!(3), bigint!(4)],
+            &[bigint!(3), bigint!(4)],
             5,
         );
 
@@ -111,7 +118,7 @@ mod tests {
         let result_2 = calculate_contract_address_from_hash(
             &bigint!(756),
             &bigint!(543),
-            &vec![bigint!(124543), bigint!(5345345), bigint!(89)],
+            &[bigint!(124543), bigint!(5345345), bigint!(89)],
             87123,
         );
 

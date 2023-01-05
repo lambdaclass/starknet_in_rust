@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockInfo {
     // The sequence number of the last block created.
-    block_number: u64,
+    pub(crate) block_number: u64,
 
     // Timestamp of the beginning of the last block creation attempt.
     pub(crate) block_timestamp: u64,

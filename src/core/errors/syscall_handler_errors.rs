@@ -17,6 +17,8 @@ pub enum SyscallHandlerError {
     SegmentationFault,
     #[error("Couldn't convert BigInt to usize")]
     BigintToUsizeFail,
+    #[error("Couldn't convert BigInt to u64")]
+    BigintToU64Fail,
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
@@ -57,6 +59,8 @@ pub enum SyscallHandlerError {
     TxInfoPtrIsNone,
     #[error("Virtual machine error: {0}")]
     VirtualMachineError(#[from] VirtualMachineError),
+    #[error("Expected GetContractAddressRequest")]
+    ExpectedGetContractAddressRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
     #[error("Expected CallContractRequest")]
@@ -67,4 +71,8 @@ pub enum SyscallHandlerError {
     ExpectedMaybeRelocatableInt,
     #[error("Memory error: {0}")]
     MemoryError(String),
+    #[error("Expected GetTxSignatureRequest")]
+    ExpectedGetTxSignatureRequest,
+    #[error("Expected a ptr but received invalid data")]
+    InvalidTxInfoPtr,
 }
