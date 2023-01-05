@@ -14,91 +14,6 @@ pub(crate) type StorageEntry = (BigInt, [u8; 32]);
 
 pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
 
-#[derive(Debug, Default, Clone)]
-pub(crate) struct StateCache {
-    // Reader's cached information; initial values, read before any write operation (per cell)
-    class_hash_initial_values: HashMap<BigInt, Vec<u8>>,
-    nonce_initial_values: HashMap<BigInt, BigInt>,
-    storage_initial_values: HashMap<StorageEntry, BigInt>,
-
-    // Writer's cached information.
-    class_hash_writes: HashMap<BigInt, Vec<u8>>,
-    nonce_writes: HashMap<BigInt, BigInt>,
-    storage_writes: HashMap<StorageEntry, BigInt>,
-}
-
-impl StateCache {
-    pub(crate) fn new() -> Self {
-        Self {
-            class_hash_initial_values: HashMap::new(),
-            nonce_initial_values: HashMap::new(),
-            storage_initial_values: HashMap::new(),
-            class_hash_writes: HashMap::new(),
-            nonce_writes: HashMap::new(),
-            storage_writes: HashMap::new(),
-        }
-    }
-    pub(crate) fn get_address_to_class_hash(&self) -> HashMap<BigInt, Vec<u8>> {
-        let mut address_to_class_hash = self.class_hash_initial_values.clone();
-        address_to_class_hash.extend(self.class_hash_writes.clone());
-        address_to_class_hash
-    }
-
-    pub(crate) fn get_address_to_nonce(&self) -> HashMap<BigInt, BigInt> {
-        let mut address_to_nonce = self.nonce_initial_values.clone();
-        address_to_nonce.extend(self.nonce_writes.clone());
-        address_to_nonce
-    }
-
-    pub(crate) fn get_storage_view(&self) -> HashMap<StorageEntry, BigInt> {
-        let mut storage_view = self.storage_initial_values.clone();
-        storage_view.extend(self.storage_writes.clone());
-        storage_view
-    }
-
-    pub(crate) fn update_writes_from_other(&mut self, other: &Self) {
-        self.class_hash_writes
-            .extend(other.class_hash_writes.clone());
-        self.nonce_writes.extend(other.nonce_writes.clone());
-        self.storage_writes.extend(other.storage_writes.clone());
-    }
-
-    pub(crate) fn update_writes(
-        &mut self,
-        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
-        address_to_nonce: &HashMap<BigInt, BigInt>,
-        storage_updates: &HashMap<StorageEntry, BigInt>,
-    ) {
-        self.class_hash_writes.extend(address_to_class_hash.clone());
-        self.nonce_writes.extend(address_to_nonce.clone());
-        self.storage_writes.extend(storage_updates.clone());
-    }
-
-    pub(crate) fn set_initial_values(
-        &mut self,
-        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
-        address_to_nonce: &HashMap<BigInt, BigInt>,
-        storage_updates: &HashMap<StorageEntry, BigInt>,
-    ) -> Result<(), StateError> {
-        if !(self.get_address_to_class_hash().is_empty()
-            && self.get_address_to_nonce().is_empty()
-            && self.get_storage_view().is_empty())
-        {
-            return Err(StateError::StateCacheAlreadyInitialized);
-        }
-        self.update_writes(address_to_class_hash, address_to_nonce, storage_updates);
-        Ok(())
-    }
-
-    pub(crate) fn get_accessed_contract_addresses(&self) -> HashSet<BigInt> {
-        let mut set: HashSet<BigInt> = HashSet::with_capacity(self.class_hash_writes.len());
-        set.extend(self.class_hash_writes.keys().cloned());
-        set.extend(self.nonce_writes.keys().cloned());
-        set.extend(self.storage_writes.keys().map(|x| x.0.clone()));
-        set
-    }
-}
-
 pub(crate) struct CachedState<T: StateReader> {
     block_info: BlockInfo,
     pub(crate) state_reader: T,
@@ -245,6 +160,92 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .clone())
     }
 }
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct StateCache {
+    // Reader's cached information; initial values, read before any write operation (per cell)
+    class_hash_initial_values: HashMap<BigInt, Vec<u8>>,
+    nonce_initial_values: HashMap<BigInt, BigInt>,
+    storage_initial_values: HashMap<StorageEntry, BigInt>,
+
+    // Writer's cached information.
+    class_hash_writes: HashMap<BigInt, Vec<u8>>,
+    nonce_writes: HashMap<BigInt, BigInt>,
+    storage_writes: HashMap<StorageEntry, BigInt>,
+}
+
+impl StateCache {
+    pub(crate) fn new() -> Self {
+        Self {
+            class_hash_initial_values: HashMap::new(),
+            nonce_initial_values: HashMap::new(),
+            storage_initial_values: HashMap::new(),
+            class_hash_writes: HashMap::new(),
+            nonce_writes: HashMap::new(),
+            storage_writes: HashMap::new(),
+        }
+    }
+    pub(crate) fn get_address_to_class_hash(&self) -> HashMap<BigInt, Vec<u8>> {
+        let mut address_to_class_hash = self.class_hash_initial_values.clone();
+        address_to_class_hash.extend(self.class_hash_writes.clone());
+        address_to_class_hash
+    }
+
+    pub(crate) fn get_address_to_nonce(&self) -> HashMap<BigInt, BigInt> {
+        let mut address_to_nonce = self.nonce_initial_values.clone();
+        address_to_nonce.extend(self.nonce_writes.clone());
+        address_to_nonce
+    }
+
+    pub(crate) fn get_storage_view(&self) -> HashMap<StorageEntry, BigInt> {
+        let mut storage_view = self.storage_initial_values.clone();
+        storage_view.extend(self.storage_writes.clone());
+        storage_view
+    }
+
+    pub(crate) fn update_writes_from_other(&mut self, other: &Self) {
+        self.class_hash_writes
+            .extend(other.class_hash_writes.clone());
+        self.nonce_writes.extend(other.nonce_writes.clone());
+        self.storage_writes.extend(other.storage_writes.clone());
+    }
+
+    pub(crate) fn update_writes(
+        &mut self,
+        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
+        address_to_nonce: &HashMap<BigInt, BigInt>,
+        storage_updates: &HashMap<StorageEntry, BigInt>,
+    ) {
+        self.class_hash_writes.extend(address_to_class_hash.clone());
+        self.nonce_writes.extend(address_to_nonce.clone());
+        self.storage_writes.extend(storage_updates.clone());
+    }
+
+    pub(crate) fn set_initial_values(
+        &mut self,
+        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
+        address_to_nonce: &HashMap<BigInt, BigInt>,
+        storage_updates: &HashMap<StorageEntry, BigInt>,
+    ) -> Result<(), StateError> {
+        if !(self.get_address_to_class_hash().is_empty()
+            && self.get_address_to_nonce().is_empty()
+            && self.get_storage_view().is_empty())
+        {
+            return Err(StateError::StateCacheAlreadyInitialized);
+        }
+        self.update_writes(address_to_class_hash, address_to_nonce, storage_updates);
+        Ok(())
+    }
+
+    pub(crate) fn get_accessed_contract_addresses(&self) -> HashSet<BigInt> {
+        let mut set: HashSet<BigInt> = HashSet::with_capacity(self.class_hash_writes.len());
+        set.extend(self.class_hash_writes.keys().cloned());
+        set.extend(self.nonce_writes.keys().cloned());
+        set.extend(self.storage_writes.keys().map(|x| x.0.clone()));
+        set
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{bigint, state};
