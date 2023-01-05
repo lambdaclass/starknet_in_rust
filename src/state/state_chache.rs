@@ -28,6 +28,16 @@ pub(crate) struct StateCache {
 }
 
 impl StateCache {
+    pub(crate) fn new() -> Self {
+        Self {
+            class_hash_initial_values: HashMap::new(),
+            nonce_initial_values: HashMap::new(),
+            storage_initial_values: HashMap::new(),
+            class_hash_writes: HashMap::new(),
+            nonce_writes: HashMap::new(),
+            storage_writes: HashMap::new(),
+        }
+    }
     pub(crate) fn get_address_to_class_hash(&self) -> HashMap<BigInt, Vec<u8>> {
         let mut address_to_class_hash = self.class_hash_initial_values.clone();
         address_to_class_hash.extend(self.class_hash_writes.clone());
@@ -55,20 +65,20 @@ impl StateCache {
 
     pub(crate) fn update_writes(
         &mut self,
-        address_to_class_hash: HashMap<BigInt, Vec<u8>>,
-        address_to_nonce: HashMap<BigInt, BigInt>,
-        storage_updates: HashMap<StorageEntry, BigInt>,
+        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
+        address_to_nonce: &HashMap<BigInt, BigInt>,
+        storage_updates: &HashMap<StorageEntry, BigInt>,
     ) {
-        self.class_hash_writes.extend(address_to_class_hash);
-        self.nonce_writes.extend(address_to_nonce);
-        self.storage_writes.extend(storage_updates);
+        self.class_hash_writes.extend(address_to_class_hash.clone());
+        self.nonce_writes.extend(address_to_nonce.clone());
+        self.storage_writes.extend(storage_updates.clone());
     }
 
     pub(crate) fn set_initial_values(
         &mut self,
-        address_to_class_hash: HashMap<BigInt, Vec<u8>>,
-        address_to_nonce: HashMap<BigInt, BigInt>,
-        storage_updates: HashMap<StorageEntry, BigInt>,
+        address_to_class_hash: &HashMap<BigInt, Vec<u8>>,
+        address_to_nonce: &HashMap<BigInt, BigInt>,
+        storage_updates: &HashMap<StorageEntry, BigInt>,
     ) -> Result<(), StateError> {
         if !(self.get_address_to_class_hash().is_empty()
             && self.get_address_to_nonce().is_empty()
