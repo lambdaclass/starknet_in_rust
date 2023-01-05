@@ -17,4 +17,8 @@ pub enum StateError {
     NoneNonce(BigInt),
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
+    #[error("Cannot deploy contract at address: {0}")]
+    ContractAddressOutOfRangeAddress(BigInt),
+    #[error("Requested contract address {0} is unavailable for deployment")]
+    ContractAddressUnavailable(BigInt),
 }
