@@ -2,7 +2,7 @@ use num_bigint::BigInt;
 
 use crate::{core::errors::state_errors::StateError, services::api::contract_class::ContractClass};
 
-use super::{cached_state::StorageEntry, state_api_objects::BlockInfo};
+use super::{state_api_objects::BlockInfo, state_chache::StorageEntry};
 
 pub(crate) trait StateReader {
     /// Returns the contract class of the given class hash.
