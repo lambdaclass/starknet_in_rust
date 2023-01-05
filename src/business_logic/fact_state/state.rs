@@ -78,7 +78,7 @@ impl<T: StateReader + Clone> CarriedState<T> {
         }
     }
 
-    pub fn block_info(&self) -> &BlockInfo {
+    pub fn get_block_info(&self) -> &BlockInfo {
         &self.state.block_info
     }
 }
