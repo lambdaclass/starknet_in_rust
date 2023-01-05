@@ -112,12 +112,11 @@ impl<T: StateReader> StateReader for CachedState<T> {
                 .insert(contract_address.clone(), class_hash);
         }
 
-        // Safe unwrap
         Ok(self
             .cache
             .get_address_to_class_hash()
             .get(contract_address)
-            .unwrap()
+            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))?
             .to_vec())
     }
 
@@ -132,12 +131,11 @@ impl<T: StateReader> StateReader for CachedState<T> {
                 .nonce_initial_values
                 .insert(contract_address.clone(), nonce);
         }
-        // Safe unwrap
         Ok(self
             .cache
             .get_address_to_nonce()
             .get(contract_address)
-            .unwrap()
+            .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))?
             .to_owned())
     }
 
@@ -149,12 +147,11 @@ impl<T: StateReader> StateReader for CachedState<T> {
                 .insert(storage_entry.clone(), value);
         }
 
-        // Safe unwrap
         Ok(self
             .cache
             .get_storage_view()
             .get(storage_entry)
-            .unwrap()
+            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))?
             .clone())
     }
 }
