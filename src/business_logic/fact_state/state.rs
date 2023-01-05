@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 use patricia_tree::PatriciaTree;
-use std::{collections::HashMap, hash, rc::Rc, thread::current};
+use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current};
 
 use crate::{
     business_logic::state::{
@@ -57,6 +57,26 @@ impl<T: StateReader + Clone> CarriedState<T> {
             parent_state: new_state,
             state: cached_state,
         }
+    }
+
+    pub fn crate_child_state_for_querying(self) -> Result<Self, StateError> {
+        match self.parent_state {
+            Some(parent_state) => Ok(CarriedState::create_from_parent_state(
+                parent_state.deref().clone(),
+            )),
+            None => return Err(StateError::ParentCarriedStateIsNone),
+        }
+    }
+
+    pub fn apply(&mut self) -> Result<(), StateError> {
+        match &self.parent_state {
+            Some(parent_state) => {
+                self.state.apply(parent_state.state.clone());
+            }
+            None => return Err(StateError::ParentCarriedStateIsNone),
+        }
+
+        Ok(())
     }
 
     pub fn block_info(&self) -> BlockInfo {

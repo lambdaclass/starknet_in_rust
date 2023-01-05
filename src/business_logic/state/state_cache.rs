@@ -143,6 +143,12 @@ impl<T: StateReader + Clone> CachedState<T> {
     ) -> BigInt {
         todo!()
     }
+
+    pub(crate) fn apply(&mut self, mut parent: CachedState<T>) {
+        // TODO assert: if self.state_reader == parent
+        parent.block_info = self.block_info.clone();
+        parent.cache.update_writes_from_other(&self.cache);
+    }
 }
 
 #[cfg(test)]
