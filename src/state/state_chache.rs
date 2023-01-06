@@ -36,22 +36,26 @@ impl StateCache {
             storage_writes: HashMap::new(),
         }
     }
-    pub(crate) fn get_address_to_class_hash(&self) -> HashMap<BigInt, Vec<u8>> {
-        let mut address_to_class_hash = self.class_hash_initial_values.clone();
-        address_to_class_hash.extend(self.class_hash_writes.clone());
-        address_to_class_hash
+
+    pub(crate) fn get_class_hash(&self, contract_address: &BigInt) -> Option<&Vec<u8>> {
+        if self.class_hash_writes.contains_key(contract_address) {
+            return self.class_hash_writes.get(contract_address);
+        }
+        self.class_hash_initial_values.get(contract_address)
     }
 
-    pub(crate) fn get_address_to_nonce(&self) -> HashMap<BigInt, BigInt> {
-        let mut address_to_nonce = self.nonce_initial_values.clone();
-        address_to_nonce.extend(self.nonce_writes.clone());
-        address_to_nonce
+    pub(crate) fn get_nonce(&self, contract_address: &BigInt) -> Option<&BigInt> {
+        if self.nonce_writes.contains_key(contract_address) {
+            return self.nonce_writes.get(contract_address);
+        }
+        self.nonce_initial_values.get(contract_address)
     }
 
-    pub(crate) fn get_storage_view(&self) -> HashMap<StorageEntry, BigInt> {
-        let mut storage_view = self.storage_initial_values.clone();
-        storage_view.extend(self.storage_writes.clone());
-        storage_view
+    pub(crate) fn get_storage(&self, storage_entry: &StorageEntry) -> Option<&BigInt> {
+        if self.storage_writes.contains_key(storage_entry) {
+            return self.storage_writes.get(storage_entry);
+        }
+        self.storage_initial_values.get(storage_entry)
     }
 
     pub(crate) fn update_writes_from_other(&mut self, other: &Self) {
@@ -78,9 +82,12 @@ impl StateCache {
         address_to_nonce: &HashMap<BigInt, BigInt>,
         storage_updates: &HashMap<StorageEntry, BigInt>,
     ) -> Result<(), StateError> {
-        if !(self.get_address_to_class_hash().is_empty()
-            && self.get_address_to_nonce().is_empty()
-            && self.get_storage_view().is_empty())
+        if !(self.class_hash_initial_values.is_empty()
+            && self.class_hash_writes.is_empty()
+            && self.nonce_initial_values.is_empty()
+            && self.nonce_writes.is_empty()
+            && self.storage_initial_values.is_empty()
+            && self.storage_writes.is_empty())
         {
             return Err(StateError::StateCacheAlreadyInitialized);
         }
@@ -148,15 +155,15 @@ mod tests {
         state_cache.update_writes_from_other(&other_state_cache);
 
         assert_eq!(
-            state_cache.get_address_to_class_hash(),
-            other_address_to_class_hash
+            state_cache.get_class_hash(&bigint!(10)),
+            Some(&b"sha-3".to_vec())
         );
         assert_eq!(
-            state_cache.get_address_to_nonce(),
+            state_cache.nonce_writes,
             HashMap::from([(bigint!(9), bigint!(12)), (bigint!(401), bigint!(100))])
         );
         assert_eq!(
-            state_cache.get_storage_view(),
+            state_cache.storage_writes,
             HashMap::from([
                 ((bigint!(20), [1; 32]), bigint!(18)),
                 ((bigint!(4002), [2; 32]), bigint!(101))
