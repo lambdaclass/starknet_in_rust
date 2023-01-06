@@ -37,26 +37,11 @@ impl<T: StateReader> CachedState<T> {
         &self.block_info
     }
 
-    pub(crate) fn get_contract_classes(&self) -> Result<&ContractClassCache, StateError> {
-        self.contract_classes
-            .as_ref()
-            .ok_or(StateError::MissingContractClassCache)
+    pub(crate) fn update_block_info(&mut self, block_info: BlockInfo) {
+        self.block_info = block_info;
     }
 
-    pub(crate) fn insert_contract_class(
-        &mut self,
-        key: Vec<u8>,
-        value: ContractClass,
-    ) -> Result<(), StateError> {
-        self.contract_classes
-            .as_mut()
-            .ok_or(StateError::MissingContractClassCache)?
-            .insert(key, value);
-
-        Ok(())
-    }
-
-    pub(crate) fn set_contract_class_cache(
+    pub(crate) fn set_contract_classes(
         &mut self,
         contract_classes: ContractClassCache,
     ) -> Result<(), StateError> {
@@ -67,14 +52,23 @@ impl<T: StateReader> CachedState<T> {
         Ok(())
     }
 
-    pub(crate) fn update_block_info(&mut self, block_info: BlockInfo) {
-        self.block_info = block_info;
+    pub(crate) fn get_contract_classes(&self) -> Result<&ContractClassCache, StateError> {
+        self.contract_classes
+            .as_ref()
+            .ok_or(StateError::MissingContractClassCache)
     }
 
-    pub(crate) fn set_contract_class(&mut self, class_hash: &[u8], contract_class: ContractClass) {
-        if let Some(contract_classes) = &mut self.contract_classes {
-            contract_classes.insert(Vec::from(class_hash), contract_class);
-        }
+    pub(crate) fn set_contract_class(
+        &mut self,
+        key: Vec<u8>,
+        value: ContractClass,
+    ) -> Result<(), StateError> {
+        self.contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingContractClassCache)?
+            .insert(key, value);
+
+        Ok(())
     }
 
     pub(crate) fn deploy_contract(&self, contract_address: &BigInt, class_hash: &[u8]) {
@@ -95,7 +89,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
     fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<&ContractClass, StateError> {
         if !(self.get_contract_classes()?.contains_key(class_hash)) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?.clone();
-            self.insert_contract_class(class_hash.to_vec(), contract_class);
+            self.set_contract_class(class_hash.to_vec(), contract_class);
         }
         self.get_contract_classes()?
             .get(class_hash)
