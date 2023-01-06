@@ -4,9 +4,9 @@ use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread
 
 use crate::{
     business_logic::state::{
+        cached_state::CachedState,
         state_api::{State, StateReader},
         state_api_objects::BlockInfo,
-        state_cache::CachedState,
     },
     core::errors::state_errors::StateError,
     definitions::general_config::{self, StarknetGeneralConfig},
