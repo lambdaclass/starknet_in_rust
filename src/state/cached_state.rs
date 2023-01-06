@@ -150,7 +150,7 @@ impl<T: StateReader> State for CachedState<T> {
 
         let current_class_hash = self.get_class_hash_at(&contract_address)?;
 
-        if current_class_hash == UNINITIALIZED_CLASS_HASH.to_vec() {
+        if current_class_hash == &UNINITIALIZED_CLASS_HASH.to_vec() {
             return Err(StateError::ContractAddressUnavailable(contract_address));
         }
         self.cache
@@ -161,10 +161,11 @@ impl<T: StateReader> State for CachedState<T> {
     }
 
     fn increment_nonce(&mut self, contract_address: &BigInt) -> Result<(), StateError> {
-        let current_nonce = self.get_nonce_at(contract_address)?;
-        self.cache
+        let new_nonce = self.get_nonce_at(contract_address)? + 1;
+        self
+            .cache
             .nonce_writes
-            .insert(contract_address.clone(), current_nonce + 1);
+            .insert(contract_address.clone(), new_nonce);
         Ok(())
     }
 
