@@ -83,11 +83,9 @@ impl<T: StateReader + Clone> CarriedState<T> {
     }
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~
 // ----------------------
 //      SHARED STATE
 // ----------------------
-// ~~~~~~~~~~~~~~~~~~~~~~
 
 pub(crate) struct SharedState<T> {
     contract_states: PatriciaTree<T>,
