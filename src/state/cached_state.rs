@@ -2,15 +2,19 @@ use std::collections::HashMap;
 
 use num_bigint::BigInt;
 
-use crate::{core::errors::state_errors::StateError, services::api::contract_class::ContractClass};
+use crate::{
+    bigint, core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
+};
 
 use super::{
-    state_api::StateReader,
+    state_api::{State, StateReader},
     state_api_objects::BlockInfo,
     state_chache::{StateCache, StorageEntry},
 };
 
 pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
+
+const UNINITIALIZED_CLASS_HASH: [u8; 32] = [b'0'; 32];
 
 pub(crate) struct CachedState<T: StateReader> {
     block_info: BlockInfo,
@@ -70,19 +74,6 @@ impl<T: StateReader> CachedState<T> {
 
         Ok(())
     }
-
-    pub(crate) fn deploy_contract(&self, contract_address: &BigInt, class_hash: &[u8]) {
-        todo!()
-    }
-
-    pub(crate) fn set_storage_at(
-        &self,
-        contract_address: &BigInt,
-        key: &[u8; 32],
-        value: BigInt,
-    ) -> BigInt {
-        todo!()
-    }
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
@@ -132,5 +123,58 @@ impl<T: StateReader> StateReader for CachedState<T> {
         self.cache
             .get_storage(storage_entry)
             .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
+    }
+}
+
+impl<T: StateReader> State for CachedState<T> {
+    fn get_block_info(&self) -> &BlockInfo {
+        &self.block_info
+    }
+
+    fn set_contract_class(&mut self, class_hash: &[u8], contract_class: &ContractClass) {
+        if let Some(contract_classes) = &mut self.contract_classes {
+            contract_classes.insert(Vec::from(class_hash), contract_class.clone());
+        }
+    }
+
+    fn deploy_contract(
+        &mut self,
+        contract_address: BigInt,
+        class_hash: Vec<u8>,
+    ) -> Result<(), StateError> {
+        if contract_address == bigint!(0) {
+            return Err(StateError::ContractAddressOutOfRangeAddress(
+                contract_address,
+            ));
+        }
+
+        let current_class_hash = self.get_class_hash_at(&contract_address)?;
+
+        if current_class_hash == &UNINITIALIZED_CLASS_HASH.to_vec() {
+            return Err(StateError::ContractAddressUnavailable(contract_address));
+        }
+        self.cache
+            .class_hash_writes
+            .insert(contract_address, class_hash);
+
+        Ok(())
+    }
+
+    fn increment_nonce(&mut self, contract_address: &BigInt) -> Result<(), StateError> {
+        let new_nonce = self.get_nonce_at(contract_address)? + 1;
+        self.cache
+            .nonce_writes
+            .insert(contract_address.clone(), new_nonce);
+        Ok(())
+    }
+
+    fn update_block_info(&mut self, block_info: BlockInfo) {
+        self.block_info = block_info;
+    }
+
+    fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: BigInt) {
+        self.cache
+            .storage_writes
+            .insert(storage_entry.clone(), value);
     }
 }
