@@ -92,66 +92,51 @@ impl<T: StateReader> CachedState<T> {
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
-    fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<ContractClass, StateError> {
+    fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<&ContractClass, StateError> {
         if !(self.get_contract_classes()?.contains_key(class_hash)) {
-            let contract_class = &self.state_reader.get_contract_class(class_hash)?;
-            self.insert_contract_class(class_hash.to_vec(), contract_class.to_owned());
+            let contract_class = self.state_reader.get_contract_class(class_hash)?.clone();
+            self.insert_contract_class(class_hash.to_vec(), contract_class);
         }
-        self.get_contract_class(class_hash)
+        self.get_contract_classes()?
+            .get(class_hash)
+            .ok_or(StateError::MissingContractClassCache)
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &BigInt) -> Result<Vec<u8>, StateError> {
-        if !(self
-            .cache
-            .get_address_to_class_hash()
-            .contains_key(contract_address))
-        {
+    fn get_class_hash_at(&mut self, contract_address: &BigInt) -> Result<&Vec<u8>, StateError> {
+        if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
             self.cache
                 .class_hash_initial_values
-                .insert(contract_address.clone(), class_hash);
+                .insert(contract_address.clone(), class_hash.clone());
         }
 
-        Ok(self
-            .cache
-            .get_address_to_class_hash()
-            .get(contract_address)
-            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))?
-            .to_vec())
+        self.cache
+            .get_class_hash(contract_address)
+            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
     }
 
-    fn get_nonce_at(&mut self, contract_address: &BigInt) -> Result<BigInt, StateError> {
-        if !(self
-            .cache
-            .get_address_to_nonce()
-            .contains_key(contract_address))
-        {
+    fn get_nonce_at(&mut self, contract_address: &BigInt) -> Result<&BigInt, StateError> {
+        if self.cache.get_nonce(contract_address).is_none() {
             let nonce = self.state_reader.get_nonce_at(contract_address)?;
             self.cache
                 .nonce_initial_values
-                .insert(contract_address.clone(), nonce);
+                .insert(contract_address.clone(), nonce.clone());
         }
-        Ok(self
-            .cache
-            .get_address_to_nonce()
-            .get(contract_address)
-            .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))?
-            .to_owned())
+        self.cache
+            .get_nonce(contract_address)
+            .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<BigInt, StateError> {
-        if !(self.cache.get_storage_view().contains_key(storage_entry)) {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&BigInt, StateError> {
+        if self.cache.get_storage(storage_entry).is_none() {
             let value = self.state_reader.get_storage_at(storage_entry)?;
             self.cache
                 .storage_initial_values
-                .insert(storage_entry.clone(), value);
+                .insert(storage_entry.clone(), value.clone());
         }
 
-        Ok(self
-            .cache
-            .get_storage_view()
-            .get(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))?
-            .clone())
+        self.cache
+            .get_storage(storage_entry)
+            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
     }
 }
