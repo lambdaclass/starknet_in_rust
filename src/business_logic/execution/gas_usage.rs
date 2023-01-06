@@ -172,6 +172,7 @@ mod tests {
     #[test]
     fn l2_emission_cost() {
         let l1_handler_1 = Some(10);
+        let l1_handler_2 = None;
 
         // CONSUMED_MSG_TO_L2_N_TOPICS = 3
         // CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE = 3
@@ -180,8 +181,6 @@ mod tests {
             get_consumed_message_to_l2_emissions_cost(l1_handler_1),
             2144
         );
-
-        let l1_handler_2 = None;
         assert_eq!(get_consumed_message_to_l2_emissions_cost(l1_handler_2), 0);
     }
 
