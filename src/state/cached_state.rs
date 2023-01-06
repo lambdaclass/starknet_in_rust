@@ -162,8 +162,7 @@ impl<T: StateReader> State for CachedState<T> {
 
     fn increment_nonce(&mut self, contract_address: &BigInt) -> Result<(), StateError> {
         let new_nonce = self.get_nonce_at(contract_address)? + 1;
-        self
-            .cache
+        self.cache
             .nonce_writes
             .insert(contract_address.clone(), new_nonce);
         Ok(())
