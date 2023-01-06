@@ -54,7 +54,7 @@ fn starknet_gas_usage(
     l2_to_l1_msg_len: usize,
     l1_to_l2_msg_len: usize,
     l1_handler: Option<usize>,
-    l2_to_l1_messages: &Vec<L2toL1MessageInfo>,
+    l2_to_l1_messages: &[L2toL1MessageInfo],
 ) -> usize {
     let l2_emissions_cost = get_consumed_message_to_l2_emissions_cost(l1_handler);
     let l1_log_emissions_cost = get_log_message_to_l1_emissions_cost(l2_to_l1_messages);
@@ -71,7 +71,7 @@ fn starknet_gas_usage(
 /// that holds the segment size - are not counted.
 
 pub fn get_message_segment_lenght(
-    l2_to_l1_messages: &Vec<L2toL1MessageInfo>,
+    l2_to_l1_messages: &[L2toL1MessageInfo],
     l1_handler_payload_size: Option<usize>,
 ) -> usize {
     let message_segment_length = l2_to_l1_messages.iter().fold(0, |acc, msg| {
@@ -111,7 +111,7 @@ pub fn get_consumed_message_to_l2_emissions_cost(l1_handler: Option<usize>) -> u
 }
 
 /// Returns the cost of LogMessageToL1 event emissions caused by the given messages.
-pub fn get_log_message_to_l1_emissions_cost(l2_to_l1_messages: &Vec<L2toL1MessageInfo>) -> usize {
+pub fn get_log_message_to_l1_emissions_cost(l2_to_l1_messages: &[L2toL1MessageInfo]) -> usize {
     l2_to_l1_messages.iter().fold(0, |acc, msg| {
         acc + get_event_emission_cost(
             LOG_MSG_TO_L1_N_TOPICS,
