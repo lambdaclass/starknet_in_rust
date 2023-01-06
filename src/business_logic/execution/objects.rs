@@ -25,6 +25,14 @@ pub(crate) struct OrderedEvent {
     #[allow(unused)] // TODO: remove once used
     data: Vec<BigInt>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Event {
+    from_address: usize,
+    keys: Vec<BigInt>,
+    data: Vec<BigInt>,
+}
+
 #[derive(Clone)]
 pub(crate) struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
@@ -40,6 +48,16 @@ pub(crate) struct TransactionExecutionContext {
 impl OrderedEvent {
     pub fn new(order: u64, keys: Vec<BigInt>, data: Vec<BigInt>) -> Self {
         OrderedEvent { order, keys, data }
+    }
+}
+
+impl Event {
+    pub fn new(event_content: OrderedEvent, emitting_contract_address: usize) -> Self {
+        Event {
+            from_address: emitting_contract_address,
+            keys: event_content.keys,
+            data: event_content.data,
+        }
     }
 }
 
