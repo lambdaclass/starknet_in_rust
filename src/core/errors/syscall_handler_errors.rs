@@ -11,8 +11,8 @@ pub enum SyscallHandlerError {
     MissingSelector,
     #[error("Missing file syscalls.json")]
     MissingSyscallsJsonFile,
-    #[error("Unknown syscall")]
-    UnknownSyscall,
+    #[error("Unknown syscall: {0}")]
+    UnknownSyscall(String),
     #[error("invalid pointer")]
     SegmentationFault,
     #[error("Couldn't convert BigInt to usize")]

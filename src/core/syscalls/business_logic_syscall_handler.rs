@@ -193,27 +193,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
                 _ => return Err(SyscallHandlerError::ExpectedCallContract),
             };
 
-        let mut calldata = Vec::new();
+        let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
 
-        // TODO review this.
-        for maybe_reloc_option in vm
-            .get_range(
-                &MaybeRelocatable::from(&request.calldata),
-                request.calldata_size,
-            )
-            .map_err(|err| SyscallHandlerError::MemoryError(err.to_string()))?
-        {
-            match maybe_reloc_option {
-                None => return Err(SyscallHandlerError::ExpectedMaybeRelocatable),
-                Some(maybe_reloc_cow) => match maybe_reloc_cow.deref() {
-                    MaybeRelocatable::Int(int) => calldata.push(int.clone()),
-                    _ => return Err(SyscallHandlerError::ExpectedMaybeRelocatableInt),
-                },
-            }
-        }
-
-        let mut code_address = None; // Optional[int]
-        let mut class_hash = None; // Optional[bytes]
+        let mut code_address = None;
+        let mut class_hash = None;
 
         match syscall_name {
             "call_contract" => {
@@ -251,7 +234,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
                 let entry_point_type = EntryPointType::L1Handler;
                 let call_type = CallType::Delegate;
             }
-            _ => return Err(SyscallHandlerError::UnknownSyscall), // TODO add some message to this error.
+            _ => {
+                return Err(SyscallHandlerError::UnknownSyscall(
+                    syscall_name.to_string(),
+                ))
+            } // TODO add some message to this error.
         }
 
         // let call = self.execute_entry_point(
@@ -268,7 +255,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         // return self.execute_entry_point(call=call)
 
         // TODO, remove this once used the commented code.
-        Ok(Vec::new())
+        todo!()
     }
 
     fn get_block_info(&self) -> &BlockInfo {

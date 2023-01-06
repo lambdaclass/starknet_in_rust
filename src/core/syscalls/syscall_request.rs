@@ -26,7 +26,7 @@ pub(crate) enum SyscallRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallContractRequest {
     pub(crate) selector: BigInt,
-    pub(crate) calldata: BigInt,
+    pub(crate) calldata: Relocatable,
     pub(crate) calldata_size: usize,
     pub(crate) contract_address: u64,
     pub(crate) class_hash: u64,
@@ -392,5 +392,11 @@ impl CountFields for GetContractAddressRequest {
 impl CountFields for GetTxInfoRequest {
     fn count_fields() -> usize {
         1
+    }
+}
+
+impl CountFields for CallContractRequest {
+    fn count_fields() -> usize {
+        5
     }
 }

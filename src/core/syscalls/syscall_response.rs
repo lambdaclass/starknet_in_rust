@@ -1,6 +1,7 @@
 use super::syscall_request::{
-    CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
-    GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
+    CallContractRequest, CountFields, GetBlockNumberRequest, GetBlockTimestampRequest,
+    GetCallerAddressRequest, GetContractAddressRequest, GetSequencerAddressRequest,
+    GetTxInfoRequest, GetTxSignatureRequest,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
@@ -116,7 +117,7 @@ impl WriteSyscallResponse for CallContractResponse {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            &(syscall_ptr), // + CallContractRequest::count_fields(), but I'm not sure
+            &(syscall_ptr + CallContractRequest::count_fields()),
             &self.retdata,
         )?;
         Ok(())

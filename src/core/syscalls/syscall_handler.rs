@@ -77,7 +77,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let retdata = self._call_contract(syscall_name, vm, syscall_ptr).unwrap();
+        let retdata = self._call_contract(syscall_name, vm, syscall_ptr)?;
 
         let retdata_maybe_reloc = retdata
             .clone()
@@ -87,7 +87,7 @@ pub(crate) trait SyscallHandler {
 
         let response = CallContractResponse::new(
             retdata.len(),
-            self.allocate_segment(vm, retdata_maybe_reloc).unwrap(),
+            self.allocate_segment(vm, retdata_maybe_reloc)?,
         );
 
         self._write_syscall_response(&response, vm, syscall_ptr)
@@ -262,7 +262,9 @@ pub(crate) trait SyscallHandler {
             "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
-            _ => Err(SyscallHandlerError::UnknownSyscall),
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
         }
     }
 }
