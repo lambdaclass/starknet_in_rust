@@ -1,6 +1,5 @@
-use std::{clone, collections::HashMap};
-
 use num_bigint::BigInt;
+use std::collections::HashMap;
 
 use crate::{
     bigint, core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
