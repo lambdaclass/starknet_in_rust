@@ -126,3 +126,99 @@ pub fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) ->
         + l1_handler_payload_size
         + GAS_PER_LOG_DATA_WORD
 }
+
+#[cfg(test)]
+mod tests {
+    use super::get_event_emission_cost;
+    use super::*;
+    use crate::business_logic::execution::objects::{
+        L2toL1MessageInfo, OrderedEvent, OrderedL2ToL1Message,
+    };
+    use cairo_rs::bigint;
+    use num_bigint::BigInt;
+
+    #[test]
+    fn test_event_emission_cost() {
+        let topics = 40;
+        let l1_handler_payload_size = 9;
+        // GAS_PER_LOG = 375
+        // N_DEFAULT_TOPICS = 1
+        // GAS_PER_LOG_TOPIC = 375
+        // GAS_PER_LOG_DATA_WORD = 8 * 32
+        assert_eq!(
+            375 + 41 * 375 + 9 + 32 * 8,
+            get_event_emission_cost(topics, l1_handler_payload_size)
+        );
+    }
+
+    #[test]
+    fn log_messages_cost_test() {
+        let ord_ev1 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(4)]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(5), bigint!(6)]);
+        let message1 = L2toL1MessageInfo::new(ord_ev1, 1234);
+        let message2 = L2toL1MessageInfo::new(ord_ev2, 1235);
+
+        // LOG_MSG_TO_L1_N_TOPICS = 2
+        // LOG_MSG_TO_L1_ENCODED_DATA_SIZE = 2
+        // first iteration:  get_emission_cost(2, 2 + 1) = 1759
+        // second iteration:  get_emission_cost(2, 2 + 2) = 1760
+        // final result = 1760 + 1759 = 3519
+        assert_eq!(
+            get_log_message_to_l1_emissions_cost(&[message1, message2]),
+            3519
+        )
+    }
+
+    #[test]
+    fn l2_emission_cost() {
+        let l1_handler_1 = Some(10);
+
+        // CONSUMED_MSG_TO_L2_N_TOPICS = 3
+        // CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE = 3
+        // result = emission_cost(3, 3+10)
+        assert_eq!(
+            get_consumed_message_to_l2_emissions_cost(l1_handler_1),
+            2144
+        );
+
+        let l1_handler_2 = None;
+        assert_eq!(get_consumed_message_to_l2_emissions_cost(l1_handler_2), 0);
+    }
+
+    #[test]
+    fn message_segment_len() {
+        let ord_ev1 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(4)]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(5), bigint!(6)]);
+        let message1 = L2toL1MessageInfo::new(ord_ev1, 1234);
+        let message2 = L2toL1MessageInfo::new(ord_ev2, 1235);
+
+        let ord_ev3 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(5), bigint!(6)]);
+        let ord_ev4 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(4)]);
+        let message3 = L2toL1MessageInfo::new(ord_ev3, 1234);
+        let message4 = L2toL1MessageInfo::new(ord_ev4, 1235);
+
+        let l1_handler_1 = Some(10);
+        let l1_handler_2 = None;
+
+        // L2_TO_L1_MSG_HEADER_SIZE = 3
+        // iterations
+        // initial value: acc = 0
+        // first iteration: acc + 3 + 1 -> acc = 4
+        // second iteration: acc + 3 + 2 = 9
+        // 9 + 5 + size
+        assert_eq!(
+            get_message_segment_lenght(&[message1, message2], l1_handler_1),
+            24
+        );
+
+        // iterations
+        // initial value: acc = 0
+        // first iteration: acc + 3 + 2 -> acc = 5
+        // second iteration: acc + 3 + 1 = 9
+        // 9
+        assert_eq!(
+            get_message_segment_lenght(&[message3, message4], l1_handler_2),
+            9
+        );
+    }
+}
