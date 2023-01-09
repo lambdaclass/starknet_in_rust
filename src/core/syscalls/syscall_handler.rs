@@ -4,6 +4,7 @@ use super::os_syscall_handler::OsSyscallHandler;
 use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::GetContractAddressResponse;
+use super::syscall_response::StorageReadResponse;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
     GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
@@ -50,6 +51,25 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
+
+    fn storage_read(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::StorageRead(request) =
+            self._read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        let value = self._storage_read(request.address)?;
+        let response = StorageReadResponse::new(value);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 
     fn _get_tx_info_ptr(
         &mut self,

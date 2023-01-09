@@ -46,7 +46,7 @@ pub(crate) struct GetTxInfoResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageReadResponse {
-    value: BigInt,
+    value: u64,
 }
 
 impl GetTxInfoResponse {
@@ -85,6 +85,12 @@ impl GetTxSignatureResponse {
 impl GetContractAddressResponse {
     pub fn new(contract_address: u64) -> Self {
         GetContractAddressResponse { contract_address }
+    }
+}
+
+impl StorageReadResponse {
+    pub fn new(value: u64) -> Self {
+        StorageReadResponse { value }
     }
 }
 
@@ -208,7 +214,7 @@ impl WriteSyscallResponse for StorageReadResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             &(syscall_ptr + StorageReadRequest::count_fields()),
-            &self.value,
+            bigint!(self.value),
         )?;
         Ok(())
     }
