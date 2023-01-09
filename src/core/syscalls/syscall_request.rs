@@ -20,6 +20,7 @@ pub(crate) enum SyscallRequest {
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
     GetTxSignature(GetTxSignatureRequest),
+    StorageRead(StorageReadRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -101,6 +102,13 @@ pub(crate) struct GetBlockNumberRequest {
     pub(crate) _selector: BigInt,
 }
 
+/// Describes the StorageRead system call format.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageReadRequest {
+    pub(crate) selector: BigInt,
+    pub(crate) address: u64,
+}
+
 impl From<EmitEventStruct> for SyscallRequest {
     fn from(emit_event_struct: EmitEventStruct) -> SyscallRequest {
         SyscallRequest::EmitEvent(emit_event_struct)
@@ -151,6 +159,12 @@ impl From<GetTxSignatureRequest> for SyscallRequest {
 impl From<GetTxInfoRequest> for SyscallRequest {
     fn from(get_tx_info_request: GetTxInfoRequest) -> SyscallRequest {
         SyscallRequest::GetTxInfo(get_tx_info_request)
+    }
+}
+
+impl From<StorageReadRequest> for SyscallRequest {
+    fn from(storage_read: StorageReadRequest) -> SyscallRequest {
+        SyscallRequest::StorageRead(storage_read)
     }
 }
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -335,6 +349,21 @@ impl FromPtr for GetContractAddressRequest {
     }
 }
 
+impl FromPtr for StorageReadRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, &syscall_ptr)?;
+        let address = get_integer(vm, &syscall_ptr)? as u64;
+
+        Ok(SyscallRequest::StorageRead(StorageReadRequest {
+            selector,
+            address,
+        }))
+    }
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  CountFields implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -382,5 +411,11 @@ impl CountFields for GetContractAddressRequest {
 impl CountFields for GetTxInfoRequest {
     fn count_fields() -> usize {
         1
+    }
+}
+
+impl CountFields for StorageReadRequest {
+    fn count_fields() -> usize {
+        2
     }
 }
