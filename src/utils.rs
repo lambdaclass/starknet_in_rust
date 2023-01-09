@@ -1,5 +1,6 @@
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::{Felt, FeltOps};
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 
@@ -15,13 +16,13 @@ pub fn get_integer(
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
         .as_ref()
         .to_usize()
-        .ok_or(SyscallHandlerError::BigintToUsizeFail)
+        .ok_or(SyscallHandlerError::FeltToUsizeFail)
 }
 
 pub fn get_big_int(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
-) -> Result<BigInt, SyscallHandlerError> {
+) -> Result<Felt, SyscallHandlerError> {
     Ok(vm
         .get_integer(syscall_ptr)
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
@@ -39,29 +40,29 @@ pub fn get_relocatable(
 pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
     bigint
         .to_usize()
-        .ok_or(SyscallHandlerError::BigintToUsizeFail)
+        .ok_or(SyscallHandlerError::FeltToUsizeFail)
 }
 
 pub fn get_integer_range(
     vm: &VirtualMachine,
     addr: &Relocatable,
     size: usize,
-) -> Result<Vec<BigInt>, SyscallHandlerError> {
+) -> Result<Vec<Felt>, SyscallHandlerError> {
     Ok(vm
         .get_integer_range(addr, size)
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
         .into_iter()
         .map(|c| c.into_owned())
-        .collect::<Vec<BigInt>>())
+        .collect::<Vec<Felt>>())
 }
 
-pub fn bigint_to_felt(value: &BigInt) -> Result<FieldElement, SyscallHandlerError> {
+pub fn felt_to_field_element(value: &Felt) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
         .map_err(|_| SyscallHandlerError::FailToComputeHash)
 }
 
-pub fn felt_to_bigint(sign: Sign, felt: &FieldElement) -> BigInt {
-    BigInt::from_bytes_be(sign, &felt.to_bytes_be())
+pub fn field_element_to_felt(sign: Sign, felt: &FieldElement) -> Felt {
+    Felt::from_bytes_be(&felt.to_bytes_be())
 }
 //* -------------------
 //* Macros
@@ -134,8 +135,8 @@ pub mod test_utils {
 
     macro_rules! vm {
         () => {{
+            use felt::{Felt, NewFelt};
             VirtualMachine::new(
-                BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
                 false,
                 Vec::new(),
             )
@@ -143,7 +144,6 @@ pub mod test_utils {
 
         ($use_trace:expr) => {{
             VirtualMachine::new(
-                BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
                 $use_trace,
                 Vec::new(),
             )
@@ -177,7 +177,7 @@ pub mod test_utils {
             $vm.insert_value(&k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
-            let v = bigint!($val);
+            let v: felt::Felt = $val.into();
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
@@ -187,7 +187,8 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            let v = $crate::bigint_str!($val);
+            use felt::FeltOps;
+            let v = felt::Felt::from_bytes_be($val);
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
