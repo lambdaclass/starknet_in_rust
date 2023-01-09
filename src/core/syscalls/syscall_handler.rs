@@ -1042,4 +1042,29 @@ mod tests {
             relocatable!(3, 0)
         );
     }
+
+    #[test]
+    fn test_storage_read_hint_ok() {
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        // direction (1,0) is the sycall_ptr
+        memory_insert!(vm, [((1, 0), (1, 1))]);
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
+        // invoke syscall
+        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        assert!(hint_processor
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .is_ok());
+    }
 }
