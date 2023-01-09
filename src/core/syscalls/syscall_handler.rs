@@ -4,6 +4,7 @@ use super::os_syscall_handler::OsSyscallHandler;
 use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::GetContractAddressResponse;
+use super::syscall_response::StorageReadResponse;
 use super::syscall_response::{
     GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
     GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
@@ -50,6 +51,25 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
+
+    fn storage_read(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::StorageRead(request) =
+            self._read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        let value = self._storage_read(request.address)?;
+        let response = StorageReadResponse::new(value);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 
     fn _get_tx_info_ptr(
         &mut self,
@@ -245,6 +265,7 @@ pub(crate) trait SyscallHandler {
             "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
+            "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall),
         }
     }
@@ -332,6 +353,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             LIBRARY_CALL => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.library_call(vm, syscall_ptr)
+            }
+            STORAGE_READ => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.storage_read(vm, syscall_ptr)
             }
             SEND_MESSAGE_TO_L1 => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -1016,5 +1041,30 @@ mod tests {
             vm.get_relocatable(&relocatable!(2, 2)).unwrap(),
             relocatable!(3, 0)
         );
+    }
+
+    #[test]
+    fn test_storage_read_hint_ok() {
+        let mut vm = vm!();
+
+        add_segments!(vm, 2);
+
+        // direction (1,0) is the sycall_ptr
+        memory_insert!(vm, [((1, 0), (1, 1))]);
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
+        // invoke syscall
+        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        assert!(hint_processor
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .is_ok());
     }
 }
