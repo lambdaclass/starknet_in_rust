@@ -1,6 +1,7 @@
 use super::syscall_request::{
     CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
     GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
+    StorageReadRequest,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
@@ -41,6 +42,11 @@ pub(crate) struct GetTxSignatureResponse {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetTxInfoResponse {
     tx_info: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageReadResponse {
+    value: BigInt,
 }
 
 impl GetTxInfoResponse {
@@ -189,6 +195,20 @@ impl WriteSyscallResponse for GetTxInfoResponse {
         vm.insert_value(
             &(syscall_ptr + GetTxInfoRequest::count_fields()),
             self.tx_info,
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for StorageReadResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + StorageReadRequest::count_fields()),
+            &self.value,
         )?;
         Ok(())
     }
