@@ -774,6 +774,7 @@ dependencies = [
  "num-traits",
  "patricia-tree",
  "serde_json",
+ "sha3",
  "starknet-crypto",
  "thiserror",
 ]

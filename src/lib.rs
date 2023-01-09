@@ -8,6 +8,5 @@ pub mod hash_utils;
 pub mod public;
 pub mod services;
 pub mod starknet_storage;
-pub mod state;
 pub mod testing;
 pub mod utils;

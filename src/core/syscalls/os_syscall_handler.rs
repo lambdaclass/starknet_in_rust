@@ -1,9 +1,9 @@
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
+use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::services::api::contract_class::EntryPointType;
-use crate::state::state_api_objects::BlockInfo;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
@@ -374,9 +374,9 @@ impl OsSyscallHandler {
 
 #[cfg(test)]
 mod tests {
+    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
-    use crate::state::state_api_objects::BlockInfo;
     use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::vm_core::VirtualMachine;

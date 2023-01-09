@@ -106,7 +106,7 @@ impl StateCache {
 
 #[cfg(test)]
 mod tests {
-    use crate::{bigint, state};
+    use crate::{bigint, business_logic::state};
 
     use super::*;
 
