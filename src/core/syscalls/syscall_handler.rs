@@ -22,9 +22,10 @@ use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintRef
 use cairo_rs::serde::deserialize_program::ApTracking;
 use cairo_rs::types::exec_scope::ExecutionScopes;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::vm::errors::hint_errors::HintError;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
-use num_bigint::BigInt;
+use felt::Felt;
 use std::any::Any;
 use std::collections::HashMap;
 
@@ -284,14 +285,14 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, BigInt>,
-    ) -> Result<bool, VirtualMachineError> {
+        constants: &HashMap<String, Felt>,
+    ) -> Result<bool, HintError> {
         match self
             .builtin_hint_processor
             .execute_hint(vm, exec_scopes, hint_data, constants)
         {
             Ok(()) => Ok(false),
-            Err(VirtualMachineError::UnknownHint(_)) => Ok(true),
+            Err(HintError::UnknownHint(_)) => Ok(true),
             Err(e) => Err(e),
         }
     }
@@ -301,7 +302,7 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        _constants: &HashMap<String, BigInt>,
+        _constants: &HashMap<String, Felt>,
     ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
@@ -360,48 +361,31 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, BigInt>,
-    ) -> Result<(), VirtualMachineError> {
+        constants: &HashMap<String, Felt>,
+    ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|e| VirtualMachineError::UnknownHint(e.to_string()))?;
+                .map_err(|e| HintError::UnknownHint(e.to_string()))?;
         }
         Ok(())
-    }
-
-    fn compile_hint(
-        &self,
-        hint_code: &str,
-        ap_tracking_data: &cairo_rs::serde::deserialize_program::ApTracking,
-        reference_ids: &std::collections::HashMap<String, usize>,
-        references: &std::collections::HashMap<
-            usize,
-            cairo_rs::hint_processor::hint_processor_definition::HintReference,
-        >,
-    ) -> Result<Box<dyn Any>, VirtualMachineError> {
-        Ok(any_box!(HintProcessorData {
-            code: hint_code.to_string(),
-            ap_tracking: ap_tracking_data.clone(),
-            ids_data: get_ids_data(reference_ids, references)?,
-        }))
     }
 }
 
 fn get_ids_data(
     reference_ids: &HashMap<String, usize>,
     references: &HashMap<usize, HintReference>,
-) -> Result<HashMap<String, HintReference>, VirtualMachineError> {
+) -> Result<HashMap<String, HintReference>, HintError> {
     let mut ids_data = HashMap::<String, HintReference>::new();
     for (path, ref_id) in reference_ids {
         let name = path
             .rsplit('.')
             .next()
-            .ok_or(VirtualMachineError::FailedToGetIds)?;
+            .ok_or(HintError::FailedToGetIds)?;
         ids_data.insert(
             name.to_string(),
             references
                 .get(ref_id)
-                .ok_or(VirtualMachineError::FailedToGetIds)?
+                .ok_or(HintError::FailedToGetIds)?
                 .clone(),
         );
     }
@@ -430,12 +414,11 @@ mod tests {
     use crate::utils::test_utils::ids_data;
     use crate::utils::{get_big_int, get_integer, get_relocatable};
     use crate::{
-        add_segments, bigint, core::syscalls::os_syscall_handler::OsSyscallHandler,
+        add_segments, core::syscalls::os_syscall_handler::OsSyscallHandler,
         utils::test_utils::vm,
     };
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
-    use num_bigint::{BigInt, Sign};
     use num_traits::ToPrimitive;
 
     use super::*;
@@ -454,7 +437,7 @@ mod tests {
         assert_eq!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
             Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
-                _selector: bigint!(0),
+                _selector: 0.into(),
                 to_address: 1,
                 payload_size: 2,
                 payload_ptr: relocatable!(2, 0)
@@ -483,10 +466,10 @@ mod tests {
         assert_eq!(
             syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
             Ok(SyscallRequest::Deploy(DeployRequestStruct {
-                _selector: bigint!(0),
-                class_hash: bigint!(1),
-                contract_address_salt: bigint!(2),
-                constructor_calldata_size: bigint!(3),
+                _selector: 0.into(),
+                class_hash: 1.into(),
+                contract_address_salt: 2.into(),
+                constructor_calldata_size: 3.into(),
                 constructor_calldata: relocatable!(1, 20),
                 deploy_from_zero: 4,
             }))
@@ -524,7 +507,7 @@ mod tests {
         // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,2) position
         assert_eq!(
             get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
-            bigint!(syscall.get_block_info().block_timestamp)
+            syscall.get_block_info().block_timestamp.into()
         );
     }
 
@@ -551,7 +534,7 @@ mod tests {
             .unwrap();
 
         // Check that syscall.get_sequencer insert syscall.get_block_info().sequencer_address in the (1,1) position
-        assert_eq!(get_big_int(&vm, &relocatable!(1, 2)).unwrap(), bigint!(0))
+        assert_eq!(get_big_int(&vm, &relocatable!(1, 2)).unwrap(), 0.into())
     }
 
     #[test]
@@ -608,8 +591,8 @@ mod tests {
         assert_eq!(
             OrderedEvent::new(
                 0,
-                Vec::from([bigint!(1), bigint!(1)]),
-                Vec::from([bigint!(1), bigint!(1)])
+                Vec::from([1.into(), 1.into()]),
+                Vec::from([1.into(), 1.into()])
             ),
             event
         );
@@ -646,11 +629,11 @@ mod tests {
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
             version: 51,
-            account_contract_address: bigint!(260),
+            account_contract_address: 260.into(),
             max_fee: 261,
-            transaction_hash: bigint!(262),
-            signature: vec![bigint!(300), bigint!(301)],
-            nonce: bigint!(263),
+            transaction_hash: 262.into(),
+            signature: vec![300.into(), 301.into()],
+            nonce: 263.into(),
             n_sent_messages: 52,
         };
         syscall_handler_hint_processor
@@ -710,7 +693,7 @@ mod tests {
                 .general_config
                 .starknet_os_config
                 .chain_id
-                .to_bigint())
+                .to_felt())
         );
 
         assert_eq!(
@@ -887,7 +870,7 @@ mod tests {
                     .n_sent_messages
                     - 1,
                 1,
-                vec![bigint!(18), bigint!(12)],
+                vec![18.into(), 12.into()],
             )]
         );
     }
@@ -989,11 +972,11 @@ mod tests {
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
             version: 51,
-            account_contract_address: bigint!(260),
+            account_contract_address: 260.into(),
             max_fee: 261,
-            transaction_hash: bigint!(262),
-            signature: vec![bigint!(300), bigint!(301)],
-            nonce: bigint!(263),
+            transaction_hash: 262.into(),
+            signature: vec![300.into(), 301.into()],
+            nonce: 263.into(),
             n_sent_messages: 52,
         };
         syscall_handler_hint_processor
