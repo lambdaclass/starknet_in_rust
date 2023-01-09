@@ -100,7 +100,6 @@ pub fn to_state_diff_storage_mapping(
     Ok(storage_updates)
 }
 
-
 //* -------------------
 //* Macros
 //* -------------------
