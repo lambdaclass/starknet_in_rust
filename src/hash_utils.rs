@@ -5,9 +5,7 @@ use num_traits::Pow;
 use num_integer::Integer;
 use starknet_crypto::{pedersen_hash, FieldElement};
 
-use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
-};
+use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 
 pub fn calculate_contract_address_from_hash(
     salt: &Felt,
