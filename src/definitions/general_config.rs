@@ -1,5 +1,6 @@
+use felt::{Felt, FeltOps};
 use num_bigint::BigInt;
-use num_traits::Zero;
+use num_traits::{Num, Zero};
 
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
@@ -21,8 +22,8 @@ impl ToString for StarknetChainId {
 }
 
 impl StarknetChainId {
-    pub(crate) fn to_bigint(self) -> BigInt {
-        BigInt::from_bytes_be(num_bigint::Sign::Plus, self.to_string().as_bytes())
+    pub(crate) fn to_felt(self) -> Felt {
+        Felt::from_bytes_be(self.to_string().as_bytes())
     }
 }
 
@@ -30,7 +31,7 @@ impl StarknetChainId {
 #[derive(Debug, Clone)]
 pub(crate) struct StarknetOsConfig {
     pub(crate) chain_id: StarknetChainId,
-    pub(crate) fee_token_address: BigInt,
+    pub(crate) fee_token_address: Felt,
 }
 
 #[allow(unused)]
@@ -60,7 +61,7 @@ impl StarknetGeneralConfig {
         Self {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
-                fee_token_address: BigInt::zero(),
+                fee_token_address: Felt::zero(),
             },
             contract_storage_commitment_tree_height: 0,
             global_state_commitment_tree_height: 0,
@@ -71,22 +72,23 @@ impl StarknetGeneralConfig {
 
 #[cfg(test)]
 mod tests {
+    use felt::felt_str;
+
     use super::*;
-    use crate::bigint_str;
 
     #[test]
-    fn starknet_chain_to_bigint() {
+    fn starknet_chain_to_felt() {
         assert_eq!(
-            bigint_str!(b"23448594291968334"),
-            StarknetChainId::MainNet.to_bigint()
+            felt_str!("23448594291968334"),
+            StarknetChainId::MainNet.to_felt()
         );
         assert_eq!(
-            bigint_str!(b"1536727068981429685321"),
-            StarknetChainId::TestNet.to_bigint()
+            felt_str!("1536727068981429685321"),
+            StarknetChainId::TestNet.to_felt()
         );
         assert_eq!(
-            bigint_str!(b"393402129659245999442226"),
-            StarknetChainId::TestNet2.to_bigint()
+            felt_str!("393402129659245999442226"),
+            StarknetChainId::TestNet2.to_felt()
         );
     }
 }
