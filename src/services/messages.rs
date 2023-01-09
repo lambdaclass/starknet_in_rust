@@ -22,7 +22,7 @@ impl StarknetMessageToL1 {
         }
     }
 
-    pub fn encode(&self) -> Vec<usize> {
+    pub fn encode(&self) -> Vec<BigInt> {
         let from_address = bigint!(self.from_address);
         let to_address = bigint!(self.to_address);
         let payload_size = bigint!(self.payload.len());
@@ -33,30 +33,9 @@ impl StarknetMessageToL1 {
         encode.push(payload_size);
         encode.append(&mut data);
         encode
-            .iter()
-            .map(|x| x.to_usize().unwrap())
-            .collect::<Vec<usize>>()
     }
 
-    // pub fn get_hash(&self) -> String {
-    //     let mut hasher = Keccak256::new();
-    //     hasher.update(&self.encode());
-
-    //     let hashed = hasher.finalize();
-    //     String::from(str::from_utf8(&hashed).unwrap())
-    // }
+    pub fn get_hash(&self) -> String {
+        todo!()
+    }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use num_bigint::{BigInt, Sign};
-//     use crate::bigint;
-
-//     use super::StarknetMessageToL1;
-
-//     #[test]
-//     fn keccak() {
-//         let msg = StarknetMessageToL1::new(123, 321, vec![bigint!(1)]);
-//         assert_eq!(msg.get_hash(), "asdasd");
-//     }
-// }

@@ -34,8 +34,9 @@ impl<T: StateReader + Clone> StarknetState<T> {
         }
     }
 
-    pub fn empty(general_config: Option<StarknetGeneralConfig>) {
+    pub fn empty(general_config: Option<StarknetGeneralConfig>) -> Self {
         let config = general_config.unwrap_or(StarknetGeneralConfig::default());
         let ffc = FactFetchingContext::new(DictStorage::new(), None);
+        todo!()
     }
 }
