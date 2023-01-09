@@ -238,7 +238,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
                 return Err(SyscallHandlerError::UnknownSyscall(
                     syscall_name.to_string(),
                 ))
-            } // TODO add some message to this error.
+            }
         }
 
         // let call = self.execute_entry_point(
