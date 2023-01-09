@@ -1,11 +1,11 @@
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
-use crate::business_logic::execution::state::ExecutionResourcesManager;
+use crate::business_logic::fact_state::state::ExecutionResourcesManager;
+use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
-use crate::state::state_api_objects::BlockInfo;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
@@ -311,11 +311,11 @@ mod tests {
     use crate::business_logic::execution::objects::{
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     };
+    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::*;
     use crate::core::syscalls::syscall_handler::*;
-    use crate::state::state_api_objects::BlockInfo;
     use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,

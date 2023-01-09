@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use num_bigint::BigInt;
+use std::collections::HashMap;
 
 use crate::{
     bigint, core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
@@ -9,21 +8,22 @@ use crate::{
 use super::{
     state_api::{State, StateReader},
     state_api_objects::BlockInfo,
-    state_chache::{StateCache, StorageEntry},
+    state_cache::{StateCache, StorageEntry},
 };
 
 pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
 
 const UNINITIALIZED_CLASS_HASH: [u8; 32] = [b'0'; 32];
 
-pub(crate) struct CachedState<T: StateReader> {
-    block_info: BlockInfo,
+#[derive(Debug, Clone)]
+pub(crate) struct CachedState<T: StateReader + Clone> {
+    pub(crate) block_info: BlockInfo,
     pub(crate) state_reader: T,
     pub(crate) cache: StateCache,
-    contract_classes: Option<ContractClassCache>,
+    pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
-impl<T: StateReader> CachedState<T> {
+impl<T: StateReader + Clone> CachedState<T> {
     pub(crate) fn new(
         block_info: BlockInfo,
         state_reader: T,
@@ -74,9 +74,15 @@ impl<T: StateReader> CachedState<T> {
 
         Ok(())
     }
+
+    pub(crate) fn apply(&mut self, mut parent: CachedState<T>) {
+        // TODO assert: if self.state_reader == parent
+        parent.block_info = self.block_info.clone();
+        parent.cache.update_writes_from_other(&self.cache);
+    }
 }
 
-impl<T: StateReader> StateReader for CachedState<T> {
+impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<&ContractClass, StateError> {
         if !(self.get_contract_classes()?.contains_key(class_hash)) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?.clone();
@@ -126,7 +132,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
     }
 }
 
-impl<T: StateReader> State for CachedState<T> {
+impl<T: StateReader + Clone> State for CachedState<T> {
     fn get_block_info(&self) -> &BlockInfo {
         &self.block_info
     }

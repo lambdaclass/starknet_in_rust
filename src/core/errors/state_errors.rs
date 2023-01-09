@@ -1,7 +1,7 @@
 use num_bigint::BigInt;
 use thiserror::Error;
 
-use crate::state::state_chache::StorageEntry;
+use crate::business_logic::state::state_cache::StorageEntry;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum StateError {
@@ -9,6 +9,10 @@ pub enum StateError {
     MissingContractClassCache,
     #[error("ContractClassCache must be None")]
     AssignedContractClassCache,
+    #[error("Missing key that in StorageUpdate Map")]
+    EmptyKeyInStorage,
+    #[error("Try to create a CarriedState from a None parent")]
+    ParentCarriedStateIsNone,
     #[error("Cache already initialized")]
     StateCacheAlreadyInitialized,
     #[error("No class hash assigned for contact address: {0}")]
