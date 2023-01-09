@@ -377,10 +377,7 @@ fn get_ids_data(
 ) -> Result<HashMap<String, HintReference>, HintError> {
     let mut ids_data = HashMap::<String, HintReference>::new();
     for (path, ref_id) in reference_ids {
-        let name = path
-            .rsplit('.')
-            .next()
-            .ok_or(HintError::FailedToGetIds)?;
+        let name = path.rsplit('.').next().ok_or(HintError::FailedToGetIds)?;
         ids_data.insert(
             name.to_string(),
             references
@@ -414,8 +411,7 @@ mod tests {
     use crate::utils::test_utils::ids_data;
     use crate::utils::{get_big_int, get_integer, get_relocatable};
     use crate::{
-        add_segments, core::syscalls::os_syscall_handler::OsSyscallHandler,
-        utils::test_utils::vm,
+        add_segments, core::syscalls::os_syscall_handler::OsSyscallHandler, utils::test_utils::vm,
     };
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;

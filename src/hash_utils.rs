@@ -1,8 +1,8 @@
 use std::vec;
 
-use felt::{Felt, NewFelt, FeltOps, felt_str};
-use num_traits::Pow;
+use felt::{felt_str, Felt, FeltOps, NewFelt};
 use num_integer::Integer;
+use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};
 
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
@@ -98,12 +98,8 @@ mod tests {
 
     #[test]
     fn test_calculate_contract_address_from_hash() {
-        let result_1 = calculate_contract_address_from_hash(
-            &1.into(),
-            &2.into(),
-            &[3.into(), 4.into()],
-            5,
-        );
+        let result_1 =
+            calculate_contract_address_from_hash(&1.into(), &2.into(), &[3.into(), 4.into()], 5);
 
         assert_eq!(
             result_1,
