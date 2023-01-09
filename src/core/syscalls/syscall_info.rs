@@ -17,15 +17,6 @@ pub(crate) enum SyscallType {
         data: Option<Member>,
     },
 
-
-
-
-
-
-
-
-
-    
     #[allow(unused)] // TODO: Remove once used.
     GetTxInfo {
         version: Option<Member>,
