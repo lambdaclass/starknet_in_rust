@@ -100,6 +100,7 @@ pub fn to_state_diff_storage_mapping(
     Ok(storage_updates)
 }
 
+
 //* -------------------
 //* Macros
 //* -------------------
@@ -328,4 +329,33 @@ pub mod test_utils {
         }};
     }
     pub(crate) use storage_key;
+}
+
+#[cfg(test)]
+mod test {
+    use num_bigint::BigInt;
+    use std::collections::HashMap;
+
+    use super::{test_utils::storage_key, to_state_diff_storage_mapping};
+    use crate::bigint;
+
+    #[test]
+    fn to_state_diff_storage_mapping_test() {
+        let mut storage: HashMap<(BigInt, [u8; 32]), BigInt> = HashMap::new();
+        let address1 = bigint!(1);
+        let key1 = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let value1 = bigint!(2);
+
+        let address2 = bigint!(3);
+        let key2 = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
+        let value2 = bigint!(4);
+
+        storage.insert((address1.clone(), key1), value1.clone());
+        storage.insert((address2.clone(), key2), value2.clone());
+
+        let map = to_state_diff_storage_mapping(storage).unwrap();
+
+        assert_eq!(*map.get(&address1).unwrap().get(&key1).unwrap(), value1);
+        assert_eq!(*map.get(&address2).unwrap().get(&key2).unwrap(), value2);
+    }
 }
