@@ -1,7 +1,7 @@
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError::*;
 use cairo_rs::serde::deserialize_program::*;
-use num_bigint::BigInt;
+use felt::Felt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -31,7 +31,7 @@ pub(crate) enum SyscallType {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct SyscallInfo {
-    selector: BigInt,
+    selector: Felt,
     syscall_size: u64,
     syscall_struct: SyscallType,
 }
@@ -40,7 +40,7 @@ pub(crate) struct SyscallInfo {
 fn get_selector(
     selector: &str,
     identifiers: &HashMap<String, Identifier>,
-) -> Result<BigInt, SyscallHandlerError> {
+) -> Result<Felt, SyscallHandlerError> {
     identifiers
         .get(selector)
         .ok_or(MissingMember)?
@@ -137,9 +137,10 @@ pub fn program_json() -> Result<ProgramJson, SyscallHandlerError> {
 #[cfg(test)]
 mod tests {
 
+    use num_traits::Num;
+
     use super::SyscallInfo;
     use super::*;
-    use num_bigint::BigInt;
     use std::str::FromStr;
 
     #[test]
@@ -150,7 +151,7 @@ mod tests {
 
         assert_eq!(
             SyscallInfo {
-                selector: BigInt::from_str("1280709301550335749748").unwrap(),
+                selector: Felt::from_str_radix("1280709301550335749748", 10).unwrap(),
                 syscall_size: 5,
                 syscall_struct: SyscallType::EmitEvent {
                     selector: Some(Member {
@@ -187,7 +188,7 @@ mod tests {
 
         assert_eq!(
             SyscallInfo {
-                selector: BigInt::from_str("1317029390204112103023").unwrap(),
+                selector: Felt::from_str_radix("1317029390204112103023", 10).unwrap(),
                 syscall_size: 8,
                 syscall_struct: SyscallType::GetTxInfo {
                     account_contract_address: Some(Member {

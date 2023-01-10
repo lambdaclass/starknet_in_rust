@@ -15,10 +15,10 @@ pub enum SyscallHandlerError {
     UnknownSyscall,
     #[error("invalid pointer")]
     SegmentationFault,
-    #[error("Couldn't convert BigInt to usize")]
-    BigintToUsizeFail,
-    #[error("Couldn't convert BigInt to u64")]
-    BigintToU64Fail,
+    #[error("Couldn't convert Felt to usize")]
+    FeltToUsizeFail,
+    #[error("Couldn't convert Felt to u64")]
+    FeltToU64Fail,
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
