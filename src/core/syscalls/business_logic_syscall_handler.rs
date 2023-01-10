@@ -5,16 +5,16 @@ use std::rc::Rc;
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
-use crate::business_logic::execution::state::ExecutionResourcesManager;
+use crate::business_logic::fact_state::state::ExecutionResourcesManager;
+use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
-use crate::state::state_api_objects::BlockInfo;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
-use num_bigint::BigInt;
-use num_traits::{One, Zero};
+use felt::{Felt, FeltOps};
+use num_traits::{One, ToPrimitive, Zero};
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
@@ -92,11 +92,9 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
         let keys_len = request.keys_len;
         let data_len = request.data_len;
-
         let order = self.tx_execution_context.n_emitted_events;
-        let keys: Vec<BigInt> = get_integer_range(vm, &request.keys, keys_len)?;
-        let data: Vec<BigInt> = get_integer_range(vm, &request.data, data_len)?;
-
+        let keys: Vec<Felt> = get_integer_range(vm, &request.keys, keys_len)?;
+        let data: Vec<Felt> = get_integer_range(vm, &request.data, data_len)?;
         self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.
@@ -114,7 +112,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             .write_arg(&segment_start, &data)
             .map_err(|_| SyscallHandlerError::SegmentationFault)?;
         let sub = segment_end
-            .sub(&segment_start.to_owned().into(), vm.get_prime())
+            .sub(&segment_start.to_owned().into())
             .map_err(|_| SyscallHandlerError::SegmentationFault)?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.push(segment);
@@ -156,7 +154,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let constructor_calldata = get_integer_range(
             vm,
             &request.constructor_calldata,
-            bigint_to_usize(&request.constructor_calldata_size)?,
+            request
+                .constructor_calldata_size
+                .to_usize()
+                .ok_or(SyscallHandlerError::FeltToUsizeFail)?,
         )?;
 
         let class_hash = &request.class_hash;
@@ -175,7 +176,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         )?;
 
         // Initialize the contract.
-        let (_sign, _class_hash_bytes) = request.class_hash.to_bytes_be();
+        let _class_hash_bytes = request.class_hash.to_bytes_be();
 
         todo!()
     }
@@ -380,15 +381,14 @@ impl Default for BusinessLogicSyscallHandler {
 
 #[cfg(test)]
 mod tests {
-    use crate::bigint;
     use crate::business_logic::execution::objects::{
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     };
+    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::*;
     use crate::core::syscalls::syscall_handler::*;
-    use crate::state::state_api_objects::BlockInfo;
     use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,
@@ -397,11 +397,11 @@ mod tests {
     use cairo_rs::relocatable;
     use cairo_rs::types::exec_scope::ExecutionScopes;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+    use cairo_rs::vm::errors::hint_errors::HintError;
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-    use cairo_rs::vm::errors::vm_errors::VirtualMachineError::UnknownHint;
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use num_bigint::{BigInt, Sign};
+    use felt::Felt;
     use std::any::Any;
     use std::borrow::Cow;
     use std::collections::HashMap;
@@ -419,13 +419,13 @@ mod tests {
         //ids and references are not needed for this test
         assert_eq!(
             run_hint!(vm, HashMap::new(), hint_code),
-            Err(VirtualMachineError::MemoryError(
+            Err(HintError::Internal(VirtualMachineError::MemoryError(
                 MemoryError::InconsistentMemory(
                     MaybeRelocatable::from((1, 6)),
                     MaybeRelocatable::from((1, 6)),
                     MaybeRelocatable::from((3, 0))
                 )
-            ))
+            )))
         );
     }
 
@@ -436,7 +436,7 @@ mod tests {
         let mut vm = vm!();
         assert_eq!(
             run_syscall_hint!(vm, HashMap::new(), hint_code),
-            Err(UnknownHint("Hint not implemented".to_string()))
+            Err(HintError::UnknownHint("Hint not implemented".to_string()))
         );
     }
 
@@ -484,7 +484,8 @@ mod tests {
         let mut vm = vm!();
 
         add_segments!(vm, 2);
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value::<Felt>(&relocatable!(1, 0), 0.into())
+            .unwrap();
 
         assert_eq!(
             syscall.get_block_number(&mut vm, relocatable!(1, 0)),
@@ -492,7 +493,7 @@ mod tests {
         );
         assert_eq!(
             vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
-            Ok(bigint!(0)),
+            Ok(0.into()),
         );
     }
 
@@ -503,7 +504,8 @@ mod tests {
 
         add_segments!(vm, 2);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value::<Felt>(&relocatable!(1, 0), 0.into())
+            .unwrap();
 
         assert_eq!(
             syscall._get_contract_address(&vm, relocatable!(1, 0)),
