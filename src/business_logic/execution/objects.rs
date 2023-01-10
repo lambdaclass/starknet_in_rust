@@ -3,7 +3,6 @@ use cairo_rs::{
     vm::vm_core::VirtualMachine,
 };
 use felt::{Felt, NewFelt};
-use num_bigint::BigInt;
 use num_traits::{ToPrimitive, Zero};
 
 use crate::{

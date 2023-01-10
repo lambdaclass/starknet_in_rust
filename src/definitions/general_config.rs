@@ -1,5 +1,4 @@
 use felt::{Felt, FeltOps};
-use num_bigint::BigInt;
 use num_traits::{Num, Zero};
 
 #[allow(unused)]
