@@ -6,7 +6,6 @@ use crate::{
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::{Felt, FeltOps};
-use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 
 //* -------------------
@@ -42,12 +41,6 @@ pub fn get_relocatable(
         .map_err(|_| SyscallHandlerError::SegmentationFault)
 }
 
-pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
-    bigint
-        .to_usize()
-        .ok_or(SyscallHandlerError::FeltToUsizeFail)
-}
-
 pub fn get_integer_range(
     vm: &VirtualMachine,
     addr: &Relocatable,
@@ -66,7 +59,7 @@ pub fn felt_to_field_element(value: &Felt) -> Result<FieldElement, SyscallHandle
         .map_err(|_| SyscallHandlerError::FailToComputeHash)
 }
 
-pub fn field_element_to_felt(sign: Sign, felt: &FieldElement) -> Felt {
+pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
     Felt::from_bytes_be(&felt.to_bytes_be())
 }
 
@@ -80,9 +73,9 @@ pub fn field_element_to_felt(sign: Sign, felt: &FieldElement) -> Felt {
 /// See to_cached_state_storage_mapping documentation.
 
 pub fn to_state_diff_storage_mapping(
-    storage_writes: HashMap<StorageEntry, BigInt>,
-) -> Result<HashMap<BigInt, HashMap<[u8; 32], BigInt>>, StateError> {
-    let mut storage_updates: HashMap<BigInt, HashMap<[u8; 32], BigInt>> = HashMap::new();
+    storage_writes: HashMap<StorageEntry, Felt>,
+) -> Result<HashMap<Felt, HashMap<[u8; 32], Felt>>, StateError> {
+    let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Felt>> = HashMap::new();
     for ((address, key), value) in storage_writes {
         if storage_updates.contains_key(&address) {
             let mut map = storage_updates
@@ -105,24 +98,7 @@ pub fn to_state_diff_storage_mapping(
 //* Macros
 //* -------------------
 
-#[macro_export]
-macro_rules! bigint_str {
-    ($val: expr) => {
-        BigInt::parse_bytes($val, 10).unwrap()
-    };
-    ($val: expr, $opt: expr) => {
-        BigInt::parse_bytes($val, $opt).unwrap()
-    };
-}
-pub(crate) use bigint_str;
 use starknet_crypto::FieldElement;
-
-#[macro_export]
-macro_rules! bigint {
-    ($val : expr) => {
-        Into::<BigInt>::into($val)
-    };
-}
 
 #[cfg(test)]
 #[macro_use]
@@ -327,22 +303,21 @@ pub mod test_utils {
 
 #[cfg(test)]
 mod test {
-    use num_bigint::BigInt;
+    use felt::Felt;
     use std::collections::HashMap;
 
     use super::{test_utils::storage_key, to_state_diff_storage_mapping};
-    use crate::bigint;
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(BigInt, [u8; 32]), BigInt> = HashMap::new();
-        let address1 = bigint!(1);
+        let mut storage: HashMap<(Felt, [u8; 32]), Felt> = HashMap::new();
+        let address1: Felt = 1.into();
         let key1 = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        let value1 = bigint!(2);
+        let value1: Felt = 2.into();
 
-        let address2 = bigint!(3);
+        let address2: Felt = 3.into();
         let key2 = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
-        let value2 = bigint!(4);
+        let value2: Felt = 4.into();
 
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());

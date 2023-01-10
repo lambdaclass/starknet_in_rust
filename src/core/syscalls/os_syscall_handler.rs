@@ -380,12 +380,10 @@ mod tests {
     use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use num_bigint::{BigInt, Sign};
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
 
     use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
-    use crate::bigint;
     use crate::core::syscalls::hint_code::GET_BLOCK_NUMBER;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::HintProcessorData;
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;

@@ -310,7 +310,6 @@ impl Default for BusinessLogicSyscallHandler {
 
 #[cfg(test)]
 mod tests {
-    use crate::bigint;
     use crate::business_logic::execution::objects::{
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     };
@@ -332,7 +331,6 @@ mod tests {
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::vm_core::VirtualMachine;
     use felt::Felt;
-    use num_bigint::{BigInt, Sign};
     use std::any::Any;
     use std::borrow::Cow;
     use std::collections::HashMap;

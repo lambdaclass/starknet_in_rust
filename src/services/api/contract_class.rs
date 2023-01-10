@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use cairo_rs::types::program::Program;
-use num_bigint::BigInt;
+use felt::Felt;
 
 use crate::public::abi::AbiType;
 
@@ -17,8 +17,8 @@ pub(crate) enum EntryPointType {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ContractEntryPoint {
-    pub(crate) selector: BigInt,
-    pub(crate) offset: BigInt,
+    pub(crate) selector: Felt,
+    pub(crate) offset: Felt,
 }
 
 #[derive(Debug, Clone)]
