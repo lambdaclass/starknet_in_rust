@@ -60,12 +60,12 @@ impl TransactionExecutionContext {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedL2ToL1Message {
     pub(crate) order: usize,
-    pub(crate) to_address: usize,
+    pub(crate) to_address: u64,
     pub(crate) payload: Vec<Felt>,
 }
 
 impl OrderedL2ToL1Message {
-    pub fn new(order: usize, to_address: usize, payload: Vec<Felt>) -> Self {
+    pub fn new(order: usize, to_address: u64, payload: Vec<Felt>) -> Self {
         OrderedL2ToL1Message {
             order,
             to_address,
@@ -75,15 +75,15 @@ impl OrderedL2ToL1Message {
 }
 
 pub struct L2toL1MessageInfo {
-    pub(crate) from_address: usize,
-    pub(crate) to_address: usize,
+    pub(crate) from_address: u64,
+    pub(crate) to_address: u64,
     pub(crate) payload: Vec<Felt>,
 }
 
 impl L2toL1MessageInfo {
     pub(crate) fn new(
         message_content: OrderedL2ToL1Message,
-        sending_contract_address: usize,
+        sending_contract_address: u64,
     ) -> Self {
         L2toL1MessageInfo {
             from_address: sending_contract_address,

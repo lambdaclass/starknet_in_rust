@@ -219,4 +219,17 @@ mod tests {
             9
         );
     }
+
+    #[test]
+    fn transaction_gas_usage_test() {
+        let ord_ev1 = OrderedL2ToL1Message::new(1, 1235, vec![4.into()]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, 35, vec![5.into(), 6.into()]);
+        let message1 = L2toL1MessageInfo::new(ord_ev1, 1234);
+        let message2 = L2toL1MessageInfo::new(ord_ev2, 1235);
+
+        assert_eq!(
+            calculate_tx_gas_usage(vec![message1, message2], 2, 2, Some(2), 1),
+            74759
+        )
+    }
 }
