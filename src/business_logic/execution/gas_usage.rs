@@ -131,10 +131,12 @@ pub fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) ->
 mod tests {
     use super::get_event_emission_cost;
     use super::*;
-    use crate::business_logic::execution::objects::{
-        L2toL1MessageInfo, OrderedEvent, OrderedL2ToL1Message,
+    use crate::{
+        bigint,
+        business_logic::execution::objects::{
+            L2toL1MessageInfo, OrderedEvent, OrderedL2ToL1Message,
+        },
     };
-    use cairo_rs::bigint;
     use num_bigint::BigInt;
 
     #[test]
@@ -153,8 +155,8 @@ mod tests {
 
     #[test]
     fn log_messages_cost_test() {
-        let ord_ev1 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(4)]);
-        let ord_ev2 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(5), bigint!(6)]);
+        let ord_ev1 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(4).into()]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(5).into(), bigint!(6).into()]);
         let message1 = L2toL1MessageInfo::new(ord_ev1, 1234);
         let message2 = L2toL1MessageInfo::new(ord_ev2, 1235);
 
@@ -186,13 +188,14 @@ mod tests {
 
     #[test]
     fn message_segment_len() {
-        let ord_ev1 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(4)]);
-        let ord_ev2 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(5), bigint!(6)]);
+        let ord_ev1 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(4).into()]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(5).into(), bigint!(6).into()]);
         let message1 = L2toL1MessageInfo::new(ord_ev1, 1234);
         let message2 = L2toL1MessageInfo::new(ord_ev2, 1235);
 
-        let ord_ev3 = OrderedL2ToL1Message::new(1, 1235, vec![bigint!(5), bigint!(6)]);
-        let ord_ev4 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(4)]);
+        let ord_ev3 =
+            OrderedL2ToL1Message::new(1, 1235, vec![bigint!(5).into(), bigint!(6).into()]);
+        let ord_ev4 = OrderedL2ToL1Message::new(2, 35, vec![bigint!(4).into()]);
         let message3 = L2toL1MessageInfo::new(ord_ev3, 1234);
         let message4 = L2toL1MessageInfo::new(ord_ev4, 1235);
 
