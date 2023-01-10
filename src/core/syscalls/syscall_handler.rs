@@ -1044,7 +1044,7 @@ mod tests {
     }
 
     #[test]
-    fn test_storage_read_hint_ok() {
+    fn test_bl_storage_read_hint_ok() {
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -1066,5 +1066,61 @@ mod tests {
                 &HashMap::new(),
             )
             .is_ok());
+    }
+
+    #[test]
+    fn test_os_storage_read_hint_ok() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10),     //  StorageReadRequest.selector
+                ((2, 1), 11)      //  StorageReadRequest.address
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
+
+        let execute_code_read_operation = VecDeque::from([5, 4, 3, 2, 1]);
+        syscall_handler_hint_processor.syscall_handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            execute_code_read_operation.clone(),
+            HashMap::new(),
+            Some(Relocatable {
+                segment_index: 0,
+                offset: 0,
+            }),
+            None,
+            BlockInfo::default(),
+        );
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(result, Ok(()));
+
+        // Check VM inserts
+        // StorageReadResponse
+        assert_eq!(
+            get_integer(&vm, &relocatable!(2, 2)),
+            Ok(*execute_code_read_operation.get(0).unwrap() as usize)
+        );
     }
 }
