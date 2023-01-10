@@ -3,8 +3,11 @@ use super::syscall_request::{
     GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use num_bigint::BigInt;
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::vm_core::VirtualMachine,
+};
+use felt::Felt;
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -16,7 +19,7 @@ pub(crate) trait WriteSyscallResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressResponse {
-    caller_address: BigInt,
+    caller_address: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -63,7 +66,7 @@ impl GetSequencerAddressResponse {
 
 impl GetCallerAddressResponse {
     pub fn new(caller_addr: u64) -> Self {
-        let caller_address = bigint!(caller_addr);
+        let caller_address = caller_addr.into();
         GetCallerAddressResponse { caller_address }
     }
 }
@@ -113,9 +116,9 @@ impl WriteSyscallResponse for GetBlockTimestampResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetBlockTimestampRequest::count_fields()),
-            bigint!(self.block_timestamp),
+            self.block_timestamp.into(),
         )?;
         Ok(())
     }
@@ -127,9 +130,9 @@ impl WriteSyscallResponse for GetSequencerAddressResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
-            bigint!(self.sequencer_address),
+            self.sequencer_address.into(),
         )?;
         Ok(())
     }
@@ -141,9 +144,9 @@ impl WriteSyscallResponse for GetBlockNumberResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetBlockNumberRequest::count_fields()),
-            bigint!(self.block_number),
+            self.block_number.into(),
         )?;
         Ok(())
     }
@@ -155,9 +158,9 @@ impl WriteSyscallResponse for GetContractAddressResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetContractAddressRequest::count_fields()),
-            bigint!(self.contract_address),
+            self.contract_address.into(),
         )?;
         Ok(())
     }
@@ -168,9 +171,9 @@ impl WriteSyscallResponse for GetTxSignatureResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetTxSignatureRequest::count_fields()),
-            bigint!(self.signature_len),
+            self.signature_len.into(),
         )?;
         vm.insert_value(
             &(syscall_ptr + GetTxSignatureRequest::count_fields() + 1),
@@ -208,7 +211,6 @@ mod tests {
         },
         utils::test_utils::vm,
     };
-    use num_bigint::{BigInt, Sign};
 
     #[test]
     fn write_get_caller_address_response() {
@@ -218,7 +220,7 @@ mod tests {
         add_segments!(vm, 2);
 
         let response = GetCallerAddressResponse {
-            caller_address: bigint!(3),
+            caller_address: 3.into(),
         };
 
         assert!(syscall
@@ -229,8 +231,12 @@ mod tests {
         // Since we can't access the vm.memory, these inserts should check the ._write_syscall_response inserts
         // The ._write_syscall_response should insert the response.caller_address in the position (1,1)
         // Because the vm memory is write once, trying to insert an 8 in that position should return an error
-        assert!(vm.insert_value(&relocatable!(1, 1), bigint!(8)).is_err());
+        assert!(vm
+            .insert_value::<Felt>(&relocatable!(1, 1), 8.into())
+            .is_err());
         // Inserting a 3 should be OK because is the value inserted by ._write_syscall_response
-        assert!(vm.insert_value(&relocatable!(1, 1), bigint!(3)).is_ok())
+        assert!(vm
+            .insert_value::<Felt>(&relocatable!(1, 1), 3.into())
+            .is_ok())
     }
 }

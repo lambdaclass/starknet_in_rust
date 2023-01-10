@@ -4,9 +4,8 @@ use crate::{
         syscalls::syscall_handler::SyscallHandler,
     },
     hash_utils::compute_hash_on_elements,
-    utils::{bigint_to_felt, felt_to_bigint},
 };
-use num_bigint::{BigInt, Sign};
+use felt::{Felt, FeltOps};
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::iter::zip;
 
@@ -18,10 +17,10 @@ use std::iter::zip;
 // -------------------------------------------------------------
 
 pub fn calculate_tx_hashes_with_signatures(
-    tx_hashes: Vec<BigInt>,
-    tx_signatures: Vec<Vec<BigInt>>,
-) -> Result<Vec<BigInt>, SyscallHandlerError> {
-    let tx_and_signatures = zip(tx_hashes, tx_signatures).collect::<Vec<(BigInt, Vec<BigInt>)>>();
+    tx_hashes: Vec<Felt>,
+    tx_signatures: Vec<Vec<Felt>>,
+) -> Result<Vec<Felt>, SyscallHandlerError> {
+    let tx_and_signatures = zip(tx_hashes, tx_signatures).collect::<Vec<(Felt, Vec<Felt>)>>();
     let mut hashes = Vec::with_capacity(tx_and_signatures.len());
 
     for (hash, signature) in tx_and_signatures {
@@ -38,24 +37,28 @@ pub fn calculate_tx_hashes_with_signatures(
 ///
 
 pub fn calculate_single_tx_hash_with_signature(
-    tx_hash: BigInt,
-    tx_signature: Vec<BigInt>,
-) -> Result<BigInt, SyscallHandlerError> {
+    tx_hash: Felt,
+    tx_signature: Vec<Felt>,
+) -> Result<Felt, SyscallHandlerError> {
     let signature_hash = compute_hash_on_elements(&tx_signature)?;
-    let hash = bigint_to_felt(&tx_hash)?;
-    let signature = bigint_to_felt(&signature_hash)?;
+    let signature_str = signature_hash.to_str_radix(10);
+    let tx_hash_str = tx_hash.to_str_radix(10);
+    let hash = FieldElement::from_dec_str(&tx_hash_str)
+        .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+    let signature = FieldElement::from_dec_str(&signature_str)
+        .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
     let new_hash = pedersen_hash(&hash, &signature);
-    Ok(felt_to_bigint(Sign::Plus, &new_hash))
+    Ok(Felt::from_bytes_be(&new_hash.to_bytes_be()))
 }
 
 /// Calculates and returns the hash of an event, given its separate fields.
 /// I.e., H(from_address, H(keys), H(data)), where each hash chain computation begins
 /// with 0 as initialization and ends with its length appended.
 pub fn calculate_event_hash(
-    from_address: BigInt,
-    keys: Vec<BigInt>,
-    data: Vec<BigInt>,
-) -> Result<BigInt, SyscallHandlerError> {
+    from_address: Felt,
+    keys: Vec<Felt>,
+    data: Vec<Felt>,
+) -> Result<Felt, SyscallHandlerError> {
     let key_hash = compute_hash_on_elements(&keys)?;
     let data_hash = compute_hash_on_elements(&data)?;
     compute_hash_on_elements(&[from_address, key_hash, data_hash])
@@ -63,36 +66,34 @@ pub fn calculate_event_hash(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        bigint, starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key,
-    };
+    use crate::{starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key};
 
     use super::*;
 
     #[test]
     fn calculate_event_hash_test() {
-        let from_address = bigint!(1);
-        let keys = vec![bigint!(300), bigint!(301)];
-        let data = vec![bigint!(302), bigint!(303)];
+        let from_address = 1.into();
+        let keys = vec![300.into(), 301.into()];
+        let data = vec![302.into(), 303.into()];
 
         assert!(calculate_event_hash(from_address, keys, data).is_ok());
     }
 
     #[test]
     fn calculate_single_tx_hash_test() {
-        let tx_hash = bigint!(21325412);
-        let signatures = vec![bigint!(300), bigint!(301)];
+        let tx_hash = 21325412.into();
+        let signatures = vec![300.into(), 301.into()];
 
         assert!(calculate_single_tx_hash_with_signature(tx_hash, signatures).is_ok());
     }
 
     #[test]
     fn calculate_tx_hashes_with_signatures_test() {
-        let tx_hash = vec![bigint!(21325412), bigint!(21322), bigint!(212)];
+        let tx_hash = vec![21325412.into(), 21322.into(), 212.into()];
         let signatures = vec![
-            vec![bigint!(300), bigint!(301)],
-            vec![bigint!(30), bigint!(32)],
-            vec![bigint!(500), bigint!(400)],
+            vec![300.into(), 301.into()],
+            vec![30.into(), 32.into()],
+            vec![500.into(), 400.into()],
         ];
 
         assert!(calculate_tx_hashes_with_signatures(tx_hash, signatures).is_ok());

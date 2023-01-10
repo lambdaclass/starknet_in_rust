@@ -1,9 +1,9 @@
-use num_bigint::BigInt;
 use std::collections::HashMap;
 
-use crate::{
-    bigint, core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
-};
+use felt::Felt;
+use num_traits::Zero;
+
+use crate::{core::errors::state_errors::StateError, services::api::contract_class::ContractClass};
 
 use super::{
     state_api::{State, StateReader},
@@ -93,7 +93,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &BigInt) -> Result<&Vec<u8>, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Felt) -> Result<&Vec<u8>, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
             self.cache
@@ -106,7 +106,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
     }
 
-    fn get_nonce_at(&mut self, contract_address: &BigInt) -> Result<&BigInt, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Felt) -> Result<&Felt, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
             let nonce = self.state_reader.get_nonce_at(contract_address)?;
             self.cache
@@ -118,7 +118,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&BigInt, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             let value = self.state_reader.get_storage_at(storage_entry)?;
             self.cache
@@ -145,10 +145,10 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
     fn deploy_contract(
         &mut self,
-        contract_address: BigInt,
+        contract_address: Felt,
         class_hash: Vec<u8>,
     ) -> Result<(), StateError> {
-        if contract_address == bigint!(0) {
+        if contract_address == Felt::zero() {
             return Err(StateError::ContractAddressOutOfRangeAddress(
                 contract_address,
             ));
@@ -166,7 +166,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         Ok(())
     }
 
-    fn increment_nonce(&mut self, contract_address: &BigInt) -> Result<(), StateError> {
+    fn increment_nonce(&mut self, contract_address: &Felt) -> Result<(), StateError> {
         let new_nonce = self.get_nonce_at(contract_address)? + 1;
         self.cache
             .nonce_writes
@@ -178,7 +178,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         self.block_info = block_info;
     }
 
-    fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: BigInt) {
+    fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt) {
         self.cache
             .storage_writes
             .insert(storage_entry.clone(), value);

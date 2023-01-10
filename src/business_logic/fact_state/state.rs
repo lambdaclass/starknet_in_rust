@@ -1,4 +1,4 @@
-use num_bigint::BigInt;
+use felt::Felt;
 use patricia_tree::PatriciaTree;
 use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current};
 
@@ -138,9 +138,9 @@ impl<T> SharedState<T> {
     pub fn apply_updates<S>(
         &self,
         ffc: FactFetchingContext<S>,
-        address_to_class_hash: HashMap<BigInt, Vec<u8>>,
-        address_to_nonce: HashMap<BigInt, BigInt>,
-        storage_updates: HashMap<BigInt, HashMap<[u8; 32], BigInt>>,
+        address_to_class_hash: HashMap<Felt, Vec<u8>>,
+        address_to_nonce: HashMap<Felt, Felt>,
+        storage_updates: HashMap<Felt, HashMap<[u8; 32], Felt>>,
         block_info: BlockInfo,
     ) -> Self
     where
