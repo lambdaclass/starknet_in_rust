@@ -27,3 +27,14 @@ pub(crate) trait State {
     fn update_block_info(&mut self, block_info: BlockInfo);
     fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt);
 }
+
+pub(crate) trait SyncState {
+    fn block_info(&self) -> &BlockInfo;
+    fn set_contract_class(&self, class_hash: &Felt, contract_class: ContractClass);
+    fn deploy_contract(&self, contract_address: u64, class_hash: &Felt);
+    fn increment_nonce(&self, contract_address: u64);
+    fn update_block_info(&self, block_info: BlockInfo);
+    fn set_storage_at(&self, contract_address: u64, key: usize, value: usize);
+    fn get_contract_class(&self, class_hash: Felt) -> ContractClass;
+    fn get_nonce_at(&self, contract_address: u64) -> Felt;
+}
