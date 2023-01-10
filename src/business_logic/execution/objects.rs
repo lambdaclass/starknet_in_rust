@@ -15,6 +15,17 @@ use crate::{
 
 use super::execution_errors::ExecutionError;
 
+pub(crate) enum CallType {
+    Call,
+    Delegate,
+}
+
+pub(crate) enum EntryPointType {
+    External,
+    L1Handler,
+    Constructor,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedEvent {
     #[allow(unused)] // TODO: remove once used

@@ -18,7 +18,17 @@ pub(crate) enum SyscallRequest {
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    CallContract(CallContractRequest),
     GetTxSignature(GetTxSignatureRequest),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractRequest {
+    pub(crate) selector: Felt,
+    pub(crate) calldata: Relocatable,
+    pub(crate) calldata_size: usize,
+    pub(crate) contract_address: u64,
+    pub(crate) class_hash: u64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -381,5 +391,11 @@ impl CountFields for GetContractAddressRequest {
 impl CountFields for GetTxInfoRequest {
     fn count_fields() -> usize {
         1
+    }
+}
+
+impl CountFields for CallContractRequest {
+    fn count_fields() -> usize {
+        5
     }
 }
