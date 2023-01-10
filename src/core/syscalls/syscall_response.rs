@@ -211,7 +211,6 @@ mod tests {
         },
         utils::test_utils::vm,
     };
-    use num_bigint::{BigInt, Sign};
 
     #[test]
     fn write_get_caller_address_response() {

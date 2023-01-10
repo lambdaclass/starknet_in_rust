@@ -1,4 +1,4 @@
-use num_bigint::BigInt;
+use felt::Felt;
 use thiserror::Error;
 
 use crate::business_logic::state::state_cache::StorageEntry;
@@ -16,13 +16,13 @@ pub enum StateError {
     #[error("Cache already initialized")]
     StateCacheAlreadyInitialized,
     #[error("No class hash assigned for contact address: {0}")]
-    NoneClassHash(BigInt),
+    NoneClassHash(Felt),
     #[error("No nonce assigned for contact address: {0}")]
-    NoneNonce(BigInt),
+    NoneNonce(Felt),
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
     #[error("Cannot deploy contract at address: {0}")]
-    ContractAddressOutOfRangeAddress(BigInt),
+    ContractAddressOutOfRangeAddress(Felt),
     #[error("Requested contract address {0} is unavailable for deployment")]
-    ContractAddressUnavailable(BigInt),
+    ContractAddressUnavailable(Felt),
 }
