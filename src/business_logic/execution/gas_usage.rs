@@ -123,8 +123,7 @@ pub fn get_log_message_to_l1_emissions_cost(l2_to_l1_messages: &[L2toL1MessageIn
 pub fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) -> usize {
     GAS_PER_LOG
         + (topics + N_DEFAULT_TOPICS) * GAS_PER_LOG_TOPIC
-        + l1_handler_payload_size
-        + GAS_PER_LOG_DATA_WORD
+        + l1_handler_payload_size * GAS_PER_LOG_DATA_WORD
 }
 
 #[cfg(test)]
@@ -145,7 +144,7 @@ mod tests {
         // GAS_PER_LOG_TOPIC = 375
         // GAS_PER_LOG_DATA_WORD = 8 * 32
         assert_eq!(
-            375 + 41 * 375 + 9 + 32 * 8,
+            18054,
             get_event_emission_cost(topics, l1_handler_payload_size)
         );
     }
@@ -159,12 +158,9 @@ mod tests {
 
         // LOG_MSG_TO_L1_N_TOPICS = 2
         // LOG_MSG_TO_L1_ENCODED_DATA_SIZE = 2
-        // first iteration:  get_emission_cost(2, 2 + 1) = 1759
-        // second iteration:  get_emission_cost(2, 2 + 2) = 1760
-        // final result = 1760 + 1759 = 3519
         assert_eq!(
             get_log_message_to_l1_emissions_cost(&[message1, message2]),
-            3519
+            4792
         )
     }
 
@@ -178,7 +174,7 @@ mod tests {
         // result = emission_cost(3, 3+10)
         assert_eq!(
             get_consumed_message_to_l2_emissions_cost(l1_handler_1),
-            2144
+            5203
         );
         assert_eq!(get_consumed_message_to_l2_emissions_cost(l1_handler_2), 0);
     }
@@ -229,7 +225,7 @@ mod tests {
 
         assert_eq!(
             calculate_tx_gas_usage(vec![message1, message2], 2, 2, Some(2), 1),
-            74759
+            77051
         )
     }
 }
