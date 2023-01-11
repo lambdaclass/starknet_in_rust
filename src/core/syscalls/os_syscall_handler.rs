@@ -49,7 +49,7 @@ impl OsSingleStarknetStorage {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) struct OsSyscallHandler {
     tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
     call_iterator: VecDeque<CallInfo>,
@@ -75,23 +75,6 @@ pub(crate) struct OsSyscallHandler {
     // The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
     block_info: BlockInfo,
-}
-
-impl Default for OsSyscallHandler {
-    fn default() -> Self {
-        Self {
-            tx_execution_info_iterator: VecDeque::new(),
-            call_iterator: VecDeque::new(),
-            call_stack: VecDeque::new(),
-            deployed_contracts_iterator: VecDeque::new(),
-            retdata_iterator: VecDeque::new(),
-            execute_code_read_iterator: VecDeque::new(),
-            starknet_storage_by_address: HashMap::new(),
-            tx_info_ptr: None,
-            tx_execution_info: None,
-            block_info: BlockInfo::default(),
-        }
-    }
 }
 
 impl SyscallHandler for OsSyscallHandler {
