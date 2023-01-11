@@ -368,6 +368,7 @@ mod tests {
     use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
+    use crate::core::syscalls::syscall_request::CallContractRequest;
     use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
@@ -886,6 +887,15 @@ mod tests {
         assert_eq!(
             handler._call_contract_and_write_response("call_contract", &mut vm, syscall_ptr),
             Ok(())
+        );
+
+        let addr = Relocatable::from(&(syscall_ptr + 5));
+        assert_eq!(
+            vm.get_relocatable(&addr),
+            Ok(Relocatable {
+                segment_index: -1,
+                offset: 0
+            })
         )
     }
 }
