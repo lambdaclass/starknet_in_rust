@@ -65,7 +65,7 @@ pub(crate) struct DeployRequestStruct {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SendMessageToL1SysCall {
     pub(crate) _selector: Felt,
-    pub(crate) to_address: usize,
+    pub(crate) to_address: u64,
     pub(crate) payload_size: usize,
     pub(crate) payload_ptr: Relocatable,
 }
@@ -256,7 +256,7 @@ impl FromPtr for SendMessageToL1SysCall {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, &syscall_ptr)?;
-        let to_address = get_integer(vm, &(&syscall_ptr + 1))?;
+        let to_address = get_integer(vm, &(&syscall_ptr + 1))? as u64;
         let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
         let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 4))?;
 
