@@ -76,9 +76,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         let address_key_pair = (contract_address.clone(), key);
         let was_accessed = !self.was_accessed(&address_key_pair);
 
-        let return_value = self
-            .state
-            .get_storage_at(&(contract_address.clone(), key))?;
+        let return_value = self.state.get_storage_at(&(contract_address, key))?;
 
         if was_accessed {
             let value = return_value
@@ -97,10 +95,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         self.state.update_block_info(block_info)
     }
 
-    pub fn get_contract_class(
-        &mut self,
-        class_hash: &Vec<u8>,
-    ) -> Result<&ContractClass, StateError> {
+    pub fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<&ContractClass, StateError> {
         self.state.get_contract_class(class_hash)
     }
 
@@ -132,11 +127,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
             .filter(|(k, _v)| self.storage_initial_values.contains_key(k))
             .collect::<HashMap<StorageEntry, u64>>();
 
-        let modified_contrats = storage_updates
-            .clone()
-            .into_iter()
-            .map(|(k, _v)| k.0)
-            .collect::<Vec<Felt>>();
+        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
 
         (modified_contrats.len(), storage_updates.len())
     }
