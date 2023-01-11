@@ -120,18 +120,6 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(segment_start)
     }
 
-    fn _call_contract_and_write_response(
-        &mut self,
-        syscall_name: &str,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
-        // TODO: Should we build a response struct to pass to _write_syscall_response?
-        // self._write_syscall_response(response_data, vm, syscall_ptr);
-        todo!()
-    }
-
     fn _deploy(
         &mut self,
         vm: &VirtualMachine,
