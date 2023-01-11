@@ -369,7 +369,7 @@ mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
     use crate::core::syscalls::syscall_request::CallContractRequest;
-    use crate::utils::{get_integer, test_utils::*};
+    use crate::utils::{get_integer, get_relocatable, test_utils::*};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
@@ -889,13 +889,21 @@ mod tests {
             Ok(())
         );
 
-        let addr = Relocatable::from(&(syscall_ptr + 5));
+        let addr_0 = Relocatable::from(&(syscall_ptr + 5));
         assert_eq!(
-            vm.get_relocatable(&addr),
+            vm.get_relocatable(&addr_0),
             Ok(Relocatable {
                 segment_index: -1,
                 offset: 0
             })
-        )
+        );
+        let addr_1 = Relocatable::from(&(syscall_ptr + 6));
+        assert_eq!(
+            get_relocatable(&vm, &addr_0),
+            Ok(Relocatable {
+                segment_index: -1,
+                offset: 0
+            })
+        );
     }
 }

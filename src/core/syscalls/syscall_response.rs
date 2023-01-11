@@ -123,6 +123,10 @@ impl WriteSyscallResponse for CallContractResponse {
             &(syscall_ptr + CallContractRequest::count_fields()),
             &self.retdata,
         )?;
+        vm.insert_value::<Felt>(
+            &(syscall_ptr + CallContractRequest::count_fields() + 1),
+            self.retdata_size.into(),
+        )?;
         Ok(())
     }
 }
