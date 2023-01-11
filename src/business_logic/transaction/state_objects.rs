@@ -2,10 +2,7 @@ use felt::Felt;
 use std::collections::HashMap;
 
 use crate::{
-    business_logic::state::{
-        state_api::{State, SyncState},
-        update_tracker_state::UpdatesTrackerState,
-    },
+    business_logic::state::{state_api::State, update_tracker_state::UpdatesTrackerState},
     core::syscalls::os_syscall_handler::{CallInfo, TransactionExecutionInfo},
     definitions::general_config::{self, StarknetGeneralConfig},
 };
@@ -23,7 +20,7 @@ pub(crate) trait InternalStateTransaction {
 
     fn sync_apply_state_updates(
         &self,
-        state: impl SyncState,
+        state: impl State,
         general_config: StarknetGeneralConfig,
     ) -> Option<TransactionExecutionInfo> {
         todo!()
@@ -31,7 +28,7 @@ pub(crate) trait InternalStateTransaction {
 
     fn apply_concurrent_changes(
         &self,
-        state: impl SyncState,
+        state: impl State,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo {
         todo!()
@@ -39,7 +36,7 @@ pub(crate) trait InternalStateTransaction {
 
     fn apply_sequential_changes(
         &self,
-        state: impl SyncState,
+        state: impl State,
         general_config: StarknetGeneralConfig,
         actual_resources: HashMap<String, Felt>,
     ) -> FeeInfo {
@@ -56,11 +53,11 @@ pub(crate) trait InternalStateTransaction {
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
-        T: SyncState;
+        T: State;
 
     fn _apply_specific_sequential_changes(
         &self,
-        state: impl SyncState,
+        state: impl State,
         general_config: StarknetGeneralConfig,
         actual_resources: HashMap<String, Felt>,
     ) -> FeeInfo;
