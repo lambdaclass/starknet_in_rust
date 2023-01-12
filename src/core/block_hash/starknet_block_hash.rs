@@ -21,7 +21,6 @@ pub fn calculate_tx_hashes_with_signatures(
     tx_signatures: Vec<Vec<Felt>>,
 ) -> Result<Vec<Felt>, SyscallHandlerError> {
     zip(tx_hashes, tx_signatures)
-        .collect::<Vec<(Felt, Vec<Felt>)>>()
         .into_iter()
         .map(|(hash, signature)| calculate_single_tx_hash_with_signature(hash, signature))
         .collect::<Result<Vec<Felt>, _>>()
