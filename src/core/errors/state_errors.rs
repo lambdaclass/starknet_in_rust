@@ -25,4 +25,6 @@ pub enum StateError {
     ContractAddressOutOfRangeAddress(Felt),
     #[error("Requested contract address {0} is unavailable for deployment")]
     ContractAddressUnavailable(Felt),
+    #[error("error converting {0} to u64")]
+    ConversionError(Felt),
 }

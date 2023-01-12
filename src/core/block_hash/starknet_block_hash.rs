@@ -20,21 +20,15 @@ pub fn calculate_tx_hashes_with_signatures(
     tx_hashes: Vec<Felt>,
     tx_signatures: Vec<Vec<Felt>>,
 ) -> Result<Vec<Felt>, SyscallHandlerError> {
-    let tx_and_signatures = zip(tx_hashes, tx_signatures).collect::<Vec<(Felt, Vec<Felt>)>>();
-    let mut hashes = Vec::with_capacity(tx_and_signatures.len());
-
-    for (hash, signature) in tx_and_signatures {
-        let hash = calculate_single_tx_hash_with_signature(hash, signature)?;
-        hashes.push(hash);
-    }
-
-    Ok(hashes)
+    zip(tx_hashes, tx_signatures)
+        .collect::<Vec<(Felt, Vec<Felt>)>>()
+        .into_iter()
+        .map(|(hash, signature)| calculate_single_tx_hash_with_signature(hash, signature))
+        .collect::<Result<Vec<Felt>, _>>()
 }
 
-///
 /// Hashes the signature with the given transaction hash, to get a hash that takes into account the
 /// entire transaction, as the original hash does not include the signature.
-///
 
 pub fn calculate_single_tx_hash_with_signature(
     tx_hash: Felt,

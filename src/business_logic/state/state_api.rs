@@ -16,7 +16,7 @@ pub(crate) trait StateReader {
 }
 
 pub(crate) trait State {
-    fn get_block_info(&self) -> &BlockInfo;
+    fn block_info(&self) -> &BlockInfo;
     fn set_contract_class(&mut self, class_hash: &[u8], contract_class: &ContractClass);
     fn deploy_contract(
         &mut self,

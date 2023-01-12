@@ -9,7 +9,7 @@ use super::state_api_objects::BlockInfo;
 use super::state_api::StateReader;
 
 /// (contract_address, key)
-pub(crate) type StorageEntry = (Felt, [u8; 32]);
+pub(crate) type StorageEntry = (Felt, u64);
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct StateCache {
@@ -114,7 +114,7 @@ mod tests {
         let mut state_cache = StateCache::new();
         let address_to_class_hash = HashMap::from([(10.into(), b"pedersen".to_vec())]);
         let address_to_nonce = HashMap::from([(9.into(), 12.into())]);
-        let storage_updates = HashMap::from([((20.into(), [1; 32]), 18.into())]);
+        let storage_updates = HashMap::from([((20.into(), 1), 18.into())]);
         assert!(state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .is_ok());
@@ -134,7 +134,7 @@ mod tests {
         let mut state_cache = StateCache::new();
         let address_to_class_hash = HashMap::from([(10.into(), b"pedersen".to_vec())]);
         let address_to_nonce = HashMap::from([(9.into(), 12.into())]);
-        let storage_updates = HashMap::from([((20.into(), [1; 32]), 18.into())]);
+        let storage_updates = HashMap::from([((20.into(), 1), 18.into())]);
         state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .expect("Error setting StateCache values");
@@ -142,7 +142,7 @@ mod tests {
         let mut other_state_cache = StateCache::new();
         let other_address_to_class_hash = HashMap::from([(10.into(), b"sha-3".to_vec())]);
         let other_address_to_nonce = HashMap::from([(401.into(), 100.into())]);
-        let other_storage_updates = HashMap::from([((4002.into(), [2; 32]), 101.into())]);
+        let other_storage_updates = HashMap::from([((4002.into(), 2), 101.into())]);
         other_state_cache
             .set_initial_values(
                 &other_address_to_class_hash,
@@ -163,10 +163,7 @@ mod tests {
         );
         assert_eq!(
             state_cache.storage_writes,
-            HashMap::from([
-                ((20.into(), [1; 32]), 18.into()),
-                ((4002.into(), [2; 32]), 101.into())
-            ])
+            HashMap::from([((20.into(), 1), 18.into()), ((4002.into(), 2), 101.into())])
         );
     }
 }
