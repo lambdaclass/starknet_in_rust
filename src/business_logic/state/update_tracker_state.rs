@@ -19,7 +19,7 @@ use super::{
 // All requests are delegated to the wrapped SyncState, and caches are maintained for storage reads
 // and writes.
 
-// The goal§ of this implementation is to allow more precise and fair computation of the number of
+// The goal of this implementation is to allow more precise and fair computation of the number of
 // storage-writes a single transaction preforms for the purposes of transaction fee calculation.
 // That is, if a given transaction writes to the same storage address multiple times, this should
 // be counted as a single storage-write. Additionally, if a transaction writes a value to storage
