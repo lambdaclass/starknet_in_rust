@@ -88,7 +88,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn library_call(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         todo!()
@@ -144,7 +144,7 @@ impl SyscallHandler for OsSyscallHandler {
     fn _call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         todo!()

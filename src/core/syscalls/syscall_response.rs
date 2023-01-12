@@ -1,6 +1,7 @@
 use super::syscall_request::{
-    CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
-    GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
+    CallContractRequest, CountFields, GetBlockNumberRequest, GetBlockTimestampRequest,
+    GetCallerAddressRequest, GetContractAddressRequest, GetSequencerAddressRequest,
+    GetTxInfoRequest, GetTxSignatureRequest,
 };
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_rs::{
@@ -15,6 +16,12 @@ pub(crate) trait WriteSyscallResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractResponse {
+    retdata_size: usize,
+    retdata: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +48,21 @@ pub(crate) struct GetTxSignatureResponse {
     signature_len: usize,
     signature: Relocatable,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberResponse {
+    block_number: u64,
+}
+
+impl CallContractResponse {
+    pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
+        Self {
+            retdata_size,
+            retdata,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetTxInfoResponse {
     tx_info: Relocatable,
@@ -85,14 +107,23 @@ impl GetContractAddressResponse {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetBlockNumberResponse {
-    block_number: u64,
-}
-
 impl GetBlockNumberResponse {
     pub(crate) fn new(block_number: u64) -> Self {
         Self { block_number }
+    }
+}
+
+impl WriteSyscallResponse for CallContractResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + CallContractRequest::count_fields()),
+            &self.retdata,
+        )?;
+        Ok(())
     }
 }
 

@@ -1,3 +1,7 @@
+use std::cell::RefCell;
+use std::ops::Deref;
+use std::rc::Rc;
+
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
@@ -76,6 +80,28 @@ impl BusinessLogicSyscallHandler {
 }
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
+    fn emit_event(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
+            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
+            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
+        };
+
+        let keys_len = request.keys_len;
+        let data_len = request.data_len;
+        let order = self.tx_execution_context.n_emitted_events;
+        let keys: Vec<Felt> = get_integer_range(vm, &request.keys, keys_len)?;
+        let data: Vec<Felt> = get_integer_range(vm, &request.data, data_len)?;
+        self.events.push(OrderedEvent::new(order, keys, data));
+
+        // Update events count.
+        self.tx_execution_context.n_emitted_events += 1;
+        Ok(())
+    }
+
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -94,19 +120,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(segment_start)
     }
 
-    fn _call_contract(
-        &mut self,
-        _syscall_name: &str,
-        _vm: &VirtualMachine,
-        _syscall_ptr: Relocatable,
-    ) -> Result<Vec<u64>, SyscallHandlerError> {
-        todo!()
-    }
-
     fn _call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
@@ -164,28 +181,82 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         todo!()
     }
 
-    fn emit_event(
+    fn _call_contract(
         &mut self,
+        syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let request = match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
-            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
-            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
-        };
+    ) -> Result<Vec<u64>, SyscallHandlerError> {
+        // Parse request and prepare the call.
+        let request =
+            match self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)? {
+                SyscallRequest::CallContract(request) => request,
+                _ => return Err(SyscallHandlerError::ExpectedCallContract),
+            };
 
-        let keys_len = request.keys_len;
-        let data_len = request.data_len;
+        let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
 
-        let order = self.tx_execution_context.n_emitted_events;
-        let keys: Vec<Felt> = get_integer_range(vm, &request.keys, keys_len)?;
-        let data: Vec<Felt> = get_integer_range(vm, &request.data, data_len)?;
+        let mut code_address = None;
+        let mut class_hash = None;
 
-        self.events.push(OrderedEvent::new(order, keys, data));
+        match syscall_name {
+            "call_contract" => {
+                code_address = Some(request.contract_address);
+                let contract_address = code_address;
+                let caller_address = self.contract_address;
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Call;
+            }
+            "delegate_call" => {
+                code_address = Some(request.contract_address);
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Delegate;
+            }
+            "delegate_l1_handler" => {
+                code_address = Some(request.contract_address);
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::L1Handler;
+                let call_type = CallType::Delegate;
+            }
+            "library_call" => {
+                class_hash = Some(request.class_hash.to_be_bytes());
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Delegate;
+            }
+            "library_call_l1_handler" => {
+                class_hash = Some(request.class_hash.to_be_bytes());
+                let contract_address = self.contract_address;
+                let caller_address = self.caller_address;
+                let entry_point_type = EntryPointType::L1Handler;
+                let call_type = CallType::Delegate;
+            }
+            _ => {
+                return Err(SyscallHandlerError::UnknownSyscall(
+                    syscall_name.to_string(),
+                ))
+            }
+        }
 
-        // Update events count.
-        self.tx_execution_context.n_emitted_events += 1;
-        Ok(())
+        // let call = self.execute_entry_point(
+        //     call_type,
+        //     class_hash,
+        //     contract_address,
+        //     code_address,
+        //     request.selector,
+        //     entry_point_type,
+        //     calldata,
+        //     caller_address,
+        // )
+
+        // return self.execute_entry_point(call=call)
+
+        // TODO, remove this once used the commented code.
+        todo!()
     }
 
     fn get_block_info(&self) -> &BlockInfo {
@@ -277,7 +348,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
     fn library_call(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._call_contract_and_write_response("library_call", vm, syscall_ptr);

@@ -18,7 +18,17 @@ pub(crate) enum SyscallRequest {
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    CallContract(CallContractRequest),
     GetTxSignature(GetTxSignatureRequest),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractRequest {
+    pub(crate) selector: Felt,
+    pub(crate) calldata: Relocatable,
+    pub(crate) calldata_size: usize,
+    pub(crate) contract_address: u64,
+    pub(crate) class_hash: u64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,7 +65,7 @@ pub(crate) struct DeployRequestStruct {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SendMessageToL1SysCall {
     pub(crate) _selector: Felt,
-    pub(crate) to_address: usize,
+    pub(crate) to_address: u64,
     pub(crate) payload_size: usize,
     pub(crate) payload_ptr: Relocatable,
 }
@@ -246,7 +256,7 @@ impl FromPtr for SendMessageToL1SysCall {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, &syscall_ptr)?;
-        let to_address = get_integer(vm, &(&syscall_ptr + 1))?;
+        let to_address = get_integer(vm, &(&syscall_ptr + 1))? as u64;
         let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
         let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 4))?;
 
@@ -381,5 +391,11 @@ impl CountFields for GetContractAddressRequest {
 impl CountFields for GetTxInfoRequest {
     fn count_fields() -> usize {
         1
+    }
+}
+
+impl CountFields for CallContractRequest {
+    fn count_fields() -> usize {
+        5
     }
 }

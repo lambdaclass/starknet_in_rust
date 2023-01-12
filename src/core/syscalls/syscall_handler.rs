@@ -5,8 +5,8 @@ use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::GetContractAddressResponse;
 use super::syscall_response::{
-    GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
-    GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
+    CallContractResponse, GetBlockTimestampResponse, GetCallerAddressResponse,
+    GetSequencerAddressResponse, GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
 };
 use crate::business_logic::execution::objects::TxInfoStruct;
 use crate::business_logic::state::state_api_objects::BlockInfo;
@@ -26,6 +26,7 @@ use cairo_rs::vm::errors::hint_errors::HintError;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::Felt;
+use felt::NewFelt;
 use std::any::Any;
 use std::collections::HashMap;
 
@@ -48,7 +49,7 @@ pub(crate) trait SyscallHandler {
 
     fn library_call(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
@@ -70,12 +71,28 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
+    // Executes the contract call and fills the CallContractResponse struct.
     fn _call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<(), SyscallHandlerError> {
+        let retdata = self._call_contract(syscall_name, vm, syscall_ptr)?;
+
+        let retdata_maybe_reloc = retdata
+            .clone()
+            .into_iter()
+            .map(|item| MaybeRelocatable::from(Felt::new(item)))
+            .collect::<Vec<MaybeRelocatable>>();
+
+        let response = CallContractResponse::new(
+            retdata.len(),
+            self.allocate_segment(vm, retdata_maybe_reloc)?,
+        );
+
+        self._write_syscall_response(&response, vm, syscall_ptr)
+    }
 
     fn _call_contract(
         &mut self,
@@ -246,7 +263,9 @@ pub(crate) trait SyscallHandler {
             "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
-            _ => Err(SyscallHandlerError::UnknownSyscall),
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
         }
     }
 }
