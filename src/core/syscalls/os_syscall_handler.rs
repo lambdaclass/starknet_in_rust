@@ -890,16 +890,10 @@ mod tests {
         );
 
         let addr_0 = Relocatable::from(&(syscall_ptr + 5));
-        assert_eq!(
-            vm.get_relocatable(&addr_0),
-            Ok(Relocatable {
-                segment_index: -1,
-                offset: 0
-            })
-        );
+        assert_eq!(get_integer(&vm, &addr_0), Ok(1));
         let addr_1 = Relocatable::from(&(syscall_ptr + 6));
         assert_eq!(
-            get_relocatable(&vm, &addr_0),
+            get_relocatable(&vm, &addr_1),
             Ok(Relocatable {
                 segment_index: -1,
                 offset: 0

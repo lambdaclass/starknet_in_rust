@@ -119,13 +119,13 @@ impl WriteSyscallResponse for CallContractResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
-            &(syscall_ptr + CallContractRequest::count_fields()),
-            &self.retdata,
-        )?;
         vm.insert_value::<Felt>(
-            &(syscall_ptr + CallContractRequest::count_fields() + 1),
+            &(syscall_ptr + CallContractRequest::count_fields()),
             self.retdata_size.into(),
+        )?;
+        vm.insert_value(
+            &(syscall_ptr + CallContractRequest::count_fields() + 1),
+            &self.retdata,
         )?;
         Ok(())
     }
