@@ -124,7 +124,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
             .storage_writes
             .clone()
             .into_iter()
-            .filter(|(k, _v)| self.storage_initial_values.contains_key(k))
+            .filter(|(k, _v)| !self.storage_initial_values.contains_key(k))
             .collect::<HashMap<StorageEntry, u64>>();
 
         let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
