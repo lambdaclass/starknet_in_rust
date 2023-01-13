@@ -454,7 +454,7 @@ mod tests {
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
             Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
                 _selector: 0.into(),
-                to_address: 1,
+                to_address: Address::new("1"),
                 payload_size: 2,
                 payload_ptr: relocatable!(2, 0)
             }))
@@ -885,7 +885,7 @@ mod tests {
                     .tx_execution_context
                     .n_sent_messages
                     - 1,
-                1,
+                Address::new("1"),
                 vec![18.into(), 12.into()],
             )]
         );

@@ -131,6 +131,14 @@ pub fn to_state_diff_storage_mapping(
 
 use starknet_crypto::FieldElement;
 
+#[macro_export]
+macro_rules! address {
+    ($val : expr) => {
+        $crate::utils::Address::new($val)
+    };
+}
+pub(crate) use address;
+
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {

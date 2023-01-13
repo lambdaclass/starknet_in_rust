@@ -1,7 +1,7 @@
 use crate::business_logic::execution::objects::TransactionExecutionContext;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetChainId;
-use crate::utils::{get_big_int, get_integer, get_relocatable};
+use crate::utils::{get_big_int, get_integer, get_relocatable, Address};
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::Felt;
@@ -27,7 +27,7 @@ pub(crate) struct CallContractRequest {
     pub(crate) selector: Felt,
     pub(crate) calldata: Relocatable,
     pub(crate) calldata_size: usize,
-    pub(crate) contract_address: u64,
+    pub(crate) contract_address: Address,
     pub(crate) class_hash: u64,
 }
 
@@ -65,7 +65,7 @@ pub(crate) struct DeployRequestStruct {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SendMessageToL1SysCall {
     pub(crate) _selector: Felt,
-    pub(crate) to_address: u64,
+    pub(crate) to_address: Address,
     pub(crate) payload_size: usize,
     pub(crate) payload_ptr: Relocatable,
 }
@@ -256,7 +256,7 @@ impl FromPtr for SendMessageToL1SysCall {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, &syscall_ptr)?;
-        let to_address = get_integer(vm, &(&syscall_ptr + 1))? as u64;
+        let to_address = Address::from_felt(get_big_int(vm, &(&syscall_ptr + 1))?);
         let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
         let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 4))?;
 

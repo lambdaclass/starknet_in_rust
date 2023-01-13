@@ -10,7 +10,7 @@ use crate::{
         errors::syscall_handler_errors::SyscallHandlerError, syscalls::syscall_request::FromPtr,
     },
     definitions::general_config::StarknetChainId,
-    utils::{get_big_int, get_integer, get_relocatable},
+    utils::{get_big_int, get_integer, get_relocatable, Address},
 };
 
 use super::execution_errors::ExecutionError;
@@ -71,12 +71,12 @@ impl TransactionExecutionContext {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedL2ToL1Message {
     pub(crate) order: usize,
-    pub(crate) to_address: u64,
+    pub(crate) to_address: Address,
     pub(crate) payload: Vec<Felt>,
 }
 
 impl OrderedL2ToL1Message {
-    pub fn new(order: usize, to_address: u64, payload: Vec<Felt>) -> Self {
+    pub fn new(order: usize, to_address: Address, payload: Vec<Felt>) -> Self {
         OrderedL2ToL1Message {
             order,
             to_address,
@@ -86,15 +86,15 @@ impl OrderedL2ToL1Message {
 }
 
 pub struct L2toL1MessageInfo {
-    pub(crate) from_address: u64,
-    pub(crate) to_address: u64,
+    pub(crate) from_address: Address,
+    pub(crate) to_address: Address,
     pub(crate) payload: Vec<Felt>,
 }
 
 impl L2toL1MessageInfo {
     pub(crate) fn new(
         message_content: OrderedL2ToL1Message,
-        sending_contract_address: u64,
+        sending_contract_address: Address,
     ) -> Self {
         L2toL1MessageInfo {
             from_address: sending_contract_address,
