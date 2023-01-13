@@ -105,16 +105,16 @@ impl StateCache {
 
 #[cfg(test)]
 mod tests {
-    use crate::business_logic::state;
+    use crate::{address, business_logic::state};
 
     use super::*;
 
     #[test]
     fn state_chache_set_initial_values() {
         let mut state_cache = StateCache::new();
-        let address_to_class_hash = HashMap::from([(Address::new("10"), b"pedersen".to_vec())]);
-        let address_to_nonce = HashMap::from([(Address::new("9"), 12.into())]);
-        let storage_updates = HashMap::from([((Address::new("4"), [1; 32]), 18.into())]);
+        let address_to_class_hash = HashMap::from([(address!("10"), b"pedersen".to_vec())]);
+        let address_to_nonce = HashMap::from([(address!("9"), 12.into())]);
+        let storage_updates = HashMap::from([((address!("4"), [1; 32]), 18.into())]);
         assert!(state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .is_ok());
@@ -125,24 +125,24 @@ mod tests {
 
         assert_eq!(
             state_cache.get_accessed_contract_addresses(),
-            HashSet::from([Address::new("10"), Address::new("9"), Address::new("4")])
+            HashSet::from([address!("10"), address!("9"), address!("4")])
         );
     }
 
     #[test]
     fn state_chache_update_writes_from_other() {
         let mut state_cache = StateCache::new();
-        let address_to_class_hash = HashMap::from([(Address::new("10"), b"pedersen".to_vec())]);
-        let address_to_nonce = HashMap::from([(Address::new("9"), 12.into())]);
-        let storage_updates = HashMap::from([((Address::new("20"), [1; 32]), 18.into())]);
+        let address_to_class_hash = HashMap::from([(address!("10"), b"pedersen".to_vec())]);
+        let address_to_nonce = HashMap::from([(address!("9"), 12.into())]);
+        let storage_updates = HashMap::from([((address!("20"), [1; 32]), 18.into())]);
         state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .expect("Error setting StateCache values");
 
         let mut other_state_cache = StateCache::new();
-        let other_address_to_class_hash = HashMap::from([(Address::new("10"), b"sha-3".to_vec())]);
-        let other_address_to_nonce = HashMap::from([(Address::new("401"), 100.into())]);
-        let other_storage_updates = HashMap::from([((Address::new("4002"), [2; 32]), 101.into())]);
+        let other_address_to_class_hash = HashMap::from([(address!("10"), b"sha-3".to_vec())]);
+        let other_address_to_nonce = HashMap::from([(address!("401"), 100.into())]);
+        let other_storage_updates = HashMap::from([((address!("4002"), [2; 32]), 101.into())]);
         other_state_cache
             .set_initial_values(
                 &other_address_to_class_hash,
@@ -154,21 +154,18 @@ mod tests {
         state_cache.update_writes_from_other(&other_state_cache);
 
         assert_eq!(
-            state_cache.get_class_hash(&Address::new("10")),
+            state_cache.get_class_hash(&address!("10")),
             Some(&b"sha-3".to_vec())
         );
         assert_eq!(
             state_cache.nonce_writes,
-            HashMap::from([
-                (Address::new("9"), 12.into()),
-                (Address::new("401"), 100.into())
-            ])
+            HashMap::from([(address!("9"), 12.into()), (address!("401"), 100.into())])
         );
         assert_eq!(
             state_cache.storage_writes,
             HashMap::from([
-                ((Address::new("20"), [1; 32]), 18.into()),
-                ((Address::new("4002"), [2; 32]), 101.into())
+                ((address!("20"), [1; 32]), 18.into()),
+                ((address!("4002"), [2; 32]), 101.into())
             ])
         );
     }

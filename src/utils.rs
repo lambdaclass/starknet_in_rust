@@ -352,11 +352,11 @@ mod test {
     #[test]
     fn to_state_diff_storage_mapping_test() {
         let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
-        let address1: Address = Address::new("1");
+        let address1: Address = address!("1");
         let key1 = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
         let value1: Felt = 2.into();
 
-        let address2: Address = Address::new("3");
+        let address2: Address = address!("3");
         let key2 = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
         let value2: Felt = 4.into();
 
