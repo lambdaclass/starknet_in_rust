@@ -1,9 +1,10 @@
 use super::{errors::storage_errors::StorageError, storage::Storage};
 use std::collections::HashMap;
 
+pub(crate) type StorageKey = (Prefix, [u8; 32]);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct DictStorage {
-    storage: HashMap<[u8; 32], Vec<u8>>,
+    storage: HashMap<StorageKey, Vec<u8>>,
 }
 
 impl DictStorage {
@@ -14,15 +15,23 @@ impl DictStorage {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+pub(crate) enum Prefix {
+    Int,
+    Float,
+    Str,
+    ContractState,
+}
+
 impl Storage for DictStorage {
-    fn set_value(&mut self, key: &[u8; 32], value: Vec<u8>) -> Result<(), StorageError> {
+    fn set_value(&mut self, key: &StorageKey, value: Vec<u8>) -> Result<(), StorageError> {
         self.storage.insert(*key, value);
         Ok(())
     }
-    fn get_value(&self, key: &[u8; 32]) -> Option<Vec<u8>> {
+    fn get_value(&self, key: &StorageKey) -> Option<Vec<u8>> {
         self.storage.get(&*key).cloned()
     }
-    fn delete_value(&mut self, key: &[u8; 32]) -> Result<Vec<u8>, StorageError> {
+    fn delete_value(&mut self, key: &StorageKey) -> Result<Vec<u8>, StorageError> {
         self.storage
             .remove(&*key)
             .ok_or(StorageError::RemoveMissingKey)
@@ -73,17 +82,14 @@ mod tests {
     fn error_after_inserting_different_data_under_same_key() {
         let mut storage = DictStorage::new();
 
-        let ikey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+        let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
 
-        storage.set_float(&fkey, 4.0);
-        storage.set_int(&ikey, 4);
-
-        assert_eq!(
-            storage.get_float(&fkey),
-            Err(StorageError::IncorrectDataSize)
+        storage.set_value(
+            &(Prefix::Int, key),
+            (4.0_f64).to_bits().to_be_bytes().to_vec(),
         );
-        assert_eq!(storage.get_int(&ikey).unwrap(), 4);
+
+        assert_eq!(storage.get_int(&key), Err(StorageError::IncorrectDataSize))
     }
 
     #[test]
@@ -93,7 +99,7 @@ mod tests {
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
 
         storage.set_float(&fkey, 4.0002);
-        storage.delete_value(&fkey);
+        storage.delete_value(&(Prefix::Float, fkey));
 
         assert_eq!(
             storage.get_float(&fkey),
@@ -109,15 +115,15 @@ mod tests {
         let ikey = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
 
         storage.set_float(&fkey, 534.0002);
-        storage.delete_value(&fkey);
+        storage.delete_value(&(Prefix::Float, fkey));
 
         assert_eq!(
-            storage.delete_value(&fkey),
+            storage.delete_value(&(Prefix::Float, fkey)),
             Err(StorageError::RemoveMissingKey)
         );
 
         assert_eq!(
-            storage.delete_value(&ikey),
+            storage.delete_value(&(Prefix::Int, ikey)),
             Err(StorageError::RemoveMissingKey)
         );
     }
