@@ -23,7 +23,7 @@ impl ContractState {
     }
 
     fn initialized(&self) -> bool {
-        !(self.contract_hash == UNINITIALIZED_CLASS_HASH)
+        self.contract_hash != UNINITIALIZED_CLASS_HASH
     }
 
     fn is_empty(&self) -> bool {
