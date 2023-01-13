@@ -98,14 +98,14 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
-            let class_hash = self.state_reader.get_class_hash_at(&contract_address)?;
+            let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
             self.cache
                 .class_hash_initial_values
                 .insert(contract_address.clone(), class_hash.clone());
         }
 
         self.cache
-            .get_class_hash(&contract_address)
+            .get_class_hash(contract_address)
             .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
     }
 
