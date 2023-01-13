@@ -11,7 +11,7 @@ use crate::{
     core::errors::state_errors::StateError,
     definitions::general_config::{self, StarknetGeneralConfig},
     starknet_storage::storage::{FactFetchingContext, Storage},
-    utils::to_state_diff_storage_mapping,
+    utils::{to_state_diff_storage_mapping, Address},
 };
 
 #[derive(Debug, Default)]
@@ -138,9 +138,9 @@ impl<T> SharedState<T> {
     pub fn apply_updates<S>(
         &self,
         ffc: FactFetchingContext<S>,
-        address_to_class_hash: HashMap<Felt, Vec<u8>>,
-        address_to_nonce: HashMap<Felt, Felt>,
-        storage_updates: HashMap<Felt, HashMap<[u8; 32], Felt>>,
+        address_to_class_hash: HashMap<Address, Vec<u8>>,
+        address_to_nonce: HashMap<Address, Felt>,
+        storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
         block_info: BlockInfo,
     ) -> Self
     where

@@ -3,7 +3,7 @@ use super::syscall_request::{
     GetCallerAddressRequest, GetContractAddressRequest, GetSequencerAddressRequest,
     GetTxInfoRequest, GetTxSignatureRequest,
 };
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
@@ -31,7 +31,7 @@ pub(crate) struct GetCallerAddressResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetContractAddressResponse {
-    contract_address: u64,
+    contract_address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -102,7 +102,7 @@ impl GetTxSignatureResponse {
     }
 }
 impl GetContractAddressResponse {
-    pub fn new(contract_address: u64) -> Self {
+    pub fn new(contract_address: Address) -> Self {
         GetContractAddressResponse { contract_address }
     }
 }
@@ -195,7 +195,7 @@ impl WriteSyscallResponse for GetContractAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt>(
             &(syscall_ptr + GetContractAddressRequest::count_fields()),
-            self.contract_address.into(),
+            self.contract_address.to_felt(),
         )?;
         Ok(())
     }

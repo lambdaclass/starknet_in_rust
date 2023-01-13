@@ -27,7 +27,7 @@ pub struct BusinessLogicSyscallHandler {
     /// A list of dynamically allocated segments that are expected to be read-only.
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) resources_manager: ExecutionResourcesManager,
-    pub(crate) contract_address: u64,
+    pub(crate) contract_address: Address,
     pub(crate) caller_address: u64,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
@@ -52,7 +52,7 @@ impl BusinessLogicSyscallHandler {
         let tx_execution_context = TransactionExecutionContext::new();
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls);
-        let contract_address = 1;
+        let contract_address = Address::new("1");
         let caller_address = 0;
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();
@@ -124,7 +124,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -151,9 +151,9 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let class_hash = &request.class_hash;
 
         let deployer_address = if request.deploy_from_zero.is_zero() {
-            self.contract_address
+            self.contract_address.clone()
         } else {
-            0
+            Address::new("0")
         };
 
         let _contract_address = calculate_contract_address_from_hash(
@@ -191,34 +191,34 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             "call_contract" => {
                 code_address = Some(request.contract_address);
                 let contract_address = code_address;
-                let caller_address = self.contract_address;
+                let caller_address = self.contract_address.clone();
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Call;
             }
             "delegate_call" => {
                 code_address = Some(request.contract_address);
-                let contract_address = self.contract_address;
+                let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address;
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Delegate;
             }
             "delegate_l1_handler" => {
                 code_address = Some(request.contract_address);
-                let contract_address = self.contract_address;
+                let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address;
                 let entry_point_type = EntryPointType::L1Handler;
                 let call_type = CallType::Delegate;
             }
             "library_call" => {
                 class_hash = Some(request.class_hash.to_be_bytes());
-                let contract_address = self.contract_address;
+                let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address;
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Delegate;
             }
             "library_call_l1_handler" => {
                 class_hash = Some(request.class_hash.to_be_bytes());
-                let contract_address = self.contract_address;
+                let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address;
                 let entry_point_type = EntryPointType::L1Handler;
                 let call_type = CallType::Delegate;
@@ -270,7 +270,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         if let SyscallRequest::GetContractAddress(request) =
             self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)?
         {
@@ -279,7 +279,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetContractAddressRequest);
         };
 
-        Ok(self.contract_address)
+        Ok(self.contract_address.clone())
     }
 
     fn send_message_to_l1(

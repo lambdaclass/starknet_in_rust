@@ -13,6 +13,7 @@ use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::utils::get_big_int;
+use crate::utils::Address;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -62,7 +63,7 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError>;
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn _read_and_validate_syscall_request(
         &mut self,
@@ -111,7 +112,7 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError>;
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError>;
 
@@ -958,8 +959,8 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
-            hint_processor.syscall_handler.contract_address
+            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            hint_processor.syscall_handler.contract_address.to_felt()
         )
     }
 

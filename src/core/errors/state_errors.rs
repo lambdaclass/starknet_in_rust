@@ -1,7 +1,7 @@
 use felt::Felt;
 use thiserror::Error;
 
-use crate::business_logic::state::state_cache::StorageEntry;
+use crate::{business_logic::state::state_cache::StorageEntry, utils::Address};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum StateError {
@@ -15,14 +15,14 @@ pub enum StateError {
     ParentCarriedStateIsNone,
     #[error("Cache already initialized")]
     StateCacheAlreadyInitialized,
-    #[error("No class hash assigned for contact address: {0}")]
-    NoneClassHash(Felt),
+    #[error("No class hash assigned for contact address: {0:?}")]
+    NoneClassHash(Address),
     #[error("No nonce assigned for contact address: {0}")]
-    NoneNonce(Felt),
+    NoneNonce(String),
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
-    #[error("Cannot deploy contract at address: {0}")]
-    ContractAddressOutOfRangeAddress(Felt),
-    #[error("Requested contract address {0} is unavailable for deployment")]
-    ContractAddressUnavailable(Felt),
+    #[error("Cannot deploy contract at address: {0:?}")]
+    ContractAddressOutOfRangeAddress(Address),
+    #[error("Requested contract address {0:?} is unavailable for deployment")]
+    ContractAddressUnavailable(Address),
 }

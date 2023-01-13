@@ -4,6 +4,7 @@ use super::syscall_response::WriteSyscallResponse;
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::services::api::contract_class::EntryPointType;
+use crate::utils::Address;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
@@ -13,7 +14,7 @@ use std::collections::{HashMap, VecDeque};
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CallInfo {
     caller_address: u64,
-    contract_address: u64,
+    contract_address: Address,
     internal_calls: Vec<CallInfo>,
     entry_point_type: Option<EntryPointType>,
     _storage_read_values: VecDeque<u64>, // u64
@@ -24,7 +25,7 @@ impl Default for CallInfo {
     fn default() -> Self {
         Self {
             caller_address: 0,
-            contract_address: 0,
+            contract_address: Address::new("0"),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             _storage_read_values: VecDeque::new(),
@@ -59,7 +60,7 @@ pub(crate) struct OsSyscallHandler {
     // state of the caller (the call the called the current call); and so on.
     call_stack: VecDeque<CallInfo>,
     // An iterator over contract addresses that were deployed during that call.
-    deployed_contracts_iterator: VecDeque<u64>, // u64
+    deployed_contracts_iterator: VecDeque<Address>, // u64
     // An iterator to the retdata of its internal calls.
     retdata_iterator: VecDeque<VecDeque<u64>>, //VEC<u64>
     // An iterator to the read_values array which is consumed when the transaction
@@ -116,7 +117,7 @@ impl SyscallHandler for OsSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         let constructor_retdata = self
             .retdata_iterator
             .pop_front()
@@ -169,10 +170,10 @@ impl SyscallHandler for OsSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         match self.call_stack.front() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info.contract_address),
+            Some(call_info) => Ok(call_info.contract_address.clone()),
         }
     }
 
@@ -212,7 +213,7 @@ impl OsSyscallHandler {
         tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
-        deployed_contracts_iterator: VecDeque<u64>,
+        deployed_contracts_iterator: VecDeque<Address>,
         retdata_iterator: VecDeque<VecDeque<u64>>,
         execute_code_read_iterator: VecDeque<u64>,
         starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
@@ -348,8 +349,8 @@ impl OsSyscallHandler {
             .filter(|call_info_internal| {
                 call_info_internal.entry_point_type == Some(EntryPointType::Constructor)
             })
-            .map(|call_info_internal| call_info_internal.contract_address)
-            .collect::<VecDeque<u64>>();
+            .map(|call_info_internal| call_info_internal.contract_address.clone())
+            .collect::<VecDeque<Address>>();
 
         self.retdata_iterator = call_info
             .internal_calls
@@ -369,7 +370,7 @@ mod tests {
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
     use crate::core::syscalls::syscall_request::CallContractRequest;
-    use crate::utils::{get_integer, get_relocatable, test_utils::*};
+    use crate::utils::{get_integer, get_relocatable, test_utils::*, Address};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
@@ -389,7 +390,7 @@ mod tests {
     fn get_contract_address() {
         let mut call_stack = VecDeque::new();
         let call_info = CallInfo {
-            contract_address: 5,
+            contract_address: Address::new("5"),
             caller_address: 1,
             internal_calls: Vec::new(),
             entry_point_type: None,
@@ -413,7 +414,7 @@ mod tests {
             offset: 0,
         };
         let get_contract_address = handler._get_contract_address(&vm, reloc);
-        assert_eq!(get_contract_address, Ok(5))
+        assert_eq!(get_contract_address, Ok(Address::new("5")))
     }
 
     #[test]
@@ -621,7 +622,7 @@ mod tests {
         let mut retdata_iterator = VecDeque::new();
         retdata_iterator.push_back(VecDeque::new());
         let mut deployed_contracts_iterator = VecDeque::new();
-        deployed_contracts_iterator.push_back(12);
+        deployed_contracts_iterator.push_back(Address::new("12"));
         let mut handler = OsSyscallHandler {
             deployed_contracts_iterator,
             retdata_iterator,
@@ -634,7 +635,7 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler._deploy(&vm, ptr), Ok(12));
+        assert_eq!(handler._deploy(&vm, ptr), Ok(Address::new("12")));
     }
 
     #[test]
@@ -712,7 +713,7 @@ mod tests {
     #[test]
     fn assert_iterators_exhausted_err_deployed() {
         let mut deployed_contracts_iterator = VecDeque::new();
-        deployed_contracts_iterator.push_back(12);
+        deployed_contracts_iterator.push_back(Address::new("12"));
         let handler = OsSyscallHandler {
             deployed_contracts_iterator,
             ..Default::default()
