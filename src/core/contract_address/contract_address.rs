@@ -1,9 +1,9 @@
-use cairo_rs::types::program::Program;
+use cairo_rs::{types::program::Program, vm::runners::{cairo_runner::CairoRunner, builtin_runner::BuiltinRunner}, serde::deserialize_program::Identifier};
 use num_bigint::BigInt;
 
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
-    hash_utils::calculate_contract_address_from_hash, services::api::contract_class::ContractClass,
+    hash_utils::calculate_contract_address_from_hash, services::api::contract_class::{ContractClass, EntryPointType, ContractEntryPoint},
 };
 
 pub(crate) fn calculate_contract_address(
@@ -27,11 +27,29 @@ fn load_program() -> Program {
     todo!()
 }
 
+fn get_contract_entry_points(
+    contract_class: ContractClass,
+    entry_point_type: EntryPointType,
+) -> Result<Vec<ContractEntryPoint>, SyscallHandlerError> {
+    
+    let program_length = contract_class.program.data.len();
+    let entry_points = contract_class.entry_points_by_type.get(&entry_point_type).unwrap();
+
+    for entry_point in entry_points {
+        if (BigInt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()) {
+            return Err(SyscallHandlerError::BigintToU64Fail); 
+            // TODO: change this error to:
+            // f"Invalid entry point offset {entry_point.offset}, len(program_data)={program_length}."
+        }
+    }
+
+    Ok(entry_points.iter().map(|entry_point| ContractEntryPoint {offset: entry_point.offset, selector: entry_point.selector}).collect())
+}
 /// Returns the serialization of a contract as a list of field elements.
 fn get_contract_class_struct(
-    identifiers: IdentifierManager, contract_class: ContractClass
-) -> Result<CairoStructProxy, _> {
-    // kinda magic
+    identifiers: &HashMap<String, Identifier>, contract_class: ContractClass
+) -> Result<ContractClass, SyscallHandlerError> {
+    // usar directamente los de rust
     // structs = CairoStructFactory(
     //     identifiers=identifiers,
     //     additional_imports=[
@@ -39,11 +57,9 @@ fn get_contract_class_struct(
     //         "starkware.starknet.core.os.contracts.ContractEntryPoint",
     //     ],
     // ).structs
+    
 
-    let API_VERSION_IDENT = identifiers.get_by_full_name(
-        ScopedName.from_string("starkware.starknet.core.os.contracts.API_VERSION")
-    )
-    assert isinstance(API_VERSION_IDENT, ConstDefinition)
+    let api_version = identifiers.get("API_VERSION").ok_or(SyscallHandlerError::MissingIdentifiers)?;
 
     let external_functions, l1_handlers, constructors = (
         get_contract_entry_points(
@@ -63,20 +79,38 @@ fn get_contract_class_struct(
     )
 
     let builtin_list = contract_class.program.builtins;
-    return Ok(structs.ContractClass(
-        API_VERSION_IDENT.value,
-        n_external_functions=len(external_functions),
-        external_functions=flat_external_functions,
-        n_l1_handlers=len(l1_handlers),
-        l1_handlers=flat_l1_handlers,
-        n_constructors=len(constructors),
-        constructors=flat_constructors,
-        n_builtins=len(builtin_list),
+    
+    // este contract class es distinto, solamente guarda los campos.
+    Ok(StructContractClass {
+        api_version: api_version.value.unwrap().into(),
+        n_external_functions: len(external_functions),
+        external_functions: flat_external_functions,
+        n_l1_handlers: len(l1_handlers),
+        l1_handlers: flat_l1_handlers,
+        n_constructors: len(constructors),
+        constructors: flat_constructors,
+        n_builtins: len(builtin_list),
         builtin_list,
-        hinted_class_hash=compute_hinted_class_hash(contract_class=contract_class),
-        bytecode_length=len(contract_class.program.data),
-        bytecode_ptr=contract_class.program.data,
-    )
+        hinted_class_hash: compute_hinted_class_hash(contract_class: contract_class),
+        bytecode_length: len(contract_class.program.data),
+        bytecode_ptr: contract_class.program.data,
+    }
+}
+
+/// This is awful, I know. Name ideas? We already have a ContractClass struct.
+struct StructContractClass {
+    api_version: usize,
+    n_external_functions: usize,
+    external_functions=flat_external_functions, 
+    n_l1_handlers: usize,
+    l1_handlers: flat_l1_handlers,
+    n_constructors: usize,
+    constructors=flat_constructors,
+    n_builtins: usize,
+    builtin_list: Vec<BuiltinRunner>,
+    hinted_class_hash=compute_hinted_class_hash(contract_class=contract_class),
+    bytecode_length: usize,
+    bytecode_ptr=contract_class.program.data,
 }
 
 fn compute_class_hash_inner(
@@ -87,14 +121,14 @@ fn compute_class_hash_inner(
         program.identifiers, contract_class
     );
     
-    let runner = CairoFunctionRunner(program);
+    let runner = CairoRunner::new(&program, "all", false).unwrap();
+
     // we are using the default one, since the only difference is the name
     // let hash_builtin = HashBuiltinRunner(
         //     name="custom_hasher", included=True, ratio=32, hash_func=hash_func
     // )
     // runner.builtin_runners["hash_builtin"] = hash_builtin
-    hash_builtin.initialize_segments(runner);
-
+    runner.run_until_pc(address, vm, hint_processor)
     runner.run(
         "starkware.starknet.core.os.contracts.class_hash",
         hash_ptr=hash_builtin.base,

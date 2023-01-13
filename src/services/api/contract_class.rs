@@ -8,7 +8,7 @@ use crate::public::abi::AbiType;
 pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
     ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum EntryPointType {
     External,
     L1Handler,
