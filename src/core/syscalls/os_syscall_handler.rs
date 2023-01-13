@@ -13,7 +13,7 @@ use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CallInfo {
-    caller_address: u64,
+    caller_address: Address,
     contract_address: Address,
     internal_calls: Vec<CallInfo>,
     entry_point_type: Option<EntryPointType>,
@@ -24,7 +24,7 @@ pub(crate) struct CallInfo {
 impl Default for CallInfo {
     fn default() -> Self {
         Self {
-            caller_address: 0,
+            caller_address: Address::new("0"),
             contract_address: Address::new("0"),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
@@ -159,10 +159,10 @@ impl SyscallHandler for OsSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         match self.call_stack.back() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
-            Some(call_info) => Ok(call_info.caller_address),
+            Some(call_info) => Ok(call_info.caller_address.clone()),
         }
     }
 
@@ -391,7 +391,7 @@ mod tests {
         let mut call_stack = VecDeque::new();
         let call_info = CallInfo {
             contract_address: Address::new("5"),
-            caller_address: 1,
+            caller_address: Address::new("1"),
             internal_calls: Vec::new(),
             entry_point_type: None,
             _storage_read_values: VecDeque::new(),

@@ -87,8 +87,8 @@ impl GetSequencerAddressResponse {
 }
 
 impl GetCallerAddressResponse {
-    pub fn new(caller_addr: u64) -> Self {
-        let caller_address = caller_addr.into();
+    pub fn new(caller_addr: Address) -> Self {
+        let caller_address = caller_addr.to_felt();
         GetCallerAddressResponse { caller_address }
     }
 }

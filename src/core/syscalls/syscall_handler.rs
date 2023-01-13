@@ -106,7 +106,7 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError>;
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn _get_contract_address(
         &mut self,
@@ -830,8 +830,8 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
-            hint_processor.syscall_handler.caller_address
+            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            hint_processor.syscall_handler.caller_address.to_felt()
         )
     }
 
