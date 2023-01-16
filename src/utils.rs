@@ -358,6 +358,7 @@ mod test {
 
         let address2: Address = address!("3");
         let key2 = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
+
         let value2: Felt = 4.into();
 
         storage.insert((address1.clone(), key1), value1.clone());

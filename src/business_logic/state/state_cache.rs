@@ -11,6 +11,7 @@ use crate::utils::Address;
 /// (contract_address, key)
 pub(crate) type StorageEntry = (Address, [u8; 32]);
 
+
 #[derive(Debug, Default, Clone)]
 pub(crate) struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
@@ -115,6 +116,7 @@ mod tests {
         let address_to_class_hash = HashMap::from([(address!("10"), b"pedersen".to_vec())]);
         let address_to_nonce = HashMap::from([(address!("9"), 12.into())]);
         let storage_updates = HashMap::from([((address!("4"), [1; 32]), 18.into())]);
+
         assert!(state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .is_ok());
@@ -135,6 +137,7 @@ mod tests {
         let address_to_class_hash = HashMap::from([(address!("10"), b"pedersen".to_vec())]);
         let address_to_nonce = HashMap::from([(address!("9"), 12.into())]);
         let storage_updates = HashMap::from([((address!("20"), [1; 32]), 18.into())]);
+
         state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .expect("Error setting StateCache values");
@@ -143,6 +146,7 @@ mod tests {
         let other_address_to_class_hash = HashMap::from([(address!("10"), b"sha-3".to_vec())]);
         let other_address_to_nonce = HashMap::from([(address!("401"), 100.into())]);
         let other_storage_updates = HashMap::from([((address!("4002"), [2; 32]), 101.into())]);
+        
         other_state_cache
             .set_initial_values(
                 &other_address_to_class_hash,
@@ -167,6 +171,7 @@ mod tests {
                 ((address!("20"), [1; 32]), 18.into()),
                 ((address!("4002"), [2; 32]), 101.into())
             ])
+
         );
     }
 }
