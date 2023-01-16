@@ -454,7 +454,7 @@ mod tests {
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
             Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
                 _selector: 0.into(),
-                to_address: Address::new("1"),
+                to_address: Address(1.into()),
                 payload_size: 2,
                 payload_ptr: relocatable!(2, 0)
             }))
@@ -831,7 +831,7 @@ mod tests {
         // response is written in direction (1,2)
         assert_eq!(
             get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
-            hint_processor.syscall_handler.caller_address.to_felt()
+            hint_processor.syscall_handler.caller_address.0
         )
     }
 
@@ -885,7 +885,7 @@ mod tests {
                     .tx_execution_context
                     .n_sent_messages
                     - 1,
-                Address::new("1"),
+                Address(1.into()),
                 vec![18.into(), 12.into()],
             )]
         );
@@ -960,7 +960,7 @@ mod tests {
         // response is written in direction (1,2)
         assert_eq!(
             get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
-            hint_processor.syscall_handler.contract_address.to_felt()
+            hint_processor.syscall_handler.contract_address.0
         )
     }
 

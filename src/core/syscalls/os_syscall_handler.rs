@@ -24,8 +24,8 @@ pub(crate) struct CallInfo {
 impl Default for CallInfo {
     fn default() -> Self {
         Self {
-            caller_address: Address::new("0"),
-            contract_address: Address::new("0"),
+            caller_address: Address(0.into()),
+            contract_address: Address(0.into()),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             _storage_read_values: VecDeque::new(),
@@ -390,8 +390,8 @@ mod tests {
     fn get_contract_address() {
         let mut call_stack = VecDeque::new();
         let call_info = CallInfo {
-            contract_address: Address::new("5"),
-            caller_address: Address::new("1"),
+            contract_address: Address(5.into()),
+            caller_address: Address(1.into()),
             internal_calls: Vec::new(),
             entry_point_type: None,
             _storage_read_values: VecDeque::new(),
@@ -414,7 +414,7 @@ mod tests {
             offset: 0,
         };
         let get_contract_address = handler._get_contract_address(&vm, reloc);
-        assert_eq!(get_contract_address, Ok(Address::new("5")))
+        assert_eq!(get_contract_address, Ok(Address(5.into())))
     }
 
     #[test]
@@ -622,7 +622,7 @@ mod tests {
         let mut retdata_iterator = VecDeque::new();
         retdata_iterator.push_back(VecDeque::new());
         let mut deployed_contracts_iterator = VecDeque::new();
-        deployed_contracts_iterator.push_back(Address::new("12"));
+        deployed_contracts_iterator.push_back(Address(12.into()));
         let mut handler = OsSyscallHandler {
             deployed_contracts_iterator,
             retdata_iterator,
@@ -635,7 +635,7 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler._deploy(&vm, ptr), Ok(Address::new("12")));
+        assert_eq!(handler._deploy(&vm, ptr), Ok(Address(12.into())));
     }
 
     #[test]
@@ -713,7 +713,7 @@ mod tests {
     #[test]
     fn assert_iterators_exhausted_err_deployed() {
         let mut deployed_contracts_iterator = VecDeque::new();
-        deployed_contracts_iterator.push_back(Address::new("12"));
+        deployed_contracts_iterator.push_back(Address(12.into()));
         let handler = OsSyscallHandler {
             deployed_contracts_iterator,
             ..Default::default()

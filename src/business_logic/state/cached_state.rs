@@ -118,7 +118,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         }
         self.cache
             .get_nonce(contract_address)
-            .ok_or_else(|| StateError::NoneNonce(contract_address.address.clone()))
+            .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))
     }
 
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
@@ -151,7 +151,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         contract_address: Address,
         class_hash: Vec<u8>,
     ) -> Result<(), StateError> {
-        if contract_address.address == "0x0" {
+        if contract_address.0 == Felt::zero() {
             return Err(StateError::ContractAddressOutOfRangeAddress(
                 contract_address.clone(),
             ));

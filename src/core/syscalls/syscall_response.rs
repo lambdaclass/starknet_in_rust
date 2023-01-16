@@ -88,7 +88,7 @@ impl GetSequencerAddressResponse {
 
 impl GetCallerAddressResponse {
     pub fn new(caller_addr: Address) -> Self {
-        let caller_address = caller_addr.to_felt();
+        let caller_address = caller_addr.0;
         GetCallerAddressResponse { caller_address }
     }
 }
@@ -195,7 +195,7 @@ impl WriteSyscallResponse for GetContractAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt>(
             &(syscall_ptr + GetContractAddressRequest::count_fields()),
-            self.contract_address.to_felt(),
+            self.contract_address.0.clone(),
         )?;
         Ok(())
     }

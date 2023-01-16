@@ -154,10 +154,10 @@ mod tests {
 
     #[test]
     fn log_messages_cost_test() {
-        let ord_ev1 = OrderedL2ToL1Message::new(1, Address::new("1235"), vec![4.into()]);
-        let ord_ev2 = OrderedL2ToL1Message::new(2, Address::new("35"), vec![5.into(), 6.into()]);
-        let message1 = L2toL1MessageInfo::new(ord_ev1, Address::new("1234"));
-        let message2 = L2toL1MessageInfo::new(ord_ev2, Address::new("1235"));
+        let ord_ev1 = OrderedL2ToL1Message::new(1, Address(1235.into()), vec![4.into()]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, Address(35.into()), vec![5.into(), 6.into()]);
+        let message1 = L2toL1MessageInfo::new(ord_ev1, Address(1234.into()));
+        let message2 = L2toL1MessageInfo::new(ord_ev2, Address(1235.into()));
 
         // LOG_MSG_TO_L1_N_TOPICS = 2
         // LOG_MSG_TO_L1_ENCODED_DATA_SIZE = 2
@@ -184,15 +184,15 @@ mod tests {
 
     #[test]
     fn message_segment_len() {
-        let ord_ev1 = OrderedL2ToL1Message::new(1, Address::new("1235"), vec![4.into()]);
-        let ord_ev2 = OrderedL2ToL1Message::new(2, Address::new("35"), vec![5.into(), 6.into()]);
-        let message1 = L2toL1MessageInfo::new(ord_ev1, Address::new("1234"));
-        let message2 = L2toL1MessageInfo::new(ord_ev2, Address::new("1235"));
+        let ord_ev1 = OrderedL2ToL1Message::new(1, Address(1235.into()), vec![4.into()]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, Address(35.into()), vec![5.into(), 6.into()]);
+        let message1 = L2toL1MessageInfo::new(ord_ev1, Address(1234.into()));
+        let message2 = L2toL1MessageInfo::new(ord_ev2, Address(1235.into()));
 
-        let ord_ev3 = OrderedL2ToL1Message::new(1, Address::new("1235"), vec![5.into(), 6.into()]);
-        let ord_ev4 = OrderedL2ToL1Message::new(2, Address::new("35"), vec![4.into()]);
-        let message3 = L2toL1MessageInfo::new(ord_ev3, Address::new("1234"));
-        let message4 = L2toL1MessageInfo::new(ord_ev4, Address::new("1235"));
+        let ord_ev3 = OrderedL2ToL1Message::new(1, Address(1235.into()), vec![5.into(), 6.into()]);
+        let ord_ev4 = OrderedL2ToL1Message::new(2, Address(35.into()), vec![4.into()]);
+        let message3 = L2toL1MessageInfo::new(ord_ev3, Address(1234.into()));
+        let message4 = L2toL1MessageInfo::new(ord_ev4, Address(1235.into()));
 
         let l1_handler_1 = Some(10);
         let l1_handler_2 = None;
@@ -221,10 +221,10 @@ mod tests {
 
     #[test]
     fn transaction_gas_usage_test() {
-        let ord_ev1 = OrderedL2ToL1Message::new(1, Address::new("1235"), vec![4.into()]);
-        let ord_ev2 = OrderedL2ToL1Message::new(2, Address::new("35"), vec![5.into(), 6.into()]);
-        let message1 = L2toL1MessageInfo::new(ord_ev1, Address::new("1234"));
-        let message2 = L2toL1MessageInfo::new(ord_ev2, Address::new("1235"));
+        let ord_ev1 = OrderedL2ToL1Message::new(1, Address(1235.into()), vec![4.into()]);
+        let ord_ev2 = OrderedL2ToL1Message::new(2, Address(35.into()), vec![5.into(), 6.into()]);
+        let message1 = L2toL1MessageInfo::new(ord_ev1, Address(1234.into()));
+        let message2 = L2toL1MessageInfo::new(ord_ev2, Address(1235.into()));
 
         assert_eq!(
             calculate_tx_gas_usage(vec![message1, message2], 2, 2, Some(2), 1),

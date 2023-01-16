@@ -17,8 +17,8 @@ pub enum StateError {
     StateCacheAlreadyInitialized,
     #[error("No class hash assigned for contact address: {0:?}")]
     NoneClassHash(Address),
-    #[error("No nonce assigned for contact address: {0}")]
-    NoneNonce(String),
+    #[error("No nonce assigned for contact address: {0:?}")]
+    NoneNonce(Address),
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
     #[error("Cannot deploy contract at address: {0:?}")]

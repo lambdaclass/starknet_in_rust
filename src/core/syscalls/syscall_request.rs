@@ -256,7 +256,7 @@ impl FromPtr for SendMessageToL1SysCall {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, &syscall_ptr)?;
-        let to_address = Address::from_felt(get_big_int(vm, &(&syscall_ptr + 1))?);
+        let to_address = Address(get_big_int(vm, &(&syscall_ptr + 1))?);
         let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
         let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 4))?;
 

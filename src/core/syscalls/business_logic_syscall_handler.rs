@@ -52,8 +52,8 @@ impl BusinessLogicSyscallHandler {
         let tx_execution_context = TransactionExecutionContext::new();
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls);
-        let contract_address = Address::new("1");
-        let caller_address = Address::new("0");
+        let contract_address = Address(1.into());
+        let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
@@ -153,7 +153,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let deployer_address = if request.deploy_from_zero.is_zero() {
             self.contract_address.clone()
         } else {
-            Address::new("0")
+            Address(0.into())
         };
 
         let _contract_address = calculate_contract_address_from_hash(

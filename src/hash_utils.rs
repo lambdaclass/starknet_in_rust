@@ -20,7 +20,7 @@ pub fn calculate_contract_address_from_hash(
     let constructor_calldata_hash = compute_hash_on_elements(constructor_calldata)?;
     let raw_address_vec = vec![
         contract_address_prefix,
-        deployer_address.to_felt(),
+        deployer_address.0,
         salt.to_owned(),
         class_hash.to_owned(),
         constructor_calldata_hash,
@@ -102,7 +102,7 @@ mod tests {
             &1.into(),
             &2.into(),
             &[3.into(), 4.into()],
-            Address::new("5"),
+            Address(5.into()),
         );
 
         assert_eq!(
@@ -116,7 +116,7 @@ mod tests {
             &756.into(),
             &543.into(),
             &[124543.into(), 5345345.into(), 89.into()],
-            Address::new("87123"),
+            Address(87123.into()),
         );
 
         assert_eq!(
