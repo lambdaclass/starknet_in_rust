@@ -1,14 +1,16 @@
 use felt::Felt;
+use serde::{Deserialize, Serialize};
 
 use crate::business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH;
 
+#[derive(Deserialize, Serialize, PartialEq, Debug)]
 pub(crate) struct ContractState {
     contract_hash: Vec<u8>,
     nonce: Felt,
 }
 
 impl ContractState {
-    fn create(contract_hash: Vec<u8>, nonce: Felt) -> Self {
+    pub(crate) fn create(contract_hash: Vec<u8>, nonce: Felt) -> Self {
         Self {
             contract_hash,
             nonce,
