@@ -140,7 +140,7 @@ impl<T> SharedState<T> {
         ffc: FactFetchingContext<S>,
         address_to_class_hash: HashMap<Address, Vec<u8>>,
         address_to_nonce: HashMap<Address, Felt>,
-        storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
+        storage_updates: HashMap<Felt, HashMap<u64, Address>>,
         block_info: BlockInfo,
     ) -> Self
     where
