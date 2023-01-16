@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use felt::Felt;
 use num_traits::Zero;
 
-use crate::{core::errors::state_errors::StateError, services::api::contract_class::ContractClass};
+use crate::{
+    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
+    utils::Address,
+};
 
 use super::{
     state_api::{State, StateReader},
@@ -93,7 +96,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &Felt) -> Result<&Vec<u8>, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
             self.cache
@@ -106,7 +109,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
     }
 
-    fn get_nonce_at(&mut self, contract_address: &Felt) -> Result<&Felt, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
             let nonce = self.state_reader.get_nonce_at(contract_address)?;
             self.cache
@@ -145,19 +148,21 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
     fn deploy_contract(
         &mut self,
-        contract_address: Felt,
+        contract_address: Address,
         class_hash: Vec<u8>,
     ) -> Result<(), StateError> {
-        if contract_address == Felt::zero() {
+        if contract_address.0 == Felt::zero() {
             return Err(StateError::ContractAddressOutOfRangeAddress(
-                contract_address,
+                contract_address.clone(),
             ));
         }
 
         let current_class_hash = self.get_class_hash_at(&contract_address)?;
 
         if current_class_hash == &UNINITIALIZED_CLASS_HASH.to_vec() {
-            return Err(StateError::ContractAddressUnavailable(contract_address));
+            return Err(StateError::ContractAddressUnavailable(
+                contract_address.clone(),
+            ));
         }
         self.cache
             .class_hash_writes
@@ -166,7 +171,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         Ok(())
     }
 
-    fn increment_nonce(&mut self, contract_address: &Felt) -> Result<(), StateError> {
+    fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError> {
         let new_nonce = self.get_nonce_at(contract_address)? + 1;
         self.cache
             .nonce_writes

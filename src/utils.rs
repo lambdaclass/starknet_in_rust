@@ -5,8 +5,15 @@ use crate::{
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::{Felt, FeltOps};
+use felt::{felt_str, Felt, FeltOps, NewFelt};
 use num_traits::ToPrimitive;
+
+//* -------------------
+//*
+//* -------------------
+
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+pub struct Address(pub Felt);
 
 //* -------------------
 //* Helper Functions
@@ -74,20 +81,20 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
 
 pub fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt>,
-) -> Result<HashMap<Felt, HashMap<u64, Felt>>, StateError> {
-    let mut storage_updates: HashMap<Felt, HashMap<u64, Felt>> = HashMap::new();
+) -> Result<HashMap<Felt, HashMap<[u8; 32], Address>>, StateError> {
+    let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
     for ((address, key), value) in storage_writes {
-        if storage_updates.contains_key(&address) {
+        if storage_updates.contains_key(&address.0) {
             let mut map = storage_updates
-                .get(&address)
+                .get(&address.0)
                 .ok_or(StateError::EmptyKeyInStorage)?
                 .to_owned();
-            map.insert(key, value);
-            storage_updates.insert(address, map);
+            map.insert(key, Address(value));
+            storage_updates.insert(address.0, map);
         } else {
-            let mut new_map = HashMap::new();
-            new_map.insert(key, value);
-            storage_updates.insert(address, new_map);
+            let mut new_map: HashMap<[u8; 32], Address> = HashMap::new();
+            new_map.insert(key, Address(value));
+            storage_updates.insert(address.0, new_map);
         }
     }
 
@@ -306,17 +313,20 @@ mod test {
     use felt::Felt;
     use std::collections::HashMap;
 
+    use crate::utils::Address;
+
     use super::{test_utils::storage_key, to_state_diff_storage_mapping};
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(Felt, u64), Felt> = HashMap::new();
-        let address1: Felt = 1.into();
-        let key1 = 0;
+        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
+        let address1: Address = Address(1.into());
+        let key1 = [0; 32];
         let value1: Felt = 2.into();
 
-        let address2: Felt = 3.into();
-        let key2 = 1;
+        let address2: Address = Address(3.into());
+        let key2 = [1; 32];
+
         let value2: Felt = 4.into();
 
         storage.insert((address1.clone(), key1), value1.clone());
@@ -324,7 +334,13 @@ mod test {
 
         let map = to_state_diff_storage_mapping(storage).unwrap();
 
-        assert_eq!(*map.get(&address1).unwrap().get(&key1).unwrap(), value1);
-        assert_eq!(*map.get(&address2).unwrap().get(&key2).unwrap(), value2);
+        assert_eq!(
+            *map.get(&address1.0).unwrap().get(&key1).unwrap(),
+            Address(value1)
+        );
+        assert_eq!(
+            *map.get(&address2.0).unwrap().get(&key2).unwrap(),
+            Address(value2)
+        );
     }
 }

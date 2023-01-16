@@ -6,7 +6,7 @@ use serde_json::value;
 
 use crate::{
     core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
-    starknet_storage::storage,
+    starknet_storage::storage, utils::Address,
 };
 
 use super::{
@@ -49,8 +49,8 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
 
     pub fn set_storage_at(
         &mut self,
-        contract_address: Felt,
-        key: u64,
+        contract_address: Address,
+        key: [u8; 32],
         value: Felt,
     ) -> Result<(), StateError> {
         let address_key_pair = (contract_address, key);
@@ -72,7 +72,11 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         Ok(())
     }
 
-    pub fn get_storage_at(&mut self, contract_address: Felt, key: u64) -> Result<Felt, StateError> {
+    pub fn get_storage_at(
+        &mut self,
+        contract_address: Address,
+        key: [u8; 32],
+    ) -> Result<Felt, StateError> {
         let address_key_pair = (contract_address.clone(), key);
         let was_not_accessed = !self.was_accessed(&address_key_pair);
 
@@ -99,7 +103,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         self.state.get_contract_class(class_hash)
     }
 
-    pub fn get_nonce_at(&mut self, contract_address: &Felt) -> Result<&Felt, StateError> {
+    pub fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
         self.state.get_nonce_at(contract_address)
     }
 
@@ -109,13 +113,13 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
 
     pub fn deploy_contract(
         &mut self,
-        contract_address: Felt,
+        contract_address: Address,
         class_hash: Vec<u8>,
     ) -> Result<(), StateError> {
         self.state.deploy_contract(contract_address, class_hash)
     }
 
-    pub fn increment_nonce(&mut self, contract_address: &Felt) -> Result<(), StateError> {
+    pub fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError> {
         self.state.increment_nonce(contract_address)
     }
 
@@ -132,7 +136,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         (modified_contrats.len(), storage_updates.len())
     }
 
-    fn was_accessed(&mut self, address_key_pair: &(Felt, u64)) -> bool {
+    fn was_accessed(&mut self, address_key_pair: &StorageEntry) -> bool {
         self.storage_initial_values.contains_key(address_key_pair)
             || self.storage_writes.contains_key(address_key_pair)
     }
