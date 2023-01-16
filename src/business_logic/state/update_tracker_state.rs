@@ -63,22 +63,22 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
                 .insert(address_key_pair.clone(), value);
         }
 
-        let stor_value = value
+        let store_value = value
             .to_u64()
             .ok_or_else(|| StateError::ConversionError(value.clone()))?;
         self.storage_writes
-            .insert(address_key_pair.clone(), stor_value);
+            .insert(address_key_pair.clone(), store_value);
         self.state.set_storage_at(&address_key_pair, value);
         Ok(())
     }
 
     pub fn get_storage_at(&mut self, contract_address: Felt, key: u64) -> Result<Felt, StateError> {
         let address_key_pair = (contract_address.clone(), key);
-        let was_accessed = !self.was_accessed(&address_key_pair);
+        let was_not_accessed = !self.was_accessed(&address_key_pair);
 
         let return_value = self.state.get_storage_at(&(contract_address, key))?;
 
-        if was_accessed {
+        if was_not_accessed {
             let value = return_value
                 .to_u64()
                 .ok_or_else(|| StateError::ConversionError(return_value.clone()))?;
