@@ -9,7 +9,7 @@ use super::state_api_objects::BlockInfo;
 use super::state_api::StateReader;
 use crate::utils::Address;
 /// (contract_address, key)
-pub(crate) type StorageEntry = (Address, u64);
+pub(crate) type StorageEntry = (Address, [u8; 32]);
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct StateCache {
@@ -114,7 +114,7 @@ mod tests {
         let mut state_cache = StateCache::new();
         let address_to_class_hash = HashMap::from([(Address::new("10"), b"pedersen".to_vec())]);
         let address_to_nonce = HashMap::from([(Address::new("9"), 12.into())]);
-        let storage_updates = HashMap::from([((Address::new("4"), 1), 18.into())]);
+        let storage_updates = HashMap::from([((Address::new("4"), [1; 32]), 18.into())]);
 
         assert!(state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
@@ -135,7 +135,7 @@ mod tests {
         let mut state_cache = StateCache::new();
         let address_to_class_hash = HashMap::from([(Address::new("10"), b"pedersen".to_vec())]);
         let address_to_nonce = HashMap::from([(Address::new("9"), 12.into())]);
-        let storage_updates = HashMap::from([((Address::new("20"), 1), 18.into())]);
+        let storage_updates = HashMap::from([((Address::new("20"), [1; 32]), 18.into())]);
 
         state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
@@ -144,7 +144,7 @@ mod tests {
         let mut other_state_cache = StateCache::new();
         let other_address_to_class_hash = HashMap::from([(Address::new("10"), b"sha-3".to_vec())]);
         let other_address_to_nonce = HashMap::from([(Address::new("401"), 100.into())]);
-        let other_storage_updates = HashMap::from([((Address::new("4002"), 2), 101.into())]);
+        let other_storage_updates = HashMap::from([((Address::new("4002"), [2; 32]), 101.into())]);
 
         other_state_cache
             .set_initial_values(
@@ -170,8 +170,8 @@ mod tests {
         assert_eq!(
             state_cache.storage_writes,
             HashMap::from([
-                ((Address::new("20"), 1), 18.into()),
-                ((Address::new("4002"), 2), 101.into())
+                ((Address::new("20"), [1; 32]), 18.into()),
+                ((Address::new("4002"), [2; 32]), 101.into())
             ])
         );
     }

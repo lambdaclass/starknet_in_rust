@@ -105,8 +105,8 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
 
 pub fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt>,
-) -> Result<HashMap<Felt, HashMap<u64, Address>>, StateError> {
-    let mut storage_updates: HashMap<Felt, HashMap<u64, Address>> = HashMap::new();
+) -> Result<HashMap<Felt, HashMap<[u8; 32], Address>>, StateError> {
+    let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
     for ((address, key), value) in storage_writes {
         if storage_updates.contains_key(&address.to_felt()) {
             let mut map = storage_updates
@@ -116,7 +116,7 @@ pub fn to_state_diff_storage_mapping(
             map.insert(key, Address::from_felt(value));
             storage_updates.insert(address.clone().to_felt(), map);
         } else {
-            let mut new_map: HashMap<u64, Address> = HashMap::new();
+            let mut new_map: HashMap<[u8; 32], Address> = HashMap::new();
             new_map.insert(key, Address::from_felt(value));
             storage_updates.insert(address.to_felt(), new_map);
         }
@@ -343,13 +343,13 @@ mod test {
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(Address, u64), Felt> = HashMap::new();
+        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
         let address1: Address = Address::new("1");
-        let key1 = 0;
+        let key1 = [0; 32];
         let value1: Felt = 2.into();
 
         let address2: Address = Address::new("3");
-        let key2 = 1;
+        let key2 = [1; 32];
 
         let value2: Felt = 4.into();
 

@@ -50,7 +50,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
     pub fn set_storage_at(
         &mut self,
         contract_address: Address,
-        key: u64,
+        key: [u8; 32],
         value: Felt,
     ) -> Result<(), StateError> {
         let address_key_pair = (contract_address, key);
@@ -75,7 +75,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
     pub fn get_storage_at(
         &mut self,
         contract_address: Address,
-        key: u64,
+        key: [u8; 32],
     ) -> Result<Felt, StateError> {
         let address_key_pair = (contract_address.clone(), key);
         let was_not_accessed = !self.was_accessed(&address_key_pair);
@@ -136,7 +136,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         (modified_contrats.len(), storage_updates.len())
     }
 
-    fn was_accessed(&mut self, address_key_pair: &(Address, u64)) -> bool {
+    fn was_accessed(&mut self, address_key_pair: &StorageEntry) -> bool {
         self.storage_initial_values.contains_key(address_key_pair)
             || self.storage_writes.contains_key(address_key_pair)
     }
