@@ -13,9 +13,9 @@ pub(crate) fn calculate_contract_address(
     deployer_address: u64,
 ) -> Result<BigInt, SyscallHandlerError> {
     // TODO: maybe this is not the right error type.
-    let class_hash = compute_class_hash(contract_class);
+    let class_hash = compute_class_hash(contract_class).unwrap();
 
-    calculate_contract_address_from_hash(salt, class_hash, constructor_calldata, deployer_address)
+    calculate_contract_address_from_hash(salt, &class_hash, constructor_calldata, deployer_address)
 }
 
 fn load_program() -> Program {
@@ -45,10 +45,52 @@ fn get_contract_entry_points(
 
     Ok(entry_points.iter().map(|entry_point| ContractEntryPoint {offset: entry_point.offset, selector: entry_point.selector}).collect())
 }
+
+const MASK_250: Felt = Felt::from(2**250 - 1);
+
+/// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
+fn starknet_keccak(data: bytes) -> u64 {
+    from_bytes(keccak(data)) & MASK_250
+}
+
+/// Computes the hash of the contract class, including hints.
+fn compute_hinted_class_hash(contract_class: ContractClass) -> BigInt {
+    // no vamos a hacer esto, no tenemos debug info 
+    let mut program_without_debug_info = contract_class.program.clone();
+    // program_without_debug_info.debug_info = false;
+
+    // We are not supporting backward compatibility now.
+
+    // // If compiler_version is not present, this was compiled with a compiler before version 0.10.0.
+    // // Use "(a : felt)" syntax instead of "(a: felt)" so that the class hash will be the same.
+    // with add_backward_compatibility_space(contract_class.program.compiler_version is None):
+    //     dumped_program = program_without_debug_info.dump()
+
+    // if len(dumped_program["attributes"]) == 0:
+    //     // Remove attributes field from raw dictionary, for hash backward compatibility of
+    //     // contracts deployed prior to adding this feature.
+    //     del dumped_program["attributes"]
+    // else:
+    //     // Remove accessible_scopes and flow_tracking_data fields from raw dictionary, for hash
+    //     // backward compatibility of contracts deployed prior to adding this feature.
+    //     for attr in dumped_program["attributes"]:
+    //         if len(attr["accessible_scopes"]) == 0:
+    //             del attr["accessible_scopes"]
+    //         if attr["flow_tracking_data"] is None:
+    //             del attr["flow_tracking_data"]
+
+    // let mut hashmap_input = HashMap::new();
+    // hashmap_input.insert("program", program_without_debug_info);
+    // hashmap_input.insert("abi", contract_class.abi);
+    
+     //hashmap_input.dumps(input_to_hash, sort_keys=True).encode()
+    starknet_keccak(r#"{"program": program_without_debug_info, "abi": contract_class.abi}"#)
+}
+
 /// Returns the serialization of a contract as a list of field elements.
 fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>, contract_class: ContractClass
-) -> Result<ContractClass, SyscallHandlerError> {
+) -> Result<StructContractClass, SyscallHandlerError> {
     // usar directamente los de rust
     // structs = CairoStructFactory(
     //     identifiers=identifiers,
@@ -61,56 +103,48 @@ fn get_contract_class_struct(
 
     let api_version = identifiers.get("API_VERSION").ok_or(SyscallHandlerError::MissingIdentifiers)?;
 
-    let external_functions, l1_handlers, constructors = (
-        get_contract_entry_points(
-            structs=structs,
-            contract_class=contract_class,
-            entry_point_type=entry_point_type,
-        )
-        for entry_point_type in (
-            EntryPointType.EXTERNAL,
-            EntryPointType.L1_HANDLER,
-            EntryPointType.CONSTRUCTOR,
-        )
-    )
-    let flat_external_functions, flat_l1_handlers, flat_constructors = (
-        list(itertools.chain.from_iterable(entry_points))
-        for entry_points in (external_functions, l1_handlers, constructors)
-    )
+    let external_functions = get_contract_entry_points(contract_class, EntryPointType::External).unwrap();
+    let l1_handlers = get_contract_entry_points(contract_class, EntryPointType::L1Handler).unwrap();
+    let constructors = get_contract_entry_points(contract_class, EntryPointType::Constructor).unwrap();
+
+    // let flat_external_functions, flat_l1_handlers, flat_constructors = (
+    //     list(itertools.chain.from_iterable(entry_points))
+    //     for entry_points in (external_functions, l1_handlers, constructors)
+    // )
 
     let builtin_list = contract_class.program.builtins;
     
     // este contract class es distinto, solamente guarda los campos.
     Ok(StructContractClass {
-        api_version: api_version.value.unwrap().into(),
-        n_external_functions: len(external_functions),
-        external_functions: flat_external_functions,
-        n_l1_handlers: len(l1_handlers),
-        l1_handlers: flat_l1_handlers,
-        n_constructors: len(constructors),
-        constructors: flat_constructors,
-        n_builtins: len(builtin_list),
+        api_version: api_version.value.unwrap(),
+        n_external_functions: external_functions.len(),
+        external_functions,
+        n_l1_handlers: l1_handlers.len(),
+        l1_handlers,
+        n_constructors: constructors.len(),
+        constructors,
+        n_builtins: builtin_list.len(),
         builtin_list,
         hinted_class_hash: compute_hinted_class_hash(contract_class: contract_class),
-        bytecode_length: len(contract_class.program.data),
+        bytecode_length: contract_class.program.data.len(),
         bytecode_ptr: contract_class.program.data,
-    }
+    })
 }
 
 /// This is awful, I know. Name ideas? We already have a ContractClass struct.
 struct StructContractClass {
-    api_version: usize,
+    api_version: BigInt,
     n_external_functions: usize,
-    external_functions=flat_external_functions, 
+    external_functions: Vec<ContractEntryPoint>, 
     n_l1_handlers: usize,
-    l1_handlers: flat_l1_handlers,
+    l1_handlers: Vec<ContractEntryPoint>,
     n_constructors: usize,
-    constructors=flat_constructors,
+    constructors: Vec<ContractEntryPoint>,
     n_builtins: usize,
-    builtin_list: Vec<BuiltinRunner>,
-    hinted_class_hash=compute_hinted_class_hash(contract_class=contract_class),
+    builtin_list: Vec<String>,
+    hinted_class_hash: compute_hinted_class_hash(contract_class=contract_class),
     bytecode_length: usize,
-    bytecode_ptr=contract_class.program.data,
+    bytecode_ptr:  Vec<MaybeRelocatable,
 }
 
 fn compute_class_hash_inner(
