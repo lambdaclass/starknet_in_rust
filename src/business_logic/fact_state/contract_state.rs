@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH;
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
-pub(crate) struct ContractState {
-    contract_hash: Vec<u8>,
-    nonce: Felt,
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct ContractState {
+    pub(crate) contract_hash: Vec<u8>,
+    pub(crate) nonce: Felt,
 }
 
 impl ContractState {

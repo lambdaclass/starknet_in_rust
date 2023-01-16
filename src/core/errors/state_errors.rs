@@ -1,7 +1,10 @@
 use felt::Felt;
 use thiserror::Error;
 
-use crate::business_logic::state::state_cache::StorageEntry;
+use crate::{
+    business_logic::{fact_state::contract_state::ContractState, state::state_cache::StorageEntry},
+    starknet_storage::errors::storage_errors::StorageError,
+};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum StateError {
@@ -15,6 +18,8 @@ pub enum StateError {
     ParentCarriedStateIsNone,
     #[error("Cache already initialized")]
     StateCacheAlreadyInitialized,
+    #[error("No contract state assigned for contact address: {0:?}")]
+    NoneContractState(Felt),
     #[error("No class hash assigned for contact address: {0}")]
     NoneClassHash(Felt),
     #[error("No nonce assigned for contact address: {0}")]
@@ -25,4 +30,6 @@ pub enum StateError {
     ContractAddressOutOfRangeAddress(Felt),
     #[error("Requested contract address {0} is unavailable for deployment")]
     ContractAddressUnavailable(Felt),
+    #[error(transparent)]
+    StorageError(#[from] StorageError),
 }

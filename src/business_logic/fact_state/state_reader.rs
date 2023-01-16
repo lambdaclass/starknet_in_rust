@@ -2,9 +2,12 @@ use std::collections::HashMap;
 
 use felt::Felt;
 
-use crate::{core::errors::state_errors::StateError, starknet_storage::storage::Storage};
+use crate::{
+    core::errors::state_errors::StateError,
+    starknet_storage::{dict_storage::Prefix, storage::Storage},
+};
 
-use super::contract_state::ContractState;
+use super::contract_state::{self, ContractState};
 
 pub(crate) struct StateReader<S1: Storage, S2: Storage> {
     global_state_root: HashMap<Felt, [u8; 32]>,
@@ -27,16 +30,33 @@ impl<S1: Storage, S2: Storage> StateReader<S1, S2> {
         }
     }
 
-    pub(crate) fn get_class_hash_at(
-        &self,
+    fn get_contract_state(
+        &mut self,
         contract_address: &Felt,
     ) -> Result<&ContractState, StateError> {
         if !self.contract_states.contains_key(contract_address) {
-            let key = self.global_state_root.get(contract_address).unwrap();
-            let result = self.ffc.get_value_or_fail(key).unwrap();
-            todo!()
+            let key = self
+                .global_state_root
+                .get(contract_address)
+                .ok_or_else(|| StateError::NoneContractState(contract_address.clone()))?;
+            let result = self.ffc.get_contract_state(key)?;
+            self.contract_states
+                .insert(contract_address.clone(), result);
         }
 
-        Ok(self.contract_states.get(contract_address).unwrap())
+        self.contract_states
+            .get(contract_address)
+            .ok_or_else(|| StateError::NoneContractState(contract_address.clone()))
+    }
+
+    pub(crate) fn get_class_hash_at(
+        &mut self,
+        contract_address: &Felt,
+    ) -> Result<&Vec<u8>, StateError> {
+        Ok(&self.get_contract_state(contract_address)?.contract_hash)
+    }
+
+    pub(crate) fn get_nonce_at(&mut self, contract_address: &Felt) -> Result<&Felt, StateError> {
+        Ok(&self.get_contract_state(contract_address)?.nonce)
     }
 }
