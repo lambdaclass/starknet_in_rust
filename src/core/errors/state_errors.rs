@@ -4,6 +4,7 @@ use thiserror::Error;
 use crate::{
     business_logic::{fact_state::contract_state::ContractState, state::state_cache::StorageEntry},
     starknet_storage::errors::storage_errors::StorageError,
+    utils::Address,
 };
 
 #[derive(Debug, PartialEq, Error)]
@@ -19,17 +20,19 @@ pub enum StateError {
     #[error("Cache already initialized")]
     StateCacheAlreadyInitialized,
     #[error("No contract state assigned for contact address: {0:?}")]
-    NoneContractState(Felt),
-    #[error("No class hash assigned for contact address: {0}")]
-    NoneClassHash(Felt),
-    #[error("No nonce assigned for contact address: {0}")]
-    NoneNonce(Felt),
+    NoneContractState(Address),
+    #[error("No class hash assigned for contact address: {0:?}")]
+    NoneClassHash(Address),
+    #[error("No nonce assigned for contact address: {0:?}")]
+    NoneNonce(Address),
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
-    #[error("Cannot deploy contract at address: {0}")]
-    ContractAddressOutOfRangeAddress(Felt),
-    #[error("Requested contract address {0} is unavailable for deployment")]
-    ContractAddressUnavailable(Felt),
+    #[error("Cannot deploy contract at address: {0:?}")]
+    ContractAddressOutOfRangeAddress(Address),
+    #[error("Requested contract address {0:?} is unavailable for deployment")]
+    ContractAddressUnavailable(Address),
+    #[error("error converting {0} to u64")]
+    ConversionError(Felt),
     #[error(transparent)]
     StorageError(#[from] StorageError),
 }

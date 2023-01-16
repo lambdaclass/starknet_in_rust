@@ -7,20 +7,20 @@ use felt::Felt;
 use super::state_api_objects::BlockInfo;
 
 use super::state_api::StateReader;
-
+use crate::utils::Address;
 /// (contract_address, key)
-pub(crate) type StorageEntry = (Felt, [u8; 32]);
+pub(crate) type StorageEntry = (Address, [u8; 32]);
 
 #[derive(Debug, Default, Clone)]
 pub(crate) struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
-    pub(crate) class_hash_initial_values: HashMap<Felt, Vec<u8>>,
-    pub(crate) nonce_initial_values: HashMap<Felt, Felt>,
+    pub(crate) class_hash_initial_values: HashMap<Address, Vec<u8>>,
+    pub(crate) nonce_initial_values: HashMap<Address, Felt>,
     pub(crate) storage_initial_values: HashMap<StorageEntry, Felt>,
 
     // Writer's cached information.
-    pub(crate) class_hash_writes: HashMap<Felt, Vec<u8>>,
-    pub(crate) nonce_writes: HashMap<Felt, Felt>,
+    pub(crate) class_hash_writes: HashMap<Address, Vec<u8>>,
+    pub(crate) nonce_writes: HashMap<Address, Felt>,
     pub(crate) storage_writes: HashMap<StorageEntry, Felt>,
 }
 
@@ -36,14 +36,14 @@ impl StateCache {
         }
     }
 
-    pub(crate) fn get_class_hash(&self, contract_address: &Felt) -> Option<&Vec<u8>> {
+    pub(crate) fn get_class_hash(&self, contract_address: &Address) -> Option<&Vec<u8>> {
         if self.class_hash_writes.contains_key(contract_address) {
             return self.class_hash_writes.get(contract_address);
         }
         self.class_hash_initial_values.get(contract_address)
     }
 
-    pub(crate) fn get_nonce(&self, contract_address: &Felt) -> Option<&Felt> {
+    pub(crate) fn get_nonce(&self, contract_address: &Address) -> Option<&Felt> {
         if self.nonce_writes.contains_key(contract_address) {
             return self.nonce_writes.get(contract_address);
         }
@@ -66,8 +66,8 @@ impl StateCache {
 
     pub(crate) fn update_writes(
         &mut self,
-        address_to_class_hash: &HashMap<Felt, Vec<u8>>,
-        address_to_nonce: &HashMap<Felt, Felt>,
+        address_to_class_hash: &HashMap<Address, Vec<u8>>,
+        address_to_nonce: &HashMap<Address, Felt>,
         storage_updates: &HashMap<StorageEntry, Felt>,
     ) {
         self.class_hash_writes.extend(address_to_class_hash.clone());
@@ -77,8 +77,8 @@ impl StateCache {
 
     pub(crate) fn set_initial_values(
         &mut self,
-        address_to_class_hash: &HashMap<Felt, Vec<u8>>,
-        address_to_nonce: &HashMap<Felt, Felt>,
+        address_to_class_hash: &HashMap<Address, Vec<u8>>,
+        address_to_nonce: &HashMap<Address, Felt>,
         storage_updates: &HashMap<StorageEntry, Felt>,
     ) -> Result<(), StateError> {
         if !(self.class_hash_initial_values.is_empty()
@@ -94,8 +94,8 @@ impl StateCache {
         Ok(())
     }
 
-    pub(crate) fn get_accessed_contract_addresses(&self) -> HashSet<Felt> {
-        let mut set: HashSet<Felt> = HashSet::with_capacity(self.class_hash_writes.len());
+    pub(crate) fn get_accessed_contract_addresses(&self) -> HashSet<Address> {
+        let mut set: HashSet<Address> = HashSet::with_capacity(self.class_hash_writes.len());
         set.extend(self.class_hash_writes.keys().cloned());
         set.extend(self.nonce_writes.keys().cloned());
         set.extend(self.storage_writes.keys().map(|x| x.0.clone()));
@@ -112,9 +112,10 @@ mod tests {
     #[test]
     fn state_chache_set_initial_values() {
         let mut state_cache = StateCache::new();
-        let address_to_class_hash = HashMap::from([(10.into(), b"pedersen".to_vec())]);
-        let address_to_nonce = HashMap::from([(9.into(), 12.into())]);
-        let storage_updates = HashMap::from([((20.into(), [1; 32]), 18.into())]);
+        let address_to_class_hash = HashMap::from([(Address(10.into()), b"pedersen".to_vec())]);
+        let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
+        let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);
+
         assert!(state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .is_ok());
@@ -125,24 +126,26 @@ mod tests {
 
         assert_eq!(
             state_cache.get_accessed_contract_addresses(),
-            HashSet::from([10.into(), 9.into(), 20.into()])
+            HashSet::from([Address(10.into()), Address(9.into()), Address(4.into())])
         );
     }
 
     #[test]
     fn state_chache_update_writes_from_other() {
         let mut state_cache = StateCache::new();
-        let address_to_class_hash = HashMap::from([(10.into(), b"pedersen".to_vec())]);
-        let address_to_nonce = HashMap::from([(9.into(), 12.into())]);
-        let storage_updates = HashMap::from([((20.into(), [1; 32]), 18.into())]);
+        let address_to_class_hash = HashMap::from([(Address(10.into()), b"pedersen".to_vec())]);
+        let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
+        let storage_updates = HashMap::from([((Address(20.into()), [1; 32]), 18.into())]);
+
         state_cache
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .expect("Error setting StateCache values");
 
         let mut other_state_cache = StateCache::new();
-        let other_address_to_class_hash = HashMap::from([(10.into(), b"sha-3".to_vec())]);
-        let other_address_to_nonce = HashMap::from([(401.into(), 100.into())]);
-        let other_storage_updates = HashMap::from([((4002.into(), [2; 32]), 101.into())]);
+        let other_address_to_class_hash = HashMap::from([(Address(10.into()), b"sha-3".to_vec())]);
+        let other_address_to_nonce = HashMap::from([(Address(401.into()), 100.into())]);
+        let other_storage_updates = HashMap::from([((Address(4002.into()), [2; 32]), 101.into())]);
+
         other_state_cache
             .set_initial_values(
                 &other_address_to_class_hash,
@@ -154,18 +157,21 @@ mod tests {
         state_cache.update_writes_from_other(&other_state_cache);
 
         assert_eq!(
-            state_cache.get_class_hash(&10.into()),
+            state_cache.get_class_hash(&Address(10.into())),
             Some(&b"sha-3".to_vec())
         );
         assert_eq!(
             state_cache.nonce_writes,
-            HashMap::from([(9.into(), 12.into()), (401.into(), 100.into())])
+            HashMap::from([
+                (Address(9.into()), 12.into()),
+                (Address(401.into()), 100.into())
+            ])
         );
         assert_eq!(
             state_cache.storage_writes,
             HashMap::from([
-                ((20.into(), [1; 32]), 18.into()),
-                ((4002.into(), [2; 32]), 101.into())
+                ((Address(20.into()), [1; 32]), 18.into()),
+                ((Address(4002.into()), [2; 32]), 101.into())
             ])
         );
     }

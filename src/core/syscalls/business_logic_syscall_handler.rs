@@ -27,8 +27,8 @@ pub struct BusinessLogicSyscallHandler {
     /// A list of dynamically allocated segments that are expected to be read-only.
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) resources_manager: ExecutionResourcesManager,
-    pub(crate) contract_address: u64,
-    pub(crate) caller_address: u64,
+    pub(crate) contract_address: Address,
+    pub(crate) caller_address: Address,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
@@ -52,8 +52,8 @@ impl BusinessLogicSyscallHandler {
         let tx_execution_context = TransactionExecutionContext::new();
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls);
-        let contract_address = 1;
-        let caller_address = 0;
+        let contract_address = Address(1.into());
+        let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
@@ -124,7 +124,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -151,9 +151,9 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let class_hash = &request.class_hash;
 
         let deployer_address = if request.deploy_from_zero.is_zero() {
-            self.contract_address
+            self.contract_address.clone()
         } else {
-            0
+            Address(0.into())
         };
 
         let _contract_address = calculate_contract_address_from_hash(
@@ -191,35 +191,35 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             "call_contract" => {
                 code_address = Some(request.contract_address);
                 let contract_address = code_address;
-                let caller_address = self.contract_address;
+                let caller_address = self.contract_address.clone();
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Call;
             }
             "delegate_call" => {
                 code_address = Some(request.contract_address);
-                let contract_address = self.contract_address;
-                let caller_address = self.caller_address;
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Delegate;
             }
             "delegate_l1_handler" => {
                 code_address = Some(request.contract_address);
-                let contract_address = self.contract_address;
-                let caller_address = self.caller_address;
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::L1Handler;
                 let call_type = CallType::Delegate;
             }
             "library_call" => {
                 class_hash = Some(request.class_hash.to_be_bytes());
-                let contract_address = self.contract_address;
-                let caller_address = self.caller_address;
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Delegate;
             }
             "library_call_l1_handler" => {
                 class_hash = Some(request.class_hash.to_be_bytes());
-                let contract_address = self.contract_address;
-                let caller_address = self.caller_address;
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::L1Handler;
                 let call_type = CallType::Delegate;
             }
@@ -255,7 +255,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         let request = if let SyscallRequest::GetCallerAddress(request) =
             self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)?
         {
@@ -264,13 +264,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
         };
 
-        Ok(self.caller_address)
+        Ok(self.caller_address.clone())
     }
     fn _get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         if let SyscallRequest::GetContractAddress(request) =
             self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)?
         {
@@ -279,7 +279,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetContractAddressRequest);
         };
 
-        Ok(self.contract_address)
+        Ok(self.contract_address.clone())
     }
 
     fn send_message_to_l1(
@@ -343,10 +343,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: u64) -> Result<u64, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: Address) -> Result<u64, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&mut self, _address: u64, _value: u64) {
+    fn _storage_write(&mut self, _address: Address, _value: u64) {
         todo!()
     }
 
