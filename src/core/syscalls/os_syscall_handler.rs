@@ -177,7 +177,7 @@ impl SyscallHandler for OsSyscallHandler {
         }
     }
 
-    fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError> {
+    fn _storage_read(&mut self, address: Address) -> Result<u64, SyscallHandlerError> {
         self.execute_code_read_iterator
             .pop_front()
             .ok_or(SyscallHandlerError::IteratorEmpty)
@@ -185,7 +185,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     // Advance execute_code_read_iterators since the previous storage value is written
     // in each write operation. See BusinessLogicSysCallHandler._storage_write().
-    fn _storage_write(&mut self, address: u64, value: u64) {
+    fn _storage_write(&mut self, address: Address, value: u64) {
         self.execute_code_read_iterator.pop_front();
     }
 
@@ -685,9 +685,9 @@ mod tests {
             ..Default::default()
         };
 
-        let addr = 0;
-        assert_eq!(handler._storage_read(addr), Ok(12));
-        assert_eq!(handler._storage_read(addr), Ok(1444));
+        let addr = Address(0.into());
+        assert_eq!(handler._storage_read(addr.clone()), Ok(12));
+        assert_eq!(handler._storage_read(addr.clone()), Ok(1444));
         assert_eq!(
             handler._storage_read(addr),
             Err(SyscallHandlerError::IteratorEmpty)
@@ -703,10 +703,10 @@ mod tests {
             ..Default::default()
         };
 
-        let addr = 0;
+        let addr = Address(0.into());
         let val = 0;
 
-        handler._storage_write(addr, val);
+        handler._storage_write(addr.clone(), val);
         handler._storage_write(addr, val);
     }
 

@@ -36,7 +36,7 @@ pub(crate) struct GetContractAddressResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetSequencerAddressResponse {
-    sequencer_address: u64,
+    sequencer_address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -81,7 +81,7 @@ impl GetBlockTimestampResponse {
 }
 
 impl GetSequencerAddressResponse {
-    pub(crate) fn new(sequencer_address: u64) -> Self {
+    pub(crate) fn new(sequencer_address: Address) -> Self {
         Self { sequencer_address }
     }
 }
@@ -167,7 +167,7 @@ impl WriteSyscallResponse for GetSequencerAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt>(
             &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
-            self.sequencer_address.into(),
+            self.sequencer_address.0.clone(),
         )?;
         Ok(())
     }

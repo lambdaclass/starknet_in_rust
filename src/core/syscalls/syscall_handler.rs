@@ -114,9 +114,9 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError>;
 
-    fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError>;
+    fn _storage_read(&mut self, address: Address) -> Result<u64, SyscallHandlerError>;
 
-    fn _storage_write(&mut self, address: u64, value: u64);
+    fn _storage_write(&mut self, address: Address, value: u64);
 
     fn allocate_segment(
         &mut self,
@@ -239,7 +239,7 @@ pub(crate) trait SyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
         };
 
-        let sequencer_address = self.get_block_info().sequencer_address;
+        let sequencer_address = self.get_block_info().sequencer_address.clone();
 
         let response = GetSequencerAddressResponse::new(sequencer_address);
 
@@ -645,7 +645,7 @@ mod tests {
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
             version: 51,
-            account_contract_address: 260.into(),
+            account_contract_address: Address(260.into()),
             max_fee: 261,
             transaction_hash: 262.into(),
             signature: vec![300.into(), 301.into()],
@@ -684,7 +684,7 @@ mod tests {
         );
         assert_eq!(
             get_big_int(&vm, &relocatable!(4, 1)),
-            Ok(tx_execution_context.account_contract_address)
+            Ok(tx_execution_context.account_contract_address.0)
         );
         assert_eq!(
             get_integer(&vm, &relocatable!(4, 2)),
@@ -988,7 +988,7 @@ mod tests {
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
             version: 51,
-            account_contract_address: 260.into(),
+            account_contract_address: Address(260.into()),
             max_fee: 261,
             transaction_hash: 262.into(),
             signature: vec![300.into(), 301.into()],

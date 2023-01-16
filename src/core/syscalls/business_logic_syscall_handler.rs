@@ -343,10 +343,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: u64) -> Result<u64, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: Address) -> Result<u64, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&mut self, _address: u64, _value: u64) {
+    fn _storage_write(&mut self, _address: Address, _value: u64) {
         todo!()
     }
 

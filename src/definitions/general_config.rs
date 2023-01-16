@@ -1,6 +1,8 @@
 use felt::{Felt, FeltOps};
 use num_traits::{Num, Zero};
 
+use crate::utils::Address;
+
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum StarknetChainId {
@@ -30,7 +32,7 @@ impl StarknetChainId {
 #[derive(Debug, Clone)]
 pub(crate) struct StarknetOsConfig {
     pub(crate) chain_id: StarknetChainId,
-    pub(crate) fee_token_address: Felt,
+    pub(crate) fee_token_address: Address,
 }
 
 #[allow(unused)]
@@ -39,7 +41,7 @@ pub(crate) struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,
-    sequencer_address: u64,
+    sequencer_address: Address,
 }
 
 impl StarknetGeneralConfig {
@@ -47,7 +49,7 @@ impl StarknetGeneralConfig {
         starknet_os_config: StarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
         global_state_commitment_tree_height: u64,
-        sequencer_address: u64,
+        sequencer_address: Address,
     ) -> Self {
         Self {
             starknet_os_config,
@@ -60,11 +62,11 @@ impl StarknetGeneralConfig {
         Self {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
-                fee_token_address: Felt::zero(),
+                fee_token_address: Address(Felt::zero()),
             },
             contract_storage_commitment_tree_height: 0,
             global_state_commitment_tree_height: 0,
-            sequencer_address: 0,
+            sequencer_address: Address(0.into()),
         }
     }
 }

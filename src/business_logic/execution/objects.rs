@@ -39,7 +39,7 @@ pub(crate) struct OrderedEvent {
 pub(crate) struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: usize,
-    pub(crate) account_contract_address: Felt,
+    pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u64,
     pub(crate) transaction_hash: Felt,
     pub(crate) signature: Vec<Felt>,
@@ -57,7 +57,7 @@ impl TransactionExecutionContext {
     pub fn new() -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
-            account_contract_address: Felt::zero(),
+            account_contract_address: Address(Felt::zero()),
             max_fee: 0,
             nonce: Felt::zero(),
             signature: Vec::new(),
@@ -108,7 +108,7 @@ impl L2toL1MessageInfo {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TxInfoStruct {
     pub(crate) version: usize,
-    pub(crate) account_contract_address: Felt,
+    pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u64,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
@@ -138,7 +138,7 @@ impl TxInfoStruct {
     pub(crate) fn to_vec(&self) -> Vec<MaybeRelocatable> {
         vec![
             MaybeRelocatable::from(Felt::new(self.version)),
-            MaybeRelocatable::from(&self.account_contract_address),
+            MaybeRelocatable::from(&self.account_contract_address.0),
             MaybeRelocatable::from(Felt::new(self.max_fee)),
             MaybeRelocatable::from(Felt::new(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
@@ -154,7 +154,7 @@ impl TxInfoStruct {
     ) -> Result<TxInfoStruct, SyscallHandlerError> {
         let version = get_integer(vm, &tx_info_ptr)?;
 
-        let account_contract_address = get_big_int(vm, &(&tx_info_ptr + 1))?;
+        let account_contract_address = Address(get_big_int(vm, &(&tx_info_ptr + 1))?);
         let max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
             .to_u64()
             .ok_or(SyscallHandlerError::FeltToU64Fail)?;
