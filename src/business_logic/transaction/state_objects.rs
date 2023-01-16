@@ -2,12 +2,15 @@ use felt::Felt;
 use std::collections::HashMap;
 
 use crate::{
-    business_logic::state::{state_api::State, update_tracker_state::UpdatesTrackerState},
-    core::syscalls::os_syscall_handler::{CallInfo, TransactionExecutionInfo},
+    business_logic::{
+        execution::objects::TransactionExecutionInfo,
+        state::{state_api::State, update_tracker_state::UpdatesTrackerState},
+    },
+    core::syscalls::os_syscall_handler::CallInfo,
     definitions::general_config::{self, StarknetGeneralConfig},
 };
 
-type FeeInfo = (Option<CallInfo>, Felt);
+type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) trait InternalStateTransaction {
     fn apply_state_updates(
@@ -18,12 +21,28 @@ pub(crate) trait InternalStateTransaction {
         todo!()
     }
 
-    fn sync_apply_state_updates(
+    fn sync_apply_state_updates<T>(
         &self,
-        state: impl State,
+        state: T,
         general_config: StarknetGeneralConfig,
-    ) -> Option<TransactionExecutionInfo> {
-        todo!()
+    ) -> TransactionExecutionInfo
+    where
+        T: State + Clone,
+    {
+        let concurrent_execution_info =
+            self.apply_concurrent_changes(state.clone(), general_config.clone());
+
+        let (fee_transfer_info, actual_fee) = self.apply_sequential_changes(
+            state,
+            general_config,
+            concurrent_execution_info.actual_resources.clone(),
+        );
+
+        TransactionExecutionInfo::from_concurrent_state_execution_info(
+            concurrent_execution_info,
+            actual_fee,
+            fee_transfer_info,
+        )
     }
 
     fn apply_concurrent_changes(

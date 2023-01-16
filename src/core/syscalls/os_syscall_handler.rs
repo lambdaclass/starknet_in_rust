@@ -1,6 +1,7 @@
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
+use crate::business_logic::execution::objects::TransactionExecutionInfo;
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::services::api::contract_class::EntryPointType;
@@ -12,7 +13,7 @@ use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct CallInfo {
+pub struct CallInfo {
     caller_address: Address,
     contract_address: Address,
     internal_calls: Vec<CallInfo>,
@@ -36,9 +37,6 @@ impl Default for CallInfo {
 
 #[derive(Debug)]
 pub(crate) struct OsSingleStarknetStorage;
-
-#[derive(Debug, PartialEq)]
-pub struct TransactionExecutionInfo;
 
 impl OsSingleStarknetStorage {
     // Writes the given value in the given key in ongoing_storage_changes and returns the
@@ -366,6 +364,7 @@ impl OsSyscallHandler {
 
 #[cfg(test)]
 mod tests {
+    use crate::business_logic::execution::objects::TransactionExecutionInfo;
     use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
@@ -378,7 +377,7 @@ mod tests {
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
 
-    use super::{CallInfo, OsSyscallHandler, TransactionExecutionInfo};
+    use super::{CallInfo, OsSyscallHandler};
     use crate::core::syscalls::hint_code::GET_BLOCK_NUMBER;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::HintProcessorData;
     use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
@@ -470,7 +469,6 @@ mod tests {
     #[test]
     fn end_tx_err_tx_execution_info() {
         let mut handler = OsSyscallHandler {
-            tx_execution_info: Some(TransactionExecutionInfo),
             ..Default::default()
         };
 
@@ -516,7 +514,9 @@ mod tests {
 
     #[test]
     fn start_tx_err_tx_execution_info() {
-        let tx_execution_info = Some(TransactionExecutionInfo);
+        let tx_execution_info = Some(TransactionExecutionInfo {
+            ..Default::default()
+        });
 
         let mut handler = OsSyscallHandler {
             tx_execution_info,
@@ -551,13 +551,20 @@ mod tests {
     #[test]
     fn skip_tx() {
         let mut tx_execution_info_iterator = VecDeque::new();
-        tx_execution_info_iterator.push_back(TransactionExecutionInfo);
+        tx_execution_info_iterator.push_back(TransactionExecutionInfo {
+            ..Default::default()
+        });
         let mut handler = OsSyscallHandler {
             tx_execution_info_iterator,
             ..Default::default()
         };
 
-        assert_eq!(handler.skip_tx(), Some(TransactionExecutionInfo));
+        assert_eq!(
+            handler.skip_tx(),
+            Some(TransactionExecutionInfo {
+                ..Default::default()
+            })
+        );
         assert_eq!(handler.skip_tx(), None)
     }
 

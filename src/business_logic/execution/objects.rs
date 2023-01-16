@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
@@ -7,13 +9,16 @@ use num_traits::{ToPrimitive, Zero};
 
 use crate::{
     core::{
-        errors::syscall_handler_errors::SyscallHandlerError, syscalls::syscall_request::FromPtr,
+        errors::syscall_handler_errors::SyscallHandlerError,
+        syscalls::{os_syscall_handler::CallInfo, syscall_request::FromPtr},
     },
-    definitions::general_config::StarknetChainId,
+    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
 
 use super::execution_errors::ExecutionError;
+
+type ResourcesMapping = HashMap<String, Felt>;
 
 pub(crate) enum CallType {
     Call,
@@ -174,5 +179,47 @@ impl TxInfoStruct {
             chain_id,
             nonce,
         })
+    }
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub struct TransactionExecutionInfo {
+    pub(crate) validate_info: Option<CallInfo>,
+    pub(crate) call_info: Option<CallInfo>,
+    pub(crate) fee_transfer_info: Option<CallInfo>,
+    pub(crate) actual_fee: u64,
+    pub(crate) actual_resources: ResourcesMapping,
+    pub(crate) tx_type: Option<TransactionType>,
+}
+
+impl TransactionExecutionInfo {
+    pub fn new(
+        validate_info: Option<CallInfo>,
+        call_info: Option<CallInfo>,
+        fee_transfer_info: Option<CallInfo>,
+        actual_fee: u64,
+        actual_resources: ResourcesMapping,
+        tx_type: Option<TransactionType>,
+    ) -> Self {
+        TransactionExecutionInfo {
+            validate_info,
+            call_info,
+            fee_transfer_info,
+            actual_fee,
+            actual_resources,
+            tx_type,
+        }
+    }
+
+    pub fn from_concurrent_state_execution_info(
+        concurrent_execution_info: TransactionExecutionInfo,
+        actual_fee: u64,
+        fee_transfer_info: Option<CallInfo>,
+    ) -> Self {
+        TransactionExecutionInfo {
+            actual_fee,
+            fee_transfer_info,
+            ..concurrent_execution_info
+        }
     }
 }

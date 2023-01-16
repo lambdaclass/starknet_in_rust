@@ -12,7 +12,7 @@ use num_traits::ToPrimitive;
 //*
 //* -------------------
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
 pub struct Address(pub Felt);
 
 //* -------------------
