@@ -133,7 +133,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 }
 
 impl<T: StateReader + Clone> State for CachedState<T> {
-    fn get_block_info(&self) -> &BlockInfo {
+    fn block_info(&self) -> &BlockInfo {
         &self.block_info
     }
 
