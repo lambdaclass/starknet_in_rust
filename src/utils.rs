@@ -131,14 +131,6 @@ pub fn to_state_diff_storage_mapping(
 
 use starknet_crypto::FieldElement;
 
-#[macro_export]
-macro_rules! address {
-    ($val : expr) => {
-        $crate::utils::Address::new($val)
-    };
-}
-pub(crate) use address;
-
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
@@ -352,11 +344,11 @@ mod test {
     #[test]
     fn to_state_diff_storage_mapping_test() {
         let mut storage: HashMap<(Address, u64), Felt> = HashMap::new();
-        let address1: Address = address!("1");
+        let address1: Address = Address::new("1");
         let key1 = 0;
         let value1: Felt = 2.into();
 
-        let address2: Address = address!("3");
+        let address2: Address = Address::new("3");
         let key2 = 1;
 
         let value2: Felt = 4.into();
