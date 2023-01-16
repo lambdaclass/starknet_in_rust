@@ -60,3 +60,45 @@ impl<S1: Storage, S2: Storage> StateReader<S1, S2> {
         Ok(&self.get_contract_state(contract_address)?.nonce)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use felt::NewFelt;
+
+    use crate::starknet_storage::dict_storage::DictStorage;
+
+    use super::*;
+
+    #[test]
+    fn get_contract_state_test() {
+        let mut state_reader =
+            StateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+
+        let contract_address = Felt::new(32123);
+        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109));
+
+        state_reader
+            .global_state_root
+            .insert(contract_address.clone(), [0; 32]);
+        state_reader
+            .ffc
+            .set_contract_state(&[0; 32], &contract_state);
+
+        assert_eq!(
+            state_reader.get_contract_state(&contract_address),
+            Ok(&contract_state)
+        );
+        assert_eq!(
+            state_reader.get_class_hash_at(&contract_address),
+            Ok(&contract_state.contract_hash)
+        );
+        assert_eq!(
+            state_reader.get_nonce_at(&contract_address),
+            Ok(&contract_state.nonce)
+        );
+        assert_eq!(
+            state_reader.contract_states,
+            HashMap::from([(contract_address, contract_state)])
+        );
+    }
+}
