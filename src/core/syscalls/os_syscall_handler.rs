@@ -1,6 +1,7 @@
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
+use crate::business_logic::execution::objects::TransactionExecutionInfo;
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::services::api::contract_class::EntryPointType;
@@ -35,9 +36,6 @@ impl Default for CallInfo {
 
 #[derive(Debug)]
 pub(crate) struct OsSingleStarknetStorage;
-
-#[derive(Debug, PartialEq)]
-pub struct TransactionExecutionInfo;
 
 impl OsSingleStarknetStorage {
     // Writes the given value in the given key in ongoing_storage_changes and returns the
@@ -469,7 +467,7 @@ mod tests {
     #[test]
     fn end_tx_err_tx_execution_info() {
         let mut handler = OsSyscallHandler {
-            tx_execution_info: Some(TransactionExecutionInfo),
+            tx_execution_info: Some(TransactionExecutionInfo::default()),
             ..Default::default()
         };
 
@@ -515,7 +513,7 @@ mod tests {
 
     #[test]
     fn start_tx_err_tx_execution_info() {
-        let tx_execution_info = Some(TransactionExecutionInfo);
+        let tx_execution_info = Some(TransactionExecutionInfo::default());
 
         let mut handler = OsSyscallHandler {
             tx_execution_info,
@@ -550,13 +548,13 @@ mod tests {
     #[test]
     fn skip_tx() {
         let mut tx_execution_info_iterator = VecDeque::new();
-        tx_execution_info_iterator.push_back(TransactionExecutionInfo);
+        tx_execution_info_iterator.push_back(TransactionExecutionInfo::default());
         let mut handler = OsSyscallHandler {
             tx_execution_info_iterator,
             ..Default::default()
         };
 
-        assert_eq!(handler.skip_tx(), Some(TransactionExecutionInfo));
+        assert_eq!(handler.skip_tx(), Some(TransactionExecutionInfo::default()));
         assert_eq!(handler.skip_tx(), None)
     }
 
