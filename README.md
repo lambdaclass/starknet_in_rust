@@ -1,7 +1,25 @@
-# Starknet in Rust
+# StarkNet in Rust
 [![codecov](https://codecov.io/github/lambdaclass/starknet_in_rust/branch/main/graph/badge.svg?token=98QY5B0VAR)](https://codecov.io/gh/lambdaclass/starknet_in_rust)
 
-`starknet_in_rust` is an implentation of [Starknet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
+## Table of Contents
+- [Disclaimer](#disclaimer)
+- [About](#about)
+- [Requisites](#requisites)
+- [Setup](#setup)
+- [Test](#test)
+- [Related Projects](#related-projects)
+- [Documentation](#documentation)
+  * [StarkNet](#starknet)
+- [License](#license)
+
+
+## Disclaimer
+
+⚠️ This project is a work-in-progress and is not ready for production yet. Use at your own risk. ⚠️
+
+## About
+
+`starknet_in_rust` is an implentation of [StarkNet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
 It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust implementation of the Cairo virtual machine.
 
 ## Requisites
@@ -27,7 +45,7 @@ Run the following command:
 $ make test
 ```
 
-## Related projects
+## Related Projects
 
 - [cairo-rs](https://github.com/lambdaclass/cairo-rs): A fast implementation of the Cairo VM in Rust.
 - [cairo-rs-py](https://github.com/lambdaclass/cairo-rs-py): Bindings for using cairo-rs from Python code.
