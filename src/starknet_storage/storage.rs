@@ -1,3 +1,5 @@
+use crate::business_logic::fact_state::contract_state::ContractState;
+
 use super::{
     dict_storage::{Prefix, StorageKey},
     errors::storage_errors::StorageError,
@@ -102,6 +104,25 @@ pub(crate) trait Storage {
         let str = str::from_utf8(&val[..]).map_err(|_| StorageError::IncorrectUtf8Enconding)?;
         Ok(String::from(str))
     }
+
+    fn set_contract_state(
+        &mut self,
+        key: &[u8; 32],
+        value: &ContractState,
+    ) -> Result<(), StorageError> {
+        let contract_state = serde_json::to_string(value)?.as_bytes().to_vec();
+
+        self.set_value(&(Prefix::ContractState, *key), contract_state)
+    }
+
+    fn get_contract_state(&self, key: &[u8; 32]) -> Result<ContractState, StorageError> {
+        let ser_contract_state = self
+            .get_value(&(Prefix::ContractState, *key))
+            .ok_or(StorageError::ErrorFetchingData)?;
+
+        let contract_state: ContractState = serde_json::from_slice(&ser_contract_state)?;
+        Ok(contract_state)
+    }
 }
 
 //* -------------------------
@@ -121,6 +142,8 @@ impl<T: Storage> FactFetchingContext<T> {
 
 #[cfg(test)]
 mod tests {
+    use felt::{Felt, NewFelt};
+
     use crate::{starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key};
 
     use super::*;
@@ -133,5 +156,19 @@ mod tests {
         ffc.storage.set_float(&fkey, 4.0);
 
         assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0)
+    }
+
+    #[test]
+    fn get_and_set_contract_state() {
+        let mut storage = DictStorage::new();
+
+        let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+
+        let contract_state = ContractState::create([8; 32].to_vec(), Felt::new(9));
+        storage
+            .set_contract_state(&key, &contract_state)
+            .expect("Error setting contract state");
+
+        assert_eq!(Ok(contract_state), storage.get_contract_state(&key));
     }
 }
