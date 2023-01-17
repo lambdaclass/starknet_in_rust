@@ -1,29 +1,80 @@
 use std::collections::HashMap;
 
-use cairo_rs::types::program::Program;
-use felt::Felt;
+use cairo_rs::{types::program::Program, utils::is_subsequence};
+use felt::{Felt, NewFelt, PRIME_STR};
 
-use crate::public::abi::AbiType;
+use crate::{core::errors::state_errors::StateError, public::abi::AbiType};
+use serde::{Deserialize, Serialize};
+
+use super::contract_class_errors::ContractClassError;
 
 pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
     ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub(crate) enum EntryPointType {
     External,
     L1Handler,
     Constructor,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Default, PartialEq)]
 pub(crate) struct ContractEntryPoint {
     pub(crate) selector: Felt,
     pub(crate) offset: Felt,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(crate) struct ContractClass {
     pub(crate) program: Program,
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub(crate) abi: Option<AbiType>,
+}
+
+impl ContractClass {
+    pub(crate) fn new(
+        program: Program,
+        entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+        abi: Option<AbiType>,
+    ) -> Result<Self, ContractClassError> {
+        // let x = entry_points_by_type.values().map(|f| { let last_plus_one = Felt::new(0);
+        //     while (f.get(0).is_some()) {
+        //     if f.pop().unwrap().selector > last_plus_one {
+        //         return StateError::EmptyKeyInStorage;
+        //     }
+        // }});
+
+        if entry_points_by_type
+            .get(&EntryPointType::Constructor)
+            .ok_or(ContractClassError::MissingConstractorEndpoint)?
+            .len()
+            > 1
+        {
+            return Err(ContractClassError::MultipleConstructors);
+        }
+
+        Ok(ContractClass {
+            program,
+            entry_points_by_type,
+            abi,
+        })
+    }
+
+    pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
+        let supported_builtins: Vec<String> = SUPPORTED_BUILTINS
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect();
+        if !is_subsequence(&self.program.builtins, &supported_builtins) {
+            return Err(ContractClassError::DisorderedBuiltins);
+        };
+
+        if self.program.prime != *PRIME_STR {
+            return Err(ContractClassError::InvalidPrime(
+                self.program.prime.clone(),
+                PRIME_STR.to_string(),
+            ));
+        };
+        Ok(())
+    }
 }
