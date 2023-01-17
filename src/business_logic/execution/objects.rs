@@ -575,7 +575,7 @@ mod tests {
         child2.internal_calls = [child5.clone(), child6.clone()].to_vec();
         call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
 
-        // DFS recursible stores from the root to the leftmost child,
+        // DFS recursibly stores from the root to the leftmost child,
         // then goes to the right child and repeats the procedure.
         // expected result of DFS (pre-order) = [call_root, child1, child3, child4, child2, child5, child6]
 
