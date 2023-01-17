@@ -1,10 +1,12 @@
 use cairo_rs::{types::program::Program, vm::runners::{cairo_runner::CairoRunner, builtin_runner::BuiltinRunner}, serde::deserialize_program::Identifier};
 use num_bigint::BigInt;
+use num_traits::pow;
 
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     hash_utils::calculate_contract_address_from_hash, services::api::contract_class::{ContractClass, EntryPointType, ContractEntryPoint},
 };
+use sha3::{Digest, Keccak256};
 
 pub(crate) fn calculate_contract_address(
     salt: &BigInt,
@@ -46,10 +48,16 @@ fn get_contract_entry_points(
     Ok(entry_points.iter().map(|entry_point| ContractEntryPoint {offset: entry_point.offset, selector: entry_point.selector}).collect())
 }
 
-const MASK_250: Felt = Felt::from(2**250 - 1);
+const MASK_250: BigInt = BigInt::from(pow(2,250) - 1);
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
-fn starknet_keccak(data: bytes) -> u64 {
+fn starknet_keccak(data: &mut Vec<u8>) -> u64 {
+    let mut hasher = Keccak256::new();
+    hasher.update(data);
+
+    let hashed = hasher.finalize();
+
+    BigInt::from_bytes_be(sign, hashed);
     from_bytes(keccak(data)) & MASK_250
 }
 
