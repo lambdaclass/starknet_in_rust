@@ -5,14 +5,15 @@ use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::GetContractAddressResponse;
 use super::syscall_response::{
-    GetBlockTimestampResponse, GetCallerAddressResponse, GetSequencerAddressResponse,
-    GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
+    CallContractResponse, GetBlockTimestampResponse, GetCallerAddressResponse,
+    GetSequencerAddressResponse, GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
 };
 use crate::business_logic::execution::objects::TxInfoStruct;
+use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::errors::storage_errors::StorageError;
-use crate::state::state_api_objects::BlockInfo;
 use crate::utils::get_big_int;
+use crate::utils::Address;
 use cairo_rs::any_box;
 use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
     BuiltinHintProcessor, HintProcessorData,
@@ -22,9 +23,11 @@ use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintRef
 use cairo_rs::serde::deserialize_program::ApTracking;
 use cairo_rs::types::exec_scope::ExecutionScopes;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::vm::errors::hint_errors::HintError;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
-use num_bigint::BigInt;
+use felt::Felt;
+use felt::NewFelt;
 use std::any::Any;
 use std::collections::HashMap;
 
@@ -47,7 +50,7 @@ pub(crate) trait SyscallHandler {
 
     fn library_call(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
@@ -60,7 +63,7 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError>;
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn _read_and_validate_syscall_request(
         &mut self,
@@ -69,12 +72,28 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
+    // Executes the contract call and fills the CallContractResponse struct.
     fn _call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<(), SyscallHandlerError> {
+        let retdata = self._call_contract(syscall_name, vm, syscall_ptr)?;
+
+        let retdata_maybe_reloc = retdata
+            .clone()
+            .into_iter()
+            .map(|item| MaybeRelocatable::from(Felt::new(item)))
+            .collect::<Vec<MaybeRelocatable>>();
+
+        let response = CallContractResponse::new(
+            retdata.len(),
+            self.allocate_segment(vm, retdata_maybe_reloc)?,
+        );
+
+        self._write_syscall_response(&response, vm, syscall_ptr)
+    }
 
     fn _call_contract(
         &mut self,
@@ -87,17 +106,17 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError>;
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn _get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError>;
+    ) -> Result<Address, SyscallHandlerError>;
 
-    fn _storage_read(&mut self, address: u64) -> Result<u64, SyscallHandlerError>;
+    fn _storage_read(&mut self, address: Address) -> Result<u64, SyscallHandlerError>;
 
-    fn _storage_write(&mut self, address: u64, value: u64);
+    fn _storage_write(&mut self, address: Address, value: u64);
 
     fn allocate_segment(
         &mut self,
@@ -220,7 +239,7 @@ pub(crate) trait SyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
         };
 
-        let sequencer_address = self.get_block_info().sequencer_address;
+        let sequencer_address = self.get_block_info().sequencer_address.clone();
 
         let response = GetSequencerAddressResponse::new(sequencer_address);
 
@@ -245,7 +264,9 @@ pub(crate) trait SyscallHandler {
             "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
-            _ => Err(SyscallHandlerError::UnknownSyscall),
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
         }
     }
 }
@@ -284,14 +305,14 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, BigInt>,
-    ) -> Result<bool, VirtualMachineError> {
+        constants: &HashMap<String, Felt>,
+    ) -> Result<bool, HintError> {
         match self
             .builtin_hint_processor
             .execute_hint(vm, exec_scopes, hint_data, constants)
         {
             Ok(()) => Ok(false),
-            Err(VirtualMachineError::UnknownHint(_)) => Ok(true),
+            Err(HintError::UnknownHint(_)) => Ok(true),
             Err(e) => Err(e),
         }
     }
@@ -301,7 +322,7 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        _constants: &HashMap<String, BigInt>,
+        _constants: &HashMap<String, Felt>,
     ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
@@ -360,48 +381,28 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, BigInt>,
-    ) -> Result<(), VirtualMachineError> {
+        constants: &HashMap<String, Felt>,
+    ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|e| VirtualMachineError::UnknownHint(e.to_string()))?;
+                .map_err(|e| HintError::UnknownHint(e.to_string()))?;
         }
         Ok(())
-    }
-
-    fn compile_hint(
-        &self,
-        hint_code: &str,
-        ap_tracking_data: &cairo_rs::serde::deserialize_program::ApTracking,
-        reference_ids: &std::collections::HashMap<String, usize>,
-        references: &std::collections::HashMap<
-            usize,
-            cairo_rs::hint_processor::hint_processor_definition::HintReference,
-        >,
-    ) -> Result<Box<dyn Any>, VirtualMachineError> {
-        Ok(any_box!(HintProcessorData {
-            code: hint_code.to_string(),
-            ap_tracking: ap_tracking_data.clone(),
-            ids_data: get_ids_data(reference_ids, references)?,
-        }))
     }
 }
 
 fn get_ids_data(
     reference_ids: &HashMap<String, usize>,
     references: &HashMap<usize, HintReference>,
-) -> Result<HashMap<String, HintReference>, VirtualMachineError> {
+) -> Result<HashMap<String, HintReference>, HintError> {
     let mut ids_data = HashMap::<String, HintReference>::new();
     for (path, ref_id) in reference_ids {
-        let name = path
-            .rsplit('.')
-            .next()
-            .ok_or(VirtualMachineError::FailedToGetIds)?;
+        let name = path.rsplit('.').next().ok_or(HintError::FailedToGetIds)?;
         ids_data.insert(
             name.to_string(),
             references
                 .get(ref_id)
-                .ok_or(VirtualMachineError::FailedToGetIds)?
+                .ok_or(HintError::FailedToGetIds)?
                 .clone(),
         );
     }
@@ -430,12 +431,10 @@ mod tests {
     use crate::utils::test_utils::ids_data;
     use crate::utils::{get_big_int, get_integer, get_relocatable};
     use crate::{
-        add_segments, bigint, core::syscalls::os_syscall_handler::OsSyscallHandler,
-        utils::test_utils::vm,
+        add_segments, core::syscalls::os_syscall_handler::OsSyscallHandler, utils::test_utils::vm,
     };
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
-    use num_bigint::{BigInt, Sign};
     use num_traits::ToPrimitive;
 
     use super::*;
@@ -454,8 +453,8 @@ mod tests {
         assert_eq!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
             Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
-                _selector: bigint!(0),
-                to_address: 1,
+                _selector: 0.into(),
+                to_address: Address(1.into()),
                 payload_size: 2,
                 payload_ptr: relocatable!(2, 0)
             }))
@@ -483,10 +482,10 @@ mod tests {
         assert_eq!(
             syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
             Ok(SyscallRequest::Deploy(DeployRequestStruct {
-                _selector: bigint!(0),
-                class_hash: bigint!(1),
-                contract_address_salt: bigint!(2),
-                constructor_calldata_size: bigint!(3),
+                _selector: 0.into(),
+                class_hash: 1.into(),
+                contract_address_salt: 2.into(),
+                constructor_calldata_size: 3.into(),
                 constructor_calldata: relocatable!(1, 20),
                 deploy_from_zero: 4,
             }))
@@ -524,7 +523,7 @@ mod tests {
         // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,2) position
         assert_eq!(
             get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
-            bigint!(syscall.get_block_info().block_timestamp)
+            syscall.get_block_info().block_timestamp.into()
         );
     }
 
@@ -551,7 +550,7 @@ mod tests {
             .unwrap();
 
         // Check that syscall.get_sequencer insert syscall.get_block_info().sequencer_address in the (1,1) position
-        assert_eq!(get_big_int(&vm, &relocatable!(1, 2)).unwrap(), bigint!(0))
+        assert_eq!(get_big_int(&vm, &relocatable!(1, 2)).unwrap(), 0.into())
     }
 
     #[test]
@@ -608,8 +607,8 @@ mod tests {
         assert_eq!(
             OrderedEvent::new(
                 0,
-                Vec::from([bigint!(1), bigint!(1)]),
-                Vec::from([bigint!(1), bigint!(1)])
+                Vec::from([1.into(), 1.into()]),
+                Vec::from([1.into(), 1.into()])
             ),
             event
         );
@@ -646,11 +645,11 @@ mod tests {
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
             version: 51,
-            account_contract_address: bigint!(260),
+            account_contract_address: Address(260.into()),
             max_fee: 261,
-            transaction_hash: bigint!(262),
-            signature: vec![bigint!(300), bigint!(301)],
-            nonce: bigint!(263),
+            transaction_hash: 262.into(),
+            signature: vec![300.into(), 301.into()],
+            nonce: 263.into(),
             n_sent_messages: 52,
         };
         syscall_handler_hint_processor
@@ -685,7 +684,7 @@ mod tests {
         );
         assert_eq!(
             get_big_int(&vm, &relocatable!(4, 1)),
-            Ok(tx_execution_context.account_contract_address)
+            Ok(tx_execution_context.account_contract_address.0)
         );
         assert_eq!(
             get_integer(&vm, &relocatable!(4, 2)),
@@ -710,7 +709,7 @@ mod tests {
                 .general_config
                 .starknet_os_config
                 .chain_id
-                .to_bigint())
+                .to_felt())
         );
 
         assert_eq!(
@@ -831,8 +830,8 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
-            hint_processor.syscall_handler.caller_address
+            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            hint_processor.syscall_handler.caller_address.0
         )
     }
 
@@ -886,8 +885,8 @@ mod tests {
                     .tx_execution_context
                     .n_sent_messages
                     - 1,
-                1,
-                vec![bigint!(18), bigint!(12)],
+                Address(1.into()),
+                vec![18.into(), 12.into()],
             )]
         );
     }
@@ -960,8 +959,8 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_integer(&vm, &relocatable!(1, 2)).unwrap() as u64,
-            hint_processor.syscall_handler.contract_address
+            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            hint_processor.syscall_handler.contract_address.0
         )
     }
 
@@ -989,11 +988,11 @@ mod tests {
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
             version: 51,
-            account_contract_address: bigint!(260),
+            account_contract_address: Address(260.into()),
             max_fee: 261,
-            transaction_hash: bigint!(262),
-            signature: vec![bigint!(300), bigint!(301)],
-            nonce: bigint!(263),
+            transaction_hash: 262.into(),
+            signature: vec![300.into(), 301.into()],
+            nonce: 263.into(),
             n_sent_messages: 52,
         };
         syscall_handler_hint_processor

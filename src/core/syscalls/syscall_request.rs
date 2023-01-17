@@ -1,11 +1,10 @@
-use crate::bigint;
 use crate::business_logic::execution::objects::TransactionExecutionContext;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetChainId;
-use crate::utils::{get_big_int, get_integer, get_relocatable};
+use crate::utils::{get_big_int, get_integer, get_relocatable, Address};
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
-use num_bigint::BigInt;
+use felt::Felt;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
@@ -19,18 +18,28 @@ pub(crate) enum SyscallRequest {
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    CallContract(CallContractRequest),
     GetTxSignature(GetTxSignatureRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractRequest {
+    pub(crate) selector: Felt,
+    pub(crate) calldata: Relocatable,
+    pub(crate) calldata_size: usize,
+    pub(crate) contract_address: Address,
+    pub(crate) class_hash: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetSequencerAddressRequest {
-    _selector: BigInt,
+    _selector: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventStruct {
     #[allow(unused)] // TODO: Remove once used.
-    pub(crate) selector: BigInt,
+    pub(crate) selector: Felt,
     pub(crate) keys_len: usize,
     pub(crate) keys: Relocatable,
     pub(crate) data_len: usize,
@@ -40,13 +49,13 @@ pub(crate) struct EmitEventStruct {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeployRequestStruct {
     // The system call selector (= DEPLOY_SELECTOR).
-    pub(crate) _selector: BigInt,
+    pub(crate) _selector: Felt,
     // The hash of the class to deploy.
-    pub(crate) class_hash: BigInt,
+    pub(crate) class_hash: Felt,
     // A salt for the new contract address calculation.
-    pub(crate) contract_address_salt: BigInt,
+    pub(crate) contract_address_salt: Felt,
     // The size of the calldata for the constructor.
-    pub(crate) constructor_calldata_size: BigInt,
+    pub(crate) constructor_calldata_size: Felt,
     // The calldata for the constructor.
     pub(crate) constructor_calldata: Relocatable,
     // Used for deterministic contract address deployment.
@@ -55,8 +64,8 @@ pub(crate) struct DeployRequestStruct {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SendMessageToL1SysCall {
-    pub(crate) _selector: BigInt,
-    pub(crate) to_address: usize,
+    pub(crate) _selector: Felt,
+    pub(crate) to_address: Address,
     pub(crate) payload_size: usize,
     pub(crate) payload_ptr: Relocatable,
 }
@@ -64,7 +73,7 @@ pub(crate) struct SendMessageToL1SysCall {
 #[allow(unused)] // TODO: Remove once used.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LibraryCallStruct {
-    pub(crate) selector: BigInt,
+    pub(crate) selector: Felt,
     pub(crate) class_hash: usize,
     pub(crate) function_selector: usize,
     pub(crate) calldata_size: usize,
@@ -72,33 +81,33 @@ pub(crate) struct LibraryCallStruct {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampRequest {
-    pub(crate) selector: BigInt,
+    pub(crate) selector: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressRequest {
-    pub(crate) _selector: BigInt,
+    pub(crate) _selector: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetTxSignatureRequest {
-    pub(crate) _selector: BigInt,
+    pub(crate) _selector: Felt,
 }
 
 #[allow(unused)] // TODO: Remove once used.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct GetTxInfoRequest {
-    pub(crate) selector: BigInt,
+    pub(crate) selector: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetContractAddressRequest {
-    pub(crate) _selector: BigInt,
+    pub(crate) _selector: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockNumberRequest {
-    pub(crate) _selector: BigInt,
+    pub(crate) _selector: Felt,
 }
 
 impl From<EmitEventStruct> for SyscallRequest {
@@ -247,7 +256,7 @@ impl FromPtr for SendMessageToL1SysCall {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, &syscall_ptr)?;
-        let to_address = get_integer(vm, &(&syscall_ptr + 1))?;
+        let to_address = Address(get_big_int(vm, &(&syscall_ptr + 1))?);
         let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
         let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 4))?;
 
@@ -382,5 +391,11 @@ impl CountFields for GetContractAddressRequest {
 impl CountFields for GetTxInfoRequest {
     fn count_fields() -> usize {
         1
+    }
+}
+
+impl CountFields for CallContractRequest {
+    fn count_fields() -> usize {
+        5
     }
 }
