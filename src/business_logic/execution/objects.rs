@@ -1,45 +1,99 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::vm_core::VirtualMachine,
+    vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use felt::{Felt, NewFelt};
 use num_traits::{ToPrimitive, Zero};
 
+use super::execution_errors::ExecutionError;
+use crate::services::api::contract_class::EntryPointType;
 use crate::{
+    business_logic::state::state_cache::StorageEntry,
     core::{
-        errors::syscall_handler_errors::SyscallHandlerError,
-        syscalls::{os_syscall_handler::CallInfo, syscall_request::FromPtr},
+        errors::syscall_handler_errors::SyscallHandlerError, syscalls::syscall_request::FromPtr,
     },
     definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
 
-use super::execution_errors::ExecutionError;
-
 type ResourcesMapping = HashMap<String, Felt>;
 
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum CallType {
     Call,
     Delegate,
 }
 
-pub(crate) enum EntryPointType {
-    External,
-    L1Handler,
-    Constructor,
+// --------------------
+// CallInfo structure
+// --------------------
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallInfo {
+    pub(crate) caller_address: Address,
+    pub(crate) call_type: Option<CallType>,
+    pub(crate) contract_address: Address,
+    pub(crate) class_hash: Option<Felt>,
+    pub(crate) entry_point_selector: Option<usize>,
+    pub(crate) entry_point_type: Option<EntryPointType>,
+    pub(crate) calldata: VecDeque<Felt>,
+    pub(crate) retdata: VecDeque<u64>,
+    pub(crate) execution_resources: ExecutionResources,
+    pub(crate) events: VecDeque<OrderedEvent>,
+    pub(crate) l2_to_l1_messages: VecDeque<OrderedL2ToL1Message>,
+    pub(crate) storage_read_values: VecDeque<u64>,
+    pub(crate) accesed_storage_keys: VecDeque<Felt>,
+    pub(crate) internal_calls: Vec<CallInfo>,
 }
+
+impl Default for CallInfo {
+    fn default() -> Self {
+        Self {
+            caller_address: Address(0.into()),
+            call_type: None,
+            contract_address: Address(0.into()),
+            class_hash: None,
+            internal_calls: Vec::new(),
+            entry_point_type: Some(EntryPointType::Constructor),
+            storage_read_values: VecDeque::new(),
+            retdata: VecDeque::new(),
+            entry_point_selector: None,
+            l2_to_l1_messages: VecDeque::new(),
+            accesed_storage_keys: VecDeque::new(),
+            calldata: VecDeque::new(),
+            execution_resources: ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::new(),
+            },
+            events: VecDeque::new(),
+        }
+    }
+}
+
+// -------------------------
+//  Events Structures
+// -------------------------
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedEvent {
-    #[allow(unused)] // TODO: remove once used
     order: u64,
-    #[allow(unused)] // TODO: remove once used
     keys: Vec<Felt>,
-    #[allow(unused)] // TODO: remove once used
     data: Vec<Felt>,
 }
+
+impl OrderedEvent {
+    pub fn new(order: u64, keys: Vec<Felt>, data: Vec<Felt>) -> Self {
+        OrderedEvent { order, keys, data }
+    }
+}
+
+// -------------------------
+//  Transaction Structures
+// -------------------------
+
 #[derive(Clone)]
 pub(crate) struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
@@ -50,12 +104,6 @@ pub(crate) struct TransactionExecutionContext {
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
-}
-
-impl OrderedEvent {
-    pub fn new(order: u64, keys: Vec<Felt>, data: Vec<Felt>) -> Self {
-        OrderedEvent { order, keys, data }
-    }
 }
 
 impl TransactionExecutionContext {
@@ -73,43 +121,6 @@ impl TransactionExecutionContext {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct OrderedL2ToL1Message {
-    pub(crate) order: usize,
-    pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt>,
-}
-
-impl OrderedL2ToL1Message {
-    pub fn new(order: usize, to_address: Address, payload: Vec<Felt>) -> Self {
-        OrderedL2ToL1Message {
-            order,
-            to_address,
-            payload,
-        }
-    }
-}
-
-pub struct L2toL1MessageInfo {
-    pub(crate) from_address: Address,
-    pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt>,
-}
-
-impl L2toL1MessageInfo {
-    pub(crate) fn new(
-        message_content: OrderedL2ToL1Message,
-        sending_contract_address: Address,
-    ) -> Self {
-        L2toL1MessageInfo {
-            from_address: sending_contract_address,
-            to_address: message_content.to_address,
-            payload: message_content.payload,
-        }
-    }
-}
-
-#[allow(unused)] // TODO: Remove once used.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TxInfoStruct {
     pub(crate) version: usize,
@@ -221,5 +232,109 @@ impl TransactionExecutionInfo {
             fee_transfer_info,
             ..concurrent_execution_info
         }
+    }
+
+    // In deploy account tx, validation will take place after execution of the constructor.
+    pub fn non_optional_calls(&self) -> Vec<CallInfo> {
+        let calls = match self.tx_type {
+            Some(TransactionType::Deploy) => [
+                self.call_info.clone(),
+                self.validate_info.clone(),
+                self.fee_transfer_info.clone(),
+            ],
+            _ => [
+                self.validate_info.clone(),
+                self.call_info.clone(),
+                self.fee_transfer_info.clone(),
+            ],
+        };
+
+        calls.into_iter().flatten().collect()
+    }
+
+    pub fn get_visited_storage_entries_of_many(&self) -> Vec<StorageEntry> {
+        todo!()
+    }
+}
+
+// --------------------
+// Messages Structures
+// --------------------
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct OrderedL2ToL1Message {
+    pub(crate) order: usize,
+    pub(crate) to_address: Address,
+    pub(crate) payload: Vec<Felt>,
+}
+
+impl OrderedL2ToL1Message {
+    pub fn new(order: usize, to_address: Address, payload: Vec<Felt>) -> Self {
+        OrderedL2ToL1Message {
+            order,
+            to_address,
+            payload,
+        }
+    }
+}
+
+pub struct L2toL1MessageInfo {
+    pub(crate) from_address: Address,
+    pub(crate) to_address: Address,
+    pub(crate) payload: Vec<Felt>,
+}
+
+impl L2toL1MessageInfo {
+    pub(crate) fn new(
+        message_content: OrderedL2ToL1Message,
+        sending_contract_address: Address,
+    ) -> Self {
+        L2toL1MessageInfo {
+            from_address: sending_contract_address,
+            to_address: message_content.to_address,
+            payload: message_content.payload,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::business_logic::execution::objects::CallInfo;
+
+    use super::TransactionExecutionInfo;
+
+    #[test]
+    fn non_optional_calls_test() {
+        let mut tx_info = TransactionExecutionInfo {
+            ..Default::default()
+        };
+        tx_info.call_info = Some(CallInfo {
+            ..Default::default()
+        });
+        tx_info.validate_info = Some(CallInfo {
+            ..Default::default()
+        });
+        tx_info.fee_transfer_info = None;
+
+        let res = tx_info.non_optional_calls();
+        assert_eq!(
+            res,
+            [
+                CallInfo {
+                    ..Default::default()
+                },
+                CallInfo {
+                    ..Default::default()
+                }
+            ]
+        );
+
+        tx_info.call_info = None;
+        tx_info.validate_info = None;
+        tx_info.fee_transfer_info = None;
+
+        let res = tx_info.non_optional_calls();
+        assert_eq!(res, [])
     }
 }

@@ -3,10 +3,9 @@ use std::collections::HashMap;
 
 use crate::{
     business_logic::{
-        execution::objects::TransactionExecutionInfo,
+        execution::objects::{CallInfo, TransactionExecutionInfo},
         state::{state_api::State, update_tracker_state::UpdatesTrackerState},
     },
-    core::syscalls::os_syscall_handler::CallInfo,
     definitions::general_config::{self, StarknetGeneralConfig},
 };
 

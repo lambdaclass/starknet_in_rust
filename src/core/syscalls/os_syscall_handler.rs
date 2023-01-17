@@ -1,6 +1,7 @@
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
+use crate::business_logic::execution::objects::CallInfo;
 use crate::business_logic::execution::objects::TransactionExecutionInfo;
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
@@ -11,29 +12,6 @@ use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct CallInfo {
-    caller_address: Address,
-    contract_address: Address,
-    internal_calls: Vec<CallInfo>,
-    entry_point_type: Option<EntryPointType>,
-    _storage_read_values: VecDeque<u64>, // u64
-    retadata: VecDeque<u64>,
-}
-
-impl Default for CallInfo {
-    fn default() -> Self {
-        Self {
-            caller_address: Address(0.into()),
-            contract_address: Address(0.into()),
-            internal_calls: Vec::new(),
-            entry_point_type: Some(EntryPointType::Constructor),
-            _storage_read_values: VecDeque::new(),
-            retadata: VecDeque::new(),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct OsSingleStarknetStorage;
@@ -353,10 +331,10 @@ impl OsSyscallHandler {
         self.retdata_iterator = call_info
             .internal_calls
             .iter()
-            .map(|call_info_internal| call_info_internal.retadata.clone())
+            .map(|call_info_internal| call_info_internal.retdata.clone())
             .collect::<VecDeque<VecDeque<u64>>>();
 
-        self.execute_code_read_iterator = call_info._storage_read_values;
+        self.execute_code_read_iterator = call_info.storage_read_values;
 
         Ok(())
     }
@@ -373,6 +351,7 @@ mod tests {
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+    use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use cairo_rs::vm::vm_core::VirtualMachine;
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
@@ -393,8 +372,20 @@ mod tests {
             caller_address: Address(1.into()),
             internal_calls: Vec::new(),
             entry_point_type: None,
-            _storage_read_values: VecDeque::new(),
-            retadata: VecDeque::new(),
+            storage_read_values: VecDeque::new(),
+            retdata: VecDeque::new(),
+            entry_point_selector: None,
+            l2_to_l1_messages: VecDeque::new(),
+            accesed_storage_keys: VecDeque::new(),
+            calldata: VecDeque::new(),
+            execution_resources: ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::new(),
+            },
+            events: VecDeque::new(),
+            call_type: None,
+            class_hash: None,
         };
         call_stack.push_back(call_info);
 
