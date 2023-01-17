@@ -1,4 +1,7 @@
-use crate::business_logic::fact_state::contract_state::ContractState;
+use crate::{
+    business_logic::fact_state::contract_state::ContractState,
+    services::api::contract_class::{self, ContractClass},
+};
 
 use super::{
     dict_storage::{Prefix, StorageKey},
@@ -123,6 +126,25 @@ pub(crate) trait Storage {
         let contract_state: ContractState = serde_json::from_slice(&ser_contract_state)?;
         Ok(contract_state)
     }
+
+    fn get_contract_class(&self, key: &[u8; 32]) -> Result<ContractClass, StorageError> {
+        let ser_contract_class = self
+            .get_value(&(Prefix::ContractClass, *key))
+            .ok_or(StorageError::ErrorFetchingData)?;
+
+        let contract_class: ContractClass = serde_json::from_slice(&ser_contract_class)?;
+        Ok(contract_class)
+    }
+
+    fn set_contract_class(
+        &mut self,
+        key: &[u8; 32],
+        value: &ContractClass,
+    ) -> Result<(), StorageError> {
+        let contract_class = serde_json::to_string(value)?.as_bytes().to_vec();
+
+        self.set_value(&(Prefix::ContractClass, *key), contract_class)
+    }
 }
 
 //* -------------------------
@@ -142,9 +164,16 @@ impl<T: Storage> FactFetchingContext<T> {
 
 #[cfg(test)]
 mod tests {
-    use felt::{Felt, NewFelt};
+    use std::collections::HashMap;
 
-    use crate::{starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key};
+    use cairo_rs::types::program::{self, Program};
+    use felt::{Felt, NewFelt, PRIME_STR};
+
+    use crate::{
+        services::api::contract_class::{ContractEntryPoint, EntryPointType},
+        starknet_storage::dict_storage::DictStorage,
+        utils::test_utils::storage_key,
+    };
 
     use super::*;
 
@@ -170,5 +199,27 @@ mod tests {
             .expect("Error setting contract state");
 
         assert_eq!(Ok(contract_state), storage.get_contract_state(&key));
+    }
+    #[test]
+    fn get_and_set_contract_class() {
+        let mut storage = DictStorage::new();
+
+        let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
+
+        let contract_class = ContractClass::new(
+            Program::default(),
+            HashMap::from([(
+                EntryPointType::Constructor,
+                vec![ContractEntryPoint::default()],
+            )]),
+            None,
+        )
+        .expect("Error creating contract class");
+
+        storage
+            .set_contract_class(&key, &contract_class)
+            .expect("Error setting contract class");
+
+        assert_eq!(Ok(contract_class), storage.get_contract_class(&key));
     }
 }
