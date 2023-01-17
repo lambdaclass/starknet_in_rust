@@ -1,5 +1,23 @@
-# StarkNet in Rust
-[![codecov](https://codecov.io/github/lambdaclass/starknet_in_rust/branch/main/graph/badge.svg?token=98QY5B0VAR)](https://codecov.io/gh/lambdaclass/starknet_in_rust)
+<div align="center">
+<img src="https://starknet.io/wp-content/uploads/2021/11/favicon.png" width="150"/>
+<h3>🦀 StarkNet in Rust 🦀</h3>
+
+StarkNet library in Rust, featuring [⚡ cairo-rs ⚡](https://github.com/lambdaclass/cairo-rs) VM
+
+<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new">Report Bug</a>
+·
+<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new">Request Feature</a>
+
+[![codecov](https://img.shields.io/codecov/c/github/lambdaclass/starknet_in_rust)](https://codecov.io/gh/lambdaclass/starknet_in_rust)
+[![license](https://img.shields.io/github/license/lambdaclass/starknet_in_rust)](/LICENSE)
+![PRs Welcome][pr-welcome]
+[![Telegram Chat][tg-badge]][tg-url]
+
+[pr-welcome]: https://img.shields.io/static/v1?color=orange&label=PRs&style=flat&message=welcome
+[tg-badge]: https://img.shields.io/static/v1?color=green&logo=telegram&label=chat&style=flat&message=join
+[tg-url]: https://t.me/starknet_rs
+
+</div>
 
 ## Table of Contents
 - [Disclaimer](#disclaimer)
