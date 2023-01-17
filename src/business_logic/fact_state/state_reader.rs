@@ -4,6 +4,7 @@ use felt::Felt;
 
 use crate::{
     core::errors::state_errors::StateError,
+    services::api::contract_class::ContractClass,
     starknet_storage::{dict_storage::Prefix, storage::Storage},
     utils::Address,
 };
@@ -29,6 +30,15 @@ impl<S1: Storage, S2: Storage> StateReader<S1, S2> {
             contract_states: HashMap::new(),
             contract_class_storage,
         }
+    }
+
+    pub(crate) fn get_contract_class(
+        &self,
+        class_hash: &[u8; 32],
+    ) -> Result<ContractClass, StateError> {
+        let contract_class = self.contract_class_storage.get_contract_class(class_hash)?;
+        contract_class.validate()?;
+        Ok(contract_class)
     }
 
     fn get_contract_state(
@@ -64,9 +74,13 @@ impl<S1: Storage, S2: Storage> StateReader<S1, S2> {
 
 #[cfg(test)]
 mod tests {
+    use cairo_rs::types::program::Program;
     use felt::NewFelt;
 
-    use crate::starknet_storage::dict_storage::DictStorage;
+    use crate::{
+        services::api::contract_class::{self, ContractEntryPoint, EntryPointType},
+        starknet_storage::dict_storage::DictStorage,
+    };
 
     use super::*;
 
@@ -100,6 +114,32 @@ mod tests {
         assert_eq!(
             state_reader.contract_states,
             HashMap::from([(contract_address, contract_state)])
+        );
+    }
+
+    #[test]
+    fn get_contract_class_test() {
+        let mut state_reader =
+            StateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+
+        let contract_class_key = [0; 32];
+        let contract_class = ContractClass::new(
+            Program::default(),
+            HashMap::from([(
+                EntryPointType::Constructor,
+                vec![ContractEntryPoint::default()],
+            )]),
+            None,
+        )
+        .expect("Error creating contract class");
+
+        state_reader
+            .contract_class_storage
+            .set_contract_class(&[0; 32], &contract_class);
+
+        assert_eq!(
+            state_reader.get_contract_class(&contract_class_key),
+            Ok(contract_class)
         );
     }
 }
