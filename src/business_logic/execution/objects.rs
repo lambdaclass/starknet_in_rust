@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    hash::Hash,
+};
 
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -49,6 +52,14 @@ pub struct CallInfo {
 }
 
 impl CallInfo {
+    pub fn get_sorted_events(&self) -> Vec<Event> {
+        todo!()
+    }
+
+    pub fn get_sorted_l2_to_l1_messages(&self) -> Vec<L2toL1MessageInfo> {
+        todo!()
+    }
+
     pub fn get_visited_storage_entries(self) -> HashSet<StorageEntry> {
         let mut storage_entries = self
             .accesed_storage_keys
@@ -101,7 +112,7 @@ impl Default for CallInfo {
 // -------------------------
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct OrderedEvent {
+pub struct OrderedEvent {
     order: u64,
     keys: Vec<Felt>,
     data: Vec<Felt>,
@@ -110,6 +121,22 @@ pub(crate) struct OrderedEvent {
 impl OrderedEvent {
     pub fn new(order: u64, keys: Vec<Felt>, data: Vec<Felt>) -> Self {
         OrderedEvent { order, keys, data }
+    }
+}
+
+pub struct Event {
+    pub from_addres: Address,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
+}
+
+impl Event {
+    pub fn new(event_content: OrderedEvent, emitting_contract_address: Address) -> Self {
+        Event {
+            from_addres: emitting_contract_address,
+            keys: event_content.keys,
+            data: event_content.data,
+        }
     }
 }
 
@@ -245,18 +272,6 @@ impl TransactionExecutionInfo {
         }
     }
 
-    pub fn from_concurrent_state_execution_info(
-        concurrent_execution_info: TransactionExecutionInfo,
-        actual_fee: u64,
-        fee_transfer_info: Option<CallInfo>,
-    ) -> Self {
-        TransactionExecutionInfo {
-            actual_fee,
-            fee_transfer_info,
-            ..concurrent_execution_info
-        }
-    }
-
     // In deploy account tx, validation will take place after execution of the constructor.
     pub fn non_optional_calls(&self) -> Vec<CallInfo> {
         let calls = match self.tx_type {
@@ -275,9 +290,92 @@ impl TransactionExecutionInfo {
         calls.into_iter().flatten().collect()
     }
 
-    pub fn get_visited_storage_entries_of_many(&self) -> Vec<StorageEntry> {
-        CallInfo::get_visited_storage_entries_of_many(self.non_optional_calls());
-        todo!()
+    pub fn get_visited_storage_entries(&self) -> HashSet<StorageEntry> {
+        CallInfo::get_visited_storage_entries_of_many(self.non_optional_calls())
+    }
+
+    pub fn from_calls_info(
+        execute_call_info: Option<CallInfo>,
+        tx_type: Option<TransactionType>,
+        validate_info: Option<CallInfo>,
+        fee_transfer_info: Option<CallInfo>,
+    ) -> Self {
+        TransactionExecutionInfo {
+            validate_info,
+            call_info: execute_call_info,
+            fee_transfer_info,
+            actual_fee: 0,
+            actual_resources: HashMap::new(),
+            tx_type,
+        }
+    }
+
+    pub fn empty() -> Self {
+        TransactionExecutionInfo {
+            validate_info: None,
+            call_info: None,
+            fee_transfer_info: None,
+            actual_fee: 0,
+            actual_resources: HashMap::new(),
+            tx_type: None,
+        }
+    }
+
+    pub fn create_concurrent_stage_execution_info(
+        validate_info: Option<CallInfo>,
+        call_info: Option<CallInfo>,
+        actual_resources: ResourcesMapping,
+        tx_type: Option<TransactionType>,
+    ) -> Self {
+        TransactionExecutionInfo {
+            validate_info,
+            call_info,
+            fee_transfer_info: None,
+            actual_fee: 0,
+            actual_resources,
+            tx_type,
+        }
+    }
+
+    pub fn from_concurrent_state_execution_info(
+        concurrent_execution_info: TransactionExecutionInfo,
+        actual_fee: u64,
+        fee_transfer_info: Option<CallInfo>,
+    ) -> Self {
+        TransactionExecutionInfo {
+            actual_fee,
+            fee_transfer_info,
+            ..concurrent_execution_info
+        }
+    }
+
+    pub fn get_visited_storage_entries_of_many(
+        execution_infos: Vec<TransactionExecutionInfo>,
+    ) -> HashSet<StorageEntry> {
+        execution_infos
+            .into_iter()
+            .fold(HashSet::new(), |mut acc, e| {
+                acc.extend(e.get_visited_storage_entries());
+                acc
+            })
+    }
+
+    pub fn get_sorted_events(&self) -> Vec<Event> {
+        self.non_optional_calls()
+            .into_iter()
+            .fold(Vec::new(), |mut acc, c| {
+                acc.extend(c.get_sorted_events());
+                acc
+            })
+    }
+
+    pub fn get_sorted_l2_to_l1_messages(&self) -> Vec<L2toL1MessageInfo> {
+        self.non_optional_calls()
+            .into_iter()
+            .fold(Vec::new(), |mut acc, c| {
+                acc.extend(c.get_sorted_l2_to_l1_messages());
+                acc
+            })
     }
 }
 
