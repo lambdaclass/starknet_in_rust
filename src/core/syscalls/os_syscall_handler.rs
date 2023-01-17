@@ -465,7 +465,6 @@ mod tests {
             }),
             ..Default::default()
         };
-        println!("{:?}", handler);
         assert_eq!(
             handler.end_tx(),
             Err(SyscallHandlerError::ShouldBeNone(String::from(

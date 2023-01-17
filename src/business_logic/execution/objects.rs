@@ -52,12 +52,67 @@ pub struct CallInfo {
 }
 
 impl CallInfo {
-    pub fn get_sorted_events(&self) -> Vec<Event> {
-        todo!()
+    ///Yields the contract calls in DFS (preorder).
+    pub fn gen_call_topology(&self) -> Vec<CallInfo> {
+        let mut calls = Vec::new();
+        for call_info in self.internal_calls.clone() {
+            calls.extend(call_info.gen_call_topology())
+        }
+        calls
     }
 
-    pub fn get_sorted_l2_to_l1_messages(&self) -> Vec<L2toL1MessageInfo> {
-        todo!()
+    /// Returns a list of StarkNet Event objects collected during the execution, sorted by the order
+    /// in which they were emitted.
+    pub fn get_sorted_events(&self) -> Result<Vec<Event>, ExecutionError> {
+        let calls = self.gen_call_topology();
+        let n_events = calls.iter().fold(0, |acc, c| acc + c.events.len());
+
+        let mut starknet_events: Vec<Option<Event>> = (0..n_events).map(|_| None).collect();
+
+        for call in calls {
+            for ordered_event in call.events {
+                let event = Event::new(ordered_event.clone(), call.contract_address.clone());
+                starknet_events.remove(ordered_event.order as usize);
+                starknet_events.insert(ordered_event.order as usize, Some(event));
+            }
+        }
+
+        let are_all_some = starknet_events
+            .iter()
+            .fold(true, |acc, e| acc && e.is_some());
+
+        if !are_all_some {
+            return Err(ExecutionError::UnexpectedHolesInEventOrder);
+        }
+        Ok(starknet_events.into_iter().flatten().collect())
+    }
+
+    /// Returns a list of StarkNet L2ToL1MessageInfo objects collected during the execution, sorted
+    /// by the order in which they were sent.
+    pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, ExecutionError> {
+        let calls = self.gen_call_topology();
+        let n_msgs = calls.iter().fold(0, |acc, c| acc + c.events.len());
+
+        let mut starknet_events: Vec<Option<L2toL1MessageInfo>> =
+            (0..n_msgs).map(|_| None).collect();
+
+        for call in calls {
+            for ordered_msg in call.l2_to_l1_messages {
+                let l2tol1msg =
+                    L2toL1MessageInfo::new(ordered_msg.clone(), call.caller_address.clone());
+                starknet_events.remove(ordered_msg.order as usize);
+                starknet_events.insert(ordered_msg.order as usize, Some(l2tol1msg));
+            }
+        }
+
+        let are_all_some = starknet_events
+            .iter()
+            .fold(true, |acc, e| acc && e.is_some());
+
+        if !are_all_some {
+            return Err(ExecutionError::UnexpectedHolesL2toL1Messages);
+        }
+        Ok(starknet_events.into_iter().flatten().collect())
     }
 
     pub fn get_visited_storage_entries(self) -> HashSet<StorageEntry> {
@@ -70,14 +125,17 @@ impl CallInfo {
         let internal_visited_storage_entries =
             CallInfo::get_visited_storage_entries_of_many(self.internal_calls);
 
-        storage_entries.extend(internal_visited_storage_entries);
         storage_entries
+            .union(&internal_visited_storage_entries)
+            .cloned()
+            .collect()
     }
 
     pub fn get_visited_storage_entries_of_many(calls_info: Vec<CallInfo>) -> HashSet<StorageEntry> {
-        calls_info.into_iter().fold(HashSet::new(), |mut acc, c| {
-            acc.extend(c.get_visited_storage_entries());
-            acc
+        calls_info.into_iter().fold(HashSet::new(), |acc, c| {
+            acc.union(&c.get_visited_storage_entries())
+                .cloned()
+                .collect()
         })
     }
 }
@@ -352,30 +410,35 @@ impl TransactionExecutionInfo {
     pub fn get_visited_storage_entries_of_many(
         execution_infos: Vec<TransactionExecutionInfo>,
     ) -> HashSet<StorageEntry> {
-        execution_infos
-            .into_iter()
-            .fold(HashSet::new(), |mut acc, e| {
-                acc.extend(e.get_visited_storage_entries());
-                acc
-            })
+        execution_infos.into_iter().fold(HashSet::new(), |acc, e| {
+            acc.union(&e.get_visited_storage_entries())
+                .cloned()
+                .collect()
+        })
     }
 
-    pub fn get_sorted_events(&self) -> Vec<Event> {
-        self.non_optional_calls()
-            .into_iter()
-            .fold(Vec::new(), |mut acc, c| {
-                acc.extend(c.get_sorted_events());
-                acc
-            })
+    pub fn get_sorted_events(&self) -> Result<Vec<Event>, ExecutionError> {
+        let calls = self.non_optional_calls();
+        let mut sorted_events: Vec<Event> = Vec::new();
+
+        for call in calls {
+            let events = call.get_sorted_events()?;
+            sorted_events.extend(events);
+        }
+
+        Ok(sorted_events)
     }
 
-    pub fn get_sorted_l2_to_l1_messages(&self) -> Vec<L2toL1MessageInfo> {
-        self.non_optional_calls()
-            .into_iter()
-            .fold(Vec::new(), |mut acc, c| {
-                acc.extend(c.get_sorted_l2_to_l1_messages());
-                acc
-            })
+    pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, ExecutionError> {
+        let calls = self.non_optional_calls();
+        let mut sorted_messages: Vec<L2toL1MessageInfo> = Vec::new();
+
+        for call in calls {
+            let messages = call.get_sorted_l2_to_l1_messages()?;
+            sorted_messages.extend(messages);
+        }
+
+        Ok(sorted_messages)
     }
 }
 

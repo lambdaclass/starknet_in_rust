@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use crate::{
     business_logic::{
         execution::objects::{CallInfo, TransactionExecutionInfo},
-        state::{state_api::State, update_tracker_state::UpdatesTrackerState},
+        state::{
+            state_api::{State, StateReader},
+            update_tracker_state::UpdatesTrackerState,
+        },
     },
     definitions::general_config::{self, StarknetGeneralConfig},
 };
@@ -12,6 +15,13 @@ use crate::{
 type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) trait InternalStateTransaction {
+    fn get_state_selector_of_many(
+        txs: Vec<impl InternalStateTransaction>,
+        general_config: StarknetGeneralConfig,
+    ) {
+        todo!()
+    }
+
     fn apply_state_updates(
         &self,
         state: impl State,
@@ -26,7 +36,7 @@ pub(crate) trait InternalStateTransaction {
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
-        T: State + Clone,
+        T: State + StateReader + Clone,
     {
         let concurrent_execution_info =
             self.apply_concurrent_changes(state.clone(), general_config.clone());
@@ -44,12 +54,15 @@ pub(crate) trait InternalStateTransaction {
         )
     }
 
-    fn apply_concurrent_changes(
+    fn apply_concurrent_changes<T>(
         &self,
-        state: impl State,
+        state: T,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo {
-        todo!()
+    ) -> TransactionExecutionInfo
+    where
+        T: State + StateReader,
+    {
+        self._apply_specific_concurrent_changes(UpdatesTrackerState::new(state), general_config)
     }
 
     fn apply_sequential_changes(
@@ -58,7 +71,7 @@ pub(crate) trait InternalStateTransaction {
         general_config: StarknetGeneralConfig,
         actual_resources: HashMap<String, Felt>,
     ) -> FeeInfo {
-        todo!()
+        self._apply_specific_sequential_changes(state, general_config, actual_resources)
     }
 
     // ------------------
