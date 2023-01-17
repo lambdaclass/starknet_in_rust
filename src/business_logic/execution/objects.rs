@@ -55,8 +55,13 @@ impl CallInfo {
     ///Yields the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
-        for call_info in self.internal_calls.clone() {
-            calls.extend(call_info.gen_call_topology())
+        if self.internal_calls.len() == 0 {
+            calls.push(self.clone())
+        } else {
+            calls.push(self.clone());
+            for call_info in self.internal_calls.clone() {
+                calls.extend(call_info.gen_call_topology());
+            }
         }
         calls
     }
@@ -72,8 +77,8 @@ impl CallInfo {
         for call in calls {
             for ordered_event in call.events {
                 let event = Event::new(ordered_event.clone(), call.contract_address.clone());
-                starknet_events.remove(ordered_event.order as usize);
-                starknet_events.insert(ordered_event.order as usize, Some(event));
+                starknet_events.remove(ordered_event.order as usize - 1);
+                starknet_events.insert(ordered_event.order as usize - 1, Some(event));
             }
         }
 
@@ -91,7 +96,9 @@ impl CallInfo {
     /// by the order in which they were sent.
     pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, ExecutionError> {
         let calls = self.gen_call_topology();
-        let n_msgs = calls.iter().fold(0, |acc, c| acc + c.events.len());
+        let n_msgs = calls
+            .iter()
+            .fold(0, |acc, c| acc + c.l2_to_l1_messages.len());
 
         let mut starknet_events: Vec<Option<L2toL1MessageInfo>> =
             (0..n_msgs).map(|_| None).collect();
@@ -100,8 +107,8 @@ impl CallInfo {
             for ordered_msg in call.l2_to_l1_messages {
                 let l2tol1msg =
                     L2toL1MessageInfo::new(ordered_msg.clone(), call.caller_address.clone());
-                starknet_events.remove(ordered_msg.order as usize);
-                starknet_events.insert(ordered_msg.order as usize, Some(l2tol1msg));
+                starknet_events.remove(ordered_msg.order as usize - 1);
+                starknet_events.insert(ordered_msg.order as usize - 1, Some(l2tol1msg));
             }
         }
 
@@ -182,6 +189,17 @@ impl OrderedEvent {
     }
 }
 
+impl Default for OrderedEvent {
+    fn default() -> Self {
+        OrderedEvent {
+            order: 0,
+            keys: Vec::new(),
+            data: Vec::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Event {
     pub from_addres: Address,
     pub keys: Vec<Felt>,
@@ -463,6 +481,17 @@ impl OrderedL2ToL1Message {
     }
 }
 
+impl Default for OrderedL2ToL1Message {
+    fn default() -> Self {
+        OrderedL2ToL1Message {
+            order: 0,
+            to_address: Address(0.into()),
+            payload: Vec::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct L2toL1MessageInfo {
     pub(crate) from_address: Address,
     pub(crate) to_address: Address,
@@ -482,12 +511,20 @@ impl L2toL1MessageInfo {
     }
 }
 
+// ---------------
+//     Tests
+// ---------------
+
 #[cfg(test)]
 mod tests {
 
-    use crate::business_logic::execution::objects::CallInfo;
+    use std::{collections::VecDeque, ops::Add};
 
-    use super::TransactionExecutionInfo;
+    use crate::{business_logic::execution::objects::CallInfo, utils::Address};
+
+    use super::{
+        Event, L2toL1MessageInfo, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionInfo,
+    };
 
     #[test]
     fn non_optional_calls_test() {
@@ -521,5 +558,198 @@ mod tests {
 
         let res = tx_info.non_optional_calls();
         assert_eq!(res, [])
+    }
+
+    #[test]
+    fn gen_call_topology_test() {
+        // dfs root
+        let mut call_root = CallInfo::default();
+
+        // level 1 children
+        let mut child1 = CallInfo::default();
+        let mut child2 = CallInfo::default();
+
+        // level 2 children
+        let mut child3 = CallInfo::default();
+        let mut child4 = CallInfo::default();
+        let mut child5 = CallInfo::default();
+        let mut child6 = CallInfo::default();
+
+        // Set a contract address to identified them
+        call_root.contract_address = Address(0.into());
+        child1.contract_address = Address(1.into());
+        child2.contract_address = Address(2.into());
+        child3.contract_address = Address(3.into());
+        child4.contract_address = Address(4.into());
+        child5.contract_address = Address(5.into());
+        child6.contract_address = Address(6.into());
+
+        // set children
+        child1.internal_calls = [child3.clone(), child4.clone()].to_vec();
+        child2.internal_calls = [child5.clone(), child6.clone()].to_vec();
+        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
+
+        // DFS recursible stores from the root to the leftmost child,
+        // then goes to the right child and repeats the procedure.
+        // expected result of DFS (pre-order) = [call_root, child1, child3, child4, child2, child5, child6]
+
+        assert_eq!(
+            call_root.gen_call_topology(),
+            [call_root, child1, child3, child4, child2, child5, child6]
+        )
+    }
+
+    #[test]
+    fn get_ordered_event_test() {
+        // root
+        let mut call_root = CallInfo::default();
+
+        // level 1 children
+        let mut child1 = CallInfo::default();
+        let mut child2 = CallInfo::default();
+
+        // orderdered events
+        let mut ord_event1 = OrderedEvent::default();
+        let mut ord_event2 = OrderedEvent::default();
+        let mut ord_event3 = OrderedEvent::default();
+        let mut ord_event4 = OrderedEvent::default();
+
+        // set orders
+        ord_event1.order = 1;
+        ord_event2.order = 2;
+        ord_event3.order = 3;
+        ord_event4.order = 4;
+
+        // store events
+        child1.events = VecDeque::from([ord_event3.clone(), ord_event4.clone()]);
+        child2.events = VecDeque::from([ord_event1.clone(), ord_event2.clone()]);
+
+        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
+
+        // events
+
+        let event1 = Event::new(ord_event1.clone(), child2.caller_address.clone());
+        let event2 = Event::new(ord_event2.clone(), child2.caller_address.clone());
+        let event3 = Event::new(ord_event3.clone(), child1.caller_address.clone());
+        let event4 = Event::new(ord_event4.clone(), child1.caller_address.clone());
+
+        assert_eq!(
+            call_root.get_sorted_events().unwrap(),
+            [event1, event2, event3, event4]
+        )
+    }
+
+    #[test]
+    fn get_ordered_event_test_fail() {
+        // root
+        let mut call_root = CallInfo::default();
+
+        // level 1 children
+        let mut child1 = CallInfo::default();
+        let mut child2 = CallInfo::default();
+
+        // orderdered events
+        let mut ord_event1 = OrderedEvent::default();
+        let mut ord_event2 = OrderedEvent::default();
+        let mut ord_event3 = OrderedEvent::default();
+        let mut ord_event4 = OrderedEvent::default();
+
+        // set orders
+        ord_event1.order = 1;
+        ord_event2.order = 2;
+        ord_event3.order = 3;
+        ord_event4.order = 3;
+
+        // store events
+        child1.events = VecDeque::from([ord_event3.clone(), ord_event4.clone()]);
+        child2.events = VecDeque::from([ord_event1.clone(), ord_event2.clone()]);
+
+        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
+
+        // events
+
+        let event1 = Event::new(ord_event1.clone(), child2.caller_address.clone());
+        let event2 = Event::new(ord_event2.clone(), child2.caller_address.clone());
+        let event3 = Event::new(ord_event3.clone(), child1.caller_address.clone());
+        let event4 = Event::new(ord_event4.clone(), child1.caller_address.clone());
+
+        assert!(call_root.get_sorted_events().is_err())
+    }
+
+    #[test]
+    fn get_ordered_messages_test() {
+        // root
+        let mut call_root = CallInfo::default();
+
+        // level 1 children
+        let mut child1 = CallInfo::default();
+        let mut child2 = CallInfo::default();
+
+        // orderdered events
+        let mut ord_msg1 = OrderedL2ToL1Message::default();
+        let mut ord_msg2 = OrderedL2ToL1Message::default();
+        let mut ord_msg3 = OrderedL2ToL1Message::default();
+        let mut ord_msg4 = OrderedL2ToL1Message::default();
+
+        // set orders
+        ord_msg1.order = 1;
+        ord_msg2.order = 2;
+        ord_msg3.order = 3;
+        ord_msg4.order = 4;
+
+        // store events
+        child1.l2_to_l1_messages = VecDeque::from([ord_msg3.clone(), ord_msg4.clone()]);
+        child2.l2_to_l1_messages = VecDeque::from([ord_msg1.clone(), ord_msg2.clone()]);
+
+        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
+
+        // events
+
+        let msg1 = L2toL1MessageInfo::new(ord_msg1.clone(), child2.caller_address.clone());
+        let msg2 = L2toL1MessageInfo::new(ord_msg2.clone(), child2.caller_address.clone());
+        let msg3 = L2toL1MessageInfo::new(ord_msg3.clone(), child1.caller_address.clone());
+        let msg4 = L2toL1MessageInfo::new(ord_msg4.clone(), child1.caller_address.clone());
+
+        assert_eq!(
+            call_root.get_sorted_l2_to_l1_messages().unwrap(),
+            [msg1, msg2, msg3, msg4]
+        )
+    }
+
+    #[test]
+    fn get_ordered_messages_test_fail() {
+        // root
+        let mut call_root = CallInfo::default();
+
+        // level 1 children
+        let mut child1 = CallInfo::default();
+        let mut child2 = CallInfo::default();
+
+        // orderdered events
+        let mut ord_msg1 = OrderedL2ToL1Message::default();
+        let mut ord_msg2 = OrderedL2ToL1Message::default();
+        let mut ord_msg3 = OrderedL2ToL1Message::default();
+        let mut ord_msg4 = OrderedL2ToL1Message::default();
+
+        // set orders
+        ord_msg1.order = 1;
+        ord_msg2.order = 2;
+        ord_msg3.order = 3;
+        ord_msg4.order = 3;
+
+        // store events
+        child1.l2_to_l1_messages = VecDeque::from([ord_msg3.clone(), ord_msg4.clone()]);
+        child2.l2_to_l1_messages = VecDeque::from([ord_msg1.clone(), ord_msg2.clone()]);
+
+        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
+
+        // events
+
+        let msg1 = L2toL1MessageInfo::new(ord_msg1.clone(), child2.caller_address.clone());
+        let msg2 = L2toL1MessageInfo::new(ord_msg2.clone(), child2.caller_address.clone());
+        let msg3 = L2toL1MessageInfo::new(ord_msg3.clone(), child1.caller_address.clone());
+        let msg4 = L2toL1MessageInfo::new(ord_msg4.clone(), child1.caller_address.clone());
+
+        assert!(call_root.get_sorted_l2_to_l1_messages().is_err())
     }
 }
