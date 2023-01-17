@@ -19,7 +19,7 @@ pub(crate) enum EntryPointType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, Default, PartialEq)]
-pub(crate) struct ContractEntryPoint {
+pub struct ContractEntryPoint {
     pub(crate) selector: Felt,
     pub(crate) offset: Felt,
 }
@@ -37,12 +37,14 @@ impl ContractClass {
         entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
         abi: Option<AbiType>,
     ) -> Result<Self, ContractClassError> {
-        // let x = entry_points_by_type.values().map(|f| { let last_plus_one = Felt::new(0);
-        //     while (f.get(0).is_some()) {
-        //     if f.pop().unwrap().selector > last_plus_one {
-        //         return StateError::EmptyKeyInStorage;
-        //     }
-        // }});
+        for entry_points in entry_points_by_type.values() {
+            let index = 1;
+            while let Some(entry_point) = entry_points.get(index) {
+                if entry_point.selector > entry_points[index - 1].selector {
+                    return Err(ContractClassError::EntrypointError(entry_points.clone()));
+                }
+            }
+        }
 
         if entry_points_by_type
             .get(&EntryPointType::Constructor)
