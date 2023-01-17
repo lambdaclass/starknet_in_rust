@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -8,7 +8,6 @@ use felt::{Felt, NewFelt};
 use num_traits::{ToPrimitive, Zero};
 
 use super::execution_errors::ExecutionError;
-use crate::services::api::contract_class::EntryPointType;
 use crate::{
     business_logic::state::state_cache::StorageEntry,
     core::{
@@ -17,6 +16,7 @@ use crate::{
     definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
+use crate::{services::api::contract_class::EntryPointType, starknet_storage::storage::Storage};
 
 type ResourcesMapping = HashMap<String, Felt>;
 
@@ -44,8 +44,31 @@ pub struct CallInfo {
     pub(crate) events: VecDeque<OrderedEvent>,
     pub(crate) l2_to_l1_messages: VecDeque<OrderedL2ToL1Message>,
     pub(crate) storage_read_values: VecDeque<u64>,
-    pub(crate) accesed_storage_keys: VecDeque<Felt>,
+    pub(crate) accesed_storage_keys: VecDeque<[u8; 32]>,
     pub(crate) internal_calls: Vec<CallInfo>,
+}
+
+impl CallInfo {
+    pub fn get_visited_storage_entries(self) -> HashSet<StorageEntry> {
+        let mut storage_entries = self
+            .accesed_storage_keys
+            .into_iter()
+            .map(|key| (self.contract_address.clone(), key))
+            .collect::<HashSet<(Address, [u8; 32])>>();
+
+        let internal_visited_storage_entries =
+            CallInfo::get_visited_storage_entries_of_many(self.internal_calls);
+
+        storage_entries.extend(internal_visited_storage_entries);
+        storage_entries
+    }
+
+    pub fn get_visited_storage_entries_of_many(calls_info: Vec<CallInfo>) -> HashSet<StorageEntry> {
+        calls_info.into_iter().fold(HashSet::new(), |mut acc, c| {
+            acc.extend(c.get_visited_storage_entries());
+            acc
+        })
+    }
 }
 
 impl Default for CallInfo {
@@ -253,6 +276,7 @@ impl TransactionExecutionInfo {
     }
 
     pub fn get_visited_storage_entries_of_many(&self) -> Vec<StorageEntry> {
+        CallInfo::get_visited_storage_entries_of_many(self.non_optional_calls());
         todo!()
     }
 }
