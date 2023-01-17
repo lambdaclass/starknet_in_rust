@@ -38,11 +38,12 @@ impl ContractClass {
         abi: Option<AbiType>,
     ) -> Result<Self, ContractClassError> {
         for entry_points in entry_points_by_type.values() {
-            let index = 1;
+            let mut index = 1;
             while let Some(entry_point) = entry_points.get(index) {
                 if entry_point.selector > entry_points[index - 1].selector {
                     return Err(ContractClassError::EntrypointError(entry_points.clone()));
                 }
+                index += 1;
             }
         }
 
