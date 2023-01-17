@@ -62,8 +62,8 @@ fn get_contract_entry_points(
         .collect())
 }
 
-const MASK_250: [u32; 2] = [1u32, 250];
 // MASK_250 = 2 ** 250 - 1
+pub const MASK_250: [u8; 250] = [1; 250];
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
 fn starknet_keccak(data: &[u8]) -> Felt {
@@ -72,45 +72,16 @@ fn starknet_keccak(data: &[u8]) -> Felt {
 
     let hashed = hasher.finalize();
 
-    Felt::from_bytes_be(&hashed)
-    // TODO:  & &MASK_250;
+    let res = hashed & MASK_250;
+    Felt::from_bytes_be(res)
 }
 
 /// Computes the hash of the contract class, including hints.
+/// We are not supporting backward compatibility now.
 fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt {
-    // We are not doing this since we dont have debug info here.
-    // let mut program_without_debug_info = contract_class.program.clone();
-    // program_without_debug_info.debug_info = false;
-
-    // We are not supporting backward compatibility now.
-
-    // // If compiler_version is not present, this was compiled with a compiler before version 0.10.0.
-    // // Use "(a : felt)" syntax instead of "(a: felt)" so that the class hash will be the same.
-    // with add_backward_compatibility_space(contract_class.program.compiler_version is None):
-    //     dumped_program = program_without_debug_info.dump()
-
-    // if len(dumped_program["attributes"]) == 0:
-    //     // Remove attributes field from raw dictionary, for hash backward compatibility of
-    //     // contracts deployed prior to adding this feature.
-    //     del dumped_program["attributes"]
-    // else:
-    //     // Remove accessible_scopes and flow_tracking_data fields from raw dictionary, for hash
-    //     // backward compatibility of contracts deployed prior to adding this feature.
-    //     for attr in dumped_program["attributes"]:
-    //         if len(attr["accessible_scopes"]) == 0:
-    //             del attr["accessible_scopes"]
-    //         if attr["flow_tracking_data"] is None:
-    //             del attr["flow_tracking_data"]
-
-    // let mut hashmap_input = HashMap::new();
-    // hashmap_input.insert("program", program_without_debug_info);
-    // hashmap_input.insert("abi", contract_class.abi);
-
-    //hashmap_input.dumps(input_to_hash, sort_keys=True).encode()
     let keccak_input =
-        r#"{"program": contract_class.program, "abi": contract_class.abi}"#.as_bytes();
-    starknet_keccak(keccak_input);
-    todo!()
+        r#"{"abi": contract_class.abi, "program": contract_class.program}"#.as_bytes();
+    starknet_keccak(keccak_input).into()
 }
 
 /// Returns the serialization of a contract as a list of field elements.
