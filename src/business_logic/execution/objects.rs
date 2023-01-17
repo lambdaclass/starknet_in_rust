@@ -55,7 +55,7 @@ impl CallInfo {
     ///Yields the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
-        if self.internal_calls.len() == 0 {
+        if self.internal_calls.is_empty() {
             calls.push(self.clone())
         } else {
             calls.push(self.clone());
@@ -82,9 +82,7 @@ impl CallInfo {
             }
         }
 
-        let are_all_some = starknet_events
-            .iter()
-            .fold(true, |acc, e| acc && e.is_some());
+        let are_all_some = starknet_events.iter().all(|e| e.is_some());
 
         if !are_all_some {
             return Err(ExecutionError::UnexpectedHolesInEventOrder);
@@ -112,9 +110,7 @@ impl CallInfo {
             }
         }
 
-        let are_all_some = starknet_events
-            .iter()
-            .fold(true, |acc, e| acc && e.is_some());
+        let are_all_some = starknet_events.iter().all(|e| e.is_some());
 
         if !are_all_some {
             return Err(ExecutionError::UnexpectedHolesL2toL1Messages);
@@ -176,7 +172,7 @@ impl Default for CallInfo {
 //  Events Structures
 // -------------------------
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OrderedEvent {
     order: u64,
     keys: Vec<Felt>,
@@ -186,16 +182,6 @@ pub struct OrderedEvent {
 impl OrderedEvent {
     pub fn new(order: u64, keys: Vec<Felt>, data: Vec<Felt>) -> Self {
         OrderedEvent { order, keys, data }
-    }
-}
-
-impl Default for OrderedEvent {
-    fn default() -> Self {
-        OrderedEvent {
-            order: 0,
-            keys: Vec::new(),
-            data: Vec::new(),
-        }
     }
 }
 
@@ -628,10 +614,10 @@ mod tests {
 
         // events
 
-        let event1 = Event::new(ord_event1.clone(), child2.caller_address.clone());
-        let event2 = Event::new(ord_event2.clone(), child2.caller_address.clone());
-        let event3 = Event::new(ord_event3.clone(), child1.caller_address.clone());
-        let event4 = Event::new(ord_event4.clone(), child1.caller_address.clone());
+        let event1 = Event::new(ord_event1, child2.caller_address.clone());
+        let event2 = Event::new(ord_event2, child2.caller_address);
+        let event3 = Event::new(ord_event3, child1.caller_address.clone());
+        let event4 = Event::new(ord_event4, child1.caller_address);
 
         assert_eq!(
             call_root.get_sorted_events().unwrap(),
@@ -668,10 +654,10 @@ mod tests {
 
         // events
 
-        let event1 = Event::new(ord_event1.clone(), child2.caller_address.clone());
-        let event2 = Event::new(ord_event2.clone(), child2.caller_address.clone());
-        let event3 = Event::new(ord_event3.clone(), child1.caller_address.clone());
-        let event4 = Event::new(ord_event4.clone(), child1.caller_address.clone());
+        let event1 = Event::new(ord_event1, child2.caller_address.clone());
+        let event2 = Event::new(ord_event2, child2.caller_address);
+        let event3 = Event::new(ord_event3, child1.caller_address.clone());
+        let event4 = Event::new(ord_event4, child1.caller_address);
 
         assert!(call_root.get_sorted_events().is_err())
     }
@@ -705,10 +691,10 @@ mod tests {
 
         // events
 
-        let msg1 = L2toL1MessageInfo::new(ord_msg1.clone(), child2.caller_address.clone());
-        let msg2 = L2toL1MessageInfo::new(ord_msg2.clone(), child2.caller_address.clone());
-        let msg3 = L2toL1MessageInfo::new(ord_msg3.clone(), child1.caller_address.clone());
-        let msg4 = L2toL1MessageInfo::new(ord_msg4.clone(), child1.caller_address.clone());
+        let msg1 = L2toL1MessageInfo::new(ord_msg1, child2.caller_address.clone());
+        let msg2 = L2toL1MessageInfo::new(ord_msg2, child2.caller_address);
+        let msg3 = L2toL1MessageInfo::new(ord_msg3, child1.caller_address.clone());
+        let msg4 = L2toL1MessageInfo::new(ord_msg4, child1.caller_address);
 
         assert_eq!(
             call_root.get_sorted_l2_to_l1_messages().unwrap(),
@@ -745,10 +731,10 @@ mod tests {
 
         // events
 
-        let msg1 = L2toL1MessageInfo::new(ord_msg1.clone(), child2.caller_address.clone());
-        let msg2 = L2toL1MessageInfo::new(ord_msg2.clone(), child2.caller_address.clone());
-        let msg3 = L2toL1MessageInfo::new(ord_msg3.clone(), child1.caller_address.clone());
-        let msg4 = L2toL1MessageInfo::new(ord_msg4.clone(), child1.caller_address.clone());
+        let msg1 = L2toL1MessageInfo::new(ord_msg1, child2.caller_address.clone());
+        let msg2 = L2toL1MessageInfo::new(ord_msg2, child2.caller_address);
+        let msg3 = L2toL1MessageInfo::new(ord_msg3, child1.caller_address.clone());
+        let msg4 = L2toL1MessageInfo::new(ord_msg4, child1.caller_address);
 
         assert!(call_root.get_sorted_l2_to_l1_messages().is_err())
     }
