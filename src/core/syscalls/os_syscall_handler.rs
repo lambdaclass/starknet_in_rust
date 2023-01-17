@@ -460,6 +460,9 @@ mod tests {
     #[test]
     fn end_tx_err_tx_execution_info() {
         let mut handler = OsSyscallHandler {
+            tx_execution_info: Some(TransactionExecutionInfo {
+                ..Default::default()
+            }),
             ..Default::default()
         };
         println!("{:?}", handler);
