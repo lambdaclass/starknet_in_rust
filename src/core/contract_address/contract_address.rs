@@ -1,7 +1,15 @@
 use cairo_rs::{
+    hint_processor::{
+        self, builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
+        hint_processor_definition::HintProcessor,
+    },
     serde::deserialize_program::Identifier,
     types::{program::Program, relocatable::MaybeRelocatable},
-    vm::runners::{builtin_runner::BuiltinRunner, cairo_runner::CairoRunner},
+    vm::{
+        self,
+        runners::{builtin_runner::BuiltinRunner, cairo_runner::CairoRunner},
+        vm_core::VirtualMachine,
+    },
 };
 use felt::{Felt, FeltOps};
 use num_traits::pow;
@@ -27,12 +35,8 @@ pub(crate) fn calculate_contract_address(
 }
 
 fn load_program() -> Program {
-    // compile_cairo_files(
-    //     "contracts.cairo",
-    //     2**251 + 17 * 2**192 + 1, // default cairo prime
-    //     //main_scope=ScopedName.from_string("starkware.starknet.core.os.contracts"),
-    // )
-    todo!()
+    // TODO: remove unwrap.
+    Program::from_file(Path::new("contracts.json"), None).unwrap()
 }
 
 fn get_contract_entry_points(
@@ -72,6 +76,8 @@ fn starknet_keccak(data: &[u8]) -> Felt {
 
     let hashed: &[u8] = hasher.finalize().as_slice();
 
+    // This is the same than doing a mask 3 only with the most significant byte.
+    // and then copying the other values.
     let res = hashed & &MASK_250;
     Felt::from_bytes_be(res)
 }
@@ -135,13 +141,34 @@ struct StructContractClass {
     bytecode_ptr: Vec<MaybeRelocatable>,
 }
 
-fn compute_class_hash_inner(contract_class: &ContractClass) -> Felt {
+fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<Felt, SyscallHandlerError> {
     let program = load_program();
     let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class);
 
-    let runner = CairoRunner::new(&program, "all", false).unwrap();
+    let vm = VirtualMachine::new(false, Vec::new());
+    let mut runner = CairoRunner::new(&program, "all", false).unwrap();
+    runner.initialize_function_runner(&mut vm);
 
-    // runner.run_until_pc(address, vm, hint_processor)
+    let hint_processor = BuiltinHintProcessor::new_empty();
+
+    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program.
+    // TODO: Looks like we can get this value from the identifier, but the value is a Felt.
+    // We need to cast that into a usize.
+    // let entrypoint = program.identifiers.get("class_hash").unwrap();
+
+    // args: hash_ptr, contract_class
+    runner.run_from_entrypoint(
+        188,
+        Vec::new(),
+        false,
+        false,
+        false,
+        &mut vm,
+        &mut hint_processor,
+    );
+
+    // read_Return_Values looks quite odd, doesn't return a value.
+    let value = runner.read_return_values(&vm);
     // runner.run(
     //     "starkware.starknet.core.os.contracts.class_hash",
     //     hash_ptr=hash_builtin.base,
@@ -154,40 +181,10 @@ fn compute_class_hash_inner(contract_class: &ContractClass) -> Felt {
     todo!()
 }
 
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, path::Path};
 
-// pub const CLASS_HASH_CACHE_CTX_VAR: HashMap<&str, Option<usize>> = {
-//     let ctx = HashMap::new();
-//     ctx.insert("class_hash_cache", None);
-//     ctx
-// };
-
-/// TODO:
-/// - Add cache.
-/// - Add the case when cache is not None.
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt, SyscallHandlerError> {
-    // TODO: maybe this is not the right error type.
-    // We are replacing this line with a HashMap
-    // let cache = CLASS_HASH_CACHE_CTX_VAR.get();
-
-    // if cache.is_none() {
-    //     return compute_class_hash_inner(contract_class);
-    // }
-
-    // let contract_class_bytes = contract_class.dumps(sort_keys = True).encode();
-    // let key = (starknet_keccak(data = contract_class_bytes), hash_func);
-
-    // if !cache.any(|&cached_item| key == cached_item) {
-    //     cache.insert(
-    //         key,
-    //         compute_class_hash_inner(contract_class = contract_class, hash_func = hash_func),
-    //     );
-    // }
-
-    // cache.get(key)
-
-    // END OF THE ORIGINAL FUNCTION.
-    compute_class_hash(contract_class)
+    compute_class_hash_inner(contract_class)
 }
