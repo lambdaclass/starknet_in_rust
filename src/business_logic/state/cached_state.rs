@@ -16,9 +16,9 @@ use super::{
 
 pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
 
-const UNINITIALIZED_CLASS_HASH: [u8; 32] = [b'0'; 32];
+pub(crate) const UNINITIALIZED_CLASS_HASH: [u8; 32] = [b'0'; 32];
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct CachedState<T: StateReader + Clone> {
     pub(crate) block_info: BlockInfo,
     pub(crate) state_reader: T,

@@ -223,7 +223,7 @@ pub mod test_utils {
     macro_rules! vm {
         () => {{
             use felt::{Felt, NewFelt};
-            VirtualMachine::new(false, Vec::new())
+            VirtualMachine::new(false)
         }};
 
         ($use_trace:expr) => {{

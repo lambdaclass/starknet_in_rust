@@ -1,6 +1,12 @@
 use felt::Felt;
-use patricia_tree::PatriciaTree;
-use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current};
+use std::{
+    borrow::Borrow,
+    collections::{HashMap, HashSet},
+    hash,
+    ops::Deref,
+    rc::Rc,
+    thread::current,
+};
 
 use crate::{
     business_logic::state::{
@@ -11,6 +17,7 @@ use crate::{
     },
     core::errors::state_errors::StateError,
     definitions::general_config::{self, StarknetGeneralConfig},
+    services::api::contract_class::ContractClass,
     starknet_storage::storage::{self, FactFetchingContext, Storage},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
@@ -18,6 +25,8 @@ use crate::{
         to_state_diff_storage_mapping, Address,
     },
 };
+
+use super::contract_state::ContractState;
 
 #[derive(Debug, Default)]
 pub struct ExecutionResourcesManager(HashMap<String, u64>);
@@ -92,12 +101,12 @@ impl<T: StateReader + Clone> CarriedState<T> {
 //      SHARED STATE
 // ----------------------
 
-pub(crate) struct SharedState<T> {
-    contract_states: PatriciaTree<T>,
+pub(crate) struct SharedState {
+    contract_states: HashMap<Felt, ContractState>,
     block_info: BlockInfo,
 }
 
-impl<T> SharedState<T> {
+impl SharedState {
     pub fn empty<S>(ffc: FactFetchingContext<S>, general_config: StarknetGeneralConfig) -> Self
     where
         S: Storage,
@@ -151,6 +160,18 @@ impl<T> SharedState<T> {
     where
         S: Storage,
     {
+        let class_addresses: HashSet<Address> = address_to_class_hash.into_keys().collect();
+        let nonce_addresses: HashSet<Address> = address_to_nonce.into_keys().collect();
+        let storage_addresses: HashSet<Address> =
+            storage_updates.into_keys().map(Address).collect();
+        let mut accesed_addresses: HashSet<Address> = HashSet::new();
+        accesed_addresses.extend(class_addresses);
+        accesed_addresses.extend(nonce_addresses);
+        accesed_addresses.extend(storage_addresses);
+
+        // TODO:
+        // let current_contract_states = self.contract_states.get_leaves(ffc, accesed_addresses)
+
         todo!()
     }
 }
@@ -249,5 +270,30 @@ impl StateDiff {
             storage_updates,
             block_info: other.block_info,
         })
+    }
+
+    pub fn commit<T: Storage>(
+        &self,
+        ffc: FactFetchingContext<T>,
+        previos_state: SharedState,
+    ) -> SharedState {
+        previos_state.apply_updates(
+            ffc,
+            self.address_to_class_hash.clone(),
+            self.address_to_nonce.clone(),
+            self.storage_updates.clone(),
+            self.block_info.clone(),
+        )
+    }
+}
+
+#[cfg(test)]
+pub mod test_utils {
+    use crate::business_logic::state::cached_state::CachedState;
+
+    #[test]
+    fn from_cached_state_test() {
+
+        //let cache_state = CachedState{..Default::default()};
     }
 }
