@@ -15,7 +15,7 @@ use felt::{Felt, FeltOps};
 use num_traits::{pow, Num};
 
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    core::errors::contract_address_errors::ContractAddressError,
     hash_utils::calculate_contract_address_from_hash,
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     utils::Address,
@@ -35,33 +35,33 @@ pub(crate) fn calculate_contract_address(
     contract_class: &ContractClass,
     constructor_calldata: &[Felt],
     deployer_address: Address,
-) -> Result<Felt, SyscallHandlerError> {
-    // TODO: remove unwrap.
-    let class_hash = compute_class_hash(contract_class).unwrap();
+) -> Result<Felt, ContractAddressError> {
+    let class_hash = compute_class_hash(contract_class)?;
 
     calculate_contract_address_from_hash(salt, &class_hash, constructor_calldata, deployer_address)
+        .map_err(|err| ContractAddressError::ContractAddressFromHash(err.to_string()))
 }
 
-fn load_program() -> Program {
-    // TODO: remove unwrap.
-    Program::from_file(Path::new("contracts.json"), None).unwrap()
+fn load_program() -> Result<Program, ContractAddressError> {
+    Program::from_file(Path::new("contracts.json"), None)
+        .map_err(|err| ContractAddressError::Program(err.to_string()))
 }
 
 fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
-) -> Result<Vec<ContractEntryPoint>, SyscallHandlerError> {
+) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
     let program_length = contract_class.program.data.len();
     let entry_points = contract_class
         .entry_points_by_type
         .get(&entry_point_type)
-        .unwrap();
+        .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
     for entry_point in entry_points {
         if (Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()) {
-            return Err(SyscallHandlerError::FeltToU64Fail);
-            // TODO: change this error to:
-            // f"Invalid entry point offset {entry_point.offset}, len(program_data)={program_length}."
+            return Err(ContractAddressError::InvalidOffset(
+                entry_point.offset.to_string(),
+            ));
         }
     }
 
@@ -104,23 +104,26 @@ fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt {
 fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
-) -> Result<StructContractClass, SyscallHandlerError> {
-    let api_version = identifiers
-        .get("API_VERSION")
-        .ok_or(SyscallHandlerError::MissingIdentifiers)?;
+) -> Result<StructContractClass, ContractAddressError> {
+    let api_version =
+        identifiers
+            .get("API_VERSION")
+            .ok_or(ContractAddressError::MissingIdentifier(
+                "API_VERSION".to_string(),
+            ))?;
 
-    // TODO: remove unwraps.
-    let external_functions =
-        get_contract_entry_points(contract_class, &EntryPointType::External).unwrap();
-    let l1_handlers =
-        get_contract_entry_points(contract_class, &EntryPointType::L1Handler).unwrap();
-    let constructors =
-        get_contract_entry_points(contract_class, &EntryPointType::Constructor).unwrap();
+    let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
+    let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
+    let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
 
     let builtin_list = &contract_class.program.builtins;
 
     Ok(StructContractClass {
-        api_version: api_version.value.as_ref().unwrap().to_owned(),
+        api_version: api_version
+            .value
+            .as_ref()
+            .ok_or(ContractAddressError::NoneApiVersion)?
+            .to_owned(),
         n_external_functions: external_functions.len(),
         external_functions,
         n_l1_handlers: l1_handlers.len(),
@@ -155,13 +158,14 @@ use std::{collections::HashMap, hash::Hash, path::Path};
 
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
-) -> Result<Felt, SyscallHandlerError> {
-    // TODO: Since we are not using a cache, we can use this as a compute_class_hash_inner().
-    let program = load_program();
+) -> Result<Felt, ContractAddressError> {
+    // Since we are not using a cache, this function replace compute_class_hash_inner.
+    let program = load_program()?;
     let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class);
 
     let mut vm = VirtualMachine::new(false, Vec::new());
-    let mut runner = CairoRunner::new(&program, "all", false).unwrap();
+    let mut runner = CairoRunner::new(&program, "all", false)
+        .map_err(|err| ContractAddressError::CairoRunner(err.to_string()))?;
     runner.initialize_function_runner(&mut vm);
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
@@ -183,10 +187,10 @@ pub(crate) fn compute_class_hash(
 
     Ok(vm
         .get_return_values(2)
-        .unwrap()
+        .map_err(|err| ContractAddressError::Memory(err.to_string()))?
         .get(1)
-        .ok_or(SyscallHandlerError::ExpectedCallContract)?
+        .ok_or(ContractAddressError::IndexOutOfRange)?
         .get_int_ref()
-        .map_err(|_| SyscallHandlerError::ExpectedCallContract)?
+        .map_err(|_| ContractAddressError::ExpectedInteger)?
         .clone())
 }
