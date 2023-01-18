@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, iter::zip};
 
 use crate::{
     business_logic::state::{state_api::State, state_cache::StorageEntry},
@@ -70,11 +70,9 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
     Felt::from_bytes_be(&felt.to_bytes_be())
 }
 
-// -------------------
-// ~~~~~~~~~~~~~~~~~~~
-//    STATE UTILS
-// ~~~~~~~~~~~~~~~~~~~
-// -------------------
+//* -------------------
+//*    STATE UTILS
+//* -------------------
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
 /// See to_cached_state_storage_mapping documentation.
@@ -101,6 +99,75 @@ pub fn to_state_diff_storage_mapping(
     Ok(storage_updates)
 }
 
+/// Returns a mapping containing key-value pairs from a that are not included in b (if
+/// a key appears in b with a different value, it will be part of the output).
+/// Uses to take only updated cells from a mapping.
+
+fn contained_or_not_updated<K, V>(key: &K, value: &V, map: HashMap<K, V>) -> bool
+where
+    K: Hash + Eq,
+    V: PartialEq + Clone,
+{
+    let update = map.get(key);
+    map.contains_key(key) || (Some(value) == update)
+}
+
+pub fn subtract_mappings<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
+where
+    K: Hash + Eq + Clone,
+    V: PartialEq + Clone,
+{
+    map_a
+        .into_iter()
+        .filter(|(k, v)| contained_or_not_updated(k, v, map_b.clone()))
+        .collect()
+}
+
+/// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
+/// storage mapping (Tuple of address and key map to the associated value).
+
+pub fn to_cache_state_storage_mapping(
+    map: HashMap<Felt, HashMap<[u8; 32], Address>>,
+) -> HashMap<StorageEntry, Felt> {
+    let mut storage_writes = HashMap::new();
+    for (address, contract_storage) in map {
+        for (key, value) in contract_storage {
+            storage_writes.insert((Address(address.clone()), key), value.0);
+        }
+    }
+    storage_writes
+}
+
+// merge two hash maps into one
+
+pub fn merge<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
+where
+    K: Hash + Eq,
+{
+    let mut merge = HashMap::new();
+
+    for (key, value) in map_a {
+        merge.insert(key, value);
+    }
+
+    for (key, value) in map_b {
+        merge.insert(key, value);
+    }
+    merge
+}
+
+// get a vector of keys from two hashmaps
+
+pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
+where
+    K: Hash + Eq,
+{
+    let keys1: Vec<K> = map_a.into_keys().collect();
+    let keys2: Vec<K> = map_b.into_keys().collect();
+
+    keys1.extend(keys2);
+    keys1
+}
 //* -------------------
 //* Macros
 //* -------------------

@@ -7,11 +7,15 @@ use crate::{
         cached_state::CachedState,
         state_api::{State, StateReader},
         state_api_objects::BlockInfo,
+        state_cache,
     },
     core::errors::state_errors::StateError,
     definitions::general_config::{self, StarknetGeneralConfig},
-    starknet_storage::storage::{FactFetchingContext, Storage},
-    utils::{to_state_diff_storage_mapping, Address},
+    starknet_storage::storage::{self, FactFetchingContext, Storage},
+    utils::{
+        get_keys, merge, subtract_mappings, to_cache_state_storage_mapping,
+        to_state_diff_storage_mapping, Address,
+    },
 };
 
 #[derive(Debug, Default)]
@@ -147,5 +151,96 @@ impl<T> SharedState<T> {
         S: Storage,
     {
         todo!()
+    }
+}
+
+pub(crate) struct StateDiff {
+    address_to_class_hash: HashMap<Address, Vec<u8>>,
+    address_to_nonce: HashMap<Address, Felt>,
+    storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
+    block_info: BlockInfo,
+}
+
+impl StateDiff {
+    pub fn empty(block_info: BlockInfo) -> Self {
+        StateDiff {
+            address_to_class_hash: HashMap::new(),
+            address_to_nonce: HashMap::new(),
+            storage_updates: HashMap::new(),
+            block_info,
+        }
+    }
+
+    pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
+    where
+        T: StateReader + Clone,
+    {
+        let state_cache = cached_state.cache;
+
+        let substracted_maps = subtract_mappings(
+            state_cache.storage_writes,
+            state_cache.storage_initial_values,
+        );
+        let storage_updates = to_state_diff_storage_mapping(substracted_maps)?;
+
+        let address_to_nonce =
+            subtract_mappings(state_cache.nonce_writes, state_cache.nonce_initial_values);
+
+        let address_to_class_hash = subtract_mappings(
+            state_cache.class_hash_writes,
+            state_cache.class_hash_initial_values,
+        );
+
+        let block_info = cached_state.block_info;
+
+        Ok(StateDiff {
+            address_to_class_hash,
+            address_to_nonce,
+            storage_updates,
+            block_info,
+        })
+    }
+
+    pub fn to_cached_state<T>(&self, state_reader: T) -> CachedState<T>
+    where
+        T: StateReader + Clone,
+    {
+        let mut cache_state = CachedState::new(self.block_info.clone(), state_reader, None);
+        let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
+
+        cache_state.cache.set_initial_values(
+            &self.address_to_class_hash,
+            &self.address_to_nonce,
+            &cache_storage_mapping,
+        );
+        cache_state
+    }
+
+    pub fn squash(&self, other: StateDiff) -> Self {
+        let address_to_class_hash = merge(
+            self.address_to_class_hash.clone(),
+            other.address_to_class_hash,
+        );
+
+        let address_to_nonce = merge(self.address_to_nonce.clone(), other.address_to_nonce);
+        let storage_updates = HashMap::new();
+
+        let addresses: Vec<Felt> = get_keys(self.storage_updates.clone(), other.storage_updates);
+
+        for address in addresses {
+            let updates = merge(
+                self.storage_updates.get((&address)),
+                other.storage_updates.get(&address),
+            );
+            storage_updates.insert(address, updates);
+        }
+        self.block_info.validate_legal_progress(other.block_info);
+
+        StateDiff {
+            address_to_class_hash,
+            address_to_nonce,
+            storage_updates,
+            block_info: other.block_info,
+        }
     }
 }
