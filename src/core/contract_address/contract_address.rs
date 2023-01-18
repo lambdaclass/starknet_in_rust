@@ -1,4 +1,4 @@
-use cairo_vm::{
+use cairo_rs::{
     hint_processor::{
         self, builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
         hint_processor_definition::HintProcessor,
@@ -12,7 +12,7 @@ use cairo_vm::{
     },
 };
 use felt::{Felt, FeltOps};
-use num_traits::pow;
+use num_traits::{pow, Num};
 
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -151,7 +151,12 @@ struct StructContractClass {
     bytecode_ptr: Vec<MaybeRelocatable>,
 }
 
-fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<&Felt, SyscallHandlerError> {
+use std::{collections::HashMap, hash::Hash, path::Path};
+
+pub(crate) fn compute_class_hash(
+    contract_class: &ContractClass,
+) -> Result<Felt, SyscallHandlerError> {
+    // TODO: Since we are not using a cache, we can use this as a compute_class_hash_inner().
     let program = load_program();
     let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class);
 
@@ -176,22 +181,12 @@ fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<&Felt, Sys
         &mut hint_processor,
     );
 
-    // TODO: change this error for a significant one.
-    vm.get_return_values(2)
-        .map_err(|_| SyscallHandlerError::ExpectedCallContract)
-        .clone()?
+    Ok(vm
+        .get_return_values(2)
+        .unwrap()
         .get(1)
-        .ok_or(SyscallHandlerError::ExpectedCallContract)
-        .map_err(|_| SyscallHandlerError::ExpectedCallContract)?
+        .ok_or(SyscallHandlerError::ExpectedCallContract)?
         .get_int_ref()
-        .map_err(|_| SyscallHandlerError::ExpectedCallContract)
-}
-
-use std::{collections::HashMap, hash::Hash, path::Path};
-
-pub(crate) fn compute_class_hash(
-    contract_class: &ContractClass,
-) -> Result<&Felt, SyscallHandlerError> {
-    // TODO: Since we are not using a cache, we can use this as a compute_class_hash_inner().
-    compute_class_hash_inner(contract_class)
+        .map_err(|_| SyscallHandlerError::ExpectedCallContract)?
+        .clone())
 }
