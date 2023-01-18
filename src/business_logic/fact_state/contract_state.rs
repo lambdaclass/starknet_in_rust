@@ -1,19 +1,27 @@
+use std::collections::HashMap;
+
 use felt::Felt;
 use serde::{Deserialize, Serialize};
 
-use crate::business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH;
+use crate::{business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH, utils::Address};
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct ContractState {
     pub(crate) contract_hash: Vec<u8>,
     pub(crate) nonce: Felt,
+    pub(crate) storage_commitment_tree: HashMap<Felt, Felt>,
 }
 
 impl ContractState {
-    pub(crate) fn create(contract_hash: Vec<u8>, nonce: Felt) -> Self {
+    pub(crate) fn create(
+        contract_hash: Vec<u8>,
+        nonce: Felt,
+        storage_commitment_tree: HashMap<Felt, Felt>,
+    ) -> Self {
         Self {
             contract_hash,
             nonce,
+            storage_commitment_tree,
         }
     }
 
@@ -21,6 +29,7 @@ impl ContractState {
         Self {
             contract_hash: UNINITIALIZED_CLASS_HASH.to_vec(),
             nonce: 0.into(),
+            storage_commitment_tree: HashMap::new(),
         }
     }
 

@@ -193,7 +193,7 @@ mod tests {
 
         let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
 
-        let contract_state = ContractState::create([8; 32].to_vec(), Felt::new(9));
+        let contract_state = ContractState::create([8; 32].to_vec(), Felt::new(9), HashMap::new());
         storage
             .set_contract_state(&key, &contract_state)
             .expect("Error setting contract state");

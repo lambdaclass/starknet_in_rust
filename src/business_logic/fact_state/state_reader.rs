@@ -70,6 +70,18 @@ impl<S1: Storage, S2: Storage> StateReader<S1, S2> {
     pub(crate) fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
         Ok(&self.get_contract_state(contract_address)?.nonce)
     }
+
+    pub(crate) fn get_storage_at(
+        &mut self,
+        contract_address: &Address,
+        key: &Felt,
+    ) -> Result<&Felt, StateError> {
+        let contract_state = self.get_contract_state(contract_address)?;
+        contract_state
+            .storage_commitment_tree
+            .get(key)
+            .ok_or(StateError::NoneStoragLeaf(key.clone()))
+    }
 }
 
 #[cfg(test)]
@@ -90,7 +102,7 @@ mod tests {
             StateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109));
+        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109), HashMap::new());
 
         state_reader
             .global_state_root
