@@ -162,7 +162,7 @@ pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
 where
     K: Hash + Eq,
 {
-    let keys1: Vec<K> = map_a.into_keys().collect();
+    let mut keys1: Vec<K> = map_a.into_keys().collect();
     let keys2: Vec<K> = map_b.into_keys().collect();
 
     keys1.extend(keys2);

@@ -12,6 +12,7 @@ use crate::{
     core::errors::state_errors::StateError,
     definitions::general_config::{self, StarknetGeneralConfig},
     starknet_storage::storage::{self, FactFetchingContext, Storage},
+    starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, merge, subtract_mappings, to_cache_state_storage_mapping,
         to_state_diff_storage_mapping, Address,
@@ -181,6 +182,7 @@ impl StateDiff {
             state_cache.storage_writes,
             state_cache.storage_initial_values,
         );
+
         let storage_updates = to_state_diff_storage_mapping(substracted_maps)?;
 
         let address_to_nonce =
@@ -216,31 +218,36 @@ impl StateDiff {
         cache_state
     }
 
-    pub fn squash(&self, other: StateDiff) -> Self {
+    pub fn squash(&self, other: StateDiff) -> Result<Self, StarkwareError> {
         let address_to_class_hash = merge(
             self.address_to_class_hash.clone(),
             other.address_to_class_hash,
         );
 
-        let address_to_nonce = merge(self.address_to_nonce.clone(), other.address_to_nonce);
-        let storage_updates = HashMap::new();
+        let address_to_nonce = merge(
+            self.address_to_nonce.clone(),
+            other.address_to_nonce.clone(),
+        );
+        let mut storage_updates = HashMap::new();
 
-        let addresses: Vec<Felt> = get_keys(self.storage_updates.clone(), other.storage_updates);
+        let addresses: Vec<Felt> =
+            get_keys(self.storage_updates.clone(), other.storage_updates.clone());
 
         for address in addresses {
-            let updates = merge(
-                self.storage_updates.get((&address)),
-                other.storage_updates.get(&address),
-            );
+            let default: HashMap<[u8; 32], Address> = HashMap::new();
+            let map_a = self.storage_updates.get(&address).unwrap_or(&default);
+            let map_b = other.storage_updates.get(&address).unwrap_or(&default);
+            let updates = merge(map_a.clone(), map_b.clone());
             storage_updates.insert(address, updates);
         }
-        self.block_info.validate_legal_progress(other.block_info);
+        self.block_info
+            .validate_legal_progress(other.block_info.clone())?;
 
-        StateDiff {
+        Ok(StateDiff {
             address_to_class_hash,
             address_to_nonce,
             storage_updates,
             block_info: other.block_info,
-        }
+        })
     }
 }
