@@ -20,7 +20,7 @@ pub(crate) fn calculate_contract_address(
     constructor_calldata: &[Felt],
     deployer_address: Address,
 ) -> Result<Felt, SyscallHandlerError> {
-    // TODO: maybe this is not the right error type.
+    // TODO: remove unwrap.
     let class_hash = compute_class_hash(contract_class).unwrap();
 
     calculate_contract_address_from_hash(salt, &class_hash, constructor_calldata, deployer_address)
@@ -89,30 +89,17 @@ fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, SyscallHandlerError> {
-    // usar directamente los de rust
-    // structs = CairoStructFactory(
-    //     identifiers=identifiers,
-    //     additional_imports=[
-    //         "starkware.starknet.core.os.contracts.ContractClass",
-    //         "starkware.starknet.core.os.contracts.ContractEntryPoint",
-    //     ],
-    // ).structs
-
     let api_version = identifiers
         .get("API_VERSION")
         .ok_or(SyscallHandlerError::MissingIdentifiers)?;
 
+    // TODO: remove unwraps.
     let external_functions =
         get_contract_entry_points(contract_class, &EntryPointType::External).unwrap();
     let l1_handlers =
         get_contract_entry_points(contract_class, &EntryPointType::L1Handler).unwrap();
     let constructors =
         get_contract_entry_points(contract_class, &EntryPointType::Constructor).unwrap();
-
-    // let flat_external_functions, flat_l1_handlers, flat_constructors = (
-    //     list(itertools.chain.from_iterable(entry_points))
-    //     for entry_points in (external_functions, l1_handlers, constructors)
-    // )
 
     let builtin_list = &contract_class.program.builtins;
 
@@ -175,6 +162,9 @@ use std::{collections::HashMap, hash::Hash};
 //     ctx
 // };
 
+/// TODO:
+/// - Add cache.
+/// - Add the case when cache is not None.
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt, SyscallHandlerError> {
@@ -197,5 +187,7 @@ pub(crate) fn compute_class_hash(
     // }
 
     // cache.get(key)
-    todo!()
+
+    // END OF THE ORIGINAL FUNCTION.
+    compute_class_hash(contract_class)
 }
