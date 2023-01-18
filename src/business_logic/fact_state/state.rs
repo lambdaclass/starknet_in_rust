@@ -286,14 +286,3 @@ impl StateDiff {
         )
     }
 }
-
-#[cfg(test)]
-pub mod test_utils {
-    use crate::business_logic::state::cached_state::CachedState;
-
-    #[test]
-    fn from_cached_state_test() {
-
-        //let cache_state = CachedState{..Default::default()};
-    }
-}

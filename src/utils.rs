@@ -1,4 +1,8 @@
-use std::{collections::HashMap, hash::Hash, iter::zip};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    iter::zip,
+};
 
 use crate::{
     business_logic::state::{state_api::State, state_cache::StorageEntry},
@@ -162,11 +166,12 @@ pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
 where
     K: Hash + Eq,
 {
-    let mut keys1: Vec<K> = map_a.into_keys().collect();
-    let keys2: Vec<K> = map_b.into_keys().collect();
+    let mut keys1: HashSet<K> = map_a.into_keys().collect();
+    let keys2: HashSet<K> = map_b.into_keys().collect();
 
     keys1.extend(keys2);
-    keys1
+
+    keys1.into_iter().collect()
 }
 //* -------------------
 //* Macros
