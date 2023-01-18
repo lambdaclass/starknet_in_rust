@@ -61,7 +61,7 @@ $ make build
 
 Check the [Makefile](/Makefile) for additional targets.
 
-## 🕌 Usage
+## 🚀 Usage
 
 This project is in an early stage and not ready to be used yet.
 
