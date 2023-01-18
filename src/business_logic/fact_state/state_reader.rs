@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use felt::Felt;
 
 use crate::{
+    business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
     starknet_storage::{dict_storage::Prefix, storage::Storage},
@@ -32,15 +33,6 @@ impl<S1: Storage, S2: Storage> InMemoryStateReader<S1, S2> {
         }
     }
 
-    pub(crate) fn get_contract_class(
-        &self,
-        class_hash: &[u8; 32],
-    ) -> Result<ContractClass, StateError> {
-        let contract_class = self.contract_class_storage.get_contract_class(class_hash)?;
-        contract_class.validate()?;
-        Ok(contract_class)
-    }
-
     fn get_contract_state(
         &mut self,
         contract_address: &Address,
@@ -59,31 +51,30 @@ impl<S1: Storage, S2: Storage> InMemoryStateReader<S1, S2> {
             .get(contract_address)
             .ok_or_else(|| StateError::NoneContractState(contract_address.clone()))
     }
+}
 
-    pub(crate) fn get_class_hash_at(
-        &mut self,
-        contract_address: &Address,
-    ) -> Result<&Vec<u8>, StateError> {
+impl<S1: Storage, S2: Storage> StateReader for InMemoryStateReader<S1, S2> {
+    fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
+        let contract_class = self.contract_class_storage.get_contract_class(class_hash)?;
+        contract_class.validate()?;
+        Ok(contract_class)
+    }
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {
         Ok(&self.get_contract_state(contract_address)?.contract_hash)
     }
 
-    pub(crate) fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
         Ok(&self.get_contract_state(contract_address)?.nonce)
     }
 
-    pub(crate) fn get_storage_at(
-        &mut self,
-        contract_address: &Address,
-        key: &Felt,
-    ) -> Result<&Felt, StateError> {
-        let contract_state = self.get_contract_state(contract_address)?;
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
+        let contract_state = self.get_contract_state(&storage_entry.0)?;
         contract_state
-            .storage_commitment_tree
-            .get(key)
-            .ok_or_else(|| StateError::NoneStoragLeaf(key.clone()))
+            .storage_keys
+            .get(&storage_entry.1)
+            .ok_or(StateError::NoneStoragLeaf(storage_entry.1))
     }
 }
-
 #[cfg(test)]
 mod tests {
     use cairo_rs::types::program::Program;

@@ -9,19 +9,19 @@ use crate::{business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH, utils
 pub struct ContractState {
     pub(crate) contract_hash: Vec<u8>,
     pub(crate) nonce: Felt,
-    pub(crate) storage_commitment_tree: HashMap<Felt, Felt>,
+    pub(crate) storage_keys: HashMap<[u8; 32], Felt>,
 }
 
 impl ContractState {
     pub(crate) fn create(
         contract_hash: Vec<u8>,
         nonce: Felt,
-        storage_commitment_tree: HashMap<Felt, Felt>,
+        storage_keys: HashMap<[u8; 32], Felt>,
     ) -> Self {
         Self {
             contract_hash,
             nonce,
-            storage_commitment_tree,
+            storage_keys,
         }
     }
 
@@ -29,7 +29,7 @@ impl ContractState {
         Self {
             contract_hash: UNINITIALIZED_CLASS_HASH.to_vec(),
             nonce: 0.into(),
-            storage_commitment_tree: HashMap::new(),
+            storage_keys: HashMap::new(),
         }
     }
 

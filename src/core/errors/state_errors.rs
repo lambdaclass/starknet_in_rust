@@ -29,7 +29,7 @@ pub enum StateError {
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
     #[error("No storage leaf assigned for key: {0:?}")]
-    NoneStoragLeaf(Felt),
+    NoneStoragLeaf([u8; 32]),
     #[error("Cannot deploy contract at address: {0:?}")]
     ContractAddressOutOfRangeAddress(Address),
     #[error("Requested contract address {0:?} is unavailable for deployment")]
