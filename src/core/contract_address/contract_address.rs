@@ -141,7 +141,7 @@ struct StructContractClass {
     bytecode_ptr: Vec<MaybeRelocatable>,
 }
 
-fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<Felt, SyscallHandlerError> {
+fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<&Felt, SyscallHandlerError> {
     let program = load_program();
     let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class);
 
@@ -168,23 +168,16 @@ fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<Felt, Sysc
     );
 
     // read_Return_Values looks quite odd, doesn't return a value.
-    let value = runner.read_return_values(&vm);
-    // runner.run(
-    //     "starkware.starknet.core.os.contracts.class_hash",
-    //     hash_ptr=hash_builtin.base,
-    //     contract_class=contract_class_struct,
-    //     use_full_name=True,
-    //     verify_secure=False,
-    // );
-    // let _, class_hash = runner.get_return_values(2);
-    // class_hash
-    todo!()
+    // TODO: change this error for a significant one.
+    vm.get_return_values(0).unwrap()[0]
+        .get_int_ref()
+        .map_err(|_| SyscallHandlerError::ExpectedCallContract)
 }
 
 use std::{collections::HashMap, hash::Hash, path::Path};
 
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
-) -> Result<Felt, SyscallHandlerError> {
+) -> Result<&Felt, SyscallHandlerError> {
     compute_class_hash_inner(contract_class)
 }
