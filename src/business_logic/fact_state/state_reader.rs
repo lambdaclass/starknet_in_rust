@@ -80,7 +80,7 @@ impl<S1: Storage, S2: Storage> StateReader<S1, S2> {
         contract_state
             .storage_commitment_tree
             .get(key)
-            .ok_or(StateError::NoneStoragLeaf(key.clone()))
+            .ok_or_else(|| StateError::NoneStoragLeaf(key.clone()))
     }
 }
 
