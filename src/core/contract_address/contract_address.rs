@@ -70,9 +70,9 @@ fn starknet_keccak(data: &[u8]) -> Felt {
     let mut hasher = Keccak256::new();
     hasher.update(data);
 
-    let hashed = hasher.finalize();
+    let hashed: &[u8] = hasher.finalize().as_slice();
 
-    let res = hashed & MASK_250;
+    let res = hashed & &MASK_250;
     Felt::from_bytes_be(res)
 }
 
@@ -116,7 +116,6 @@ fn get_contract_class_struct(
 
     let builtin_list = &contract_class.program.builtins;
 
-    // este contract class es distinto, solamente guarda los campos.
     Ok(StructContractClass {
         api_version: api_version.value.as_ref().unwrap().to_owned(),
         n_external_functions: external_functions.len(),
@@ -133,7 +132,7 @@ fn get_contract_class_struct(
     })
 }
 
-/// This is awful, I know. Name ideas? We already have a ContractClass struct.
+// TODO: think about a new name for this struct (ContractClass already exists)
 struct StructContractClass {
     api_version: Felt,
     n_external_functions: usize,
@@ -155,11 +154,6 @@ fn compute_class_hash_inner(contract_class: &ContractClass) -> Felt {
 
     let runner = CairoRunner::new(&program, "all", false).unwrap();
 
-    // we are using the default one, since the only difference is the name
-    // let hash_builtin = HashBuiltinRunner(
-    //     name="custom_hasher", included=True, ratio=32, hash_func=hash_func
-    // )
-    // runner.builtin_runners["hash_builtin"] = hash_builtin
     // runner.run_until_pc(address, vm, hint_processor)
     // runner.run(
     //     "starkware.starknet.core.os.contracts.class_hash",
@@ -205,6 +199,3 @@ pub(crate) fn compute_class_hash(
     // cache.get(key)
     todo!()
 }
-
-#[cfg(test)]
-mod tests {}
