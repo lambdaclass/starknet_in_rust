@@ -54,7 +54,7 @@ fn get_contract_entry_points(
     let program_length = contract_class.program.data.len();
     let entry_points = contract_class
         .entry_points_by_type
-        .get(&entry_point_type)
+        .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
     for entry_point in entry_points {
@@ -87,7 +87,7 @@ fn starknet_keccak(data: &[u8]) -> Felt {
 
     // This is the same than doing a mask 3 only with the most significant byte.
     // and then copying the other values.
-    let res = &hashed_slice[0] & &MASK_3;
+    let res = hashed_slice[0] & MASK_3;
     finalized_hash[0] = res;
     Felt::from_bytes_be(finalized_hash.as_slice())
 }
@@ -97,7 +97,7 @@ fn starknet_keccak(data: &[u8]) -> Felt {
 fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt {
     let keccak_input =
         r#"{"abi": contract_class.abi, "program": contract_class.program}"#.as_bytes();
-    starknet_keccak(keccak_input).into()
+    starknet_keccak(keccak_input)
 }
 
 /// Returns the serialization of a contract as a list of field elements.
@@ -105,12 +105,9 @@ fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
-    let api_version =
-        identifiers
-            .get("API_VERSION")
-            .ok_or(ContractAddressError::MissingIdentifier(
-                "API_VERSION".to_string(),
-            ))?;
+    let api_version = identifiers
+        .get("API_VERSION")
+        .ok_or_else(|| ContractAddressError::MissingIdentifier("API_VERSION".to_string()))?;
 
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;

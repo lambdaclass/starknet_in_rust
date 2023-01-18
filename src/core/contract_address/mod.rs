@@ -1,1 +1,1 @@
-pub mod contract_address;
+pub mod starknet_contract_address;
