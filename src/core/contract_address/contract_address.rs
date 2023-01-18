@@ -1,4 +1,4 @@
-use cairo_rs::{
+use cairo_vm::{
     hint_processor::{
         self, builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
         hint_processor_definition::HintProcessor,
@@ -22,6 +22,14 @@ use crate::{
 };
 use sha3::{Digest, Keccak256};
 
+/// Calculates the contract address in the starkNet network - a unique identifier of the contract.
+/// The contract address is a hash chain of the following information:
+///     1. Prefix.
+///     2. Deployer address.
+///     3. Salt.
+///     4. Class hash.
+/// To avoid exceeding the maximum address we take modulus L2_ADDRESS_UPPER_BOUND of the above
+/// result.
 pub(crate) fn calculate_contract_address(
     salt: &Felt,
     contract_class: &ContractClass,
@@ -67,19 +75,21 @@ fn get_contract_entry_points(
 }
 
 // MASK_250 = 2 ** 250 - 1
-pub const MASK_250: [u8; 250] = [1; 250];
+/// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
+pub const MASK_3: u8 = 3;
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
 fn starknet_keccak(data: &[u8]) -> Felt {
     let mut hasher = Keccak256::new();
     hasher.update(data);
-
-    let hashed: &[u8] = hasher.finalize().as_slice();
+    let mut finalized_hash = hasher.finalize();
+    let mut hashed_slice: &[u8] = finalized_hash.as_slice();
 
     // This is the same than doing a mask 3 only with the most significant byte.
     // and then copying the other values.
-    let res = hashed & &MASK_250;
-    Felt::from_bytes_be(res)
+    let res = &hashed_slice[0] & &MASK_3;
+    finalized_hash[0] = res;
+    Felt::from_bytes_be(finalized_hash.as_slice())
 }
 
 /// Computes the hash of the contract class, including hints.
@@ -145,18 +155,17 @@ fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<&Felt, Sys
     let program = load_program();
     let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class);
 
-    let vm = VirtualMachine::new(false, Vec::new());
+    let mut vm = VirtualMachine::new(false, Vec::new());
     let mut runner = CairoRunner::new(&program, "all", false).unwrap();
     runner.initialize_function_runner(&mut vm);
 
-    let hint_processor = BuiltinHintProcessor::new_empty();
+    let mut hint_processor = BuiltinHintProcessor::new_empty();
 
     // 188 is the entrypoint since is the __main__.class_hash function in our compiled program.
     // TODO: Looks like we can get this value from the identifier, but the value is a Felt.
     // We need to cast that into a usize.
     // let entrypoint = program.identifiers.get("class_hash").unwrap();
 
-    // args: hash_ptr, contract_class
     runner.run_from_entrypoint(
         188,
         Vec::new(),
@@ -167,9 +176,13 @@ fn compute_class_hash_inner(contract_class: &ContractClass) -> Result<&Felt, Sys
         &mut hint_processor,
     );
 
-    // read_Return_Values looks quite odd, doesn't return a value.
     // TODO: change this error for a significant one.
-    vm.get_return_values(0).unwrap()[0]
+    vm.get_return_values(2)
+        .map_err(|_| SyscallHandlerError::ExpectedCallContract)
+        .clone()?
+        .get(1)
+        .ok_or(SyscallHandlerError::ExpectedCallContract)
+        .map_err(|_| SyscallHandlerError::ExpectedCallContract)?
         .get_int_ref()
         .map_err(|_| SyscallHandlerError::ExpectedCallContract)
 }
@@ -179,5 +192,6 @@ use std::{collections::HashMap, hash::Hash, path::Path};
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
 ) -> Result<&Felt, SyscallHandlerError> {
+    // TODO: Since we are not using a cache, we can use this as a compute_class_hash_inner().
     compute_class_hash_inner(contract_class)
 }
