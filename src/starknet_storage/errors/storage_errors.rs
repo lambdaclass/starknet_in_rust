@@ -10,4 +10,12 @@ pub enum StorageError {
     IncorrectUtf8Enconding,
     #[error("Attempt to remove missing key")]
     RemoveMissingKey,
+    #[error("Serde error: {0}")]
+    SerdeError(String),
+}
+
+impl From<serde_json::Error> for StorageError {
+    fn from(error: serde_json::Error) -> Self {
+        StorageError::SerdeError(error.to_string())
+    }
 }
