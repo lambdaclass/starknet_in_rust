@@ -163,7 +163,7 @@ pub(crate) fn compute_class_hash(
     let program = load_program()?;
     let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class);
 
-    let mut vm = VirtualMachine::new(false, Vec::new());
+    let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all", false)
         .map_err(|err| ContractAddressError::CairoRunner(err.to_string()))?;
     runner.initialize_function_runner(&mut vm);

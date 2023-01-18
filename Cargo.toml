@@ -6,9 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs" }
-felt = { git = "https://github.com/lambdaclass/cairo-rs/" }
-patricia-tree = { git = "https://github.com/lambdaclass/patricia-tree" }    
+cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm" }
+felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt" }
 num-bigint = { version = "0.4", features = ["serde"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 thiserror = { version = "1.0.32" }
@@ -16,6 +15,7 @@ num-traits = "0.2.15"
 num-integer = "0.1.45"
 starknet-crypto = "0.2.0"
 sha3 = "0.10.1"
+serde = { version = "1.0.152", features = ["derive"] }
 
 [dev-dependencies.rusty-hook]
 version = "0.11"
