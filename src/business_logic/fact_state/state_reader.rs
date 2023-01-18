@@ -11,14 +11,14 @@ use crate::{
 
 use super::contract_state::{self, ContractState};
 
-pub(crate) struct StateReader<S1: Storage, S2: Storage> {
+pub(crate) struct InMemoryStateReader<S1: Storage, S2: Storage> {
     global_state_root: HashMap<Address, [u8; 32]>,
     ffc: S1,
     contract_states: HashMap<Address, ContractState>,
     contract_class_storage: S2,
 }
 
-impl<S1: Storage, S2: Storage> StateReader<S1, S2> {
+impl<S1: Storage, S2: Storage> InMemoryStateReader<S1, S2> {
     pub(crate) fn new(
         global_state_root: HashMap<Address, [u8; 32]>,
         ffc: S1,
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn get_contract_state_test() {
         let mut state_reader =
-            StateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109), HashMap::new());
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn get_contract_class_test() {
         let mut state_reader =
-            StateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
 
         let contract_class_key = [0; 32];
         let contract_class = ContractClass::new(
