@@ -4,9 +4,9 @@
 
 StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdaclass/cairo-rs) VM
 
-<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new">Report Bug</a>
+<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+">Report Bug</a>
 ·
-<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new">Request Feature</a>
+<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+">Request Feature</a>
 
 [![codecov](https://img.shields.io/codecov/c/github/lambdaclass/starknet_in_rust)](https://codecov.io/gh/lambdaclass/starknet_in_rust)
 [![license](https://img.shields.io/github/license/lambdaclass/starknet_in_rust)](/LICENSE)
@@ -27,11 +27,11 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
   * [Installation](#installation)
 - [Usage](#-usage)
   * [Testing](#testing)
+- [Contributing](#-contributing)
 - [Related Projects](#-related-projects)
 - [Documentation](#-documentation)
   * [StarkNet](#starknet)
 - [License](#-license)
-
 
 ## ⚠️ Disclaimer
 
@@ -63,11 +63,27 @@ Check the [Makefile](/Makefile) for additional targets.
 
 ## 🕌 Usage
 
+This project is in an early stage and not ready to be used yet.
+
 ### Testing
 Run the following command:
 ```bash
 $ make test
 ```
+
+## 🛠 Contributing
+
+The open source community is a fantastic place for learning, inspiration, and creation, and this is all thanks to contributions from people like you. Your contributions are **greatly appreciated**. 
+
+If you have any suggestions for how to improve the project, please feel free to fork the repo and create a pull request, or [open an issue](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+) with the tag 'enhancement'.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+And don't forget to give the project a star! ⭐ Thank you again for your support.
 
 ## 🌞 Related Projects
 
@@ -83,4 +99,6 @@ $ make test
 
 ## 📝 License
 
-[MIT](/LICENSE)
+This project is licensed under the MIT license.
+
+See [LICENSE](/LICENSE) for more information.
