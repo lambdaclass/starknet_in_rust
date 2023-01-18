@@ -10,7 +10,7 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 
 [![codecov](https://img.shields.io/codecov/c/github/lambdaclass/starknet_in_rust)](https://codecov.io/gh/lambdaclass/starknet_in_rust)
 [![license](https://img.shields.io/github/license/lambdaclass/starknet_in_rust)](/LICENSE)
-![PRs Welcome][pr-welcome]
+[![pr-welcome]](#-contributing)
 [![Telegram Chat][tg-badge]][tg-url]
 
 [pr-welcome]: https://img.shields.io/static/v1?color=orange&label=PRs&style=flat&message=welcome
