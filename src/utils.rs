@@ -383,11 +383,13 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use felt::Felt;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, hash::Hash};
 
     use crate::utils::{merge, subtract_mappings, Address};
 
-    use super::{test_utils::storage_key, to_state_diff_storage_mapping};
+    use super::{
+        test_utils::storage_key, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
+    };
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
@@ -444,7 +446,7 @@ mod test {
         a.insert("b", 3);
 
         b.insert("c", 2);
-        b.insert("d", 43);
+        b.insert("d", 4);
         b.insert("a", 3);
 
         let res = [("a", 2), ("b", 3)]
@@ -481,5 +483,32 @@ mod test {
         f.insert(6, 7);
 
         assert_eq!(subtract_mappings(e, f), HashMap::new())
+    }
+
+    #[test]
+
+    fn to_cache_state_storage_mapping_test() {
+        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
+        let address1: Address = Address(1.into());
+        let key1 = [0; 32];
+        let value1: Felt = 2.into();
+
+        let address2: Address = Address(3.into());
+        let key2 = [1; 32];
+
+        let value2: Felt = 4.into();
+
+        storage.insert((address1.clone(), key1), value1.clone());
+        storage.insert((address2.clone(), key2), value2.clone());
+
+        let state_dff = to_state_diff_storage_mapping(storage).unwrap();
+        let cache_storage = to_cache_state_storage_mapping(state_dff);
+
+        let mut expected_res = HashMap::new();
+
+        expected_res.insert((Address(address1.0), key1), value1);
+        expected_res.insert((Address(address2.0), key2), value2);
+
+        assert_eq!(cache_storage, expected_res)
     }
 }
