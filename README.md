@@ -30,7 +30,7 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 - [Related Projects](#-related-projects)
 - [Documentation](#-documentation)
   * [StarkNet](#starknet)
-- [License](#-license)
+- [License](#%EF%B8%8F-license)
 
 ## ⚠️ Disclaimer
 
