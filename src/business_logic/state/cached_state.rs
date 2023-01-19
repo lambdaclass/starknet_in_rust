@@ -16,7 +16,7 @@ use super::{
 
 pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
 
-pub(crate) const UNINITIALIZED_CLASS_HASH: [u8; 32] = [b'0'; 32];
+pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
 #[derive(Debug, Clone)]
 pub(crate) struct CachedState<T: StateReader + Clone> {
@@ -86,14 +86,19 @@ impl<T: StateReader + Clone> CachedState<T> {
 }
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
-    fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<&ContractClass, StateError> {
-        if !(self.get_contract_classes()?.contains_key(class_hash)) {
-            let contract_class = self.state_reader.get_contract_class(class_hash)?.clone();
+    fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
+        if !(self
+            .get_contract_classes()?
+            .contains_key(&class_hash.to_vec()))
+        {
+            let contract_class = self.state_reader.get_contract_class(class_hash)?;
             self.set_contract_class(class_hash.to_vec(), contract_class);
         }
-        self.get_contract_classes()?
-            .get(class_hash)
-            .ok_or(StateError::MissingContractClassCache)
+        Ok(self
+            .get_contract_classes()?
+            .get(&class_hash.to_vec())
+            .ok_or(StateError::MissingContractClassCache)?
+            .to_owned())
     }
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {

@@ -3,6 +3,7 @@ use thiserror::Error;
 
 use crate::{
     business_logic::{fact_state::contract_state::ContractState, state::state_cache::StorageEntry},
+    services::api::contract_class_errors::ContractClassError,
     starknet_storage::errors::storage_errors::StorageError,
     utils::Address,
 };
@@ -27,6 +28,8 @@ pub enum StateError {
     NoneNonce(Address),
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
+    #[error("No storage leaf assigned for key: {0:?}")]
+    NoneStoragLeaf([u8; 32]),
     #[error("Cannot deploy contract at address: {0:?}")]
     ContractAddressOutOfRangeAddress(Address),
     #[error("Requested contract address {0:?} is unavailable for deployment")]
@@ -35,4 +38,6 @@ pub enum StateError {
     ConversionError(Felt),
     #[error(transparent)]
     StorageError(#[from] StorageError),
+    #[error(transparent)]
+    ContractClassError(#[from] ContractClassError),
 }

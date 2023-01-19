@@ -20,12 +20,6 @@ pub(crate) enum CallType {
     Delegate,
 }
 
-pub(crate) enum EntryPointType {
-    External,
-    L1Handler,
-    Constructor,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct OrderedEvent {
     #[allow(unused)] // TODO: remove once used
