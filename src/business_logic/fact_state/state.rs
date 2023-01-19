@@ -1,5 +1,4 @@
 use felt::Felt;
-use patricia_tree::PatriciaTree;
 use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current};
 
 use crate::{
@@ -13,6 +12,8 @@ use crate::{
     starknet_storage::storage::{FactFetchingContext, Storage},
     utils::{to_state_diff_storage_mapping, Address},
 };
+
+use super::contract_state::ContractState;
 
 #[derive(Debug, Default)]
 pub struct ExecutionResourcesManager(HashMap<String, u64>);
@@ -87,12 +88,12 @@ impl<T: StateReader + Clone> CarriedState<T> {
 //      SHARED STATE
 // ----------------------
 
-pub(crate) struct SharedState<T> {
-    contract_states: PatriciaTree<T>,
+pub(crate) struct SharedState {
+    contract_states: HashMap<Felt, ContractState>,
     block_info: BlockInfo,
 }
 
-impl<T> SharedState<T> {
+impl SharedState {
     pub fn empty<S>(ffc: FactFetchingContext<S>, general_config: StarknetGeneralConfig) -> Self
     where
         S: Storage,
