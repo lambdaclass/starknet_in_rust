@@ -1,3 +1,5 @@
+use std::error;
+
 use thiserror::Error;
 
 use crate::core::errors;
@@ -11,4 +13,8 @@ pub enum ExecutionError {
     NotARelocatableValue,
     #[error("Error converting from {0} to {1}")]
     ErrorInDataConversion(String, String),
+    #[error("Unexpected holes in the event order")]
+    UnexpectedHolesInEventOrder,
+    #[error("Unexpected holes in the L2-to-L1 message order.")]
+    UnexpectedHolesL2toL1Messages,
 }
