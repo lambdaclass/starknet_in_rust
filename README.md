@@ -1,12 +1,11 @@
 <div align="center">
 <img src="https://starknet.io/wp-content/uploads/2021/11/favicon.png" width="150"/>
-<h3>🦀 StarkNet in Rust 🦀</h3>
+
+### 🦀 StarkNet in Rust 🦀
 
 StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdaclass/cairo-rs) VM
 
-<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+">Report Bug</a>
-·
-<a href="https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+">Request Feature</a>
+[Report Bug](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+) · [Request Feature](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+)
 
 [![codecov](https://img.shields.io/codecov/c/github/lambdaclass/starknet_in_rust)](https://codecov.io/gh/lambdaclass/starknet_in_rust)
 [![license](https://img.shields.io/github/license/lambdaclass/starknet_in_rust)](/LICENSE)
@@ -31,7 +30,7 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 - [Related Projects](#-related-projects)
 - [Documentation](#-documentation)
   * [StarkNet](#starknet)
-- [License](#-license)
+- [License](#%EF%B8%8F-license)
 
 ## ⚠️ Disclaimer
 
@@ -97,8 +96,8 @@ And don't forget to give the project a star! ⭐ Thank you again for your suppor
 - [StarkNet State](https://docs.starknet.io/documentation/architecture_and_concepts/State/starknet-state/)
 - [Array Hashing](https://docs.starknet.io/documentation/architecture_and_concepts/Hashing/hash-functions/#array_hashing)
 
-## 📝 License
+## ⚖️ License
 
-This project is licensed under the MIT license.
+This project is licensed under the Apache 2.0 license.
 
 See [LICENSE](/LICENSE) for more information.
