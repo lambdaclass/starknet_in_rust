@@ -142,24 +142,6 @@ pub fn to_cache_state_storage_mapping(
     storage_writes
 }
 
-// merge two hash maps into one
-
-pub fn merge<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
-where
-    K: Hash + Eq,
-{
-    let mut merge = HashMap::new();
-
-    for (key, value) in map_a {
-        merge.insert(key, value);
-    }
-
-    for (key, value) in map_b {
-        merge.insert(key, value);
-    }
-    merge
-}
-
 // get a vector of keys from two hashmaps
 
 pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
@@ -385,7 +367,7 @@ mod test {
     use felt::Felt;
     use std::{collections::HashMap, hash::Hash};
 
-    use crate::utils::{merge, subtract_mappings, Address};
+    use crate::utils::{subtract_mappings, Address};
 
     use super::{
         test_utils::storage_key, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
@@ -416,24 +398,6 @@ mod test {
             *map.get(&address2.0).unwrap().get(&key2).unwrap(),
             Address(value2)
         );
-    }
-
-    #[test]
-    fn merge_test() {
-        let mut a = HashMap::new();
-        let mut b = HashMap::new();
-
-        a.insert("key1", 1);
-        a.insert("key2", 2);
-        a.insert("key3", 3);
-
-        b.insert("key1", 2);
-        b.insert("key4", 6);
-
-        let c = [("key1", 2), ("key2", 2), ("key3", 3), ("key4", 6)]
-            .into_iter()
-            .collect::<HashMap<&str, i32>>();
-        assert_eq!(merge(a, b), c);
     }
 
     #[test]

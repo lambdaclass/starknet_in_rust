@@ -21,8 +21,8 @@ use crate::{
     starknet_storage::storage::{self, FactFetchingContext, Storage},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
-        get_keys, merge, subtract_mappings, to_cache_state_storage_mapping,
-        to_state_diff_storage_mapping, Address,
+        get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
+        Address,
     },
 };
 
@@ -239,16 +239,14 @@ impl StateDiff {
         cache_state
     }
 
-    pub fn squash(&self, other: StateDiff) -> Result<Self, StarkwareError> {
-        let address_to_class_hash = merge(
-            self.address_to_class_hash.clone(),
-            other.address_to_class_hash,
-        );
+    pub fn squash(&mut self, other: StateDiff) -> Result<Self, StarkwareError> {
+        self.address_to_class_hash
+            .extend(other.address_to_class_hash);
+        let address_to_class_hash = self.address_to_class_hash.clone();
 
-        let address_to_nonce = merge(
-            self.address_to_nonce.clone(),
-            other.address_to_nonce.clone(),
-        );
+        self.address_to_nonce.extend(other.address_to_nonce);
+        let address_to_nonce = self.address_to_nonce.clone();
+
         let mut storage_updates = HashMap::new();
 
         let addresses: Vec<Felt> =
@@ -256,10 +254,18 @@ impl StateDiff {
 
         for address in addresses {
             let default: HashMap<[u8; 32], Address> = HashMap::new();
-            let map_a = self.storage_updates.get(&address).unwrap_or(&default);
-            let map_b = other.storage_updates.get(&address).unwrap_or(&default);
-            let updates = merge(map_a.clone(), map_b.clone());
-            storage_updates.insert(address, updates);
+            let mut map_a = self
+                .storage_updates
+                .get(&address)
+                .unwrap_or(&default)
+                .to_owned();
+            let map_b = other
+                .storage_updates
+                .get(&address)
+                .unwrap_or(&default)
+                .to_owned();
+            map_a.extend(map_b);
+            storage_updates.insert(address, map_a.clone());
         }
         self.block_info
             .validate_legal_progress(other.block_info.clone())?;
