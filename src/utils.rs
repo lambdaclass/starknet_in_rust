@@ -13,14 +13,14 @@ use felt::{felt_str, Felt, FeltOps, NewFelt};
 use num_traits::ToPrimitive;
 
 //* -------------------
-//*
+//*      Address
 //* -------------------
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub struct Address(pub Felt);
 
 //* -------------------
-//* Helper Functions
+//*  Helper Functions
 //* -------------------
 
 pub fn get_integer(
@@ -75,7 +75,7 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
 }
 
 //* -------------------
-//*    STATE UTILS
+//*    State utils
 //* -------------------
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
@@ -107,13 +107,13 @@ pub fn to_state_diff_storage_mapping(
 /// a key appears in b with a different value, it will be part of the output).
 /// Uses to take only updated cells from a mapping.
 
-fn contained_or_not_updated<K, V>(key: &K, value: &V, map: HashMap<K, V>) -> bool
+fn contained_and_not_updated<K, V>(key: &K, value: &V, map: HashMap<K, V>) -> bool
 where
     K: Hash + Eq,
     V: PartialEq + Clone,
 {
-    let update = map.get(key);
-    map.contains_key(key) || (Some(value) == update)
+    let val = map.get(key);
+    !(map.contains_key(key) && (Some(value) == val))
 }
 
 pub fn subtract_mappings<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
@@ -123,7 +123,7 @@ where
 {
     map_a
         .into_iter()
-        .filter(|(k, v)| contained_or_not_updated(k, v, map_b.clone()))
+        .filter(|(k, v)| contained_and_not_updated(k, v, map_b.clone()))
         .collect()
 }
 
@@ -385,7 +385,7 @@ mod test {
     use felt::Felt;
     use std::collections::HashMap;
 
-    use crate::utils::Address;
+    use crate::utils::{merge, subtract_mappings, Address};
 
     use super::{test_utils::storage_key, to_state_diff_storage_mapping};
 
@@ -414,5 +414,72 @@ mod test {
             *map.get(&address2.0).unwrap().get(&key2).unwrap(),
             Address(value2)
         );
+    }
+
+    #[test]
+    fn merge_test() {
+        let mut a = HashMap::new();
+        let mut b = HashMap::new();
+
+        a.insert("key1", 1);
+        a.insert("key2", 2);
+        a.insert("key3", 3);
+
+        b.insert("key1", 2);
+        b.insert("key4", 6);
+
+        let c = [("key1", 2), ("key2", 2), ("key3", 3), ("key4", 6)]
+            .into_iter()
+            .collect::<HashMap<&str, i32>>();
+        assert_eq!(merge(a, b), c);
+    }
+
+    #[test]
+
+    fn subtract_mappings_test() {
+        let mut a = HashMap::new();
+        let mut b = HashMap::new();
+
+        a.insert("a", 2);
+        a.insert("b", 3);
+
+        b.insert("c", 2);
+        b.insert("d", 43);
+        b.insert("a", 3);
+
+        let res = [("a", 2), ("b", 3)]
+            .into_iter()
+            .collect::<HashMap<&str, i32>>();
+
+        assert_eq!(subtract_mappings(a, b), res);
+
+        let mut c = HashMap::new();
+        let mut d = HashMap::new();
+
+        c.insert(1, 2);
+        c.insert(3, 4);
+        c.insert(6, 7);
+
+        d.insert(1, 3);
+        d.insert(3, 5);
+        d.insert(6, 8);
+
+        let res = [(1, 2), (3, 4), (6, 7)]
+            .into_iter()
+            .collect::<HashMap<i32, i32>>();
+
+        assert_eq!(subtract_mappings(c, d), res);
+
+        let mut e = HashMap::new();
+        let mut f = HashMap::new();
+        e.insert(1, 2);
+        e.insert(3, 4);
+        e.insert(6, 7);
+
+        f.insert(1, 2);
+        f.insert(3, 4);
+        f.insert(6, 7);
+
+        assert_eq!(subtract_mappings(e, f), HashMap::new())
     }
 }
