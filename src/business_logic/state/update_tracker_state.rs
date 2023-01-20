@@ -99,7 +99,10 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         self.state.update_block_info(block_info)
     }
 
-    pub fn get_contract_class(&mut self, class_hash: &[u8]) -> Result<&ContractClass, StateError> {
+    pub fn get_contract_class(
+        &mut self,
+        class_hash: &[u8; 32],
+    ) -> Result<ContractClass, StateError> {
         self.state.get_contract_class(class_hash)
     }
 

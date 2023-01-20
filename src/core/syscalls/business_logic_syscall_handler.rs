@@ -10,6 +10,7 @@ use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
+use crate::services::api::contract_class::EntryPointType;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;

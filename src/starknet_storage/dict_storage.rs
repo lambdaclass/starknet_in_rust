@@ -21,6 +21,7 @@ pub(crate) enum Prefix {
     Float,
     Str,
     ContractState,
+    ContractClass,
 }
 
 impl Storage for DictStorage {
