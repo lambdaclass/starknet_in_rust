@@ -15,7 +15,7 @@ pub(crate) enum EntryPointType {
     Constructor,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ContractEntryPoint {
     pub(crate) selector: Felt,
     pub(crate) offset: Felt,

@@ -21,6 +21,6 @@ pub enum ContractAddressError {
     ExpectedInteger,
     #[error("Failed to calculate contract address from hash with error: {0}")]
     ContractAddressFromHash(String),
-    #[error("Failed to create a new CairoRunner with error: {0}")]
+    #[error("CairoRunner error: {0}")]
     CairoRunner(String),
 }

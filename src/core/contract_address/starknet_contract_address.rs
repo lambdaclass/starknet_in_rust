@@ -22,6 +22,10 @@ use crate::{
 };
 use sha3::{Digest, Keccak256};
 
+// MASK_250 = 2 ** 250 - 1
+/// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
+pub const MASK_3: u8 = 3;
+
 /// Calculates the contract address in the starkNet network - a unique identifier of the contract.
 /// The contract address is a hash chain of the following information:
 ///     1. Prefix.
@@ -43,7 +47,7 @@ pub(crate) fn calculate_contract_address(
 }
 
 fn load_program() -> Result<Program, ContractAddressError> {
-    Program::from_file(Path::new("contracts.json"), None)
+    Program::from_file(Path::new("src/core/contract_address/contracts.json"), None)
         .map_err(|err| ContractAddressError::Program(err.to_string()))
 }
 
@@ -74,10 +78,6 @@ fn get_contract_entry_points(
         .collect())
 }
 
-// MASK_250 = 2 ** 250 - 1
-/// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
-pub const MASK_3: u8 = 3;
-
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
 fn starknet_keccak(data: &[u8]) -> Felt {
     let mut hasher = Keccak256::new();
@@ -105,8 +105,9 @@ fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
+    println!("Identifiers: {:?}\n\n", identifiers);
     let api_version = identifiers
-        .get("API_VERSION")
+        .get("__main__.API_VERSION")
         .ok_or_else(|| ContractAddressError::MissingIdentifier("API_VERSION".to_string()))?;
 
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
@@ -136,6 +137,7 @@ fn get_contract_class_struct(
 }
 
 // TODO: think about a new name for this struct (ContractClass already exists)
+#[derive(Debug)]
 struct StructContractClass {
     api_version: Felt,
     n_external_functions: usize,
@@ -158,7 +160,7 @@ pub(crate) fn compute_class_hash(
 ) -> Result<Felt, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
-    let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class);
+    let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class)?;
 
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all", false)
@@ -167,27 +169,152 @@ pub(crate) fn compute_class_hash(
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
-    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program.
+    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
     // TODO: Looks like we can get this value from the identifier, but the value is a Felt.
     // We need to cast that into a usize.
     // let entrypoint = program.identifiers.get("class_hash").unwrap();
+    runner
+        .run_from_entrypoint(188, &vec![], true, &mut vm, &mut hint_processor)
+        .map_err(|err| ContractAddressError::CairoRunner(err.to_string()))?;
 
-    runner.run_from_entrypoint(
-        188,
-        Vec::new(),
-        false,
-        false,
-        false,
-        &mut vm,
-        &mut hint_processor,
-    );
-
+    println!("ACA LLEGA\n\n");
+    println!("vm PC: {:#?}", vm.get_pc());
+    println!("vm AP: {:#?}", vm.get_ap());
+    println!("vm FP: {:#?}", vm.get_fp());
     Ok(vm
-        .get_return_values(2)
+        .get_return_values(1)
         .map_err(|err| ContractAddressError::Memory(err.to_string()))?
         .get(1)
         .ok_or(ContractAddressError::IndexOutOfRange)?
         .get_int_ref()
         .map_err(|_| ContractAddressError::ExpectedInteger)?
         .clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::services::api::contract_class;
+
+    use super::*;
+    use felt::{Felt, FeltOps};
+    use num_traits::{pow, Num};
+    use sha3::{Digest, Keccak256};
+
+    #[test]
+    fn test_starknet_keccak() {
+        let data: &[u8] = "hello".as_bytes();
+
+        // This expected output is the result of calling the python version in cairo-lang of the function.
+        // starknet_keccak("hello".encode())
+        let expected_result = Felt::from_str_radix(
+            "245588857976802048747271734601661359235654411526357843137188188665016085192",
+            10,
+        )
+        .unwrap();
+        let result = starknet_keccak(data);
+
+        assert_eq!(expected_result, result);
+    }
+
+    #[test]
+    fn test_get_contract_entrypoints() {
+        let mut entry_points_by_type = HashMap::new();
+        entry_points_by_type.insert(
+            EntryPointType::Constructor,
+            vec![ContractEntryPoint {
+                selector: 0.into(),
+                offset: 12.into(),
+            }],
+        );
+        let contract_class = ContractClass {
+            program: Program::default(),
+            entry_points_by_type,
+            abi: None,
+        };
+
+        assert_eq!(
+            get_contract_entry_points(&contract_class, &EntryPointType::Constructor),
+            Ok(vec![ContractEntryPoint {
+                selector: 0.into(),
+                offset: 12.into()
+            }])
+        );
+        assert_eq!(
+            get_contract_entry_points(&contract_class, &EntryPointType::External),
+            Err(ContractAddressError::NoneExistingEntryPointType)
+        );
+    }
+
+    #[test]
+    fn test_compute_class_hash() {
+        let mut entry_points_by_type = HashMap::new();
+        entry_points_by_type.insert(
+            EntryPointType::Constructor,
+            vec![ContractEntryPoint {
+                selector: 1.into(),
+                offset: 12.into(),
+            }],
+        );
+        entry_points_by_type.insert(
+            EntryPointType::L1Handler,
+            vec![ContractEntryPoint {
+                selector: 2.into(),
+                offset: 12.into(),
+            }],
+        );
+        entry_points_by_type.insert(
+            EntryPointType::External,
+            vec![ContractEntryPoint {
+                selector: 3.into(),
+                offset: 12.into(),
+            }],
+        );
+        let contract_class = ContractClass {
+            program: Program::default(),
+            entry_points_by_type,
+            abi: None,
+        };
+        //println!("compute_class_hash: {:?}", compute_class_hash(&contract_class));
+        assert_eq!(compute_class_hash(&contract_class), Ok(Felt::default()));
+    }
+
+    #[test]
+    fn test_compute_hinted_class_hash() {
+        let mut entry_points_by_type = HashMap::new();
+        entry_points_by_type.insert(
+            EntryPointType::Constructor,
+            vec![ContractEntryPoint {
+                selector: 1.into(),
+                offset: 12.into(),
+            }],
+        );
+        entry_points_by_type.insert(
+            EntryPointType::L1Handler,
+            vec![ContractEntryPoint {
+                selector: 2.into(),
+                offset: 12.into(),
+            }],
+        );
+        entry_points_by_type.insert(
+            EntryPointType::External,
+            vec![ContractEntryPoint {
+                selector: 3.into(),
+                offset: 12.into(),
+            }],
+        );
+        let contract_class = ContractClass {
+            program: Program::default(),
+            entry_points_by_type,
+            abi: None,
+        };
+
+        assert_eq!(
+            compute_hinted_class_hash(&contract_class),
+            Felt::from_str_radix(
+                "1703103364832599665802491695999915073351807236114175062140703903952998591438",
+                10
+            )
+            .unwrap()
+        );
+    }
 }
