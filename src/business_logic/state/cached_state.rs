@@ -148,7 +148,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         contract_address: Address,
         class_hash: Vec<u8>,
     ) -> Result<(), StateError> {
-        if contract_address.0 == Felt::zero() {
+        if contract_address == Address(0.into()) {
             return Err(StateError::ContractAddressOutOfRangeAddress(
                 contract_address.clone(),
             ));
@@ -300,5 +300,27 @@ mod tests {
 
         let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
         assert!(cached_state.get_storage_at(&storage_entry_2).is_err());
+    }
+
+    #[test]
+    fn cached_state_deploy_contract_test() {
+        let mut state_reader =
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+
+        let contract_address = Address(32123.into());
+        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109), HashMap::new());
+
+        state_reader
+            .global_state_root
+            .insert(contract_address.clone(), [0; 32]);
+        state_reader
+            .ffc
+            .set_contract_state(&[0; 32], &contract_state);
+
+        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+
+        assert!(cached_state
+            .deploy_contract(contract_address, [5, 6, 7].to_vec())
+            .is_ok())
     }
 }
