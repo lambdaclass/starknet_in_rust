@@ -283,4 +283,22 @@ mod tests {
         cached_state.apply(&mut parent_cached_state);
         assert_eq!(parent_cached_state.block_info(), &block_info)
     }
+
+    #[test]
+    fn cached_state_storage_test() {
+        let mut cached_state = CachedState::new(
+            BlockInfo::default(),
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            None,
+        );
+
+        let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
+        let value = Felt::new(10);
+        cached_state.set_storage_at(&storage_entry, value.clone());
+
+        assert_eq!(cached_state.get_storage_at(&storage_entry), Ok(&value));
+
+        let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
+        assert!(cached_state.get_storage_at(&storage_entry_2).is_err());
+    }
 }
