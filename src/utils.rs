@@ -136,7 +136,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
 ) -> Result<HashMap<String, Felt>, ExecutionError> {
     let (n_modified_contracts, n_storage_changes) = state.count_actual_storage_changes();
 
-    let non_optional_calls: Vec<CallInfo> = call_info.to_owned().into_iter().flatten().collect();
+    let non_optional_calls: Vec<CallInfo> = call_info.iter().cloned().flatten().collect();
     let n_deployments = non_optional_calls
         .clone()
         .into_iter()
