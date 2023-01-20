@@ -14,7 +14,7 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 
-pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
+pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -65,19 +65,6 @@ impl<T: StateReader + Clone> CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    pub(crate) fn set_contract_class(
-        &mut self,
-        key: Vec<u8>,
-        value: ContractClass,
-    ) -> Result<(), StateError> {
-        self.contract_classes
-            .as_mut()
-            .ok_or(StateError::MissingContractClassCache)?
-            .insert(key, value);
-
-        Ok(())
-    }
-
     ///Apply updates to parent state
     pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
@@ -88,16 +75,13 @@ impl<T: StateReader + Clone> CachedState<T> {
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
-        if !(self
-            .get_contract_classes()?
-            .contains_key(&class_hash.to_vec()))
-        {
+        if !(self.get_contract_classes()?.contains_key(class_hash)) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
-            self.set_contract_class(class_hash.to_vec(), contract_class);
+            self.set_contract_class(class_hash, &contract_class)?;
         }
         Ok(self
             .get_contract_classes()?
-            .get(&class_hash.to_vec())
+            .get(class_hash)
             .ok_or(StateError::MissingContractClassCache)?
             .to_owned())
     }
@@ -146,10 +130,17 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         &self.block_info
     }
 
-    fn set_contract_class(&mut self, class_hash: &[u8], contract_class: &ContractClass) {
-        if let Some(contract_classes) = &mut self.contract_classes {
-            contract_classes.insert(Vec::from(class_hash), contract_class.clone());
-        }
+    fn set_contract_class(
+        &mut self,
+        class_hash: &[u8; 32],
+        contract_class: &ContractClass,
+    ) -> Result<(), StateError> {
+        self.contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingContractClassCache)?
+            .insert(*class_hash, contract_class.clone());
+
+        Ok(())
     }
 
     fn deploy_contract(
