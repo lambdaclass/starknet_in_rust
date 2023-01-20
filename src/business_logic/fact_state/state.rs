@@ -1,5 +1,7 @@
 use felt::Felt;
-use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current};
+use std::{
+    borrow::Borrow, cell::RefCell, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current,
+};
 
 use crate::{
     business_logic::state::{
@@ -46,14 +48,14 @@ pub(crate) struct CarriedState<T>
 where
     T: StateReader + Clone,
 {
-    parent_state: Option<Rc<CarriedState<T>>>,
+    parent_state: Option<Rc<RefCell<CarriedState<T>>>>,
     state: CachedState<T>,
 }
 
 impl<T: StateReader + Clone> CarriedState<T> {
     pub fn create_from_parent_state(parent_state: CarriedState<T>) -> Self {
         let cached_state = parent_state.state.clone();
-        let new_state = Some(Rc::new(parent_state));
+        let new_state = Some(Rc::new(RefCell::new(parent_state)));
         CarriedState {
             parent_state: new_state,
             state: cached_state,
@@ -63,7 +65,7 @@ impl<T: StateReader + Clone> CarriedState<T> {
     pub fn create_child_state_for_querying(&self) -> Result<Self, StateError> {
         match &self.parent_state {
             Some(parent_state) => Ok(CarriedState::create_from_parent_state(
-                parent_state.deref().clone(),
+                parent_state.as_ref().borrow().clone(),
             )),
             None => Err(StateError::ParentCarriedStateIsNone),
         }
@@ -72,7 +74,7 @@ impl<T: StateReader + Clone> CarriedState<T> {
     fn apply(&mut self) -> Result<(), StateError> {
         match &self.parent_state {
             Some(parent_state) => {
-                self.state.apply(parent_state.state.clone());
+                self.state.apply(&mut parent_state.borrow_mut().state);
                 Ok(())
             }
             None => Err(StateError::ParentCarriedStateIsNone),
