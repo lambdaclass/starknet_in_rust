@@ -1,3 +1,4 @@
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current};
 
@@ -16,31 +17,40 @@ use crate::{
 use super::contract_state::ContractState;
 
 #[derive(Debug, Default)]
-pub struct ExecutionResourcesManager(HashMap<String, u64>);
+pub struct ExecutionResourcesManager {
+    pub(crate) syscall_counter: HashMap<String, u64>,
+    pub(crate) cairo_usage: ExecutionResources,
+}
 
 impl ExecutionResourcesManager {
-    pub fn new(syscalls: Vec<String>) -> Self {
-        let mut manager = HashMap::new();
+    pub fn new(syscalls: Vec<String>, cairo_usage: ExecutionResources) -> Self {
+        let mut syscall_counter = HashMap::new();
         for syscall in syscalls {
-            manager.insert(syscall, 0);
+            syscall_counter.insert(syscall, 0);
         }
-        ExecutionResourcesManager(manager)
+        ExecutionResourcesManager {
+            syscall_counter,
+            cairo_usage,
+        }
     }
 
     pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) -> Option<()> {
-        self.0.get_mut(syscall_name).map(|val| *val += amount)
+        self.syscall_counter
+            .get_mut(syscall_name)
+            .map(|val| *val += amount)
     }
 
     pub fn get_syscall_counter(&self, syscall_name: &str) -> Option<u64> {
-        self.0.get(syscall_name).map(ToOwned::to_owned)
+        self.syscall_counter
+            .get(syscall_name)
+            .map(ToOwned::to_owned)
     }
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~
 // ----------------------
 //      SHARED STATE
 // ----------------------
-// ~~~~~~~~~~~~~~~~~~~~~~
+
 #[derive(Debug, Clone)]
 pub(crate) struct CarriedState<T>
 where

@@ -24,7 +24,7 @@ use crate::{services::api::contract_class::EntryPointType, starknet_storage::sto
 type ResourcesMapping = HashMap<String, Felt>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum CallType {
+pub enum CallType {
     Call,
     Delegate,
 }
@@ -38,7 +38,7 @@ pub struct CallInfo {
     pub(crate) caller_address: Address,
     pub(crate) call_type: Option<CallType>,
     pub(crate) contract_address: Address,
-    pub(crate) class_hash: Option<Felt>,
+    pub(crate) class_hash: [u8; 32],
     pub(crate) entry_point_selector: Option<usize>,
     pub(crate) entry_point_type: Option<EntryPointType>,
     pub(crate) calldata: VecDeque<Felt>,
@@ -52,7 +52,52 @@ pub struct CallInfo {
 }
 
 impl CallInfo {
-    ///Yields the contract calls in DFS (preorder).
+    pub fn empty(
+        contract_address: Address,
+        caller_address: Address,
+        class_hash: [u8; 32],
+        call_type: Option<CallType>,
+        entry_point_type: Option<EntryPointType>,
+        entry_point_selector: Option<usize>,
+    ) -> Self {
+        CallInfo {
+            caller_address,
+            call_type,
+            contract_address,
+            class_hash,
+            entry_point_selector,
+            entry_point_type,
+            calldata: VecDeque::new(),
+            retdata: VecDeque::new(),
+            execution_resources: ExecutionResources {
+                n_steps: 0,
+                builtin_instance_counter: HashMap::new(),
+                n_memory_holes: 0,
+            },
+            events: VecDeque::new(),
+            l2_to_l1_messages: VecDeque::new(),
+            storage_read_values: VecDeque::new(),
+            accesed_storage_keys: VecDeque::new(),
+            internal_calls: Vec::new(),
+        }
+    }
+
+    pub fn empty_constructor_call(
+        contract_address: Address,
+        caller_address: Address,
+        class_hash: [u8; 32],
+    ) -> Self {
+        CallInfo::empty(
+            contract_address,
+            caller_address,
+            class_hash,
+            Some(CallType::Call),
+            Some(EntryPointType::Constructor),
+            None,
+        )
+    }
+
+    /// Yields the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
         if self.internal_calls.is_empty() {
@@ -149,7 +194,7 @@ impl Default for CallInfo {
             caller_address: Address(0.into()),
             call_type: None,
             contract_address: Address(0.into()),
-            class_hash: None,
+            class_hash: [0; 32],
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             storage_read_values: VecDeque::new(),

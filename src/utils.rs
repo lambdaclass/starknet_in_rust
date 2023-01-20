@@ -1,22 +1,35 @@
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
-    business_logic::state::{state_api::State, state_cache::StorageEntry},
+    business_logic::{
+        execution::{
+            execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            os_usage::get_additional_os_resources,
+        },
+        fact_state::state::ExecutionResourcesManager,
+        state::{
+            state_api::{State, StateReader},
+            state_cache::StorageEntry,
+            update_tracker_state::UpdatesTrackerState,
+        },
+    },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    definitions::transaction_type::TransactionType,
+    services::api::contract_class::EntryPointType,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::{felt_str, Felt, FeltOps, NewFelt};
 use num_traits::ToPrimitive;
 
 //* -------------------
-//*
+//*     Address
 //* -------------------
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
 pub struct Address(pub Felt);
 
 //* -------------------
-//* Helper Functions
+//*  Helper Functions
 //* -------------------
 
 pub fn get_integer(
@@ -71,9 +84,7 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
 }
 
 // -------------------
-// ~~~~~~~~~~~~~~~~~~~
 //    STATE UTILS
-// ~~~~~~~~~~~~~~~~~~~
 // -------------------
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
@@ -101,8 +112,62 @@ pub fn to_state_diff_storage_mapping(
     Ok(storage_updates)
 }
 
+/// Returns the total resources needed to include the most recent transaction in a StarkNet batch
+/// (recent w.r.t. application on the given state) i.e., L1 gas usage and Cairo execution resources.
+/// Used for transaction fee; calculation is made as if the transaction is the first in batch, for
+/// consistency.
+
+pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
+    call_info
+        .gen_call_topology()
+        .into_iter()
+        .fold(0, |acc, c| match c.entry_point_type {
+            Some(EntryPointType::Constructor) => acc + 1,
+            _ => acc,
+        })
+}
+
+pub fn calculate_tx_resources<S: State + StateReader>(
+    resources_manager: ExecutionResourcesManager,
+    call_info: &[Option<CallInfo>],
+    tx_type: TransactionType,
+    state: UpdatesTrackerState<S>,
+    l1_handler_payload_size: Option<usize>,
+) -> Result<HashMap<String, Felt>, ExecutionError> {
+    let (n_modified_contracts, n_storage_changes) = state.count_actual_storage_changes();
+
+    let non_optional_calls: Vec<CallInfo> = call_info.to_owned().into_iter().flatten().collect();
+    let n_deployments = non_optional_calls
+        .clone()
+        .into_iter()
+        .fold(0, |acc, c| get_call_n_deployments(c));
+
+    let mut l2_to_l1_messages = Vec::new();
+
+    for call_info in non_optional_calls {
+        l2_to_l1_messages.extend(call_info.get_sorted_l2_to_l1_messages()?)
+    }
+
+    let l1_gas_usage = calculate_tx_gas_usage(
+        l2_to_l1_messages,
+        n_modified_contracts,
+        n_storage_changes,
+        l1_handler_payload_size,
+        n_deployments,
+    );
+
+    let cairo_usage = resources_manager.cairo_usage;
+    let tx_syscall_counter = resources_manager.syscall_counter;
+
+    // Add additional Cairo resources needed for the OS to run the transaction.
+
+    let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);
+
+    todo!()
+}
+
 //* -------------------
-//* Macros
+//*      Macros
 //* -------------------
 
 use starknet_crypto::FieldElement;

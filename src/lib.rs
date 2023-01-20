@@ -8,4 +8,5 @@ pub mod hash_utils;
 pub mod public;
 pub mod services;
 pub mod starknet_storage;
+pub mod starkware_utils;
 pub mod utils;
