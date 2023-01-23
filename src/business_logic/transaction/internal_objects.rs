@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::business_logic::execution::objects::{CallInfo, TransactionExecutionInfo};
+use crate::business_logic::execution::objects::{
+    CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
+};
 use crate::business_logic::fact_state::state::ExecutionResourcesManager;
 use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::update_tracker_state::UpdatesTrackerState;
@@ -16,6 +18,7 @@ use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
 use crate::utils::{calculate_tx_resources, Address};
 use felt::Felt;
+use num_traits::Zero;
 
 use super::state_objects::FeeInfo;
 
@@ -155,5 +158,29 @@ impl InternalDeploy {
                 Some(self.tx_type.clone()),
             ),
         )
+    }
+
+    pub fn invoke_constructor<S: State>(
+        &self,
+        state: UpdatesTrackerState<S>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo {
+        // TODO: uncomment once execute entry point has been implemented
+        // let call = ExecuteEntryPoint.create()
+        // let call_info = call.execute()
+        // actual_resources = calculate_tx_resources()
+
+        let tx_execution_context = TransactionExecutionContext::new(
+            Address(Felt::zero()),
+            self.hash_value.clone(),
+            Vec::new(),
+            0,
+            Felt::zero(),
+            general_config.invoke_tx_max_n_steps,
+            self.version,
+        );
+
+        let resources_manager = ExecutionResourcesManager::default();
+        todo!()
     }
 }

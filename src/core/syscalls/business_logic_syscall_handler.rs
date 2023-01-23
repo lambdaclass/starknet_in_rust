@@ -51,7 +51,9 @@ impl BusinessLogicSyscallHandler {
             "get_block_timestamp".to_string(),
         ]);
         let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext::new();
+        let tx_execution_context = TransactionExecutionContext {
+            ..Default::default()
+        };
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(
             syscalls,

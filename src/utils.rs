@@ -135,7 +135,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     tx_type: TransactionType,
     state: UpdatesTrackerState<S>,
     l1_handler_payload_size: Option<usize>,
-) -> Result<HashMap<String, Felt>, ExecutionError> {
+) -> Result<HashMap<String, usize>, ExecutionError> {
     let (n_modified_contracts, n_storage_changes) = state.count_actual_storage_changes();
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
@@ -166,10 +166,10 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let new_resources = calculate_additional_resources(cairo_usage, additional_resources);
     let filtered_builtins = filter_unused_builtins(new_resources);
 
-    let mut resources: HashMap<String, Felt> = HashMap::new();
-    resources.insert("l1_gas_usage".to_string(), l1_gas_usage.into());
+    let mut resources: HashMap<String, usize> = HashMap::new();
+    resources.insert("l1_gas_usage".to_string(), l1_gas_usage);
     for (builtin, value) in filtered_builtins.builtin_instance_counter {
-        resources.insert(builtin, value.into());
+        resources.insert(builtin, value);
     }
 
     Ok(resources)

@@ -69,7 +69,7 @@ pub(crate) trait InternalStateTransaction {
         &self,
         state: impl State,
         general_config: StarknetGeneralConfig,
-        actual_resources: HashMap<String, Felt>,
+        actual_resources: HashMap<String, usize>,
     ) -> FeeInfo {
         self._apply_specific_sequential_changes(state, general_config, actual_resources)
     }
@@ -90,6 +90,6 @@ pub(crate) trait InternalStateTransaction {
         &self,
         state: impl State,
         general_config: StarknetGeneralConfig,
-        actual_resources: HashMap<String, Felt>,
+        actual_resources: HashMap<String, usize>,
     ) -> FeeInfo;
 }

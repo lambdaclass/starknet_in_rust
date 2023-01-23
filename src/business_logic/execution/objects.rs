@@ -4,6 +4,7 @@ use std::{
 };
 
 use cairo_rs::{
+    hint_processor::builtin_hint_processor::secp::signature,
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
@@ -251,8 +252,8 @@ impl Event {
 //  Transaction Structures
 // -------------------------
 
-#[derive(Clone)]
-pub(crate) struct TransactionExecutionContext {
+#[derive(Clone, Default)]
+pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: usize,
     pub(crate) account_contract_address: Address,
@@ -261,19 +262,29 @@ pub(crate) struct TransactionExecutionContext {
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
+    pub(crate) n_steps: usize,
 }
 
 impl TransactionExecutionContext {
-    pub fn new() -> Self {
+    pub fn new(
+        account_contract_address: Address,
+        transaction_hash: Felt,
+        signature: Vec<Felt>,
+        max_fee: u64,
+        nonce: Felt,
+        n_steps: u64,
+        version: u64,
+    ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
-            account_contract_address: Address(Felt::zero()),
-            max_fee: 0,
-            nonce: Felt::zero(),
-            signature: Vec::new(),
-            transaction_hash: Felt::zero(),
+            account_contract_address,
+            max_fee,
+            nonce,
+            signature,
+            transaction_hash,
             version: 0,
             n_sent_messages: 0,
+            n_steps: 0,
         }
     }
 }
@@ -356,7 +367,7 @@ pub struct TransactionExecutionInfo {
     pub(crate) call_info: Option<CallInfo>,
     pub(crate) fee_transfer_info: Option<CallInfo>,
     pub(crate) actual_fee: u64,
-    pub(crate) actual_resources: ResourcesMapping,
+    pub(crate) actual_resources: HashMap<String, usize>,
     pub(crate) tx_type: Option<TransactionType>,
 }
 
@@ -366,7 +377,7 @@ impl TransactionExecutionInfo {
         call_info: Option<CallInfo>,
         fee_transfer_info: Option<CallInfo>,
         actual_fee: u64,
-        actual_resources: ResourcesMapping,
+        actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
     ) -> Self {
         TransactionExecutionInfo {
@@ -431,7 +442,7 @@ impl TransactionExecutionInfo {
     pub fn create_concurrent_stage_execution_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
-        actual_resources: ResourcesMapping,
+        actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
     ) -> Self {
         TransactionExecutionInfo {

@@ -48,6 +48,8 @@ impl ExecutionResourcesManager {
     }
 }
 
+// TODO: this functions should be in cairo-rs
+
 // Returns a copy of the execution resources where all the builtins with a usage counter
 // of 0 are omitted.
 
@@ -87,6 +89,7 @@ pub fn calculate_additional_resources(
         builtin_instance_counter,
     }
 }
+
 // ----------------------
 //      SHARED STATE
 // ----------------------
