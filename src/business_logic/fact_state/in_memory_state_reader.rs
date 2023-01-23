@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{clone, collections::HashMap};
 
 use felt::Felt;
 
@@ -6,17 +6,21 @@ use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
-    starknet_storage::{dict_storage::Prefix, storage::Storage},
+    starknet_storage::{
+        dict_storage::{DictStorage, Prefix},
+        storage::Storage,
+    },
     utils::Address,
 };
 
 use super::contract_state::{self, ContractState};
 
+#[derive(Clone, Debug)]
 pub(crate) struct InMemoryStateReader<S1: Storage, S2: Storage> {
-    global_state_root: HashMap<Address, [u8; 32]>,
-    ffc: S1,
-    contract_states: HashMap<Address, ContractState>,
-    contract_class_storage: S2,
+    pub(crate) global_state_root: HashMap<Address, [u8; 32]>,
+    pub(crate) ffc: S1,
+    pub(crate) contract_states: HashMap<Address, ContractState>,
+    pub(crate) contract_class_storage: S2,
 }
 
 impl<S1: Storage, S2: Storage> InMemoryStateReader<S1, S2> {
@@ -81,6 +85,7 @@ mod tests {
     use felt::NewFelt;
 
     use crate::{
+        business_logic::state::cached_state,
         services::api::contract_class::{self, ContractEntryPoint, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
     };
