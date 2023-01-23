@@ -24,7 +24,7 @@ use crate::{services::api::contract_class::EntryPointType, starknet_storage::sto
 type ResourcesMapping = HashMap<String, Felt>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum CallType {
+pub enum CallType {
     Call,
     Delegate,
 }
