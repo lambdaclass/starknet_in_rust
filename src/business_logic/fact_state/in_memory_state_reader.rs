@@ -63,7 +63,7 @@ impl<S1: Storage, S2: Storage> StateReader for InMemoryStateReader<S1, S2> {
         contract_class.validate()?;
         Ok(contract_class)
     }
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
         Ok(&self.get_contract_state(contract_address)?.contract_hash)
     }
 
@@ -98,7 +98,7 @@ mod tests {
             InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::create([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .global_state_root

@@ -211,14 +211,14 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
                 let call_type = CallType::Delegate;
             }
             "library_call" => {
-                class_hash = Some(request.class_hash.to_be_bytes());
+                class_hash = Some(request.class_hash.to_bytes_be());
                 let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Delegate;
             }
             "library_call_l1_handler" => {
-                class_hash = Some(request.class_hash.to_be_bytes());
+                class_hash = Some(request.class_hash.to_bytes_be());
                 let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::L1Handler;

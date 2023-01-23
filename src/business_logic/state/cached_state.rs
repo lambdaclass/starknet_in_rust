@@ -86,12 +86,12 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .to_owned())
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
             self.cache
                 .class_hash_initial_values
-                .insert(contract_address.clone(), class_hash.clone());
+                .insert(contract_address.clone(), *class_hash);
         }
 
         self.cache
@@ -146,7 +146,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
     fn deploy_contract(
         &mut self,
         contract_address: Address,
-        class_hash: Vec<u8>,
+        class_hash: [u8; 32],
     ) -> Result<(), StateError> {
         if contract_address == Address(0.into()) {
             return Err(StateError::ContractAddressOutOfRangeAddress(
@@ -156,7 +156,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
         let current_class_hash = self.get_class_hash_at(&contract_address)?;
 
-        if current_class_hash == &UNINITIALIZED_CLASS_HASH.to_vec() {
+        if current_class_hash == UNINITIALIZED_CLASS_HASH {
             return Err(StateError::ContractAddressUnavailable(
                 contract_address.clone(),
             ));
@@ -208,7 +208,7 @@ mod tests {
             InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .global_state_root
@@ -308,7 +308,7 @@ mod tests {
             InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .global_state_root
@@ -320,7 +320,7 @@ mod tests {
         let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
 
         assert!(cached_state
-            .deploy_contract(contract_address, [5, 6, 7].to_vec())
+            .deploy_contract(contract_address, [10; 32])
             .is_ok())
     }
 }
