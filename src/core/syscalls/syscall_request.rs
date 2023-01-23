@@ -115,7 +115,7 @@ pub(crate) struct GetBlockNumberRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageReadRequest {
     pub(crate) selector: Felt,
-    pub(crate) address: Felt,
+    pub(crate) address: Address,
 }
 
 impl From<EmitEventStruct> for SyscallRequest {
@@ -364,7 +364,7 @@ impl FromPtr for StorageReadRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &syscall_ptr)?;
-        let address = get_big_int(vm, &syscall_ptr)?;
+        let address = Address(get_big_int(vm, &(syscall_ptr + 1))?);
 
         Ok(SyscallRequest::StorageRead(StorageReadRequest {
             selector,

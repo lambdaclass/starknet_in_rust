@@ -68,7 +68,7 @@ pub(crate) trait SyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
         };
 
-        let value = self._storage_read(Address(request.address))?;
+        let value = self._storage_read(request.address)?;
         let response = StorageReadResponse::new(value);
 
         response.write_syscall_response(vm, syscall_ptr)
@@ -134,7 +134,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError>;
 
-    fn _storage_read(&mut self, address: Address) -> Result<u64, SyscallHandlerError>;
+    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError>;
 
     fn _storage_write(&mut self, address: Address, value: u64);
 
@@ -1057,6 +1057,12 @@ mod tests {
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
         // invoke syscall
         let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        // println!("{:?}", hint_processor.execute_hint(
+        //     &mut vm,
+        //     &mut ExecutionScopes::new(),
+        //     &any_box!(hint_data),
+        //     &HashMap::new(),
+        // ));
         assert!(hint_processor
             .execute_hint(
                 &mut vm,
@@ -1089,7 +1095,8 @@ mod tests {
         // invoke syscall
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
 
-        let execute_code_read_operation = VecDeque::from([5, 4, 3, 2, 1]);
+        let execute_code_read_operation: VecDeque<Felt> =
+            VecDeque::from([5.into(), 4.into(), 3.into(), 2.into(), 1.into()]);
         syscall_handler_hint_processor.syscall_handler = OsSyscallHandler::new(
             VecDeque::new(),
             VecDeque::new(),
@@ -1118,8 +1125,8 @@ mod tests {
         // Check VM inserts
         // StorageReadResponse
         assert_eq!(
-            get_integer(&vm, &relocatable!(2, 2)),
-            Ok(*execute_code_read_operation.get(0).unwrap() as usize)
+            get_big_int(&vm, &relocatable!(2, 2)),
+            Ok(execute_code_read_operation.get(0).unwrap().clone())
         );
     }
 }
