@@ -1,4 +1,8 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    iter::zip,
+};
 
 use crate::{
     business_logic::{
@@ -24,7 +28,7 @@ use felt::{felt_str, Felt, FeltOps, NewFelt};
 use num_traits::ToPrimitive;
 
 //* -------------------
-//*     Address
+//*      Address
 //* -------------------
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
@@ -173,6 +177,59 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     }
 
     Ok(resources)
+}
+
+/// Returns a mapping containing key-value pairs from a that are not included in b (if
+/// a key appears in b with a different value, it will be part of the output).
+/// Uses to take only updated cells from a mapping.
+
+fn contained_and_not_updated<K, V>(key: &K, value: &V, map: HashMap<K, V>) -> bool
+where
+    K: Hash + Eq,
+    V: PartialEq + Clone,
+{
+    let val = map.get(key);
+    !(map.contains_key(key) && (Some(value) == val))
+}
+
+pub fn subtract_mappings<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
+where
+    K: Hash + Eq + Clone,
+    V: PartialEq + Clone,
+{
+    map_a
+        .into_iter()
+        .filter(|(k, v)| contained_and_not_updated(k, v, map_b.clone()))
+        .collect()
+}
+
+/// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
+/// storage mapping (Tuple of address and key map to the associated value).
+
+pub fn to_cache_state_storage_mapping(
+    map: HashMap<Felt, HashMap<[u8; 32], Address>>,
+) -> HashMap<StorageEntry, Felt> {
+    let mut storage_writes = HashMap::new();
+    for (address, contract_storage) in map {
+        for (key, value) in contract_storage {
+            storage_writes.insert((Address(address.clone()), key), value.0);
+        }
+    }
+    storage_writes
+}
+
+// get a vector of keys from two hashmaps
+
+pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
+where
+    K: Hash + Eq,
+{
+    let mut keys1: HashSet<K> = map_a.into_keys().collect();
+    let keys2: HashSet<K> = map_b.into_keys().collect();
+
+    keys1.extend(keys2);
+
+    keys1.into_iter().collect()
 }
 
 //* -------------------
@@ -385,11 +442,13 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use felt::Felt;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, hash::Hash};
 
-    use crate::utils::Address;
+    use crate::utils::{subtract_mappings, Address};
 
-    use super::{test_utils::storage_key, to_state_diff_storage_mapping};
+    use super::{
+        test_utils::storage_key, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
+    };
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
@@ -416,5 +475,81 @@ mod test {
             *map.get(&address2.0).unwrap().get(&key2).unwrap(),
             Address(value2)
         );
+    }
+
+    #[test]
+
+    fn subtract_mappings_test() {
+        let mut a = HashMap::new();
+        let mut b = HashMap::new();
+
+        a.insert("a", 2);
+        a.insert("b", 3);
+
+        b.insert("c", 2);
+        b.insert("d", 4);
+        b.insert("a", 3);
+
+        let res = [("a", 2), ("b", 3)]
+            .into_iter()
+            .collect::<HashMap<&str, i32>>();
+
+        assert_eq!(subtract_mappings(a, b), res);
+
+        let mut c = HashMap::new();
+        let mut d = HashMap::new();
+
+        c.insert(1, 2);
+        c.insert(3, 4);
+        c.insert(6, 7);
+
+        d.insert(1, 3);
+        d.insert(3, 5);
+        d.insert(6, 8);
+
+        let res = [(1, 2), (3, 4), (6, 7)]
+            .into_iter()
+            .collect::<HashMap<i32, i32>>();
+
+        assert_eq!(subtract_mappings(c, d), res);
+
+        let mut e = HashMap::new();
+        let mut f = HashMap::new();
+        e.insert(1, 2);
+        e.insert(3, 4);
+        e.insert(6, 7);
+
+        f.insert(1, 2);
+        f.insert(3, 4);
+        f.insert(6, 7);
+
+        assert_eq!(subtract_mappings(e, f), HashMap::new())
+    }
+
+    #[test]
+
+    fn to_cache_state_storage_mapping_test() {
+        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
+        let address1: Address = Address(1.into());
+        let key1 = [0; 32];
+        let value1: Felt = 2.into();
+
+        let address2: Address = Address(3.into());
+        let key2 = [1; 32];
+
+        let value2: Felt = 4.into();
+
+        storage.insert((address1.clone(), key1), value1.clone());
+        storage.insert((address2.clone(), key2), value2.clone());
+
+        let state_dff = to_state_diff_storage_mapping(storage).unwrap();
+        let cache_storage = to_cache_state_storage_mapping(state_dff);
+
+        let mut expected_res = HashMap::new();
+
+        expected_res.insert((Address(address1.0), key1), value1);
+        expected_res.insert((Address(address2.0), key2), value2);
+
+        assert_eq!(cache_storage, expected_res)
     }
 }
