@@ -11,14 +11,14 @@ pub enum SyscallHandlerError {
     MissingSelector,
     #[error("Missing file syscalls.json")]
     MissingSyscallsJsonFile,
-    #[error("Unknown syscall")]
-    UnknownSyscall,
+    #[error("Unknown syscall: {0}")]
+    UnknownSyscall(String),
     #[error("invalid pointer")]
     SegmentationFault,
-    #[error("Couldn't convert BigInt to usize")]
-    BigintToUsizeFail,
-    #[error("Couldn't convert BigInt to u64")]
-    BigintToU64Fail,
+    #[error("Couldn't convert Felt to usize")]
+    FeltToUsizeFail,
+    #[error("Couldn't convert Felt to u64")]
+    FeltToU64Fail,
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
@@ -65,6 +65,14 @@ pub enum SyscallHandlerError {
     ExpectedGetContractAddressRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
+    #[error("Expected CallContractRequest")]
+    ExpectedCallContract,
+    #[error("Expected MaybeRelocatable")]
+    ExpectedMaybeRelocatable,
+    #[error("Expected MaybeRelocatable::Int")]
+    ExpectedMaybeRelocatableInt,
+    #[error("Memory error: {0}")]
+    MemoryError(String),
     #[error("Expected GetTxSignatureRequest")]
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]

@@ -1,7 +1,19 @@
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use std::{collections::HashMap, hash::Hash};
+
+use crate::{
+    business_logic::state::{state_api::State, state_cache::StorageEntry},
+    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+};
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use num_bigint::{BigInt, Sign};
+use felt::{felt_str, Felt, FeltOps, NewFelt};
 use num_traits::ToPrimitive;
+
+//* -------------------
+//*
+//* -------------------
+
+#[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
+pub struct Address(pub Felt);
 
 //* -------------------
 //* Helper Functions
@@ -15,13 +27,13 @@ pub fn get_integer(
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
         .as_ref()
         .to_usize()
-        .ok_or(SyscallHandlerError::BigintToUsizeFail)
+        .ok_or(SyscallHandlerError::FeltToUsizeFail)
 }
 
 pub fn get_big_int(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
-) -> Result<BigInt, SyscallHandlerError> {
+) -> Result<Felt, SyscallHandlerError> {
     Ok(vm
         .get_integer(syscall_ptr)
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
@@ -36,55 +48,64 @@ pub fn get_relocatable(
         .map_err(|_| SyscallHandlerError::SegmentationFault)
 }
 
-pub fn bigint_to_usize(bigint: &BigInt) -> Result<usize, SyscallHandlerError> {
-    bigint
-        .to_usize()
-        .ok_or(SyscallHandlerError::BigintToUsizeFail)
-}
-
 pub fn get_integer_range(
     vm: &VirtualMachine,
     addr: &Relocatable,
     size: usize,
-) -> Result<Vec<BigInt>, SyscallHandlerError> {
+) -> Result<Vec<Felt>, SyscallHandlerError> {
     Ok(vm
         .get_integer_range(addr, size)
         .map_err(|_| SyscallHandlerError::SegmentationFault)?
         .into_iter()
         .map(|c| c.into_owned())
-        .collect::<Vec<BigInt>>())
+        .collect::<Vec<Felt>>())
 }
 
-pub fn bigint_to_felt(value: &BigInt) -> Result<FieldElement, SyscallHandlerError> {
+pub fn felt_to_field_element(value: &Felt) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
         .map_err(|_| SyscallHandlerError::FailToComputeHash)
 }
 
-pub fn felt_to_bigint(sign: Sign, felt: &FieldElement) -> BigInt {
-    BigInt::from_bytes_be(sign, &felt.to_bytes_be())
+pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
+    Felt::from_bytes_be(&felt.to_bytes_be())
 }
+
+// -------------------
+// ~~~~~~~~~~~~~~~~~~~
+//    STATE UTILS
+// ~~~~~~~~~~~~~~~~~~~
+// -------------------
+
+/// Converts CachedState storage mapping to StateDiff storage mapping.
+/// See to_cached_state_storage_mapping documentation.
+
+pub fn to_state_diff_storage_mapping(
+    storage_writes: HashMap<StorageEntry, Felt>,
+) -> Result<HashMap<Felt, HashMap<[u8; 32], Address>>, StateError> {
+    let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
+    for ((address, key), value) in storage_writes {
+        if storage_updates.contains_key(&address.0) {
+            let mut map = storage_updates
+                .get(&address.0)
+                .ok_or(StateError::EmptyKeyInStorage)?
+                .to_owned();
+            map.insert(key, Address(value));
+            storage_updates.insert(address.0, map);
+        } else {
+            let mut new_map: HashMap<[u8; 32], Address> = HashMap::new();
+            new_map.insert(key, Address(value));
+            storage_updates.insert(address.0, new_map);
+        }
+    }
+
+    Ok(storage_updates)
+}
+
 //* -------------------
 //* Macros
 //* -------------------
 
-#[macro_export]
-macro_rules! bigint_str {
-    ($val: expr) => {
-        BigInt::parse_bytes($val, 10).unwrap()
-    };
-    ($val: expr, $opt: expr) => {
-        BigInt::parse_bytes($val, $opt).unwrap()
-    };
-}
-pub(crate) use bigint_str;
 use starknet_crypto::FieldElement;
-
-#[macro_export]
-macro_rules! bigint {
-    ($val : expr) => {
-        Into::<BigInt>::into($val)
-    };
-}
 
 #[cfg(test)]
 #[macro_use]
@@ -134,19 +155,12 @@ pub mod test_utils {
 
     macro_rules! vm {
         () => {{
-            VirtualMachine::new(
-                BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
-                false,
-                Vec::new(),
-            )
+            use felt::{Felt, NewFelt};
+            VirtualMachine::new(false)
         }};
 
         ($use_trace:expr) => {{
-            VirtualMachine::new(
-                BigInt::new(Sign::Plus, vec![1, 0, 0, 0, 0, 0, 17, 134217728]),
-                $use_trace,
-                Vec::new(),
-            )
+            VirtualMachine::new($use_trace, Vec::new())
         }};
     }
     pub(crate) use vm;
@@ -177,7 +191,7 @@ pub mod test_utils {
             $vm.insert_value(&k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
-            let v = bigint!($val);
+            let v: felt::Felt = $val.into();
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
@@ -187,7 +201,8 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            let v = $crate::bigint_str!($val);
+            use felt::FeltOps;
+            let v = felt::Felt::from_bytes_be($val);
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
         };
@@ -291,4 +306,41 @@ pub mod test_utils {
         }};
     }
     pub(crate) use storage_key;
+}
+
+#[cfg(test)]
+mod test {
+    use felt::Felt;
+    use std::collections::HashMap;
+
+    use crate::utils::Address;
+
+    use super::{test_utils::storage_key, to_state_diff_storage_mapping};
+
+    #[test]
+    fn to_state_diff_storage_mapping_test() {
+        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
+        let address1: Address = Address(1.into());
+        let key1 = [0; 32];
+        let value1: Felt = 2.into();
+
+        let address2: Address = Address(3.into());
+        let key2 = [1; 32];
+
+        let value2: Felt = 4.into();
+
+        storage.insert((address1.clone(), key1), value1.clone());
+        storage.insert((address2.clone(), key2), value2.clone());
+
+        let map = to_state_diff_storage_mapping(storage).unwrap();
+
+        assert_eq!(
+            *map.get(&address1.0).unwrap().get(&key1).unwrap(),
+            Address(value1)
+        );
+        assert_eq!(
+            *map.get(&address2.0).unwrap().get(&key2).unwrap(),
+            Address(value2)
+        );
+    }
 }

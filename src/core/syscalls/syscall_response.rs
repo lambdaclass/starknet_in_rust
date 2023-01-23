@@ -1,11 +1,14 @@
 use super::syscall_request::{
-    CountFields, GetBlockNumberRequest, GetBlockTimestampRequest, GetCallerAddressRequest,
-    GetContractAddressRequest, GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest,
-    StorageReadRequest,
+    CallContractRequest, CountFields, GetBlockNumberRequest, GetBlockTimestampRequest,
+    GetCallerAddressRequest, GetContractAddressRequest, GetSequencerAddressRequest,
+    GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
 };
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use cairo_rs::{bigint, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use num_bigint::BigInt;
+use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::vm_core::VirtualMachine,
+};
+use felt::{Felt, NewFelt};
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -16,18 +19,24 @@ pub(crate) trait WriteSyscallResponse {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractResponse {
+    retdata_size: usize,
+    retdata: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressResponse {
-    caller_address: BigInt,
+    caller_address: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetContractAddressResponse {
-    contract_address: u64,
+    contract_address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetSequencerAddressResponse {
-    sequencer_address: u64,
+    sequencer_address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -39,6 +48,21 @@ pub(crate) struct GetTxSignatureResponse {
     signature_len: usize,
     signature: Relocatable,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockNumberResponse {
+    block_number: u64,
+}
+
+impl CallContractResponse {
+    pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
+        Self {
+            retdata_size,
+            retdata,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetTxInfoResponse {
     tx_info: Relocatable,
@@ -62,14 +86,14 @@ impl GetBlockTimestampResponse {
 }
 
 impl GetSequencerAddressResponse {
-    pub(crate) fn new(sequencer_address: u64) -> Self {
+    pub(crate) fn new(sequencer_address: Address) -> Self {
         Self { sequencer_address }
     }
 }
 
 impl GetCallerAddressResponse {
-    pub fn new(caller_addr: u64) -> Self {
-        let caller_address = bigint!(caller_addr);
+    pub fn new(caller_addr: Address) -> Self {
+        let caller_address = caller_addr.0;
         GetCallerAddressResponse { caller_address }
     }
 }
@@ -83,7 +107,7 @@ impl GetTxSignatureResponse {
     }
 }
 impl GetContractAddressResponse {
-    pub fn new(contract_address: u64) -> Self {
+    pub fn new(contract_address: Address) -> Self {
         GetContractAddressResponse { contract_address }
     }
 }
@@ -94,14 +118,27 @@ impl StorageReadResponse {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetBlockNumberResponse {
-    block_number: u64,
-}
-
 impl GetBlockNumberResponse {
     pub(crate) fn new(block_number: u64) -> Self {
         Self { block_number }
+    }
+}
+
+impl WriteSyscallResponse for CallContractResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value::<Felt>(
+            &(syscall_ptr + CallContractRequest::count_fields()),
+            self.retdata_size.into(),
+        )?;
+        vm.insert_value(
+            &(syscall_ptr + CallContractRequest::count_fields() + 1),
+            &self.retdata,
+        )?;
+        Ok(())
     }
 }
 
@@ -125,9 +162,9 @@ impl WriteSyscallResponse for GetBlockTimestampResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetBlockTimestampRequest::count_fields()),
-            bigint!(self.block_timestamp),
+            self.block_timestamp.into(),
         )?;
         Ok(())
     }
@@ -139,9 +176,9 @@ impl WriteSyscallResponse for GetSequencerAddressResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
-            bigint!(self.sequencer_address),
+            self.sequencer_address.0.clone(),
         )?;
         Ok(())
     }
@@ -153,9 +190,9 @@ impl WriteSyscallResponse for GetBlockNumberResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetBlockNumberRequest::count_fields()),
-            bigint!(self.block_number),
+            self.block_number.into(),
         )?;
         Ok(())
     }
@@ -167,9 +204,9 @@ impl WriteSyscallResponse for GetContractAddressResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetContractAddressRequest::count_fields()),
-            bigint!(self.contract_address),
+            self.contract_address.0.clone(),
         )?;
         Ok(())
     }
@@ -180,9 +217,9 @@ impl WriteSyscallResponse for GetTxSignatureResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value(
+        vm.insert_value::<Felt>(
             &(syscall_ptr + GetTxSignatureRequest::count_fields()),
-            bigint!(self.signature_len),
+            self.signature_len.into(),
         )?;
         vm.insert_value(
             &(syscall_ptr + GetTxSignatureRequest::count_fields() + 1),
@@ -214,7 +251,7 @@ impl WriteSyscallResponse for StorageReadResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             &(syscall_ptr + StorageReadRequest::count_fields()),
-            bigint!(self.value),
+            Felt::new(self.value),
         )?;
         Ok(())
     }
@@ -227,14 +264,13 @@ mod tests {
 
     use crate::{
         add_segments,
+        business_logic::state::state_api_objects::BlockInfo,
         core::syscalls::{
             business_logic_syscall_handler::BusinessLogicSyscallHandler,
             syscall_handler::SyscallHandler,
         },
-        state::state_api_objects::BlockInfo,
         utils::test_utils::vm,
     };
-    use num_bigint::{BigInt, Sign};
 
     #[test]
     fn write_get_caller_address_response() {
@@ -244,7 +280,7 @@ mod tests {
         add_segments!(vm, 2);
 
         let response = GetCallerAddressResponse {
-            caller_address: bigint!(3),
+            caller_address: 3.into(),
         };
 
         assert!(syscall
@@ -255,8 +291,12 @@ mod tests {
         // Since we can't access the vm.memory, these inserts should check the ._write_syscall_response inserts
         // The ._write_syscall_response should insert the response.caller_address in the position (1,1)
         // Because the vm memory is write once, trying to insert an 8 in that position should return an error
-        assert!(vm.insert_value(&relocatable!(1, 1), bigint!(8)).is_err());
+        assert!(vm
+            .insert_value::<Felt>(&relocatable!(1, 1), 8.into())
+            .is_err());
         // Inserting a 3 should be OK because is the value inserted by ._write_syscall_response
-        assert!(vm.insert_value(&relocatable!(1, 1), bigint!(3)).is_ok())
+        assert!(vm
+            .insert_value::<Felt>(&relocatable!(1, 1), 3.into())
+            .is_ok())
     }
 }

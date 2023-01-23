@@ -1,21 +1,22 @@
 use std::collections::HashSet;
 
+use felt::Felt;
 use num_bigint::BigInt;
 
-use crate::core::errors::state_errors::StateError;
+use crate::{core::errors::state_errors::StateError, utils::Address};
 
 use super::state_api::{State, StateReader};
 
 pub(crate) struct ContractStorageState<T: State + StateReader> {
     pub(crate) state: T,
-    pub(crate) contract_address: BigInt,
+    pub(crate) contract_address: Address,
     /// Maintain all read request values in chronological order
-    pub(crate) read_values: Vec<BigInt>,
+    pub(crate) read_values: Vec<Felt>,
     pub(crate) accessed_keys: HashSet<[u8; 32]>,
 }
 
 impl<T: State + StateReader> ContractStorageState<T> {
-    pub(crate) fn new(state: T, contract_address: BigInt) -> Self {
+    pub(crate) fn new(state: T, contract_address: Address) -> Self {
         Self {
             state,
             contract_address,
@@ -24,7 +25,7 @@ impl<T: State + StateReader> ContractStorageState<T> {
         }
     }
 
-    pub(crate) fn read(&mut self, address: &[u8; 32]) -> Result<&BigInt, StateError> {
+    pub(crate) fn read(&mut self, address: &[u8; 32]) -> Result<&Felt, StateError> {
         self.accessed_keys.insert(*address);
         let value = self
             .state
@@ -34,7 +35,7 @@ impl<T: State + StateReader> ContractStorageState<T> {
         Ok(value)
     }
 
-    pub(crate) fn write(&mut self, address: &[u8; 32], value: BigInt) {
+    pub(crate) fn write(&mut self, address: &[u8; 32], value: Felt) {
         self.accessed_keys.insert(*address);
         self.state
             .set_storage_at(&(self.contract_address.clone(), *address), value);

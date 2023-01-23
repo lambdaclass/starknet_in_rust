@@ -1,3 +1,5 @@
+use crate::utils::Address;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockInfo {
     // The sequence number of the last block created.
@@ -10,7 +12,7 @@ pub struct BlockInfo {
     gas_price: u64,
 
     // The sequencer address of this block.
-    pub(crate) sequencer_address: u64,
+    pub(crate) sequencer_address: Address,
 
     // The version of StarkNet system (e.g. "0.10.3").
     starknet_version: String,
@@ -22,7 +24,7 @@ impl Default for BlockInfo {
             block_number: 0,
             block_timestamp: 0,
             gas_price: 0,
-            sequencer_address: 0,
+            sequencer_address: Address(0.into()),
             starknet_version: "0.0.0".to_string(),
         }
     }

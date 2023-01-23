@@ -1,16 +1,21 @@
+use std::cell::RefCell;
+use std::ops::Deref;
+use std::rc::Rc;
+
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
 use crate::business_logic::execution::objects::*;
-use crate::business_logic::execution::state::ExecutionResourcesManager;
+use crate::business_logic::fact_state::state::ExecutionResourcesManager;
+use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
-use crate::state::state_api_objects::BlockInfo;
+use crate::services::api::contract_class::EntryPointType;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
-use num_bigint::BigInt;
-use num_traits::{One, Zero};
+use felt::{Felt, FeltOps};
+use num_traits::{One, ToPrimitive, Zero};
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
@@ -23,8 +28,8 @@ pub struct BusinessLogicSyscallHandler {
     /// A list of dynamically allocated segments that are expected to be read-only.
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) resources_manager: ExecutionResourcesManager,
-    pub(crate) contract_address: u64,
-    pub(crate) caller_address: u64,
+    pub(crate) contract_address: Address,
+    pub(crate) caller_address: Address,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
@@ -48,8 +53,8 @@ impl BusinessLogicSyscallHandler {
         let tx_execution_context = TransactionExecutionContext::new();
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls);
-        let contract_address = 1;
-        let caller_address = 0;
+        let contract_address = Address(1.into());
+        let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
@@ -76,6 +81,28 @@ impl BusinessLogicSyscallHandler {
 }
 
 impl SyscallHandler for BusinessLogicSyscallHandler {
+    fn emit_event(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
+            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
+            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
+        };
+
+        let keys_len = request.keys_len;
+        let data_len = request.data_len;
+        let order = self.tx_execution_context.n_emitted_events;
+        let keys: Vec<Felt> = get_integer_range(vm, &request.keys, keys_len)?;
+        let data: Vec<Felt> = get_integer_range(vm, &request.data, data_len)?;
+        self.events.push(OrderedEvent::new(order, keys, data));
+
+        // Update events count.
+        self.tx_execution_context.n_emitted_events += 1;
+        Ok(())
+    }
+
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -86,7 +113,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             .write_arg(&segment_start, &data)
             .map_err(|_| SyscallHandlerError::SegmentationFault)?;
         let sub = segment_end
-            .sub(&segment_start.to_owned().into(), vm.get_prime())
+            .sub(&segment_start.to_owned().into())
             .map_err(|_| SyscallHandlerError::SegmentationFault)?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.push(segment);
@@ -94,32 +121,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(segment_start)
     }
 
-    fn _call_contract(
-        &mut self,
-        _syscall_name: &str,
-        _vm: &VirtualMachine,
-        _syscall_ptr: Relocatable,
-    ) -> Result<Vec<u64>, SyscallHandlerError> {
-        todo!()
-    }
-
-    fn _call_contract_and_write_response(
-        &mut self,
-        syscall_name: &str,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let response_data = self._call_contract(syscall_name, vm, syscall_ptr)?;
-        // TODO: Should we build a response struct to pass to _write_syscall_response?
-        // self._write_syscall_response(response_data, vm, syscall_ptr);
-        todo!()
-    }
-
     fn _deploy(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
             self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
@@ -137,15 +143,18 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let constructor_calldata = get_integer_range(
             vm,
             &request.constructor_calldata,
-            bigint_to_usize(&request.constructor_calldata_size)?,
+            request
+                .constructor_calldata_size
+                .to_usize()
+                .ok_or(SyscallHandlerError::FeltToUsizeFail)?,
         )?;
 
         let class_hash = &request.class_hash;
 
         let deployer_address = if request.deploy_from_zero.is_zero() {
-            self.contract_address
+            self.contract_address.clone()
         } else {
-            0
+            Address(0.into())
         };
 
         let _contract_address = calculate_contract_address_from_hash(
@@ -156,33 +165,87 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         )?;
 
         // Initialize the contract.
-        let (_sign, _class_hash_bytes) = request.class_hash.to_bytes_be();
+        let _class_hash_bytes = request.class_hash.to_bytes_be();
 
         todo!()
     }
 
-    fn emit_event(
+    fn _call_contract(
         &mut self,
+        syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let request = match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
-            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
-            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
-        };
+    ) -> Result<Vec<u64>, SyscallHandlerError> {
+        // Parse request and prepare the call.
+        let request =
+            match self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)? {
+                SyscallRequest::CallContract(request) => request,
+                _ => return Err(SyscallHandlerError::ExpectedCallContract),
+            };
 
-        let keys_len = request.keys_len;
-        let data_len = request.data_len;
+        let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
 
-        let order = self.tx_execution_context.n_emitted_events;
-        let keys: Vec<BigInt> = get_integer_range(vm, &request.keys, keys_len)?;
-        let data: Vec<BigInt> = get_integer_range(vm, &request.data, data_len)?;
+        let mut code_address = None;
+        let mut class_hash = None;
 
-        self.events.push(OrderedEvent::new(order, keys, data));
+        match syscall_name {
+            "call_contract" => {
+                code_address = Some(request.contract_address);
+                let contract_address = code_address;
+                let caller_address = self.contract_address.clone();
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Call;
+            }
+            "delegate_call" => {
+                code_address = Some(request.contract_address);
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Delegate;
+            }
+            "delegate_l1_handler" => {
+                code_address = Some(request.contract_address);
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
+                let entry_point_type = EntryPointType::L1Handler;
+                let call_type = CallType::Delegate;
+            }
+            "library_call" => {
+                class_hash = Some(request.class_hash.to_bytes_be());
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
+                let entry_point_type = EntryPointType::External;
+                let call_type = CallType::Delegate;
+            }
+            "library_call_l1_handler" => {
+                class_hash = Some(request.class_hash.to_bytes_be());
+                let contract_address = self.contract_address.clone();
+                let caller_address = self.caller_address.clone();
+                let entry_point_type = EntryPointType::L1Handler;
+                let call_type = CallType::Delegate;
+            }
+            _ => {
+                return Err(SyscallHandlerError::UnknownSyscall(
+                    syscall_name.to_string(),
+                ))
+            }
+        }
 
-        // Update events count.
-        self.tx_execution_context.n_emitted_events += 1;
-        Ok(())
+        // let call = self.execute_entry_point(
+        //     call_type,
+        //     class_hash,
+        //     contract_address,
+        //     code_address,
+        //     request.selector,
+        //     entry_point_type,
+        //     calldata,
+        //     caller_address,
+        // )
+
+        // return self.execute_entry_point(call=call)
+
+        // TODO, remove this once used the commented code.
+        todo!()
     }
 
     fn get_block_info(&self) -> &BlockInfo {
@@ -193,7 +256,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         let request = if let SyscallRequest::GetCallerAddress(request) =
             self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)?
         {
@@ -202,13 +265,13 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
         };
 
-        Ok(self.caller_address)
+        Ok(self.caller_address.clone())
     }
     fn _get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<u64, SyscallHandlerError> {
+    ) -> Result<Address, SyscallHandlerError> {
         if let SyscallRequest::GetContractAddress(request) =
             self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)?
         {
@@ -217,7 +280,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetContractAddressRequest);
         };
 
-        Ok(self.contract_address)
+        Ok(self.contract_address.clone())
     }
 
     fn send_message_to_l1(
@@ -274,17 +337,17 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
 
     fn library_call(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._call_contract_and_write_response("library_call", vm, syscall_ptr);
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: u64) -> Result<u64, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: Address) -> Result<u64, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&mut self, _address: u64, _value: u64) {
+    fn _storage_write(&mut self, _address: Address, _value: u64) {
         todo!()
     }
 
@@ -307,15 +370,14 @@ impl Default for BusinessLogicSyscallHandler {
 
 #[cfg(test)]
 mod tests {
-    use crate::bigint;
     use crate::business_logic::execution::objects::{
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     };
+    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::*;
     use crate::core::syscalls::syscall_handler::*;
-    use crate::state::state_api_objects::BlockInfo;
     use crate::utils::{get_integer, test_utils::*};
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,
@@ -324,11 +386,11 @@ mod tests {
     use cairo_rs::relocatable;
     use cairo_rs::types::exec_scope::ExecutionScopes;
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+    use cairo_rs::vm::errors::hint_errors::HintError;
     use cairo_rs::vm::errors::memory_errors::MemoryError;
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-    use cairo_rs::vm::errors::vm_errors::VirtualMachineError::UnknownHint;
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use num_bigint::{BigInt, Sign};
+    use felt::Felt;
     use std::any::Any;
     use std::borrow::Cow;
     use std::collections::HashMap;
@@ -346,13 +408,13 @@ mod tests {
         //ids and references are not needed for this test
         assert_eq!(
             run_hint!(vm, HashMap::new(), hint_code),
-            Err(VirtualMachineError::MemoryError(
+            Err(HintError::Internal(VirtualMachineError::MemoryError(
                 MemoryError::InconsistentMemory(
                     MaybeRelocatable::from((1, 6)),
                     MaybeRelocatable::from((1, 6)),
                     MaybeRelocatable::from((3, 0))
                 )
-            ))
+            )))
         );
     }
 
@@ -363,7 +425,7 @@ mod tests {
         let mut vm = vm!();
         assert_eq!(
             run_syscall_hint!(vm, HashMap::new(), hint_code),
-            Err(UnknownHint("Hint not implemented".to_string()))
+            Err(HintError::UnknownHint("Hint not implemented".to_string()))
         );
     }
 
@@ -411,7 +473,8 @@ mod tests {
         let mut vm = vm!();
 
         add_segments!(vm, 2);
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value::<Felt>(&relocatable!(1, 0), 0.into())
+            .unwrap();
 
         assert_eq!(
             syscall.get_block_number(&mut vm, relocatable!(1, 0)),
@@ -419,7 +482,7 @@ mod tests {
         );
         assert_eq!(
             vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
-            Ok(bigint!(0)),
+            Ok(0.into()),
         );
     }
 
@@ -430,7 +493,8 @@ mod tests {
 
         add_segments!(vm, 2);
 
-        vm.insert_value(&relocatable!(1, 0), bigint!(0)).unwrap();
+        vm.insert_value::<Felt>(&relocatable!(1, 0), 0.into())
+            .unwrap();
 
         assert_eq!(
             syscall._get_contract_address(&vm, relocatable!(1, 0)),
