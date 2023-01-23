@@ -178,7 +178,7 @@ impl SharedState {
 }
 
 pub(crate) struct StateDiff {
-    address_to_class_hash: HashMap<Address, Vec<u8>>,
+    address_to_class_hash: HashMap<Address, [u8; 32]>,
     address_to_nonce: HashMap<Address, Felt>,
     storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
     block_info: BlockInfo,
