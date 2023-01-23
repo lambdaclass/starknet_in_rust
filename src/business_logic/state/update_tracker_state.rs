@@ -110,8 +110,13 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         self.state.get_nonce_at(contract_address)
     }
 
-    pub fn set_contract_class(&mut self, class_hash: &[u8; 32], contract_class: &ContractClass) {
-        self.state.set_contract_class(class_hash, contract_class)
+    pub fn set_contract_class(
+        &mut self,
+        class_hash: &[u8; 32],
+        contract_class: &ContractClass,
+    ) -> Result<(), StateError> {
+        self.state.set_contract_class(class_hash, contract_class);
+        Ok(())
     }
 
     pub fn deploy_contract(
