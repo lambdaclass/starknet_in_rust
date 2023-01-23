@@ -12,7 +12,7 @@ use crate::{
     definitions::general_config::{self, StarknetGeneralConfig},
 };
 
-type FeeInfo = (Option<CallInfo>, u64);
+pub type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) trait InternalStateTransaction {
     fn get_state_selector_of_many(

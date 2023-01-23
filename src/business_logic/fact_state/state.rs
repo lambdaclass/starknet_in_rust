@@ -1,5 +1,6 @@
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
+use num_traits::Zero;
 use std::{borrow::Borrow, collections::HashMap, hash, ops::Deref, rc::Rc, thread::current};
 
 use crate::{
@@ -47,6 +48,45 @@ impl ExecutionResourcesManager {
     }
 }
 
+// Returns a copy of the execution resources where all the builtins with a usage counter
+// of 0 are omitted.
+
+pub fn filter_unused_builtins(resources: ExecutionResources) -> ExecutionResources {
+    ExecutionResources {
+        n_steps: resources.n_steps,
+        n_memory_holes: resources.n_memory_holes,
+        builtin_instance_counter: resources
+            .builtin_instance_counter
+            .into_iter()
+            .filter(|builtin| !builtin.1.is_zero())
+            .collect(),
+    }
+}
+
+pub fn calculate_additional_resources(
+    current_resources: ExecutionResources,
+    additional_resources: ExecutionResources,
+) -> ExecutionResources {
+    let mut builtin_instance_counter = current_resources.builtin_instance_counter.clone();
+
+    let n_steps = current_resources.n_steps + additional_resources.n_steps;
+    let n_memory_holes = current_resources.n_memory_holes + additional_resources.n_memory_holes;
+
+    for (k, v) in additional_resources.builtin_instance_counter {
+        if builtin_instance_counter.contains_key(&k) {
+            let val = builtin_instance_counter.get(&k).unwrap_or(&0).to_owned();
+            builtin_instance_counter.insert(k, val + v);
+        } else {
+            builtin_instance_counter.remove(&k);
+        }
+    }
+
+    ExecutionResources {
+        n_steps,
+        n_memory_holes,
+        builtin_instance_counter,
+    }
+}
 // ----------------------
 //      SHARED STATE
 // ----------------------

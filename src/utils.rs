@@ -6,7 +6,9 @@ use crate::{
             execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
-        fact_state::state::ExecutionResourcesManager,
+        fact_state::state::{
+            calculate_additional_resources, filter_unused_builtins, ExecutionResourcesManager,
+        },
         state::{
             state_api::{State, StateReader},
             state_cache::StorageEntry,
@@ -136,7 +138,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
 ) -> Result<HashMap<String, Felt>, ExecutionError> {
     let (n_modified_contracts, n_storage_changes) = state.count_actual_storage_changes();
 
-    let non_optional_calls: Vec<CallInfo> = call_info.iter().cloned().flatten().collect();
+    let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
     let n_deployments = non_optional_calls
         .clone()
         .into_iter()
@@ -156,14 +158,21 @@ pub fn calculate_tx_resources<S: State + StateReader>(
         n_deployments,
     );
 
-    let cairo_usage = resources_manager.cairo_usage;
+    let cairo_usage = resources_manager.cairo_usage.clone();
     let tx_syscall_counter = resources_manager.syscall_counter;
 
     // Add additional Cairo resources needed for the OS to run the transaction.
-
     let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);
+    let new_resources = calculate_additional_resources(cairo_usage, additional_resources);
+    let filtered_builtins = filter_unused_builtins(new_resources);
 
-    todo!()
+    let mut resources: HashMap<String, Felt> = HashMap::new();
+    resources.insert("l1_gas_usage".to_string(), l1_gas_usage.into());
+    for (builtin, value) in filtered_builtins.builtin_instance_counter {
+        resources.insert(builtin, value.into());
+    }
+
+    Ok(resources)
 }
 
 //* -------------------

@@ -17,6 +17,8 @@ use crate::starkware_utils::starkware_errors::StarkwareError;
 use crate::utils::{calculate_tx_resources, Address};
 use felt::Felt;
 
+use super::state_objects::FeeInfo;
+
 pub struct InternalDeploy {
     hash_value: Felt,
     version: u64,
@@ -102,6 +104,17 @@ impl InternalDeploy {
         let contract_class = state.get_contract_class(&class_hash);
 
         self.handle_empty_constructor(state)
+    }
+
+    pub fn _apply_specific_sequential_changes(
+        &self,
+        state: impl State,
+        general_config: StarknetGeneralConfig,
+        actual_resources: HashMap<String, Felt>,
+    ) -> FeeInfo {
+        let fee_transfer_info = None;
+        let actual_fee = 0;
+        (fee_transfer_info, actual_fee)
     }
 
     pub fn handle_empty_constructor<S: State + StateReader>(
