@@ -10,8 +10,13 @@ use super::syscall_response::{
     GetSequencerAddressResponse, GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
 };
 use crate::business_logic::execution::objects::TxInfoStruct;
+use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
+use crate::business_logic::state::cached_state::CachedState;
+use crate::business_logic::state::state_api::State;
+use crate::business_logic::state::state_api::StateReader;
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::starknet_storage::dict_storage::DictStorage;
 use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::utils::get_big_int;
 use crate::utils::Address;
@@ -302,20 +307,24 @@ pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
     pub(crate) syscall_handler: H,
 }
 
-impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
-    #[allow(unused)] // TODO: Remove once used.
-    pub fn new_empty(
-    ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
-        Ok(SyscallHintProcessor {
-            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler::new(BlockInfo::default()),
-        })
-    }
-
+impl SyscallHintProcessor<OsSyscallHandler> {
     pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: OsSyscallHandler::default(),
+        })
+    }
+}
+
+impl
+    SyscallHintProcessor<
+        BusinessLogicSyscallHandler<CachedState<InMemoryStateReader<DictStorage, DictStorage>>>,
+    >
+{
+    pub fn new_empty() -> Result<Self, SyscallHandlerError> {
+        Ok(SyscallHintProcessor {
+            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
+            syscall_handler: BusinessLogicSyscallHandler::default(),
         })
     }
 }
@@ -467,7 +476,7 @@ mod tests {
 
     #[test]
     fn read_send_message_to_l1_request() {
-        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -488,7 +497,7 @@ mod tests {
 
     #[test]
     fn read_deploy_syscall_request() {
-        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -519,7 +528,7 @@ mod tests {
 
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -554,7 +563,7 @@ mod tests {
 
     #[test]
     fn get_sequencer_address_for_business_logic() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
