@@ -316,11 +316,7 @@ impl SyscallHintProcessor<OsSyscallHandler> {
     }
 }
 
-impl
-    SyscallHintProcessor<
-        BusinessLogicSyscallHandler<CachedState<InMemoryStateReader<DictStorage, DictStorage>>>,
-    >
-{
+impl SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>> {
     pub fn new_empty() -> Result<Self, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),

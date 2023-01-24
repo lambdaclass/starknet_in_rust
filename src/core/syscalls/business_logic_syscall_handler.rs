@@ -372,9 +372,7 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
     }
 }
 
-impl Default
-    for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader<DictStorage, DictStorage>>>
-{
+impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
     fn default() -> Self {
         let cached_state = CachedState::new(
             BlockInfo::default(),
