@@ -12,7 +12,7 @@ pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
     ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub enum EntryPointType {
+pub(crate) enum EntryPointType {
     External,
     L1Handler,
     Constructor,

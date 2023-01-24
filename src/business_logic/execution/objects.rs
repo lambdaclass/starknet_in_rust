@@ -216,6 +216,7 @@ pub(crate) struct TransactionExecutionContext {
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
+    pub(crate) n_steps: u64,
 }
 
 impl TransactionExecutionContext {
@@ -229,6 +230,27 @@ impl TransactionExecutionContext {
             transaction_hash: Felt::zero(),
             version: 0,
             n_sent_messages: 0,
+            n_steps: 0,
+        }
+    }
+
+    pub fn create_for_testing(
+        account_contract_address: Address,
+        max_fee: u64,
+        nonce: Felt,
+        n_steps: u64,
+        version: usize,
+    ) -> Self {
+        TransactionExecutionContext {
+            n_emitted_events: 0,
+            version,
+            account_contract_address,
+            max_fee: 0,
+            transaction_hash: Felt::zero(),
+            signature: Vec::new(),
+            nonce,
+            n_sent_messages: 0,
+            n_steps,
         }
     }
 }

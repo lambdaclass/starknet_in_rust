@@ -29,7 +29,7 @@ use crate::{
 
 use super::contract_state::ContractState;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ExecutionResourcesManager(HashMap<String, u64>);
 
 impl ExecutionResourcesManager {
