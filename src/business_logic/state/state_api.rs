@@ -34,5 +34,3 @@ pub trait State {
     fn update_block_info(&mut self, block_info: BlockInfo);
     fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt);
 }
-
-pub trait StateComplete: StateReader + State {}
