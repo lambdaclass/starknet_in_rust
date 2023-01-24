@@ -370,6 +370,7 @@ mod tests {
         let call_info = CallInfo {
             contract_address: Address(5.into()),
             caller_address: Address(1.into()),
+            code_address: None,
             internal_calls: Vec::new(),
             entry_point_type: None,
             storage_read_values: VecDeque::new(),

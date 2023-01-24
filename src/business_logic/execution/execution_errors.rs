@@ -19,4 +19,12 @@ pub enum ExecutionError {
     UnexpectedHolesL2toL1Messages,
     #[error("Trace is not enabled for this run")]
     TraceError,
+    #[error("Call type {0} not implemented")]
+    CallTypeNotImplemented(String),
+    #[error("Attemp to return class hash with incorrect call type")]
+    CallTypeIsNotDelegate,
+    #[error("Attemp to return code address when is None")]
+    AttempToUseNoneCodeAddress,
+    #[error("error recovering class hash from storage")]
+    FailToReadClassHash,
 }

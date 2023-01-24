@@ -2,10 +2,17 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
     iter::zip,
+    ops::Add,
 };
 
 use crate::{
-    business_logic::state::{state_api::State, state_cache::StorageEntry},
+    business_logic::{
+        execution::execution_errors::ExecutionError,
+        state::{
+            state_api::{State, StateReader},
+            state_cache::StorageEntry,
+        },
+    },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
@@ -155,6 +162,29 @@ where
 
     keys1.into_iter().collect()
 }
+
+//* ----------------------------
+//* Execution entry point utils
+//* ----------------------------
+
+// TODO: make the check UNINITIALIZED_CLASS_HASH = b"\x00" * HASH_BYTES
+
+pub fn get_deployed_address_class_hash_at_address<S: State + StateReader>(
+    state: S,
+    contract_address: Address,
+) -> Result<Option<[u8; 32]>, ExecutionError> {
+    let class_hash: [u8; 32] = state
+        .get_class_hash_at(&contract_address)
+        .map_err(|_| ExecutionError::FailToReadClassHash)?
+        .to_owned()
+        .try_into()
+        .map_err(|_| {
+            ExecutionError::ErrorInDataConversion("Vec<u8>".to_string(), "[u8;32]".to_string())
+        })?;
+
+    Ok(Some(class_hash))
+}
+
 //* -------------------
 //* Macros
 //* -------------------
