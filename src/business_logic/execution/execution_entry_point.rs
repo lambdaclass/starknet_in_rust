@@ -1,7 +1,10 @@
-use cairo_rs::vm::{
-    self,
-    runners::cairo_runner::{CairoRunner, ExecutionResources},
-    vm_core::VirtualMachine,
+use cairo_rs::{
+    types::relocatable::MaybeRelocatable,
+    vm::{
+        self,
+        runners::cairo_runner::{CairoRunner, ExecutionResources},
+        vm_core::VirtualMachine,
+    },
 };
 use felt::Felt;
 use num_traits::Zero;
@@ -20,6 +23,7 @@ use crate::{
         general_config::{self, StarknetGeneralConfig},
     },
     services::api::contract_class::EntryPointType,
+    starknet_runner::runner::StarknetRunner,
     utils::Address,
 };
 
@@ -92,7 +96,7 @@ impl ExecutionEntryPoint {
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: TransactionExecutionContext,
     ) -> Result<CallInfo, ExecutionError> {
-        //let previous_cairo_usage = resources_manager.cairo_usage;
+        // let previous_cairo_usage = resources_manager.cairo_usage;
 
         let (runner, syscall_handler) = self.run(
             state,
@@ -101,15 +105,11 @@ impl ExecutionEntryPoint {
             tx_execution_context,
         );
 
-        let vm = VirtualMachine::new(false);
-
         // TODO: add sum trait to executionResources
-        let resources_manager = runner
-            .get_execution_resources(&vm)
-            .map_err(|_| ExecutionError::TraceError)?;
+        let resources_manager = runner.get_execution_resources();
 
-        let retadata = get_return_values(runner);
-        self.build_call_info(previous_cairo_usage, syscall_handler, retdata);
+        let retdata = runner.get_return_values();
+        // self.build_call_info(previous_cairo_usage, syscall_handler, retdata);
         todo!()
     }
 
@@ -125,7 +125,9 @@ impl ExecutionEntryPoint {
         resources_manager: &mut ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
         tx_execution_context: TransactionExecutionContext,
-    ) -> (CairoRunner, BusinessLogicSyscallHandler) {
+    ) -> (StarknetRunner, BusinessLogicSyscallHandler) {
+        // Prepare input for Cairo runner.
+        //  let cairo_runner = CairoRunner::new(program, "all", false);
         todo!()
     }
 
@@ -133,7 +135,7 @@ impl ExecutionEntryPoint {
         &self,
         previous_cairo_usage: ExecutionResources,
         syscall_handler: BusinessLogicSyscallHandler,
-        redata: Vec<Felt>,
+        redata: Vec<MaybeRelocatable>,
     ) -> CallInfo {
         todo!()
     }
