@@ -39,7 +39,7 @@ pub struct CallInfo {
     pub(crate) caller_address: Address,
     pub(crate) call_type: Option<CallType>,
     pub(crate) contract_address: Address,
-    pub(crate) class_hash: [u8; 32],
+    pub(crate) class_hash: Option<[u8; 32]>,
     pub(crate) entry_point_selector: Option<usize>,
     pub(crate) entry_point_type: Option<EntryPointType>,
     pub(crate) calldata: VecDeque<Felt>,
@@ -56,7 +56,7 @@ impl CallInfo {
     pub fn empty(
         contract_address: Address,
         caller_address: Address,
-        class_hash: [u8; 32],
+        class_hash: Option<[u8; 32]>,
         call_type: Option<CallType>,
         entry_point_type: Option<EntryPointType>,
         entry_point_selector: Option<usize>,
@@ -86,7 +86,7 @@ impl CallInfo {
     pub fn empty_constructor_call(
         contract_address: Address,
         caller_address: Address,
-        class_hash: [u8; 32],
+        class_hash: Option<[u8; 32]>,
     ) -> Self {
         CallInfo::empty(
             contract_address,
@@ -195,7 +195,7 @@ impl Default for CallInfo {
             caller_address: Address(0.into()),
             call_type: None,
             contract_address: Address(0.into()),
-            class_hash: [0; 32],
+            class_hash: Some([0; 32]),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             storage_read_values: VecDeque::new(),

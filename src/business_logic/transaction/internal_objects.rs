@@ -134,7 +134,7 @@ impl InternalDeploy {
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
             Address(0.into()),
-            class_hash,
+            Some(class_hash),
         );
 
         let resources_manager = ExecutionResourcesManager {
