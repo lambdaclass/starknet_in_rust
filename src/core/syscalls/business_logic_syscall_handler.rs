@@ -183,7 +183,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<u64>, SyscallHandlerError> {
+    ) -> Result<Vec<Felt>, SyscallHandlerError> {
         // Parse request and prepare the call.
         let request =
             match self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)? {
@@ -352,10 +352,10 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: Address) -> Result<u64, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: Address) -> Result<Felt, SyscallHandlerError> {
         todo!()
     }
-    fn _storage_write(&mut self, _address: Address, _value: u64) {
+    fn _storage_write(&mut self, _address: Address, _value: Felt) {
         todo!()
     }
 

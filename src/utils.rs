@@ -99,14 +99,11 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
 
 pub fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt>,
-) -> Result<HashMap<Felt, HashMap<[u8; 32], Address>>, StateError> {
+) -> HashMap<Felt, HashMap<[u8; 32], Address>> {
     let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
     for ((address, key), value) in storage_writes {
         if storage_updates.contains_key(&address.0) {
-            let mut map = storage_updates
-                .get(&address.0)
-                .ok_or(StateError::EmptyKeyInStorage)?
-                .to_owned();
+            let mut map = storage_updates.get(&address.0).unwrap().to_owned();
             map.insert(key, Address(value));
             storage_updates.insert(address.0, map);
         } else {
@@ -116,7 +113,7 @@ pub fn to_state_diff_storage_mapping(
         }
     }
 
-    Ok(storage_updates)
+    storage_updates
 }
 
 /// Returns the total resources needed to include the most recent transaction in a StarkNet batch
@@ -240,7 +237,7 @@ where
 // TODO: make the check UNINITIALIZED_CLASS_HASH = b"\x00" * HASH_BYTES
 
 pub fn get_deployed_address_class_hash_at_address<S: State + StateReader>(
-    state: S,
+    mut state: S,
     contract_address: Address,
 ) -> Result<Option<[u8; 32]>, ExecutionError> {
     let class_hash: [u8; 32] = state
@@ -488,7 +485,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let map = to_state_diff_storage_mapping(storage).unwrap();
+        let map = to_state_diff_storage_mapping(storage);
 
         assert_eq!(
             *map.get(&address1.0).unwrap().get(&key1).unwrap(),
@@ -565,7 +562,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let state_dff = to_state_diff_storage_mapping(storage).unwrap();
+        let state_dff = to_state_diff_storage_mapping(storage);
         let cache_storage = to_cache_state_storage_mapping(state_dff);
 
         let mut expected_res = HashMap::new();

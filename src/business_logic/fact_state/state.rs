@@ -90,7 +90,7 @@ pub fn calculate_additional_resources(
 
     for (k, v) in additional_resources.builtin_instance_counter {
         if builtin_instance_counter.contains_key(&k) {
-            let val = builtin_instance_counter.get(&k).unwrap_or(&0).to_owned();
+            let val = builtin_instance_counter.get(&k).unwrap().to_owned();
             builtin_instance_counter.insert(k, val + v);
         } else {
             builtin_instance_counter.remove(&k);
@@ -198,7 +198,7 @@ impl SharedState {
             ffc,
             state_cache.class_hash_writes,
             state_cache.nonce_writes,
-            to_state_diff_storage_mapping(state_cache.storage_writes)?,
+            to_state_diff_storage_mapping(state_cache.storage_writes),
             current_carried_state.state.block_info,
         ))
     }
@@ -258,7 +258,7 @@ impl StateDiff {
             state_cache.storage_initial_values,
         );
 
-        let storage_updates = to_state_diff_storage_mapping(substracted_maps)?;
+        let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
         let address_to_nonce =
             subtract_mappings(state_cache.nonce_writes, state_cache.nonce_initial_values);

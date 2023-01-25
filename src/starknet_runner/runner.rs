@@ -6,11 +6,15 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
+use felt::Felt;
 
 use crate::core::syscalls::{
     business_logic_syscall_handler::BusinessLogicSyscallHandler,
     syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
 };
+
+use super::starknet_runner_error::StarknetRunnerError;
+use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 
 pub(crate) struct StarknetRunner {
     cairo_runner: CairoRunner,
@@ -38,7 +42,15 @@ impl StarknetRunner {
         self.cairo_runner.get_execution_resources(&self.vm).unwrap()
     }
 
-    pub fn get_return_values(&self) -> Vec<MaybeRelocatable> {
-        self.vm.get_return_values(2).unwrap()
+    pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
+        self.vm
+            .get_return_values(2)
+            .map_err(|_| StarknetRunnerError::NumOutOfBounds)?
+            .into_iter()
+            .map(|val| match val {
+                Int(felt) => Ok(felt),
+                _ => Err(StarknetRunnerError::NotFeltInReturnValue),
+            })
+            .collect::<Result<Vec<Felt>, _>>()
     }
 }

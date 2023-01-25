@@ -27,4 +27,6 @@ pub enum ExecutionError {
     AttempToUseNoneCodeAddress,
     #[error("error recovering class hash from storage")]
     FailToReadClassHash,
+    #[error("error while fetching redata {0}")]
+    RetdataError(String),
 }

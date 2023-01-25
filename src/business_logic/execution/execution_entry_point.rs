@@ -39,7 +39,7 @@ pub(crate) struct ExecutionEntryPoint {
     contract_address: Address,
     code_address: Option<Address>,
     class_hash: Option<[u8; 32]>,
-    calldata: VecDeque<Felt>,
+    calldata: Vec<Felt>,
     caller_address: Address,
     entry_point_selector: Option<usize>,
     entry_point_type: Option<EntryPointType>,
@@ -48,7 +48,7 @@ pub(crate) struct ExecutionEntryPoint {
 impl ExecutionEntryPoint {
     pub fn new(
         contract_address: Address,
-        calldata: VecDeque<Felt>,
+        calldata: Vec<Felt>,
         entry_point_selector: Option<usize>,
         caller_address: Address,
         entry_point_type: Option<EntryPointType>,
@@ -101,7 +101,7 @@ impl ExecutionEntryPoint {
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: TransactionExecutionContext,
     ) -> Result<CallInfo, ExecutionError> {
-        // let previous_cairo_usage = resources_manager.cairo_usage;
+        let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         let (runner, syscall_handler) = self.run(
             state,
@@ -113,9 +113,10 @@ impl ExecutionEntryPoint {
         // TODO: add sum trait to executionResources
         let resources_manager = runner.get_execution_resources();
 
-        let retdata = runner.get_return_values();
-        // self.build_call_info(previous_cairo_usage, syscall_handler, retdata);
-        todo!()
+        let retdata = runner
+            .get_return_values()
+            .map_err(|e| ExecutionError::RetdataError(e.to_string()))?;
+        self.build_call_info(previous_cairo_usage, syscall_handler, retdata)
     }
 
     /// Runs the selected entry point with the given calldata in the code of the contract deployed
@@ -140,27 +141,28 @@ impl ExecutionEntryPoint {
         &self,
         previous_cairo_usage: ExecutionResources,
         syscall_handler: BusinessLogicSyscallHandler,
-        retdata: VecDeque<MaybeRelocatable>,
-    ) -> CallInfo {
-        let execution_resources =
-            syscall_handler.resources_manager.cairo_usage - previous_cairo_usage;
-        CallInfo {
-            caller_address: self.caller_address,
-            call_type: Some(self.call_type),
-            contract_address: self.contract_address,
-            code_address: self.code_address,
-            class_hash: self.get_code_class_hash(syscall_handler.state).unwrap(),
-            entry_point_selector: self.entry_point_selector,
-            entry_point_type: self.entry_point_type,
-            calldata: self.calldata,
-            retdata,
-            execution_resources: execution_resources.filter_unused_builtins(),
-            events: syscall_handler.events,
-            l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
-            storage_read_values: syscall_handler.starknet_storage.read_values,
-            accesed_storage_keys: syscall_handler.starknet_storage.accesed_keys,
-            internal_calls: syscall_handler.internal_calls,
-        }
+        retdata: Vec<Felt>,
+    ) -> Result<CallInfo, ExecutionError> {
+        //let execution_resources =
+        //     syscall_handler.resources_manager.cairo_usage - previous_cairo_usage;
+        // Ok(CallInfo {
+        //     caller_address: self.caller_address,
+        //     call_type: Some(self.call_type),
+        //     contract_address: self.contract_address,
+        //     code_address: self.code_address,
+        //     class_hash: self.get_code_class_hash(syscall_handler.state)?,
+        //     entry_point_selector: self.entry_point_selector,
+        //     entry_point_type: self.entry_point_type,
+        //     calldata: self.calldata,
+        //     retdata,
+        //     execution_resources: execution_resources.filter_unused_builtins(),
+        //     events: syscall_handler.events,
+        //     l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
+        //     storage_read_values: syscall_handler.starknet_storage.read_values,
+        //     accesed_storage_keys: syscall_handler.starknet_storage.accesed_keys,
+        //     internal_calls: syscall_handler.internal_calls,
+        // })
+        todo!();
     }
 
     /// Returns the hash of the executed contract class.
@@ -174,17 +176,17 @@ impl ExecutionEntryPoint {
                 _ => return Err(ExecutionError::CallTypeIsNotDelegate),
             }
         }
-        let Some(code_address) = match self.call_type {
-            CallType::Call => Some(self.contract_address),
+        let code_address = match self.call_type {
+            CallType::Call => Some(self.contract_address.clone()),
             CallType::Delegate => {
                 if self.code_address.is_some() {
-                    self.code_address
+                    self.code_address.clone()
                 } else {
                     return Err(ExecutionError::AttempToUseNoneCodeAddress);
                 }
             }
         };
 
-        get_deployed_address_class_hash_at_address(state, code_address)
+        get_deployed_address_class_hash_at_address(state, code_address.unwrap())
     }
 }

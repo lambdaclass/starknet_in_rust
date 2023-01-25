@@ -10,6 +10,7 @@ use crate::utils::Address;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
+use felt::Felt;
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 
@@ -36,14 +37,14 @@ pub(crate) struct OsSyscallHandler {
     // state of the caller (the call the called the current call); and so on.
     call_stack: VecDeque<CallInfo>,
     // An iterator over contract addresses that were deployed during that call.
-    deployed_contracts_iterator: VecDeque<Address>, // u64
+    deployed_contracts_iterator: VecDeque<Address>, // felt
     // An iterator to the retdata of its internal calls.
-    retdata_iterator: VecDeque<VecDeque<u64>>, //VEC<u64>
+    retdata_iterator: VecDeque<VecDeque<Felt>>, //VEC<felt>
     // An iterator to the read_values array which is consumed when the transaction
     // code is executed.
-    execute_code_read_iterator: VecDeque<u64>, //u64
+    execute_code_read_iterator: VecDeque<Felt>, //felt
     // StarkNet storage members.
-    starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
+    starknet_storage_by_address: HashMap<Felt, OsSingleStarknetStorage>,
     // A pointer to the Cairo TxInfo struct.
     // This pointer needs to match the TxInfo pointer that is going to be used during the system
     // call validation by the StarkNet OS.
@@ -123,7 +124,7 @@ impl SyscallHandler for OsSyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<u64>, SyscallHandlerError> {
+    ) -> Result<Vec<Felt>, SyscallHandlerError> {
         Ok(self
             .retdata_iterator
             .pop_front()
@@ -153,7 +154,7 @@ impl SyscallHandler for OsSyscallHandler {
         }
     }
 
-    fn _storage_read(&mut self, address: Address) -> Result<u64, SyscallHandlerError> {
+    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
         self.execute_code_read_iterator
             .pop_front()
             .ok_or(SyscallHandlerError::IteratorEmpty)
@@ -161,7 +162,7 @@ impl SyscallHandler for OsSyscallHandler {
 
     // Advance execute_code_read_iterators since the previous storage value is written
     // in each write operation. See BusinessLogicSysCallHandler._storage_write().
-    fn _storage_write(&mut self, address: Address, value: u64) {
+    fn _storage_write(&mut self, address: Address, value: Felt) {
         self.execute_code_read_iterator.pop_front();
     }
 
@@ -190,9 +191,9 @@ impl OsSyscallHandler {
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
         deployed_contracts_iterator: VecDeque<Address>,
-        retdata_iterator: VecDeque<VecDeque<u64>>,
-        execute_code_read_iterator: VecDeque<u64>,
-        starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
+        retdata_iterator: VecDeque<VecDeque<Felt>>,
+        execute_code_read_iterator: VecDeque<Felt>,
+        starknet_storage_by_address: HashMap<Felt, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
         block_info: BlockInfo,
@@ -299,13 +300,13 @@ impl OsSyscallHandler {
     /// the write operation.
     fn execute_syscall_storage_write(
         &self,
-        contract_address: &u64,
+        contract_address: &Address,
         key: u64,
         value: u64,
     ) -> Result<u64, SyscallHandlerError> {
         Ok(self
             .starknet_storage_by_address
-            .get(contract_address)
+            .get(&contract_address.0)
             .ok_or(SyscallHandlerError::KeyNotFound)?
             .write(key, value))
     }
@@ -330,11 +331,11 @@ impl OsSyscallHandler {
 
         self.retdata_iterator = call_info
             .internal_calls
-            .iter()
-            .map(|call_info_internal| call_info_internal.retdata.clone())
-            .collect::<VecDeque<VecDeque<u64>>>();
+            .into_iter()
+            .map(|call_info_internal| call_info_internal.retdata.into())
+            .collect::<VecDeque<VecDeque<Felt>>>();
 
-        self.execute_code_read_iterator = call_info.storage_read_values;
+        self.execute_code_read_iterator = call_info.storage_read_values.into();
 
         Ok(())
     }
@@ -353,6 +354,7 @@ mod tests {
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use cairo_rs::vm::vm_core::VirtualMachine;
+    use felt::Felt;
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
 
@@ -373,18 +375,18 @@ mod tests {
             code_address: None,
             internal_calls: Vec::new(),
             entry_point_type: None,
-            storage_read_values: VecDeque::new(),
-            retdata: VecDeque::new(),
+            storage_read_values: Vec::new(),
+            retdata: Vec::new(),
             entry_point_selector: None,
-            l2_to_l1_messages: VecDeque::new(),
-            accesed_storage_keys: VecDeque::new(),
-            calldata: VecDeque::new(),
+            l2_to_l1_messages: Vec::new(),
+            accesed_storage_keys: Vec::new(),
+            calldata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::new(),
             },
-            events: VecDeque::new(),
+            events: Vec::new(),
             call_type: None,
             class_hash: Some([0; 32]),
         };
@@ -430,7 +432,7 @@ mod tests {
     #[test]
     fn end_tx_err_execute_code_read_iterator() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
+        execute_code_read_iterator.push_back(12.into());
         let mut handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()
@@ -643,7 +645,7 @@ mod tests {
     fn storage_deploy_err_retdata_iterator_multiple() {
         let mut retdata_iterator = VecDeque::new();
         let mut retdata_construct = VecDeque::new();
-        retdata_construct.push_back(12);
+        retdata_construct.push_back(12.into());
         retdata_iterator.push_back(retdata_construct);
         let mut handler = OsSyscallHandler {
             retdata_iterator,
@@ -679,16 +681,16 @@ mod tests {
     #[test]
     fn storage_read() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
-        execute_code_read_iterator.push_back(1444);
+        execute_code_read_iterator.push_back(12.into());
+        execute_code_read_iterator.push_back(1444.into());
         let mut handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()
         };
 
         let addr = Address(0.into());
-        assert_eq!(handler._storage_read(addr.clone()), Ok(12));
-        assert_eq!(handler._storage_read(addr.clone()), Ok(1444));
+        assert_eq!(handler._storage_read(addr.clone()), Ok(12.into()));
+        assert_eq!(handler._storage_read(addr.clone()), Ok(1444.into()));
         assert_eq!(
             handler._storage_read(addr),
             Err(SyscallHandlerError::IteratorEmpty)
@@ -698,16 +700,16 @@ mod tests {
     #[test]
     fn storage_write() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
+        execute_code_read_iterator.push_back(12.into());
         let mut handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()
         };
 
         let addr = Address(0.into());
-        let val = 0;
+        let val: Felt = 0.into();
 
-        handler._storage_write(addr.clone(), val);
+        handler._storage_write(addr.clone(), val.clone());
         handler._storage_write(addr, val);
     }
 
@@ -744,7 +746,7 @@ mod tests {
     #[test]
     fn assert_iterators_exhausted_err_execute() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
+        execute_code_read_iterator.push_back(12.into());
         let handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()
@@ -853,7 +855,7 @@ mod tests {
 
     #[test]
     fn call_contract_and_write_response_err() {
-        let retdata_iterator = vec![vec![12].into(), vec![6543].into()].into();
+        let retdata_iterator = vec![vec![12.into()].into(), vec![6543.into()].into()].into();
         let mut handler = OsSyscallHandler {
             retdata_iterator,
             ..Default::default()
@@ -873,7 +875,7 @@ mod tests {
     }
     #[test]
     fn call_contract_and_write_response() {
-        let retdata_iterator = vec![vec![12].into(), vec![6543].into()].into();
+        let retdata_iterator = vec![vec![12.into()].into(), vec![6543.into()].into()].into();
         let mut handler = OsSyscallHandler {
             retdata_iterator,
             ..Default::default()
