@@ -386,7 +386,7 @@ mod tests {
             },
             events: VecDeque::new(),
             call_type: None,
-            class_hash: None,
+            class_hash: Some([0; 32]),
         };
         call_stack.push_back(call_info);
 

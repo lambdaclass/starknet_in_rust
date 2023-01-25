@@ -680,7 +680,7 @@ mod tests {
         // TxInfoStruct
         assert_eq!(
             get_integer(&vm, &relocatable!(4, 0)),
-            Ok(tx_execution_context.version)
+            Ok(tx_execution_context.version as usize)
         );
         assert_eq!(
             get_big_int(&vm, &relocatable!(4, 1)),

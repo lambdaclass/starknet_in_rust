@@ -1,4 +1,6 @@
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
+use num_traits::Zero;
 use std::{
     borrow::Borrow,
     cell::RefCell,
@@ -30,31 +32,82 @@ use crate::{
 use super::contract_state::ContractState;
 
 #[derive(Debug, Default, Clone)]
-pub struct ExecutionResourcesManager(HashMap<String, u64>);
+pub struct ExecutionResourcesManager {
+    pub(crate) syscall_counter: HashMap<String, u64>,
+    pub(crate) cairo_usage: ExecutionResources,
+}
 
 impl ExecutionResourcesManager {
-    pub fn new(syscalls: Vec<String>) -> Self {
-        let mut manager = HashMap::new();
+    pub fn new(syscalls: Vec<String>, cairo_usage: ExecutionResources) -> Self {
+        let mut syscall_counter = HashMap::new();
         for syscall in syscalls {
-            manager.insert(syscall, 0);
+            syscall_counter.insert(syscall, 0);
         }
-        ExecutionResourcesManager(manager)
+        ExecutionResourcesManager {
+            syscall_counter,
+            cairo_usage,
+        }
     }
 
     pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) -> Option<()> {
-        self.0.get_mut(syscall_name).map(|val| *val += amount)
+        self.syscall_counter
+            .get_mut(syscall_name)
+            .map(|val| *val += amount)
     }
 
     pub fn get_syscall_counter(&self, syscall_name: &str) -> Option<u64> {
-        self.0.get(syscall_name).map(ToOwned::to_owned)
+        self.syscall_counter
+            .get(syscall_name)
+            .map(ToOwned::to_owned)
     }
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~
+// TODO: this functions should be in cairo-rs
+
+// Returns a copy of the execution resources where all the builtins with a usage counter
+// of 0 are omitted.
+
+pub fn filter_unused_builtins(resources: ExecutionResources) -> ExecutionResources {
+    ExecutionResources {
+        n_steps: resources.n_steps,
+        n_memory_holes: resources.n_memory_holes,
+        builtin_instance_counter: resources
+            .builtin_instance_counter
+            .into_iter()
+            .filter(|builtin| !builtin.1.is_zero())
+            .collect(),
+    }
+}
+
+pub fn calculate_additional_resources(
+    current_resources: ExecutionResources,
+    additional_resources: ExecutionResources,
+) -> ExecutionResources {
+    let mut builtin_instance_counter = current_resources.builtin_instance_counter.clone();
+
+    let n_steps = current_resources.n_steps + additional_resources.n_steps;
+    let n_memory_holes = current_resources.n_memory_holes + additional_resources.n_memory_holes;
+
+    for (k, v) in additional_resources.builtin_instance_counter {
+        if builtin_instance_counter.contains_key(&k) {
+            let val = builtin_instance_counter.get(&k).unwrap_or(&0).to_owned();
+            builtin_instance_counter.insert(k, val + v);
+        } else {
+            builtin_instance_counter.remove(&k);
+        }
+    }
+
+    ExecutionResources {
+        n_steps,
+        n_memory_holes,
+        builtin_instance_counter,
+    }
+}
+
 // ----------------------
 //      SHARED STATE
 // ----------------------
-// ~~~~~~~~~~~~~~~~~~~~~~
+
 #[derive(Debug, Clone)]
 pub(crate) struct CarriedState<T>
 where

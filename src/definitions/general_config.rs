@@ -37,7 +37,7 @@ pub(crate) struct StarknetOsConfig {
 
 #[allow(unused)]
 #[derive(Debug, Clone)]
-pub(crate) struct StarknetGeneralConfig {
+pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,

@@ -4,6 +4,7 @@ use std::{
 };
 
 use cairo_rs::{
+    hint_processor::builtin_hint_processor::secp::signature,
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
@@ -53,7 +54,55 @@ pub struct CallInfo {
 }
 
 impl CallInfo {
-    ///Yields the contract calls in DFS (preorder).
+    pub fn empty(
+        contract_address: Address,
+        caller_address: Address,
+        class_hash: Option<[u8; 32]>,
+        call_type: Option<CallType>,
+        entry_point_type: Option<EntryPointType>,
+        entry_point_selector: Option<usize>,
+        code_address: Option<Address>,
+    ) -> Self {
+        CallInfo {
+            caller_address,
+            call_type,
+            contract_address,
+            class_hash,
+            entry_point_selector,
+            code_address,
+            entry_point_type,
+            calldata: VecDeque::new(),
+            retdata: VecDeque::new(),
+            execution_resources: ExecutionResources {
+                n_steps: 0,
+                builtin_instance_counter: HashMap::new(),
+                n_memory_holes: 0,
+            },
+            events: VecDeque::new(),
+            l2_to_l1_messages: VecDeque::new(),
+            storage_read_values: VecDeque::new(),
+            accesed_storage_keys: VecDeque::new(),
+            internal_calls: Vec::new(),
+        }
+    }
+
+    pub fn empty_constructor_call(
+        contract_address: Address,
+        caller_address: Address,
+        class_hash: Option<[u8; 32]>,
+    ) -> Self {
+        CallInfo::empty(
+            contract_address,
+            caller_address,
+            class_hash,
+            Some(CallType::Call),
+            Some(EntryPointType::Constructor),
+            None,
+            None,
+        )
+    }
+
+    /// Yields the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
         if self.internal_calls.is_empty() {
@@ -150,8 +199,8 @@ impl Default for CallInfo {
             caller_address: Address(0.into()),
             call_type: None,
             contract_address: Address(0.into()),
-            class_hash: None,
             code_address: None,
+            class_hash: Some([0; 32]),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             storage_read_values: VecDeque::new(),
@@ -208,10 +257,10 @@ impl Event {
 //  Transaction Structures
 // -------------------------
 
-#[derive(Clone)]
-pub(crate) struct TransactionExecutionContext {
+#[derive(Clone, Default)]
+pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
-    pub(crate) version: usize,
+    pub(crate) version: u64,
     pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u64,
     pub(crate) transaction_hash: Felt,
@@ -222,14 +271,22 @@ pub(crate) struct TransactionExecutionContext {
 }
 
 impl TransactionExecutionContext {
-    pub fn new() -> Self {
+    pub fn new(
+        account_contract_address: Address,
+        transaction_hash: Felt,
+        signature: Vec<Felt>,
+        max_fee: u64,
+        nonce: Felt,
+        n_steps: u64,
+        version: u64,
+    ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
-            account_contract_address: Address(Felt::zero()),
-            max_fee: 0,
-            nonce: Felt::zero(),
-            signature: Vec::new(),
-            transaction_hash: Felt::zero(),
+            account_contract_address,
+            max_fee,
+            nonce,
+            signature,
+            transaction_hash,
             version: 0,
             n_sent_messages: 0,
             n_steps: 0,
@@ -241,7 +298,7 @@ impl TransactionExecutionContext {
         max_fee: u64,
         nonce: Felt,
         n_steps: u64,
-        version: usize,
+        version: u64,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
@@ -276,7 +333,7 @@ impl TxInfoStruct {
         chain_id: StarknetChainId,
     ) -> TxInfoStruct {
         TxInfoStruct {
-            version: tx.version,
+            version: tx.version as usize,
             account_contract_address: tx.account_contract_address,
             max_fee: tx.max_fee,
             signature_len: tx.signature.len(),
@@ -335,7 +392,7 @@ pub struct TransactionExecutionInfo {
     pub(crate) call_info: Option<CallInfo>,
     pub(crate) fee_transfer_info: Option<CallInfo>,
     pub(crate) actual_fee: u64,
-    pub(crate) actual_resources: ResourcesMapping,
+    pub(crate) actual_resources: HashMap<String, usize>,
     pub(crate) tx_type: Option<TransactionType>,
 }
 
@@ -345,7 +402,7 @@ impl TransactionExecutionInfo {
         call_info: Option<CallInfo>,
         fee_transfer_info: Option<CallInfo>,
         actual_fee: u64,
-        actual_resources: ResourcesMapping,
+        actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
     ) -> Self {
         TransactionExecutionInfo {
@@ -410,7 +467,7 @@ impl TransactionExecutionInfo {
     pub fn create_concurrent_stage_execution_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
-        actual_resources: ResourcesMapping,
+        actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
     ) -> Self {
         TransactionExecutionInfo {
