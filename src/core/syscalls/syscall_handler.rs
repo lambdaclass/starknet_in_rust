@@ -651,6 +651,7 @@ mod tests {
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
             n_sent_messages: 52,
+            n_steps: 100000,
         };
         syscall_handler_hint_processor
             .syscall_handler
@@ -994,6 +995,7 @@ mod tests {
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
             n_sent_messages: 52,
+            n_steps: 10000,
         };
         syscall_handler_hint_processor
             .syscall_handler

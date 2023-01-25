@@ -35,7 +35,7 @@ use std::str;
 //*   Storage Trait
 //* ------------------
 
-pub(crate) trait Storage {
+pub trait Storage {
     fn set_value(&mut self, key: &StorageKey, value: Vec<u8>) -> Result<(), StorageError>;
     fn get_value(&self, key: &StorageKey) -> Option<Vec<u8>>;
     fn delete_value(&mut self, key: &StorageKey) -> Result<Vec<u8>, StorageError>;
@@ -151,7 +151,7 @@ pub(crate) trait Storage {
 //*   FactFetching contract
 //* -------------------------
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct FactFetchingContext<T: Storage> {
+pub struct FactFetchingContext<T: Storage> {
     storage: T,
     n_workers: Option<usize>,
 }
