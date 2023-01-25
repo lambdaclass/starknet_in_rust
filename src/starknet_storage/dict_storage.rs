@@ -1,7 +1,7 @@
 use super::{errors::storage_errors::StorageError, storage::Storage};
 use std::collections::HashMap;
 
-pub(crate) type StorageKey = (Prefix, [u8; 32]);
+pub type StorageKey = (Prefix, [u8; 32]);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct DictStorage {
     storage: HashMap<StorageKey, Vec<u8>>,
@@ -16,7 +16,7 @@ impl DictStorage {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
-pub(crate) enum Prefix {
+pub enum Prefix {
     Int,
     Float,
     Str,

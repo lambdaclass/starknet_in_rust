@@ -9,3 +9,5 @@ pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
 
 pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
     (L2_TO_L1_MSG_HEADER_SIZE + 1) - LOG_MSG_TO_L1_N_TOPICS;
+
+pub(crate) const TRANSACTION_VERSION: u64 = 1;

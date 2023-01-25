@@ -25,7 +25,7 @@ use super::{
 // be counted as a single storage-write. Additionally, if a transaction writes a value to storage
 // which is equal to the initial value previously contained in that address, then no change needs
 // to be done and this should not count as a storage-write.
-pub(crate) struct UpdatesTrackerState<T: State> {
+pub struct UpdatesTrackerState<T: State> {
     pub(crate) state: T,
     pub(crate) storage_initial_values: HashMap<StorageEntry, u64>,
     pub(crate) storage_writes: HashMap<StorageEntry, u64>,
