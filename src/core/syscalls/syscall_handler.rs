@@ -1137,16 +1137,17 @@ mod tests {
             10,
         )
         .unwrap();
-        // insert data to form the request
+
         memory_insert!(
             vm,
             [
                 ((1, 0), (2, 0)), //  syscall_ptr
-                ((2, 0), 10)      //  StorageReadRequest.selector
+                ((2, 0), 10),     //  StorageWriteRequest.selector
+                ((2, 2), 45)      //  StorageWriteRequest.value
             ]
         );
 
-        // StorageReadRequest.address
+        // StorageWriteRequest.address
         vm.insert_value(&relocatable!(2, 1), address.clone());
 
         // syscall_ptr
@@ -1179,6 +1180,13 @@ mod tests {
                 &HashMap::new(),
             )
             .is_ok());
+
+        let write = syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .read(&Address(address).to_32_bytes().unwrap());
+
+        assert_eq!(write, Ok(&Felt::new(45)));
     }
 
     #[test]

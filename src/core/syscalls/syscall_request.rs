@@ -395,7 +395,7 @@ impl FromPtr for StorageWriteRequest {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &syscall_ptr)?;
         let address = Address(get_big_int(vm, &(syscall_ptr + 1))?);
-        let value = get_big_int(vm, &syscall_ptr)?;
+        let value = get_big_int(vm, &(syscall_ptr + 2))?;
 
         Ok(SyscallRequest::StorageWrite(StorageWriteRequest {
             selector,
