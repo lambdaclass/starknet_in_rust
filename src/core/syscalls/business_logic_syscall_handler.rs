@@ -13,6 +13,7 @@ use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::services::api::contract_class::EntryPointType;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::{Felt, FeltOps};
 use num_traits::{One, ToPrimitive, Zero};
@@ -50,9 +51,16 @@ impl BusinessLogicSyscallHandler {
             "get_block_timestamp".to_string(),
         ]);
         let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext::new();
+        let tx_execution_context = TransactionExecutionContext {
+            ..Default::default()
+        };
         let read_only_segments = Vec::new();
-        let resources_manager = ExecutionResourcesManager::new(syscalls);
+        let resources_manager = ExecutionResourcesManager::new(
+            syscalls,
+            ExecutionResources {
+                ..Default::default()
+            },
+        );
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
@@ -158,7 +166,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         };
 
         let _contract_address = calculate_contract_address_from_hash(
-            &request.contract_address_salt,
+            &Address(request.contract_address_salt),
             class_hash,
             &constructor_calldata,
             deployer_address,

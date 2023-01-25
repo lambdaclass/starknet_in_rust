@@ -19,6 +19,8 @@ pub enum SyscallHandlerError {
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
     FeltToU64Fail,
+    #[error("Couldn't convert Felt to [u8;32]")]
+    FeltToFixBytesArrayFail,
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]

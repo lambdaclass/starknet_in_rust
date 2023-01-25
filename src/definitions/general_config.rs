@@ -37,11 +37,12 @@ pub(crate) struct StarknetOsConfig {
 
 #[allow(unused)]
 #[derive(Debug, Clone)]
-pub(crate) struct StarknetGeneralConfig {
+pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,
     sequencer_address: Address,
+    pub(crate) invoke_tx_max_n_steps: u64,
 }
 
 impl StarknetGeneralConfig {
@@ -50,12 +51,14 @@ impl StarknetGeneralConfig {
         contract_storage_commitment_tree_height: u64,
         global_state_commitment_tree_height: u64,
         sequencer_address: Address,
+        invoke_tx_max_n_steps: u64,
     ) -> Self {
         Self {
             starknet_os_config,
             contract_storage_commitment_tree_height,
             global_state_commitment_tree_height,
             sequencer_address,
+            invoke_tx_max_n_steps,
         }
     }
     pub(crate) fn default() -> Self {
@@ -67,6 +70,7 @@ impl StarknetGeneralConfig {
             contract_storage_commitment_tree_height: 0,
             global_state_commitment_tree_height: 0,
             sequencer_address: Address(0.into()),
+            invoke_tx_max_n_steps: 0,
         }
     }
 }

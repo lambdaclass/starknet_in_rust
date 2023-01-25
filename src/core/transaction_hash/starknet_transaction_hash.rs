@@ -1,7 +1,8 @@
 use felt::{felt_str, Felt};
 
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError, hash_utils::compute_hash_on_elements,
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    hash_utils::compute_hash_on_elements, utils::Address,
 };
 
 #[derive(Debug)]
@@ -31,7 +32,7 @@ impl TransactionHashPrefix {
 pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: u64,
-    contract_address: u64,
+    contract_address: Address,
     entry_point_selector: u64,
     calldata: &[Felt],
     max_fee: u64,
@@ -56,7 +57,7 @@ pub fn calculate_transaction_hash_common(
     let mut data_to_hash: Vec<Felt> = vec![
         tx_hash_prefix.get_prefix(),
         version.into(),
-        contract_address.into(),
+        contract_address.0,
         entry_point_selector.into(),
         calldata_hash,
         max_fee.into(),
@@ -70,7 +71,7 @@ pub fn calculate_transaction_hash_common(
 
 pub fn calculate_deploy_transaction_hash(
     version: u64,
-    contract_address: u64,
+    contract_address: Address,
     constructor_calldata: &[Felt],
     chain_id: u64,
 ) -> Result<Felt, SyscallHandlerError> {
@@ -92,7 +93,7 @@ pub fn calculate_deploy_transaction_hash(
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
     version: u64,
-    contract_address: u64,
+    contract_address: Address,
     class_hash: Felt,
     constructor_calldata: &[Felt],
     max_fee: u64,
@@ -125,7 +126,7 @@ mod tests {
     fn calculate_transaction_hash_common_test() {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
         let version = 0;
-        let contract_addres = 42;
+        let contract_addres = Address(42.into());
         let entry_point_selector = 100;
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;

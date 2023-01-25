@@ -8,7 +8,7 @@ use starknet_crypto::{pedersen_hash, FieldElement};
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
 
 pub fn calculate_contract_address_from_hash(
-    salt: &Felt,
+    salt: &Address,
     class_hash: &Felt,
     constructor_calldata: &[Felt],
     deployer_address: Address,
@@ -21,7 +21,7 @@ pub fn calculate_contract_address_from_hash(
     let raw_address_vec = vec![
         contract_address_prefix,
         deployer_address.0,
-        salt.to_owned(),
+        salt.0.to_owned(),
         class_hash.to_owned(),
         constructor_calldata_hash,
     ];
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn test_calculate_contract_address_from_hash() {
         let result_1 = calculate_contract_address_from_hash(
-            &1.into(),
+            &Address(1.into()),
             &2.into(),
             &[3.into(), 4.into()],
             Address(5.into()),
@@ -113,7 +113,7 @@ mod tests {
         );
 
         let result_2 = calculate_contract_address_from_hash(
-            &756.into(),
+            &Address(756.into()),
             &543.into(),
             &[124543.into(), 5345345.into(), 89.into()],
             Address(87123.into()),

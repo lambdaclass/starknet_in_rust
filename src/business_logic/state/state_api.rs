@@ -7,7 +7,7 @@ use crate::{
 
 use super::{state_api_objects::BlockInfo, state_cache::StorageEntry};
 
-pub(crate) trait StateReader {
+pub trait StateReader {
     /// Returns the contract class of the given class hash.
     fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError>;
     /// Returns the class hash of the contract class at the given address.
@@ -18,7 +18,7 @@ pub(crate) trait StateReader {
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError>;
 }
 
-pub(crate) trait State {
+pub trait State {
     fn block_info(&self) -> &BlockInfo;
     fn set_contract_class(
         &mut self,
