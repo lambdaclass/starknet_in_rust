@@ -388,6 +388,23 @@ impl FromPtr for StorageReadRequest {
     }
 }
 
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, &syscall_ptr)?;
+        let address = Address(get_big_int(vm, &(syscall_ptr + 1))?);
+        let value = get_big_int(vm, &syscall_ptr)?;
+
+        Ok(SyscallRequest::StorageWrite(StorageWriteRequest {
+            selector,
+            address,
+            value,
+        }))
+    }
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  CountFields implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
