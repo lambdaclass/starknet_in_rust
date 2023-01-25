@@ -1,4 +1,5 @@
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+use felt::Felt;
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
@@ -19,8 +20,8 @@ pub enum SyscallHandlerError {
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
     FeltToU64Fail,
-    #[error("Couldn't convert Felt to [u8;32]")]
-    FeltToFixBytesArrayFail,
+    #[error("Couldn't convert Felt: {0} to [u8;32]")]
+    FeltToFixBytesArrayFail(Felt),
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]

@@ -50,7 +50,7 @@ impl InternalDeploy {
             .to_string()
             .as_bytes()
             .try_into()
-            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail)?;
+            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(class_hash.clone()))?;
         let contract_address = Address(calculate_contract_address_from_hash(
             &contract_address_salt,
             &class_hash,
@@ -92,7 +92,7 @@ impl InternalDeploy {
     }
 
     pub fn class_hash(&self) -> [u8; 32] {
-        self.contract_hash.clone()
+        self.contract_hash
     }
 
     pub fn get_state_selector() {
@@ -104,7 +104,7 @@ impl InternalDeploy {
         mut state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        state.deploy_contract(self.contract_address.clone(), self.contract_hash.clone());
+        state.deploy_contract(self.contract_address.clone(), self.contract_hash);
         let class_hash: [u8; 32] = self.contract_hash[..]
             .try_into()
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
