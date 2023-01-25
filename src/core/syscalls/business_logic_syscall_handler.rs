@@ -363,8 +363,9 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: Address) -> Result<Felt, SyscallHandlerError> {
-        todo!()
+    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
+        let x: [u8; 32] = address.to_32_bytes()?;
+        Ok(self.starknet_storage.read(&x)?.clone())
     }
     fn _storage_write(&mut self, _address: Address, _value: u64) {
         todo!()

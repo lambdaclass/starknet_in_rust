@@ -2,6 +2,8 @@ use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use felt::Felt;
 use thiserror::Error;
 
+use super::state_errors::StateError;
+
 #[derive(Debug, PartialEq, Error)]
 pub enum SyscallHandlerError {
     #[error("Missing Member")]
@@ -80,4 +82,6 @@ pub enum SyscallHandlerError {
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
+    #[error(transparent)]
+    StateError(#[from] StateError),
 }
