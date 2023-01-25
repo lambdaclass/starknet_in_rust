@@ -74,18 +74,17 @@ impl ExecutionEntryPoint {
         resources_manager: &mut Option<ExecutionResourcesManager>,
         tx_execution_context: Option<TransactionExecutionContext>,
     ) -> Result<CallInfo, ExecutionError> {
-        let tx_context =
-            tx_execution_context.unwrap_or(TransactionExecutionContext::create_for_testing(
+        let tx_context = tx_execution_context.unwrap_or_else(|| {
+            TransactionExecutionContext::create_for_testing(
                 Address(0.into()),
                 0,
                 Felt::zero(),
                 general_config.invoke_tx_max_n_steps,
                 TRANSACTION_VERSION,
-            ));
+            )
+        });
 
-        let mut rsc_manager = resources_manager
-            .clone()
-            .unwrap_or(ExecutionResourcesManager::default());
+        let mut rsc_manager = resources_manager.clone().unwrap_or_default();
 
         self.execute(state, general_config, &mut rsc_manager, tx_context)
     }
