@@ -112,7 +112,6 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     }
 
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
-        println!("{:?}", storage_entry);
         if self.cache.get_storage(storage_entry).is_none() {
             let value = self.state_reader.get_storage_at(storage_entry)?;
             self.cache

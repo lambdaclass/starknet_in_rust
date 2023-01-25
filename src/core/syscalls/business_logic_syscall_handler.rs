@@ -42,7 +42,7 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     pub(crate) block_info: BlockInfo,
     pub(crate) state: T,
-    pub(crate) starknet_storage: ContractStorageState<T>,
+    pub(crate) starknet_storage_state: ContractStorageState<T>,
 }
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
@@ -74,7 +74,8 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
-        let starknet_storage = ContractStorageState::new(state.clone(), contract_address.clone());
+        let starknet_storage_state =
+            ContractStorageState::new(state.clone(), contract_address.clone());
 
         BusinessLogicSyscallHandler {
             tx_execution_context,
@@ -88,7 +89,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             tx_info_ptr,
             block_info,
             state,
-            starknet_storage,
+            starknet_storage_state,
         }
     }
 
@@ -364,7 +365,10 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
-        Ok(self.starknet_storage.read(&address.to_32_bytes()?)?.clone())
+        Ok(self
+            .starknet_storage_state
+            .read(&address.to_32_bytes()?)?
+            .clone())
     }
     fn _storage_write(&mut self, _address: Address, _value: u64) {
         todo!()

@@ -1081,13 +1081,13 @@ mod tests {
 
         syscall_handler_hint_processor
             .syscall_handler
-            .starknet_storage
+            .starknet_storage_state
             .state
             .set_storage_at(
                 &(
                     syscall_handler_hint_processor
                         .syscall_handler
-                        .starknet_storage
+                        .starknet_storage_state
                         .contract_address
                         .clone(),
                     address.to_bytes_be().try_into().unwrap(),
