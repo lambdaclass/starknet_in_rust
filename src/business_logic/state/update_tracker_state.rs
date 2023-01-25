@@ -122,7 +122,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
     pub fn deploy_contract(
         &mut self,
         contract_address: Address,
-        class_hash: Vec<u8>,
+        class_hash: [u8; 32],
     ) -> Result<(), StateError> {
         self.state.deploy_contract(contract_address, class_hash)
     }

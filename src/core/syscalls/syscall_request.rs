@@ -28,7 +28,7 @@ pub(crate) struct CallContractRequest {
     pub(crate) calldata: Relocatable,
     pub(crate) calldata_size: usize,
     pub(crate) contract_address: Address,
-    pub(crate) class_hash: u64,
+    pub(crate) class_hash: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -74,7 +74,7 @@ pub(crate) struct SendMessageToL1SysCall {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LibraryCallStruct {
     pub(crate) selector: Felt,
-    pub(crate) class_hash: usize,
+    pub(crate) class_hash: Felt,
     pub(crate) function_selector: usize,
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
@@ -212,7 +212,7 @@ impl FromPtr for LibraryCallStruct {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &(syscall_ptr))?;
-        let class_hash = get_integer(vm, &(&syscall_ptr + 1))?;
+        let class_hash = get_big_int(vm, &(&syscall_ptr + 1))?;
         let function_selector = get_integer(vm, &(&syscall_ptr + 2))?;
         let calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
         let calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;

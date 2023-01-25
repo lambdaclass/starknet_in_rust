@@ -27,7 +27,7 @@ pub struct InternalDeploy {
     version: u64,
     contract_address: Address,
     contract_address_salt: Address,
-    contract_hash: Vec<u8>,
+    contract_hash: [u8; 32],
     constructor_calldata: Vec<Felt>,
     tx_type: TransactionType,
 }
@@ -46,7 +46,11 @@ impl InternalDeploy {
         version: u64,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_class_hash(contract_class);
-        let contract_hash = class_hash.to_string().as_bytes().to_vec();
+        let contract_hash: [u8; 32] = class_hash
+            .to_string()
+            .as_bytes()
+            .try_into()
+            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(class_hash.clone()))?;
         let contract_address = Address(calculate_contract_address_from_hash(
             &contract_address_salt,
             &class_hash,
@@ -87,8 +91,8 @@ impl InternalDeploy {
         )
     }
 
-    pub fn class_hash(&self) -> Vec<u8> {
-        self.contract_hash.clone()
+    pub fn class_hash(&self) -> [u8; 32] {
+        self.contract_hash
     }
 
     pub fn get_state_selector() {
@@ -100,7 +104,7 @@ impl InternalDeploy {
         mut state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        state.deploy_contract(self.contract_address.clone(), self.contract_hash.clone());
+        state.deploy_contract(self.contract_address.clone(), self.contract_hash);
         let class_hash: [u8; 32] = self.contract_hash[..]
             .try_into()
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
