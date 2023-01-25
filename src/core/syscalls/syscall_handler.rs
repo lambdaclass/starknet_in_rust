@@ -465,7 +465,8 @@ mod tests {
     };
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
-    use num_traits::ToPrimitive;
+    use felt::FeltOps;
+    use num_traits::{Num, ToPrimitive};
 
     use super::*;
     use std::collections::VecDeque;
@@ -1052,25 +1053,48 @@ mod tests {
     #[test]
     fn test_bl_storage_read_hint_ok() {
         let mut vm = vm!();
+        add_segments!(vm, 3);
 
-        add_segments!(vm, 2);
+        let address = Felt::from_str_radix(
+            "2151680050850558576753658069693146429350618838199373217695410689374331200218",
+            10,
+        )
+        .unwrap();
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10)      //  StorageReadRequest.selector
+            ]
+        );
 
-        // direction (1,0) is the sycall_ptr
-        memory_insert!(vm, [((1, 0), (1, 1))]);
+        // StorageReadRequest.address
+        vm.insert_value(&relocatable!(2, 1), address.clone());
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
-        // invoke syscall
-        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
-        // println!("{:?}", hint_processor.execute_hint(
-        //     &mut vm,
-        //     &mut ExecutionScopes::new(),
-        //     &any_box!(hint_data),
-        //     &HashMap::new(),
-        // ));
-        assert!(hint_processor
+
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage
+            .state
+            .set_storage_at(
+                &(
+                    syscall_handler_hint_processor
+                        .syscall_handler
+                        .starknet_storage
+                        .contract_address
+                        .clone(),
+                    address.to_bytes_be().try_into().unwrap(),
+                ),
+                Felt::new(3),
+            );
+        assert!(syscall_handler_hint_processor
             .execute_hint(
                 &mut vm,
                 &mut ExecutionScopes::new(),
