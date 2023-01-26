@@ -1079,6 +1079,7 @@ mod tests {
 
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
 
+        let storage_value = Felt::new(3);
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
@@ -1092,7 +1093,7 @@ mod tests {
                         .clone(),
                     address.to_bytes_be().try_into().unwrap(),
                 ),
-                Felt::new(3),
+                storage_value.clone(),
             );
         assert!(syscall_handler_hint_processor
             .execute_hint(
@@ -1102,6 +1103,9 @@ mod tests {
                 &HashMap::new(),
             )
             .is_ok());
+
+        // Check StorageReadResponse insert
+        assert_eq!(Ok(storage_value), get_big_int(&vm, &relocatable!(2, 2)));
     }
 
     #[test]
