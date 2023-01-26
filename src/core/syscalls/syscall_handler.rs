@@ -306,8 +306,18 @@ pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
     pub(crate) syscall_handler: H,
 }
 
-impl SyscallHintProcessor<BusinessLogicSyscallHandler<InMemoryStateReader>> {
-    pub fn new_empty() -> SyscallHintProcessor<BusinessLogicSyscallHandler<InMemoryStateReader>> {
+impl SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>> {
+    pub fn new(
+        syscall_handler: BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+    ) -> Self {
+        SyscallHintProcessor {
+            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
+            syscall_handler,
+        }
+    }
+
+    pub fn new_empty(
+    ) -> SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>> {
         SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: BusinessLogicSyscallHandler::default(),
@@ -318,15 +328,6 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler<InMemoryStateReader>> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: OsSyscallHandler::default(),
-        })
-    }
-}
-
-impl SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>> {
-    pub fn new_empty() -> Result<Self, SyscallHandlerError> {
-        Ok(SyscallHintProcessor {
-            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler::default(),
         })
     }
 }
@@ -1082,7 +1083,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
 
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
 
         let storage_value = Felt::new(3);
         syscall_handler_hint_processor

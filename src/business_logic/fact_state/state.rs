@@ -79,6 +79,12 @@ pub fn filter_unused_builtins(resources: ExecutionResources) -> ExecutionResourc
     }
 }
 
+pub fn substract_resources(
+    current_resources: ExecutionResources,
+    additional_resources: ExecutionResources,
+) -> ExecutionResources {
+    todo!();
+}
 pub fn calculate_additional_resources(
     current_resources: ExecutionResources,
     additional_resources: ExecutionResources,

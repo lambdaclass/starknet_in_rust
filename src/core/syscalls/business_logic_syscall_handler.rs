@@ -45,6 +45,7 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) block_info: BlockInfo,
     pub(crate) state: T,
     pub(crate) starknet_storage_state: ContractStorageState<T>,
+    pub(crate) internal_calls: Vec<CallInfo>,
 }
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
@@ -79,6 +80,8 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         let starknet_storage_state =
             ContractStorageState::new(state.clone(), contract_address.clone());
 
+        let internal_calls = Vec::new();
+
         BusinessLogicSyscallHandler {
             tx_execution_context,
             events,
@@ -92,6 +95,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             block_info,
             state,
             starknet_storage_state,
+            internal_calls,
         }
     }
 

@@ -244,7 +244,7 @@ where
 
 // TODO: make the check UNINITIALIZED_CLASS_HASH = b"\x00" * HASH_BYTES
 
-pub fn get_deployed_address_class_hash_at_address<S: State + StateReader>(
+pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     mut state: S,
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
@@ -260,7 +260,7 @@ pub fn get_deployed_address_class_hash_at_address<S: State + StateReader>(
     Ok(class_hash)
 }
 
-pub fn validate_contract_deployed<S: State + StateReader>(
+pub fn validate_contract_deployed<S: StateReader + Clone>(
     mut state: S,
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {

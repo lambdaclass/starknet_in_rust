@@ -9,7 +9,9 @@ use cairo_rs::{
 use felt::Felt;
 
 use crate::{
-    business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
+    business_logic::{
+        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+    },
     core::syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
@@ -23,7 +25,7 @@ pub(crate) struct StarknetRunner {
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
     pub(crate) syscall_handler:
-        SyscallHintProcessor<BusinessLogicSyscallHandler<InMemoryStateReader>>,
+        SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>>,
 }
 
 // TODO: implement run_from_entry_pointt (similar to cairo-rs-py and cairo-rs)
@@ -32,7 +34,9 @@ impl StarknetRunner {
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
-        syscall_handler: SyscallHintProcessor<BusinessLogicSyscallHandler<InMemoryStateReader>>,
+        syscall_handler: SyscallHintProcessor<
+            BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+        >,
     ) -> Self {
         StarknetRunner {
             cairo_runner,

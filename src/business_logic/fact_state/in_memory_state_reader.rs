@@ -16,7 +16,7 @@ use crate::{
 use super::contract_state::{self, ContractState};
 
 #[derive(Clone, Debug)]
-pub(crate) struct InMemoryStateReader {
+pub struct InMemoryStateReader {
     pub(crate) global_state_root: HashMap<Address, [u8; 32]>,
     pub(crate) ffc: DictStorage,
     pub(crate) contract_states: HashMap<Address, ContractState>,

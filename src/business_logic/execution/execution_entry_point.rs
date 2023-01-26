@@ -15,8 +15,12 @@ use super::{
     execution_errors::ExecutionError,
     objects::{CallInfo, CallType, TransactionExecutionContext},
 };
-use crate::business_logic::fact_state::{
-    in_memory_state_reader::InMemoryStateReader, state::filter_unused_builtins,
+use crate::business_logic::{
+    fact_state::{
+        in_memory_state_reader::InMemoryStateReader,
+        state::{filter_unused_builtins, substract_resources},
+    },
+    state::cached_state::CachedState,
 };
 use crate::{
     business_logic::{
@@ -74,7 +78,7 @@ impl ExecutionEntryPoint {
         }
     }
 
-    pub fn execute_for_testing<S: State + StateReader>(
+    pub fn execute_for_testing<S: StateReader + Clone>(
         &self,
         state: S,
         general_config: StarknetGeneralConfig,
@@ -100,7 +104,7 @@ impl ExecutionEntryPoint {
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader + Clone>(
         &self,
         state: S,
         general_config: StarknetGeneralConfig,
@@ -131,21 +135,15 @@ impl ExecutionEntryPoint {
     /// self.contract_address.
     /// Returns the corresponding CairoFunctionRunner and BusinessLogicSysCallHandler in order to
     /// retrieve the execution information.
-    fn run<S: State + StateReader>(
+    fn run<S: StateReader + Clone>(
         &self,
-        state: S,
+        mut state: S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
         tx_execution_context: TransactionExecutionContext,
-    ) -> Result<
-        (
-            StarknetRunner,
-            BusinessLogicSyscallHandler<InMemoryStateReader>,
-        ),
-        ExecutionError,
-    > {
+    ) -> Result<(StarknetRunner, BusinessLogicSyscallHandler<CachedState<S>>), ExecutionError> {
         // Prepare input for Starknet runner.
-        let class_hash = self.get_code_class_hash(state)?;
+        let class_hash = self.get_code_class_hash(state.clone())?;
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| ExecutionError::MissigContractClass)?;
@@ -155,12 +153,12 @@ impl ExecutionEntryPoint {
             .map_err(|_| ExecutionError::FailToCreateCairoRunner)?;
         let vm = VirtualMachine::new(false);
         let hint_processor = SyscallHintProcessor::new_empty();
-        let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // prepare OS context
         let os_context = prepare_os_context(runner);
 
-        validate_contract_deployed(state, self.contract_address).is_ok();
+        validate_contract_deployed(state, self.contract_address.clone()).is_ok();
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -168,44 +166,44 @@ impl ExecutionEntryPoint {
             _ => return Err(ExecutionError::ExpectedPointer),
         };
 
-        //let syscall_handler = BusinessLogicSyscallHandler::new();
+        let syscall_handler = BusinessLogicSyscallHandler::new();
+        runner.syscall_handler = SyscallHintProcessor::new(syscall_handler);
 
         todo!()
     }
 
-    fn build_call_info(
+    fn build_call_info<S: StateReader + Clone>(
         &self,
         previous_cairo_usage: ExecutionResources,
-        syscall_handler: BusinessLogicSyscallHandler<InMemoryStateReader>,
+        syscall_handler: BusinessLogicSyscallHandler<CachedState<S>>,
         retdata: Vec<Felt>,
     ) -> Result<CallInfo, ExecutionError> {
-        let execution_resources =
-            syscall_handler.resources_manager.cairo_usage - previous_cairo_usage;
+        let execution_resources = substract_resources(
+            syscall_handler.resources_manager.cairo_usage,
+            previous_cairo_usage,
+        );
+
         Ok(CallInfo {
-            caller_address: self.caller_address,
-            call_type: Some(self.call_type),
-            contract_address: self.contract_address,
-            code_address: self.code_address,
+            caller_address: self.caller_address.clone(),
+            call_type: Some(self.call_type.clone()),
+            contract_address: self.contract_address.clone(),
+            code_address: self.code_address.clone(),
             class_hash: Some(self.get_code_class_hash(syscall_handler.state)?),
             entry_point_selector: self.entry_point_selector,
             entry_point_type: self.entry_point_type,
-            calldata: self.calldata,
+            calldata: self.calldata.clone(),
             retdata,
             execution_resources: filter_unused_builtins(execution_resources),
             events: syscall_handler.events,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
-            storage_read_values: syscall_handler.starknet_storage.read_values,
-            accesed_storage_keys: syscall_handler.starknet_storage.accesed_keys,
+            storage_read_values: syscall_handler.starknet_storage_state.read_values,
+            accesed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
             internal_calls: syscall_handler.internal_calls,
-        });
-        todo!();
+        })
     }
 
     /// Returns the hash of the executed contract class.
-    fn get_code_class_hash<S: State + StateReader>(
-        &self,
-        state: S,
-    ) -> Result<[u8; 32], ExecutionError> {
+    fn get_code_class_hash<S: StateReader>(&self, state: S) -> Result<[u8; 32], ExecutionError> {
         if self.class_hash.is_some() {
             match self.call_type {
                 CallType::Delegate => return Ok(self.class_hash.unwrap()),

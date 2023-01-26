@@ -49,7 +49,7 @@ pub struct CallInfo {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) storage_read_values: Vec<Felt>,
-    pub(crate) accesed_storage_keys: Vec<[u8; 32]>,
+    pub(crate) accesed_storage_keys: HashSet<[u8; 32]>,
     pub(crate) internal_calls: Vec<CallInfo>,
 }
 
@@ -81,7 +81,7 @@ impl CallInfo {
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             storage_read_values: Vec::new(),
-            accesed_storage_keys: Vec::new(),
+            accesed_storage_keys: HashSet::new(),
             internal_calls: Vec::new(),
         }
     }
@@ -207,7 +207,7 @@ impl Default for CallInfo {
             retdata: Vec::new(),
             entry_point_selector: None,
             l2_to_l1_messages: Vec::new(),
-            accesed_storage_keys: Vec::new(),
+            accesed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,

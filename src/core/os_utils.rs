@@ -2,9 +2,9 @@ use crate::starknet_runner::runner::StarknetRunner;
 use cairo_rs::{types::relocatable::MaybeRelocatable, vm::runners::builtin_runner::BuiltinRunner};
 use std::collections::HashMap;
 
-pub fn prepare_os_context(runner: StarknetRunner) -> Vec<MaybeRelocatable> {
+pub(crate) fn prepare_os_context(mut runner: StarknetRunner) -> Vec<MaybeRelocatable> {
     let syscall_segment = runner.vm.add_memory_segment();
-    let os_context = [syscall_segment.into()].to_vec();
+    let mut os_context = [syscall_segment.into()].to_vec();
     let builtin_runners = runner
         .vm
         .get_builtin_runners()

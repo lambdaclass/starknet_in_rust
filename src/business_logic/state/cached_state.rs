@@ -19,7 +19,7 @@ pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct CachedState<T: StateReader + Clone> {
+pub struct CachedState<T: StateReader + Clone> {
     pub(crate) block_info: BlockInfo,
     pub(crate) state_reader: T,
     pub(crate) cache: StateCache,
