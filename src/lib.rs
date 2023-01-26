@@ -10,3 +10,4 @@ pub mod services;
 pub mod starknet_storage;
 pub mod starkware_utils;
 pub mod utils;
+pub mod utils_errors;
