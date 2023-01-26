@@ -8,9 +8,12 @@ use cairo_rs::{
 };
 use felt::Felt;
 
-use crate::core::syscalls::{
-    business_logic_syscall_handler::BusinessLogicSyscallHandler,
-    syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
+use crate::{
+    business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
+    core::syscalls::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
+    },
 };
 
 use super::starknet_runner_error::StarknetRunnerError;
@@ -19,7 +22,8 @@ use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 pub(crate) struct StarknetRunner {
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
-    pub(crate) syscall_handler: SyscallHintProcessor<BusinessLogicSyscallHandler>,
+    pub(crate) syscall_handler:
+        SyscallHintProcessor<BusinessLogicSyscallHandler<InMemoryStateReader>>,
 }
 
 // TODO: implement run_from_entry_pointt (similar to cairo-rs-py and cairo-rs)
@@ -28,7 +32,7 @@ impl StarknetRunner {
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
-        syscall_handler: SyscallHintProcessor<BusinessLogicSyscallHandler>,
+        syscall_handler: SyscallHintProcessor<BusinessLogicSyscallHandler<InMemoryStateReader>>,
     ) -> Self {
         StarknetRunner {
             cairo_runner,

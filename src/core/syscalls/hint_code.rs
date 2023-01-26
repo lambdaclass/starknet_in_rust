@@ -15,7 +15,6 @@ pub(crate) const GET_SEQUENCER_ADDRESS: &str =
 pub(crate) const STORAGE_WRITE: &str =
     "syscall_handler.storage_write(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
-#[allow(unused)] // TODO: remove after using.
 pub(crate) const STORAGE_READ: &str =
     "syscall_handler.storage_read(segments=segments, syscall_ptr=ids.syscall_ptr)";
 

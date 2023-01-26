@@ -16,18 +16,18 @@ use crate::{
 use super::contract_state::{self, ContractState};
 
 #[derive(Clone, Debug)]
-pub(crate) struct InMemoryStateReader<S1: Storage, S2: Storage> {
+pub(crate) struct InMemoryStateReader {
     pub(crate) global_state_root: HashMap<Address, [u8; 32]>,
-    pub(crate) ffc: S1,
+    pub(crate) ffc: DictStorage,
     pub(crate) contract_states: HashMap<Address, ContractState>,
-    pub(crate) contract_class_storage: S2,
+    pub(crate) contract_class_storage: DictStorage,
 }
 
-impl<S1: Storage, S2: Storage> InMemoryStateReader<S1, S2> {
+impl InMemoryStateReader {
     pub(crate) fn new(
         global_state_root: HashMap<Address, [u8; 32]>,
-        ffc: S1,
-        contract_class_storage: S2,
+        ffc: DictStorage,
+        contract_class_storage: DictStorage,
     ) -> Self {
         Self {
             global_state_root,
@@ -57,13 +57,13 @@ impl<S1: Storage, S2: Storage> InMemoryStateReader<S1, S2> {
     }
 }
 
-impl<S1: Storage, S2: Storage> StateReader for InMemoryStateReader<S1, S2> {
+impl StateReader for InMemoryStateReader {
     fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
         let contract_class = self.contract_class_storage.get_contract_class(class_hash)?;
         contract_class.validate()?;
         Ok(contract_class)
     }
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
         Ok(&self.get_contract_state(contract_address)?.contract_hash)
     }
 
@@ -98,7 +98,7 @@ mod tests {
             InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create(vec![1, 2, 3], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::create([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .global_state_root

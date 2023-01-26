@@ -94,14 +94,14 @@ pub fn calculate_deploy_transaction_hash(
 pub fn calculate_deploy_account_transaction_hash(
     version: u64,
     contract_address: Address,
-    class_hash: u64,
+    class_hash: Felt,
     constructor_calldata: &[Felt],
     max_fee: u64,
     nonce: u64,
     salt: u64,
     chain_id: u64,
 ) -> Result<Felt, SyscallHandlerError> {
-    let mut calldata: Vec<Felt> = vec![class_hash, salt].iter().map(|n| (*n).into()).collect();
+    let mut calldata: Vec<Felt> = vec![class_hash, salt.into()];
     calldata.extend_from_slice(constructor_calldata);
 
     calculate_transaction_hash_common(

@@ -15,7 +15,9 @@ use super::{
     execution_errors::ExecutionError,
     objects::{CallInfo, CallType, TransactionExecutionContext},
 };
-use crate::business_logic::fact_state::state::filter_unused_builtins;
+use crate::business_logic::fact_state::{
+    in_memory_state_reader::InMemoryStateReader, state::filter_unused_builtins,
+};
 use crate::{
     business_logic::{
         fact_state::state::ExecutionResourcesManager,
@@ -135,7 +137,13 @@ impl ExecutionEntryPoint {
         resources_manager: &mut ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
         tx_execution_context: TransactionExecutionContext,
-    ) -> Result<(StarknetRunner, BusinessLogicSyscallHandler), ExecutionError> {
+    ) -> Result<
+        (
+            StarknetRunner,
+            BusinessLogicSyscallHandler<InMemoryStateReader>,
+        ),
+        ExecutionError,
+    > {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
@@ -168,7 +176,7 @@ impl ExecutionEntryPoint {
     fn build_call_info(
         &self,
         previous_cairo_usage: ExecutionResources,
-        syscall_handler: BusinessLogicSyscallHandler,
+        syscall_handler: BusinessLogicSyscallHandler<InMemoryStateReader>,
         retdata: Vec<Felt>,
     ) -> Result<CallInfo, ExecutionError> {
         let execution_resources =

@@ -1,14 +1,14 @@
 use super::syscall_request::{
     CallContractRequest, CountFields, GetBlockNumberRequest, GetBlockTimestampRequest,
     GetCallerAddressRequest, GetContractAddressRequest, GetSequencerAddressRequest,
-    GetTxInfoRequest, GetTxSignatureRequest,
+    GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
-use felt::Felt;
+use felt::{Felt, NewFelt};
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -68,6 +68,11 @@ pub(crate) struct GetTxInfoResponse {
     tx_info: Relocatable,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageReadResponse {
+    value: Felt,
+}
+
 impl GetTxInfoResponse {
     pub fn new(tx_info: Relocatable) -> Self {
         GetTxInfoResponse { tx_info }
@@ -104,6 +109,12 @@ impl GetTxSignatureResponse {
 impl GetContractAddressResponse {
     pub fn new(contract_address: Address) -> Self {
         GetContractAddressResponse { contract_address }
+    }
+}
+
+impl StorageReadResponse {
+    pub fn new(value: Felt) -> Self {
+        StorageReadResponse { value }
     }
 }
 
@@ -232,6 +243,20 @@ impl WriteSyscallResponse for GetTxInfoResponse {
     }
 }
 
+impl WriteSyscallResponse for StorageReadResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + StorageReadRequest::count_fields()),
+            self.value.clone(),
+        )?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,7 +274,7 @@ mod tests {
 
     #[test]
     fn write_get_caller_address_response() {
-        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
 
         add_segments!(vm, 2);

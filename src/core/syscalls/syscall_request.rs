@@ -20,6 +20,7 @@ pub(crate) enum SyscallRequest {
     GetBlockTimestamp(GetBlockTimestampRequest),
     CallContract(CallContractRequest),
     GetTxSignature(GetTxSignatureRequest),
+    StorageRead(StorageReadRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -28,7 +29,7 @@ pub(crate) struct CallContractRequest {
     pub(crate) calldata: Relocatable,
     pub(crate) calldata_size: usize,
     pub(crate) contract_address: Address,
-    pub(crate) class_hash: u64,
+    pub(crate) class_hash: Felt,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -74,7 +75,7 @@ pub(crate) struct SendMessageToL1SysCall {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LibraryCallStruct {
     pub(crate) selector: Felt,
-    pub(crate) class_hash: usize,
+    pub(crate) class_hash: Felt,
     pub(crate) function_selector: usize,
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
@@ -108,6 +109,13 @@ pub(crate) struct GetContractAddressRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockNumberRequest {
     pub(crate) _selector: Felt,
+}
+
+/// Describes the StorageRead system call format.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageReadRequest {
+    pub(crate) selector: Felt,
+    pub(crate) address: Address,
 }
 
 impl From<EmitEventStruct> for SyscallRequest {
@@ -162,6 +170,12 @@ impl From<GetTxInfoRequest> for SyscallRequest {
         SyscallRequest::GetTxInfo(get_tx_info_request)
     }
 }
+
+impl From<StorageReadRequest> for SyscallRequest {
+    fn from(storage_read: StorageReadRequest) -> SyscallRequest {
+        SyscallRequest::StorageRead(storage_read)
+    }
+}
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  FromPtr implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -212,7 +226,7 @@ impl FromPtr for LibraryCallStruct {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &(syscall_ptr))?;
-        let class_hash = get_integer(vm, &(&syscall_ptr + 1))?;
+        let class_hash = get_big_int(vm, &(&syscall_ptr + 1))?;
         let function_selector = get_integer(vm, &(&syscall_ptr + 2))?;
         let calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
         let calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
@@ -344,6 +358,21 @@ impl FromPtr for GetContractAddressRequest {
     }
 }
 
+impl FromPtr for StorageReadRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, &syscall_ptr)?;
+        let address = Address(get_big_int(vm, &(syscall_ptr + 1))?);
+
+        Ok(SyscallRequest::StorageRead(StorageReadRequest {
+            selector,
+            address,
+        }))
+    }
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  CountFields implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -391,6 +420,12 @@ impl CountFields for GetContractAddressRequest {
 impl CountFields for GetTxInfoRequest {
     fn count_fields() -> usize {
         1
+    }
+}
+
+impl CountFields for StorageReadRequest {
+    fn count_fields() -> usize {
+        2
     }
 }
 

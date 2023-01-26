@@ -1,17 +1,24 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
 
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
 use crate::business_logic::execution::execution_entry_point::ExecutionEntryPoint;
+use crate::business_logic::execution::objects::*;
 use crate::business_logic::execution::{execution_entry_point, objects::*};
+use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
 use crate::business_logic::fact_state::state::ExecutionResourcesManager;
+use crate::business_logic::state::cached_state::CachedState;
+use crate::business_logic::state::contract_storage_state::ContractStorageState;
+use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::services::api::contract_class::EntryPointType;
+use crate::starknet_storage::dict_storage::DictStorage;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
@@ -23,7 +30,7 @@ use num_traits::{One, ToPrimitive, Zero};
 //* BusinessLogicHandler implementation
 //* -----------------------------------
 
-pub struct BusinessLogicSyscallHandler {
+pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -36,10 +43,12 @@ pub struct BusinessLogicSyscallHandler {
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     pub(crate) block_info: BlockInfo,
+    pub(crate) state: T,
+    pub(crate) starknet_storage_state: ContractStorageState<T>,
 }
 
-impl BusinessLogicSyscallHandler {
-    pub fn new(block_info: BlockInfo) -> Self {
+impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
+    pub fn new(block_info: BlockInfo, contract_address: Address, state: T) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
             "deploy".to_string(),
@@ -67,6 +76,8 @@ impl BusinessLogicSyscallHandler {
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
+        let starknet_storage_state =
+            ContractStorageState::new(state.clone(), contract_address.clone());
 
         BusinessLogicSyscallHandler {
             tx_execution_context,
@@ -79,6 +90,8 @@ impl BusinessLogicSyscallHandler {
             general_config,
             tx_info_ptr,
             block_info,
+            state,
+            starknet_storage_state,
         }
     }
 
@@ -89,7 +102,7 @@ impl BusinessLogicSyscallHandler {
     }
 }
 
-impl SyscallHandler for BusinessLogicSyscallHandler {
+impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHandler<T> {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -220,14 +233,14 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
                 let call_type = CallType::Delegate;
             }
             "library_call" => {
-                class_hash = Some(request.class_hash.to_be_bytes());
+                class_hash = Some(request.class_hash.to_bytes_be());
                 let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::External;
                 let call_type = CallType::Delegate;
             }
             "library_call_l1_handler" => {
-                class_hash = Some(request.class_hash.to_be_bytes());
+                class_hash = Some(request.class_hash.to_bytes_be());
                 let contract_address = self.contract_address.clone();
                 let caller_address = self.caller_address.clone();
                 let entry_point_type = EntryPointType::L1Handler;
@@ -353,8 +366,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(())
     }
 
-    fn _storage_read(&mut self, _address: Address) -> Result<Felt, SyscallHandlerError> {
-        todo!()
+    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
+        Ok(self
+            .starknet_storage_state
+            .read(&address.to_32_bytes()?)?
+            .clone())
     }
     fn _storage_write(&mut self, _address: Address, _value: Felt) {
         todo!()
@@ -371,9 +387,15 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     }
 }
 
-impl Default for BusinessLogicSyscallHandler {
+impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
     fn default() -> Self {
-        Self::new(BlockInfo::default())
+        let cached_state = CachedState::new(
+            BlockInfo::default(),
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            None,
+        );
+
+        Self::new(BlockInfo::default(), Address(0.into()), cached_state)
     }
 }
 
@@ -439,7 +461,7 @@ mod tests {
     }
 
     fn deploy_from_zero_error() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -464,7 +486,7 @@ mod tests {
 
     #[test]
     fn can_allocate_segment() {
-        let mut syscall_handler = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall_handler = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
 
@@ -478,7 +500,7 @@ mod tests {
     }
     #[test]
     fn test_get_block_number() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -497,7 +519,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_address_ok() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
 
         add_segments!(vm, 2);
