@@ -15,6 +15,7 @@ use crate::{
             calculate_additional_resources, filter_unused_builtins, ExecutionResourcesManager,
         },
         state::{
+            cached_state::UNINITIALIZED_CLASS_HASH,
             state_api::{State, StateReader},
             state_cache::StorageEntry,
             update_tracker_state::UpdatesTrackerState,
@@ -242,8 +243,6 @@ where
 //* Execution entry point utils
 //* ----------------------------
 
-// TODO: make the check UNINITIALIZED_CLASS_HASH = b"\x00" * HASH_BYTES
-
 pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     mut state: S,
     contract_address: Address,
@@ -257,6 +256,9 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
             ExecutionError::ErrorInDataConversion("Vec<u8>".to_string(), "[u8;32]".to_string())
         })?;
 
+    if class_hash == *UNINITIALIZED_CLASS_HASH {
+        return Err(ExecutionError::NotDeployedContract(class_hash));
+    }
     Ok(class_hash)
 }
 

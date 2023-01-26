@@ -41,7 +41,7 @@ pub struct CallInfo {
     pub(crate) contract_address: Address,
     pub(crate) code_address: Option<Address>,
     pub(crate) class_hash: Option<[u8; 32]>,
-    pub(crate) entry_point_selector: Option<usize>,
+    pub(crate) entry_point_selector: Option<Felt>,
     pub(crate) entry_point_type: Option<EntryPointType>,
     pub(crate) calldata: Vec<Felt>,
     pub(crate) retdata: Vec<Felt>,
@@ -60,7 +60,7 @@ impl CallInfo {
         class_hash: Option<[u8; 32]>,
         call_type: Option<CallType>,
         entry_point_type: Option<EntryPointType>,
-        entry_point_selector: Option<usize>,
+        entry_point_selector: Option<Felt>,
         code_address: Option<Address>,
     ) -> Self {
         CallInfo {

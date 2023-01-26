@@ -1,8 +1,13 @@
+use std::collections::HashMap;
+
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::relocatable::MaybeRelocatable,
     vm::{
-        runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
+        runners::{
+            builtin_runner::BuiltinRunner,
+            cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
+        },
         vm_core::VirtualMachine,
     },
 };
@@ -24,7 +29,7 @@ use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 pub(crate) struct StarknetRunner {
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
-    pub(crate) syscall_handler:
+    pub(crate) hint_processor:
         SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>>,
 }
 
@@ -34,14 +39,14 @@ impl StarknetRunner {
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
-        syscall_handler: SyscallHintProcessor<
+        hint_processor: SyscallHintProcessor<
             BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
         >,
     ) -> Self {
         StarknetRunner {
             cairo_runner,
             vm,
-            syscall_handler,
+            hint_processor,
         }
     }
 
@@ -54,7 +59,7 @@ impl StarknetRunner {
             &args,
             verify_secure,
             &mut self.vm,
-            &mut self.syscall_handler,
+            &mut self.hint_processor,
         );
     }
 
@@ -72,5 +77,27 @@ impl StarknetRunner {
                 _ => Err(StarknetRunnerError::NotFeltInReturnValue),
             })
             .collect::<Result<Vec<Felt>, _>>()
+    }
+
+    pub(crate) fn prepare_os_context(&mut self) -> Vec<MaybeRelocatable> {
+        let syscall_segment = self.vm.add_memory_segment();
+        let mut os_context = [syscall_segment.into()].to_vec();
+        let builtin_runners = self
+            .vm
+            .get_builtin_runners()
+            .to_owned()
+            .into_iter()
+            .collect::<HashMap<String, BuiltinRunner>>();
+        self.cairo_runner
+            .get_program_builtins()
+            .iter()
+            .for_each(|builtin| {
+                if builtin_runners.contains_key(builtin) {
+                    let b_runner = builtin_runners.get(builtin).unwrap();
+                    let stack = b_runner.initial_stack();
+                    os_context.extend(stack);
+                }
+            });
+        os_context
     }
 }

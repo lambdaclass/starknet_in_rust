@@ -356,7 +356,7 @@ mod tests {
     use cairo_rs::vm::vm_core::VirtualMachine;
     use felt::{Felt, NewFelt};
     use std::any::Any;
-    use std::collections::{HashMap, VecDeque};
+    use std::collections::{HashMap, HashSet, VecDeque};
 
     use super::{CallInfo, OsSyscallHandler};
     use crate::core::syscalls::hint_code::GET_BLOCK_NUMBER;
@@ -379,7 +379,7 @@ mod tests {
             retdata: Vec::new(),
             entry_point_selector: None,
             l2_to_l1_messages: Vec::new(),
-            accesed_storage_keys: Vec::new(),
+            accesed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,

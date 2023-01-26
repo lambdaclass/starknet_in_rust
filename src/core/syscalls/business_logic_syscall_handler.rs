@@ -15,7 +15,7 @@ use crate::business_logic::state::contract_storage_state::ContractStorageState;
 use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::definitions::general_config::StarknetGeneralConfig;
+use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::services::api::contract_class::EntryPointType;
 use crate::starknet_storage::dict_storage::DictStorage;
@@ -46,10 +46,58 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) state: T,
     pub(crate) starknet_storage_state: ContractStorageState<T>,
     pub(crate) internal_calls: Vec<CallInfo>,
+    pub(crate) expected_syscall_ptr: Relocatable,
 }
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
-    pub fn new(block_info: BlockInfo, contract_address: Address, state: T) -> Self {
+    pub fn new(
+        tx_execution_context: TransactionExecutionContext,
+        state: T,
+        resources_manager: ExecutionResourcesManager,
+        caller_address: Address,
+        contract_address: Address,
+        general_config: StarknetGeneralConfig,
+        syscall_ptr: Relocatable,
+    ) -> Self {
+        let block_info = state.block_info().clone();
+        let events = Vec::new();
+        let tx_execution_context = TransactionExecutionContext {
+            ..Default::default()
+        };
+        let read_only_segments = Vec::new();
+        let l2_to_l1_messages = Vec::new();
+        let general_config = StarknetGeneralConfig::default();
+        let tx_info_ptr = None;
+        let starknet_storage_state =
+            ContractStorageState::new(state.clone(), contract_address.clone());
+
+        let internal_calls = Vec::new();
+
+        BusinessLogicSyscallHandler {
+            tx_execution_context,
+            events,
+            read_only_segments,
+            resources_manager,
+            contract_address,
+            caller_address,
+            l2_to_l1_messages,
+            general_config,
+            tx_info_ptr,
+            block_info,
+            state,
+            starknet_storage_state,
+            internal_calls,
+            expected_syscall_ptr: syscall_ptr,
+        }
+    }
+
+    /// Increments the syscall count for a given `syscall_name` by 1.
+    fn increment_syscall_count(&mut self, syscall_name: &str) {
+        self.resources_manager
+            .increment_syscall_counter(syscall_name, 1);
+    }
+
+    pub fn new_for_testing(block_info: BlockInfo, contract_address: Address, state: T) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
             "deploy".to_string(),
@@ -81,6 +129,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             ContractStorageState::new(state.clone(), contract_address.clone());
 
         let internal_calls = Vec::new();
+        let expected_syscall_ptr = Relocatable::from((0, 0));
 
         BusinessLogicSyscallHandler {
             tx_execution_context,
@@ -96,13 +145,8 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             state,
             starknet_storage_state,
             internal_calls,
+            expected_syscall_ptr,
         }
-    }
-
-    /// Increments the syscall count for a given `syscall_name` by 1.
-    fn increment_syscall_count(&mut self, syscall_name: &str) {
-        self.resources_manager
-            .increment_syscall_counter(syscall_name, 1);
     }
 }
 
@@ -399,7 +443,13 @@ impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
             None,
         );
 
-        Self::new(BlockInfo::default(), Address(0.into()), cached_state)
+        let contract_address = Address(0.into());
+
+        BusinessLogicSyscallHandler::new_for_testing(
+            BlockInfo::default(),
+            contract_address,
+            cached_state,
+        )
     }
 }
 

@@ -1,9 +1,10 @@
 use std::error;
 
+use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use thiserror::Error;
 
 use crate::core::errors;
-#[derive(Debug, PartialEq, Eq, Error)]
+#[derive(Debug, PartialEq, Error)]
 pub enum ExecutionError {
     #[error("Missing field for TxStruct")]
     MissingTxStructField,
@@ -35,4 +36,8 @@ pub enum ExecutionError {
     FailToCreateCairoRunner,
     #[error("Value should be a pointer but got an Int")]
     ExpectedPointer,
+    #[error("contract address {0:?} not deployed")]
+    NotDeployedContract([u8; 32]),
+    #[error(transparent)]
+    VmException(#[from] VirtualMachineError),
 }

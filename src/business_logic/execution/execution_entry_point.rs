@@ -4,35 +4,25 @@ use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
         self,
-        runners::cairo_runner::{CairoRunner, ExecutionResources},
+        runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
         vm_core::VirtualMachine,
     },
 };
 use felt::Felt;
-use num_traits::Zero;
+use num_traits::{ToPrimitive, Zero};
 
 use super::{
     execution_errors::ExecutionError,
     objects::{CallInfo, CallType, TransactionExecutionContext},
-};
-use crate::business_logic::{
-    fact_state::{
-        in_memory_state_reader::InMemoryStateReader,
-        state::{filter_unused_builtins, substract_resources},
-    },
-    state::cached_state::CachedState,
 };
 use crate::{
     business_logic::{
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
     },
-    core::{
-        os_utils::prepare_os_context,
-        syscalls::{
-            business_logic_syscall_handler::BusinessLogicSyscallHandler,
-            syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
-        },
+    core::syscalls::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
     },
     definitions::{
         constants::TRANSACTION_VERSION,
@@ -41,6 +31,16 @@ use crate::{
     services::api::contract_class::EntryPointType,
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
+};
+use crate::{
+    business_logic::{
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader,
+            state::{filter_unused_builtins, substract_resources},
+        },
+        state::cached_state::CachedState,
+    },
+    services::api::contract_class::{ContractClass, ContractEntryPoint},
 };
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
@@ -52,7 +52,7 @@ pub(crate) struct ExecutionEntryPoint {
     class_hash: Option<[u8; 32]>,
     calldata: Vec<Felt>,
     caller_address: Address,
-    entry_point_selector: Option<usize>,
+    entry_point_selector: Felt,
     entry_point_type: Option<EntryPointType>,
 }
 
@@ -60,7 +60,7 @@ impl ExecutionEntryPoint {
     pub fn new(
         contract_address: Address,
         calldata: Vec<Felt>,
-        entry_point_selector: Option<usize>,
+        entry_point_selector: Felt,
         caller_address: Address,
         entry_point_type: Option<EntryPointType>,
         call_type: Option<CallType>,
@@ -78,11 +78,11 @@ impl ExecutionEntryPoint {
         }
     }
 
-    pub fn execute_for_testing<S: StateReader + Clone>(
+    pub fn execute_for_testing<S: State + StateReader + Clone>(
         &self,
         state: S,
         general_config: StarknetGeneralConfig,
-        resources_manager: &mut Option<ExecutionResourcesManager>,
+        resources_manager: Option<ExecutionResourcesManager>,
         tx_execution_context: Option<TransactionExecutionContext>,
     ) -> Result<CallInfo, ExecutionError> {
         let tx_context = tx_execution_context.unwrap_or_else(|| {
@@ -97,18 +97,18 @@ impl ExecutionEntryPoint {
 
         let mut rsc_manager = resources_manager.clone().unwrap_or_default();
 
-        self.execute(state, general_config, &mut rsc_manager, tx_context)
+        self.execute(state, general_config, rsc_manager, tx_context)
     }
 
     /// Executes the selected entry point with the given calldata in the specified contract.
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
-    pub fn execute<S: StateReader + Clone>(
+    pub fn execute<S: State + StateReader + Clone>(
         &self,
         state: S,
         general_config: StarknetGeneralConfig,
-        resources_manager: &mut ExecutionResourcesManager,
+        resources_manager: ExecutionResourcesManager,
         tx_execution_context: TransactionExecutionContext,
     ) -> Result<CallInfo, ExecutionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
@@ -135,19 +135,27 @@ impl ExecutionEntryPoint {
     /// self.contract_address.
     /// Returns the corresponding CairoFunctionRunner and BusinessLogicSysCallHandler in order to
     /// retrieve the execution information.
-    fn run<S: StateReader + Clone>(
+    fn run<S: State + StateReader + Clone>(
         &self,
         mut state: S,
-        resources_manager: &mut ExecutionResourcesManager,
+        resources_manager: ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
         tx_execution_context: TransactionExecutionContext,
-    ) -> Result<(StarknetRunner, BusinessLogicSyscallHandler<CachedState<S>>), ExecutionError> {
+    ) -> Result<
+        (
+            StarknetRunner,
+            BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+        ),
+        ExecutionError,
+    > {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state.clone())?;
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| ExecutionError::MissigContractClass)?;
 
+        // fetch selected entry point
+        let entry_point = self.get_selected_entry_point(contract_class, class_hash);
         // create starknet runner
         let cairo_runner = CairoRunner::new(&contract_class.program, "all", false)
             .map_err(|_| ExecutionError::FailToCreateCairoRunner)?;
@@ -156,9 +164,8 @@ impl ExecutionEntryPoint {
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // prepare OS context
-        let os_context = prepare_os_context(runner);
-
-        validate_contract_deployed(state, self.contract_address.clone()).is_ok();
+        let os_context = runner.prepare_os_context();
+        validate_contract_deployed(state.clone(), self.contract_address.clone())?;
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -166,9 +173,47 @@ impl ExecutionEntryPoint {
             _ => return Err(ExecutionError::ExpectedPointer),
         };
 
-        let syscall_handler = BusinessLogicSyscallHandler::new();
-        runner.syscall_handler = SyscallHintProcessor::new(syscall_handler);
+        let syscall_handler = BusinessLogicSyscallHandler::new(
+            tx_execution_context,
+            state,
+            resources_manager,
+            self.caller_address.clone(),
+            self.contract_address.clone(),
+            general_config,
+            initial_syscall_ptr,
+        );
 
+        // runner.syscall_handler = SyscallHintProcessor::new(syscall_handler);
+
+        // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
+        let data = self.calldata.clone().iter().map(|d| d.into()).collect();
+        let alloc_pointer = runner
+            .hint_processor
+            .syscall_handler
+            .allocate_segment(&mut runner.vm, data)
+            .unwrap()
+            .into();
+
+        let entry_point_args = [
+            CairoArg::Single(self.entry_point_selector.clone().into()),
+            CairoArg::Array(os_context),
+            CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
+            CairoArg::Single(alloc_pointer),
+        ];
+
+        Ok(runner
+            .run_from_entrypoint(
+                entry_point.offset.to_usize(),
+                entry_point_args.try_into().unwrap(),
+            )
+            .unwrap())
+    }
+
+    fn get_selected_entry_point(
+        &self,
+        contract_class: ContractClass,
+        class_hash: [u8; 32],
+    ) -> ContractEntryPoint {
         todo!()
     }
 
@@ -189,7 +234,7 @@ impl ExecutionEntryPoint {
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
             class_hash: Some(self.get_code_class_hash(syscall_handler.state)?),
-            entry_point_selector: self.entry_point_selector,
+            entry_point_selector: Some(self.entry_point_selector.clone()),
             entry_point_type: self.entry_point_type,
             calldata: self.calldata.clone(),
             retdata,
