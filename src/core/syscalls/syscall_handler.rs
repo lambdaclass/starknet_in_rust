@@ -282,12 +282,11 @@ pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
 
 impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
     #[allow(unused)] // TODO: Remove once used.
-    pub fn new_empty(
-    ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
-        Ok(SyscallHintProcessor {
+    pub fn new_empty() -> SyscallHintProcessor<BusinessLogicSyscallHandler> {
+        SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: BusinessLogicSyscallHandler::new(BlockInfo::default()),
-        })
+        }
     }
 
     pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
@@ -509,7 +508,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
         // invoke syscall
-        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler = SyscallHintProcessor::new_empty();
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -538,7 +537,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
         // invoke syscall
-        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler = SyscallHintProcessor::new_empty();
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -586,7 +585,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(EMIT_EVENT_CODE.to_string(), ids_data);
         // invoke syscall
-        let mut syscall_handler = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler = SyscallHintProcessor::new_empty();
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -639,7 +638,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
         // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
@@ -743,7 +742,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
         // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
 
         syscall_handler_hint_processor.syscall_handler.tx_info_ptr =
             Some(relocatable!(7, 0).into());
@@ -818,7 +817,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_CALLER_ADDRESS.to_string(), ids_data);
         // invoke syscall
-        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        let mut hint_processor = SyscallHintProcessor::new_empty();
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -860,7 +859,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(SEND_MESSAGE_TO_L1.to_string(), ids_data);
         // invoke syscall
-        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        let mut hint_processor = SyscallHintProcessor::new_empty();
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -916,8 +915,7 @@ mod tests {
             ]
         );
 
-        let mut hint_processor =
-            SyscallHintProcessor::new_empty().expect("Could not create the syscall hint processor");
+        let mut hint_processor = SyscallHintProcessor::new_empty();
 
         let hint_data =
             HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
@@ -947,7 +945,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
         // invoke syscall
-        let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        let mut hint_processor = SyscallHintProcessor::new_empty();
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -983,7 +981,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
         // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,

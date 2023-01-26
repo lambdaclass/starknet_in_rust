@@ -17,14 +17,26 @@ use super::starknet_runner_error::StarknetRunnerError;
 use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 
 pub(crate) struct StarknetRunner {
-    cairo_runner: CairoRunner,
-    vm: VirtualMachine,
-    syscall_handler: SyscallHintProcessor<BusinessLogicSyscallHandler>,
+    pub(crate) cairo_runner: CairoRunner,
+    pub(crate) vm: VirtualMachine,
+    pub(crate) syscall_handler: SyscallHintProcessor<BusinessLogicSyscallHandler>,
 }
 
 // TODO: implement run_from_entry_pointt (similar to cairo-rs-py and cairo-rs)
 
 impl StarknetRunner {
+    pub fn new(
+        cairo_runner: CairoRunner,
+        vm: VirtualMachine,
+        syscall_handler: SyscallHintProcessor<BusinessLogicSyscallHandler>,
+    ) -> Self {
+        StarknetRunner {
+            cairo_runner,
+            vm,
+            syscall_handler,
+        }
+    }
+
     pub fn run_from_entrypoint(&mut self, entrypoint: usize, args: &[&CairoArg]) {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();

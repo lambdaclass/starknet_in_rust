@@ -29,4 +29,10 @@ pub enum ExecutionError {
     FailToReadClassHash,
     #[error("error while fetching redata {0}")]
     RetdataError(String),
+    #[error("Missing contract class after fetching")]
+    MissigContractClass,
+    #[error("Could not create cairo runner")]
+    FailToCreateCairoRunner,
+    #[error("Value should be a pointer but got an Int")]
+    ExpectedPointer,
 }

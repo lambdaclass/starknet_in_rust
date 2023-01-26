@@ -4,7 +4,8 @@ use std::rc::Rc;
 
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
-use crate::business_logic::execution::objects::*;
+use crate::business_logic::execution::execution_entry_point::ExecutionEntryPoint;
+use crate::business_logic::execution::{execution_entry_point, objects::*};
 use crate::business_logic::fact_state::state::ExecutionResourcesManager;
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
