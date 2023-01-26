@@ -394,7 +394,7 @@ impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
     fn default() -> Self {
         let cached_state = CachedState::new(
             BlockInfo::default(),
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
 

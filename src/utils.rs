@@ -22,6 +22,7 @@ use crate::{
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::transaction_type::TransactionType,
     services::api::contract_class::EntryPointType,
+    utils_errors::UtilsError,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::{felt_str, Felt, FeltOps, NewFelt};
@@ -35,10 +36,10 @@ use num_traits::ToPrimitive;
 pub struct Address(pub Felt);
 
 impl Address {
-    pub(crate) fn to_32_bytes(&self) -> Result<[u8; 32], SyscallHandlerError> {
+    pub(crate) fn to_32_bytes(&self) -> Result<[u8; 32], UtilsError> {
         let mut result = self.0.to_bytes_be();
         if result.len() > 32 {
-            return Err(SyscallHandlerError::FeltToFixBytesArrayFail(self.0.clone()));
+            return Err(UtilsError::FeltToFixBytesArrayFail(self.0.clone()));
         }
         for _i in result.len()..32 {
             result.insert(0, 0)
@@ -46,7 +47,7 @@ impl Address {
 
         result
             .try_into()
-            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(self.0.clone()))
+            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(self.0.clone()))
     }
 }
 //* -------------------
