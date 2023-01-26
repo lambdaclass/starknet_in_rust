@@ -15,6 +15,7 @@ use felt::Felt;
 
 use crate::{
     business_logic::{
+        execution::execution_errors::ExecutionError,
         fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     },
     core::syscalls::{
@@ -50,17 +51,21 @@ impl StarknetRunner {
         }
     }
 
-    pub fn run_from_entrypoint(&mut self, entrypoint: usize, args: &[&CairoArg]) {
+    pub fn run_from_entrypoint(
+        &mut self,
+        entrypoint: usize,
+        args: &[&CairoArg],
+    ) -> Result<(), ExecutionError> {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
 
-        self.cairo_runner.run_from_entrypoint(
+        Ok(self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
             verify_secure,
             &mut self.vm,
             &mut self.hint_processor,
-        );
+        )?)
     }
 
     pub fn get_execution_resources(&self) -> ExecutionResources {

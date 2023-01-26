@@ -113,7 +113,7 @@ impl ExecutionEntryPoint {
     ) -> Result<CallInfo, ExecutionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
-        let (runner, syscall_handler) = self.run(
+        let runner = self.run(
             state,
             resources_manager,
             general_config,
@@ -126,7 +126,11 @@ impl ExecutionEntryPoint {
         let retdata = runner
             .get_return_values()
             .map_err(|e| ExecutionError::RetdataError(e.to_string()))?;
-        self.build_call_info(previous_cairo_usage, syscall_handler, retdata)
+        self.build_call_info(
+            previous_cairo_usage,
+            runner.hint_processor.syscall_handler,
+            retdata,
+        )
     }
 
     /// Runs the selected entry point with the given calldata in the code of the contract deployed
@@ -141,13 +145,7 @@ impl ExecutionEntryPoint {
         resources_manager: ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
         tx_execution_context: TransactionExecutionContext,
-    ) -> Result<
-        (
-            StarknetRunner,
-            BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
-        ),
-        ExecutionError,
-    > {
+    ) -> Result<StarknetRunner, ExecutionError> {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state.clone())?;
         let contract_class = state
@@ -155,7 +153,7 @@ impl ExecutionEntryPoint {
             .map_err(|_| ExecutionError::MissigContractClass)?;
 
         // fetch selected entry point
-        let entry_point = self.get_selected_entry_point(contract_class, class_hash);
+        let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash);
         // create starknet runner
         let cairo_runner = CairoRunner::new(&contract_class.program, "all", false)
             .map_err(|_| ExecutionError::FailToCreateCairoRunner)?;
@@ -170,7 +168,7 @@ impl ExecutionEntryPoint {
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
             Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
-            _ => return Err(ExecutionError::ExpectedPointer),
+            _ => return Err(ExecutionError::NotARelocatableValue),
         };
 
         let syscall_handler = BusinessLogicSyscallHandler::new(
@@ -191,22 +189,24 @@ impl ExecutionEntryPoint {
             .hint_processor
             .syscall_handler
             .allocate_segment(&mut runner.vm, data)
-            .unwrap()
+            .map_err(|_| ExecutionError::ErrorAllocatingSegment)?
             .into();
 
         let entry_point_args = [
-            CairoArg::Single(self.entry_point_selector.clone().into()),
-            CairoArg::Array(os_context),
-            CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
-            CairoArg::Single(alloc_pointer),
+            &CairoArg::Single(self.entry_point_selector.clone().into()),
+            &CairoArg::Array(os_context),
+            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
+            &CairoArg::Single(alloc_pointer),
         ];
 
-        Ok(runner
-            .run_from_entrypoint(
-                entry_point.offset.to_usize(),
-                entry_point_args.try_into().unwrap(),
-            )
-            .unwrap())
+        let entrypoint = entry_point.offset.to_usize().ok_or_else(|| {
+            ExecutionError::ErrorInDataConversion("felt".to_string(), "usize".to_string())
+        })?;
+
+        // cairo runner entry point
+        runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
+
+        Ok(runner)
     }
 
     fn get_selected_entry_point(

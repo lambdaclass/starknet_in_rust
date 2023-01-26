@@ -1,6 +1,7 @@
 use std::error;
 
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+use felt::Felt;
 use thiserror::Error;
 
 use crate::core::errors;
@@ -34,10 +35,10 @@ pub enum ExecutionError {
     MissigContractClass,
     #[error("Could not create cairo runner")]
     FailToCreateCairoRunner,
-    #[error("Value should be a pointer but got an Int")]
-    ExpectedPointer,
     #[error("contract address {0:?} not deployed")]
     NotDeployedContract([u8; 32]),
+    #[error("error allocating memory segment")]
+    ErrorAllocatingSegment,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
 }
