@@ -34,6 +34,14 @@ use num_traits::ToPrimitive;
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
 pub struct Address(pub Felt);
 
+impl Address {
+    pub(crate) fn to_32_bytes(&self) -> Result<[u8; 32], SyscallHandlerError> {
+        self.0
+            .to_bytes_be()
+            .try_into()
+            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(self.0.clone()))
+    }
+}
 //* -------------------
 //*  Helper Functions
 //* -------------------

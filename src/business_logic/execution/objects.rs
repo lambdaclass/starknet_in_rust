@@ -47,7 +47,7 @@ pub struct CallInfo {
     pub(crate) execution_resources: ExecutionResources,
     pub(crate) events: VecDeque<OrderedEvent>,
     pub(crate) l2_to_l1_messages: VecDeque<OrderedL2ToL1Message>,
-    pub(crate) storage_read_values: VecDeque<u64>,
+    pub(crate) storage_read_values: VecDeque<Felt>,
     pub(crate) accesed_storage_keys: VecDeque<[u8; 32]>,
     pub(crate) internal_calls: Vec<CallInfo>,
 }

@@ -2,6 +2,8 @@ use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use felt::Felt;
 use thiserror::Error;
 
+use super::state_errors::StateError;
+
 #[derive(Debug, PartialEq, Error)]
 pub enum SyscallHandlerError {
     #[error("Missing Member")]
@@ -34,6 +36,8 @@ pub enum SyscallHandlerError {
     ExpectedSendMessageToL1,
     #[error("Expected GetBlockTimestampRequest")]
     ExpectedGetBlockTimestampRequest,
+    #[error("Expected StorageReadRequest")]
+    ExpectedStorageReadRequest,
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1, found: {0}")]
     DeployFromZero(usize),
     #[error("Hint not implemented")]
@@ -78,4 +82,6 @@ pub enum SyscallHandlerError {
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
+    #[error(transparent)]
+    StateError(#[from] StateError),
 }

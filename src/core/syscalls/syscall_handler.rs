@@ -4,13 +4,19 @@ use super::os_syscall_handler::OsSyscallHandler;
 use super::syscall_request::*;
 use super::syscall_response::GetBlockNumberResponse;
 use super::syscall_response::GetContractAddressResponse;
+use super::syscall_response::StorageReadResponse;
 use super::syscall_response::{
     CallContractResponse, GetBlockTimestampResponse, GetCallerAddressResponse,
     GetSequencerAddressResponse, GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
 };
 use crate::business_logic::execution::objects::TxInfoStruct;
+use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
+use crate::business_logic::state::cached_state::CachedState;
+use crate::business_logic::state::state_api::State;
+use crate::business_logic::state::state_api::StateReader;
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::starknet_storage::dict_storage::DictStorage;
 use crate::starknet_storage::errors::storage_errors::StorageError;
 use crate::utils::get_big_int;
 use crate::utils::Address;
@@ -53,6 +59,25 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
+
+    fn storage_read(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::StorageRead(request) =
+            self._read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        let value = self._storage_read(request.address)?;
+        let response = StorageReadResponse::new(value);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
 
     fn _get_tx_info_ptr(
         &mut self,
@@ -114,7 +139,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError>;
 
-    fn _storage_read(&mut self, address: Address) -> Result<u64, SyscallHandlerError>;
+    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError>;
 
     fn _storage_write(&mut self, address: Address, value: u64);
 
@@ -264,6 +289,7 @@ pub(crate) trait SyscallHandler {
             "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
             "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
+            "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -281,20 +307,20 @@ pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
     pub(crate) syscall_handler: H,
 }
 
-impl SyscallHintProcessor<BusinessLogicSyscallHandler> {
-    #[allow(unused)] // TODO: Remove once used.
-    pub fn new_empty(
-    ) -> Result<SyscallHintProcessor<BusinessLogicSyscallHandler>, SyscallHandlerError> {
-        Ok(SyscallHintProcessor {
-            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: BusinessLogicSyscallHandler::new(BlockInfo::default()),
-        })
-    }
-
+impl SyscallHintProcessor<OsSyscallHandler> {
     pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler: OsSyscallHandler::default(),
+        })
+    }
+}
+
+impl SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>> {
+    pub fn new_empty() -> Result<Self, SyscallHandlerError> {
+        Ok(SyscallHintProcessor {
+            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
+            syscall_handler: BusinessLogicSyscallHandler::default(),
         })
     }
 }
@@ -353,6 +379,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             LIBRARY_CALL => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.library_call(vm, syscall_ptr)
+            }
+            STORAGE_READ => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.storage_read(vm, syscall_ptr)
             }
             SEND_MESSAGE_TO_L1 => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -435,14 +465,15 @@ mod tests {
     };
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
-    use num_traits::ToPrimitive;
+    use felt::FeltOps;
+    use num_traits::{Num, ToPrimitive};
 
     use super::*;
     use std::collections::VecDeque;
 
     #[test]
     fn read_send_message_to_l1_request() {
-        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -463,7 +494,7 @@ mod tests {
 
     #[test]
     fn read_deploy_syscall_request() {
-        let syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -494,7 +525,7 @@ mod tests {
 
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -529,7 +560,7 @@ mod tests {
 
     #[test]
     fn get_sequencer_address_for_business_logic() {
-        let mut syscall = BusinessLogicSyscallHandler::new(BlockInfo::default());
+        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -1016,6 +1047,121 @@ mod tests {
         assert_eq!(
             vm.get_relocatable(&relocatable!(2, 2)).unwrap(),
             relocatable!(3, 0)
+        );
+    }
+
+    #[test]
+    fn test_bl_storage_read_hint_ok() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        let address = Felt::from_str_radix(
+            "2151680050850558576753658069693146429350618838199373217695410689374331200218",
+            10,
+        )
+        .unwrap();
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10)      //  StorageReadRequest.selector
+            ]
+        );
+
+        // StorageReadRequest.address
+        vm.insert_value(&relocatable!(2, 1), address.clone());
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
+
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        let storage_value = Felt::new(3);
+        syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state
+            .set_storage_at(
+                &(
+                    syscall_handler_hint_processor
+                        .syscall_handler
+                        .starknet_storage_state
+                        .contract_address
+                        .clone(),
+                    address.to_bytes_be().try_into().unwrap(),
+                ),
+                storage_value.clone(),
+            );
+        assert!(syscall_handler_hint_processor
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .is_ok());
+
+        // Check StorageReadResponse insert
+        assert_eq!(Ok(storage_value), get_big_int(&vm, &relocatable!(2, 2)));
+    }
+
+    #[test]
+    fn test_os_storage_read_hint_ok() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10),     //  StorageReadRequest.selector
+                ((2, 1), 11)      //  StorageReadRequest.address
+            ]
+        );
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
+
+        let execute_code_read_operation: VecDeque<Felt> =
+            VecDeque::from([5.into(), 4.into(), 3.into(), 2.into(), 1.into()]);
+        syscall_handler_hint_processor.syscall_handler = OsSyscallHandler::new(
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            VecDeque::new(),
+            execute_code_read_operation.clone(),
+            HashMap::new(),
+            Some(Relocatable {
+                segment_index: 0,
+                offset: 0,
+            }),
+            None,
+            BlockInfo::default(),
+        );
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(result, Ok(()));
+
+        // Check VM inserts
+        // StorageReadResponse
+        assert_eq!(
+            get_big_int(&vm, &relocatable!(2, 2)),
+            Ok(execute_code_read_operation.get(0).unwrap().clone())
         );
     }
 }
