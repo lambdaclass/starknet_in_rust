@@ -8,7 +8,9 @@ use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::update_tracker_state::UpdatesTrackerState;
 use crate::core::errors::state_errors::StateError;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::core::transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash;
+use crate::core::transaction_hash::starknet_transaction_hash::{
+    calculate_deploy_transaction_hash, calculate_transaction_hash_common, TransactionHashPrefix,
+};
 use crate::definitions::constants::TRANSACTION_VERSION;
 use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::definitions::transaction_type::TransactionType;
@@ -186,5 +188,55 @@ impl InternalDeploy {
 
         let resources_manager = ExecutionResourcesManager::default();
         todo!()
+    }
+}
+
+pub(crate) struct InternalL1Handler {
+    contract_address: Address,
+    entry_point_selector: u64,
+    call_data: Vec<Felt>,
+    nonce: Option<Felt>,
+    tx_type: TransactionType,
+    hash_value: Felt,
+}
+
+// hash_value = calculate_transaction_hash_common(
+//     tx_hash_prefix=TransactionHashPrefix.L1_HANDLER,
+//     version=constants.L1_HANDLER_VERSION,
+//     contract_address=contract_address,
+//     entry_point_selector=entry_point_selector,
+//     calldata=calldata,
+//     max_fee=0,
+//     chain_id=chain_id,
+//     additional_data=[nonce],
+// )
+impl InternalL1Handler {
+    fn create(
+        contract_address: Address,
+        entry_point_selector: u64,
+        call_data: &[Felt],
+        chain_id: u64,
+        nonce: Felt,
+    ) -> Self {
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::L1Handler,
+            0,
+            contract_address.clone(),
+            entry_point_selector,
+            call_data,
+            0,
+            chain_id,
+            &[nonce],
+        )
+        .unwrap();
+
+        InternalL1Handler {
+            contract_address,
+            entry_point_selector,
+            nonce: Some(nonce),
+            hash_value,
+            call_data: call_data.to_vec(),
+            tx_type: TransactionType::L1Handler,
+        }
     }
 }
