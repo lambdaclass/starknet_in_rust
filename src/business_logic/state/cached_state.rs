@@ -314,4 +314,33 @@ mod tests {
             .deploy_contract(contract_address, [10; 32])
             .is_ok())
     }
+
+    #[test]
+    fn get_and_set_storage() {
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+
+        let contract_address = Address(31.into());
+        let storage_key = [18; 32];
+        let value = Felt::new(912);
+
+        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+
+        // set storage_key
+        cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
+        let result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
+
+        assert_eq!(result, Ok(&value));
+
+        // rewrite storage_key
+        let new_value = value.clone() + 3_usize;
+
+        cached_state.set_storage_at(
+            &(contract_address.clone(), storage_key),
+            (new_value.clone()),
+        );
+
+        let new_result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
+
+        assert_eq!(new_result, Ok(&new_value));
+    }
 }
