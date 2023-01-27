@@ -259,4 +259,8 @@ impl InternalL1Handler {
             L1_HANDLER_VERSION,
         ))
     }
+
+    fn get_payload_size(&self) -> usize {
+        self.call_data.len() - 1
+    }
 }
