@@ -79,6 +79,24 @@ pub(crate) trait SyscallHandler {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    fn storage_write(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let SyscallRequest::StorageWrite(request) =
+            self._read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        self._storage_write(request.address, request.value);
+
+        Ok(())
+    }
+
     fn _get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
@@ -141,7 +159,7 @@ pub(crate) trait SyscallHandler {
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError>;
 
-    fn _storage_write(&mut self, address: Address, value: u64);
+    fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError>;
 
     fn allocate_segment(
         &mut self,
@@ -290,6 +308,7 @@ pub(crate) trait SyscallHandler {
             "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
+            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -383,6 +402,10 @@ impl<H: SyscallHandler> SyscallHintProcessor<H> {
             STORAGE_READ => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.storage_read(vm, syscall_ptr)
+            }
+            STORAGE_WRITE => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.storage_write(vm, syscall_ptr)
             }
             SEND_MESSAGE_TO_L1 => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -1106,6 +1129,68 @@ mod tests {
 
         // Check StorageReadResponse insert
         assert_eq!(Ok(storage_value), get_big_int(&vm, &relocatable!(2, 2)));
+    }
+
+    #[test]
+    fn test_bl_storage_write_hint_ok() {
+        let mut vm = vm!();
+        add_segments!(vm, 3);
+
+        let address = Felt::from_str_radix(
+            "2151680050850558576753658069693146429350618838199373217695410689374331200218",
+            10,
+        )
+        .unwrap();
+
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10),     //  StorageWriteRequest.selector
+                ((2, 2), 45)      //  StorageWriteRequest.value
+            ]
+        );
+
+        // StorageWriteRequest.address
+        vm.insert_value(&relocatable!(2, 1), address.clone());
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(STORAGE_WRITE.to_string(), ids_data);
+
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty().unwrap();
+
+        syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state
+            .set_storage_at(
+                &(
+                    syscall_handler_hint_processor
+                        .syscall_handler
+                        .starknet_storage_state
+                        .contract_address
+                        .clone(),
+                    address.to_bytes_be().try_into().unwrap(),
+                ),
+                Felt::new(3),
+            );
+        assert!(syscall_handler_hint_processor
+            .execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            )
+            .is_ok());
+
+        let write = syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .read(&Address(address).to_32_bytes().unwrap());
+
+        assert_eq!(write, Ok(&Felt::new(45)));
     }
 
     #[test]
