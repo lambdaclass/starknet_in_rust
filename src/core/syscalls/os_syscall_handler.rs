@@ -355,7 +355,7 @@ mod tests {
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use felt::{Felt, NewFelt};
+    use felt::Felt;
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
 

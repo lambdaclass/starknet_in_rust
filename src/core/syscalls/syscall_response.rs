@@ -8,7 +8,7 @@ use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
-use felt::{Felt, NewFelt};
+use felt::Felt;
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use cairo_rs::{types::program::Program, utils::is_subsequence};
-use felt::{Felt, NewFelt, PRIME_STR};
+use felt::{Felt, PRIME_STR};
 
 use crate::{core::errors::state_errors::StateError, public::abi::AbiType};
 use serde::{Deserialize, Serialize};
