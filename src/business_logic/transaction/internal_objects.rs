@@ -17,6 +17,7 @@ use crate::services::api::contract_class::{self, ContractClass};
 use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
 use crate::utils::{calculate_tx_resources, Address};
+use crate::utils_errors::UtilsError;
 use felt::Felt;
 use num_traits::Zero;
 
@@ -50,7 +51,7 @@ impl InternalDeploy {
             .to_string()
             .as_bytes()
             .try_into()
-            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(class_hash.clone()))?;
+            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(class_hash.clone()))?;
         let contract_address = Address(calculate_contract_address_from_hash(
             &contract_address_salt,
             &class_hash,

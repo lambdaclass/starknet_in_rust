@@ -17,20 +17,14 @@ use super::contract_state::{self, ContractState};
 
 #[derive(Clone, Debug)]
 pub(crate) struct InMemoryStateReader {
-    pub(crate) global_state_root: HashMap<Address, [u8; 32]>,
     pub(crate) ffc: DictStorage,
     pub(crate) contract_states: HashMap<Address, ContractState>,
     pub(crate) contract_class_storage: DictStorage,
 }
 
 impl InMemoryStateReader {
-    pub(crate) fn new(
-        global_state_root: HashMap<Address, [u8; 32]>,
-        ffc: DictStorage,
-        contract_class_storage: DictStorage,
-    ) -> Self {
+    pub(crate) fn new(ffc: DictStorage, contract_class_storage: DictStorage) -> Self {
         Self {
-            global_state_root,
             ffc,
             contract_states: HashMap::new(),
             contract_class_storage,
@@ -42,11 +36,9 @@ impl InMemoryStateReader {
         contract_address: &Address,
     ) -> Result<&ContractState, StateError> {
         if !self.contract_states.contains_key(contract_address) {
-            let key = self
-                .global_state_root
-                .get(contract_address)
-                .ok_or_else(|| StateError::NoneContractState(contract_address.clone()))?;
-            let result = self.ffc.get_contract_state(key)?;
+            let result = self
+                .ffc
+                .get_contract_state(&contract_address.to_32_bytes()?)?;
             self.contract_states
                 .insert(contract_address.clone(), result);
         }
@@ -94,18 +86,14 @@ mod tests {
 
     #[test]
     fn get_contract_state_test() {
-        let mut state_reader =
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::create([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .global_state_root
-            .insert(contract_address.clone(), [0; 32]);
-        state_reader
             .ffc
-            .set_contract_state(&[0; 32], &contract_state);
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
 
         assert_eq!(
             state_reader.get_contract_state(&contract_address),
@@ -127,8 +115,7 @@ mod tests {
 
     #[test]
     fn get_contract_class_test() {
-        let mut state_reader =
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_class_key = [0; 32];
         let contract_class = ContractClass::new(

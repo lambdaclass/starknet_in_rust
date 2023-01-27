@@ -6,6 +6,7 @@ use crate::{
     services::api::contract_class_errors::ContractClassError,
     starknet_storage::errors::storage_errors::StorageError,
     utils::Address,
+    utils_errors::UtilsError,
 };
 
 #[derive(Debug, PartialEq, Error)]
@@ -40,4 +41,6 @@ pub enum StateError {
     StorageError(#[from] StorageError),
     #[error(transparent)]
     ContractClassError(#[from] ContractClassError),
+    #[error(transparent)]
+    UtilsError(#[from] UtilsError),
 }
