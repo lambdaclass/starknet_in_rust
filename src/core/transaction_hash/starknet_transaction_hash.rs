@@ -37,7 +37,7 @@ pub fn calculate_transaction_hash_common(
     calldata: &[Felt],
     max_fee: u64,
     chain_id: u64,
-    additional_data: &[u64],
+    additional_data: &[Felt],
 ) -> Result<Felt, SyscallHandlerError> {
     /// Calculates the transaction hash in the StarkNet network - a unique identifier of the
     /// transaction.
@@ -54,7 +54,7 @@ pub fn calculate_transaction_hash_common(
     /// H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y).
     let calldata_hash = compute_hash_on_elements(calldata)?;
 
-    let mut data_to_hash: Vec<Felt> = vec![
+    let data_to_hash: Vec<Felt> = vec![
         tx_hash_prefix.get_prefix(),
         version.into(),
         contract_address.0,
@@ -63,8 +63,6 @@ pub fn calculate_transaction_hash_common(
         max_fee.into(),
         chain_id.into(),
     ];
-
-    data_to_hash.extend(additional_data.iter().map(|n| (*n).into()));
 
     compute_hash_on_elements(&data_to_hash)
 }
@@ -97,7 +95,7 @@ pub fn calculate_deploy_account_transaction_hash(
     class_hash: Felt,
     constructor_calldata: &[Felt],
     max_fee: u64,
-    nonce: u64,
+    nonce: Felt,
     salt: u64,
     chain_id: u64,
 ) -> Result<Felt, SyscallHandlerError> {
@@ -131,7 +129,7 @@ mod tests {
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
         let chain_id = 1;
-        let additional_data: Vec<u64> = Vec::new();
+        let additional_data: Vec<Felt> = Vec::new();
 
         // Expected value taken from Python implementation of calculate_transaction_hash_common function
         let expected = felt_str!(

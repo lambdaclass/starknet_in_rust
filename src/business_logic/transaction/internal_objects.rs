@@ -226,7 +226,7 @@ impl InternalL1Handler {
             call_data,
             0,
             chain_id,
-            &[nonce],
+            &[nonce.clone()],
         )
         .unwrap();
 
