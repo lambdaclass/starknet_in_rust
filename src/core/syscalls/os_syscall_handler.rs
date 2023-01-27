@@ -162,8 +162,9 @@ impl SyscallHandler for OsSyscallHandler {
 
     // Advance execute_code_read_iterators since the previous storage value is written
     // in each write operation. See BusinessLogicSysCallHandler._storage_write().
-    fn _storage_write(&mut self, address: Address, value: u64) {
+    fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
         self.execute_code_read_iterator.pop_front();
+        Ok(())
     }
 
     /// Allocates and returns a new temporary segment.
@@ -354,7 +355,7 @@ mod tests {
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use cairo_rs::vm::vm_core::VirtualMachine;
-    use felt::{Felt, NewFelt};
+    use felt::Felt;
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
 
@@ -678,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn storage_read() {
+    fn test_storage_read() {
         let mut execute_code_read_iterator = VecDeque::new();
         execute_code_read_iterator.push_back(Felt::new(12));
         execute_code_read_iterator.push_back(Felt::new(1444));
@@ -697,7 +698,7 @@ mod tests {
     }
 
     #[test]
-    fn storage_write() {
+    fn test_storage_write() {
         let mut execute_code_read_iterator = VecDeque::new();
         execute_code_read_iterator.push_back(Felt::new(12));
         let mut handler = OsSyscallHandler {
@@ -706,9 +707,9 @@ mod tests {
         };
 
         let addr = Address(0.into());
-        let val = 0;
+        let val = Felt::new(0);
 
-        handler._storage_write(addr.clone(), val);
+        handler._storage_write(addr.clone(), val.clone());
         handler._storage_write(addr, val);
     }
 

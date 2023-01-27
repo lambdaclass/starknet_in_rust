@@ -22,9 +22,10 @@ use crate::{
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::transaction_type::TransactionType,
     services::api::contract_class::EntryPointType,
+    utils_errors::UtilsError,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::{felt_str, Felt, FeltOps, NewFelt};
+use felt::{felt_str, Felt};
 use num_traits::ToPrimitive;
 
 //* -------------------
@@ -35,11 +36,18 @@ use num_traits::ToPrimitive;
 pub struct Address(pub Felt);
 
 impl Address {
-    pub(crate) fn to_32_bytes(&self) -> Result<[u8; 32], SyscallHandlerError> {
-        self.0
-            .to_bytes_be()
+    pub(crate) fn to_32_bytes(&self) -> Result<[u8; 32], UtilsError> {
+        let mut result = self.0.to_bytes_be();
+        if result.len() > 32 {
+            return Err(UtilsError::FeltToFixBytesArrayFail(self.0.clone()));
+        }
+        for _i in result.len()..32 {
+            result.insert(0, 0)
+        }
+
+        result
             .try_into()
-            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(self.0.clone()))
+            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(self.0.clone()))
     }
 }
 //* -------------------
@@ -294,7 +302,7 @@ pub mod test_utils {
 
     macro_rules! vm {
         () => {{
-            use felt::{Felt, NewFelt};
+            use felt::Felt;
             VirtualMachine::new(false)
         }};
 
@@ -340,7 +348,6 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            use felt::FeltOps;
             let v = felt::Felt::from_bytes_be($val);
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();
@@ -450,6 +457,7 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use felt::Felt;
+    use num_traits::Num;
     use std::{collections::HashMap, hash::Hash};
 
     use crate::utils::{subtract_mappings, Address};
@@ -559,5 +567,39 @@ mod test {
         expected_res.insert((Address(address2.0), key2), value2);
 
         assert_eq!(cache_storage, expected_res)
+    }
+
+    #[test]
+    fn address_to_32_bytes() {
+        assert_eq!(Address(0.into()).to_32_bytes(), Ok([0; 32]));
+        assert_eq!(
+            Address(1.into()).to_32_bytes(),
+            Ok([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1
+            ])
+        );
+        assert_eq!(
+            Address(257.into()).to_32_bytes(),
+            Ok([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 1, 1
+            ])
+        );
+
+        let address = Address(
+            Felt::from_str_radix(
+                "2151680050850558576753658069693146429350618838199373217695410689374331200218",
+                10,
+            )
+            .unwrap(),
+        );
+        assert_eq!(
+            address.to_32_bytes(),
+            Ok([
+                4, 193, 206, 200, 202, 13, 38, 110, 16, 37, 89, 67, 39, 3, 185, 128, 123, 117, 218,
+                224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
+            ])
+        );
     }
 }

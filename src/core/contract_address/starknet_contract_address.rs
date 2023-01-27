@@ -14,7 +14,7 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::{Felt, FeltOps};
+use felt::Felt;
 use num_traits::{pow, Num};
 
 use crate::{
@@ -38,7 +38,7 @@ pub const MASK_3: u8 = 3;
 /// To avoid exceeding the maximum address we take modulus L2_ADDRESS_UPPER_BOUND of the above
 /// result.
 pub(crate) fn calculate_contract_address(
-    salt: &Felt,
+    salt: &Address,
     contract_class: &ContractClass,
     constructor_calldata: &[Felt],
     deployer_address: Address,

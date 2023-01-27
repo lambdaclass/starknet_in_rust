@@ -2,6 +2,8 @@ use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use felt::Felt;
 use thiserror::Error;
 
+use crate::utils_errors::UtilsError;
+
 use super::state_errors::StateError;
 
 #[derive(Debug, PartialEq, Error)]
@@ -22,8 +24,6 @@ pub enum SyscallHandlerError {
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
     FeltToU64Fail,
-    #[error("Couldn't convert Felt: {0} to [u8;32]")]
-    FeltToFixBytesArrayFail(Felt),
     #[error("Couldn't compure hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
@@ -84,4 +84,6 @@ pub enum SyscallHandlerError {
     InvalidTxInfoPtr,
     #[error(transparent)]
     StateError(#[from] StateError),
+    #[error(transparent)]
+    UtilsError(#[from] UtilsError),
 }
