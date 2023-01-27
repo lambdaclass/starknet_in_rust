@@ -7,7 +7,10 @@ use cairo_rs::{
     types::{program::Program, relocatable::MaybeRelocatable},
     vm::{
         self,
-        runners::{builtin_runner::BuiltinRunner, cairo_runner::CairoRunner},
+        runners::{
+            builtin_runner::BuiltinRunner,
+            cairo_runner::{CairoArg, CairoRunner},
+        },
         vm_core::VirtualMachine,
     },
 };
@@ -105,7 +108,7 @@ fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
-    println!("Identifiers: {:?}\n\n", identifiers);
+    // println!("Identifiers: {:?}\n\n", identifiers);
     let api_version = identifiers
         .get("__main__.API_VERSION")
         .ok_or_else(|| ContractAddressError::MissingIdentifier("API_VERSION".to_string()))?;
@@ -121,17 +124,21 @@ fn get_contract_class_struct(
             .value
             .as_ref()
             .ok_or(ContractAddressError::NoneApiVersion)?
-            .to_owned(),
-        n_external_functions: external_functions.len(),
+            .to_owned()
+            .into(),
+        n_external_functions: Felt::from(external_functions.len()).into(),
         external_functions,
-        n_l1_handlers: l1_handlers.len(),
+        n_l1_handlers: Felt::from(l1_handlers.len()).into(),
         l1_handlers,
-        n_constructors: constructors.len(),
+        n_constructors: Felt::from(constructors.len()).into(),
         constructors,
-        n_builtins: builtin_list.len(),
-        builtin_list: builtin_list.to_vec(),
-        hinted_class_hash: compute_hinted_class_hash(contract_class),
-        bytecode_length: contract_class.program.data.len(),
+        n_builtins: Felt::from(builtin_list.len()).into(),
+        builtin_list: builtin_list
+            .iter()
+            .map(|builtin| Felt::from_bytes_be(builtin.to_ascii_lowercase().as_bytes()).into())
+            .collect::<Vec<MaybeRelocatable>>(),
+        hinted_class_hash: compute_hinted_class_hash(contract_class).into(),
+        bytecode_length: Felt::from(contract_class.program.data.len()).into(),
         bytecode_ptr: contract_class.program.data.clone(),
     })
 }
@@ -139,18 +146,63 @@ fn get_contract_class_struct(
 // TODO: think about a new name for this struct (ContractClass already exists)
 #[derive(Debug)]
 struct StructContractClass {
-    api_version: Felt,
-    n_external_functions: usize,
+    api_version: MaybeRelocatable,
+    n_external_functions: MaybeRelocatable,
     external_functions: Vec<ContractEntryPoint>,
-    n_l1_handlers: usize,
+    n_l1_handlers: MaybeRelocatable,
     l1_handlers: Vec<ContractEntryPoint>,
-    n_constructors: usize,
+    n_constructors: MaybeRelocatable,
     constructors: Vec<ContractEntryPoint>,
-    n_builtins: usize,
-    builtin_list: Vec<String>,
-    hinted_class_hash: Felt,
-    bytecode_length: usize,
+    n_builtins: MaybeRelocatable,
+    builtin_list: Vec<MaybeRelocatable>,
+    hinted_class_hash: MaybeRelocatable,
+    bytecode_length: MaybeRelocatable,
     bytecode_ptr: Vec<MaybeRelocatable>,
+}
+
+impl From<StructContractClass> for CairoArg {
+    fn from(contract_class: StructContractClass) -> Self {
+        let external_func_flatted = contract_class
+            .external_functions
+            .iter()
+            .flat_map::<Vec<MaybeRelocatable>, _>(|entry_point| entry_point.into())
+            .collect::<Vec<MaybeRelocatable>>();
+
+        let mut result = vec![
+            contract_class.api_version,
+            contract_class.n_external_functions,
+        ];
+        result.extend(external_func_flatted);
+
+        result.extend(vec![contract_class.n_l1_handlers]);
+
+        let l1_handlers_flatted = contract_class
+            .l1_handlers
+            .iter()
+            .flat_map::<Vec<MaybeRelocatable>, _>(|entry_point| entry_point.into())
+            .collect::<Vec<MaybeRelocatable>>();
+
+        result.extend(l1_handlers_flatted);
+
+        result.extend(vec![contract_class.n_constructors]);
+
+        let constructors_flatted = contract_class
+            .constructors
+            .iter()
+            .flat_map::<Vec<MaybeRelocatable>, _>(|entry_point| entry_point.into())
+            .collect::<Vec<MaybeRelocatable>>();
+
+        result.extend(constructors_flatted);
+        result.extend(vec![contract_class.n_builtins]);
+        result.extend(contract_class.builtin_list);
+        result.extend(vec![
+            contract_class.hinted_class_hash,
+            contract_class.bytecode_length,
+        ]);
+        result.extend(contract_class.bytecode_ptr);
+
+        CairoArg::Array(result)
+    }
 }
 
 use std::{collections::HashMap, hash::Hash, path::Path};
@@ -160,7 +212,8 @@ pub(crate) fn compute_class_hash(
 ) -> Result<Felt, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
-    let contract_class_struct = get_contract_class_struct(&program.identifiers, contract_class)?;
+    let contract_class_struct =
+        &get_contract_class_struct(&program.identifiers, contract_class)?.into();
 
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all", false)
@@ -172,17 +225,25 @@ pub(crate) fn compute_class_hash(
     // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
     // TODO: Looks like we can get this value from the identifier, but the value is a Felt.
     // We need to cast that into a usize.
-    // let entrypoint = program.identifiers.get("class_hash").unwrap();
+    // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
+    println!(
+        "Contract class before into: {:#?}",
+        get_contract_class_struct(&program.identifiers, contract_class)?
+    );
+    println!("Contract class struct into: {:#?}", contract_class_struct);
+    let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
     runner
-        .run_from_entrypoint(188, &vec![], true, &mut vm, &mut hint_processor)
+        .run_from_entrypoint(
+            188,
+            &vec![contract_class_struct, &hash_base.into()],
+            true,
+            &mut vm,
+            &mut hint_processor,
+        )
         .map_err(|err| ContractAddressError::CairoRunner(err.to_string()))?;
 
-    println!("ACA LLEGA\n\n");
-    println!("vm PC: {:#?}", vm.get_pc());
-    println!("vm AP: {:#?}", vm.get_ap());
-    println!("vm FP: {:#?}", vm.get_fp());
     Ok(vm
-        .get_return_values(1)
+        .get_return_values(2)
         .map_err(|err| ContractAddressError::Memory(err.to_string()))?
         .get(1)
         .ok_or(ContractAddressError::IndexOutOfRange)?
