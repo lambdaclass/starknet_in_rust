@@ -95,7 +95,7 @@ impl ExecutionEntryPoint {
             )
         });
 
-        let mut rsc_manager = resources_manager.clone().unwrap_or_default();
+        let mut rsc_manager = resources_manager.unwrap_or_default();
 
         self.execute(state, general_config, rsc_manager, tx_context)
     }
@@ -181,7 +181,7 @@ impl ExecutionEntryPoint {
             initial_syscall_ptr,
         );
 
-        // runner.syscall_handler = SyscallHintProcessor::new(syscall_handler);
+        runner.syscall_handler = SyscallHintProcessor::new(syscall_handler);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data = self.calldata.clone().iter().map(|d| d.into()).collect();

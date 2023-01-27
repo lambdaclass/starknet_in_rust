@@ -110,6 +110,20 @@ pub fn calculate_additional_resources(
     }
 }
 
+pub fn multiply_resources(rsc: ExecutionResources, other: usize) -> ExecutionResources {
+    let builtin_instance_counter = rsc
+        .builtin_instance_counter
+        .into_iter()
+        .map(|b| (b.0, b.1 * other))
+        .collect();
+
+    ExecutionResources {
+        n_steps: rsc.n_steps * other,
+        n_memory_holes: rsc.n_memory_holes * other,
+        builtin_instance_counter,
+    }
+}
+
 // ----------------------
 //      SHARED STATE
 // ----------------------
