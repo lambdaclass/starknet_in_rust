@@ -332,14 +332,14 @@ mod tests {
         assert_eq!(result, Ok(&value));
 
         // rewrite storage_key
-        let new_value = value.clone() + 3_usize;
+        let new_value = value + 3_usize;
 
         cached_state.set_storage_at(
             &(contract_address.clone(), storage_key),
             (new_value.clone()),
         );
 
-        let new_result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
+        let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
 
         assert_eq!(new_result, Ok(&new_value));
     }
