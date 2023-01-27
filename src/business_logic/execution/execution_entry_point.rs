@@ -181,7 +181,7 @@ impl ExecutionEntryPoint {
             initial_syscall_ptr,
         );
 
-        // runner.hint_processor = SyscallHintProcessor::new(syscall_handler);
+        runner.hint_processor = SyscallHintProcessor::new(syscall_handler);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data = self.calldata.clone().iter().map(|d| d.into()).collect();
