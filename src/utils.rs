@@ -133,52 +133,6 @@ pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
         })
 }
 
-pub fn calculate_tx_resources<S: State + StateReader>(
-    resources_manager: ExecutionResourcesManager,
-    call_info: &[Option<CallInfo>],
-    tx_type: TransactionType,
-    state: UpdatesTrackerState<S>,
-    l1_handler_payload_size: Option<usize>,
-) -> Result<HashMap<String, usize>, ExecutionError> {
-    let (n_modified_contracts, n_storage_changes) = state.count_actual_storage_changes();
-
-    let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
-    let n_deployments = non_optional_calls
-        .clone()
-        .into_iter()
-        .fold(0, |acc, c| get_call_n_deployments(c));
-
-    let mut l2_to_l1_messages = Vec::new();
-
-    for call_info in non_optional_calls {
-        l2_to_l1_messages.extend(call_info.get_sorted_l2_to_l1_messages()?)
-    }
-
-    let l1_gas_usage = calculate_tx_gas_usage(
-        l2_to_l1_messages,
-        n_modified_contracts,
-        n_storage_changes,
-        l1_handler_payload_size,
-        n_deployments,
-    );
-
-    let cairo_usage = resources_manager.cairo_usage.clone();
-    let tx_syscall_counter = resources_manager.syscall_counter;
-
-    // Add additional Cairo resources needed for the OS to run the transaction.
-    let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);
-    let new_resources = calculate_additional_resources(cairo_usage, additional_resources);
-    let filtered_builtins = filter_unused_builtins(new_resources);
-
-    let mut resources: HashMap<String, usize> = HashMap::new();
-    resources.insert("l1_gas_usage".to_string(), l1_gas_usage);
-    for (builtin, value) in filtered_builtins.builtin_instance_counter {
-        resources.insert(builtin, value);
-    }
-
-    Ok(resources)
-}
-
 /// Returns a mapping containing key-value pairs from a that are not included in b (if
 /// a key appears in b with a different value, it will be part of the output).
 /// Uses to take only updated cells from a mapping.

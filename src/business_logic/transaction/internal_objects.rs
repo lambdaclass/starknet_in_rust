@@ -16,7 +16,7 @@ use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::services::api::contract_class::{self, ContractClass};
 use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
-use crate::utils::{calculate_tx_resources, Address};
+use crate::utils::Address;
 use felt::Felt;
 use num_traits::Zero;
 
@@ -145,14 +145,14 @@ impl InternalDeploy {
             ..Default::default()
         };
 
-        let actual_resources = calculate_tx_resources(
-            resources_manager,
-            &[Some(call_info.clone())],
-            self.tx_type.clone(),
-            state,
-            None,
-        )
-        .map_err(|_| StarkwareError::UnexpectedHolesL2toL1Messages)?;
+        let actual_resources = resources_manager
+            .calculate_tx_resources(
+                &[Some(call_info.clone())],
+                self.tx_type.clone(),
+                &state,
+                None,
+            )
+            .map_err(|_| StarkwareError::UnexpectedHolesL2toL1Messages)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -185,6 +185,66 @@ impl InternalDeploy {
         );
 
         let resources_manager = ExecutionResourcesManager::default();
+        todo!()
+    }
+}
+
+/// Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
+/// contract class.
+pub(crate) struct InternalDeclare {
+    /// The hash of the declared class.
+    class_hash: [u8; 32],
+    sender_address: Felt,
+    /// Class variables.
+    tx_type: TransactionType,
+    // related_external_cls: ClassVar[Type[Transaction]] = Declare
+    // validate_entry_point_selector: Felt,
+}
+
+impl InternalDeclare {
+    pub fn new(
+        contract_class: ContractClass,
+        sender_address: Felt,
+    ) -> Result<Self, SyscallHandlerError> {
+        let class_hash_felt = compute_class_hash(contract_class);
+        let class_hash = class_hash_felt
+            .to_string()
+            .as_bytes()
+            .try_into()
+            .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(class_hash_felt.clone()))?;
+        Ok(InternalDeclare {
+            class_hash,
+            sender_address,
+            tx_type: TransactionType::Declare,
+        })
+    }
+
+    pub fn _apply_specific_concurrent_changes<T: State + StateReader>(
+        &self,
+        state: &UpdatesTrackerState<T>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo {
+        // validate transaction
+        let resources_manager = ExecutionResourcesManager::default();
+        let validate_info = self.run_validate_entrypoint(state, &resources_manager, general_config);
+        let actual_resources = resources_manager
+            .calculate_tx_resources(&vec![validate_info], TransactionType::Declare, state, None)
+            .unwrap();
+
+        TransactionExecutionInfo::create_concurrent_stage_execution_info(
+            validate_info,
+            None,
+            actual_resources,
+            Some(self.tx_type.clone()),
+        )
+    }
+
+    fn run_validate_entrypoint<T: State + StateReader>(
+        &self,
+        state: &UpdatesTrackerState<T>,
+        resources_manager: &ExecutionResourcesManager,
+        general_config: StarknetGeneralConfig,
+    ) -> Option<CallInfo> {
         todo!()
     }
 }
