@@ -258,11 +258,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     let class_hash: [u8; 32] = state
         .get_class_hash_at(&contract_address)
         .map_err(|_| ExecutionError::FailToReadClassHash)?
-        .to_owned()
-        .try_into()
-        .map_err(|_| {
-            ExecutionError::ErrorInDataConversion("Vec<u8>".to_string(), "[u8;32]".to_string())
-        })?;
+        .to_owned();
 
     if class_hash == *UNINITIALIZED_CLASS_HASH {
         return Err(ExecutionError::NotDeployedContract(class_hash));

@@ -153,7 +153,7 @@ impl ExecutionEntryPoint {
             .map_err(|_| ExecutionError::MissigContractClass)?;
 
         // fetch selected entry point
-        let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash);
+        let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
         // create starknet runner
         let cairo_runner = CairoRunner::new(&contract_class.program, "all", false)
             .map_err(|_| ExecutionError::FailToCreateCairoRunner)?;
@@ -181,7 +181,7 @@ impl ExecutionEntryPoint {
             initial_syscall_ptr,
         );
 
-        runner.hint_processor = SyscallHintProcessor::new(syscall_handler);
+        // runner.hint_processor = SyscallHintProcessor::new(syscall_handler);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data = self.calldata.clone().iter().map(|d| d.into()).collect();
@@ -199,7 +199,7 @@ impl ExecutionEntryPoint {
             &CairoArg::Single(alloc_pointer),
         ];
 
-        let entrypoint = entry_point?.offset.to_usize().ok_or_else(|| {
+        let entrypoint = entry_point.offset.to_usize().ok_or_else(|| {
             ExecutionError::ErrorInDataConversion("felt".to_string(), "usize".to_string())
         })?;
 
@@ -215,17 +215,19 @@ impl ExecutionEntryPoint {
         contract_class: ContractClass,
         class_hash: [u8; 32],
     ) -> Result<ContractEntryPoint, ExecutionError> {
-        let entry_points = *contract_class
+        let entry_points = contract_class
             .entry_points_by_type
             .get(&self.entry_point_type)
-            .unwrap();
+            .unwrap()
+            .clone();
         let filtered_entry_points = entry_points
+            .clone()
             .into_iter()
             .filter(|ep| ep.selector == self.entry_point_selector)
             .collect::<Vec<ContractEntryPoint>>();
 
-        if filtered_entry_points.is_empty() && entry_points.len() > 0 {
-            let first_entry_point = *entry_points.get(0).unwrap();
+        if filtered_entry_points.is_empty() && !entry_points.is_empty() {
+            let first_entry_point = entry_points.get(0).unwrap().clone();
 
             return Ok(first_entry_point);
         }

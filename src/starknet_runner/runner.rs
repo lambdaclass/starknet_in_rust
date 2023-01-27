@@ -90,7 +90,7 @@ impl StarknetRunner {
         let builtin_runners = self
             .vm
             .get_builtin_runners()
-            .to_owned()
+            .clone()
             .into_iter()
             .collect::<HashMap<String, BuiltinRunner>>();
         self.cairo_runner
