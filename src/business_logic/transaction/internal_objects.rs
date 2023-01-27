@@ -200,16 +200,6 @@ pub(crate) struct InternalL1Handler {
     hash_value: Felt,
 }
 
-// hash_value = calculate_transaction_hash_common(
-//     tx_hash_prefix=TransactionHashPrefix.L1_HANDLER,
-//     version=constants.L1_HANDLER_VERSION,
-//     contract_address=contract_address,
-//     entry_point_selector=entry_point_selector,
-//     calldata=calldata,
-//     max_fee=0,
-//     chain_id=chain_id,
-//     additional_data=[nonce],
-// )
 impl InternalL1Handler {
     fn create(
         contract_address: Address,
@@ -217,7 +207,7 @@ impl InternalL1Handler {
         call_data: &[Felt],
         chain_id: u64,
         nonce: Felt,
-    ) -> Self {
+    ) -> Result<Self, SyscallHandlerError> {
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::L1Handler,
             0,
@@ -227,16 +217,15 @@ impl InternalL1Handler {
             0,
             chain_id,
             &[nonce.clone()],
-        )
-        .unwrap();
+        )?;
 
-        InternalL1Handler {
+        Ok(InternalL1Handler {
             contract_address,
             entry_point_selector,
             nonce: Some(nonce),
             hash_value,
             call_data: call_data.to_vec(),
             tx_type: TransactionType::L1Handler,
-        }
+        })
     }
 }
