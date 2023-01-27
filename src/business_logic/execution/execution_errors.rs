@@ -39,6 +39,8 @@ pub enum ExecutionError {
     NotDeployedContract([u8; 32]),
     #[error("error allocating memory segment")]
     ErrorAllocatingSegment,
+    #[error("Non-unique entry points are not possible in a ContractClass object")]
+    NonUniqueEntryPoint,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]

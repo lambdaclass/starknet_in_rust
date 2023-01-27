@@ -53,7 +53,7 @@ pub(crate) struct ExecutionEntryPoint {
     calldata: Vec<Felt>,
     caller_address: Address,
     entry_point_selector: Felt,
-    entry_point_type: Option<EntryPointType>,
+    entry_point_type: EntryPointType,
 }
 
 impl ExecutionEntryPoint {
@@ -62,7 +62,7 @@ impl ExecutionEntryPoint {
         calldata: Vec<Felt>,
         entry_point_selector: Felt,
         caller_address: Address,
-        entry_point_type: Option<EntryPointType>,
+        entry_point_type: EntryPointType,
         call_type: Option<CallType>,
         class_hash: Option<[u8; 32]>,
     ) -> Self {
@@ -199,7 +199,7 @@ impl ExecutionEntryPoint {
             &CairoArg::Single(alloc_pointer),
         ];
 
-        let entrypoint = entry_point.offset.to_usize().ok_or_else(|| {
+        let entrypoint = entry_point?.offset.to_usize().ok_or_else(|| {
             ExecutionError::ErrorInDataConversion("felt".to_string(), "usize".to_string())
         })?;
 
@@ -209,12 +209,31 @@ impl ExecutionEntryPoint {
         Ok(runner)
     }
 
+    /// Returns the entry point with selector corresponding with self.entry_point_selector.
     fn get_selected_entry_point(
         &self,
         contract_class: ContractClass,
         class_hash: [u8; 32],
-    ) -> ContractEntryPoint {
-        todo!()
+    ) -> Result<ContractEntryPoint, ExecutionError> {
+        let entry_points = *contract_class
+            .entry_points_by_type
+            .get(&self.entry_point_type)
+            .unwrap();
+        let filtered_entry_points = entry_points
+            .into_iter()
+            .filter(|ep| ep.selector == self.entry_point_selector)
+            .collect::<Vec<ContractEntryPoint>>();
+
+        if filtered_entry_points.is_empty() && entry_points.len() > 0 {
+            let first_entry_point = *entry_points.get(0).unwrap();
+
+            return Ok(first_entry_point);
+        }
+
+        if filtered_entry_points.len() != 1 {
+            return Err(ExecutionError::NonUniqueEntryPoint);
+        }
+        Ok(filtered_entry_points.get(0).unwrap().to_owned())
     }
 
     fn build_call_info<S: StateReader + Clone>(
@@ -235,7 +254,7 @@ impl ExecutionEntryPoint {
             code_address: self.code_address.clone(),
             class_hash: Some(self.get_code_class_hash(syscall_handler.state)?),
             entry_point_selector: Some(self.entry_point_selector.clone()),
-            entry_point_type: self.entry_point_type,
+            entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata,
             execution_resources: filter_unused_builtins(execution_resources),
