@@ -257,7 +257,7 @@ mod tests {
     use crate::services::api::contract_class;
 
     use super::*;
-    use felt::{Felt, FeltOps};
+    use felt::Felt;
     use num_traits::{pow, Num};
     use sha3::{Digest, Keccak256};
 
