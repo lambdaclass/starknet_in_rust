@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "f1a21ebeaac17282984775dbf801087edd46a5d1" }
-felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "f1a21ebeaac17282984775dbf801087edd46a5d1" }
+cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "42a4c1cc389306ed6bebf23de716bed5be4062a1" }
+felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "42a4c1cc389306ed6bebf23de716bed5be4062a1" }
 num-bigint = { version = "0.4", features = ["serde"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 thiserror = { version = "1.0.32" }

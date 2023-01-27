@@ -24,7 +24,7 @@ use crate::{
     services::api::contract_class::EntryPointType,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::{felt_str, Felt, FeltOps, NewFelt};
+use felt::{felt_str, Felt};
 use num_traits::ToPrimitive;
 
 //* -------------------
@@ -294,7 +294,7 @@ pub mod test_utils {
 
     macro_rules! vm {
         () => {{
-            use felt::{Felt, NewFelt};
+            use felt::Felt;
             VirtualMachine::new(false)
         }};
 
@@ -340,7 +340,6 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            use felt::FeltOps;
             let v = felt::Felt::from_bytes_be($val);
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(&k, v).unwrap();

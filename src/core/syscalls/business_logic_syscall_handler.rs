@@ -21,7 +21,7 @@ use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use cairo_rs::vm::vm_core::VirtualMachine;
-use felt::{Felt, FeltOps};
+use felt::Felt;
 use num_traits::{One, ToPrimitive, Zero};
 
 //* -----------------------------------

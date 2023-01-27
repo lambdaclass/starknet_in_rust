@@ -33,7 +33,6 @@ use cairo_rs::vm::errors::hint_errors::HintError;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::Felt;
-use felt::NewFelt;
 use std::any::Any;
 use std::collections::HashMap;
 
@@ -465,7 +464,6 @@ mod tests {
     };
     use crate::{allocate_selector, memory_insert};
     use cairo_rs::relocatable;
-    use felt::FeltOps;
     use num_traits::{Num, ToPrimitive};
 
     use super::*;

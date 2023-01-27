@@ -82,7 +82,6 @@ impl StateReader for InMemoryStateReader {
 #[cfg(test)]
 mod tests {
     use cairo_rs::types::program::Program;
-    use felt::NewFelt;
 
     use crate::{
         business_logic::state::cached_state,

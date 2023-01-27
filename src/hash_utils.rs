@@ -1,6 +1,6 @@
 use std::vec;
 
-use felt::{felt_str, Felt, FeltOps, NewFelt};
+use felt::{felt_str, Felt};
 use num_integer::Integer;
 use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};

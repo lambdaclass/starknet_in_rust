@@ -167,7 +167,7 @@ mod tests {
     use std::collections::HashMap;
 
     use cairo_rs::types::program::{self, Program};
-    use felt::{Felt, NewFelt, PRIME_STR};
+    use felt::{Felt, PRIME_STR};
 
     use crate::{
         services::api::contract_class::{ContractEntryPoint, EntryPointType},

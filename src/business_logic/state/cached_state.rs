@@ -190,7 +190,6 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use cairo_rs::types::program::Program;
-    use felt::NewFelt;
 
     use crate::{
         business_logic::fact_state::{

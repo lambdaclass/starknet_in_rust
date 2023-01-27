@@ -5,7 +5,7 @@ use crate::{
     },
     hash_utils::compute_hash_on_elements,
 };
-use felt::{Felt, FeltOps};
+use felt::Felt;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::iter::zip;
 
