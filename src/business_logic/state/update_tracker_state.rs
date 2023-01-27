@@ -25,7 +25,7 @@ use super::{
 // be counted as a single storage-write. Additionally, if a transaction writes a value to storage
 // which is equal to the initial value previously contained in that address, then no change needs
 // to be done and this should not count as a storage-write.
-pub(crate) struct UpdatesTrackerState<T: State> {
+pub struct UpdatesTrackerState<T: State> {
     pub(crate) state: T,
     pub(crate) storage_initial_values: HashMap<StorageEntry, u64>,
     pub(crate) storage_writes: HashMap<StorageEntry, u64>,
@@ -110,14 +110,19 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         self.state.get_nonce_at(contract_address)
     }
 
-    pub fn set_contract_class(&mut self, class_hash: &[u8], contract_class: &ContractClass) {
-        self.state.set_contract_class(class_hash, contract_class)
+    pub fn set_contract_class(
+        &mut self,
+        class_hash: &[u8; 32],
+        contract_class: &ContractClass,
+    ) -> Result<(), StateError> {
+        self.state.set_contract_class(class_hash, contract_class);
+        Ok(())
     }
 
     pub fn deploy_contract(
         &mut self,
         contract_address: Address,
-        class_hash: Vec<u8>,
+        class_hash: [u8; 32],
     ) -> Result<(), StateError> {
         self.state.deploy_contract(contract_address, class_hash)
     }

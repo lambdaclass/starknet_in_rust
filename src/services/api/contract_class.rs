@@ -15,7 +15,7 @@ pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
     ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub(crate) enum EntryPointType {
+pub enum EntryPointType {
     External,
     L1Handler,
     Constructor,
@@ -28,7 +28,7 @@ pub struct ContractEntryPoint {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub(crate) struct ContractClass {
+pub struct ContractClass {
     pub(crate) program: Program,
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub(crate) abi: Option<AbiType>,

@@ -14,11 +14,11 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 
-pub(crate) type ContractClassCache = HashMap<Vec<u8>, ContractClass>;
+pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct CachedState<T: StateReader + Clone> {
     pub(crate) block_info: BlockInfo,
     pub(crate) state_reader: T,
@@ -65,20 +65,8 @@ impl<T: StateReader + Clone> CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    pub(crate) fn set_contract_class(
-        &mut self,
-        key: Vec<u8>,
-        value: ContractClass,
-    ) -> Result<(), StateError> {
-        self.contract_classes
-            .as_mut()
-            .ok_or(StateError::MissingContractClassCache)?
-            .insert(key, value);
-
-        Ok(())
-    }
-
-    pub(crate) fn apply(&mut self, mut parent: CachedState<T>) {
+    ///Apply updates to parent state
+    pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
         parent.block_info = self.block_info.clone();
         parent.cache.update_writes_from_other(&self.cache);
@@ -87,26 +75,23 @@ impl<T: StateReader + Clone> CachedState<T> {
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
-        if !(self
-            .get_contract_classes()?
-            .contains_key(&class_hash.to_vec()))
-        {
+        if !(self.get_contract_classes()?.contains_key(class_hash)) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
-            self.set_contract_class(class_hash.to_vec(), contract_class);
+            self.set_contract_class(class_hash, &contract_class)?;
         }
         Ok(self
             .get_contract_classes()?
-            .get(&class_hash.to_vec())
+            .get(class_hash)
             .ok_or(StateError::MissingContractClassCache)?
             .to_owned())
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&Vec<u8>, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
             self.cache
                 .class_hash_initial_values
-                .insert(contract_address.clone(), class_hash.clone());
+                .insert(contract_address.clone(), *class_hash);
         }
 
         self.cache
@@ -145,18 +130,25 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         &self.block_info
     }
 
-    fn set_contract_class(&mut self, class_hash: &[u8], contract_class: &ContractClass) {
-        if let Some(contract_classes) = &mut self.contract_classes {
-            contract_classes.insert(Vec::from(class_hash), contract_class.clone());
-        }
+    fn set_contract_class(
+        &mut self,
+        class_hash: &[u8; 32],
+        contract_class: &ContractClass,
+    ) -> Result<(), StateError> {
+        self.contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingContractClassCache)?
+            .insert(*class_hash, contract_class.clone());
+
+        Ok(())
     }
 
     fn deploy_contract(
         &mut self,
         contract_address: Address,
-        class_hash: Vec<u8>,
+        class_hash: [u8; 32],
     ) -> Result<(), StateError> {
-        if contract_address.0 == Felt::zero() {
+        if contract_address == Address(0.into()) {
             return Err(StateError::ContractAddressOutOfRangeAddress(
                 contract_address.clone(),
             ));
@@ -164,7 +156,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
         let current_class_hash = self.get_class_hash_at(&contract_address)?;
 
-        if current_class_hash == &UNINITIALIZED_CLASS_HASH.to_vec() {
+        if current_class_hash == UNINITIALIZED_CLASS_HASH {
             return Err(StateError::ContractAddressUnavailable(
                 contract_address.clone(),
             ));
@@ -192,5 +184,143 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         self.cache
             .storage_writes
             .insert(storage_entry.clone(), value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cairo_rs::types::program::Program;
+    use felt::NewFelt;
+
+    use crate::{
+        business_logic::fact_state::{
+            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+        },
+        services::api::contract_class::{ContractEntryPoint, EntryPointType},
+        starknet_storage::{dict_storage::DictStorage, storage::Storage},
+    };
+
+    use super::*;
+
+    #[test]
+    fn get_class_hash_and_nonce_from_state_reader() {
+        let mut state_reader =
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+
+        let contract_address = Address(32123.into());
+        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
+
+        state_reader
+            .global_state_root
+            .insert(contract_address.clone(), [0; 32]);
+        state_reader
+            .ffc
+            .set_contract_state(&[0; 32], &contract_state);
+
+        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+
+        assert_eq!(
+            cached_state.get_class_hash_at(&contract_address),
+            Ok(&contract_state.contract_hash)
+        );
+        assert_eq!(
+            cached_state.get_nonce_at(&contract_address),
+            Ok(&contract_state.nonce)
+        );
+        cached_state.increment_nonce(&contract_address);
+        assert_eq!(
+            cached_state.get_nonce_at(&contract_address),
+            Ok(&(contract_state.nonce + Felt::new(1)))
+        );
+    }
+
+    #[test]
+    fn get_contract_class_from_state_reader() {
+        let mut state_reader =
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+
+        let contract_class_key = [0; 32];
+        let contract_class = ContractClass::new(
+            Program::default(),
+            HashMap::from([(
+                EntryPointType::Constructor,
+                vec![ContractEntryPoint::default()],
+            )]),
+            None,
+        )
+        .expect("Error creating contract class");
+
+        state_reader
+            .contract_class_storage
+            .set_contract_class(&[0; 32], &contract_class);
+
+        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+
+        cached_state.set_contract_classes(HashMap::new());
+        assert!(cached_state.contract_classes.is_some());
+
+        assert_eq!(
+            cached_state.get_contract_class(&[0; 32]),
+            cached_state.state_reader.get_contract_class(&[0; 32])
+        );
+    }
+
+    #[test]
+    fn apply_cached_state_test() {
+        let mut block_info = BlockInfo::default();
+        block_info.block_number += 11;
+        let mut cached_state = CachedState::new(
+            block_info.clone(),
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            None,
+        );
+        let mut parent_cached_state = CachedState::new(
+            BlockInfo::default(),
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            None,
+        );
+
+        cached_state.apply(&mut parent_cached_state);
+        assert_eq!(parent_cached_state.block_info(), &block_info)
+    }
+
+    #[test]
+    fn cached_state_storage_test() {
+        let mut cached_state = CachedState::new(
+            BlockInfo::default(),
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            None,
+        );
+
+        let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
+        let value = Felt::new(10);
+        cached_state.set_storage_at(&storage_entry, value.clone());
+
+        assert_eq!(cached_state.get_storage_at(&storage_entry), Ok(&value));
+
+        let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
+        assert!(cached_state.get_storage_at(&storage_entry_2).is_err());
+    }
+
+    #[test]
+    fn cached_state_deploy_contract_test() {
+        let mut state_reader =
+            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+
+        let contract_address = Address(32123.into());
+        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
+
+        state_reader
+            .global_state_root
+            .insert(contract_address.clone(), [0; 32]);
+        state_reader
+            .ffc
+            .set_contract_state(&[0; 32], &contract_state);
+
+        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+
+        assert!(cached_state
+            .deploy_contract(contract_address, [10; 32])
+            .is_ok())
     }
 }

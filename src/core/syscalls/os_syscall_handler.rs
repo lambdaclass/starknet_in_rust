@@ -10,6 +10,7 @@ use crate::utils::Address;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::vm_core::VirtualMachine;
 use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
+use felt::Felt;
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
 
@@ -41,7 +42,7 @@ pub(crate) struct OsSyscallHandler {
     retdata_iterator: VecDeque<VecDeque<u64>>, //VEC<u64>
     // An iterator to the read_values array which is consumed when the transaction
     // code is executed.
-    execute_code_read_iterator: VecDeque<u64>, //u64
+    execute_code_read_iterator: VecDeque<Felt>,
     // StarkNet storage members.
     starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
     // A pointer to the Cairo TxInfo struct.
@@ -153,7 +154,7 @@ impl SyscallHandler for OsSyscallHandler {
         }
     }
 
-    fn _storage_read(&mut self, address: Address) -> Result<u64, SyscallHandlerError> {
+    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
         self.execute_code_read_iterator
             .pop_front()
             .ok_or(SyscallHandlerError::IteratorEmpty)
@@ -191,7 +192,7 @@ impl OsSyscallHandler {
         call_stack: VecDeque<CallInfo>,
         deployed_contracts_iterator: VecDeque<Address>,
         retdata_iterator: VecDeque<VecDeque<u64>>,
-        execute_code_read_iterator: VecDeque<u64>,
+        execute_code_read_iterator: VecDeque<Felt>,
         starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
@@ -353,6 +354,7 @@ mod tests {
     use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
     use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use cairo_rs::vm::vm_core::VirtualMachine;
+    use felt::{Felt, NewFelt};
     use std::any::Any;
     use std::collections::{HashMap, VecDeque};
 
@@ -385,7 +387,7 @@ mod tests {
             },
             events: VecDeque::new(),
             call_type: None,
-            class_hash: None,
+            class_hash: Some([0; 32]),
         };
         call_stack.push_back(call_info);
 
@@ -429,7 +431,7 @@ mod tests {
     #[test]
     fn end_tx_err_execute_code_read_iterator() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
+        execute_code_read_iterator.push_back(Felt::new(12));
         let mut handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()
@@ -678,16 +680,16 @@ mod tests {
     #[test]
     fn storage_read() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
-        execute_code_read_iterator.push_back(1444);
+        execute_code_read_iterator.push_back(Felt::new(12));
+        execute_code_read_iterator.push_back(Felt::new(1444));
         let mut handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()
         };
 
         let addr = Address(0.into());
-        assert_eq!(handler._storage_read(addr.clone()), Ok(12));
-        assert_eq!(handler._storage_read(addr.clone()), Ok(1444));
+        assert_eq!(handler._storage_read(addr.clone()), Ok(Felt::new(12)));
+        assert_eq!(handler._storage_read(addr.clone()), Ok(Felt::new(1444)));
         assert_eq!(
             handler._storage_read(addr),
             Err(SyscallHandlerError::IteratorEmpty)
@@ -697,7 +699,7 @@ mod tests {
     #[test]
     fn storage_write() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
+        execute_code_read_iterator.push_back(Felt::new(12));
         let mut handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()
@@ -743,7 +745,7 @@ mod tests {
     #[test]
     fn assert_iterators_exhausted_err_execute() {
         let mut execute_code_read_iterator = VecDeque::new();
-        execute_code_read_iterator.push_back(12);
+        execute_code_read_iterator.push_back(Felt::new(12));
         let handler = OsSyscallHandler {
             execute_code_read_iterator,
             ..Default::default()

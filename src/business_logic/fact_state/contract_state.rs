@@ -7,14 +7,14 @@ use crate::{business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH, utils
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct ContractState {
-    pub(crate) contract_hash: Vec<u8>,
+    pub(crate) contract_hash: [u8; 32],
     pub(crate) nonce: Felt,
     pub(crate) storage_keys: HashMap<[u8; 32], Felt>,
 }
 
 impl ContractState {
     pub(crate) fn create(
-        contract_hash: Vec<u8>,
+        contract_hash: [u8; 32],
         nonce: Felt,
         storage_keys: HashMap<[u8; 32], Felt>,
     ) -> Self {
@@ -27,14 +27,14 @@ impl ContractState {
 
     pub(crate) fn empty() -> Self {
         Self {
-            contract_hash: UNINITIALIZED_CLASS_HASH.to_vec(),
+            contract_hash: *UNINITIALIZED_CLASS_HASH,
             nonce: 0.into(),
             storage_keys: HashMap::new(),
         }
     }
 
     fn initialized(&self) -> bool {
-        self.contract_hash != UNINITIALIZED_CLASS_HASH
+        &self.contract_hash != UNINITIALIZED_CLASS_HASH
     }
 
     fn is_empty(&self) -> bool {
