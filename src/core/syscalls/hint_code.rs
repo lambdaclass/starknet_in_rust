@@ -11,7 +11,6 @@ pub(crate) const EMIT_EVENT_CODE: &str =
 pub(crate) const GET_SEQUENCER_ADDRESS: &str =
     "syscall_handler.get_sequencer_address(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
-#[allow(unused)] // TODO: remove after using.
 pub(crate) const STORAGE_WRITE: &str =
     "syscall_handler.storage_write(segments=segments, syscall_ptr=ids.syscall_ptr)";
 

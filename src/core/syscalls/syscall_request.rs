@@ -21,6 +21,7 @@ pub(crate) enum SyscallRequest {
     CallContract(CallContractRequest),
     GetTxSignature(GetTxSignatureRequest),
     StorageRead(StorageReadRequest),
+    StorageWrite(StorageWriteRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -118,6 +119,13 @@ pub(crate) struct StorageReadRequest {
     pub(crate) address: Address,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageWriteRequest {
+    pub(crate) selector: Felt,
+    pub(crate) address: Address,
+    pub(crate) value: Felt,
+}
+
 impl From<EmitEventStruct> for SyscallRequest {
     fn from(emit_event_struct: EmitEventStruct) -> SyscallRequest {
         SyscallRequest::EmitEvent(emit_event_struct)
@@ -176,6 +184,13 @@ impl From<StorageReadRequest> for SyscallRequest {
         SyscallRequest::StorageRead(storage_read)
     }
 }
+
+impl From<StorageWriteRequest> for SyscallRequest {
+    fn from(storage_write: StorageWriteRequest) -> SyscallRequest {
+        SyscallRequest::StorageWrite(storage_write)
+    }
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  FromPtr implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -369,6 +384,23 @@ impl FromPtr for StorageReadRequest {
         Ok(SyscallRequest::StorageRead(StorageReadRequest {
             selector,
             address,
+        }))
+    }
+}
+
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, &syscall_ptr)?;
+        let address = Address(get_big_int(vm, &(syscall_ptr + 1))?);
+        let value = get_big_int(vm, &(syscall_ptr + 2))?;
+
+        Ok(SyscallRequest::StorageWrite(StorageWriteRequest {
+            selector,
+            address,
+            value,
         }))
     }
 }

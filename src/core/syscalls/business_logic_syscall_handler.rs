@@ -23,7 +23,7 @@ use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use cairo_rs::vm::vm_core::VirtualMachine;
-use felt::{Felt, FeltOps};
+use felt::Felt;
 use num_traits::{One, ToPrimitive, Zero};
 
 //* -----------------------------------
@@ -420,8 +420,14 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
             .read(&address.to_32_bytes()?)?
             .clone())
     }
-    fn _storage_write(&mut self, _address: Address, _value: Felt) {
-        todo!()
+
+    fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
+        let _read = self.starknet_storage_state.read(&address.to_32_bytes()?)?;
+
+        self.starknet_storage_state
+            .write(&address.to_32_bytes()?, value);
+
+        Ok(())
     }
 
     fn _read_and_validate_syscall_request(
@@ -439,7 +445,7 @@ impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
     fn default() -> Self {
         let cached_state = CachedState::new(
             BlockInfo::default(),
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
 

@@ -1,11 +1,11 @@
 use std::error;
 
-use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+use cairo_rs::vm::errors::{cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError};
 use felt::Felt;
 use thiserror::Error;
 
 use crate::core::errors;
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, Error)]
 pub enum ExecutionError {
     #[error("Missing field for TxStruct")]
     MissingTxStructField,
@@ -41,4 +41,6 @@ pub enum ExecutionError {
     ErrorAllocatingSegment,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
+    #[error(transparent)]
+    CairoRunnerException(#[from] CairoRunError),
 }

@@ -1,4 +1,4 @@
-use felt::{Felt, FeltOps};
+use felt::Felt;
 use num_traits::{Num, Zero};
 
 use crate::utils::Address;

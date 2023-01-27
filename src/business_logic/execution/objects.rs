@@ -8,7 +8,7 @@ use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
-use felt::{Felt, NewFelt};
+use felt::Felt;
 use num_traits::{ToPrimitive, Zero};
 
 use super::execution_errors::ExecutionError;

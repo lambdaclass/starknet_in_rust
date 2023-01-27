@@ -190,7 +190,6 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use cairo_rs::types::program::Program;
-    use felt::NewFelt;
 
     use crate::{
         business_logic::fact_state::{
@@ -204,18 +203,14 @@ mod tests {
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
-        let mut state_reader =
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .global_state_root
-            .insert(contract_address.clone(), [0; 32]);
-        state_reader
             .ffc
-            .set_contract_state(&[0; 32], &contract_state);
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
 
         let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
 
@@ -236,8 +231,7 @@ mod tests {
 
     #[test]
     fn get_contract_class_from_state_reader() {
-        let mut state_reader =
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_class_key = [0; 32];
         let contract_class = ContractClass::new(
@@ -271,12 +265,12 @@ mod tests {
         block_info.block_number += 11;
         let mut cached_state = CachedState::new(
             block_info.clone(),
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
         let mut parent_cached_state = CachedState::new(
             BlockInfo::default(),
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
 
@@ -288,7 +282,7 @@ mod tests {
     fn cached_state_storage_test() {
         let mut cached_state = CachedState::new(
             BlockInfo::default(),
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new()),
+            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
 
@@ -304,23 +298,48 @@ mod tests {
 
     #[test]
     fn cached_state_deploy_contract_test() {
-        let mut state_reader =
-            InMemoryStateReader::new(HashMap::new(), DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .global_state_root
-            .insert(contract_address.clone(), [0; 32]);
-        state_reader
             .ffc
-            .set_contract_state(&[0; 32], &contract_state);
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
 
         let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
 
         assert!(cached_state
             .deploy_contract(contract_address, [10; 32])
             .is_ok())
+    }
+
+    #[test]
+    fn get_and_set_storage() {
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+
+        let contract_address = Address(31.into());
+        let storage_key = [18; 32];
+        let value = Felt::new(912);
+
+        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+
+        // set storage_key
+        cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
+        let result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
+
+        assert_eq!(result, Ok(&value));
+
+        // rewrite storage_key
+        let new_value = value + 3_usize;
+
+        cached_state.set_storage_at(
+            &(contract_address.clone(), storage_key),
+            (new_value.clone()),
+        );
+
+        let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
+
+        assert_eq!(new_result, Ok(&new_value));
     }
 }
