@@ -17,4 +17,6 @@ pub enum ExecutionError {
     UnexpectedHolesInEventOrder,
     #[error("Unexpected holes in the L2-to-L1 message order.")]
     UnexpectedHolesL2toL1Messages,
+    #[error("Error creating TransactionExecutionContext")]
+    TransactionExecutionContext,
 }

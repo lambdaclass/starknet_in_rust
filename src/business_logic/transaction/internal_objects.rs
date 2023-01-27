@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::business_logic::execution::execution_errors::ExecutionError;
 use crate::business_logic::execution::objects::{
     CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
 };
@@ -19,10 +20,13 @@ use crate::services::api::contract_class::{self, ContractClass};
 use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
 use crate::utils::{calculate_tx_resources, Address};
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
 
 use super::state_objects::FeeInfo;
+
+pub(crate) const L1_HANDLER_VERSION: u64 = 0;
 
 pub struct InternalDeploy {
     hash_value: Felt,
@@ -227,5 +231,32 @@ impl InternalL1Handler {
             call_data: call_data.to_vec(),
             tx_type: TransactionType::L1Handler,
         })
+    }
+
+    fn _apply_specific_concurrent_changes<T: State>(
+        &self,
+        state: UpdatesTrackerState<T>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo {
+        let resources_manager = ExecutionResourcesManager::default();
+
+        todo!()
+    }
+
+    fn get_execution_context(
+        &self,
+        n_steps: u64,
+    ) -> Result<TransactionExecutionContext, ExecutionError> {
+        Ok(TransactionExecutionContext::new(
+            self.contract_address.clone(),
+            self.hash_value.clone(),
+            Vec::new(),
+            0,
+            self.nonce
+                .clone()
+                .ok_or(ExecutionError::TransactionExecutionContext)?,
+            n_steps,
+            L1_HANDLER_VERSION,
+        ))
     }
 }
