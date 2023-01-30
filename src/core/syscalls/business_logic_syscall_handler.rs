@@ -6,6 +6,7 @@ use std::rc::Rc;
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
 use crate::business_logic::execution::execution_entry_point::ExecutionEntryPoint;
+use crate::business_logic::execution::execution_errors::ExecutionError;
 use crate::business_logic::execution::objects::*;
 use crate::business_logic::execution::{execution_entry_point, objects::*};
 use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
@@ -18,6 +19,7 @@ use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::services::api::contract_class::EntryPointType;
+use crate::starknet_runner::runner::StarknetRunner;
 use crate::starknet_storage::dict_storage::DictStorage;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
@@ -147,6 +149,50 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             internal_calls,
             expected_syscall_ptr,
         }
+    }
+
+    /// Performs post run syscall related tasks.
+    pub(crate) fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: MaybeRelocatable,
+    ) -> Result<(), ExecutionError> {
+        let expected_stop_ptr = self.expected_syscall_ptr;
+        let syscall_ptr = match syscall_stop_ptr {
+            MaybeRelocatable::RelocatableValue(val) => val,
+            _ => return Err(ExecutionError::NotARelocatableValue),
+        };
+        if syscall_ptr != expected_stop_ptr {
+            return Err(ExecutionError::InvalidStopPointer(
+                expected_stop_ptr,
+                syscall_ptr,
+            ));
+        }
+        self.validate_read_only_segments(runner)
+    }
+
+    /// Validates that there were no out of bounds writes to read-only segments and marks
+    /// them as accessed.
+    pub(crate) fn validate_read_only_segments(
+        &self,
+        runner: &mut VirtualMachine,
+    ) -> Result<(), ExecutionError> {
+        for (segment_ptr, segment_size) in self.read_only_segments.clone() {
+            let used_size = runner
+                .get_segment_used_size(segment_ptr.segment_index as usize)
+                .ok_or(ExecutionError::InvalidSegmentSize)?;
+
+            let seg_size = match segment_size {
+                MaybeRelocatable::Int(size) => size,
+                _ => return Err(ExecutionError::NotAnInt),
+            };
+
+            if seg_size != used_size.into() {
+                return Err(ExecutionError::OutOfBound);
+            }
+            runner.mark_address_range_as_accessed(segment_ptr, used_size);
+        }
+        Ok(())
     }
 }
 

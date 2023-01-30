@@ -171,7 +171,7 @@ impl StarknetRunner {
     /// Validates and processes an OS context that was returned by a transaction.
     /// Returns the syscall processor object containing the accumulated syscall information.
     pub(crate) fn validate_and_process_os_context(
-        &self,
+        &mut self,
         initial_os_context: Vec<MaybeRelocatable>,
     ) -> Result<(), ExecutionError> {
         // The returned values are os_context, retdata_size, retdata_ptr.
@@ -188,6 +188,7 @@ impl StarknetRunner {
         for builtin in self.cairo_runner.get_program_builtins() {
             let builtin_runner = builtin_runners.get(builtin).unwrap();
 
+            // TODO:
             // stack_ptr = builtin_runner.final_stack(self.cairo_runner., self.vm.get_range(addr, size), stack_ptr);
         }
 
@@ -201,9 +202,11 @@ impl StarknetRunner {
         let (syscall_base_ptr, syscall_stop_ptr) =
             self.get_os_segment_ptr_range(0, initial_os_context)?;
 
-        self.validate_segment_pointers(syscall_base_ptr, syscall_stop_ptr)?;
+        self.validate_segment_pointers(syscall_base_ptr, syscall_stop_ptr.clone())?;
 
-        // self.hint_processor.syscall_handler.post_run();
+        self.hint_processor
+            .syscall_handler
+            .post_run(&mut self.vm, syscall_stop_ptr);
 
         Ok(())
     }
