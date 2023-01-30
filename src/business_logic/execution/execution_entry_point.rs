@@ -78,9 +78,9 @@ impl ExecutionEntryPoint {
         }
     }
 
-    pub fn execute_for_testing<S: State + StateReader + Clone>(
+    pub fn execute_for_testing(
         &self,
-        state: S,
+        state: CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
         resources_manager: Option<ExecutionResourcesManager>,
         tx_execution_context: Option<TransactionExecutionContext>,
@@ -104,9 +104,9 @@ impl ExecutionEntryPoint {
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
-    pub fn execute<S: State + StateReader + Clone>(
+    pub fn execute(
         &self,
-        state: S,
+        state: CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
         resources_manager: ExecutionResourcesManager,
         tx_execution_context: TransactionExecutionContext,
@@ -139,9 +139,9 @@ impl ExecutionEntryPoint {
     /// self.contract_address.
     /// Returns the corresponding CairoFunctionRunner and BusinessLogicSysCallHandler in order to
     /// retrieve the execution information.
-    fn run<S: State + StateReader + Clone>(
+    fn run(
         &self,
-        mut state: S,
+        mut state: CachedState<InMemoryStateReader>,
         resources_manager: ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
         tx_execution_context: TransactionExecutionContext,
