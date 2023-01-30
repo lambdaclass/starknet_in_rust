@@ -11,9 +11,7 @@ use crate::{
             execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
-        fact_state::state::{
-            calculate_additional_resources, filter_unused_builtins, ExecutionResourcesManager,
-        },
+        fact_state::state::ExecutionResourcesManager,
         state::{
             cached_state::UNINITIALIZED_CLASS_HASH,
             state_api::{State, StateReader},
@@ -182,8 +180,8 @@ pub fn calculate_tx_resources<S: State + StateReader>(
 
     // Add additional Cairo resources needed for the OS to run the transaction.
     let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);
-    let new_resources = calculate_additional_resources(cairo_usage, additional_resources);
-    let filtered_builtins = filter_unused_builtins(new_resources);
+    let new_resources = cairo_usage + additional_resources;
+    let filtered_builtins = new_resources.filter_unused_builtins();
 
     let mut resources: HashMap<String, usize> = HashMap::new();
     resources.insert("l1_gas_usage".to_string(), l1_gas_usage);

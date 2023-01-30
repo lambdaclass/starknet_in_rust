@@ -1,6 +1,11 @@
 use std::error;
 
-use cairo_rs::vm::errors::{cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError};
+use cairo_rs::{
+    types::relocatable::Relocatable,
+    vm::errors::{
+        cairo_run_errors::CairoRunError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
+    },
+};
 use felt::Felt;
 use thiserror::Error;
 
@@ -41,6 +46,22 @@ pub enum ExecutionError {
     ErrorAllocatingSegment,
     #[error("Non-unique entry points are not possible in a ContractClass object")]
     NonUniqueEntryPoint,
+    #[error("Ptr result diverges after calculate final stacks")]
+    OsContextPtrNotEqual,
+    #[error("Illegal OS ptr offset")]
+    IllegalOsPtrOffset,
+    #[error("Invalid pointer fetched from memory expected maybe relocatable but got None")]
+    InvalidPtrFetch,
+    #[error("Segment base pointer must be zero; got {0}")]
+    InvalidSegBasePtrOffset(usize),
+    #[error("Invalid segment size; expected usize but got None")]
+    InvalidSegmentSize,
+    #[error("Invalid stop pointer for segment; expected {0}, found {1}")]
+    InvalidStopPointer(Relocatable, Relocatable),
+    #[error(transparent)]
+    MemoryException(#[from] MemoryError),
+    #[error("Expected Relocatable; found None")]
+    InvalidInitialFp,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]

@@ -17,6 +17,12 @@ use super::{
 };
 use crate::{
     business_logic::{
+        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+    },
+    services::api::contract_class::{ContractClass, ContractEntryPoint},
+};
+use crate::{
+    business_logic::{
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
     },
@@ -31,16 +37,6 @@ use crate::{
     services::api::contract_class::EntryPointType,
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
-};
-use crate::{
-    business_logic::{
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader,
-            state::{filter_unused_builtins, substract_resources},
-        },
-        state::cached_state::CachedState,
-    },
-    services::api::contract_class::{ContractClass, ContractEntryPoint},
 };
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
@@ -97,7 +93,7 @@ impl ExecutionEntryPoint {
 
         let mut rsc_manager = resources_manager.unwrap_or_default();
 
-        self.execute(state, general_config, rsc_manager, tx_context)
+        self.execute(state, general_config, &mut rsc_manager, tx_context)
     }
 
     /// Executes the selected entry point with the given calldata in the specified contract.
@@ -108,24 +104,26 @@ impl ExecutionEntryPoint {
         &self,
         state: CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
-        resources_manager: ExecutionResourcesManager,
+        resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: TransactionExecutionContext,
     ) -> Result<CallInfo, ExecutionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         let runner = self.run(
             state,
-            resources_manager,
+            resources_manager.clone(),
             general_config,
             tx_execution_context,
         )?;
 
-        // TODO: add sum trait to executionResources
-        let resources_manager = runner.get_execution_resources();
+        // Update resources usage (for bouncer).
+        resources_manager.cairo_usage =
+            resources_manager.cairo_usage.clone() + runner.get_execution_resources();
 
         let retdata = runner
             .get_return_values()
             .map_err(|e| ExecutionError::RetdataError(e.to_string()))?;
+
         self.build_call_info(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler,
@@ -194,7 +192,7 @@ impl ExecutionEntryPoint {
 
         let entry_point_args = [
             &CairoArg::Single(self.entry_point_selector.clone().into()),
-            &CairoArg::Array(os_context),
+            &CairoArg::Array(os_context.clone()),
             &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
             &CairoArg::Single(alloc_pointer),
         ];
@@ -205,6 +203,19 @@ impl ExecutionEntryPoint {
 
         // cairo runner entry point
         runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
+
+        runner.validate_and_process_os_context(os_context)?;
+
+        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        let args_ptr = runner
+            .cairo_runner
+            .get_initial_fp()
+            .ok_or(ExecutionError::InvalidInitialFp)?
+            .sub_usize(entry_point_args.len() + 2)?;
+
+        runner
+            .vm
+            .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
 
         Ok(runner)
     }
@@ -244,10 +255,8 @@ impl ExecutionEntryPoint {
         syscall_handler: BusinessLogicSyscallHandler<CachedState<S>>,
         retdata: Vec<Felt>,
     ) -> Result<CallInfo, ExecutionError> {
-        let execution_resources = substract_resources(
-            syscall_handler.resources_manager.cairo_usage,
-            previous_cairo_usage,
-        );
+        let execution_resources =
+            syscall_handler.resources_manager.cairo_usage - previous_cairo_usage;
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
@@ -259,7 +268,7 @@ impl ExecutionEntryPoint {
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata,
-            execution_resources: filter_unused_builtins(execution_resources),
+            execution_resources: execution_resources.filter_unused_builtins(),
             events: syscall_handler.events,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             storage_read_values: syscall_handler.starknet_storage_state.read_values,
