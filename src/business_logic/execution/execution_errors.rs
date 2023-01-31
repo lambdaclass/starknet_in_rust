@@ -3,7 +3,8 @@ use std::error;
 use cairo_rs::{
     types::relocatable::Relocatable,
     vm::errors::{
-        cairo_run_errors::CairoRunError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
+        cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
+        vm_errors::VirtualMachineError,
     },
 };
 use felt::Felt;
@@ -70,4 +71,6 @@ pub enum ExecutionError {
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]
     CairoRunnerException(#[from] CairoRunError),
+    #[error(transparent)]
+    RunnerException(#[from] RunnerError),
 }

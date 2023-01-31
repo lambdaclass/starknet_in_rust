@@ -176,21 +176,11 @@ impl StarknetRunner {
     ) -> Result<(), ExecutionError> {
         // The returned values are os_context, retdata_size, retdata_ptr.
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
-        let mut stack_ptr = os_context_end;
+        let mut stack_pointer = os_context_end;
 
-        let builtin_runners = self
-            .vm
-            .get_builtin_runners()
-            .clone()
-            .into_iter()
-            .collect::<HashMap<String, BuiltinRunner>>();
-
-        for builtin in self.cairo_runner.get_program_builtins() {
-            let builtin_runner = builtin_runners.get(builtin).unwrap();
-
-            // TODO:
-            // stack_ptr = builtin_runner.final_stack(self.cairo_runner., self.vm.get_range(addr, size), stack_ptr);
-        }
+        let stack_ptr = self
+            .cairo_runner
+            .get_builtins_final_stack(&mut self.vm, stack_pointer)?;
 
         let final_os_context_ptr = stack_ptr.sub_usize(1)?;
 
