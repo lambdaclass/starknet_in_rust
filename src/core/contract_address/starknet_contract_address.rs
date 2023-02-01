@@ -63,7 +63,6 @@ fn get_contract_entry_points(
         .entry_points_by_type
         .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
-
     for entry_point in entry_points {
         if (Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()) {
             return Err(ContractAddressError::InvalidOffset(
@@ -71,7 +70,6 @@ fn get_contract_entry_points(
             ));
         }
     }
-
     Ok(entry_points
         .iter()
         .map(|entry_point| ContractEntryPoint {
@@ -115,7 +113,6 @@ fn get_contract_class_struct(
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
-
     let builtin_list = &contract_class.program.builtins;
 
     Ok(StructContractClass {
@@ -161,46 +158,39 @@ struct StructContractClass {
 
 impl From<StructContractClass> for CairoArg {
     fn from(contract_class: StructContractClass) -> Self {
-        let external_func_flatted = contract_class
+        let external_functions_flatted = contract_class
             .external_functions
             .iter()
-            .flat_map::<Vec<MaybeRelocatable>, _>(|entry_point| entry_point.into())
+            .flat_map::<Vec<MaybeRelocatable>, _>(|ext_func| ext_func.into())
             .collect::<Vec<MaybeRelocatable>>();
-
-        let mut result = vec![
-            contract_class.api_version,
-            contract_class.n_external_functions,
-        ];
-        result.extend(external_func_flatted);
-
-        result.extend(vec![contract_class.n_l1_handlers]);
 
         let l1_handlers_flatted = contract_class
             .l1_handlers
             .iter()
-            .flat_map::<Vec<MaybeRelocatable>, _>(|entry_point| entry_point.into())
+            .flat_map::<Vec<MaybeRelocatable>, _>(|l1_handler| l1_handler.into())
             .collect::<Vec<MaybeRelocatable>>();
-
-        result.extend(l1_handlers_flatted);
-
-        result.extend(vec![contract_class.n_constructors]);
 
         let constructors_flatted = contract_class
             .constructors
             .iter()
-            .flat_map::<Vec<MaybeRelocatable>, _>(|entry_point| entry_point.into())
+            .flat_map::<Vec<MaybeRelocatable>, _>(|constructor| constructor.into())
             .collect::<Vec<MaybeRelocatable>>();
 
-        result.extend(constructors_flatted);
-        result.extend(vec![contract_class.n_builtins]);
-        result.extend(contract_class.builtin_list);
-        result.extend(vec![
-            contract_class.hinted_class_hash,
-            contract_class.bytecode_length,
-        ]);
-        result.extend(contract_class.bytecode_ptr);
-
-        CairoArg::Array(result)
+        let result = vec![
+            CairoArg::Single(contract_class.api_version),
+            CairoArg::Single(contract_class.n_external_functions),
+            CairoArg::Array(external_functions_flatted),
+            CairoArg::Single(contract_class.n_l1_handlers),
+            CairoArg::Array(l1_handlers_flatted),
+            CairoArg::Single(contract_class.n_constructors),
+            CairoArg::Array(constructors_flatted),
+            CairoArg::Single(contract_class.n_builtins),
+            CairoArg::Array(contract_class.builtin_list),
+            CairoArg::Single(contract_class.hinted_class_hash),
+            CairoArg::Single(contract_class.bytecode_length),
+            CairoArg::Array(contract_class.bytecode_ptr),
+        ];
+        CairoArg::Composed(result)
     }
 }
 
@@ -213,7 +203,6 @@ pub(crate) fn compute_class_hash(
     let program = load_program()?;
     let contract_class_struct =
         &get_contract_class_struct(&program.identifiers, contract_class)?.into();
-
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all", false)
         .map_err(|err| ContractAddressError::CairoRunner(err.to_string()))?;
@@ -226,10 +215,11 @@ pub(crate) fn compute_class_hash(
     // We need to cast that into a usize.
     // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
     let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
+
     runner
         .run_from_entrypoint(
             188,
-            &vec![contract_class_struct, &hash_base.into()],
+            &vec![&hash_base.into(), contract_class_struct],
             true,
             &mut vm,
             &mut hint_processor,
@@ -277,12 +267,12 @@ mod tests {
         entry_points_by_type.insert(
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
-                selector: 0.into(),
-                offset: 12.into(),
+                selector: 1.into(),
+                offset: 281.into(),
             }],
         );
         let contract_class = ContractClass {
-            program: Program::default(),
+            program: load_program().unwrap(),
             entry_points_by_type,
             abi: None,
         };
@@ -290,8 +280,8 @@ mod tests {
         assert_eq!(
             get_contract_entry_points(&contract_class, &EntryPointType::Constructor),
             Ok(vec![ContractEntryPoint {
-                selector: 0.into(),
-                offset: 12.into()
+                selector: 1.into(),
+                offset: 281.into()
             }])
         );
         assert_eq!(
@@ -306,22 +296,22 @@ mod tests {
         entry_points_by_type.insert(
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
-                selector: 1.into(),
-                offset: 12.into(),
+                selector: 3.into(),
+                offset: 281.into(),
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::L1Handler,
             vec![ContractEntryPoint {
-                selector: 2.into(),
-                offset: 12.into(),
+                selector: 4.into(),
+                offset: 281.into(),
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::External,
             vec![ContractEntryPoint {
-                selector: 3.into(),
-                offset: 12.into(),
+                selector: 5.into(),
+                offset: 281.into(),
             }],
         );
         let contract_class = ContractClass {
@@ -329,7 +319,14 @@ mod tests {
             entry_points_by_type,
             abi: None,
         };
-        assert_eq!(compute_class_hash(&contract_class), Ok(Felt::default()));
+        assert_eq!(
+            compute_class_hash(&contract_class),
+            Ok(Felt::from_str_radix(
+                "552722482124318516168801863105426343412913757815637029914461834987726889277",
+                10
+            )
+            .unwrap())
+        );
     }
 
     #[test]
@@ -357,7 +354,7 @@ mod tests {
             }],
         );
         let contract_class = ContractClass {
-            program: Program::default(),
+            program: load_program().unwrap(),
             entry_points_by_type,
             abi: None,
         };
