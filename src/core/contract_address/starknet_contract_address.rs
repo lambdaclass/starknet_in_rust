@@ -156,25 +156,18 @@ struct StructContractClass {
     bytecode_ptr: Vec<MaybeRelocatable>,
 }
 
+fn flat_into_maybe_relocs(contract_entrypoints: Vec<ContractEntryPoint>) -> Vec<MaybeRelocatable> {
+    contract_entrypoints
+        .iter()
+        .flat_map::<Vec<MaybeRelocatable>, _>(|contract_entrypoint| contract_entrypoint.into())
+        .collect::<Vec<MaybeRelocatable>>()
+}
+
 impl From<StructContractClass> for CairoArg {
     fn from(contract_class: StructContractClass) -> Self {
-        let external_functions_flatted = contract_class
-            .external_functions
-            .iter()
-            .flat_map::<Vec<MaybeRelocatable>, _>(|ext_func| ext_func.into())
-            .collect::<Vec<MaybeRelocatable>>();
-
-        let l1_handlers_flatted = contract_class
-            .l1_handlers
-            .iter()
-            .flat_map::<Vec<MaybeRelocatable>, _>(|l1_handler| l1_handler.into())
-            .collect::<Vec<MaybeRelocatable>>();
-
-        let constructors_flatted = contract_class
-            .constructors
-            .iter()
-            .flat_map::<Vec<MaybeRelocatable>, _>(|constructor| constructor.into())
-            .collect::<Vec<MaybeRelocatable>>();
+        let external_functions_flatted = flat_into_maybe_relocs(contract_class.external_functions);
+        let l1_handlers_flatted = flat_into_maybe_relocs(contract_class.l1_handlers);
+        let constructors_flatted = flat_into_maybe_relocs(contract_class.constructors);
 
         let result = vec![
             CairoArg::Single(contract_class.api_version),
