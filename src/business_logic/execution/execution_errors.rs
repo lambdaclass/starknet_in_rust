@@ -4,7 +4,7 @@ use cairo_rs::{
     types::relocatable::Relocatable,
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
-        vm_errors::VirtualMachineError,
+        trace_errors::TraceError, vm_errors::VirtualMachineError,
     },
 };
 use felt::Felt;
@@ -25,8 +25,6 @@ pub enum ExecutionError {
     UnexpectedHolesInEventOrder,
     #[error("Unexpected holes in the L2-to-L1 message order.")]
     UnexpectedHolesL2toL1Messages,
-    #[error("Trace is not enabled for this run")]
-    TraceError,
     #[error("Call type {0} not implemented")]
     CallTypeNotImplemented(String),
     #[error("Attemp to return class hash with incorrect call type")]
@@ -63,6 +61,8 @@ pub enum ExecutionError {
     NotAnInt,
     #[error("Out of bounds write to a read-only segment.")]
     OutOfBound,
+    #[error(transparent)]
+    TraceException(#[from] TraceError),
     #[error(transparent)]
     MemoryException(#[from] MemoryError),
     #[error("Expected Relocatable; found None")]

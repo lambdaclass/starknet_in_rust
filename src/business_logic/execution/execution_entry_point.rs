@@ -118,7 +118,7 @@ impl ExecutionEntryPoint {
 
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
-            resources_manager.cairo_usage.clone() + runner.get_execution_resources();
+            resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
 
         let retdata = runner
             .get_return_values()

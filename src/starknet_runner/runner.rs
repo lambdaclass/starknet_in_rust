@@ -35,8 +35,6 @@ pub(crate) struct StarknetRunner {
         SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>>,
 }
 
-// TODO: implement run_from_entry_pointt (similar to cairo-rs-py and cairo-rs)
-
 impl StarknetRunner {
     pub fn new(
         cairo_runner: CairoRunner,
@@ -69,8 +67,8 @@ impl StarknetRunner {
         )?)
     }
 
-    pub fn get_execution_resources(&self) -> ExecutionResources {
-        self.cairo_runner.get_execution_resources(&self.vm).unwrap()
+    pub fn get_execution_resources(&self) -> Result<ExecutionResources, ExecutionError> {
+        Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
     pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
@@ -199,5 +197,54 @@ impl StarknetRunner {
             .post_run(&mut self.vm, syscall_stop_ptr);
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use cairo_rs::{
+        types::{program::Program, relocatable::MaybeRelocatable},
+        vm::{
+            runners::cairo_runner::{CairoRunner, ExecutionResources},
+            vm_core::VirtualMachine,
+        },
+    };
+
+    use crate::{
+        core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor},
+        utils::test_utils::vm,
+    };
+
+    use super::StarknetRunner;
+
+    #[test]
+    fn get_execution_resources_test_fail() {
+        let program = Program::default();
+        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let mut vm = VirtualMachine::new(true);
+        let hint_processor = SyscallHintProcessor::new_empty();
+
+        let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+
+        assert!(runner.get_execution_resources().is_err());
+    }
+
+    #[test]
+    fn prepare_os_context_test() {
+        let program = Program::default();
+        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let mut vm = VirtualMachine::new(true);
+        let hint_processor = SyscallHintProcessor::new_empty();
+
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+
+        let os_context = runner.prepare_os_context();
+
+        // is expected to return a pointer to the first segment as there is nothing more in the vm
+        let expected = Vec::from([MaybeRelocatable::from((0, 0))]);
+
+        assert_eq!(os_context, expected);
     }
 }
