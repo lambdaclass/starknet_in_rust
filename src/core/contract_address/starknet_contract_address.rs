@@ -219,7 +219,7 @@ pub(crate) fn compute_class_hash(
     runner
         .run_from_entrypoint(
             188,
-            &vec![&hash_base.into(), contract_class_struct],
+            &[&hash_base.into(), contract_class_struct],
             true,
             &mut vm,
             &mut hint_processor,
