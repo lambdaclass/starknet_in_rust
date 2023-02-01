@@ -108,10 +108,9 @@ fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
-    // println!("Identifiers: {:?}\n\n", identifiers);
-    let api_version = identifiers
-        .get("__main__.API_VERSION")
-        .ok_or_else(|| ContractAddressError::MissingIdentifier("API_VERSION".to_string()))?;
+    let api_version = identifiers.get("__main__.API_VERSION").ok_or_else(|| {
+        ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
+    })?;
 
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
@@ -226,11 +225,6 @@ pub(crate) fn compute_class_hash(
     // TODO: Looks like we can get this value from the identifier, but the value is a Felt.
     // We need to cast that into a usize.
     // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
-    println!(
-        "Contract class before into: {:#?}",
-        get_contract_class_struct(&program.identifiers, contract_class)?
-    );
-    println!("Contract class struct into: {:#?}", contract_class_struct);
     let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
     runner
         .run_from_entrypoint(
@@ -331,11 +325,10 @@ mod tests {
             }],
         );
         let contract_class = ContractClass {
-            program: Program::default(),
+            program: load_program().unwrap(),
             entry_points_by_type,
             abi: None,
         };
-        //println!("compute_class_hash: {:?}", compute_class_hash(&contract_class));
         assert_eq!(compute_class_hash(&contract_class), Ok(Felt::default()));
     }
 
