@@ -218,10 +218,11 @@ mod tests {
         business_logic::{
             execution::{
                 execution_entry_point::ExecutionEntryPoint,
-                objects::{CallInfo, TransactionExecutionContext},
+                objects::{CallInfo, CallType, TransactionExecutionContext},
             },
             fact_state::{
-                in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+                state::ExecutionResourcesManager,
             },
             state::{cached_state::CachedState, state_api_objects::BlockInfo},
         },
@@ -268,10 +269,14 @@ mod tests {
 
     #[test]
     fn integration_test() {
+        // ---------------------------------------------------------
+        //  Create program and entry point types for contract class
+        // ---------------------------------------------------------
+
         let path = Path::new("cairo_programs/fibonacci.json");
-        let program = Program::from_file(&path, None).unwrap();
-        let mut entrypoint_type = HashMap::new();
-        entrypoint_type.insert(
+        let program = Program::from_file(path, None).unwrap();
+        let mut entry_points_by_type = HashMap::new();
+        entry_points_by_type.insert(
             EntryPointType::Constructor,
             [ContractEntryPoint {
                 selector: 0.into(),
@@ -279,19 +284,47 @@ mod tests {
             }]
             .to_vec(),
         );
-        let contract_class = ContractClass::new(program, entrypoint_type, None).unwrap();
+        entry_points_by_type.insert(
+            EntryPointType::External,
+            [ContractEntryPoint {
+                selector: 1.into(),
+                offset: 0.into(),
+            }]
+            .to_vec(),
+        );
+        let contract_class = ContractClass::new(program, entry_points_by_type, None).unwrap();
+
+        //* --------------------------------------------
+        //*    Create state reader with class hash data
+        //* -------------------------------------- -----
 
         let block_info = BlockInfo::default();
         let ffc = DictStorage::new();
         let contract_class_storage = DictStorage::new();
-        let state = CachedState::new(
-            block_info,
-            InMemoryStateReader::new(ffc, contract_class_storage),
-            None,
-        );
+        let mut contract_class_cache = HashMap::new();
 
-        // exec entry point
+        //  ------------ contract data --------------------
+
         let address = Address(1111.into());
+        let class_hash = [1; 32];
+        let contract_state = ContractState::create(class_hash, 3.into(), HashMap::new());
+
+        contract_class_cache.insert(class_hash, contract_class);
+        let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);
+        state_reader
+            .contract_states
+            .insert(address.clone(), contract_state);
+
+        //* ---------------------------------------
+        //*    Create state with previous data
+        //* ---------------------------------------
+
+        let state = CachedState::new(block_info, state_reader, Some(contract_class_cache));
+
+        //* ------------------------------------
+        //*    Create execution entry point
+        //* ------------------------------------
+
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let entry_point_selector = 1.into();
         let caller_address = Address(0000.into());
@@ -303,11 +336,13 @@ mod tests {
             entry_point_selector,
             caller_address,
             entry_point_type,
-            None,
-            None,
+            Some(CallType::Delegate),
+            Some(class_hash),
         );
 
-        // execute call
+        //* --------------------
+        //*   Execute contract
+        //* ---------------------
         let general_config = StarknetGeneralConfig::default();
         let tx_execution_context = TransactionExecutionContext::create_for_testing(
             Address(0.into()),
@@ -317,6 +352,9 @@ mod tests {
             TRANSACTION_VERSION,
         );
         let mut resources_manager = ExecutionResourcesManager::default();
+
+        // TODO: delete this, it is only used to see the errors
+
         let call_info = CallInfo::default();
         assert_eq!(
             exec_entry_point

@@ -74,28 +74,6 @@ impl ExecutionEntryPoint {
         }
     }
 
-    pub fn execute_for_testing(
-        &self,
-        state: CachedState<InMemoryStateReader>,
-        general_config: StarknetGeneralConfig,
-        resources_manager: Option<ExecutionResourcesManager>,
-        tx_execution_context: Option<TransactionExecutionContext>,
-    ) -> Result<CallInfo, ExecutionError> {
-        let tx_context = tx_execution_context.unwrap_or_else(|| {
-            TransactionExecutionContext::create_for_testing(
-                Address(0.into()),
-                0,
-                Felt::zero(),
-                general_config.invoke_tx_max_n_steps,
-                TRANSACTION_VERSION,
-            )
-        });
-
-        let mut rsc_manager = resources_manager.unwrap_or_default();
-
-        self.execute(state, general_config, &mut rsc_manager, tx_context)
-    }
-
     /// Executes the selected entry point with the given calldata in the specified contract.
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.

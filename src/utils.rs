@@ -253,6 +253,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     mut state: S,
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
+    println!("address is {:?}", contract_address);
     let class_hash: [u8; 32] = state
         .get_class_hash_at(&contract_address)
         .map_err(|_| ExecutionError::FailToReadClassHash)?
@@ -268,6 +269,7 @@ pub fn validate_contract_deployed<S: StateReader + Clone>(
     mut state: S,
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
+    println!("this functions breaks");
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
 
