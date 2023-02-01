@@ -202,7 +202,7 @@ impl StarknetRunner {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, fs, path::Path};
 
     use cairo_rs::{
         types::{program::Program, relocatable::MaybeRelocatable},
@@ -211,10 +211,28 @@ mod tests {
             vm_core::VirtualMachine,
         },
     };
+    use felt::Felt;
+    use num_traits::Zero;
 
     use crate::{
+        business_logic::{
+            execution::{
+                execution_entry_point::ExecutionEntryPoint,
+                objects::{CallInfo, TransactionExecutionContext},
+            },
+            fact_state::{
+                in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+            },
+            state::{cached_state::CachedState, state_api_objects::BlockInfo},
+        },
         core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor},
-        utils::test_utils::vm,
+        definitions::{
+            constants::TRANSACTION_VERSION,
+            general_config::{self, StarknetGeneralConfig},
+        },
+        services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+        starknet_storage::dict_storage::DictStorage,
+        utils::{test_utils::vm, Address},
     };
 
     use super::StarknetRunner;
@@ -246,5 +264,70 @@ mod tests {
         let expected = Vec::from([MaybeRelocatable::from((0, 0))]);
 
         assert_eq!(os_context, expected);
+    }
+
+    #[test]
+    fn integration_test() {
+        let path = Path::new("cairo_programs/fibonacci.json");
+        let program = Program::from_file(&path, None).unwrap();
+        let mut entrypoint_type = HashMap::new();
+        entrypoint_type.insert(
+            EntryPointType::Constructor,
+            [ContractEntryPoint {
+                selector: 0.into(),
+                offset: 0.into(),
+            }]
+            .to_vec(),
+        );
+        let contract_class = ContractClass::new(program, entrypoint_type, None).unwrap();
+
+        let block_info = BlockInfo::default();
+        let ffc = DictStorage::new();
+        let contract_class_storage = DictStorage::new();
+        let state = CachedState::new(
+            block_info,
+            InMemoryStateReader::new(ffc, contract_class_storage),
+            None,
+        );
+
+        // exec entry point
+        let address = Address(1111.into());
+        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let entry_point_selector = 1.into();
+        let caller_address = Address(0000.into());
+        let entry_point_type = EntryPointType::External;
+
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address,
+            calldata,
+            entry_point_selector,
+            caller_address,
+            entry_point_type,
+            None,
+            None,
+        );
+
+        // execute call
+        let general_config = StarknetGeneralConfig::default();
+        let tx_execution_context = TransactionExecutionContext::create_for_testing(
+            Address(0.into()),
+            0,
+            Felt::zero(),
+            general_config.invoke_tx_max_n_steps,
+            TRANSACTION_VERSION,
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = CallInfo::default();
+        assert_eq!(
+            exec_entry_point
+                .execute(
+                    state,
+                    general_config,
+                    &mut resources_manager,
+                    tx_execution_context
+                )
+                .unwrap(),
+            call_info
+        );
     }
 }
