@@ -131,14 +131,22 @@ impl ExecutionEntryPoint {
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
         // create starknet runner
-        let cairo_runner = CairoRunner::new(&contract_class.program, "all", false)
+
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)
             .map_err(|_| ExecutionError::FailToCreateCairoRunner)?;
-        let vm = VirtualMachine::new(false);
+
+        let mut vm = VirtualMachine::new(false);
+
+        cairo_runner.initialize_function_runner(&mut vm);
+
         let hint_processor = SyscallHintProcessor::new_empty();
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // prepare OS context
         let os_context = runner.prepare_os_context();
+
+        println!("os: {os_context:?}");
+
         validate_contract_deployed(state.clone(), self.contract_address.clone())?;
 
         // fetch syscall_ptr

@@ -115,14 +115,23 @@ impl StarknetRunner {
             return Err(ExecutionError::IllegalOsPtrOffset);
         }
 
-        let os_context_end = self.vm.get_ap().sub_usize(2)?;
-        let final_os_context_ptr = os_context_end.sub_usize(os_context.len())?;
+        println!("os1: {os_context:?}");
 
+        let os_context_end = self.vm.get_ap().sub_usize(2)?;
+        println!("os_context_end: {os_context_end}");
+        let final_os_context_ptr = os_context_end.sub_usize(os_context.len())?;
+        println!("final_os_context_ptr: {final_os_context_ptr}");
         let os_context_ptr = os_context
             .get(ptr_offset)
             .ok_or(ExecutionError::InvalidPtrFetch)?
             .to_owned();
+
+        println!("os_context_ptr: {os_context_ptr}");
+
         let addr = final_os_context_ptr + ptr_offset;
+
+        println!("addr: {addr}");
+
         let ptr_fetch_from_memory = self
             .vm
             .get_maybe(&addr)?
@@ -157,6 +166,7 @@ impl StarknetRunner {
             _ => return Err(ExecutionError::NotARelocatableValue),
         };
 
+        println!("breakpoint");
         if expected_stop_ptr != seg_stop_ptr {
             return Err(ExecutionError::InvalidStopPointer(
                 expected_stop_ptr,
@@ -279,7 +289,7 @@ mod tests {
         entry_points_by_type.insert(
             EntryPointType::Constructor,
             [ContractEntryPoint {
-                selector: 0.into(),
+                selector: 1.into(),
                 offset: 0.into(),
             }]
             .to_vec(),
