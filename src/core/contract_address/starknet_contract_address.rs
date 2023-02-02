@@ -50,7 +50,7 @@ pub(crate) fn calculate_contract_address(
 }
 
 fn load_program() -> Result<Program, ContractAddressError> {
-    Program::from_file(Path::new("src/core/contract_address/contracts.json"), None)
+    Program::from_file(Path::new("cairo_programs/contracts.json"), None)
         .map_err(|err| ContractAddressError::Program(err.to_string()))
 }
 
@@ -261,7 +261,7 @@ mod tests {
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
                 selector: 1.into(),
-                offset: 281.into(),
+                offset: 285.into(),
             }],
         );
         let contract_class = ContractClass {
@@ -274,7 +274,7 @@ mod tests {
             get_contract_entry_points(&contract_class, &EntryPointType::Constructor),
             Ok(vec![ContractEntryPoint {
                 selector: 1.into(),
-                offset: 281.into()
+                offset: 285.into()
             }])
         );
         assert_eq!(
@@ -290,21 +290,21 @@ mod tests {
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
                 selector: 3.into(),
-                offset: 281.into(),
+                offset: 285.into(),
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::L1Handler,
             vec![ContractEntryPoint {
                 selector: 4.into(),
-                offset: 281.into(),
+                offset: 285.into(),
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::External,
             vec![ContractEntryPoint {
                 selector: 5.into(),
-                offset: 281.into(),
+                offset: 285.into(),
             }],
         );
         let contract_class = ContractClass {
@@ -315,7 +315,7 @@ mod tests {
         assert_eq!(
             compute_class_hash(&contract_class),
             Ok(Felt::from_str_radix(
-                "552722482124318516168801863105426343412913757815637029914461834987726889277",
+                "80645216105174565694368692920098410890941897438829883356170668060797764005",
                 10
             )
             .unwrap())
