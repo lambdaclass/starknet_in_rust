@@ -10,7 +10,7 @@ pub enum ContractAddressError {
     #[error("None existing EntryPointType")]
     NoneExistingEntryPointType,
     #[error("Invalid offset: {0}")]
-    InvalidOffset(String),
+    InvalidOffset(Felt),
     #[error("Api version can't be None")]
     NoneApiVersion,
     #[error("Memory error: {0}")]

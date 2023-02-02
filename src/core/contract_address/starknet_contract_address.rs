@@ -24,8 +24,8 @@ use crate::{
     utils::Address,
 };
 use sha3::{Digest, Keccak256};
+use std::{collections::HashMap, hash::Hash, path::Path};
 
-// MASK_250 = 2 ** 250 - 1
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
 
@@ -66,7 +66,7 @@ fn get_contract_entry_points(
     for entry_point in entry_points {
         if (Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()) {
             return Err(ContractAddressError::InvalidOffset(
-                entry_point.offset.to_string(),
+                entry_point.offset.clone(),
             ));
         }
     }
@@ -186,8 +186,6 @@ impl From<StructContractClass> for CairoArg {
         CairoArg::Composed(result)
     }
 }
-
-use std::{collections::HashMap, hash::Hash, path::Path};
 
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
