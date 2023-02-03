@@ -132,8 +132,7 @@ impl ExecutionEntryPoint {
         let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
         // create starknet runner
 
-        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)
-            .map_err(|_| ExecutionError::FailToCreateCairoRunner)?;
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)?;
 
         let mut vm = VirtualMachine::new(false);
 
@@ -172,8 +171,7 @@ impl ExecutionEntryPoint {
         let alloc_pointer = runner
             .hint_processor
             .syscall_handler
-            .allocate_segment(&mut runner.vm, data)
-            .map_err(|_| ExecutionError::ErrorAllocatingSegment)?
+            .allocate_segment(&mut runner.vm, data)?
             .into();
 
         let entry_point_args = [

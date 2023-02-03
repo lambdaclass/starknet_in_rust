@@ -40,8 +40,6 @@ pub enum ExecutionError {
     RetdataError(String),
     #[error("Missing contract class after fetching")]
     MissigContractClass,
-    #[error("Could not create cairo runner")]
-    FailToCreateCairoRunner,
     #[error("contract address {0:?} not deployed")]
     NotDeployedContract([u8; 32]),
     #[error("error allocating memory segment")]
@@ -70,8 +68,6 @@ pub enum ExecutionError {
     MemoryException(#[from] MemoryError),
     #[error("Expected Relocatable; found None")]
     InvalidInitialFp,
-    #[error("Could not convert memory values array into felts")]
-    InvalidMemoryValues,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]
