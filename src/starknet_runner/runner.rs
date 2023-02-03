@@ -168,7 +168,7 @@ impl StarknetRunner {
                 .get_segment_used_size(seg_base_ptr.segment_index as usize)
                 .ok_or(ExecutionError::InvalidSegmentSize)?;
 
-        let seg_stop_ptr = match segment_stop_ptr {
+        let seg_stop_ptr: Relocatable = match segment_stop_ptr {
             MaybeRelocatable::RelocatableValue(val) => val,
             _ => return Err(ExecutionError::NotARelocatableValue),
         };
@@ -290,7 +290,7 @@ mod tests {
         //  Create program and entry point types for contract class
         // ---------------------------------------------------------
 
-        let path = Path::new("cairo_programs/fibonacci.json");
+        let path = Path::new("cairo_programs/not_main.json");
         let program = Program::from_file(path, None).unwrap();
         let mut entry_points_by_type = HashMap::new();
         entry_points_by_type.insert(

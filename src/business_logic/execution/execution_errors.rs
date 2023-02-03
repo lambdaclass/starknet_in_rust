@@ -10,7 +10,10 @@ use cairo_rs::{
 use felt::Felt;
 use thiserror::Error;
 
-use crate::{core::errors, starknet_runner::starknet_runner_error::StarknetRunnerError};
+use crate::{
+    core::errors::{self, syscall_handler_errors::SyscallHandlerError},
+    starknet_runner::starknet_runner_error::StarknetRunnerError,
+};
 #[derive(Debug, Error)]
 pub enum ExecutionError {
     #[error("Missing field for TxStruct")]
@@ -77,4 +80,6 @@ pub enum ExecutionError {
     RunnerException(#[from] RunnerError),
     #[error(transparent)]
     StarknetRunnerException(#[from] StarknetRunnerError),
+    #[error(transparent)]
+    SyscallException(#[from] SyscallHandlerError),
 }
