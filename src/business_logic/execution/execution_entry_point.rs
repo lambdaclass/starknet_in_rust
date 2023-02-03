@@ -20,6 +20,7 @@ use crate::{
         fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     },
     services::api::contract_class::{ContractClass, ContractEntryPoint},
+    utils::get_integer_range,
 };
 use crate::{
     business_logic::{
@@ -98,9 +99,9 @@ impl ExecutionEntryPoint {
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
 
-        let retdata = runner
-            .get_return_values()
-            .map_err(|e| ExecutionError::RetdataError(e.to_string()))?;
+        let (ret_data_size, ret_data_ptr) = runner.get_return_values()?;
+        let retdata = get_integer_range(&runner.vm, &ret_data_ptr, ret_data_size)
+            .map_err(|_| ExecutionError::InvalidMemoryValues)?;
 
         self.build_call_info(
             previous_cairo_usage,

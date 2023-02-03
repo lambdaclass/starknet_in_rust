@@ -1,9 +1,14 @@
+use cairo_rs::vm::errors::memory_errors::MemoryError;
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum StarknetRunnerError {
     #[error("Maybe relocatable should be a Felt")]
-    NotFeltInReturnValue,
-    #[error("Range-check validation failed, number is out of valid range")]
-    NumOutOfBounds,
+    NotAFelt,
+    #[error("Maybe relocatable should be a Relocatable")]
+    NotARelocatable,
+    #[error("could not convert Felt to usize")]
+    DataConvertionError,
+    #[error(transparent)]
+    MemoryException(#[from] MemoryError),
 }

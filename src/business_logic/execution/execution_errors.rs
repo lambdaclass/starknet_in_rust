@@ -10,7 +10,7 @@ use cairo_rs::{
 use felt::Felt;
 use thiserror::Error;
 
-use crate::core::errors;
+use crate::{core::errors, starknet_runner::starknet_runner_error::StarknetRunnerError};
 #[derive(Debug, Error)]
 pub enum ExecutionError {
     #[error("Missing field for TxStruct")]
@@ -67,10 +67,14 @@ pub enum ExecutionError {
     MemoryException(#[from] MemoryError),
     #[error("Expected Relocatable; found None")]
     InvalidInitialFp,
+    #[error("Could not convert memory values array into felts")]
+    InvalidMemoryValues,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]
     CairoRunnerException(#[from] CairoRunError),
     #[error(transparent)]
     RunnerException(#[from] RunnerError),
+    #[error(transparent)]
+    StarknetRunnerException(#[from] StarknetRunnerError),
 }

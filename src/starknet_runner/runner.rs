@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
-    types::relocatable::MaybeRelocatable,
+    types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
         errors::vm_errors::VirtualMachineError,
         runners::{
@@ -13,6 +13,7 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
+use num_traits::ToPrimitive;
 
 use crate::{
     business_logic::{
@@ -71,16 +72,22 @@ impl StarknetRunner {
         Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
-    pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
-        self.vm
-            .get_return_values(2)
-            .map_err(|_| StarknetRunnerError::NumOutOfBounds)?
-            .into_iter()
-            .map(|val| match val {
-                Int(felt) => Ok(felt),
-                _ => Err(StarknetRunnerError::NotFeltInReturnValue),
-            })
-            .collect::<Result<Vec<Felt>, _>>()
+    pub fn get_return_values(&self) -> Result<(usize, Relocatable), StarknetRunnerError> {
+        let values = self.vm.get_return_values(2)?;
+
+        let ret_data_size = match values.get(0) {
+            Some(MaybeRelocatable::Int(val)) => val
+                .to_owned()
+                .to_usize()
+                .ok_or(StarknetRunnerError::DataConvertionError)?,
+            _ => return Err(StarknetRunnerError::NotAFelt),
+        };
+        let ret_data_ptr = match values.get(1) {
+            Some(MaybeRelocatable::RelocatableValue(val)) => val.to_owned(),
+            _ => return Err(StarknetRunnerError::NotARelocatable),
+        };
+
+        Ok((ret_data_size, ret_data_ptr))
     }
 
     pub(crate) fn prepare_os_context(&mut self) -> Vec<MaybeRelocatable> {
@@ -306,7 +313,7 @@ mod tests {
 
         //* --------------------------------------------
         //*    Create state reader with class hash data
-        //* -------------------------------------- -----
+        //* --------------------------------------------
 
         let block_info = BlockInfo::default();
         let ffc = DictStorage::new();
