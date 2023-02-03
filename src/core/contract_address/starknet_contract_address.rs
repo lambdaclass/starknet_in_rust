@@ -50,7 +50,10 @@ pub(crate) fn calculate_contract_address(
 }
 
 fn load_program() -> Result<Program, ContractAddressError> {
-    Program::from_file(Path::new("cairo_programs/contracts.json"), None).map_err(|err| err.into())
+    Ok(Program::from_file(
+        Path::new("cairo_programs/contracts.json"),
+        None,
+    )?)
 }
 
 fn get_contract_entry_points(
