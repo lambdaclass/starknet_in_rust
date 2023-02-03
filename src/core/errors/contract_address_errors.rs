@@ -2,6 +2,7 @@ use cairo_rs::{
     types::errors::program_errors::ProgramError,
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
+        vm_errors::VirtualMachineError,
     },
 };
 use felt::Felt;
@@ -31,4 +32,6 @@ pub enum ContractAddressError {
     CairoRunner(#[from] RunnerError),
     #[error(transparent)]
     CairoRun(#[from] CairoRunError),
+    #[error(transparent)]
+    VirtualMachine(#[from] VirtualMachineError),
 }

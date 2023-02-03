@@ -194,8 +194,7 @@ pub(crate) fn compute_class_hash(
     let contract_class_struct =
         &get_contract_class_struct(&program.identifiers, contract_class)?.into();
     let mut vm = VirtualMachine::new(false);
-    let mut runner =
-        CairoRunner::new(&program, "all", false).map_err(ContractAddressError::from)?;
+    let mut runner = CairoRunner::new(&program, "all", false)?;
     runner.initialize_function_runner(&mut vm);
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
@@ -206,23 +205,19 @@ pub(crate) fn compute_class_hash(
     // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
     let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
 
-    runner
-        .run_from_entrypoint(
-            188,
-            &[&hash_base.into(), contract_class_struct],
-            true,
-            &mut vm,
-            &mut hint_processor,
-        )
-        .map_err(ContractAddressError::from)?;
+    runner.run_from_entrypoint(
+        188,
+        &[&hash_base.into(), contract_class_struct],
+        true,
+        &mut vm,
+        &mut hint_processor,
+    )?;
 
     Ok(vm
-        .get_return_values(2)
-        .map_err(ContractAddressError::from)?
+        .get_return_values(2)?
         .get(1)
         .ok_or(ContractAddressError::IndexOutOfRange)?
-        .get_int_ref()
-        .map_err(|_| ContractAddressError::ExpectedInteger)?
+        .get_int_ref()?
         .clone())
 }
 
