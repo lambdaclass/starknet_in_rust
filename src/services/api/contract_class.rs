@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use cairo_rs::{types::program::Program, utils::is_subsequence};
+use cairo_rs::{
+    types::{program::Program, relocatable::MaybeRelocatable},
+    utils::is_subsequence,
+};
 use felt::{Felt, PRIME_STR};
 
 use crate::{core::errors::state_errors::StateError, public::abi::AbiType};
@@ -29,6 +32,15 @@ pub struct ContractClass {
     pub(crate) program: Program,
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub(crate) abi: Option<AbiType>,
+}
+
+impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
+    fn from(entry_point: &ContractEntryPoint) -> Self {
+        vec![
+            MaybeRelocatable::from(entry_point.selector.clone()),
+            MaybeRelocatable::from(entry_point.offset.clone()),
+        ]
+    }
 }
 
 impl ContractClass {
