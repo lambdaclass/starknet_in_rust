@@ -19,3 +19,6 @@ serde = { version = "1.0.152", features = ["derive"] }
 
 [dev-dependencies.rusty-hook]
 version = "0.11"
+
+[dev-dependencies]
+assert_matches = "1.5.0"

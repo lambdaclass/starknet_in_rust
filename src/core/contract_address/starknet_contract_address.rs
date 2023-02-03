@@ -50,8 +50,7 @@ pub(crate) fn calculate_contract_address(
 }
 
 fn load_program() -> Result<Program, ContractAddressError> {
-    Program::from_file(Path::new("cairo_programs/contracts.json"), None)
-        .map_err(|err| ContractAddressError::Program(err.to_string()))
+    Program::from_file(Path::new("cairo_programs/contracts.json"), None).map_err(|err| err.into())
 }
 
 fn get_contract_entry_points(
@@ -195,8 +194,8 @@ pub(crate) fn compute_class_hash(
     let contract_class_struct =
         &get_contract_class_struct(&program.identifiers, contract_class)?.into();
     let mut vm = VirtualMachine::new(false);
-    let mut runner = CairoRunner::new(&program, "all", false)
-        .map_err(|err| ContractAddressError::CairoRunner(err.to_string()))?;
+    let mut runner =
+        CairoRunner::new(&program, "all", false).map_err(ContractAddressError::from)?;
     runner.initialize_function_runner(&mut vm);
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
@@ -215,11 +214,11 @@ pub(crate) fn compute_class_hash(
             &mut vm,
             &mut hint_processor,
         )
-        .map_err(|err| ContractAddressError::CairoRunner(err.to_string()))?;
+        .map_err(ContractAddressError::from)?;
 
     Ok(vm
         .get_return_values(2)
-        .map_err(|err| ContractAddressError::Memory(err.to_string()))?
+        .map_err(ContractAddressError::from)?
         .get(1)
         .ok_or(ContractAddressError::IndexOutOfRange)?
         .get_int_ref()
@@ -269,13 +268,13 @@ mod tests {
         };
 
         assert_eq!(
-            get_contract_entry_points(&contract_class, &EntryPointType::Constructor),
-            Ok(vec![ContractEntryPoint {
+            get_contract_entry_points(&contract_class, &EntryPointType::Constructor).unwrap(),
+            vec![ContractEntryPoint {
                 selector: 1.into(),
                 offset: 285.into()
-            }])
+            }]
         );
-        assert_eq!(
+        assert_matches!(
             get_contract_entry_points(&contract_class, &EntryPointType::External),
             Err(ContractAddressError::NoneExistingEntryPointType)
         );
@@ -311,12 +310,12 @@ mod tests {
             abi: None,
         };
         assert_eq!(
-            compute_class_hash(&contract_class),
-            Ok(Felt::from_str_radix(
+            compute_class_hash(&contract_class).unwrap(),
+            Felt::from_str_radix(
                 "80645216105174565694368692920098410890941897438829883356170668060797764005",
                 10
             )
-            .unwrap())
+            .unwrap()
         );
     }
 
