@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
+    default::Default,
 };
 
 use cairo_rs::{
@@ -425,17 +426,6 @@ impl TransactionExecutionInfo {
             actual_fee: 0,
             actual_resources: HashMap::new(),
             tx_type,
-        }
-    }
-
-    pub fn empty() -> Self {
-        TransactionExecutionInfo {
-            validate_info: None,
-            call_info: None,
-            fee_transfer_info: None,
-            actual_fee: 0,
-            actual_resources: HashMap::new(),
-            tx_type: None,
         }
     }
 

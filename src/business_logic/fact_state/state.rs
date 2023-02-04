@@ -9,6 +9,7 @@ use std::{
     ops::Deref,
     rc::Rc,
     thread::current,
+    default::Default,
 };
 
 use crate::{
@@ -230,6 +231,7 @@ impl SharedState {
     }
 }
 
+#[derive(Default)]
 pub(crate) struct StateDiff {
     address_to_class_hash: HashMap<Address, [u8; 32]>,
     address_to_nonce: HashMap<Address, Felt>,
@@ -238,15 +240,7 @@ pub(crate) struct StateDiff {
 }
 
 impl StateDiff {
-    pub fn empty(block_info: BlockInfo) -> Self {
-        StateDiff {
-            address_to_class_hash: HashMap::new(),
-            address_to_nonce: HashMap::new(),
-            storage_updates: HashMap::new(),
-            block_info,
-        }
-    }
-
+    
     pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
     where
         T: StateReader + Clone,
