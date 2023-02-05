@@ -119,7 +119,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         Ok(())
     }
 
-    pub fn deploy_contract(
+    pub fn set_class_hash_at(
         &mut self,
         contract_address: Address,
         class_hash: [u8; 32],

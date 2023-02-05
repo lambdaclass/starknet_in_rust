@@ -143,7 +143,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         Ok(())
     }
 
-    fn deploy_contract(
+    fn set_class_hash_at(
         &mut self,
         contract_address: Address,
         class_hash: [u8; 32],

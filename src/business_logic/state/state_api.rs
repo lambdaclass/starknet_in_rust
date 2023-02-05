@@ -25,7 +25,7 @@ pub trait State {
         class_hash: &[u8; 32],
         contract_class: &ContractClass,
     ) -> Result<(), StateError>;
-    fn deploy_contract(
+    fn set_class_hash_at(
         &mut self,
         contract_address: Address,
         class_hash: [u8; 32],
