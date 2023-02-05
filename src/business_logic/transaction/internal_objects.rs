@@ -105,7 +105,7 @@ impl InternalDeploy {
         mut state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        state.deploy_contract(self.contract_address.clone(), self.contract_hash);
+        state.set_class_hash_at(self.contract_address.clone(), self.contract_hash);
         let class_hash: [u8; 32] = self.contract_hash[..]
             .try_into()
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;

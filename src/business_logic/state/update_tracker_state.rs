@@ -124,7 +124,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         contract_address: Address,
         class_hash: [u8; 32],
     ) -> Result<(), StateError> {
-        self.state.deploy_contract(contract_address, class_hash)
+        self.state.set_class_hash_at(contract_address, class_hash)
     }
 
     pub fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError> {
