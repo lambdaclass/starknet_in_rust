@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -393,7 +392,6 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
 impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
     fn default() -> Self {
         let cached_state = CachedState::new(
-            BlockInfo::default(),
             InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
