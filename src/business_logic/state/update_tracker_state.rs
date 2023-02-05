@@ -11,7 +11,6 @@ use crate::{
 
 use super::{
     state_api::{State, StateReader},
-    state_api_objects::BlockInfo,
     state_cache::StorageEntry,
 };
 
@@ -89,14 +88,6 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
             self.storage_initial_values.insert(address_key_pair, value);
         }
         Ok(return_value.clone())
-    }
-
-    pub fn block_info(&self) -> &BlockInfo {
-        self.state.block_info()
-    }
-
-    pub fn update_block_info(&mut self, mut block_info: BlockInfo) {
-        self.state.update_block_info(block_info)
     }
 
     pub fn get_contract_class(

@@ -11,7 +11,6 @@ use crate::business_logic::fact_state::state::ExecutionResourcesManager;
 use crate::business_logic::state::cached_state::CachedState;
 use crate::business_logic::state::contract_storage_state::ContractStorageState;
 use crate::business_logic::state::state_api::{State, StateReader};
-use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address_from_hash;
@@ -40,13 +39,12 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
-    pub(crate) block_info: BlockInfo,
     pub(crate) state: T,
     pub(crate) starknet_storage_state: ContractStorageState<T>,
 }
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
-    pub fn new(block_info: BlockInfo, contract_address: Address, state: T) -> Self {
+    pub fn new(contract_address: Address, state: T) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
             "deploy".to_string(),
@@ -87,7 +85,6 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
-            block_info,
             state,
             starknet_storage_state,
         }
@@ -268,10 +265,6 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         todo!()
     }
 
-    fn get_block_info(&self) -> &BlockInfo {
-        &self.block_info
-    }
-
     fn _get_caller_address(
         &mut self,
         vm: &VirtualMachine,
@@ -393,12 +386,11 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
 impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
     fn default() -> Self {
         let cached_state = CachedState::new(
-            BlockInfo::default(),
             InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
 
-        Self::new(BlockInfo::default(), Address(0.into()), cached_state)
+        Self::new(Address(0.into()), cached_state)
     }
 }
 
@@ -407,7 +399,6 @@ mod tests {
     use crate::business_logic::execution::objects::{
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     };
-    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::*;

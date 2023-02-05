@@ -14,7 +14,6 @@ use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateRead
 use crate::business_logic::state::cached_state::CachedState;
 use crate::business_logic::state::state_api::State;
 use crate::business_logic::state::state_api::StateReader;
-use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::starknet_storage::dict_storage::DictStorage;
 use crate::starknet_storage::errors::storage_errors::StorageError;
@@ -173,18 +172,6 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         response.write_syscall_response(vm, syscall_ptr)
-    }
-
-    fn get_block_info(&self) -> &BlockInfo;
-
-    fn get_block_number(
-        &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
-        GetBlockNumberResponse::new(self.get_block_info().block_number)
-            .write_syscall_response(vm, syscall_ptr)
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -15,7 +15,6 @@ use crate::{
     business_logic::state::{
         cached_state::CachedState,
         state_api::{State, StateReader},
-        state_api_objects::BlockInfo,
         state_cache,
     },
     core::errors::state_errors::StateError,
@@ -145,10 +144,6 @@ impl<T: StateReader + Clone> CarriedState<T> {
             None => Err(StateError::ParentCarriedStateIsNone),
         }
     }
-
-    pub fn get_block_info(&self) -> &BlockInfo {
-        &self.state.block_info
-    }
 }
 
 // ----------------------
@@ -157,7 +152,6 @@ impl<T: StateReader + Clone> CarriedState<T> {
 
 pub(crate) struct SharedState {
     contract_states: HashMap<Felt, ContractState>,
-    block_info: BlockInfo,
 }
 
 impl SharedState {
@@ -199,7 +193,6 @@ impl SharedState {
             state_cache.class_hash_writes,
             state_cache.nonce_writes,
             to_state_diff_storage_mapping(state_cache.storage_writes)?,
-            current_carried_state.state.block_info,
         ))
     }
 
@@ -209,7 +202,6 @@ impl SharedState {
         address_to_class_hash: HashMap<Address, [u8; 32]>,
         address_to_nonce: HashMap<Address, Felt>,
         storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
-        block_info: BlockInfo,
     ) -> Self
     where
         S: Storage,
@@ -234,16 +226,14 @@ pub(crate) struct StateDiff {
     address_to_class_hash: HashMap<Address, [u8; 32]>,
     address_to_nonce: HashMap<Address, Felt>,
     storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
-    block_info: BlockInfo,
 }
 
 impl StateDiff {
-    pub fn empty(block_info: BlockInfo) -> Self {
+    pub fn empty() -> Self {
         StateDiff {
             address_to_class_hash: HashMap::new(),
             address_to_nonce: HashMap::new(),
             storage_updates: HashMap::new(),
-            block_info,
         }
     }
 
@@ -268,13 +258,10 @@ impl StateDiff {
             state_cache.class_hash_initial_values,
         );
 
-        let block_info = cached_state.block_info;
-
         Ok(StateDiff {
             address_to_class_hash,
             address_to_nonce,
             storage_updates,
-            block_info,
         })
     }
 
@@ -282,7 +269,7 @@ impl StateDiff {
     where
         T: StateReader + Clone,
     {
-        let mut cache_state = CachedState::new(self.block_info.clone(), state_reader, None);
+        let mut cache_state = CachedState::new(state_reader, None);
         let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
 
         cache_state.cache.set_initial_values(
@@ -321,14 +308,11 @@ impl StateDiff {
             map_a.extend(map_b);
             storage_updates.insert(address, map_a.clone());
         }
-        self.block_info
-            .validate_legal_progress(other.block_info.clone())?;
 
         Ok(StateDiff {
             address_to_class_hash,
             address_to_nonce,
             storage_updates,
-            block_info: other.block_info,
         })
     }
 
@@ -342,7 +326,6 @@ impl StateDiff {
             self.address_to_class_hash.clone(),
             self.address_to_nonce.clone(),
             self.storage_updates.clone(),
-            self.block_info.clone(),
         )
     }
 }

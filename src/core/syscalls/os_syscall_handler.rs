@@ -3,7 +3,6 @@ use super::syscall_request::SyscallRequest;
 use super::syscall_response::WriteSyscallResponse;
 use crate::business_logic::execution::objects::CallInfo;
 use crate::business_logic::execution::objects::TransactionExecutionInfo;
-use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::services::api::contract_class::EntryPointType;
 use crate::utils::Address;
@@ -52,7 +51,6 @@ pub(crate) struct OsSyscallHandler {
     pub(crate) tx_info_ptr: Option<Relocatable>,
     // The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
-    block_info: BlockInfo,
 }
 
 impl SyscallHandler for OsSyscallHandler {
@@ -179,10 +177,6 @@ impl SyscallHandler for OsSyscallHandler {
             .map_err(|_| SyscallHandlerError::WriteArg)?;
         Ok(segment_start)
     }
-
-    fn get_block_info(&self) -> &BlockInfo {
-        &self.block_info
-    }
 }
 
 impl OsSyscallHandler {
@@ -197,7 +191,6 @@ impl OsSyscallHandler {
         starknet_storage_by_address: HashMap<u64, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
-        block_info: BlockInfo,
     ) -> Self {
         Self {
             tx_execution_info_iterator,
@@ -209,7 +202,6 @@ impl OsSyscallHandler {
             starknet_storage_by_address,
             tx_info_ptr,
             tx_execution_info,
-            block_info,
         }
     }
 
@@ -224,7 +216,6 @@ impl OsSyscallHandler {
             HashMap::new(),
             None,
             None,
-            BlockInfo::default(),
         )
     }
     // Called when starting the execution of a transaction.
@@ -345,7 +336,6 @@ impl OsSyscallHandler {
 #[cfg(test)]
 mod tests {
     use crate::business_logic::execution::objects::TransactionExecutionInfo;
-    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
     use crate::core::syscalls::syscall_request::CallContractRequest;

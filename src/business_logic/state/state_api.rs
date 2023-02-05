@@ -5,7 +5,7 @@ use crate::{
     utils::Address,
 };
 
-use super::{state_api_objects::BlockInfo, state_cache::StorageEntry};
+use super::state_cache::StorageEntry;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash.
@@ -19,7 +19,6 @@ pub trait StateReader {
 }
 
 pub trait State {
-    fn block_info(&self) -> &BlockInfo;
     fn set_contract_class(
         &mut self,
         class_hash: &[u8; 32],
@@ -31,6 +30,5 @@ pub trait State {
         class_hash: [u8; 32],
     ) -> Result<(), StateError>;
     fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError>;
-    fn update_block_info(&mut self, block_info: BlockInfo);
     fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt);
 }
