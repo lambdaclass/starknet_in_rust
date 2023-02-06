@@ -2,7 +2,10 @@ use felt::Felt;
 use thiserror::Error;
 
 use crate::{
-    business_logic::{fact_state::contract_state::ContractState, state::state_cache::StorageEntry},
+    business_logic::{
+        fact_state::contract_state::ContractState,
+        state::{state_api::ContractStorageKey, state_cache::StorageEntry},
+    },
     services::api::contract_class_errors::ContractClassError,
     starknet_storage::errors::storage_errors::StorageError,
     utils::Address,
@@ -28,7 +31,7 @@ pub enum StateError {
     #[error("No nonce assigned for contact address: {0:?}")]
     NoneNonce(Address),
     #[error("No storage value assigned for entry: {0:?}")]
-    NoneStorage(StorageEntry),
+    NoneStorage(ContractStorageKey),
     #[error("No storage leaf assigned for key: {0:?}")]
     NoneStoragLeaf([u8; 32]),
     #[error("Cannot deploy contract at address: {0:?}")]

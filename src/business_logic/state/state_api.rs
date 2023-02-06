@@ -15,7 +15,7 @@ pub trait StateReader {
     /// Returns the nonce of the given contract instance.
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError>;
     /// Returns the storage value under the given key in the given contract instance.
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError>;
+    fn get_storage_at(&mut self, storage_entry: &ContractStorageKey) -> Result<&Felt, StateError>;
 }
 
 pub trait State {
@@ -34,3 +34,5 @@ pub trait State {
     fn update_block_info(&mut self, block_info: BlockInfo);
     fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt);
 }
+
+pub type ContractStorageKey = (Address, Felt);

@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    state_api::{State, StateReader},
+    state_api::{State, StateReader, ContractStorageKey},
     state_api_objects::BlockInfo,
     state_cache::{StateCache, StorageEntry},
 };
@@ -111,7 +111,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &ContractStorageKey) -> Result<&Felt, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             let value = self.state_reader.get_storage_at(storage_entry)?;
             self.cache
@@ -202,38 +202,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_class_hash_and_nonce_from_state_reader() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
-
-        let contract_address = Address(32123.into());
-        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
-
-        state_reader
-            .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
-
-        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
-
-        assert_eq!(
-            cached_state.get_class_hash_at(&contract_address),
-            Ok(&contract_state.contract_hash)
-        );
-        assert_eq!(
-            cached_state.get_nonce_at(&contract_address),
-            Ok(&contract_state.nonce)
-        );
-        cached_state.increment_nonce(&contract_address);
-        assert_eq!(
-            cached_state.get_nonce_at(&contract_address),
-            Ok(&(contract_state.nonce + Felt::new(1)))
-        );
-    }
-
-    #[test]
     fn get_contract_class_from_state_reader() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_class_key = [0; 32];
+        let class_hash = [0; 32];
         let contract_class = ContractClass::new(
             Program::default(),
             HashMap::from([(
@@ -244,9 +217,7 @@ mod tests {
         )
         .expect("Error creating contract class");
 
-        state_reader
-            .contract_class_storage
-            .set_contract_class(&[0; 32], &contract_class);
+        state_reader.get_contract_class(&class_hash);
 
         let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
 

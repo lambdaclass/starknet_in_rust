@@ -35,6 +35,8 @@ use num_traits::ToPrimitive;
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
 pub struct Address(pub Felt);
 
+pub type ClassHash = [u8; 32];
+
 impl Address {
     pub(crate) fn to_32_bytes(&self) -> Result<[u8; 32], UtilsError> {
         let mut result = self.0.to_bytes_be();

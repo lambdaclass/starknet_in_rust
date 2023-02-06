@@ -6,7 +6,7 @@ use felt::Felt;
 
 use super::state_api_objects::BlockInfo;
 
-use super::state_api::StateReader;
+use super::state_api::{StateReader, ContractStorageKey};
 use crate::utils::Address;
 /// (contract_address, key)
 pub(crate) type StorageEntry = (Address, [u8; 32]);
@@ -50,7 +50,7 @@ impl StateCache {
         self.nonce_initial_values.get(contract_address)
     }
 
-    pub(crate) fn get_storage(&self, storage_entry: &StorageEntry) -> Option<&Felt> {
+    pub(crate) fn get_storage(&self, storage_entry: &ContractStorageKey) -> Option<&Felt> {
         if self.storage_writes.contains_key(storage_entry) {
             return self.storage_writes.get(storage_entry);
         }
