@@ -26,9 +26,9 @@ use super::state_objects::FeeInfo;
 pub struct InternalDeploy {
     hash_value: Felt,
     version: u64,
-    contract_address: Address,
+    pub(crate) contract_address: Address,
     contract_address_salt: Address,
-    contract_hash: [u8; 32],
+    pub(crate) contract_hash: [u8; 32],
     constructor_calldata: Vec<Felt>,
     tx_type: TransactionType,
 }

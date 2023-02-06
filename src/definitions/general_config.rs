@@ -3,6 +3,8 @@ use num_traits::{Num, Zero};
 
 use crate::utils::Address;
 
+use super::errors::general_config_error::StarknetChainIdError;
+
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum StarknetChainId {
@@ -22,26 +24,52 @@ impl ToString for StarknetChainId {
     }
 }
 
+impl Default for StarknetChainId {
+    fn default() -> Self {
+        StarknetChainId::TestNet
+    }
+}
+
 impl StarknetChainId {
     pub(crate) fn to_felt(self) -> Felt {
         Felt::from_bytes_be(self.to_string().as_bytes())
     }
+
+    pub(crate) fn as_u64(&self) -> Result<u64, StarknetChainIdError> {
+        let id = self.to_string().as_bytes().to_vec();
+
+        if id.len() == 8 {
+            let bytes: [u8; 8] = id
+                .try_into()
+                .map_err(|_| StarknetChainIdError::ConversionErrorToBytes)?;
+
+            Ok(u64::from_ne_bytes(bytes))
+        } else if id.len() < 8 {
+            id.resize_with(8, || 0);
+            let bytes = id
+                .try_into()
+                .map_err(|_| StarknetChainIdError::ConversionErrorToBytes)?;
+            Ok(u64::from_ne_bytes(bytes))
+        } else {
+            Err(StarknetChainIdError::ConversionErrorToBytes)
+        }
+    }
 }
 
 #[allow(unused)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct StarknetOsConfig {
     pub(crate) chain_id: StarknetChainId,
     pub(crate) fee_token_address: Address,
 }
 
 #[allow(unused)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,
-    sequencer_address: Address,
+    pub(crate) sequencer_address: Address,
     pub(crate) invoke_tx_max_n_steps: u64,
 }
 

@@ -62,7 +62,7 @@ pub(crate) trait InternalStateTransaction {
     where
         T: State + StateReader,
     {
-        self._apply_specific_concurrent_changes(UpdatesTrackerState::new(state), general_config)
+        self.apply_specific_concurrent_changes(UpdatesTrackerState::new(state), general_config)
     }
 
     fn apply_sequential_changes(
@@ -71,14 +71,14 @@ pub(crate) trait InternalStateTransaction {
         general_config: StarknetGeneralConfig,
         actual_resources: HashMap<String, usize>,
     ) -> FeeInfo {
-        self._apply_specific_sequential_changes(state, general_config, actual_resources)
+        self.apply_specific_sequential_changes(state, general_config, actual_resources)
     }
 
     // ------------------
     //  Abstract methods
     // ------------------
 
-    fn _apply_specific_concurrent_changes<T>(
+    fn apply_specific_concurrent_changes<T>(
         &self,
         state: UpdatesTrackerState<T>,
         general_config: StarknetGeneralConfig,
@@ -86,7 +86,7 @@ pub(crate) trait InternalStateTransaction {
     where
         T: State;
 
-    fn _apply_specific_sequential_changes(
+    fn apply_specific_sequential_changes(
         &self,
         state: impl State,
         general_config: StarknetGeneralConfig,
