@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use crate::{
     business_logic::{
         execution::objects::{CallInfo, TransactionExecutionInfo},
+        fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
+            cached_state::CachedState,
             state_api::{State, StateReader},
             update_tracker_state::UpdatesTrackerState,
         },
@@ -24,11 +26,9 @@ pub(crate) trait InternalStateTransaction {
 
     fn apply_state_updates(
         &self,
-        state: impl State,
+        state: CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
-    ) -> Option<TransactionExecutionInfo> {
-        todo!()
-    }
+    ) -> TransactionExecutionInfo;
 
     fn sync_apply_state_updates<T>(
         &self,

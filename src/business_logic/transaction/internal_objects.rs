@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use crate::business_logic::execution::objects::{
     CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
 };
+use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
 use crate::business_logic::fact_state::state::ExecutionResourcesManager;
+use crate::business_logic::state::cached_state::CachedState;
 use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::update_tracker_state::UpdatesTrackerState;
 use crate::core::errors::state_errors::StateError;
@@ -21,7 +23,7 @@ use crate::utils_errors::UtilsError;
 use felt::Felt;
 use num_traits::Zero;
 
-use super::state_objects::FeeInfo;
+use super::state_objects::{FeeInfo, InternalStateTransaction};
 
 pub struct InternalDeploy {
     hash_value: Felt,
@@ -187,5 +189,35 @@ impl InternalDeploy {
 
         let resources_manager = ExecutionResourcesManager::default();
         todo!()
+    }
+}
+
+impl InternalStateTransaction for InternalDeploy {
+    fn apply_specific_concurrent_changes<T>(
+        &self,
+        state: UpdatesTrackerState<T>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo
+    where
+        T: State,
+    {
+        todo!()
+    }
+
+    fn apply_specific_sequential_changes(
+        &self,
+        state: impl State,
+        general_config: StarknetGeneralConfig,
+        actual_resources: HashMap<String, usize>,
+    ) -> FeeInfo {
+        todo!()
+    }
+
+    fn apply_state_updates(
+        &self,
+        state: CachedState<InMemoryStateReader>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo {
+        self.sync_apply_state_updates(state, general_config)
     }
 }

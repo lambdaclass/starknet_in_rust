@@ -36,7 +36,7 @@ impl StarknetChainId {
     }
 
     pub(crate) fn as_u64(&self) -> Result<u64, StarknetChainIdError> {
-        let id = self.to_string().as_bytes().to_vec();
+        let mut id = self.to_string().as_bytes().to_vec();
 
         if id.len() == 8 {
             let bytes: [u8; 8] = id

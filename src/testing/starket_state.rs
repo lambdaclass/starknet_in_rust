@@ -4,8 +4,13 @@ use felt::Felt;
 
 use crate::{
     business_logic::{
-        execution::objects::{Event, TransactionExecutionInfo},
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        execution::{
+            execution_entry_point::ExecutionEntryPoint,
+            objects::{CallInfo, Event, TransactionExecutionContext, TransactionExecutionInfo},
+        },
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
         state::{cached_state::CachedState, state_api::State, state_api_objects::BlockInfo},
         transaction::{internal_objects::InternalDeploy, state_objects::InternalStateTransaction},
     },
@@ -14,14 +19,14 @@ use crate::{
         general_config::{self, StarknetGeneralConfig},
     },
     services::api::{
-        contract_class::ContractClass,
+        contract_class::{ContractClass, EntryPointType},
         messages::{self, StarknetMessageToL1},
     },
     starknet_storage::dict_storage::DictStorage,
     utils::Address,
 };
 
-use super::starknet_state_error::StarknetStateError;
+use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
 
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub(crate) struct StarknetState {
@@ -90,16 +95,54 @@ impl StarknetState {
         Ok((tx.contract_address, tx_execution_info))
     }
 
+    /// Builds the transaction execution context and executes the entry point.
+    /// Returns the CallInfo.
+
+    pub fn execute_entry_raw_point(
+        &mut self,
+        contract_address: Address,
+        entry_point_selector: Felt,
+        calldata: Vec<Felt>,
+        caller_address: Address,
+    ) -> Result<CallInfo, StarknetStateError> {
+        let call = ExecutionEntryPoint::new(
+            contract_address,
+            calldata,
+            entry_point_selector,
+            caller_address,
+            EntryPointType::External,
+            None,
+            None,
+        );
+
+        let state_copy = self.state.copy_and_apply();
+        let mut resources_manager = ExecutionResourcesManager::default();
+
+        let tx_execution_context = TransactionExecutionContext::default();
+        let call_info = call.execute(
+            state_copy,
+            self.general_config.clone(),
+            &mut resources_manager,
+            tx_execution_context,
+        )?;
+
+        let exec_info = ExecutionInfo::Call(call_info.clone());
+        self.add_messages_and_events(&exec_info);
+
+        Ok(call_info)
+    }
+
     pub fn execute_tx(&mut self, tx: &mut InternalDeploy) -> TransactionExecutionInfo {
         let state_copy = self.state.copy_and_apply();
         let tx_execution_info = tx.apply_state_updates(state_copy, self.general_config.clone());
-        self.add_messages_and_events(&tx_execution_info);
+        let exec_info = ExecutionInfo::Transaction(tx_execution_info.clone());
+        self.add_messages_and_events(&exec_info);
         tx_execution_info
     }
 
     pub fn add_messages_and_events(
         &mut self,
-        exec_info: &TransactionExecutionInfo,
+        exec_info: &ExecutionInfo,
     ) -> Result<(), StarknetStateError> {
         for msg in exec_info.get_sorted_l2_to_l1_messages()? {
             let starknet_message =
@@ -119,5 +162,23 @@ impl StarknetState {
         let mut events = exec_info.get_sorted_events()?;
         self.events.append(&mut events);
         Ok(())
+    }
+
+    /// Consumes the given message hash.
+    pub fn consume_message_hash(
+        &mut self,
+        message_hash: Vec<u8>,
+    ) -> Result<(), StarknetStateError> {
+        let val = self
+            .l2_to_l1_messages
+            .get(&message_hash)
+            .ok_or(StarknetStateError::InvalidMessageHash)?;
+
+        if *val < 0 as usize {
+            Err(StarknetStateError::InvalidMessageHash)
+        } else {
+            self.l2_to_l1_messages.insert(message_hash, val - 1);
+            Ok(())
+        }
     }
 }

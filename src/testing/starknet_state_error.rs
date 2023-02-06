@@ -3,11 +3,15 @@ use thiserror::Error;
 use crate::{
     business_logic::execution::execution_errors::ExecutionError,
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::{general_config::StarknetChainId, starknet_chain_id_error::StarknetChainIdError},
+    definitions::{
+        errors::general_config_error::StarknetChainIdError, general_config::StarknetChainId,
+    },
 };
 
 #[derive(Debug, Error)]
-pub enum StarknetStateError {
+pub(crate) enum StarknetStateError {
+    #[error("Invalid message hash key passed to l2 messages")]
+    InvalidMessageHash,
     #[error(transparent)]
     ChaindIdException(#[from] StarknetChainIdError),
     #[error(transparent)]
