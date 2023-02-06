@@ -14,7 +14,11 @@ thiserror = { version = "1.0.32" }
 num-traits = "0.2.15"
 num-integer = "0.1.45"
 starknet-crypto = "0.2.0"
+sha3 = "0.10.1"
 serde = { version = "1.0.152", features = ["derive"] }
 
 [dev-dependencies.rusty-hook]
 version = "0.11"
+
+[dev-dependencies]
+assert_matches = "1.5.0"
