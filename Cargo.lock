@@ -837,6 +837,7 @@ dependencies = [
  "assert_matches",
  "cairo-felt",
  "cairo-vm",
+ "lazy_static",
  "num-bigint",
  "num-integer",
  "num-traits",
