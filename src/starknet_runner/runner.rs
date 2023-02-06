@@ -289,6 +289,22 @@ mod tests {
         let path = Path::new("cairo_programs/fibonacci.json");
         let program = Program::from_file(path, None).unwrap();
         let mut entry_points_by_type = HashMap::new();
+
+        // insert function f entrypoint
+        // entry_points_by_type.insert(
+        //     EntryPointType::External,
+        //     [ContractEntryPoint {
+        //         selector: Felt::from_str_radix(
+        //             "485685360977693822178494178685050472186234432883326654755380582597179924681",
+        //             10,
+        //         )
+        //         .unwrap(),
+        //         offset: Felt::from_str_radix("113", 10).unwrap(),
+        //     }]
+        //     .to_vec(),
+        // );
+
+        // insert function fib entrypoint
         entry_points_by_type.insert(
             EntryPointType::External,
             [ContractEntryPoint {
@@ -336,7 +352,7 @@ mod tests {
 
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let entry_point_selector = Felt::from_str_radix(
-            "863427220838082661055619684193000030706980744522103514661584834441870967939",
+            "485685360977693822178494178685050472186234432883326654755380582597179924681",
             10,
         )
         .unwrap();
