@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    state_api::{State, StateReader, ContractStorageKey},
+    state_api::{ContractStorageKey, State, StateReader},
     state_api_objects::BlockInfo,
     state_cache::{StateCache, StorageEntry},
 };

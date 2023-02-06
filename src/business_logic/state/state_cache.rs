@@ -6,7 +6,7 @@ use felt::Felt;
 
 use super::state_api_objects::BlockInfo;
 
-use super::state_api::{StateReader, ContractStorageKey};
+use super::state_api::{ContractStorageKey, StateReader};
 use crate::utils::Address;
 /// (contract_address, key)
 pub(crate) type StorageEntry = (Address, [u8; 32]);
