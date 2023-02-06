@@ -20,6 +20,7 @@ use crate::{
         fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     },
     services::api::contract_class::{ContractClass, ContractEntryPoint},
+    utils::get_integer_range,
 };
 use crate::{
     business_logic::{
@@ -98,9 +99,8 @@ impl ExecutionEntryPoint {
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
 
-        let retdata = runner
-            .get_return_values()
-            .map_err(|e| ExecutionError::RetdataError(e.to_string()))?;
+        let retdata = runner.get_return_values()?;
+        // let retdata = get_integer_range(&runner.vm, &ret_data_ptr, ret_data_size)?;
 
         self.build_call_info(
             previous_cairo_usage,
@@ -132,8 +132,7 @@ impl ExecutionEntryPoint {
         let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
         // create starknet runner
 
-        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)
-            .map_err(|_| ExecutionError::FailToCreateCairoRunner)?;
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)?;
 
         let mut vm = VirtualMachine::new(false);
 
@@ -172,8 +171,7 @@ impl ExecutionEntryPoint {
         let alloc_pointer = runner
             .hint_processor
             .syscall_handler
-            .allocate_segment(&mut runner.vm, data)
-            .map_err(|_| ExecutionError::ErrorAllocatingSegment)?
+            .allocate_segment(&mut runner.vm, data)?
             .into();
 
         let entry_point_args = [

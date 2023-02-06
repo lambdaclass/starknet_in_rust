@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
-    types::relocatable::MaybeRelocatable,
+    types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
         errors::vm_errors::VirtualMachineError,
         runners::{
@@ -13,6 +13,7 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
+use num_traits::ToPrimitive;
 
 use crate::{
     business_logic::{
@@ -74,7 +75,7 @@ impl StarknetRunner {
     pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
         self.vm
             .get_return_values(2)
-            .map_err(|_| StarknetRunnerError::NumOutOfBounds)?
+            .map_err(|e| StarknetRunnerError::MemoryException(e))?
             .into_iter()
             .map(|val| match val {
                 Int(felt) => Ok(felt),
@@ -163,7 +164,7 @@ impl StarknetRunner {
                 .get_segment_used_size(seg_base_ptr.segment_index as usize)
                 .ok_or(ExecutionError::InvalidSegmentSize)?;
 
-        let seg_stop_ptr = match segment_stop_ptr {
+        let seg_stop_ptr: Relocatable = match segment_stop_ptr {
             MaybeRelocatable::RelocatableValue(val) => val,
             _ => return Err(ExecutionError::NotARelocatableValue),
         };
@@ -304,7 +305,7 @@ mod tests {
 
         //* --------------------------------------------
         //*    Create state reader with class hash data
-        //* -------------------------------------- -----
+        //* --------------------------------------------
 
         let block_info = BlockInfo::default();
         let ffc = DictStorage::new();
