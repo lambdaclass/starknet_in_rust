@@ -47,15 +47,6 @@ impl ContractClass {
             }
         }
 
-        if entry_points_by_type
-            .get(&EntryPointType::Constructor)
-            .ok_or(ContractClassError::MissingConstractorEndpoint)?
-            .len()
-            > 1
-        {
-            return Err(ContractClassError::MultipleConstructors);
-        }
-
         Ok(ContractClass {
             program,
             entry_points_by_type,

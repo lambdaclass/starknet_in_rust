@@ -78,7 +78,9 @@ impl StarknetRunner {
             .into_iter()
             .map(|val| match val {
                 Int(felt) => Ok(felt),
-                _ => Err(StarknetRunnerError::NotFeltInReturnValue),
+                MaybeRelocatable::RelocatableValue(r) => {
+                    Ok(self.vm.get_integer(&r).unwrap().into_owned())
+                }
             })
             .collect::<Result<Vec<Felt>, _>>()
     }
@@ -222,7 +224,7 @@ mod tests {
         },
     };
     use felt::Felt;
-    use num_traits::Zero;
+    use num_traits::{Num, Zero};
 
     use crate::{
         business_logic::{
@@ -287,18 +289,14 @@ mod tests {
         let program = Program::from_file(path, None).unwrap();
         let mut entry_points_by_type = HashMap::new();
         entry_points_by_type.insert(
-            EntryPointType::Constructor,
-            [ContractEntryPoint {
-                selector: 1.into(),
-                offset: 0.into(),
-            }]
-            .to_vec(),
-        );
-        entry_points_by_type.insert(
             EntryPointType::External,
             [ContractEntryPoint {
-                selector: 1.into(),
-                offset: 0.into(),
+                selector: Felt::from_str_radix(
+                    "485685360977693822178494178685050472186234432883326654755380582597179924681",
+                    10,
+                )
+                .unwrap(),
+                offset: Felt::from_str_radix("33", 10).unwrap(),
             }]
             .to_vec(),
         );
@@ -336,7 +334,11 @@ mod tests {
         //* ------------------------------------
 
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
-        let entry_point_selector = 1.into();
+        let entry_point_selector = Felt::from_str_radix(
+            "863427220838082661055619684193000030706980744522103514661584834441870967939",
+            10,
+        )
+        .unwrap();
         let caller_address = Address(0000.into());
         let entry_point_type = EntryPointType::External;
 
@@ -356,7 +358,7 @@ mod tests {
         let general_config = StarknetGeneralConfig::default();
         let tx_execution_context = TransactionExecutionContext::create_for_testing(
             Address(0.into()),
-            0,
+            10,
             Felt::zero(),
             general_config.invoke_tx_max_n_steps,
             TRANSACTION_VERSION,
