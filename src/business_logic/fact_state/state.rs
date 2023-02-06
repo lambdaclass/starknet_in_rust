@@ -101,7 +101,7 @@ impl ExecutionResourcesManager {
         );
 
         let cairo_usage = self.cairo_usage.clone();
-        let tx_syscall_counter = self.syscall_counter;
+        let tx_syscall_counter = &self.syscall_counter;
 
         // Add additional Cairo resources needed for the OS to run the transaction.
         let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);

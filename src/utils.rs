@@ -34,6 +34,12 @@ use num_traits::ToPrimitive;
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
 pub struct Address(pub Felt);
 
+impl From<Felt> for Address {
+    fn from(x: Felt) -> Self {
+        Address(x)
+    }
+}
+
 //* -------------------
 //*  Helper Functions
 //* -------------------

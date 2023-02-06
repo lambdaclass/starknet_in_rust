@@ -8,7 +8,7 @@ use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
-use felt::{Felt, NewFelt};
+use felt::{Felt, FeltOps, NewFelt};
 use num_traits::{ToPrimitive, Zero};
 
 use super::execution_errors::ExecutionError;
@@ -258,7 +258,7 @@ pub struct TransactionExecutionContext {
     pub(crate) version: usize,
     pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u64,
-    pub(crate) transaction_hash: Felt,
+    pub(crate) transaction_hash: [u8; 32],
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
@@ -268,7 +268,7 @@ pub struct TransactionExecutionContext {
 impl TransactionExecutionContext {
     pub fn new(
         account_contract_address: Address,
-        transaction_hash: Felt,
+        transaction_hash: [u8; 32],
         signature: Vec<Felt>,
         max_fee: u64,
         nonce: Felt,
@@ -296,7 +296,7 @@ pub(crate) struct TxInfoStruct {
     pub(crate) max_fee: u64,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
-    pub(crate) transaction_hash: Felt,
+    pub(crate) transaction_hash: [u8; 32],
     pub(crate) chain_id: Felt,
     pub(crate) nonce: Felt,
 }
@@ -326,7 +326,7 @@ impl TxInfoStruct {
             MaybeRelocatable::from(Felt::new(self.max_fee)),
             MaybeRelocatable::from(Felt::new(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
-            MaybeRelocatable::from(&self.transaction_hash),
+            MaybeRelocatable::from(Felt::from_bytes_be(&self.transaction_hash)),
             MaybeRelocatable::from(&self.chain_id),
             MaybeRelocatable::from(&self.nonce),
         ]
@@ -344,7 +344,10 @@ impl TxInfoStruct {
             .ok_or(SyscallHandlerError::FeltToU64Fail)?;
         let signature_len = get_integer(vm, &(&tx_info_ptr + 3))?;
         let signature = get_relocatable(vm, &(&tx_info_ptr + 4))?;
-        let transaction_hash = get_big_int(vm, &(&tx_info_ptr + 5))?;
+        let transaction_hash = get_big_int(vm, &(&tx_info_ptr + 5))?
+            .to_bytes_be()
+            .try_into()
+            .unwrap();
         let chain_id = get_big_int(vm, &(&tx_info_ptr + 6))?;
         let nonce = get_big_int(vm, &(&tx_info_ptr + 7))?;
 

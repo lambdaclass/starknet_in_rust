@@ -17,10 +17,61 @@ use crate::services::api::contract_class::{self, ContractClass};
 use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
 use crate::utils::Address;
-use felt::Felt;
+use felt::{Felt, FeltOps};
 use num_traits::Zero;
 
 use super::state_objects::FeeInfo;
+
+pub(crate) enum InternalTransaction {
+    Deploy(InternalDeploy),
+    Declare(InternalDeclare),
+    // InvokeFunction(InternalInvokeFunction)
+}
+
+impl InternalTransaction {
+    // def get_execution_context(self, n_steps: int) -> TransactionExecutionContext:
+    // return TransactionExecutionContext.create(
+    //     account_contract_address=self.account_contract_address,
+    //     transaction_hash=self.hash_value,
+    //     signature=self.signature,
+    //     max_fee=self.max_fee,
+    //     nonce=self.nonce,
+    //     n_steps=n_steps,
+    //     version=self.version,
+    // )
+
+    pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
+        match self {
+            InternalTransaction::Deploy(_) => todo!(),
+            InternalTransaction::Declare(declare_tx) => {
+                // transaction_hash: tx.transaction_hash,
+                // max_fee: tx.max_fee,
+                // version: tx.version,
+                // signature: tx.signature.clone(),
+                // nonce: tx.nonce,
+                // sender_address: tx.sender_address,
+                TransactionExecutionContext::new(
+                    declare_tx.sender_address.clone().into(),
+                    declare_tx.tx_hash,
+                    declare_tx.signature.clone(),
+                    declare_tx.max_fee,
+                    declare_tx.nonce.clone(),
+                    n_steps,
+                    declare_tx.version,
+                )
+            }
+        }
+    }
+
+    fn run_validate_entrypoint<T: State + StateReader>(
+        &self,
+        state: &UpdatesTrackerState<T>,
+        resources_manager: &ExecutionResourcesManager,
+        general_config: StarknetGeneralConfig,
+    ) -> Option<CallInfo> {
+        todo!()
+    }
+}
 
 pub struct InternalDeploy {
     hash_value: Felt,
@@ -176,7 +227,7 @@ impl InternalDeploy {
 
         let tx_execution_context = TransactionExecutionContext::new(
             Address(Felt::zero()),
-            self.hash_value.clone(),
+            self.hash_value.clone().to_bytes_be().try_into().unwrap(),
             Vec::new(),
             0,
             Felt::zero(),
@@ -192,19 +243,28 @@ impl InternalDeploy {
 /// Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 /// contract class.
 pub(crate) struct InternalDeclare {
+    tx_hash: [u8; 32],
     /// The hash of the declared class.
     class_hash: [u8; 32],
-    sender_address: Felt,
+    sender_address: Address,
     /// Class variables.
     tx_type: TransactionType,
-    // related_external_cls: ClassVar[Type[Transaction]] = Declare
+    max_fee: u64,
+    version: u64,
+    signature: Vec<Felt>,
     // validate_entry_point_selector: Felt,
+    nonce: Felt,
 }
 
 impl InternalDeclare {
     pub fn new(
         contract_class: ContractClass,
         sender_address: Felt,
+        max_fee: u64,
+        version: u64,
+        tx_hash: [u8; 32],
+        signature: Vec<Felt>,
+        nonce: Felt,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash_felt = compute_class_hash(contract_class);
         let class_hash = class_hash_felt
@@ -214,7 +274,12 @@ impl InternalDeclare {
             .map_err(|_| SyscallHandlerError::FeltToFixBytesArrayFail(class_hash_felt.clone()))?;
         Ok(InternalDeclare {
             class_hash,
-            sender_address,
+            max_fee,
+            version,
+            tx_hash,
+            signature,
+            nonce,
+            sender_address: sender_address.into(),
             tx_type: TransactionType::Declare,
         })
     }
@@ -222,13 +287,18 @@ impl InternalDeclare {
     pub fn _apply_specific_concurrent_changes<T: State + StateReader>(
         &self,
         state: &UpdatesTrackerState<T>,
+        validate_info: Option<CallInfo>,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo {
         // validate transaction
         let resources_manager = ExecutionResourcesManager::default();
-        let validate_info = self.run_validate_entrypoint(state, &resources_manager, general_config);
         let actual_resources = resources_manager
-            .calculate_tx_resources(&vec![validate_info], TransactionType::Declare, state, None)
+            .calculate_tx_resources(
+                &vec![validate_info.clone()],
+                TransactionType::Declare,
+                state,
+                None,
+            )
             .unwrap();
 
         TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -237,14 +307,5 @@ impl InternalDeclare {
             actual_resources,
             Some(self.tx_type.clone()),
         )
-    }
-
-    fn run_validate_entrypoint<T: State + StateReader>(
-        &self,
-        state: &UpdatesTrackerState<T>,
-        resources_manager: &ExecutionResourcesManager,
-        general_config: StarknetGeneralConfig,
-    ) -> Option<CallInfo> {
-        todo!()
     }
 }

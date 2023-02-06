@@ -21,7 +21,7 @@ impl OsResources {
 }
 
 pub fn get_additional_os_resources(
-    syscall_counter: HashMap<String, u64>,
+    syscall_counter: &HashMap<String, u64>,
     tx_type: TransactionType,
 ) -> ExecutionResources {
     todo!();
