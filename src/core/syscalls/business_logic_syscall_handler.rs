@@ -14,7 +14,7 @@ use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
-use crate::hash_utils::calculate_contract_address_from_hash;
+use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class::EntryPointType;
 use crate::starknet_storage::dict_storage::DictStorage;
 use crate::utils::*;
@@ -177,7 +177,7 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
             Address(0.into())
         };
 
-        let _contract_address = calculate_contract_address_from_hash(
+        let _contract_address = calculate_contract_address(
             &Address(request.contract_address_salt),
             class_hash,
             &constructor_calldata,
