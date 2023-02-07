@@ -109,7 +109,7 @@ impl InternalDeploy {
         todo!()
     }
 
-    pub fn _apply_specific_concurrent_changes<S: StateReader>(
+    pub fn _apply_specific_concurrent_changes<S: State + StateReader>(
         &self,
         mut state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
@@ -134,7 +134,7 @@ impl InternalDeploy {
         (fee_transfer_info, actual_fee)
     }
 
-    pub fn handle_empty_constructor<S: StateReader>(
+    pub fn handle_empty_constructor<S: State + StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
@@ -174,12 +174,12 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor<S: StateReader>(
+    pub fn invoke_constructor<S: State + StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let entry_point_selector = "constructor".as_bytes().into();
+        let entry_point_selector = Felt::from_bytes_be("constructor".as_bytes());
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
@@ -201,12 +201,16 @@ impl InternalDeploy {
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let call_info = call.execute(
-            state,
-            general_config,
-            &mut resources_manager,
-            tx_execution_context,
-        )?;
+
+        // TODO: fix the issue with update tracker state and delete the default
+
+        let call_info = CallInfo::default();
+        // let call_info = call.execute(
+        //     state,
+        //     general_config,
+        //     &mut resources_manager,
+        //     tx_execution_context,
+        // )?;
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -232,7 +236,7 @@ impl InternalDeploy {
 // ------------------------------------------------------------
 
 impl InternalStateTransaction for InternalDeploy {
-    fn apply_specific_concurrent_changes<S: StateReader>(
+    fn apply_specific_concurrent_changes<S: State + StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
@@ -285,7 +289,7 @@ impl InternalDeclare {
             .try_into()
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(hash.clone()))?;
 
-        let validate_entry_point_selector = "__validate_declare__".as_bytes().into();
+        let validate_entry_point_selector = Felt::from_bytes_be("__validate_declare__".as_bytes());
 
         Ok(InternalDeclare {
             class_hash,
@@ -304,7 +308,7 @@ impl InternalDeclare {
 //                   Trait implementation
 // ------------------------------------------------------------
 impl InternalStateTransaction for InternalDeclare {
-    fn apply_specific_concurrent_changes<S: StateReader>(
+    fn apply_specific_concurrent_changes<S: State + StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
@@ -353,21 +357,21 @@ impl InternalInvokeFunction {
         chain_id: u64,
         nonce: Option<Felt>,
         version: u64,
-    ) -> Self {
+    ) -> Result<Self, TransactionError> {
         let (entry_point_selector_field, additional_data) =
-            preprocess_invoke_function_fields(entry_point_selector, nonce, max_fee, version);
+            preprocess_invoke_function_fields(entry_point_selector, nonce, max_fee, version)?;
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
             contract_address,
-            entry_point_selector,
+            entry_point_selector_field,
             &calldata,
             max_fee,
             chain_id,
-            additional_data,
-        );
+            &additional_data,
+        )?;
 
-        InternalInvokeFunction {
+        Ok(InternalInvokeFunction {
             contract_address,
             entry_point_selector,
             entry_point_type: EntryPointType::External,
@@ -378,6 +382,25 @@ impl InternalInvokeFunction {
             singature,
             nonce,
             hash_value,
-        }
+        })
+    }
+}
+
+impl InternalStateTransaction for InternalInvokeFunction {
+    fn apply_specific_concurrent_changes<S: State + StateReader>(
+        &self,
+        state: UpdatesTrackerState<S>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo {
+        todo!()
+    }
+
+    fn apply_specific_sequential_changes(
+        &self,
+        state: impl State,
+        general_config: StarknetGeneralConfig,
+        actual_resources: HashMap<String, usize>,
+    ) -> FeeInfo {
+        todo!()
     }
 }

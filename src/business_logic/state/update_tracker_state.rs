@@ -29,8 +29,8 @@ use super::{
 // to be done and this should not count as a storage-write.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-pub struct UpdatesTrackerState<T: StateReader> {
-    pub(crate) state: InMemoryStateReader,
+pub struct UpdatesTrackerState<T: State + StateReader> {
+    pub(crate) state: T,
     pub(crate) storage_initial_values: HashMap<StorageEntry, u64>,
     pub(crate) storage_writes: HashMap<StorageEntry, u64>,
 }
@@ -39,7 +39,7 @@ pub struct UpdatesTrackerState<T: StateReader> {
 //                    Functions
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-impl<T: StateReader> UpdatesTrackerState<T> {
+impl<T: State + StateReader> UpdatesTrackerState<T> {
     pub fn new(state: T) -> Self {
         UpdatesTrackerState {
             state,

@@ -84,7 +84,7 @@ pub(crate) trait InternalStateTransaction {
     //  Abstract methods
     // ------------------
 
-    fn apply_specific_concurrent_changes<S: StateReader>(
+    fn apply_specific_concurrent_changes<S: State + StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,

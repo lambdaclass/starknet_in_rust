@@ -142,9 +142,9 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
-    ) -> TransactionExecutionInfo {
-        let tx = self.create_invoke_function(
-            &self.state,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let mut tx = self.create_invoke_function(
+            self.state,
             contract_address,
             selector,
             calldata,
@@ -152,8 +152,10 @@ impl StarknetState {
             TRANSACTION_VERSION,
             signature,
             nonce,
-            self.chain_id(),
-        );
+            self.chain_id().as_u64()?,
+        )?;
+
+        Ok(self.execute_tx(&mut tx))
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -272,8 +274,8 @@ impl StarknetState {
         version: u64,
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
-        chain_id: StarknetChainId,
-    ) -> InternalInvokeFunction {
+        chain_id: u64,
+    ) -> Result<InternalInvokeFunction, TransactionError> {
         let signature = match signature {
             Some(sign) => sign,
             None => Vec::new(),
@@ -281,7 +283,7 @@ impl StarknetState {
 
         let nonce = match nonce {
             Some(n) => n,
-            None => state.get_nonce_at(&contract_address)?,
+            None => state.get_nonce_at(&contract_address)?.to_owned(),
         };
 
         InternalInvokeFunction::new(

@@ -148,7 +148,7 @@ pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
         })
 }
 
-pub fn calculate_tx_resources<S: StateReader>(
+pub fn calculate_tx_resources<S: State + StateReader>(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
@@ -286,8 +286,8 @@ pub(crate) fn preprocess_invoke_function_fields(
     nonce: Option<Felt>,
     max_fee: u64,
     version: u64,
-) -> Result<(Felt, Vec<Felt>), TransactionError> {
-    if version > 0 && version < i32::pow(2, 128) {
+) -> Result<(u64, Vec<u64>), TransactionError> {
+    if version > 0 && version < u64::pow(2, 128) {
         match nonce {
             Some(_) => {
                 return Err(TransactionError::InvalidNonce(
@@ -296,15 +296,18 @@ pub(crate) fn preprocess_invoke_function_fields(
             }
             None => {
                 let additional_data = Vec::new();
-                let entry_point_selector_field = entry_point_selector;
+                let entry_point_selector_field = entry_point_selector
+                    .to_u64()
+                    .ok_or(TransactionError::InvalidFeltConversion)?;
                 Ok((entry_point_selector_field, additional_data))
             }
         }
     } else {
         match nonce {
             Some(n) => {
-                let additional_data = [n].to_vec();
-                let entry_point_selector_field = 0;
+                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
+                let additional_data = [val].to_vec();
+                let entry_point_selector_field = 0 as u64;
                 Ok((entry_point_selector_field, additional_data))
             }
             None => {
