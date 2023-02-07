@@ -1,7 +1,9 @@
 use thiserror::Error;
 
 use crate::{
-    business_logic::execution::execution_errors::ExecutionError,
+    business_logic::{
+        execution::execution_errors::ExecutionError, transaction::error::TransactionError,
+    },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::{
         errors::general_config_error::StarknetChainIdError, general_config::StarknetChainId,
@@ -20,4 +22,6 @@ pub(crate) enum StarknetStateError {
     StateException(#[from] StateError),
     #[error(transparent)]
     ExecuteException(#[from] ExecutionError),
+    #[error(transparent)]
+    TransactionException(#[from] TransactionError),
 }

@@ -17,6 +17,9 @@ use crate::{
 pub type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) trait InternalStateTransaction {
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
     fn get_state_selector_of_many(
         txs: Vec<impl InternalStateTransaction>,
         general_config: StarknetGeneralConfig,
@@ -24,11 +27,19 @@ pub(crate) trait InternalStateTransaction {
         todo!()
     }
 
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
     fn apply_state_updates(
         &self,
         state: CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo;
+    ) -> TransactionExecutionInfo {
+        self.sync_apply_state_updates(state, general_config)
+    }
+
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
 
     fn sync_apply_state_updates<T>(
         &self,
@@ -54,6 +65,9 @@ pub(crate) trait InternalStateTransaction {
         )
     }
 
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
     fn apply_concurrent_changes<T>(
         &self,
         state: T,
@@ -65,6 +79,9 @@ pub(crate) trait InternalStateTransaction {
         self.apply_specific_concurrent_changes(UpdatesTrackerState::new(state), general_config)
     }
 
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+
     fn apply_sequential_changes(
         &self,
         state: impl State,
@@ -73,6 +90,9 @@ pub(crate) trait InternalStateTransaction {
     ) -> FeeInfo {
         self.apply_specific_sequential_changes(state, general_config, actual_resources)
     }
+
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
 
     // ------------------
     //  Abstract methods
@@ -85,6 +105,9 @@ pub(crate) trait InternalStateTransaction {
     ) -> TransactionExecutionInfo
     where
         T: State;
+
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
 
     fn apply_specific_sequential_changes(
         &self,

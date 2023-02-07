@@ -1,7 +1,9 @@
 use std::{collections::HashMap, hash::Hash};
 
 use felt::Felt;
+use num_traits::Zero;
 
+use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::{
     business_logic::{
         execution::{
@@ -12,11 +14,16 @@ use crate::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{cached_state::CachedState, state_api::State, state_api_objects::BlockInfo},
-        transaction::{internal_objects::InternalDeploy, state_objects::InternalStateTransaction},
+        transaction::{
+            error::TransactionError,
+            internal_objects::{InternalDeclare, InternalDeploy},
+            state_objects::InternalStateTransaction,
+        },
     },
     definitions::{
         constants::TRANSACTION_VERSION,
-        general_config::{self, StarknetGeneralConfig},
+        general_config::{self, StarknetChainId, StarknetGeneralConfig},
+        transaction_type::DEFAULT_DECLARE_SENDER_ADDRESS,
     },
     services::api::{
         contract_class::{ContractClass, EntryPointType},
@@ -26,9 +33,9 @@ use crate::{
     utils::Address,
 };
 
-use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
-
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// StarkNet testing object. Represents a state of a StarkNet network.
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pub(crate) struct StarknetState {
     pub(crate) state: CachedState<InMemoryStateReader>,
     pub(crate) general_config: StarknetGeneralConfig,
@@ -37,7 +44,14 @@ pub(crate) struct StarknetState {
     events: Vec<Event>,
 }
 
+// ------------------------------------------------------
+//                     Functions
+// ------------------------------------------------------
 impl StarknetState {
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// Creates a new StarknetState instance.
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     pub fn empty(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
@@ -58,19 +72,36 @@ impl StarknetState {
         }
     }
 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// Declares a contract class.
     /// Returns the class hash and the execution info.
-    /// Args:
-    /// contract_class - a compiled StarkNet contract returned by compile_starknet_files()
-    pub fn declare(&self, contract_class: ContractClass) -> (Vec<u8>, TransactionExecutionInfo) {
-        todo!()
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    pub fn declare(
+        &mut self,
+        contract_class: ContractClass,
+    ) -> Result<([u8; 32], TransactionExecutionInfo), StarknetStateError> {
+        let tx = InternalDeclare::new(
+            contract_class.clone(),
+            self.chain_id().as_u64()?,
+            Address(DEFAULT_DECLARE_SENDER_ADDRESS.into()),
+            0,
+            0,
+            Vec::new(),
+            Felt::zero(),
+        )?;
+
+        self.state
+            .set_contract_class(&tx.class_hash, &contract_class)?;
+        let state_copy = self.state.copy_and_apply();
+        let tx_execution_info = tx.apply_state_updates(state_copy, self.general_config.clone());
+
+        Ok((tx.class_hash, tx_execution_info))
     }
 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// Deploys a contract. Returns the contract address and the execution info.
-    /// Args:
-    /// contract_class - a compiled StarkNet contract returned by compile_starknet_files().
-    /// contract_address_salt - If supplied, a hexadecimal string or an integer representing
-    /// the salt to use for deploying. Otherwise, the salt is randomized.
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // TODO: ask for contract_address_salt
     pub fn deploy(
@@ -95,10 +126,12 @@ impl StarknetState {
         Ok((tx.contract_address, tx_execution_info))
     }
 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    pub fn execute_entry_raw_point(
+    pub fn execute_entry_point_raw(
         &mut self,
         contract_address: Address,
         entry_point_selector: Felt,
@@ -132,13 +165,17 @@ impl StarknetState {
         Ok(call_info)
     }
 
-    pub fn execute_tx(&mut self, tx: &mut InternalDeploy) -> TransactionExecutionInfo {
+    pub fn execute_tx(
+        &mut self,
+        tx: &mut impl InternalStateTransaction,
+    ) -> TransactionExecutionInfo {
         let state_copy = self.state.copy_and_apply();
         let tx_execution_info = tx.apply_state_updates(state_copy, self.general_config.clone());
         let exec_info = ExecutionInfo::Transaction(tx_execution_info.clone());
         self.add_messages_and_events(&exec_info);
         tx_execution_info
     }
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     pub fn add_messages_and_events(
         &mut self,
@@ -164,7 +201,10 @@ impl StarknetState {
         Ok(())
     }
 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// Consumes the given message hash.
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     pub fn consume_message_hash(
         &mut self,
         message_hash: Vec<u8>,
@@ -180,5 +220,13 @@ impl StarknetState {
             self.l2_to_l1_messages.insert(message_hash, val - 1);
             Ok(())
         }
+    }
+
+    // ------------------------
+    //    Private functions
+    // ------------------------
+
+    fn chain_id(&self) -> StarknetChainId {
+        self.general_config.starknet_os_config.chain_id.clone()
     }
 }

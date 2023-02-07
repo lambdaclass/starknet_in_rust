@@ -122,8 +122,6 @@ impl StarknetRunner {
             return Err(ExecutionError::IllegalOsPtrOffset);
         }
 
-        println!("os1: {os_context:?}");
-
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
         println!("os_context_end: {os_context_end}");
         let final_os_context_ptr = os_context_end.sub_usize(os_context.len())?;
@@ -133,11 +131,7 @@ impl StarknetRunner {
             .ok_or(ExecutionError::InvalidPtrFetch)?
             .to_owned();
 
-        println!("os_context_ptr: {os_context_ptr}");
-
         let addr = final_os_context_ptr + ptr_offset;
-
-        println!("addr: {addr}");
 
         let ptr_fetch_from_memory = self
             .vm
@@ -173,7 +167,6 @@ impl StarknetRunner {
             _ => return Err(ExecutionError::NotARelocatableValue),
         };
 
-        println!("breakpoint");
         if expected_stop_ptr != seg_stop_ptr {
             return Err(ExecutionError::InvalidStopPointer(
                 expected_stop_ptr,
