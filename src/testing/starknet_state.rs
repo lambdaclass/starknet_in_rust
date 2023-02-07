@@ -135,7 +135,7 @@ impl StarknetState {
     /// Invokes a contract function. Returns the execution info.
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     pub fn invoke_raw(
-        &self,
+        &mut self,
         contract_address: Address,
         selector: Felt,
         calldata: Vec<Felt>,
@@ -143,8 +143,9 @@ impl StarknetState {
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx = self.create_invoke_function(
-            self.state,
+        let chain_id = self.chain_id().as_u64()?;
+        let mut tx = create_invoke_function(
+            &mut self.state,
             contract_address,
             selector,
             calldata,
@@ -152,7 +153,7 @@ impl StarknetState {
             TRANSACTION_VERSION,
             signature,
             nonce,
-            self.chain_id().as_u64()?,
+            chain_id,
         )?;
 
         Ok(self.execute_tx(&mut tx))
@@ -263,38 +264,37 @@ impl StarknetState {
     fn chain_id(&self) -> StarknetChainId {
         self.general_config.starknet_os_config.chain_id.clone()
     }
+}
 
-    fn create_invoke_function(
-        &self,
-        state: CachedState<InMemoryStateReader>,
-        contract_address: Address,
-        entry_point_selector: Felt,
-        calldata: Vec<Felt>,
-        max_fee: u64,
-        version: u64,
-        signature: Option<Vec<Felt>>,
-        nonce: Option<Felt>,
-        chain_id: u64,
-    ) -> Result<InternalInvokeFunction, TransactionError> {
-        let signature = match signature {
-            Some(sign) => sign,
-            None => Vec::new(),
-        };
+fn create_invoke_function(
+    state: &mut CachedState<InMemoryStateReader>,
+    contract_address: Address,
+    entry_point_selector: Felt,
+    calldata: Vec<Felt>,
+    max_fee: u64,
+    version: u64,
+    signature: Option<Vec<Felt>>,
+    nonce: Option<Felt>,
+    chain_id: u64,
+) -> Result<InternalInvokeFunction, TransactionError> {
+    let signature = match signature {
+        Some(sign) => sign,
+        None => Vec::new(),
+    };
 
-        let nonce = match nonce {
-            Some(n) => n,
-            None => state.get_nonce_at(&contract_address)?.to_owned(),
-        };
+    let nonce = match nonce {
+        Some(n) => n,
+        None => state.get_nonce_at(&contract_address)?.to_owned(),
+    };
 
-        InternalInvokeFunction::new(
-            contract_address,
-            entry_point_selector,
-            max_fee,
-            calldata,
-            signature,
-            chain_id,
-            Some(nonce),
-            version,
-        )
-    }
+    InternalInvokeFunction::new(
+        contract_address,
+        entry_point_selector,
+        max_fee,
+        calldata,
+        signature,
+        chain_id,
+        Some(nonce),
+        version,
+    )
 }

@@ -174,7 +174,7 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor<S: State + StateReader>(
+    pub(crate) fn invoke_constructor<S: State + StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
@@ -215,7 +215,7 @@ impl InternalDeploy {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
-            self.tx_type,
+            self.tx_type.clone(),
             state,
             None,
         )?;
@@ -225,7 +225,7 @@ impl InternalDeploy {
                 None,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type),
+                Some(self.tx_type.clone()),
             ),
         )
     }
@@ -358,12 +358,17 @@ impl InternalInvokeFunction {
         nonce: Option<Felt>,
         version: u64,
     ) -> Result<Self, TransactionError> {
-        let (entry_point_selector_field, additional_data) =
-            preprocess_invoke_function_fields(entry_point_selector, nonce, max_fee, version)?;
+        let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
+            entry_point_selector.clone(),
+            nonce.clone(),
+            max_fee,
+            version,
+        )?;
+
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
-            contract_address,
+            contract_address.clone(),
             entry_point_selector_field,
             &calldata,
             max_fee,
