@@ -11,6 +11,8 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub(crate) enum TransactionError {
+    #[error("{0}")]
+    InvalidNonce(String),
     #[error(transparent)]
     UtilsError(#[from] UtilsError),
     #[error(transparent)]

@@ -5,6 +5,7 @@ use num_traits::ToPrimitive;
 use serde_json::value;
 
 use crate::{
+    business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
     core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
     starknet_storage::storage, utils::Address,
 };
@@ -15,6 +16,7 @@ use super::{
     state_cache::StorageEntry,
 };
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // An implementation of the SyncState API that wraps another SyncState object and contains a cache.
 // All requests are delegated to the wrapped SyncState, and caches are maintained for storage reads
 // and writes.
@@ -25,13 +27,19 @@ use super::{
 // be counted as a single storage-write. Additionally, if a transaction writes a value to storage
 // which is equal to the initial value previously contained in that address, then no change needs
 // to be done and this should not count as a storage-write.
-pub struct UpdatesTrackerState<T: State> {
-    pub(crate) state: T,
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+pub struct UpdatesTrackerState<T: StateReader> {
+    pub(crate) state: InMemoryStateReader,
     pub(crate) storage_initial_values: HashMap<StorageEntry, u64>,
     pub(crate) storage_writes: HashMap<StorageEntry, u64>,
 }
 
-impl<T: State + StateReader> UpdatesTrackerState<T> {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                    Functions
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+impl<T: StateReader> UpdatesTrackerState<T> {
     pub fn new(state: T) -> Self {
         UpdatesTrackerState {
             state,
@@ -40,12 +48,14 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         }
     }
 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // This method writes to a storage cell and updates the cache accordingly. If this is the first
     // access to the cell (read or write), the method first reads the value at that cell and caches
     // it.
     // This read operation is necessary for fee calculation. Because if the transaction writes a
     // value to storage that is identical to the value previously held at that address, then no
     // change is made to that cell and it does not count as a storage-change in fee calculation.
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     pub fn set_storage_at(
         &mut self,
@@ -71,6 +81,8 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         self.state.set_storage_at(&address_key_pair, value);
         Ok(())
     }
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     pub fn get_storage_at(
         &mut self,

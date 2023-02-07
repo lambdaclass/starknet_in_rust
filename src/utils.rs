@@ -8,7 +8,8 @@ use std::{
 use crate::{
     business_logic::{
         execution::{
-            execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            execution_entry_point, execution_errors::ExecutionError,
+            gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
         fact_state::state::ExecutionResourcesManager,
@@ -18,6 +19,7 @@ use crate::{
             state_cache::StorageEntry,
             update_tracker_state::UpdatesTrackerState,
         },
+        transaction::error::TransactionError,
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::transaction_type::TransactionType,
@@ -146,7 +148,7 @@ pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
         })
 }
 
-pub fn calculate_tx_resources<S: State + StateReader>(
+pub fn calculate_tx_resources<S: StateReader>(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
@@ -269,6 +271,49 @@ pub fn validate_contract_deployed<S: StateReader + Clone>(
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
+}
+
+// ------------------------------------
+//  Invoke internal functions utils
+// ------------------------------------
+
+// Performs validation on fields related to function invocation transaction.
+// InvokeFunction transaction.
+// Deduces and returns fields required for hash calculation of
+
+pub(crate) fn preprocess_invoke_function_fields(
+    entry_point_selector: Felt,
+    nonce: Option<Felt>,
+    max_fee: u64,
+    version: u64,
+) -> Result<(Felt, Vec<Felt>), TransactionError> {
+    if version > 0 && version < i32::pow(2, 128) {
+        match nonce {
+            Some(_) => {
+                return Err(TransactionError::InvalidNonce(
+                    "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
+                ))
+            }
+            None => {
+                let additional_data = Vec::new();
+                let entry_point_selector_field = entry_point_selector;
+                Ok((entry_point_selector_field, additional_data))
+            }
+        }
+    } else {
+        match nonce {
+            Some(n) => {
+                let additional_data = [n].to_vec();
+                let entry_point_selector_field = 0;
+                Ok((entry_point_selector_field, additional_data))
+            }
+            None => {
+                return Err(TransactionError::InvalidNonce(
+                    "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
+                ))
+            }
+        }
+    }
 }
 
 //* -------------------

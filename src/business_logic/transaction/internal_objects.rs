@@ -12,7 +12,9 @@ use crate::business_logic::state::update_tracker_state::UpdatesTrackerState;
 use crate::core::contract_address::starknet_contract_address::compute_class_hash;
 use crate::core::errors::state_errors::StateError;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::core::transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash;
+use crate::core::transaction_hash::starknet_transaction_hash::{
+    calculate_deploy_transaction_hash, calculate_transaction_hash_common, TransactionHashPrefix,
+};
 use crate::definitions::constants::TRANSACTION_VERSION;
 use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::definitions::transaction_type::TransactionType;
@@ -20,7 +22,7 @@ use crate::hash_utils::calculate_contract_address_from_hash;
 use crate::services::api::contract_class::{self, ContractClass, EntryPointType};
 use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
-use crate::utils::{calculate_tx_resources, Address};
+use crate::utils::{calculate_tx_resources, preprocess_invoke_function_fields, Address};
 use crate::utils_errors::UtilsError;
 use felt::Felt;
 use num_traits::Zero;
@@ -82,7 +84,6 @@ impl InternalDeploy {
             tx_type: TransactionType::Deploy,
         })
     }
-    // ------------------------------------------------------------
 
     pub fn create_for_testing<S: Storage>(
         ffc: FactFetchingContext<S>,
@@ -99,19 +100,16 @@ impl InternalDeploy {
             TRANSACTION_VERSION,
         )
     }
-    // ------------------------------------------------------------
 
     pub fn class_hash(&self) -> [u8; 32] {
         self.contract_hash
     }
-    // ------------------------------------------------------------
 
     pub fn get_state_selector() {
         todo!()
     }
-    // ------------------------------------------------------------
 
-    pub fn _apply_specific_concurrent_changes<S: State + StateReader>(
+    pub fn _apply_specific_concurrent_changes<S: StateReader>(
         &self,
         mut state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
@@ -124,7 +122,6 @@ impl InternalDeploy {
 
         self.handle_empty_constructor(state)
     }
-    // ------------------------------------------------------------
 
     pub fn _apply_specific_sequential_changes(
         &self,
@@ -136,9 +133,8 @@ impl InternalDeploy {
         let actual_fee = 0;
         (fee_transfer_info, actual_fee)
     }
-    // ------------------------------------------------------------
 
-    pub fn handle_empty_constructor<S: State + StateReader>(
+    pub fn handle_empty_constructor<S: StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
@@ -177,14 +173,13 @@ impl InternalDeploy {
             ),
         )
     }
-    // ------------------------------------------------------------
 
-    pub fn invoke_constructor<S: State>(
+    pub fn invoke_constructor<S: StateReader>(
         &self,
         state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let entry_point_selector = Felt::from_bytes_be("constructor".to_string().as_bytes());
+        let entry_point_selector = "constructor".as_bytes().into();
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
@@ -237,19 +232,13 @@ impl InternalDeploy {
 // ------------------------------------------------------------
 
 impl InternalStateTransaction for InternalDeploy {
-    // --------------------------------------------------------
-
-    fn apply_specific_concurrent_changes<T>(
+    fn apply_specific_concurrent_changes<S: StateReader>(
         &self,
-        state: UpdatesTrackerState<T>,
+        state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo
-    where
-        T: State,
-    {
+    ) -> TransactionExecutionInfo {
         todo!()
     }
-    // --------------------------------------------------------
 
     fn apply_specific_sequential_changes(
         &self,
@@ -269,7 +258,7 @@ pub(crate) struct InternalDeclare {
     pub(crate) class_hash: [u8; 32],
     pub(crate) sender_address: Address,
     pub(crate) tx_type: TransactionType,
-    pub(crate) validate_entry_point_selector: String,
+    pub(crate) validate_entry_point_selector: Felt,
     pub(crate) version: usize,
     pub(crate) max_fee: u64,
     pub(crate) signature: Vec<Felt>,
@@ -296,11 +285,13 @@ impl InternalDeclare {
             .try_into()
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(hash.clone()))?;
 
+        let validate_entry_point_selector = "__validate_declare__".as_bytes().into();
+
         Ok(InternalDeclare {
             class_hash,
             sender_address,
             tx_type: TransactionType::Declare,
-            validate_entry_point_selector: String::new(),
+            validate_entry_point_selector,
             version,
             max_fee,
             signature,
@@ -313,19 +304,13 @@ impl InternalDeclare {
 //                   Trait implementation
 // ------------------------------------------------------------
 impl InternalStateTransaction for InternalDeclare {
-    // --------------------------------------------------------
-
-    fn apply_specific_concurrent_changes<T>(
+    fn apply_specific_concurrent_changes<S: StateReader>(
         &self,
-        state: UpdatesTrackerState<T>,
+        state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo
-    where
-        T: State,
-    {
+    ) -> TransactionExecutionInfo {
         todo!()
     }
-    // ---------------------------------------------------------
 
     fn apply_specific_sequential_changes(
         &self,
@@ -334,5 +319,65 @@ impl InternalStateTransaction for InternalDeclare {
         actual_resources: HashMap<String, usize>,
     ) -> FeeInfo {
         todo!()
+    }
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///   Represents an internal transaction in the StarkNet network that is an invocation of a Cairo
+///   contract function.
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pub(crate) struct InternalInvokeFunction {
+    contract_address: Address,
+    entry_point_selector: Felt,
+    entry_point_type: EntryPointType,
+    calldata: Vec<Felt>,
+    tx_type: TransactionType,
+    version: u64,
+    max_fee: u64,
+    singature: Vec<Felt>,
+    nonce: Option<Felt>,
+    hash_value: Felt,
+}
+
+// ------------------------------------------------------------
+//                        Functions
+// ------------------------------------------------------------
+
+impl InternalInvokeFunction {
+    pub fn new(
+        contract_address: Address,
+        entry_point_selector: Felt,
+        max_fee: u64,
+        calldata: Vec<Felt>,
+        singature: Vec<Felt>,
+        chain_id: u64,
+        nonce: Option<Felt>,
+        version: u64,
+    ) -> Self {
+        let (entry_point_selector_field, additional_data) =
+            preprocess_invoke_function_fields(entry_point_selector, nonce, max_fee, version);
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::Invoke,
+            version,
+            contract_address,
+            entry_point_selector,
+            &calldata,
+            max_fee,
+            chain_id,
+            additional_data,
+        );
+
+        InternalInvokeFunction {
+            contract_address,
+            entry_point_selector,
+            entry_point_type: EntryPointType::External,
+            calldata,
+            tx_type: TransactionType::InvokeFunction,
+            version,
+            max_fee,
+            singature,
+            nonce,
+            hash_value,
+        }
     }
 }

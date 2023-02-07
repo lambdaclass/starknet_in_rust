@@ -16,19 +16,17 @@ use crate::{
 
 pub type FeeInfo = (Option<CallInfo>, u64);
 
-pub(crate) trait InternalStateTransaction {
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
+// ------------------------------------------------------------
+//               Internal Strate Transaction Trait
+// ------------------------------------------------------------
 
+pub(crate) trait InternalStateTransaction {
     fn get_state_selector_of_many(
         txs: Vec<impl InternalStateTransaction>,
         general_config: StarknetGeneralConfig,
     ) {
         todo!()
     }
-
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
 
     fn apply_state_updates(
         &self,
@@ -37,9 +35,6 @@ pub(crate) trait InternalStateTransaction {
     ) -> TransactionExecutionInfo {
         self.sync_apply_state_updates(state, general_config)
     }
-
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
 
     fn sync_apply_state_updates<T>(
         &self,
@@ -65,9 +60,6 @@ pub(crate) trait InternalStateTransaction {
         )
     }
 
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
-
     fn apply_concurrent_changes<T>(
         &self,
         state: T,
@@ -79,9 +71,6 @@ pub(crate) trait InternalStateTransaction {
         self.apply_specific_concurrent_changes(UpdatesTrackerState::new(state), general_config)
     }
 
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
-
     fn apply_sequential_changes(
         &self,
         state: impl State,
@@ -91,23 +80,15 @@ pub(crate) trait InternalStateTransaction {
         self.apply_specific_sequential_changes(state, general_config, actual_resources)
     }
 
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
-
     // ------------------
     //  Abstract methods
     // ------------------
 
-    fn apply_specific_concurrent_changes<T>(
+    fn apply_specific_concurrent_changes<S: StateReader>(
         &self,
-        state: UpdatesTrackerState<T>,
+        state: UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo
-    where
-        T: State;
-
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
+    ) -> TransactionExecutionInfo;
 
     fn apply_specific_sequential_changes(
         &self,

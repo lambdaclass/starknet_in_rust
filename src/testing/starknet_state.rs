@@ -13,10 +13,14 @@ use crate::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::{cached_state::CachedState, state_api::State, state_api_objects::BlockInfo},
+        state::{
+            cached_state::CachedState,
+            state_api::{State, StateReader},
+            state_api_objects::BlockInfo,
+        },
         transaction::{
             error::TransactionError,
-            internal_objects::{InternalDeclare, InternalDeploy},
+            internal_objects::{InternalDeclare, InternalDeploy, InternalInvokeFunction},
             state_objects::InternalStateTransaction,
         },
     },
@@ -36,6 +40,7 @@ use crate::{
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// StarkNet testing object. Represents a state of a StarkNet network.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#[derive(Debug, Clone)]
 pub(crate) struct StarknetState {
     pub(crate) state: CachedState<InMemoryStateReader>,
     pub(crate) general_config: StarknetGeneralConfig,
@@ -127,6 +132,31 @@ impl StarknetState {
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /// Invokes a contract function. Returns the execution info.
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    pub fn invoke_raw(
+        &self,
+        contract_address: Address,
+        selector: Felt,
+        calldata: Vec<Felt>,
+        max_fee: u64,
+        signature: Option<Vec<Felt>>,
+        nonce: Option<Felt>,
+    ) -> TransactionExecutionInfo {
+        let tx = self.create_invoke_function(
+            &self.state,
+            contract_address,
+            selector,
+            calldata,
+            max_fee,
+            TRANSACTION_VERSION,
+            signature,
+            nonce,
+            self.chain_id(),
+        );
+    }
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,6 +205,8 @@ impl StarknetState {
         self.add_messages_and_events(&exec_info);
         tx_execution_info
     }
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     pub fn add_messages_and_events(
@@ -228,5 +260,39 @@ impl StarknetState {
 
     fn chain_id(&self) -> StarknetChainId {
         self.general_config.starknet_os_config.chain_id.clone()
+    }
+
+    fn create_invoke_function(
+        &self,
+        state: CachedState<InMemoryStateReader>,
+        contract_address: Address,
+        entry_point_selector: Felt,
+        calldata: Vec<Felt>,
+        max_fee: u64,
+        version: u64,
+        signature: Option<Vec<Felt>>,
+        nonce: Option<Felt>,
+        chain_id: StarknetChainId,
+    ) -> InternalInvokeFunction {
+        let signature = match signature {
+            Some(sign) => sign,
+            None => Vec::new(),
+        };
+
+        let nonce = match nonce {
+            Some(n) => n,
+            None => state.get_nonce_at(&contract_address)?,
+        };
+
+        InternalInvokeFunction::new(
+            contract_address,
+            entry_point_selector,
+            max_fee,
+            calldata,
+            signature,
+            chain_id,
+            Some(nonce),
+            version,
+        )
     }
 }
