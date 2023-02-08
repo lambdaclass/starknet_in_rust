@@ -4,8 +4,8 @@ use crate::business_logic::execution::{
 };
 
 pub(crate) enum ExecutionInfo {
-    Transaction(TransactionExecutionInfo),
-    Call(CallInfo),
+    Transaction(Box<TransactionExecutionInfo>),
+    Call(Box<CallInfo>),
 }
 
 impl ExecutionInfo {

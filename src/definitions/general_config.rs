@@ -38,20 +38,15 @@ impl StarknetChainId {
     pub(crate) fn as_u64(&self) -> Result<u64, StarknetChainIdError> {
         let mut id = self.to_string().as_bytes().to_vec();
 
-        if id.len() == 8 {
-            let bytes: [u8; 8] = id
-                .try_into()
-                .map_err(|_| StarknetChainIdError::ConversionErrorToBytes)?;
-
-            Ok(u64::from_ne_bytes(bytes))
-        } else if id.len() < 8 {
-            id.resize_with(8, || 0);
-            let bytes = id
-                .try_into()
-                .map_err(|_| StarknetChainIdError::ConversionErrorToBytes)?;
-            Ok(u64::from_ne_bytes(bytes))
-        } else {
-            Err(StarknetChainIdError::ConversionErrorToBytes)
+        match id.len() {
+            (0..=7) | 8 => {
+                id.resize_with(8, || 0);
+                let bytes = id
+                    .try_into()
+                    .map_err(|_| StarknetChainIdError::ConversionErrorToBytes)?;
+                Ok(u64::from_ne_bytes(bytes))
+            }
+            _ => Err(StarknetChainIdError::ConversionErrorToBytes),
         }
     }
 }

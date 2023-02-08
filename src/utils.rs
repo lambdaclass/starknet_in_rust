@@ -289,11 +289,9 @@ pub(crate) fn preprocess_invoke_function_fields(
 ) -> Result<(u64, Vec<u64>), TransactionError> {
     if version > 0 && version < u64::pow(2, 128) {
         match nonce {
-            Some(_) => {
-                return Err(TransactionError::InvalidNonce(
-                    "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
-                ))
-            }
+            Some(_) => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
+            )),
             None => {
                 let additional_data = Vec::new();
                 let entry_point_selector_field = entry_point_selector
@@ -307,14 +305,12 @@ pub(crate) fn preprocess_invoke_function_fields(
             Some(n) => {
                 let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
                 let additional_data = [val].to_vec();
-                let entry_point_selector_field = 0 as u64;
+                let entry_point_selector_field = 0_u64;
                 Ok((entry_point_selector_field, additional_data))
             }
-            None => {
-                return Err(TransactionError::InvalidNonce(
-                    "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
-                ))
-            }
+            None => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
+            )),
         }
     }
 }

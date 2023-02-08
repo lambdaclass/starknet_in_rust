@@ -143,17 +143,13 @@ impl StarknetState {
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let chain_id = self.chain_id().as_u64()?;
-        let mut tx = create_invoke_function(
-            &mut self.state,
+        let mut tx = self.create_invoke_function(
             contract_address,
             selector,
             calldata,
             max_fee,
-            TRANSACTION_VERSION,
             signature,
             nonce,
-            chain_id,
         )?;
 
         Ok(self.execute_tx(&mut tx))
@@ -192,7 +188,7 @@ impl StarknetState {
             tx_execution_context,
         )?;
 
-        let exec_info = ExecutionInfo::Call(call_info.clone());
+        let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));
         self.add_messages_and_events(&exec_info);
 
         Ok(call_info)
@@ -204,7 +200,7 @@ impl StarknetState {
     ) -> TransactionExecutionInfo {
         let state_copy = self.state.copy_and_apply();
         let tx_execution_info = tx.apply_state_updates(state_copy, self.general_config.clone());
-        let exec_info = ExecutionInfo::Transaction(tx_execution_info.clone());
+        let exec_info = ExecutionInfo::Transaction(Box::new(tx_execution_info.clone()));
         self.add_messages_and_events(&exec_info);
         tx_execution_info
     }
@@ -249,7 +245,7 @@ impl StarknetState {
             .get(&message_hash)
             .ok_or(StarknetStateError::InvalidMessageHash)?;
 
-        if *val < 0 as usize {
+        if val.is_zero() {
             Err(StarknetStateError::InvalidMessageHash)
         } else {
             self.l2_to_l1_messages.insert(message_hash, val - 1);
@@ -262,39 +258,36 @@ impl StarknetState {
     // ------------------------
 
     fn chain_id(&self) -> StarknetChainId {
-        self.general_config.starknet_os_config.chain_id.clone()
+        self.general_config.starknet_os_config.chain_id
     }
-}
 
-fn create_invoke_function(
-    state: &mut CachedState<InMemoryStateReader>,
-    contract_address: Address,
-    entry_point_selector: Felt,
-    calldata: Vec<Felt>,
-    max_fee: u64,
-    version: u64,
-    signature: Option<Vec<Felt>>,
-    nonce: Option<Felt>,
-    chain_id: u64,
-) -> Result<InternalInvokeFunction, TransactionError> {
-    let signature = match signature {
-        Some(sign) => sign,
-        None => Vec::new(),
-    };
+    fn create_invoke_function(
+        &mut self,
+        contract_address: Address,
+        entry_point_selector: Felt,
+        calldata: Vec<Felt>,
+        max_fee: u64,
+        signature: Option<Vec<Felt>>,
+        nonce: Option<Felt>,
+    ) -> Result<InternalInvokeFunction, TransactionError> {
+        let signature = match signature {
+            Some(sign) => sign,
+            None => Vec::new(),
+        };
 
-    let nonce = match nonce {
-        Some(n) => n,
-        None => state.get_nonce_at(&contract_address)?.to_owned(),
-    };
+        let nonce = match nonce {
+            Some(n) => n,
+            None => self.state.get_nonce_at(&contract_address)?.to_owned(),
+        };
 
-    InternalInvokeFunction::new(
-        contract_address,
-        entry_point_selector,
-        max_fee,
-        calldata,
-        signature,
-        chain_id,
-        Some(nonce),
-        version,
-    )
+        InternalInvokeFunction::new(
+            contract_address,
+            entry_point_selector,
+            max_fee,
+            calldata,
+            signature,
+            self.chain_id().as_u64()?,
+            Some(nonce),
+        )
+    }
 }

@@ -356,8 +356,8 @@ impl InternalInvokeFunction {
         singature: Vec<Felt>,
         chain_id: u64,
         nonce: Option<Felt>,
-        version: u64,
     ) -> Result<Self, TransactionError> {
+        let version = TRANSACTION_VERSION;
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
