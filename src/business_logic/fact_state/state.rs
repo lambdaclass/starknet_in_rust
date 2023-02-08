@@ -166,8 +166,7 @@ impl SharedState {
             ffc,
             state_cache.class_hash_writes,
             state_cache.nonce_writes,
-
-            to_state_diff_storage_mapping(state_cache.storage_writes)?,
+            to_state_diff_storage_mapping(state_cache.storage_writes),
         ))
     }
 

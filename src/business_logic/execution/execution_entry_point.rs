@@ -17,7 +17,8 @@ use super::{
 };
 use crate::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, state_api_objects::BlockInfo},
     },
     services::api::contract_class::{ContractClass, ContractEntryPoint},
     utils::get_integer_range,
@@ -155,6 +156,7 @@ impl ExecutionEntryPoint {
         };
 
         let syscall_handler = BusinessLogicSyscallHandler::new(
+            BlockInfo::default(),
             tx_execution_context,
             state,
             resources_manager,

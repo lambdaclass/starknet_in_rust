@@ -323,7 +323,6 @@ mod tests {
         //*    Create state reader with class hash data
         //* --------------------------------------------
 
-        let block_info = BlockInfo::default();
         let ffc = DictStorage::new();
         let contract_class_storage = DictStorage::new();
         let mut contract_class_cache = HashMap::new();
@@ -344,7 +343,7 @@ mod tests {
         //*    Create state with previous data
         //* ---------------------------------------
 
-        let state = CachedState::new(block_info, state_reader, Some(contract_class_cache));
+        let state = CachedState::new(state_reader, Some(contract_class_cache));
 
         //* ------------------------------------
         //*    Create execution entry point

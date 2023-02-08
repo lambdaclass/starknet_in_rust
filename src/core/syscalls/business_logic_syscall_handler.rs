@@ -52,6 +52,7 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     pub fn new(
+        block_info: BlockInfo,
         tx_execution_context: TransactionExecutionContext,
         state: T,
         resources_manager: ExecutionResourcesManager,
@@ -60,7 +61,6 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
-        let block_info = state.block_info().clone();
         let events = Vec::new();
         let tx_execution_context = TransactionExecutionContext {
             ..Default::default()
