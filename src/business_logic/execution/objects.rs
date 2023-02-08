@@ -428,17 +428,6 @@ impl TransactionExecutionInfo {
         }
     }
 
-    pub fn empty() -> Self {
-        TransactionExecutionInfo {
-            validate_info: None,
-            call_info: None,
-            fee_transfer_info: None,
-            actual_fee: 0,
-            actual_resources: HashMap::new(),
-            tx_type: None,
-        }
-    }
-
     pub fn create_concurrent_stage_execution_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
