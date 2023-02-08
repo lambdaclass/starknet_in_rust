@@ -361,7 +361,7 @@ impl TxInfoStruct {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct TransactionExecutionInfo {
     pub(crate) validate_info: Option<CallInfo>,
     pub(crate) call_info: Option<CallInfo>,
@@ -369,20 +369,6 @@ pub struct TransactionExecutionInfo {
     pub(crate) actual_fee: u64,
     pub(crate) actual_resources: HashMap<String, usize>,
     pub(crate) tx_type: Option<TransactionType>,
-}
-
-/// Implement default trait for TransactionExecutionInfo
-impl Default for TransactionExecutionInfo {
-    fn default() -> Self {
-        TransactionExecutionInfo {
-            validate_info: None,
-            call_info: None,
-            fee_transfer_info: None,
-            actual_fee: 0,
-            actual_resources: HashMap::new(),
-            tx_type: None,
-        }
-    }
 }
 
 impl TransactionExecutionInfo {
