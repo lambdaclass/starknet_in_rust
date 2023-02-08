@@ -39,16 +39,17 @@ pub struct CallInfo {
     pub(crate) caller_address: Address,
     pub(crate) call_type: Option<CallType>,
     pub(crate) contract_address: Address,
+    pub(crate) code_address: Option<Address>,
     pub(crate) class_hash: Option<[u8; 32]>,
-    pub(crate) entry_point_selector: Option<usize>,
+    pub(crate) entry_point_selector: Option<Felt>,
     pub(crate) entry_point_type: Option<EntryPointType>,
-    pub(crate) calldata: VecDeque<Felt>,
-    pub(crate) retdata: VecDeque<u64>,
+    pub(crate) calldata: Vec<Felt>,
+    pub(crate) retdata: Vec<Felt>,
     pub(crate) execution_resources: ExecutionResources,
-    pub(crate) events: VecDeque<OrderedEvent>,
-    pub(crate) l2_to_l1_messages: VecDeque<OrderedL2ToL1Message>,
-    pub(crate) storage_read_values: VecDeque<Felt>,
-    pub(crate) accesed_storage_keys: VecDeque<[u8; 32]>,
+    pub(crate) events: Vec<OrderedEvent>,
+    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub(crate) storage_read_values: Vec<Felt>,
+    pub(crate) accesed_storage_keys: HashSet<[u8; 32]>,
     pub(crate) internal_calls: Vec<CallInfo>,
 }
 
@@ -59,7 +60,8 @@ impl CallInfo {
         class_hash: Option<[u8; 32]>,
         call_type: Option<CallType>,
         entry_point_type: Option<EntryPointType>,
-        entry_point_selector: Option<usize>,
+        entry_point_selector: Option<Felt>,
+        code_address: Option<Address>,
     ) -> Self {
         CallInfo {
             caller_address,
@@ -67,18 +69,19 @@ impl CallInfo {
             contract_address,
             class_hash,
             entry_point_selector,
+            code_address,
             entry_point_type,
-            calldata: VecDeque::new(),
-            retdata: VecDeque::new(),
+            calldata: Vec::new(),
+            retdata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,
                 builtin_instance_counter: HashMap::new(),
                 n_memory_holes: 0,
             },
-            events: VecDeque::new(),
-            l2_to_l1_messages: VecDeque::new(),
-            storage_read_values: VecDeque::new(),
-            accesed_storage_keys: VecDeque::new(),
+            events: Vec::new(),
+            l2_to_l1_messages: Vec::new(),
+            storage_read_values: Vec::new(),
+            accesed_storage_keys: HashSet::new(),
             internal_calls: Vec::new(),
         }
     }
@@ -94,6 +97,7 @@ impl CallInfo {
             class_hash,
             Some(CallType::Call),
             Some(EntryPointType::Constructor),
+            None,
             None,
         )
     }
@@ -195,21 +199,22 @@ impl Default for CallInfo {
             caller_address: Address(0.into()),
             call_type: None,
             contract_address: Address(0.into()),
+            code_address: None,
             class_hash: Some([0; 32]),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
-            storage_read_values: VecDeque::new(),
-            retdata: VecDeque::new(),
+            storage_read_values: Vec::new(),
+            retdata: Vec::new(),
             entry_point_selector: None,
-            l2_to_l1_messages: VecDeque::new(),
-            accesed_storage_keys: VecDeque::new(),
-            calldata: VecDeque::new(),
+            l2_to_l1_messages: Vec::new(),
+            accesed_storage_keys: HashSet::new(),
+            calldata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::new(),
             },
-            events: VecDeque::new(),
+            events: Vec::new(),
         }
     }
 }
@@ -255,14 +260,14 @@ impl Event {
 #[derive(Clone, Default)]
 pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
-    pub(crate) version: usize,
+    pub(crate) version: u64,
     pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u64,
     pub(crate) transaction_hash: Felt,
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
-    pub(crate) n_steps: usize,
+    pub(crate) n_steps: u64,
 }
 
 impl TransactionExecutionContext {
@@ -287,6 +292,26 @@ impl TransactionExecutionContext {
             n_steps: 0,
         }
     }
+
+    pub fn create_for_testing(
+        account_contract_address: Address,
+        max_fee: u64,
+        nonce: Felt,
+        n_steps: u64,
+        version: u64,
+    ) -> Self {
+        TransactionExecutionContext {
+            n_emitted_events: 0,
+            version,
+            account_contract_address,
+            max_fee: 0,
+            transaction_hash: Felt::zero(),
+            signature: Vec::new(),
+            nonce,
+            n_sent_messages: 0,
+            n_steps,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -308,7 +333,7 @@ impl TxInfoStruct {
         chain_id: StarknetChainId,
     ) -> TxInfoStruct {
         TxInfoStruct {
-            version: tx.version,
+            version: tx.version as usize,
             account_contract_address: tx.account_contract_address,
             max_fee: tx.max_fee,
             signature_len: tx.signature.len(),
@@ -663,8 +688,8 @@ mod tests {
         ord_event4.order = 4;
 
         // store events
-        child1.events = VecDeque::from([ord_event3.clone(), ord_event4.clone()]);
-        child2.events = VecDeque::from([ord_event1.clone(), ord_event2.clone()]);
+        child1.events = Vec::from([ord_event3.clone(), ord_event4.clone()]);
+        child2.events = Vec::from([ord_event1.clone(), ord_event2.clone()]);
 
         call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
 
@@ -703,8 +728,8 @@ mod tests {
         ord_event4.order = 3;
 
         // store events
-        child1.events = VecDeque::from([ord_event3.clone(), ord_event4.clone()]);
-        child2.events = VecDeque::from([ord_event1.clone(), ord_event2.clone()]);
+        child1.events = Vec::from([ord_event3.clone(), ord_event4.clone()]);
+        child2.events = Vec::from([ord_event1.clone(), ord_event2.clone()]);
 
         call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
 
@@ -740,8 +765,8 @@ mod tests {
         ord_msg4.order = 4;
 
         // store events
-        child1.l2_to_l1_messages = VecDeque::from([ord_msg3.clone(), ord_msg4.clone()]);
-        child2.l2_to_l1_messages = VecDeque::from([ord_msg1.clone(), ord_msg2.clone()]);
+        child1.l2_to_l1_messages = Vec::from([ord_msg3.clone(), ord_msg4.clone()]);
+        child2.l2_to_l1_messages = Vec::from([ord_msg1.clone(), ord_msg2.clone()]);
 
         call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
 
@@ -780,8 +805,8 @@ mod tests {
         ord_msg4.order = 3;
 
         // store events
-        child1.l2_to_l1_messages = VecDeque::from([ord_msg3.clone(), ord_msg4.clone()]);
-        child2.l2_to_l1_messages = VecDeque::from([ord_msg1.clone(), ord_msg2.clone()]);
+        child1.l2_to_l1_messages = Vec::from([ord_msg3.clone(), ord_msg4.clone()]);
+        child2.l2_to_l1_messages = Vec::from([ord_msg1.clone(), ord_msg2.clone()]);
 
         call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
 
