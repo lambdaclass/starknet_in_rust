@@ -224,20 +224,11 @@ impl SharedState {
     }
 }
 
+#[derive(Default)]
 pub(crate) struct StateDiff {
     address_to_class_hash: HashMap<Address, [u8; 32]>,
     address_to_nonce: HashMap<Address, Felt>,
     storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
-}
-
-impl Default for StateDiff {
-    fn default() -> Self {
-        StateDiff {
-            address_to_class_hash: HashMap::new(),
-            address_to_nonce: HashMap::new(),
-            storage_updates: HashMap::new(),
-        }
-    }
 }
 
 impl StateDiff {
