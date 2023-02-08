@@ -12,7 +12,7 @@ use crate::core::transaction_hash::starknet_transaction_hash::calculate_deploy_t
 use crate::definitions::constants::TRANSACTION_VERSION;
 use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::definitions::transaction_type::TransactionType;
-use crate::hash_utils::calculate_contract_address_from_hash;
+use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class::{self, ContractClass};
 use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
@@ -52,7 +52,7 @@ impl InternalDeploy {
             .as_bytes()
             .try_into()
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(class_hash.clone()))?;
-        let contract_address = Address(calculate_contract_address_from_hash(
+        let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &class_hash,
             &constructor_calldata[..],
