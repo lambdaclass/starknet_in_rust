@@ -103,6 +103,7 @@ impl ExecutionEntryPoint {
         let retdata = runner.get_return_values()?;
         // let retdata = get_integer_range(&runner.vm, &ret_data_ptr, ret_data_size)?;
 
+        println!("arrive here");
         self.build_call_info(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler,
@@ -156,7 +157,6 @@ impl ExecutionEntryPoint {
         };
 
         let syscall_handler = BusinessLogicSyscallHandler::new(
-            BlockInfo::default(),
             tx_execution_context,
             state,
             resources_manager,

@@ -75,7 +75,7 @@ impl StarknetRunner {
     pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
         self.vm
             .get_return_values(2)
-            .map_err(|e| StarknetRunnerError::MemoryException(e))?
+            .map_err(StarknetRunnerError::MemoryException)?
             .into_iter()
             .map(|val| match val {
                 Int(felt) => Ok(felt),
@@ -286,7 +286,7 @@ mod tests {
         //  Create program and entry point types for contract class
         // ---------------------------------------------------------
 
-        let path = Path::new("cairo_programs/fibonacci.json");
+        let path = Path::new("cairo_programs/not_main.json");
         let program = Program::from_file(path, None).unwrap();
         let mut entry_points_by_type = HashMap::new();
 
