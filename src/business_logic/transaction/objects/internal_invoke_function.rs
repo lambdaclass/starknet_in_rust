@@ -5,7 +5,11 @@ use num_traits::{Num, Zero};
 
 use crate::{
     business_logic::{
-        execution::objects::{CallInfo, TransactionExecutionInfo},
+        execution::{
+            execution_entry_point::ExecutionEntryPoint,
+            execution_errors::ExecutionError,
+            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+        },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
@@ -18,6 +22,7 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::{
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, TRANSACTION_VERSION},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
@@ -31,6 +36,11 @@ pub(crate) struct InternalInvokeFunction {
     calldata: Vec<Felt>,
     tx_type: TransactionType,
     version: u64,
+    validate_entry_point_selector: Felt,
+    hash_value: Felt,
+    signature: Vec<Felt>,
+    max_fee: u64,
+    nonce: Felt,
 }
 
 impl InternalInvokeFunction {
@@ -52,57 +62,53 @@ impl InternalInvokeFunction {
         Ok(())
     }
 
-    fn run_validate_entrypoint(&self) -> Option<CallInfo> {
+    fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
+        TransactionExecutionContext::new(
+            self.contract_address.clone(),
+            self.hash_value.clone(),
+            self.signature.clone(),
+            self.max_fee.clone(),
+            self.nonce.clone(),
+            n_steps,
+            self.version.clone(),
+        )
+    }
+
+    fn run_validate_entrypoint(
+        &self,
+        state: CachedState<InMemoryStateReader>,
+        resources_manager: &mut ExecutionResourcesManager,
+        general_config: StarknetGeneralConfig,
+    ) -> Result<Option<CallInfo>, ExecutionError> {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
-            return None;
+            return Ok(None);
         }
 
         if self.version == 0 {
-            return None;
+            return Ok(None);
         }
 
-        // let call = ExecutionEntryPo
-        /*
-                call = ExecuteEntryPoint.create(
-            contract_address=self.account_contract_address,
-            entry_point_selector=self.validate_entry_point_selector,
-            entry_point_type=EntryPointType.EXTERNAL,
-            calldata=self.validate_entrypoint_calldata,
-            caller_address=0,
-        )
+        let call = ExecutionEntryPoint::new(
+            self.contract_address.clone(),
+            self.calldata.clone(),
+            self.validate_entry_point_selector.clone(),
+            Address(0.into()),
+            EntryPointType::External,
+            None,
+            None,
+        );
 
-        call_info = call.execute(
-            state=state,
-            resources_manager=resources_manager,
-            general_config=general_config,
-            tx_execution_context=self.get_execution_context(
-                n_steps=general_config.validate_max_n_steps
-            ),
-        )
-        verify_no_calls_to_other_contracts(call_info=call_info, function_name="'validate'")
+        let call_info = call.execute(
+            state,
+            general_config.clone(),
+            resources_manager,
+            self.get_execution_context(general_config.validate_max_n_steps),
+        )?;
 
-        return call_info
+        verify_no_calls_to_other_contracts(&call_info)?;
 
-        */
-        todo!()
+        Ok(Some(call_info))
     }
-    /*
-        def run_validate_entrypoint(
-        self,
-        state: SyncState,
-        resources_manager: ExecutionResourcesManager,
-        general_config: StarknetGeneralConfig,
-    ) -> Optional[CallInfo]:
-        """
-        Runs the '__validate__' entry point.
-        """
-        if self.entry_point_selector != starknet_abi.EXECUTE_ENTRY_POINT_SELECTOR:
-            return None
-
-        return super().run_validate_entrypoint(
-            state=state, resources_manager=resources_manager, general_config=general_config
-        )
-    */
 
     fn _apply_specific_concurrent_changes<T: StateReader + Clone>(
         &self,
@@ -178,5 +184,15 @@ pub(crate) fn verify_version(
         return Err(TransactionError::InvalidTransactionVersion(version));
     }
 
+    Ok(())
+}
+
+fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
+    let invoked_contract_address = call_info.contract_address.clone();
+    for internal_call in call_info.gen_call_topology() {
+        if internal_call.contract_address != invoked_contract_address {
+            return Err(TransactionError::UnauthorizedActionOnValidate);
+        }
+    }
     Ok(())
 }
