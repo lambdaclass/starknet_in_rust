@@ -144,8 +144,6 @@ impl ExecutionEntryPoint {
         // prepare OS context
         let os_context = runner.prepare_os_context();
 
-        println!("os: {os_context:?}");
-
         validate_contract_deployed(state.clone(), self.contract_address.clone())?;
 
         // fetch syscall_ptr

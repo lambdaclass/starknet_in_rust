@@ -118,23 +118,14 @@ impl StarknetRunner {
             return Err(ExecutionError::IllegalOsPtrOffset);
         }
 
-        println!("os1: {os_context:?}");
-
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
-        println!("os_context_end: {os_context_end}");
         let final_os_context_ptr = os_context_end.sub_usize(os_context.len())?;
-        println!("final_os_context_ptr: {final_os_context_ptr}");
         let os_context_ptr = os_context
             .get(ptr_offset)
             .ok_or(ExecutionError::InvalidPtrFetch)?
             .to_owned();
 
-        println!("os_context_ptr: {os_context_ptr}");
-
         let addr = final_os_context_ptr + ptr_offset;
-
-        println!("addr: {addr}");
-
         let ptr_fetch_from_memory = self
             .vm
             .get_maybe(&addr)?
@@ -169,7 +160,6 @@ impl StarknetRunner {
             _ => return Err(ExecutionError::NotARelocatableValue),
         };
 
-        println!("breakpoint");
         if expected_stop_ptr != seg_stop_ptr {
             return Err(ExecutionError::InvalidStopPointer(
                 expected_stop_ptr,
@@ -290,29 +280,17 @@ mod tests {
         let program = Program::from_file(path, None).unwrap();
         let mut entry_points_by_type = HashMap::new();
 
-        // insert function f entrypoint
-        // entry_points_by_type.insert(
-        //     EntryPointType::External,
-        //     [ContractEntryPoint {
-        //         selector: Felt::from_str_radix(
-        //             "485685360977693822178494178685050472186234432883326654755380582597179924681",
-        //             10,
-        //         )
-        //         .unwrap(),
-        //         offset: Felt::from_str_radix("113", 10).unwrap(),
-        //     }]
-        //     .to_vec(),
-        // );
+        let fib_entrypoint_selector = Felt::from_str_radix(
+            "485685360977693822178494178685050472186234432883326654755380582597179924681",
+            10,
+        )
+        .unwrap();
 
         // insert function fib entrypoint
         entry_points_by_type.insert(
             EntryPointType::External,
             [ContractEntryPoint {
-                selector: Felt::from_str_radix(
-                    "485685360977693822178494178685050472186234432883326654755380582597179924681",
-                    10,
-                )
-                .unwrap(),
+                selector: fib_entrypoint_selector.clone(),
                 offset: Felt::from_str_radix("33", 10).unwrap(),
             }]
             .to_vec(),
@@ -351,18 +329,13 @@ mod tests {
         //* ------------------------------------
 
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
-        let entry_point_selector = Felt::from_str_radix(
-            "485685360977693822178494178685050472186234432883326654755380582597179924681",
-            10,
-        )
-        .unwrap();
         let caller_address = Address(0000.into());
         let entry_point_type = EntryPointType::External;
 
         let exec_entry_point = ExecutionEntryPoint::new(
             address,
-            calldata,
-            entry_point_selector,
+            calldata.clone(),
+            fib_entrypoint_selector.clone(),
             caller_address,
             entry_point_type,
             Some(CallType::Delegate),
@@ -382,9 +355,19 @@ mod tests {
         );
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        // TODO: delete this, it is only used to see the errors
+        let expected_call_info = CallInfo {
+            caller_address: Address(0.into()),
+            call_type: Some(CallType::Delegate),
+            contract_address: Address(1111.into()),
+            entry_point_selector: Some(fib_entrypoint_selector),
+            entry_point_type: Some(EntryPointType::External),
+            calldata,
+            retdata: [1.into(), 144.into()].to_vec(),
+            execution_resources: ExecutionResources::default(),
+            class_hash: Some(class_hash),
+            ..Default::default()
+        };
 
-        let call_info = CallInfo::default();
         assert_eq!(
             exec_entry_point
                 .execute(
@@ -394,7 +377,7 @@ mod tests {
                     tx_execution_context
                 )
                 .unwrap(),
-            call_info
+            expected_call_info
         );
     }
 }
