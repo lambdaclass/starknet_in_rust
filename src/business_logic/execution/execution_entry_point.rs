@@ -17,7 +17,8 @@ use super::{
 };
 use crate::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, state_api_objects::BlockInfo},
     },
     services::api::contract_class::{ContractClass, ContractEntryPoint},
     utils::get_integer_range,
@@ -102,6 +103,7 @@ impl ExecutionEntryPoint {
         let retdata = runner.get_return_values()?;
         // let retdata = get_integer_range(&runner.vm, &ret_data_ptr, ret_data_size)?;
 
+        println!("arrive here");
         self.build_call_info(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler,

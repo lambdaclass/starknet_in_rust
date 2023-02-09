@@ -20,33 +20,19 @@ pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
 #[derive(Debug, Clone, Default)]
-pub struct CachedState<T: StateReader + Clone> {
-    pub(crate) block_info: BlockInfo,
+pub(crate) struct CachedState<T: StateReader + Clone> {
     pub(crate) state_reader: T,
     pub(crate) cache: StateCache,
     pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
 impl<T: StateReader + Clone> CachedState<T> {
-    pub(crate) fn new(
-        block_info: BlockInfo,
-        state_reader: T,
-        contract_class_cache: Option<ContractClassCache>,
-    ) -> Self {
+    pub(crate) fn new(state_reader: T, contract_class_cache: Option<ContractClassCache>) -> Self {
         Self {
-            block_info,
             cache: StateCache::default(),
             contract_classes: contract_class_cache,
             state_reader,
         }
-    }
-
-    pub(crate) fn block_info(&self) -> &BlockInfo {
-        &self.block_info
-    }
-
-    pub(crate) fn update_block_info(&mut self, block_info: BlockInfo) {
-        self.block_info = block_info;
     }
 
     pub(crate) fn set_contract_classes(
@@ -69,7 +55,6 @@ impl<T: StateReader + Clone> CachedState<T> {
     ///Apply updates to parent state
     pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
-        parent.block_info = self.block_info.clone();
         parent.cache.update_writes_from_other(&self.cache);
     }
 }
@@ -127,10 +112,6 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 }
 
 impl<T: StateReader + Clone> State for CachedState<T> {
-    fn block_info(&self) -> &BlockInfo {
-        &self.block_info
-    }
-
     fn set_contract_class(
         &mut self,
         class_hash: &[u8; 32],
@@ -177,10 +158,6 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         Ok(())
     }
 
-    fn update_block_info(&mut self, block_info: BlockInfo) {
-        self.block_info = block_info;
-    }
-
     fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt) {
         self.cache
             .storage_writes
@@ -213,7 +190,7 @@ mod tests {
             .ffc
             .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
 
-        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+        let mut cached_state = CachedState::new(state_reader, None);
 
         assert_eq!(
             cached_state.get_class_hash_at(&contract_address),
@@ -249,7 +226,7 @@ mod tests {
             .contract_class_storage
             .set_contract_class(&[0; 32], &contract_class);
 
-        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+        let mut cached_state = CachedState::new(state_reader, None);
 
         cached_state.set_contract_classes(HashMap::new());
         assert!(cached_state.contract_classes.is_some());
@@ -261,28 +238,8 @@ mod tests {
     }
 
     #[test]
-    fn apply_cached_state_test() {
-        let mut block_info = BlockInfo::default();
-        block_info.block_number += 11;
-        let mut cached_state = CachedState::new(
-            block_info.clone(),
-            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
-            None,
-        );
-        let mut parent_cached_state = CachedState::new(
-            BlockInfo::default(),
-            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
-            None,
-        );
-
-        cached_state.apply(&mut parent_cached_state);
-        assert_eq!(parent_cached_state.block_info(), &block_info)
-    }
-
-    #[test]
     fn cached_state_storage_test() {
         let mut cached_state = CachedState::new(
-            BlockInfo::default(),
             InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
@@ -308,7 +265,7 @@ mod tests {
             .ffc
             .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
 
-        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+        let mut cached_state = CachedState::new(state_reader, None);
 
         assert!(cached_state
             .deploy_contract(contract_address, [10; 32])
@@ -323,7 +280,7 @@ mod tests {
         let storage_key = [18; 32];
         let value = Felt::new(912);
 
-        let mut cached_state = CachedState::new(BlockInfo::default(), state_reader, None);
+        let mut cached_state = CachedState::new(state_reader, None);
 
         // set storage_key
         cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());

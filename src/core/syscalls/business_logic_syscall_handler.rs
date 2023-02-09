@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -16,8 +15,8 @@ use crate::business_logic::state::contract_storage_state::ContractStorageState;
 use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::definitions::general_config::{self, StarknetGeneralConfig};
-use crate::hash_utils::calculate_contract_address_from_hash;
+use crate::definitions::general_config::StarknetGeneralConfig;
+use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class::EntryPointType;
 use crate::starknet_runner::runner::StarknetRunner;
 use crate::starknet_storage::dict_storage::DictStorage;
@@ -61,7 +60,8 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
-        let block_info = state.block_info().clone();
+        // TODO: check work arounds to pass block info
+        let block_info = BlockInfo::default();
         let events = Vec::new();
         let tx_execution_context = TransactionExecutionContext {
             ..Default::default()
@@ -273,7 +273,7 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
             Address(0.into())
         };
 
-        let _contract_address = calculate_contract_address_from_hash(
+        let _contract_address = calculate_contract_address(
             &Address(request.contract_address_salt),
             class_hash,
             &constructor_calldata,
@@ -490,7 +490,6 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
 impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
     fn default() -> Self {
         let cached_state = CachedState::new(
-            BlockInfo::default(),
             InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
             None,
         );
