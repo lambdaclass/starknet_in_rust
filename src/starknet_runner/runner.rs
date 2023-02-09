@@ -276,7 +276,7 @@ mod tests {
         //  Create program and entry point types for contract class
         // ---------------------------------------------------------
 
-        let path = Path::new("cairo_programs/not_main.json");
+        let path = Path::new("cairo_programs/fibonacci.json");
         let program = Program::from_file(path, None).unwrap();
         let mut entry_points_by_type = HashMap::new();
 
