@@ -151,7 +151,7 @@ fn convert_entry_points(
         let contracts_entry_points = vec
             .into_iter()
             .map(|e| {
-                let selector = Felt::from_bytes_be(&e.selector.0.bytes());
+                let selector = Felt::from_bytes_be(e.selector.0.bytes());
                 let offset = e.offset.0.into();
                 ContractEntryPoint { selector, offset }
             })
