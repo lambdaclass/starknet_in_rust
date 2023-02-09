@@ -1194,7 +1194,7 @@ mod tests {
             .starknet_storage_state
             .read(&Address(address).to_32_bytes().unwrap());
 
-        assert_eq!(write, Ok(&Felt::new(45)));
+        assert_eq!(write.unwrap(), &Felt::new(45));
     }
 
     #[test]
