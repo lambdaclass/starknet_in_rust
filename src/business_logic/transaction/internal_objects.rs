@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::business_logic::execution::execution_errors::ExecutionError;
 use crate::business_logic::execution::objects::{
     CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
 };
@@ -80,28 +81,8 @@ impl InternalDeploy {
         })
     }
 
-    pub fn create_for_testing<S: Storage>(
-        ffc: FactFetchingContext<S>,
-        contract_class: ContractClass,
-        contract_address_salt: Address,
-        constructor_calldata: Vec<Felt>,
-        chain_id: Option<u64>,
-    ) -> Result<Self, SyscallHandlerError> {
-        InternalDeploy::new(
-            contract_address_salt,
-            contract_class,
-            constructor_calldata,
-            chain_id.unwrap_or(0),
-            TRANSACTION_VERSION,
-        )
-    }
-
     pub fn class_hash(&self) -> [u8; 32] {
         self.contract_hash
-    }
-
-    pub fn get_state_selector() {
-        todo!()
     }
 
     pub fn _apply_specific_concurrent_changes<S: State + StateReader>(
@@ -291,7 +272,7 @@ impl InternalDeclare {
         state: UpdatesTrackerState<T>,
         validate_info: Option<CallInfo>,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo {
+    ) -> Result<TransactionExecutionInfo, ExecutionError> {
         // validate transaction
         let resources_manager = ExecutionResourcesManager::default();
         let actual_resources = calculate_tx_resources(
@@ -300,14 +281,27 @@ impl InternalDeclare {
             TransactionType::Declare,
             state,
             None,
-        )
-        .unwrap();
+        )?;
 
-        TransactionExecutionInfo::create_concurrent_stage_execution_info(
-            validate_info,
-            None,
-            actual_resources,
-            Some(self.tx_type.clone()),
+        Ok(
+            TransactionExecutionInfo::create_concurrent_stage_execution_info(
+                validate_info,
+                None,
+                actual_resources,
+                Some(self.tx_type.clone()),
+            ),
+        )
+    }
+
+    pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
+        TransactionExecutionContext::new(
+            self.sender_address.clone(),
+            self.hash_value.clone(),
+            self.signature.clone(),
+            self.max_fee,
+            self.nonce.clone(),
+            n_steps,
+            self.version,
         )
     }
 }
@@ -315,32 +309,3 @@ impl InternalDeclare {
 // ------------------------------------------------------------
 //                   Trait implementation
 // ------------------------------------------------------------
-impl InternalStateTransaction for InternalDeclare {
-    fn _apply_specific_concurrent_changes<T>(
-        &self,
-        state: UpdatesTrackerState<T>,
-        general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo
-    where
-        T: State,
-    {
-        todo!()
-    }
-
-    fn _apply_specific_sequential_changes(
-        &self,
-        state: impl State,
-        general_config: StarknetGeneralConfig,
-        actual_resources: HashMap<String, usize>,
-    ) -> FeeInfo {
-        todo!()
-    }
-
-    fn apply_state_updates(
-        &self,
-        state: impl State,
-        general_config: StarknetGeneralConfig,
-    ) -> Option<TransactionExecutionInfo> {
-        todo!()
-    }
-}
