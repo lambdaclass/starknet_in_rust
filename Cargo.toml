@@ -16,6 +16,7 @@ num-integer = "0.1.45"
 starknet-crypto = "0.2.0"
 sha3 = "0.10.1"
 serde = { version = "1.0.152", features = ["derive"] }
+tokio = { version = "0.2.0", features = ["full"] }
 
 [dev-dependencies.rusty-hook]
 version = "0.11"
