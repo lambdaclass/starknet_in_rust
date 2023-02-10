@@ -12,20 +12,30 @@ use std::{
 };
 
 use crate::{
-    business_logic::state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-        state_api_objects::BlockInfo,
-        state_cache,
+    business_logic::{
+        execution::{
+            execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            os_usage::get_additional_os_resources,
+        },
+        state::{
+            cached_state::CachedState,
+            state_api::{State, StateReader},
+            state_api_objects::BlockInfo,
+            state_cache,
+            update_tracker_state::UpdatesTrackerState,
+        },
     },
     core::errors::state_errors::StateError,
-    definitions::general_config::{self, StarknetGeneralConfig},
+    definitions::{
+        general_config::{self, StarknetGeneralConfig},
+        transaction_type::TransactionType,
+    },
     services::api::contract_class::ContractClass,
     starknet_storage::storage::{self, FactFetchingContext, Storage},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
-        get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-        Address,
+        get_call_n_deployments, get_keys, subtract_mappings, to_cache_state_storage_mapping,
+        to_state_diff_storage_mapping, Address,
     },
 };
 

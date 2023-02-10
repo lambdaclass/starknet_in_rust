@@ -15,20 +15,11 @@ use crate::{
 pub type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) trait InternalStateTransaction {
-    fn get_state_selector_of_many(
-        txs: Vec<impl InternalStateTransaction>,
-        general_config: StarknetGeneralConfig,
-    ) {
-        todo!()
-    }
-
     fn apply_state_updates(
         &self,
         state: impl State,
         general_config: StarknetGeneralConfig,
-    ) -> Option<TransactionExecutionInfo> {
-        todo!()
-    }
+    ) -> Option<TransactionExecutionInfo>;
 
     fn sync_apply_state_updates<T>(
         &self,
