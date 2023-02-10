@@ -1,8 +1,14 @@
 use felt::{felt_str, Felt};
+use num_traits::ToPrimitive;
 
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
-    hash_utils::compute_hash_on_elements, utils::Address,
+    core::{
+        contract_address::starknet_contract_address::compute_class_hash,
+        errors::syscall_handler_errors::SyscallHandlerError,
+    },
+    hash_utils::compute_hash_on_elements,
+    services::api::contract_class::ContractClass,
+    utils::Address,
 };
 
 #[derive(Debug)]
@@ -113,6 +119,41 @@ pub fn calculate_deploy_account_transaction_hash(
         max_fee,
         chain_id,
         &[nonce],
+    )
+}
+
+pub(crate) fn calculate_declare_transaction_hash(
+    contract_class: ContractClass,
+    chain_id: u64,
+    sender_address: Address,
+    max_fee: u64,
+    version: u64,
+    nonce: Felt,
+) -> Result<Felt, SyscallHandlerError> {
+    let class_hash =
+        compute_class_hash(&contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+
+    let (calldata, additional_data) = if version > u64::pow(2, 128) {
+        let value = class_hash
+            .to_u64()
+            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
+        (Vec::new(), [value].to_vec())
+    } else {
+        let value = nonce
+            .to_u64()
+            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
+        ([class_hash].to_vec(), [value].to_vec())
+    };
+
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::Declare,
+        version,
+        sender_address,
+        0,
+        &calldata,
+        max_fee,
+        chain_id,
+        &additional_data,
     )
 }
 

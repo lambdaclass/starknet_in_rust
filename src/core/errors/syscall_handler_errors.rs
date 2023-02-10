@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::utils_errors::UtilsError;
 
-use super::state_errors::StateError;
+use super::{contract_address_errors::ContractAddressError, state_errors::StateError};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum SyscallHandlerError {
@@ -24,7 +24,7 @@ pub enum SyscallHandlerError {
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
     FeltToU64Fail,
-    #[error("Couldn't compure hash")]
+    #[error("Couldn't compute hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
     ExpectedDeployRequestStruct,
@@ -82,6 +82,8 @@ pub enum SyscallHandlerError {
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
+    #[error("could not convert felt to u64")]
+    InvalidFeltConversion,
     #[error(transparent)]
     StateError(#[from] StateError),
     #[error(transparent)]

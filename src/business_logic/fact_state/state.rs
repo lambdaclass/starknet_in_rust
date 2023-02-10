@@ -12,20 +12,30 @@ use std::{
 };
 
 use crate::{
-    business_logic::state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-        state_api_objects::BlockInfo,
-        state_cache,
+    business_logic::{
+        execution::{
+            execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            os_usage::get_additional_os_resources,
+        },
+        state::{
+            cached_state::CachedState,
+            state_api::{State, StateReader},
+            state_api_objects::BlockInfo,
+            state_cache,
+            update_tracker_state::UpdatesTrackerState,
+        },
     },
     core::errors::state_errors::StateError,
-    definitions::general_config::{self, StarknetGeneralConfig},
+    definitions::{
+        general_config::{self, StarknetGeneralConfig},
+        transaction_type::TransactionType,
+    },
     services::api::contract_class::ContractClass,
     starknet_storage::storage::{self, FactFetchingContext, Storage},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
-        get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-        Address,
+        get_call_n_deployments, get_keys, subtract_mappings, to_cache_state_storage_mapping,
+        to_state_diff_storage_mapping, Address,
     },
 };
 
@@ -59,48 +69,6 @@ impl ExecutionResourcesManager {
         self.syscall_counter
             .get(syscall_name)
             .map(ToOwned::to_owned)
-    }
-}
-
-// TODO: this functions should be in cairo-rs
-
-// Returns a copy of the execution resources where all the builtins with a usage counter
-// of 0 are omitted.
-
-pub fn filter_unused_builtins(resources: ExecutionResources) -> ExecutionResources {
-    ExecutionResources {
-        n_steps: resources.n_steps,
-        n_memory_holes: resources.n_memory_holes,
-        builtin_instance_counter: resources
-            .builtin_instance_counter
-            .into_iter()
-            .filter(|builtin| !builtin.1.is_zero())
-            .collect(),
-    }
-}
-
-pub fn calculate_additional_resources(
-    current_resources: ExecutionResources,
-    additional_resources: ExecutionResources,
-) -> ExecutionResources {
-    let mut builtin_instance_counter = current_resources.builtin_instance_counter.clone();
-
-    let n_steps = current_resources.n_steps + additional_resources.n_steps;
-    let n_memory_holes = current_resources.n_memory_holes + additional_resources.n_memory_holes;
-
-    for (k, v) in additional_resources.builtin_instance_counter {
-        if builtin_instance_counter.contains_key(&k) {
-            let val = builtin_instance_counter.get(&k).unwrap_or(&0).to_owned();
-            builtin_instance_counter.insert(k, val + v);
-        } else {
-            builtin_instance_counter.remove(&k);
-        }
-    }
-
-    ExecutionResources {
-        n_steps,
-        n_memory_holes,
-        builtin_instance_counter,
     }
 }
 

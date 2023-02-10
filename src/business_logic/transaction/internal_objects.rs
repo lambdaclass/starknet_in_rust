@@ -8,7 +8,9 @@ use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::update_tracker_state::UpdatesTrackerState;
 use crate::core::errors::state_errors::StateError;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::core::transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash;
+use crate::core::transaction_hash::starknet_transaction_hash::{
+    calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
+};
 use crate::definitions::constants::TRANSACTION_VERSION;
 use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::definitions::transaction_type::TransactionType;
@@ -18,10 +20,12 @@ use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
 use crate::utils::{calculate_tx_resources, Address};
 use crate::utils_errors::UtilsError;
+use cairo_rs::types::instruction::Res;
 use felt::Felt;
 use num_traits::Zero;
 
-use super::state_objects::FeeInfo;
+use super::error::TransactionError;
+use super::state_objects::{FeeInfo, InternalStateTransaction};
 
 pub struct InternalDeploy {
     hash_value: Felt,
@@ -186,6 +190,157 @@ impl InternalDeploy {
         );
 
         let resources_manager = ExecutionResourcesManager::default();
+        todo!()
+    }
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
+///  contract class.
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pub(crate) struct InternalDeclare {
+    pub(crate) class_hash: [u8; 32],
+    pub(crate) sender_address: Address,
+    pub(crate) tx_type: TransactionType,
+    pub(crate) version: u64,
+    pub(crate) max_fee: u64,
+    pub(crate) signature: Vec<Felt>,
+    pub(crate) nonce: Felt,
+    pub(crate) hash_value: Felt,
+}
+
+// ------------------------------------------------------------
+//                        Functions
+// ------------------------------------------------------------
+impl InternalDeclare {
+    pub fn new(
+        contract_class: ContractClass,
+        chain_id: u64,
+        sender_address: Address,
+        max_fee: u64,
+        version: u64,
+        signature: Vec<Felt>,
+        nonce: Felt,
+    ) -> Result<Self, TransactionError> {
+        let hash = compute_class_hash(contract_class.clone());
+        let class_hash = hash
+            .to_string()
+            .as_bytes()
+            .try_into()
+            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(hash.clone()))?;
+
+        let hash_value = calculate_declare_transaction_hash(
+            contract_class,
+            chain_id,
+            sender_address.clone(),
+            max_fee,
+            version,
+            nonce.clone(),
+        )?;
+
+        let internal_declare = InternalDeclare {
+            class_hash,
+            sender_address,
+            tx_type: TransactionType::Declare,
+            version,
+            max_fee,
+            signature,
+            nonce,
+            hash_value,
+        };
+
+        internal_declare.verify_version();
+        Ok(internal_declare)
+    }
+
+    pub fn account_contract_address(&self) -> Address {
+        self.sender_address.clone()
+    }
+
+    pub fn verify_version(&self) -> Result<(), TransactionError> {
+        // no need to check if its lesser than 0 because it is an usize
+        if self.version > u64::pow(2, 128) {
+            return Err(TransactionError::StarknetError(
+                "The sender_address field in Declare transactions of version 0, sender should be 1"
+                    .to_string(),
+            ));
+        }
+
+        if !self.max_fee.is_zero() {
+            return Err(TransactionError::StarknetError(
+                "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
+            ));
+        }
+
+        if !self.nonce.is_zero() {
+            return Err(TransactionError::StarknetError(
+                "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
+            ));
+        }
+
+        if !self.signature.len().is_zero() {
+            return Err(TransactionError::StarknetError(
+                "The signature field in Declare transactions must be an empty list.".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn _apply_specific_concurrent_changes<T: State + StateReader>(
+        &self,
+        state: UpdatesTrackerState<T>,
+        validate_info: Option<CallInfo>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo {
+        // validate transaction
+        let resources_manager = ExecutionResourcesManager::default();
+        let actual_resources = calculate_tx_resources(
+            resources_manager,
+            &vec![validate_info.clone()],
+            TransactionType::Declare,
+            state,
+            None,
+        )
+        .unwrap();
+
+        TransactionExecutionInfo::create_concurrent_stage_execution_info(
+            validate_info,
+            None,
+            actual_resources,
+            Some(self.tx_type.clone()),
+        )
+    }
+}
+
+// ------------------------------------------------------------
+//                   Trait implementation
+// ------------------------------------------------------------
+impl InternalStateTransaction for InternalDeclare {
+    fn _apply_specific_concurrent_changes<T>(
+        &self,
+        state: UpdatesTrackerState<T>,
+        general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo
+    where
+        T: State,
+    {
+        todo!()
+    }
+
+    fn _apply_specific_sequential_changes(
+        &self,
+        state: impl State,
+        general_config: StarknetGeneralConfig,
+        actual_resources: HashMap<String, usize>,
+    ) -> FeeInfo {
+        todo!()
+    }
+
+    fn apply_state_updates(
+        &self,
+        state: impl State,
+        general_config: StarknetGeneralConfig,
+    ) -> Option<TransactionExecutionInfo> {
         todo!()
     }
 }
