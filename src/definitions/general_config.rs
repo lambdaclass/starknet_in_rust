@@ -1,7 +1,6 @@
+use crate::utils::Address;
 use felt::Felt;
 use num_traits::{Num, Zero};
-
-use crate::utils::Address;
 
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
@@ -61,7 +60,10 @@ impl StarknetGeneralConfig {
             invoke_tx_max_n_steps,
         }
     }
-    pub(crate) fn default() -> Self {
+}
+
+impl Default for StarknetGeneralConfig {
+    fn default() -> Self {
         Self {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,

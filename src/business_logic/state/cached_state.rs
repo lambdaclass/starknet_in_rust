@@ -1,18 +1,15 @@
-use std::collections::HashMap;
-
-use felt::Felt;
-use num_traits::Zero;
-
-use crate::{
-    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
-    utils::Address,
-};
-
 use super::{
     state_api::{State, StateReader},
     state_api_objects::BlockInfo,
     state_cache::{StateCache, StorageEntry},
 };
+use crate::{
+    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
+    utils::Address,
+};
+use felt::Felt;
+use num_traits::Zero;
+use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
 pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
@@ -20,14 +17,14 @@ pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct CachedState<T: StateReader + Clone> {
+pub struct CachedState<T: StateReader + Clone> {
     pub(crate) state_reader: T,
     pub(crate) cache: StateCache,
     pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
 impl<T: StateReader + Clone> CachedState<T> {
-    pub(crate) fn new(state_reader: T, contract_class_cache: Option<ContractClassCache>) -> Self {
+    pub fn new(state_reader: T, contract_class_cache: Option<ContractClassCache>) -> Self {
         Self {
             cache: StateCache::default(),
             contract_classes: contract_class_cache,
@@ -184,7 +181,7 @@ mod tests {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .ffc
@@ -259,7 +256,7 @@ mod tests {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .ffc

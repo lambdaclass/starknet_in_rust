@@ -13,7 +13,7 @@ pub struct ContractState {
 }
 
 impl ContractState {
-    pub(crate) fn create(
+    pub fn new(
         contract_hash: [u8; 32],
         nonce: Felt,
         storage_keys: HashMap<[u8; 32], Felt>,

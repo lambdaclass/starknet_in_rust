@@ -315,7 +315,7 @@ mod tests {
 
         let address = Address(1111.into());
         let class_hash = [1; 32];
-        let contract_state = ContractState::create(class_hash, 3.into(), HashMap::new());
+        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
 
         contract_class_cache.insert(class_hash, contract_class);
         let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);

@@ -1,7 +1,4 @@
-use std::{clone, collections::HashMap};
-
-use felt::Felt;
-
+use super::contract_state::{self, ContractState};
 use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
@@ -12,18 +9,18 @@ use crate::{
     },
     utils::Address,
 };
-
-use super::contract_state::{self, ContractState};
+use felt::Felt;
+use std::{clone, collections::HashMap};
 
 #[derive(Clone, Debug)]
-pub(crate) struct InMemoryStateReader {
+pub struct InMemoryStateReader {
     pub(crate) ffc: DictStorage,
     pub(crate) contract_states: HashMap<Address, ContractState>,
     pub(crate) contract_class_storage: DictStorage,
 }
 
 impl InMemoryStateReader {
-    pub(crate) fn new(ffc: DictStorage, contract_class_storage: DictStorage) -> Self {
+    pub fn new(ffc: DictStorage, contract_class_storage: DictStorage) -> Self {
         Self {
             ffc,
             contract_states: HashMap::new(),
@@ -88,7 +85,7 @@ mod tests {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create([1; 32], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::new([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .ffc

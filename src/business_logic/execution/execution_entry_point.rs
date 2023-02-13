@@ -1,5 +1,33 @@
-use std::collections::VecDeque;
-
+use super::{
+    execution_errors::ExecutionError,
+    objects::{CallInfo, CallType, TransactionExecutionContext},
+};
+use crate::{
+    business_logic::{
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
+        state::{
+            cached_state::CachedState,
+            state_api::{State, StateReader},
+            state_api_objects::BlockInfo,
+        },
+    },
+    core::syscalls::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
+    },
+    definitions::{
+        constants::TRANSACTION_VERSION,
+        general_config::{self, StarknetGeneralConfig},
+    },
+    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+    starknet_runner::runner::StarknetRunner,
+    utils::{
+        get_deployed_address_class_hash_at_address, get_integer_range, validate_contract_deployed,
+        Address,
+    },
+};
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -10,40 +38,11 @@ use cairo_rs::{
 };
 use felt::Felt;
 use num_traits::{ToPrimitive, Zero};
-
-use super::{
-    execution_errors::ExecutionError,
-    objects::{CallInfo, CallType, TransactionExecutionContext},
-};
-use crate::{
-    business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, state_api_objects::BlockInfo},
-    },
-    services::api::contract_class::{ContractClass, ContractEntryPoint},
-    utils::get_integer_range,
-};
-use crate::{
-    business_logic::{
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
-    },
-    core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
-    },
-    definitions::{
-        constants::TRANSACTION_VERSION,
-        general_config::{self, StarknetGeneralConfig},
-    },
-    services::api::contract_class::EntryPointType,
-    starknet_runner::runner::StarknetRunner,
-    utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
-};
+use std::collections::VecDeque;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
-pub(crate) struct ExecutionEntryPoint {
+pub struct ExecutionEntryPoint {
     call_type: CallType,
     contract_address: Address,
     code_address: Option<Address>,
