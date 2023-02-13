@@ -25,6 +25,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 use super::contract_class_errors::ContractClassError;
+use getset::Getters;
 
 pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
     ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
@@ -36,15 +37,17 @@ pub enum EntryPointType {
     Constructor,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Getters, Hash, PartialEq, Serialize)]
 pub struct ContractEntryPoint {
+    #[getset(get = "pub")]
     pub(crate) selector: Felt,
     pub(crate) offset: Felt,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Getters, PartialEq, Serialize)]
 pub struct ContractClass {
     pub(crate) program: Program,
+    #[getset(get = "pub")]
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub(crate) abi: Option<AbiType>,
 }

@@ -10,11 +10,13 @@ use crate::{
     utils::Address,
 };
 use felt::Felt;
+use getset::{Getters, MutGetters};
 use std::{clone, collections::HashMap};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, MutGetters)]
 pub struct InMemoryStateReader {
     pub(crate) ffc: DictStorage,
+    #[getset(get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
     pub(crate) contract_class_storage: DictStorage,
 }

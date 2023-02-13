@@ -1,5 +1,6 @@
 use crate::utils::Address;
 use felt::Felt;
+use getset::CopyGetters;
 use num_traits::{Num, Zero};
 
 #[allow(unused)]
@@ -35,12 +36,13 @@ pub(crate) struct StarknetOsConfig {
 }
 
 #[allow(unused)]
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, CopyGetters)]
 pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,
     sequencer_address: Address,
+    #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
 }
 
