@@ -21,15 +21,25 @@ use std::path::Path;
 
 #[test]
 fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
+    // Contract parameters:
     let contract_path = Path::new("tests/syscalls.json");
+    let class_hash = [1; 32];
+    let nonce = 3;
+    let caller_address = Address(0.into());
+    let contract_address = Address(1111.into());
+    let retdata = vec![
+        Felt::from_str_radix("1", 10).unwrap(),
+        Felt::from_str_radix("0", 10).unwrap(),
+    ];
+
+    // Contract execution (testing).
     let contract_class = ContractClass::try_from(contract_path.to_path_buf())?;
 
-    let class_hash = [1; 32];
-    let contract_state = ContractState::new(class_hash, 3.into(), Default::default());
+    let contract_state = ContractState::new(class_hash, nonce.into(), Default::default());
     let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
     state_reader
         .contract_states_mut()
-        .insert(Address(1111.into()), contract_state);
+        .insert(contract_address.clone(), contract_state);
     let state = CachedState::new(
         state_reader,
         Some([(class_hash, contract_class.clone())].into_iter().collect()),
@@ -43,7 +53,7 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
             .get(&EntryPointType::External)
             .and_then(|x| x.first().map(|x| x.selector().clone()))
             .unwrap(),
-        Address(0000.into()),
+        caller_address.clone(),
         EntryPointType::External,
         CallType::Delegate.into(),
         class_hash.into(),
@@ -53,7 +63,7 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
     let tx_execution_context = TransactionExecutionContext::create_for_testing(
         Address(0.into()),
         10,
-        0.into(),
+        nonce.into(),
         general_config.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
@@ -67,8 +77,8 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
             tx_execution_context,
         )?,
         CallInfo {
-            contract_address: Address(1111.into()),
-            caller_address: Address(0.into()),
+            contract_address,
+            caller_address,
             entry_point_type: EntryPointType::External.into(),
             call_type: CallType::Delegate.into(),
             class_hash: class_hash.into(),
@@ -76,10 +86,7 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
                 .entry_points_by_type()
                 .get(&EntryPointType::External)
                 .and_then(|x| x.first().map(|x| x.selector().clone())),
-            retdata: vec![
-                Felt::from_str_radix("1", 10,).unwrap(),
-                Felt::from_str_radix("0", 10,).unwrap(),
-            ],
+            retdata,
             ..Default::default()
         },
     );
