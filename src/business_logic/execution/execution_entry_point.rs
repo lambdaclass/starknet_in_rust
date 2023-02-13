@@ -90,10 +90,10 @@ impl ExecutionEntryPoint {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         let runner = self.run(
-            &mut state,
+            state,
             &resources_manager.clone(),
-            &general_config,
-            &tx_execution_context,
+            general_config,
+            tx_execution_context,
         )?;
 
         // Update resources usage (for bouncer).
