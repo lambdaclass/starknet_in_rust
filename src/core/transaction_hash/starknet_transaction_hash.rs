@@ -1,9 +1,8 @@
-use felt::{felt_str, Felt};
-
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     hash_utils::compute_hash_on_elements, utils::Address,
 };
+use felt::{felt_str, Felt};
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
@@ -28,6 +27,19 @@ impl TransactionHashPrefix {
     }
 }
 
+/// Calculates the transaction hash in the StarkNet network - a unique identifier of the
+/// transaction.
+/// The transaction hash is a hash chain of the following information:
+///    1. A prefix that depends on the transaction type.
+///    2. The transaction's version.
+///    3. Contract address.
+///    4. Entry point selector.
+///    5. A hash chain of the calldata.
+///    6. The transaction's maximum fee.
+///    7. The network's chain ID.
+/// Each hash chain computation begins with 0 as initialization and ends with its length appended.
+/// The length is appended in order to avoid collisions of the following kind:
+/// H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y).
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
@@ -39,19 +51,6 @@ pub fn calculate_transaction_hash_common(
     chain_id: u64,
     additional_data: &[u64],
 ) -> Result<Felt, SyscallHandlerError> {
-    /// Calculates the transaction hash in the StarkNet network - a unique identifier of the
-    /// transaction.
-    /// The transaction hash is a hash chain of the following information:
-    ///    1. A prefix that depends on the transaction type.
-    ///    2. The transaction's version.
-    ///    3. Contract address.
-    ///    4. Entry point selector.
-    ///    5. A hash chain of the calldata.
-    ///    6. The transaction's maximum fee.
-    ///    7. The network's chain ID.
-    /// Each hash chain computation begins with 0 as initialization and ends with its length appended.
-    /// The length is appended in order to avoid collisions of the following kind:
-    /// H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y).
     let calldata_hash = compute_hash_on_elements(calldata)?;
 
     let mut data_to_hash: Vec<Felt> = vec![
@@ -70,24 +69,25 @@ pub fn calculate_transaction_hash_common(
 }
 
 pub fn calculate_deploy_transaction_hash(
-    version: u64,
-    contract_address: Address,
-    constructor_calldata: &[Felt],
-    chain_id: u64,
+    _version: u64,
+    _contract_address: Address,
+    _constructor_calldata: &[Felt],
+    _chain_id: u64,
 ) -> Result<Felt, SyscallHandlerError> {
-    calculate_transaction_hash_common(
-        TransactionHashPrefix::Deploy,
-        version,
-        contract_address,
-        // TODO: A constant CONSTRUCTOR_ENTRY_POINT_SELECTOR must be provided here.
-        // See https://github.com/starkware-libs/cairo-lang/blob/9889fbd522edc5eff603356e1912e20642ae20af/src/starkware/starknet/public/abi.py#L53
-        todo!(),
-        constructor_calldata,
-        // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
-        0,
-        chain_id,
-        &Vec::new(),
-    )
+    todo!("Provide a constant CONSTRUCTOR_ENTRY_POINT_SELECTOR.")
+    // calculate_transaction_hash_common(
+    //     TransactionHashPrefix::Deploy,
+    //     version,
+    //     contract_address,
+    //     // TODO: A constant CONSTRUCTOR_ENTRY_POINT_SELECTOR must be provided here.
+    //     // See https://github.com/starkware-libs/cairo-lang/blob/9889fbd522edc5eff603356e1912e20642ae20af/src/starkware/starknet/public/abi.py#L53
+    //     todo!(),
+    //     constructor_calldata,
+    //     // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
+    //     0,
+    //     chain_id,
+    //     &Vec::new(),
+    // )
 }
 
 #[allow(clippy::too_many_arguments)]

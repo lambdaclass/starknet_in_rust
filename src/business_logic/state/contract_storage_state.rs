@@ -1,11 +1,7 @@
-use std::collections::HashSet;
-
-use felt::Felt;
-use num_bigint::BigInt;
-
-use crate::{core::errors::state_errors::StateError, utils::Address};
-
 use super::state_api::{State, StateReader};
+use crate::{core::errors::state_errors::StateError, utils::Address};
+use felt::Felt;
+use std::collections::HashSet;
 
 pub(crate) struct ContractStorageState<T: State + StateReader> {
     pub(crate) state: T,

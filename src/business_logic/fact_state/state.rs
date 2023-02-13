@@ -1,35 +1,25 @@
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt;
-use num_traits::Zero;
-use std::{
-    borrow::Borrow,
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    hash,
-    ops::Deref,
-    rc::Rc,
-    thread::current,
-};
-
+use super::contract_state::ContractState;
 use crate::{
     business_logic::state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-        state_api_objects::BlockInfo,
-        state_cache,
+        cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo,
     },
     core::errors::state_errors::StateError,
-    definitions::general_config::{self, StarknetGeneralConfig},
-    services::api::contract_class::ContractClass,
-    starknet_storage::storage::{self, FactFetchingContext, Storage},
+    definitions::general_config::StarknetGeneralConfig,
+    starknet_storage::storage::{FactFetchingContext, Storage},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
         Address,
     },
 };
-
-use super::contract_state::ContractState;
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+use felt::Felt;
+use num_traits::Zero;
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 #[derive(Debug, Default)]
 pub struct ExecutionResourcesManager {
@@ -113,22 +103,26 @@ pub(crate) struct CarriedState<T>
 where
     T: StateReader + Clone,
 {
-    parent_state: Option<Rc<RefCell<CarriedState<T>>>>,
-    state: CachedState<T>,
+    _parent_state: Option<Rc<RefCell<CarriedState<T>>>>,
+    _state: CachedState<T>,
 }
 
 impl<T: StateReader + Clone> CarriedState<T> {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn create_from_parent_state(parent_state: CarriedState<T>) -> Self {
-        let cached_state = parent_state.state.clone();
+        let cached_state = parent_state._state.clone();
         let new_state = Some(Rc::new(RefCell::new(parent_state)));
         CarriedState {
-            parent_state: new_state,
-            state: cached_state,
+            _parent_state: new_state,
+            _state: cached_state,
         }
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn create_child_state_for_querying(&self) -> Result<Self, StateError> {
-        match &self.parent_state {
+        match &self._parent_state {
             Some(parent_state) => Ok(CarriedState::create_from_parent_state(
                 parent_state.as_ref().borrow().clone(),
             )),
@@ -136,10 +130,12 @@ impl<T: StateReader + Clone> CarriedState<T> {
         }
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn apply(&mut self) -> Result<(), StateError> {
-        match &self.parent_state {
+        match &self._parent_state {
             Some(parent_state) => {
-                self.state.apply(&mut parent_state.borrow_mut().state);
+                self._state.apply(&mut parent_state.borrow_mut()._state);
                 Ok(())
             }
             None => Err(StateError::ParentCarriedStateIsNone),
@@ -151,20 +147,26 @@ impl<T: StateReader + Clone> CarriedState<T> {
 //      SHARED STATE
 // ----------------------
 
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 pub(crate) struct SharedState {
     contract_states: HashMap<Felt, ContractState>,
     block_info: BlockInfo,
 }
 
 impl SharedState {
-    pub fn empty<S>(ffc: FactFetchingContext<S>, general_config: StarknetGeneralConfig) -> Self
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
+    pub fn empty<S>(_ffc: FactFetchingContext<S>, _general_config: StarknetGeneralConfig) -> Self
     where
         S: Storage,
     {
         todo!()
     }
 
-    pub fn to_carried_state<S, R>(&self, ffc: FactFetchingContext<S>) -> CarriedState<R>
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
+    pub fn to_carried_state<S, R>(&self, _ffc: FactFetchingContext<S>) -> CarriedState<R>
     where
         S: Storage,
         R: StateReader + Clone,
@@ -179,17 +181,19 @@ impl SharedState {
         todo!()
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn apply_state_updates<S, R>(
         &self,
         ffc: FactFetchingContext<S>,
-        previous_carried_state: CarriedState<R>,
+        _previous_carried_state: CarriedState<R>,
         current_carried_state: CarriedState<R>,
     ) -> Result<Self, StateError>
     where
         S: Storage,
         R: StateReader + Clone,
     {
-        let state_cache = current_carried_state.state.cache;
+        let state_cache = current_carried_state._state.cache;
         Ok(self.apply_updates(
             ffc,
             state_cache.class_hash_writes,
@@ -200,7 +204,7 @@ impl SharedState {
 
     pub fn apply_updates<S>(
         &self,
-        ffc: FactFetchingContext<S>,
+        _ffc: FactFetchingContext<S>,
         address_to_class_hash: HashMap<Address, [u8; 32]>,
         address_to_nonce: HashMap<Address, Felt>,
         storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
@@ -226,12 +230,14 @@ impl SharedState {
 
 #[derive(Default)]
 pub(crate) struct StateDiff {
-    address_to_class_hash: HashMap<Address, [u8; 32]>,
-    address_to_nonce: HashMap<Address, Felt>,
-    storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
+    _address_to_class_hash: HashMap<Address, [u8; 32]>,
+    _address_to_nonce: HashMap<Address, Felt>,
+    _storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
 }
 
 impl StateDiff {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
     where
         T: StateReader + Clone,
@@ -254,49 +260,55 @@ impl StateDiff {
         );
 
         Ok(StateDiff {
-            address_to_class_hash,
-            address_to_nonce,
-            storage_updates,
+            _address_to_class_hash: address_to_class_hash,
+            _address_to_nonce: address_to_nonce,
+            _storage_updates: storage_updates,
         })
     }
 
-    pub fn to_cached_state<T>(&self, state_reader: T) -> CachedState<T>
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
+    pub fn to_cached_state<T>(&self, state_reader: T) -> Result<CachedState<T>, StateError>
     where
         T: StateReader + Clone,
     {
         let mut cache_state = CachedState::new(state_reader, None);
-        let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
+        let cache_storage_mapping = to_cache_state_storage_mapping(self._storage_updates.clone());
 
         cache_state.cache.set_initial_values(
-            &self.address_to_class_hash,
-            &self.address_to_nonce,
+            &self._address_to_class_hash,
+            &self._address_to_nonce,
             &cache_storage_mapping,
-        );
-        cache_state
+        )?;
+        Ok(cache_state)
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn squash(&mut self, other: StateDiff) -> Result<Self, StarkwareError> {
-        self.address_to_class_hash
-            .extend(other.address_to_class_hash);
-        let address_to_class_hash = self.address_to_class_hash.clone();
+        self._address_to_class_hash
+            .extend(other._address_to_class_hash);
+        let address_to_class_hash = self._address_to_class_hash.clone();
 
-        self.address_to_nonce.extend(other.address_to_nonce);
-        let address_to_nonce = self.address_to_nonce.clone();
+        self._address_to_nonce.extend(other._address_to_nonce);
+        let address_to_nonce = self._address_to_nonce.clone();
 
         let mut storage_updates = HashMap::new();
 
-        let addresses: Vec<Felt> =
-            get_keys(self.storage_updates.clone(), other.storage_updates.clone());
+        let addresses: Vec<Felt> = get_keys(
+            self._storage_updates.clone(),
+            other._storage_updates.clone(),
+        );
 
         for address in addresses {
             let default: HashMap<[u8; 32], Address> = HashMap::new();
             let mut map_a = self
-                .storage_updates
+                ._storage_updates
                 .get(&address)
                 .unwrap_or(&default)
                 .to_owned();
             let map_b = other
-                .storage_updates
+                ._storage_updates
                 .get(&address)
                 .unwrap_or(&default)
                 .to_owned();
@@ -305,12 +317,14 @@ impl StateDiff {
         }
 
         Ok(StateDiff {
-            address_to_class_hash,
-            address_to_nonce,
-            storage_updates,
+            _address_to_class_hash: address_to_class_hash,
+            _address_to_nonce: address_to_nonce,
+            _storage_updates: storage_updates,
         })
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn commit<T: Storage>(
         &self,
         ffc: FactFetchingContext<T>,
@@ -318,9 +332,9 @@ impl StateDiff {
     ) -> SharedState {
         previos_state.apply_updates(
             ffc,
-            self.address_to_class_hash.clone(),
-            self.address_to_nonce.clone(),
-            self.storage_updates.clone(),
+            self._address_to_class_hash.clone(),
+            self._address_to_nonce.clone(),
+            self._storage_updates.clone(),
         )
     }
 }

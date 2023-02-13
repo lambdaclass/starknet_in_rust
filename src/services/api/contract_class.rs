@@ -1,15 +1,12 @@
-use std::collections::HashMap;
-
+use super::contract_class_errors::ContractClassError;
+use crate::public::abi::AbiType;
 use cairo_rs::{
     types::{program::Program, relocatable::MaybeRelocatable},
     utils::is_subsequence,
 };
 use felt::{Felt, PRIME_STR};
-
-use crate::{core::errors::state_errors::StateError, public::abi::AbiType};
 use serde::{Deserialize, Serialize};
-
-use super::contract_class_errors::ContractClassError;
+use std::collections::HashMap;
 
 pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
     ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
@@ -44,6 +41,8 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
 }
 
 impl ContractClass {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn new(
         program: Program,
         entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,

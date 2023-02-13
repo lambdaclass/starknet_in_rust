@@ -1,6 +1,5 @@
-use thiserror::Error;
-
 use super::contract_class::ContractEntryPoint;
+use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum ContractClassError {

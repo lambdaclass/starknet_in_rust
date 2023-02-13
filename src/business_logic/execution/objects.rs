@@ -1,28 +1,18 @@
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    hash::Hash,
+use super::execution_errors::ExecutionError;
+use crate::{
+    business_logic::state::state_cache::StorageEntry,
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
+    services::api::contract_class::EntryPointType,
+    utils::{get_big_int, get_integer, get_relocatable, Address},
 };
-
 use cairo_rs::{
-    hint_processor::builtin_hint_processor::secp::signature,
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use felt::Felt;
-use num_traits::{ToPrimitive, Zero};
-
-use super::execution_errors::ExecutionError;
-use crate::{
-    business_logic::state::state_cache::StorageEntry,
-    core::{
-        errors::syscall_handler_errors::SyscallHandlerError, syscalls::syscall_request::FromPtr,
-    },
-    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
-    utils::{get_big_int, get_integer, get_relocatable, Address},
-};
-use crate::{services::api::contract_class::EntryPointType, starknet_storage::storage::Storage};
-
-type ResourcesMapping = HashMap<String, Felt>;
+use num_traits::ToPrimitive;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CallType {
@@ -165,7 +155,7 @@ impl CallInfo {
     }
 
     pub fn get_visited_storage_entries(self) -> HashSet<StorageEntry> {
-        let mut storage_entries = self
+        let storage_entries = self
             .accesed_storage_keys
             .into_iter()
             .map(|key| (self.contract_address.clone(), key))
@@ -262,7 +252,7 @@ pub struct TransactionExecutionContext {
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
-    pub(crate) n_steps: usize,
+    pub(crate) _n_steps: usize,
 }
 
 impl TransactionExecutionContext {
@@ -272,8 +262,8 @@ impl TransactionExecutionContext {
         signature: Vec<Felt>,
         max_fee: u64,
         nonce: Felt,
-        n_steps: u64,
-        version: u64,
+        _n_steps: u64,
+        _version: u64,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
@@ -284,7 +274,7 @@ impl TransactionExecutionContext {
             transaction_hash,
             version: 0,
             n_sent_messages: 0,
-            n_steps: 0,
+            _n_steps: 0,
         }
     }
 }
@@ -496,7 +486,7 @@ impl TransactionExecutionInfo {
 // --------------------
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct OrderedL2ToL1Message {
+pub struct OrderedL2ToL1Message {
     pub(crate) order: usize,
     pub(crate) to_address: Address,
     pub(crate) payload: Vec<Felt>,
@@ -548,14 +538,8 @@ impl L2toL1MessageInfo {
 
 #[cfg(test)]
 mod tests {
-
-    use std::{collections::VecDeque, ops::Add};
-
+    use super::*;
     use crate::{business_logic::execution::objects::CallInfo, utils::Address};
-
-    use super::{
-        Event, L2toL1MessageInfo, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionInfo,
-    };
 
     #[test]
     fn non_optional_calls_test() {
@@ -699,10 +683,10 @@ mod tests {
 
         // events
 
-        let event1 = Event::new(ord_event1, child2.caller_address.clone());
-        let event2 = Event::new(ord_event2, child2.caller_address);
-        let event3 = Event::new(ord_event3, child1.caller_address.clone());
-        let event4 = Event::new(ord_event4, child1.caller_address);
+        Event::new(ord_event1, child2.caller_address.clone());
+        Event::new(ord_event2, child2.caller_address);
+        Event::new(ord_event3, child1.caller_address.clone());
+        Event::new(ord_event4, child1.caller_address);
 
         assert!(call_root.get_sorted_events().is_err())
     }
@@ -776,10 +760,10 @@ mod tests {
 
         // events
 
-        let msg1 = L2toL1MessageInfo::new(ord_msg1, child2.caller_address.clone());
-        let msg2 = L2toL1MessageInfo::new(ord_msg2, child2.caller_address);
-        let msg3 = L2toL1MessageInfo::new(ord_msg3, child1.caller_address.clone());
-        let msg4 = L2toL1MessageInfo::new(ord_msg4, child1.caller_address);
+        L2toL1MessageInfo::new(ord_msg1, child2.caller_address.clone());
+        L2toL1MessageInfo::new(ord_msg2, child2.caller_address);
+        L2toL1MessageInfo::new(ord_msg3, child1.caller_address.clone());
+        L2toL1MessageInfo::new(ord_msg4, child1.caller_address);
 
         assert!(call_root.get_sorted_l2_to_l1_messages().is_err())
     }

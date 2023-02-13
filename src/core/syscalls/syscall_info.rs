@@ -136,12 +136,9 @@ pub fn program_json() -> Result<ProgramJson, SyscallHandlerError> {
 
 #[cfg(test)]
 mod tests {
-
-    use num_traits::Num;
-
     use super::SyscallInfo;
     use super::*;
-    use std::str::FromStr;
+    use num_traits::Num;
 
     #[test]
     fn create_syscall_info_emit_event() {

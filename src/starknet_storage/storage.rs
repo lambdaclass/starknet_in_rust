@@ -1,11 +1,10 @@
-use crate::{
-    business_logic::fact_state::contract_state::ContractState,
-    services::api::contract_class::{self, ContractClass},
-};
-
 use super::{
     dict_storage::{Prefix, StorageKey},
     errors::storage_errors::StorageError,
+};
+use crate::{
+    business_logic::fact_state::contract_state::ContractState,
+    services::api::contract_class::ContractClass,
 };
 use std::str;
 
@@ -164,27 +163,26 @@ impl<T: Storage> FactFetchingContext<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use cairo_rs::types::program::{self, Program};
-    use felt::{Felt, PRIME_STR};
-
+    use super::*;
     use crate::{
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
         utils::test_utils::storage_key,
     };
-
-    use super::*;
+    use cairo_rs::types::program::Program;
+    use felt::Felt;
+    use std::collections::HashMap;
 
     #[test]
-    fn new_ffc() {
+    fn new_ffc() -> Result<(), Box<dyn std::error::Error>> {
         let mut ffc = FactFetchingContext::new(DictStorage::new(), Some(2));
 
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        ffc.storage.set_float(&fkey, 4.0);
+        ffc.storage.set_float(&fkey, 4.0)?;
 
-        assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0)
+        assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0);
+
+        Ok(())
     }
 
     #[test]
@@ -193,13 +191,14 @@ mod tests {
 
         let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
 
-        let contract_state = ContractState::create([8; 32], Felt::new(9), HashMap::new());
+        let contract_state = ContractState::new([8; 32], Felt::new(9), HashMap::new());
         storage
             .set_contract_state(&key, &contract_state)
             .expect("Error setting contract state");
 
         assert_eq!(Ok(contract_state), storage.get_contract_state(&key));
     }
+
     #[test]
     fn get_and_set_contract_class() {
         let mut storage = DictStorage::new();
