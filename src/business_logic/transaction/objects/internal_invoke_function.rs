@@ -76,9 +76,9 @@ impl InternalInvokeFunction {
 
     fn run_validate_entrypoint(
         &self,
-        state: CachedState<InMemoryStateReader>,
+        state: &CachedState<InMemoryStateReader>,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: StarknetGeneralConfig,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
@@ -99,7 +99,7 @@ impl InternalInvokeFunction {
         );
 
         let call_info = call.execute(
-            state,
+            state.clone(),
             general_config.clone(),
             resources_manager,
             self.get_execution_context(general_config.validate_max_n_steps),
@@ -114,8 +114,8 @@ impl InternalInvokeFunction {
     ///     Returns the CallInfo.
     fn run_execute_entrypoint(
         &self,
-        state: CachedState<InMemoryStateReader>,
-        general_config: StarknetGeneralConfig,
+        state: &CachedState<InMemoryStateReader>,
+        general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, ExecutionError> {
         let call = ExecutionEntryPoint::new(
@@ -129,7 +129,7 @@ impl InternalInvokeFunction {
         );
 
         call.execute(
-            state,
+            state.clone(),
             general_config.clone(),
             resources_manager,
             self.get_execution_context(general_config.invoke_tx_max_n_steps),
@@ -140,21 +140,18 @@ impl InternalInvokeFunction {
         &self,
         // Check this
         // state: UpdatesTrackerState<CachedState<InMemoryStateReader>>,
-        state: CachedState<InMemoryStateReader>,
-        general_config: StarknetGeneralConfig,
+        state: &CachedState<InMemoryStateReader>,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
         self.verify_version()?;
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info = self.run_validate_entrypoint(
-            state.clone(),
-            &mut resources_manager,
-            general_config.clone(),
-        )?;
+        let validate_info =
+            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
         // Execute transaction
         let call_info =
-            self.run_execute_entrypoint(state.clone(), general_config, &mut resources_manager)?;
-        let updates_tracker_state = UpdatesTrackerState::new(state);
+            self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
+        let updates_tracker_state = UpdatesTrackerState::new(state.clone());
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
@@ -162,13 +159,14 @@ impl InternalInvokeFunction {
             updates_tracker_state,
             None,
         )?;
-        let x = TransactionExecutionInfo::create_concurrent_stage_execution_info(
-            validate_info,
-            Some(call_info),
-            actual_resources,
-            Some(self.tx_type.clone()),
-        );
-        Ok(x)
+        let transaction_execution_info =
+            TransactionExecutionInfo::create_concurrent_stage_execution_info(
+                validate_info,
+                Some(call_info),
+                actual_resources,
+                Some(self.tx_type.clone()),
+            );
+        Ok(transaction_execution_info)
     }
 }
 
