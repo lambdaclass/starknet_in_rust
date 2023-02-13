@@ -341,10 +341,12 @@ mod tests {
         //*   Execute contract
         //* ---------------------
         let general_config = StarknetGeneralConfig::default();
-        let tx_execution_context = TransactionExecutionContext::create_for_testing(
+        let tx_execution_context = TransactionExecutionContext::new(
             Address(0.into()),
-            10,
             Felt::zero(),
+            Vec::new(),
+            0,
+            10.into(),
             general_config.invoke_tx_max_n_steps,
             TRANSACTION_VERSION,
         );

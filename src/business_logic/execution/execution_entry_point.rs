@@ -211,7 +211,7 @@ impl ExecutionEntryPoint {
         let entry_points = contract_class
             .entry_points_by_type
             .get(&self.entry_point_type)
-            .unwrap()
+            .ok_or(ExecutionError::InvalidEntryPoints)?
             .clone();
         let filtered_entry_points = entry_points
             .clone()

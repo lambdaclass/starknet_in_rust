@@ -63,9 +63,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         // TODO: check work arounds to pass block info
         let block_info = BlockInfo::default();
         let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext {
-            ..Default::default()
-        };
+        let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();

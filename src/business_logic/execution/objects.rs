@@ -287,9 +287,9 @@ impl TransactionExecutionContext {
             nonce,
             signature,
             transaction_hash,
-            version: 0,
+            version,
             n_sent_messages: 0,
-            n_steps: 0,
+            n_steps,
         }
     }
 

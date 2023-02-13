@@ -10,8 +10,8 @@ use cairo_rs::{
 use felt::Felt;
 use thiserror::Error;
 
+use crate::business_logic::transaction::transaction_errors::TransactionError;
 use crate::{
-    business_logic::transaction::transaction_errors::TransactionError,
     core::errors::{self, syscall_handler_errors::SyscallHandlerError},
     starknet_runner::starknet_runner_error::StarknetRunnerError,
 };
@@ -59,6 +59,8 @@ pub enum ExecutionError {
     InvalidSegmentSize,
     #[error("Invalid stop pointer for segment; expected {0}, found {1}")]
     InvalidStopPointer(Relocatable, Relocatable),
+    #[error("Invalid entry point types")]
+    InvalidEntryPoints,
     #[error("Expected and int value got a Relocatable")]
     NotAnInt,
     #[error("Out of bounds write to a read-only segment.")]
