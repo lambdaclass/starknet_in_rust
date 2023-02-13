@@ -283,25 +283,15 @@ mod tests {
 
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let mut entry_points_by_type = HashMap::new();
+        let mut entry_points_by_type = contract_class.entry_points_by_type.clone();
 
-        let fib_entrypoint_selector = Felt::from_str_radix(
-            "485685360977693822178494178685050472186234432883326654755380582597179924681",
-            10,
-        )
-        .unwrap();
-
-        // insert function fib entrypoint
-        entry_points_by_type.insert(
-            EntryPointType::External,
-            [ContractEntryPoint {
-                selector: fib_entrypoint_selector.clone(),
-                offset: Felt::from_str_radix("33", 10).unwrap(),
-            }]
-            .to_vec(),
-        );
-        let contract_class =
-            ContractClass::new(contract_class.program, entry_points_by_type, None).unwrap();
+        let fib_entrypoint_selector = entry_points_by_type
+            .get(&EntryPointType::External)
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .selector
+            .clone();
 
         //* --------------------------------------------
         //*    Create state reader with class hash data

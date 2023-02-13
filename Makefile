@@ -26,7 +26,7 @@ clean:
 
 compile_starknet:
 	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
-	cairo-compile cairo_programs/contracts.cairo > cairo_programs/contracts.json && \
+	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
 	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json 
 
 clippy:
@@ -38,8 +38,8 @@ remove-venv:
 venv-test:
 	. starknet-in-rs-venv/bin/activate && \
 	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
+	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
 	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json && \
-	starknet-compile starknet_programs/contracts.cairo > starknet_programs/contracts.json && \
 	cargo test
 
 test:
