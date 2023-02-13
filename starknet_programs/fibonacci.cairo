@@ -1,9 +1,4 @@
 %lang starknet
-// from starkware.cairo.common.cairo_builtins import HashBuiltin
-
-// @storage_var
-// func _counter() -> (res: felt) {
-// }
 
 func main() {
     // Call fib(1, 1, 10).
@@ -13,12 +8,6 @@ func main() {
     assert result = 144;
     ret;
 }
-
-// @external
-// func f{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (res:felt) {
-//      _counter.write(42);
-//      return _counter.read();
-// }
 
 @external
 func fib(first_element, second_element, n) -> (res: felt) {
