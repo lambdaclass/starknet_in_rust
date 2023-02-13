@@ -26,7 +26,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
-    utils::Address,
+    utils::{calculate_tx_resources, Address},
 };
 
 pub(crate) struct InternalInvokeFunction {
@@ -67,10 +67,10 @@ impl InternalInvokeFunction {
             self.contract_address.clone(),
             self.hash_value.clone(),
             self.signature.clone(),
-            self.max_fee.clone(),
+            self.max_fee,
             self.nonce.clone(),
             n_steps,
-            self.version.clone(),
+            self.version,
         )
     }
 
@@ -110,59 +110,68 @@ impl InternalInvokeFunction {
         Ok(Some(call_info))
     }
 
-    fn _apply_specific_concurrent_changes<T: StateReader + Clone>(
+    ///     Builds the transaction execution context and executes the entry point.
+    ///     Returns the CallInfo.
+    fn run_execute_entrypoint(
         &self,
-        state: UpdatesTrackerState<CachedState<T>>,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.verify_version();
-        let resources_manager = ExecutionResourcesManager::default();
+        state: CachedState<InMemoryStateReader>,
+        general_config: StarknetGeneralConfig,
+        resources_manager: &mut ExecutionResourcesManager,
+    ) -> Result<CallInfo, ExecutionError> {
+        let call = ExecutionEntryPoint::new(
+            self.contract_address.clone(),
+            self.calldata.clone(),
+            self.entry_point_selector.clone(),
+            Address(0.into()),
+            EntryPointType::External,
+            None,
+            None,
+        );
 
-        todo!()
+        call.execute(
+            state,
+            general_config.clone(),
+            resources_manager,
+            self.get_execution_context(general_config.invoke_tx_max_n_steps),
+        )
+    }
+
+    fn _apply_specific_concurrent_changes(
+        &self,
+        // Check this
+        // state: UpdatesTrackerState<CachedState<InMemoryStateReader>>,
+        state: CachedState<InMemoryStateReader>,
+        general_config: StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+        self.verify_version()?;
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let validate_info = self.run_validate_entrypoint(
+            state.clone(),
+            &mut resources_manager,
+            general_config.clone(),
+        )?;
+
+        // Execute transaction
+        let call_info =
+            self.run_execute_entrypoint(state.clone(), general_config, &mut resources_manager)?;
+        let updates_tracker_state = UpdatesTrackerState::new(state);
+        let actual_resources = calculate_tx_resources(
+            resources_manager,
+            &vec![Some(call_info.clone()), validate_info.clone()],
+            self.tx_type.clone(),
+            updates_tracker_state,
+            None,
+        )?;
+        let x = TransactionExecutionInfo::create_concurrent_stage_execution_info(
+            validate_info,
+            Some(call_info),
+            actual_resources,
+            Some(self.tx_type.clone()),
+        );
+        Ok(x)
     }
 }
 
-/*
-    def _apply_specific_concurrent_changes(
-        self, state: UpdatesTrackerState, general_config: StarknetGeneralConfig
-    ) -> TransactionExecutionInfo:
-        """
-        Applies self to 'state' by executing the entry point and charging fee for it (if needed).
-        """
-        # Reject unsupported versions. This is necessary (in addition to the gateway's check)
-        # since an old transaction might still reach here, e.g., in case of a re-org.
-        self.verify_version()
-
-        # Validate transaction.
-        resources_manager = ExecutionResourcesManager.empty()
-        validate_info = self.run_validate_entrypoint(
-            state=state,
-            resources_manager=resources_manager,
-            general_config=general_config,
-        )
-
-        # Execute transaction.
-        call_info = self.run_execute_entrypoint(
-            state=state,
-            resources_manager=resources_manager,
-            general_config=general_config,
-        )
-
-        # Handle fee.
-        actual_resources = calculate_tx_resources(
-            state=state,
-            resources_manager=resources_manager,
-            call_infos=[call_info, validate_info],
-            tx_type=self.tx_type,
-        )
-
-        return TransactionExecutionInfo.create_concurrent_stage_execution_info(
-            validate_info=validate_info,
-            call_info=call_info,
-            actual_resources=actual_resources,
-            tx_type=self.tx_type,
-        )
-
-*/
 pub(crate) fn verify_version(
     version: u64,
     only_query: bool,
