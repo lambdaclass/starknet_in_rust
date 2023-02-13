@@ -84,6 +84,8 @@ pub enum SyscallHandlerError {
     InvalidTxInfoPtr,
     #[error("could not convert felt to u64")]
     InvalidFeltConversion,
+    #[error("Could not compute hash")]
+    ErrorComputingHash,
     #[error(transparent)]
     StateError(#[from] StateError),
     #[error(transparent)]

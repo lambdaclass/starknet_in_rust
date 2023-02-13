@@ -4,7 +4,10 @@ use std::rc::Rc;
 
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
+use crate::business_logic::execution::execution_entry_point::ExecutionEntryPoint;
+use crate::business_logic::execution::execution_errors::ExecutionError;
 use crate::business_logic::execution::objects::*;
+use crate::business_logic::execution::{execution_entry_point, objects::*};
 use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
 use crate::business_logic::fact_state::state::ExecutionResourcesManager;
 use crate::business_logic::state::cached_state::CachedState;
@@ -15,6 +18,7 @@ use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::definitions::general_config::StarknetGeneralConfig;
 use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class::EntryPointType;
+use crate::starknet_runner::runner::StarknetRunner;
 use crate::starknet_storage::dict_storage::DictStorage;
 use crate::utils::*;
 use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
@@ -42,10 +46,58 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) block_info: BlockInfo,
     pub(crate) state: T,
     pub(crate) starknet_storage_state: ContractStorageState<T>,
+    pub(crate) internal_calls: Vec<CallInfo>,
+    pub(crate) expected_syscall_ptr: Relocatable,
 }
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
-    pub fn new(block_info: BlockInfo, contract_address: Address, state: T) -> Self {
+    pub fn new(
+        tx_execution_context: TransactionExecutionContext,
+        state: T,
+        resources_manager: ExecutionResourcesManager,
+        caller_address: Address,
+        contract_address: Address,
+        general_config: StarknetGeneralConfig,
+        syscall_ptr: Relocatable,
+    ) -> Self {
+        // TODO: check work arounds to pass block info
+        let block_info = BlockInfo::default();
+        let events = Vec::new();
+        let tx_execution_context = TransactionExecutionContext::default();
+        let read_only_segments = Vec::new();
+        let l2_to_l1_messages = Vec::new();
+        let general_config = StarknetGeneralConfig::default();
+        let tx_info_ptr = None;
+        let starknet_storage_state =
+            ContractStorageState::new(state.clone(), contract_address.clone());
+
+        let internal_calls = Vec::new();
+
+        BusinessLogicSyscallHandler {
+            tx_execution_context,
+            events,
+            read_only_segments,
+            resources_manager,
+            contract_address,
+            caller_address,
+            l2_to_l1_messages,
+            general_config,
+            tx_info_ptr,
+            block_info,
+            state,
+            starknet_storage_state,
+            internal_calls,
+            expected_syscall_ptr: syscall_ptr,
+        }
+    }
+
+    /// Increments the syscall count for a given `syscall_name` by 1.
+    fn increment_syscall_count(&mut self, syscall_name: &str) {
+        self.resources_manager
+            .increment_syscall_counter(syscall_name, 1);
+    }
+
+    pub fn new_for_testing(block_info: BlockInfo, contract_address: Address, state: T) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
             "deploy".to_string(),
@@ -76,6 +128,9 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         let starknet_storage_state =
             ContractStorageState::new(state.clone(), contract_address.clone());
 
+        let internal_calls = Vec::new();
+        let expected_syscall_ptr = Relocatable::from((0, 0));
+
         BusinessLogicSyscallHandler {
             tx_execution_context,
             events,
@@ -89,13 +144,53 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             block_info,
             state,
             starknet_storage_state,
+            internal_calls,
+            expected_syscall_ptr,
         }
     }
 
-    /// Increments the syscall count for a given `syscall_name` by 1.
-    fn increment_syscall_count(&mut self, syscall_name: &str) {
-        self.resources_manager
-            .increment_syscall_counter(syscall_name, 1);
+    /// Performs post run syscall related tasks.
+    pub(crate) fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: MaybeRelocatable,
+    ) -> Result<(), ExecutionError> {
+        let expected_stop_ptr = self.expected_syscall_ptr;
+        let syscall_ptr = match syscall_stop_ptr {
+            MaybeRelocatable::RelocatableValue(val) => val,
+            _ => return Err(ExecutionError::NotARelocatableValue),
+        };
+        if syscall_ptr != expected_stop_ptr {
+            return Err(ExecutionError::InvalidStopPointer(
+                expected_stop_ptr,
+                syscall_ptr,
+            ));
+        }
+        self.validate_read_only_segments(runner)
+    }
+
+    /// Validates that there were no out of bounds writes to read-only segments and marks
+    /// them as accessed.
+    pub(crate) fn validate_read_only_segments(
+        &self,
+        runner: &mut VirtualMachine,
+    ) -> Result<(), ExecutionError> {
+        for (segment_ptr, segment_size) in self.read_only_segments.clone() {
+            let used_size = runner
+                .get_segment_used_size(segment_ptr.segment_index as usize)
+                .ok_or(ExecutionError::InvalidSegmentSize)?;
+
+            let seg_size = match segment_size {
+                MaybeRelocatable::Int(size) => size,
+                _ => return Err(ExecutionError::NotAnInt),
+            };
+
+            if seg_size != used_size.into() {
+                return Err(ExecutionError::OutOfBound);
+            }
+            runner.mark_address_range_as_accessed(segment_ptr, used_size);
+        }
+        Ok(())
     }
 }
 
@@ -194,7 +289,7 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<u64>, SyscallHandlerError> {
+    ) -> Result<Vec<Felt>, SyscallHandlerError> {
         // Parse request and prepare the call.
         let request =
             match self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)? {
@@ -369,6 +464,7 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
             .read(&address.to_32_bytes()?)?
             .clone())
     }
+
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
         let _read = self.starknet_storage_state.read(&address.to_32_bytes()?)?;
 
@@ -396,7 +492,13 @@ impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
             None,
         );
 
-        Self::new(BlockInfo::default(), Address(0.into()), cached_state)
+        let contract_address = Address(0.into());
+
+        BusinessLogicSyscallHandler::new_for_testing(
+            BlockInfo::default(),
+            contract_address,
+            cached_state,
+        )
     }
 }
 

@@ -7,6 +7,7 @@ use crate::business_logic::execution::objects::{
 use crate::business_logic::fact_state::state::ExecutionResourcesManager;
 use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::update_tracker_state::UpdatesTrackerState;
+use crate::core::contract_address::starknet_contract_address::compute_class_hash;
 use crate::core::errors::state_errors::StateError;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::transaction_hash::starknet_transaction_hash::{
@@ -38,11 +39,6 @@ pub struct InternalDeploy {
     tx_type: TransactionType,
 }
 
-// TODO: this function is on another PR
-fn compute_class_hash(contract_class: ContractClass) -> Felt {
-    todo!()
-}
-
 impl InternalDeploy {
     pub fn new(
         contract_address_salt: Address,
@@ -51,7 +47,8 @@ impl InternalDeploy {
         chain_id: u64,
         version: u64,
     ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_class_hash(contract_class);
+        let class_hash = compute_class_hash(&contract_class)
+            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
         let contract_hash: [u8; 32] = class_hash
             .to_string()
             .as_bytes()

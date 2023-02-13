@@ -41,7 +41,7 @@ use crate::{
 
 use super::contract_state::ContractState;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ExecutionResourcesManager {
     pub(crate) syscall_counter: HashMap<String, u64>,
     pub(crate) cairo_usage: ExecutionResources,
@@ -162,7 +162,7 @@ impl SharedState {
             ffc,
             state_cache.class_hash_writes,
             state_cache.nonce_writes,
-            to_state_diff_storage_mapping(state_cache.storage_writes)?,
+            to_state_diff_storage_mapping(state_cache.storage_writes),
         ))
     }
 
@@ -211,7 +211,7 @@ impl StateDiff {
             state_cache.storage_initial_values,
         );
 
-        let storage_updates = to_state_diff_storage_mapping(substracted_maps)?;
+        let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
         let address_to_nonce =
             subtract_mappings(state_cache.nonce_writes, state_cache.nonce_initial_values);

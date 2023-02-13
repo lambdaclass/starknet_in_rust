@@ -16,6 +16,9 @@ num-integer = "0.1.45"
 starknet-crypto = "0.2.0"
 sha3 = "0.10.1"
 serde = { version = "1.0.152", features = ["derive"] }
+starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "main", features = [
+    "testing",
+] }
 
 [dev-dependencies.rusty-hook]
 version = "0.11"

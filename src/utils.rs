@@ -2,6 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
     iter::zip,
+    ops::Add,
 };
 
 use crate::{
@@ -12,6 +13,7 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
+            cached_state::UNINITIALIZED_CLASS_HASH,
             state_api::{State, StateReader},
             state_cache::StorageEntry,
             update_tracker_state::UpdatesTrackerState,
@@ -20,6 +22,7 @@ use crate::{
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::transaction_type::TransactionType,
     services::api::contract_class::EntryPointType,
+    starknet_storage::storage,
     utils_errors::UtilsError,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
@@ -112,24 +115,14 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
 
 pub fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt>,
-) -> Result<HashMap<Felt, HashMap<[u8; 32], Address>>, StateError> {
+) -> HashMap<Felt, HashMap<[u8; 32], Address>> {
     let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
     for ((address, key), value) in storage_writes {
-        if storage_updates.contains_key(&address.0) {
-            let mut map = storage_updates
-                .get(&address.0)
-                .ok_or(StateError::EmptyKeyInStorage)?
-                .to_owned();
-            map.insert(key, Address(value));
-            storage_updates.insert(address.0, map);
-        } else {
-            let mut new_map: HashMap<[u8; 32], Address> = HashMap::new();
-            new_map.insert(key, Address(value));
-            storage_updates.insert(address.0, new_map);
-        }
+        let mut map = storage_updates.get(&address.0).cloned().unwrap_or_default();
+        map.insert(key, Address(value));
+        storage_updates.insert(address.0, map);
     }
-
-    Ok(storage_updates)
+    storage_updates
 }
 
 /// Returns the total resources needed to include the most recent transaction in a StarkNet batch
@@ -160,7 +153,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let n_deployments = non_optional_calls
         .clone()
         .into_iter()
-        .fold(0, |acc, c| get_call_n_deployments(c));
+        .fold(0, |acc, c| acc + get_call_n_deployments(c));
 
     let mut l2_to_l1_messages = Vec::new();
 
@@ -244,6 +237,32 @@ where
     keys1.extend(keys2);
 
     keys1.into_iter().collect()
+}
+
+//* ----------------------------
+//* Execution entry point utils
+//* ----------------------------
+
+pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
+    mut state: S,
+    contract_address: Address,
+) -> Result<[u8; 32], ExecutionError> {
+    let class_hash: [u8; 32] = state
+        .get_class_hash_at(&contract_address)
+        .map_err(|_| ExecutionError::FailToReadClassHash)?
+        .to_owned();
+
+    if class_hash == *UNINITIALIZED_CLASS_HASH {
+        return Err(ExecutionError::NotDeployedContract(class_hash));
+    }
+    Ok(class_hash)
+}
+
+pub fn validate_contract_deployed<S: StateReader + Clone>(
+    mut state: S,
+    contract_address: Address,
+) -> Result<[u8; 32], ExecutionError> {
+    get_deployed_address_class_hash_at_address(state, contract_address)
 }
 
 //* -------------------
@@ -421,7 +440,7 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let mut hint_processor = SyscallHintProcessor::new_empty().unwrap();
+            let mut hint_processor = SyscallHintProcessor::new_empty();
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
@@ -479,7 +498,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let map = to_state_diff_storage_mapping(storage).unwrap();
+        let map = to_state_diff_storage_mapping(storage);
 
         assert_eq!(
             *map.get(&address1.0).unwrap().get(&key1).unwrap(),
@@ -556,7 +575,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let state_dff = to_state_diff_storage_mapping(storage).unwrap();
+        let state_dff = to_state_diff_storage_mapping(storage);
         let cache_storage = to_cache_state_storage_mapping(state_dff);
 
         let mut expected_res = HashMap::new();
