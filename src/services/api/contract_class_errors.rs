@@ -1,3 +1,4 @@
+use cairo_rs::types::errors::program_errors::ProgramError;
 use thiserror::Error;
 
 use super::contract_class::ContractEntryPoint;

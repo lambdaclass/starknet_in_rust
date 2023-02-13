@@ -6,13 +6,14 @@ use crate::business_logic::execution::objects::{
 use crate::business_logic::fact_state::state::ExecutionResourcesManager;
 use crate::business_logic::state::state_api::{State, StateReader};
 use crate::business_logic::state::update_tracker_state::UpdatesTrackerState;
+use crate::core::contract_address::starknet_contract_address::compute_class_hash;
 use crate::core::errors::state_errors::StateError;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 use crate::core::transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash;
 use crate::definitions::constants::TRANSACTION_VERSION;
 use crate::definitions::general_config::{self, StarknetGeneralConfig};
 use crate::definitions::transaction_type::TransactionType;
-use crate::hash_utils::calculate_contract_address_from_hash;
+use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class::{self, ContractClass};
 use crate::starknet_storage::storage::{FactFetchingContext, Storage};
 use crate::starkware_utils::starkware_errors::StarkwareError;
@@ -33,11 +34,6 @@ pub struct InternalDeploy {
     tx_type: TransactionType,
 }
 
-// TODO: this function is on another PR
-fn compute_class_hash(contract_class: ContractClass) -> Felt {
-    todo!()
-}
-
 impl InternalDeploy {
     pub fn new(
         contract_address_salt: Address,
@@ -46,13 +42,14 @@ impl InternalDeploy {
         chain_id: u64,
         version: u64,
     ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_class_hash(contract_class);
+        let class_hash = compute_class_hash(&contract_class)
+            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
         let contract_hash: [u8; 32] = class_hash
             .to_string()
             .as_bytes()
             .try_into()
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(class_hash.clone()))?;
-        let contract_address = Address(calculate_contract_address_from_hash(
+        let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &class_hash,
             &constructor_calldata[..],
@@ -76,28 +73,8 @@ impl InternalDeploy {
         })
     }
 
-    pub fn create_for_testing<S: Storage>(
-        ffc: FactFetchingContext<S>,
-        contract_class: ContractClass,
-        contract_address_salt: Address,
-        constructor_calldata: Vec<Felt>,
-        chain_id: Option<u64>,
-    ) -> Result<Self, SyscallHandlerError> {
-        InternalDeploy::new(
-            contract_address_salt,
-            contract_class,
-            constructor_calldata,
-            chain_id.unwrap_or(0),
-            TRANSACTION_VERSION,
-        )
-    }
-
     pub fn class_hash(&self) -> [u8; 32] {
         self.contract_hash
-    }
-
-    pub fn get_state_selector() {
-        todo!()
     }
 
     pub fn _apply_specific_concurrent_changes<S: State + StateReader>(

@@ -17,7 +17,8 @@ use super::{
 };
 use crate::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, state_api_objects::BlockInfo},
     },
     services::api::contract_class::{ContractClass, ContractEntryPoint},
     utils::get_integer_range,
@@ -81,16 +82,16 @@ impl ExecutionEntryPoint {
     /// Returns a CallInfo object that represents the execution.
     pub fn execute(
         &self,
-        state: CachedState<InMemoryStateReader>,
-        general_config: StarknetGeneralConfig,
+        mut state: &mut CachedState<InMemoryStateReader>,
+        general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-        tx_execution_context: TransactionExecutionContext,
+        tx_execution_context: &TransactionExecutionContext,
     ) -> Result<CallInfo, ExecutionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         let runner = self.run(
             state,
-            resources_manager.clone(),
+            &resources_manager.clone(),
             general_config,
             tx_execution_context,
         )?;
@@ -100,7 +101,6 @@ impl ExecutionEntryPoint {
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values()?;
-        // let retdata = get_integer_range(&runner.vm, &ret_data_ptr, ret_data_size)?;
 
         self.build_call_info(
             previous_cairo_usage,
@@ -117,10 +117,10 @@ impl ExecutionEntryPoint {
     /// retrieve the execution information.
     fn run(
         &self,
-        mut state: CachedState<InMemoryStateReader>,
-        resources_manager: ExecutionResourcesManager,
-        general_config: StarknetGeneralConfig,
-        tx_execution_context: TransactionExecutionContext,
+        state: &mut CachedState<InMemoryStateReader>,
+        resources_manager: &ExecutionResourcesManager,
+        general_config: &StarknetGeneralConfig,
+        tx_execution_context: &TransactionExecutionContext,
     ) -> Result<StarknetRunner, ExecutionError> {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state.clone())?;
@@ -144,8 +144,6 @@ impl ExecutionEntryPoint {
         // prepare OS context
         let os_context = runner.prepare_os_context();
 
-        println!("os: {os_context:?}");
-
         validate_contract_deployed(state.clone(), self.contract_address.clone())?;
 
         // fetch syscall_ptr
@@ -155,12 +153,12 @@ impl ExecutionEntryPoint {
         };
 
         let syscall_handler = BusinessLogicSyscallHandler::new(
-            tx_execution_context,
-            state,
-            resources_manager,
+            tx_execution_context.clone(),
+            state.clone(),
+            resources_manager.clone(),
             self.caller_address.clone(),
             self.contract_address.clone(),
-            general_config,
+            general_config.clone(),
             initial_syscall_ptr,
         );
 

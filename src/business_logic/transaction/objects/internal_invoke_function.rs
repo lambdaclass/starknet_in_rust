@@ -76,7 +76,7 @@ impl InternalInvokeFunction {
 
     fn run_validate_entrypoint(
         &self,
-        state: &CachedState<InMemoryStateReader>,
+        state: &mut CachedState<InMemoryStateReader>,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
@@ -99,10 +99,10 @@ impl InternalInvokeFunction {
         );
 
         let call_info = call.execute(
-            state.clone(),
-            general_config.clone(),
+            state,
+            general_config,
             resources_manager,
-            self.get_execution_context(general_config.validate_max_n_steps),
+            &self.get_execution_context(general_config.validate_max_n_steps),
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)?;
@@ -114,7 +114,7 @@ impl InternalInvokeFunction {
     ///     Returns the CallInfo.
     fn run_execute_entrypoint(
         &self,
-        state: &CachedState<InMemoryStateReader>,
+        state: &mut CachedState<InMemoryStateReader>,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, ExecutionError> {
@@ -129,10 +129,10 @@ impl InternalInvokeFunction {
         );
 
         call.execute(
-            state.clone(),
-            general_config.clone(),
+            state,
+            general_config,
             resources_manager,
-            self.get_execution_context(general_config.invoke_tx_max_n_steps),
+            &self.get_execution_context(general_config.invoke_tx_max_n_steps),
         )
     }
 
@@ -140,7 +140,7 @@ impl InternalInvokeFunction {
         &self,
         // Check this
         // state: UpdatesTrackerState<CachedState<InMemoryStateReader>>,
-        state: &CachedState<InMemoryStateReader>,
+        state: &mut CachedState<InMemoryStateReader>,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
         self.verify_version()?;

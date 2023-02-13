@@ -19,7 +19,7 @@ use num_traits::{pow, Num};
 
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
-    hash_utils::calculate_contract_address_from_hash,
+    hash_utils::{calculate_contract_address, compute_hash_on_elements},
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     utils::Address,
 };
@@ -28,26 +28,6 @@ use std::{collections::HashMap, hash::Hash, path::Path};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
-
-/// Calculates the contract address in the starkNet network - a unique identifier of the contract.
-/// The contract address is a hash chain of the following information:
-///     1. Prefix.
-///     2. Deployer address.
-///     3. Salt.
-///     4. Class hash.
-/// To avoid exceeding the maximum address we take modulus L2_ADDRESS_UPPER_BOUND of the above
-/// result.
-pub(crate) fn calculate_contract_address(
-    salt: &Address,
-    contract_class: &ContractClass,
-    constructor_calldata: &[Felt],
-    deployer_address: Address,
-) -> Result<Felt, ContractAddressError> {
-    let class_hash = compute_class_hash(contract_class)?;
-
-    calculate_contract_address_from_hash(salt, &class_hash, constructor_calldata, deployer_address)
-        .map_err(|err| ContractAddressError::ContractAddressFromHash(err.to_string()))
-}
 
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(

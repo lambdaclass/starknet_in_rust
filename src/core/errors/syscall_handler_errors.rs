@@ -82,6 +82,8 @@ pub enum SyscallHandlerError {
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
+    #[error("Could not compute hash")]
+    ErrorComputingHash,
     #[error(transparent)]
     StateError(#[from] StateError),
     #[error(transparent)]

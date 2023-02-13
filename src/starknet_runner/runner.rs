@@ -75,7 +75,7 @@ impl StarknetRunner {
     pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
         self.vm
             .get_return_values(2)
-            .map_err(|e| StarknetRunnerError::MemoryException(e))?
+            .map_err(StarknetRunnerError::MemoryException)?
             .into_iter()
             .map(|val| match val {
                 Int(felt) => Ok(felt),
@@ -118,23 +118,14 @@ impl StarknetRunner {
             return Err(ExecutionError::IllegalOsPtrOffset);
         }
 
-        println!("os1: {os_context:?}");
-
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
-        println!("os_context_end: {os_context_end}");
         let final_os_context_ptr = os_context_end.sub_usize(os_context.len())?;
-        println!("final_os_context_ptr: {final_os_context_ptr}");
         let os_context_ptr = os_context
             .get(ptr_offset)
             .ok_or(ExecutionError::InvalidPtrFetch)?
             .to_owned();
 
-        println!("os_context_ptr: {os_context_ptr}");
-
         let addr = final_os_context_ptr + ptr_offset;
-
-        println!("addr: {addr}");
-
         let ptr_fetch_from_memory = self
             .vm
             .get_maybe(&addr)?
@@ -169,7 +160,6 @@ impl StarknetRunner {
             _ => return Err(ExecutionError::NotARelocatableValue),
         };
 
-        println!("breakpoint");
         if expected_stop_ptr != seg_stop_ptr {
             return Err(ExecutionError::InvalidStopPointer(
                 expected_stop_ptr,
@@ -215,10 +205,14 @@ impl StarknetRunner {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, fs, path::Path};
+    use std::{
+        collections::HashMap,
+        fs,
+        path::{Path, PathBuf},
+    };
 
     use cairo_rs::{
-        types::{program::Program, relocatable::MaybeRelocatable},
+        types::relocatable::MaybeRelocatable,
         vm::{
             runners::cairo_runner::{CairoRunner, ExecutionResources},
             vm_core::VirtualMachine,
@@ -226,6 +220,7 @@ mod tests {
     };
     use felt::Felt;
     use num_traits::{Num, Zero};
+    use starknet_api::state::Program;
 
     use crate::{
         business_logic::{
@@ -253,7 +248,7 @@ mod tests {
 
     #[test]
     fn get_execution_resources_test_fail() {
-        let program = Program::default();
+        let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         let hint_processor = SyscallHintProcessor::new_empty();
@@ -265,7 +260,7 @@ mod tests {
 
     #[test]
     fn prepare_os_context_test() {
-        let program = Program::default();
+        let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         let hint_processor = SyscallHintProcessor::new_empty();
@@ -286,44 +281,22 @@ mod tests {
         //  Create program and entry point types for contract class
         // ---------------------------------------------------------
 
-        let path = Path::new("cairo_programs/fibonacci.json");
-        let program = Program::from_file(path, None).unwrap();
-        let mut entry_points_by_type = HashMap::new();
+        let path = PathBuf::from("starknet_programs/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let mut entry_points_by_type = contract_class.entry_points_by_type.clone();
 
-        // insert function f entrypoint
-        // entry_points_by_type.insert(
-        //     EntryPointType::External,
-        //     [ContractEntryPoint {
-        //         selector: Felt::from_str_radix(
-        //             "485685360977693822178494178685050472186234432883326654755380582597179924681",
-        //             10,
-        //         )
-        //         .unwrap(),
-        //         offset: Felt::from_str_radix("113", 10).unwrap(),
-        //     }]
-        //     .to_vec(),
-        // );
-
-        // insert function fib entrypoint
-        entry_points_by_type.insert(
-            EntryPointType::External,
-            [ContractEntryPoint {
-                selector: Felt::from_str_radix(
-                    "485685360977693822178494178685050472186234432883326654755380582597179924681",
-                    10,
-                )
-                .unwrap(),
-                offset: Felt::from_str_radix("33", 10).unwrap(),
-            }]
-            .to_vec(),
-        );
-        let contract_class = ContractClass::new(program, entry_points_by_type, None).unwrap();
+        let fib_entrypoint_selector = entry_points_by_type
+            .get(&EntryPointType::External)
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .selector
+            .clone();
 
         //* --------------------------------------------
         //*    Create state reader with class hash data
         //* --------------------------------------------
 
-        let block_info = BlockInfo::default();
         let ffc = DictStorage::new();
         let contract_class_storage = DictStorage::new();
         let mut contract_class_cache = HashMap::new();
@@ -344,25 +317,20 @@ mod tests {
         //*    Create state with previous data
         //* ---------------------------------------
 
-        let state = CachedState::new(block_info, state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
         //* ------------------------------------
         //*    Create execution entry point
         //* ------------------------------------
 
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
-        let entry_point_selector = Felt::from_str_radix(
-            "485685360977693822178494178685050472186234432883326654755380582597179924681",
-            10,
-        )
-        .unwrap();
         let caller_address = Address(0000.into());
         let entry_point_type = EntryPointType::External;
 
         let exec_entry_point = ExecutionEntryPoint::new(
             address,
-            calldata,
-            entry_point_selector,
+            calldata.clone(),
+            fib_entrypoint_selector.clone(),
             caller_address,
             entry_point_type,
             Some(CallType::Delegate),
@@ -382,19 +350,29 @@ mod tests {
         );
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        // TODO: delete this, it is only used to see the errors
+        let expected_call_info = CallInfo {
+            caller_address: Address(0.into()),
+            call_type: Some(CallType::Delegate),
+            contract_address: Address(1111.into()),
+            entry_point_selector: Some(fib_entrypoint_selector),
+            entry_point_type: Some(EntryPointType::External),
+            calldata,
+            retdata: [1.into(), 144.into()].to_vec(),
+            execution_resources: ExecutionResources::default(),
+            class_hash: Some(class_hash),
+            ..Default::default()
+        };
 
-        let call_info = CallInfo::default();
         assert_eq!(
             exec_entry_point
                 .execute(
-                    state,
-                    general_config,
+                    &mut state,
+                    &general_config,
                     &mut resources_manager,
-                    tx_execution_context
+                    &tx_execution_context
                 )
                 .unwrap(),
-            call_info
+            expected_call_info
         );
     }
 }

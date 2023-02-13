@@ -1,4 +1,4 @@
-.PHONY: build check deps deps-macos clean compile_cairo clippy remove-venv venv-test test clean coverage
+.PHONY: build check deps deps-macos clean compile_starknet clippy remove-venv venv-test test clean coverage
 	
 build: 
 	cargo build --release
@@ -22,12 +22,12 @@ deps-macos:
 
 clean: 
 	rm cairo_syscalls/*json
+	rm cairo_programs/*json
 
-compile_cairo:
-	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json && \
-	cairo-compile cairo_programs/fibonacci.cairo --output cairo_programs/fibonacci.json && \
-	cairo-compile cairo_programs/not_main.cairo --output cairo_programs/not_main.json && \
-	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json
+compile_starknet:
+	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
+	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
+	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json 
 
 clippy:
 	cargo clippy --all-targets -- -D warnings
@@ -37,8 +37,9 @@ remove-venv:
 
 venv-test:
 	. starknet-in-rs-venv/bin/activate && \
-	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json && \
+	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
 	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
+	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json && \
 	cargo test
 
 test:
