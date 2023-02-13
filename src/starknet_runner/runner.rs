@@ -327,7 +327,7 @@ mod tests {
         //*    Create state with previous data
         //* ---------------------------------------
 
-        let state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
         //* ------------------------------------
         //*    Create execution entry point
@@ -376,10 +376,10 @@ mod tests {
         assert_eq!(
             exec_entry_point
                 .execute(
-                    state,
-                    general_config,
+                    &mut state,
+                    &general_config,
                     &mut resources_manager,
-                    tx_execution_context
+                    &tx_execution_context
                 )
                 .unwrap(),
             expected_call_info

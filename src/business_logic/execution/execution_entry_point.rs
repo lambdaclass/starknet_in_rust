@@ -82,18 +82,18 @@ impl ExecutionEntryPoint {
     /// Returns a CallInfo object that represents the execution.
     pub fn execute(
         &self,
-        state: CachedState<InMemoryStateReader>,
-        general_config: StarknetGeneralConfig,
+        mut state: &mut CachedState<InMemoryStateReader>,
+        general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-        tx_execution_context: TransactionExecutionContext,
+        tx_execution_context: &TransactionExecutionContext,
     ) -> Result<CallInfo, ExecutionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         let runner = self.run(
-            state,
-            resources_manager.clone(),
-            general_config,
-            tx_execution_context,
+            &mut state,
+            &resources_manager.clone(),
+            &general_config,
+            &tx_execution_context,
         )?;
 
         // Update resources usage (for bouncer).
@@ -117,10 +117,10 @@ impl ExecutionEntryPoint {
     /// retrieve the execution information.
     fn run(
         &self,
-        mut state: CachedState<InMemoryStateReader>,
-        resources_manager: ExecutionResourcesManager,
-        general_config: StarknetGeneralConfig,
-        tx_execution_context: TransactionExecutionContext,
+        state: &mut CachedState<InMemoryStateReader>,
+        resources_manager: &ExecutionResourcesManager,
+        general_config: &StarknetGeneralConfig,
+        tx_execution_context: &TransactionExecutionContext,
     ) -> Result<StarknetRunner, ExecutionError> {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state.clone())?;
@@ -153,12 +153,12 @@ impl ExecutionEntryPoint {
         };
 
         let syscall_handler = BusinessLogicSyscallHandler::new(
-            tx_execution_context,
-            state,
-            resources_manager,
+            tx_execution_context.clone(),
+            state.clone(),
+            resources_manager.clone(),
             self.caller_address.clone(),
             self.contract_address.clone(),
-            general_config,
+            general_config.clone(),
             initial_syscall_ptr,
         );
 

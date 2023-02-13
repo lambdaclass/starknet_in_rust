@@ -159,7 +159,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let n_deployments = non_optional_calls
         .clone()
         .into_iter()
-        .fold(0, |acc, c| get_call_n_deployments(c));
+        .fold(0, |acc, c| acc + get_call_n_deployments(c));
 
     let mut l2_to_l1_messages = Vec::new();
 
