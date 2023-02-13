@@ -42,33 +42,15 @@ pub struct ContractEntryPoint {
     pub(crate) offset: Felt,
 }
 
+// -------------------------------
+//         Contract Class
+// -------------------------------
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ContractClass {
     pub(crate) program: Program,
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub(crate) abi: Option<AbiType>,
-}
-
-impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
-    fn from(entry_point: &ContractEntryPoint) -> Self {
-        vec![
-            MaybeRelocatable::from(entry_point.selector.clone()),
-            MaybeRelocatable::from(entry_point.offset.clone()),
-        ]
-    }
-}
-
-impl From<starknet_api::state::ContractClass> for ContractClass {
-    fn from(contract_class: starknet_api::state::ContractClass) -> Self {
-        let program = to_cairo_runner_program(&contract_class.program).unwrap();
-        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
-
-        ContractClass {
-            program,
-            entry_points_by_type,
-            abi: None,
-        }
-    }
 }
 
 impl ContractClass {
@@ -113,6 +95,45 @@ impl ContractClass {
     }
 }
 
+// -------------------------------
+//         From traits
+// -------------------------------
+
+impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
+    fn from(entry_point: &ContractEntryPoint) -> Self {
+        vec![
+            MaybeRelocatable::from(entry_point.selector.clone()),
+            MaybeRelocatable::from(entry_point.offset.clone()),
+        ]
+    }
+}
+
+impl From<starknet_api::state::EntryPointType> for EntryPointType {
+    fn from(entry_type: starknet_api::state::EntryPointType) -> Self {
+        type ApiEPT = starknet_api::state::EntryPointType;
+        type StarknetEPT = crate::services::api::contract_class::EntryPointType;
+
+        match entry_type {
+            ApiEPT::Constructor => StarknetEPT::Constructor,
+            ApiEPT::External => StarknetEPT::External,
+            ApiEPT::L1Handler => StarknetEPT::L1Handler,
+        }
+    }
+}
+
+impl From<starknet_api::state::ContractClass> for ContractClass {
+    fn from(contract_class: starknet_api::state::ContractClass) -> Self {
+        let program = to_cairo_runner_program(&contract_class.program).unwrap();
+        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
+
+        ContractClass {
+            program,
+            entry_points_by_type,
+            abi: None,
+        }
+    }
+}
+
 // -------------------
 //  Helper Functions
 // -------------------
@@ -136,17 +157,7 @@ fn convert_entry_points(
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
     for (entry_type, vec) in entry_points {
-        let en_type = match entry_type {
-            starknet_api::state::EntryPointType::Constructor => {
-                crate::services::api::contract_class::EntryPointType::Constructor
-            }
-            starknet_api::state::EntryPointType::External => {
-                crate::services::api::contract_class::EntryPointType::External
-            }
-            starknet_api::state::EntryPointType::L1Handler => {
-                crate::services::api::contract_class::EntryPointType::L1Handler
-            }
-        };
+        let en_type = entry_type.into();
 
         let contracts_entry_points = vec
             .into_iter()
