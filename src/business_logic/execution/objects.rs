@@ -36,21 +36,21 @@ pub enum CallType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallInfo {
-    pub(crate) caller_address: Address,
-    pub(crate) call_type: Option<CallType>,
-    pub(crate) contract_address: Address,
-    pub(crate) code_address: Option<Address>,
-    pub(crate) class_hash: Option<[u8; 32]>,
-    pub(crate) entry_point_selector: Option<Felt>,
-    pub(crate) entry_point_type: Option<EntryPointType>,
-    pub(crate) calldata: Vec<Felt>,
-    pub(crate) retdata: Vec<Felt>,
-    pub(crate) execution_resources: ExecutionResources,
-    pub(crate) events: Vec<OrderedEvent>,
-    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub(crate) storage_read_values: Vec<Felt>,
-    pub(crate) accesed_storage_keys: HashSet<[u8; 32]>,
-    pub(crate) internal_calls: Vec<CallInfo>,
+    pub caller_address: Address,
+    pub call_type: Option<CallType>,
+    pub contract_address: Address,
+    pub code_address: Option<Address>,
+    pub class_hash: Option<[u8; 32]>,
+    pub entry_point_selector: Option<Felt>,
+    pub entry_point_type: Option<EntryPointType>,
+    pub calldata: Vec<Felt>,
+    pub retdata: Vec<Felt>,
+    pub execution_resources: ExecutionResources,
+    pub events: Vec<OrderedEvent>,
+    pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub storage_read_values: Vec<Felt>,
+    pub accesed_storage_keys: HashSet<[u8; 32]>,
+    pub internal_calls: Vec<CallInfo>,
 }
 
 impl CallInfo {
@@ -521,7 +521,7 @@ impl TransactionExecutionInfo {
 // --------------------
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct OrderedL2ToL1Message {
+pub struct OrderedL2ToL1Message {
     pub(crate) order: usize,
     pub(crate) to_address: Address,
     pub(crate) payload: Vec<Felt>,
