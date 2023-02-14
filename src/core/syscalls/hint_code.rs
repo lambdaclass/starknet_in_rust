@@ -20,7 +20,8 @@ pub(crate) const STORAGE_READ: &str =
 pub(crate) const SEND_MESSAGE_TO_L1: &str =
     "syscall_handler.send_message_to_l1(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
-#[allow(unused)] // TODO: remove after using.
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 pub(crate) const LIBRARY_CALL_L1_HANDLER: &str =
     "syscall_handler.library_call_l1_handler(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
@@ -33,7 +34,6 @@ pub(crate) const GET_TX_SIGNATURE: &str =
 pub(crate) const GET_TX_INFO: &str =
     "syscall_handler.get_tx_info(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
-#[allow(unused)] // TODO: remove after using.
 pub(crate) const GET_CONTRACT_ADDRESS: &str =
     "syscall_handler.get_contract_address(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
@@ -43,6 +43,5 @@ pub(crate) const GET_CALLER_ADDRESS: &str =
 pub(crate) const GET_BLOCK_TIMESTAMP: &str =
     "syscall_handler.get_block_timestamp(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
-#[allow(unused)] // TODO: remove after using.
 pub(crate) const GET_BLOCK_NUMBER: &str =
     "syscall_handler.get_block_number(segments=segments, syscall_ptr=ids.syscall_ptr)";
