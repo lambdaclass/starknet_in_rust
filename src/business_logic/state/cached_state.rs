@@ -177,7 +177,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_class_hash_and_nonce_from_state_reader() -> Result<(), Box<dyn std::error::Error>> {
+    fn get_class_hash_and_nonce_from_state_reader() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
@@ -185,7 +185,8 @@ mod tests {
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)?;
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .unwrap();
 
         let mut cached_state = CachedState::new(state_reader, None);
 
@@ -197,17 +198,15 @@ mod tests {
             cached_state.get_nonce_at(&contract_address),
             Ok(&contract_state.nonce)
         );
-        cached_state.increment_nonce(&contract_address)?;
+        cached_state.increment_nonce(&contract_address).unwrap();
         assert_eq!(
             cached_state.get_nonce_at(&contract_address),
             Ok(&(contract_state.nonce + Felt::new(1)))
         );
-
-        Ok(())
     }
 
     #[test]
-    fn get_contract_class_from_state_reader() -> Result<(), Box<dyn std::error::Error>> {
+    fn get_contract_class_from_state_reader() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_class = ContractClass::new(
@@ -222,19 +221,18 @@ mod tests {
 
         state_reader
             .contract_class_storage
-            .set_contract_class(&[0; 32], &contract_class)?;
+            .set_contract_class(&[0; 32], &contract_class)
+            .unwrap();
 
         let mut cached_state = CachedState::new(state_reader, None);
 
-        cached_state.set_contract_classes(HashMap::new())?;
+        cached_state.set_contract_classes(HashMap::new()).unwrap();
         assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
             cached_state.get_contract_class(&[0; 32]),
             cached_state.state_reader.get_contract_class(&[0; 32])
         );
-
-        Ok(())
     }
 
     #[test]
@@ -255,7 +253,7 @@ mod tests {
     }
 
     #[test]
-    fn cached_state_deploy_contract_test() -> Result<(), Box<dyn std::error::Error>> {
+    fn cached_state_deploy_contract_test() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
@@ -263,15 +261,14 @@ mod tests {
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)?;
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .unwrap();
 
         let mut cached_state = CachedState::new(state_reader, None);
 
         assert!(cached_state
             .deploy_contract(contract_address, [10; 32])
             .is_ok());
-
-        Ok(())
     }
 
     #[test]

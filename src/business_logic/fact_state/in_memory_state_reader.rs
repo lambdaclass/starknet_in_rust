@@ -75,7 +75,7 @@ mod tests {
     use cairo_rs::types::program::Program;
 
     #[test]
-    fn get_contract_state_test() -> Result<(), Box<dyn std::error::Error>> {
+    fn get_contract_state_test() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
@@ -83,7 +83,8 @@ mod tests {
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)?;
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .unwrap();
 
         assert_eq!(
             state_reader.get_contract_state(&contract_address),
@@ -101,12 +102,10 @@ mod tests {
             state_reader.contract_states,
             HashMap::from([(contract_address, contract_state)])
         );
-
-        Ok(())
     }
 
     #[test]
-    fn get_contract_class_test() -> Result<(), Box<dyn std::error::Error>> {
+    fn get_contract_class_test() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_class_key = [0; 32];
@@ -122,13 +121,12 @@ mod tests {
 
         state_reader
             .contract_class_storage
-            .set_contract_class(&[0; 32], &contract_class)?;
+            .set_contract_class(&[0; 32], &contract_class)
+            .unwrap();
 
         assert_eq!(
             state_reader.get_contract_class(&contract_class_key),
             Ok(contract_class)
         );
-
-        Ok(())
     }
 }

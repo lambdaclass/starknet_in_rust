@@ -174,15 +174,13 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn new_ffc() -> Result<(), Box<dyn std::error::Error>> {
+    fn new_ffc() {
         let mut ffc = FactFetchingContext::new(DictStorage::new(), Some(2));
 
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        ffc.storage.set_float(&fkey, 4.0)?;
+        ffc.storage.set_float(&fkey, 4.0).unwrap();
 
         assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0);
-
-        Ok(())
     }
 
     #[test]

@@ -46,34 +46,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn insert_data_in_storage() -> Result<(), Box<dyn std::error::Error>> {
+    fn insert_data_in_storage() {
         let mut storage = DictStorage::new();
 
         let ikey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
         let skey = storage_key!("0000000000000000000000000000000000000000000000000000000000000002");
 
-        storage.set_float(&fkey, 4.0)?;
-        storage.set_int(&ikey, 4)?;
-        storage.set_str(&skey, "value")?;
+        storage.set_float(&fkey, 4.0).unwrap();
+        storage.set_int(&ikey, 4).unwrap();
+        storage.set_str(&skey, "value").unwrap();
 
         assert_eq!(storage.get_int(&ikey).unwrap(), 4);
         assert_eq!(storage.get_float(&fkey).unwrap(), 4.0);
         assert_eq!(storage.get_str(&skey).unwrap(), "value");
-
-        Ok(())
     }
 
     #[test]
-    fn get_int_not_default() -> Result<(), Box<dyn std::error::Error>> {
+    fn get_int_not_default() {
         let mut storage = DictStorage::new();
         let default = 0;
 
         let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        storage.set_int(&key, 1234)?;
+        storage.set_int(&key, 1234).unwrap();
         assert_eq!(storage.get_int_or_default(&key, default).unwrap(), 1234);
-
-        Ok(())
     }
 
     #[test]
@@ -86,49 +82,45 @@ mod tests {
     }
 
     #[test]
-    fn error_after_inserting_different_data_under_same_key(
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn error_after_inserting_different_data_under_same_key() {
         let mut storage = DictStorage::new();
 
         let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
 
-        storage.set_value(
-            &(Prefix::Int, key),
-            (4.0_f64).to_bits().to_be_bytes().to_vec(),
-        )?;
+        storage
+            .set_value(
+                &(Prefix::Int, key),
+                (4.0_f64).to_bits().to_be_bytes().to_vec(),
+            )
+            .unwrap();
 
         assert_eq!(storage.get_int(&key), Err(StorageError::IncorrectDataSize));
-
-        Ok(())
     }
 
     #[test]
-    fn error_after_getting_deleted_value() -> Result<(), Box<dyn std::error::Error>> {
+    fn error_after_getting_deleted_value() {
         let mut storage = DictStorage::new();
 
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
 
-        storage.set_float(&fkey, 4.0002)?;
-        storage.delete_value(&(Prefix::Float, fkey))?;
+        storage.set_float(&fkey, 4.0002).unwrap();
+        storage.delete_value(&(Prefix::Float, fkey)).unwrap();
 
         assert_eq!(
             storage.get_float(&fkey),
             Err(StorageError::ErrorFetchingData)
         );
-
-        Ok(())
     }
 
     #[test]
-    fn error_trying_to_delete_non_existing_or_deleted_value(
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn error_trying_to_delete_non_existing_or_deleted_value() {
         let mut storage = DictStorage::new();
 
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
         let ikey = storage_key!("0000000000000000000000000000000000000000000000000000000000000001");
 
-        storage.set_float(&fkey, 534.0002)?;
-        storage.delete_value(&(Prefix::Float, fkey))?;
+        storage.set_float(&fkey, 534.0002).unwrap();
+        storage.delete_value(&(Prefix::Float, fkey)).unwrap();
 
         assert_eq!(
             storage.delete_value(&(Prefix::Float, fkey)),
@@ -139,7 +131,5 @@ mod tests {
             storage.delete_value(&(Prefix::Int, ikey)),
             Err(StorageError::RemoveMissingKey)
         );
-
-        Ok(())
     }
 }

@@ -1067,7 +1067,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bl_storage_read_hint_ok() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_bl_storage_read_hint_ok() {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -1086,7 +1086,8 @@ mod tests {
         );
 
         // StorageReadRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone())?;
+        vm.insert_value(&relocatable!(2, 1), address.clone())
+            .unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -1122,12 +1123,10 @@ mod tests {
 
         // Check StorageReadResponse insert
         assert_eq!(Ok(storage_value), get_big_int(&vm, &relocatable!(2, 2)));
-
-        Ok(())
     }
 
     #[test]
-    fn test_bl_storage_write_hint_ok() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_bl_storage_write_hint_ok() {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -1147,7 +1146,8 @@ mod tests {
         );
 
         // StorageWriteRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone())?;
+        vm.insert_value(&relocatable!(2, 1), address.clone())
+            .unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -1186,8 +1186,6 @@ mod tests {
             .read(&Address(address).to_32_bytes().unwrap());
 
         assert_eq!(write, Ok(&Felt::new(45)));
-
-        Ok(())
     }
 
     #[test]
