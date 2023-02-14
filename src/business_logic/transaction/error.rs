@@ -6,7 +6,7 @@ use crate::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
     },
-    definitions::{error::StarknetChainIdError, general_config::StarknetChainId},
+    definitions::error::StarknetChainIdError,
     utils_errors::UtilsError,
 };
 

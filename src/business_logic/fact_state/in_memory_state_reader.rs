@@ -1,19 +1,13 @@
-use std::{clone, collections::HashMap};
-
-use felt::Felt;
-
+use super::contract_state::ContractState;
 use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
-    starknet_storage::{
-        dict_storage::{DictStorage, Prefix},
-        storage::Storage,
-    },
+    starknet_storage::{dict_storage::DictStorage, storage::Storage},
     utils::Address,
 };
-
-use super::contract_state::{self, ContractState};
+use felt::Felt;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
 pub(crate) struct InMemoryStateReader {
@@ -73,26 +67,24 @@ impl StateReader for InMemoryStateReader {
 }
 #[cfg(test)]
 mod tests {
-    use cairo_rs::types::program::Program;
-
+    use super::*;
     use crate::{
-        business_logic::state::cached_state,
-        services::api::contract_class::{self, ContractEntryPoint, EntryPointType},
+        services::api::contract_class::{ContractEntryPoint, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
     };
-
-    use super::*;
+    use cairo_rs::types::program::Program;
 
     #[test]
     fn get_contract_state_test() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create([1; 32], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::new([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .unwrap();
 
         assert_eq!(
             state_reader.get_contract_state(&contract_address),
@@ -129,7 +121,8 @@ mod tests {
 
         state_reader
             .contract_class_storage
-            .set_contract_class(&[0; 32], &contract_class);
+            .set_contract_class(&[0; 32], &contract_class)
+            .unwrap();
 
         assert_eq!(
             state_reader.get_contract_class(&contract_class_key),

@@ -24,10 +24,6 @@ pub enum ContractAddressError {
     Memory(#[from] MemoryError),
     #[error("Index out of range")]
     IndexOutOfRange,
-    #[error("Expected integer variant of MaybeRelocatable")]
-    ExpectedInteger,
-    #[error("Failed to calculate contract address from hash with error: {0}")]
-    ContractAddressFromHash(String),
     #[error(transparent)]
     CairoRunner(#[from] RunnerError),
     #[error(transparent)]

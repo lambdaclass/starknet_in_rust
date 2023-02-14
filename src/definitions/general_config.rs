@@ -1,7 +1,6 @@
-use felt::Felt;
-use num_traits::{Num, Zero};
-
 use crate::utils::Address;
+use felt::Felt;
+use num_traits::Zero;
 
 use super::error::StarknetChainIdError;
 
@@ -63,6 +62,8 @@ pub struct StarknetGeneralConfig {
 }
 
 impl StarknetGeneralConfig {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn new(
         starknet_os_config: StarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
@@ -78,6 +79,7 @@ impl StarknetGeneralConfig {
             invoke_tx_max_n_steps,
         }
     }
+
     pub(crate) fn default() -> Self {
         Self {
             starknet_os_config: StarknetOsConfig {
@@ -94,9 +96,8 @@ impl StarknetGeneralConfig {
 
 #[cfg(test)]
 mod tests {
-    use felt::felt_str;
-
     use super::*;
+    use felt::felt_str;
 
     #[test]
     fn starknet_chain_to_felt() {

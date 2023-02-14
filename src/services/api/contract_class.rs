@@ -1,10 +1,5 @@
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{self, BufReader},
-    path::PathBuf,
-};
-
+use super::contract_class_errors::ContractClassError;
+use crate::public::abi::AbiType;
 use cairo_rs::{
     serde::deserialize_program::{
         deserialize_array_of_bigint_hex, deserialize_felt_hex, Attribute, HintParams, Identifier,
@@ -16,15 +11,14 @@ use cairo_rs::{
     utils::is_subsequence,
 };
 use felt::{Felt, PRIME_STR};
-use starknet_api::state::{ContractClassAbiEntry, EntryPoint};
-
-use crate::{
-    business_logic::execution::execution_errors::ExecutionError,
-    core::errors::state_errors::StateError, public::abi::AbiType,
-};
 use serde::{Deserialize, Serialize};
-
-use super::contract_class_errors::ContractClassError;
+use starknet_api::state::EntryPoint;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{self, BufReader},
+    path::PathBuf,
+};
 
 pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
     ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
@@ -54,6 +48,8 @@ pub struct ContractClass {
 }
 
 impl ContractClass {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn new(
         program: Program,
         entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,

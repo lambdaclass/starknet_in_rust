@@ -1,10 +1,7 @@
-use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-use felt::Felt;
-use thiserror::Error;
-
+use super::state_errors::StateError;
 use crate::utils_errors::UtilsError;
-
-use super::{contract_address_errors::ContractAddressError, state_errors::StateError};
+use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum SyscallHandlerError {
