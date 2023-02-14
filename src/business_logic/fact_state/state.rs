@@ -187,9 +187,9 @@ impl SharedState {
 
 #[derive(Default)]
 pub(crate) struct StateDiff {
-    address_to_class_hash: HashMap<Address, [u8; 32]>,
-    address_to_nonce: HashMap<Address, Felt>,
-    storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
+    pub(crate) address_to_class_hash: HashMap<Address, [u8; 32]>,
+    pub(crate) address_to_nonce: HashMap<Address, Felt>,
+    pub(crate) storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
 }
 
 impl StateDiff {
@@ -283,13 +283,54 @@ impl StateDiff {
     pub fn commit<T: Storage>(
         &self,
         ffc: FactFetchingContext<T>,
-        previos_state: SharedState,
+        previous_state: SharedState,
     ) -> SharedState {
-        previos_state.apply_updates(
+        previous_state.apply_updates(
             ffc,
             self.address_to_class_hash.clone(),
             self.address_to_nonce.clone(),
             self.storage_updates.clone(),
         )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+
+    use felt::Felt;
+
+    use crate::{
+        business_logic::{
+            fact_state::{
+                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+            },
+            state::{
+                cached_state::{self, CachedState},
+                state_api_objects::BlockInfo,
+            },
+        },
+        starknet_storage::{dict_storage::DictStorage, storage::Storage},
+        utils::Address,
+    };
+
+    use super::StateDiff;
+
+    #[test]
+    fn test_from_cached_state_without_updates() {
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+
+        let contract_address = Address(32123.into());
+        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
+
+        state_reader
+            .ffc
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
+
+        let cached_state = CachedState::new(state_reader, None);
+
+        let diff = StateDiff::from_cached_state(cached_state).unwrap();
+
+        assert_eq!(0, diff.storage_updates.len());
     }
 }
