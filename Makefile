@@ -1,58 +1,58 @@
-.PHONY: build check deps deps-macos clean compile_cairo clippy remove-venv venv-test test clean coverage
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test
 
+
+OS := $(shell uname)
+ifeq ($(OS), Darwin)
+	CFLAGS  += -I/opt/homebrew/opt/gmp/include
+	LDFLAGS += -L/opt/homebrew/opt/gmp/lib
+endif
+
+
+CAIRO_SOURCES=$(wildcard cairo_programs/*.cairo)
+CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
 
 STARKNET_SOURCES=$(wildcard tests/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 
 
-%.json: %.cairo
+cairo_programs/%.json: cairo_programs/%.cairo
+	cairo-compile $< --output $@
+
+tests/%.json: tests/%.cairo
 	starknet-compile $< | python3 tests/starknet-bug-workaround.py > $@
 
 
-build:
+build: compile-cairo
 	cargo build --release
 
-check:
+check: compile-cairo
 	cargo check
 
 deps:
-	cargo install cargo-tarpaulin --version 0.23.1 && \
-	python3 -m venv starknet-in-rs-venv
-	. starknet-in-rs-venv/bin/activate && \
-	pip install cairo_lang==0.10.1 && \
-	deactivate
+	cargo install cargo-tarpaulin --version 0.23.1
+	python3 -m venv starknet-venv
+	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
-deps-macos:
-	cargo install cargo-tarpaulin --version 0.23.1 && \
-	python3 -m venv starknet-in-rs-venv
-	. starknet-in-rs-venv/bin/activate && \
-	CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install fastecdsa cairo_lang==0.10.1 && \
-	deactivate
+deps-venv:
+	pip install \
+		fastecdsa \
+		cairo-lang==0.10.3
 
 clean:
-	-rm cairo_programs/*json
-	-rm tests/*.json
+	-rm -rf starknet-venv/
+	-rm -f cairo_programs/*.json
+	-rm -f tests/*.json
 
-compile_cairo:
-	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
-	cairo-compile cairo_programs/not_main.cairo --output cairo_programs/not_main.json && \
-	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json
+compile-cairo: $(CAIRO_TARGETS)
 
 compile-starknet: $(STARKNET_TARGETS)
 
-clippy:
+clippy: compile-cairo
 	cargo clippy --all-targets -- -D warnings
 
-remove-venv:
-	rm -rf starknet-in-rs-venv
-
-venv-test:
-	. starknet-in-rs-venv/bin/activate && $(MAKE) compile_cairo compile-starknet
+test: compile-cairo compile-starknet
 	cargo test
 
-test:
-	cargo test
-
-coverage:
+coverage: compile-cairo
 	cargo tarpaulin
-	rm -f default.profraw
+	-rm -f default.profraw
