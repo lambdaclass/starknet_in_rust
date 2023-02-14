@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use felt::{felt_str, Felt};
-use serde_json::Value;
+use sha3::{Digest, Keccak256};
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -19,24 +19,19 @@ use starknet_rs::{
     starknet_storage::dict_storage::DictStorage,
     utils::Address,
 };
-use std::{fs::read_to_string, path::Path};
+use std::path::Path;
 
-// Workaround until the ABI is available.
-fn find_entry_point_index(contract_path: impl AsRef<Path>, entry_point: &str) -> usize {
-    let contract_data = read_to_string(contract_path).unwrap();
-    let contract_data: Value = serde_json::from_str(&contract_data).unwrap();
+fn find_entry_point_selector(entry_point: &str) -> Felt {
+    let mut selector: [u8; 32] = Keccak256::new()
+        .chain_update(entry_point.as_bytes())
+        .finalize()
+        .into();
+    selector[0] &= 3;
 
-    contract_data
-        .get("abi")
-        .unwrap()
-        .as_array()
-        .unwrap()
-        .iter()
-        .enumerate()
-        .find_map(|(i, x)| (x.get("name").unwrap().as_str().unwrap() == entry_point).then_some(i))
-        .unwrap()
+    Felt::from_bytes_be(&selector)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn test_contract(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
@@ -44,10 +39,9 @@ fn test_contract(
     nonce: usize,
     contract_address: Address,
     caller_address: Address,
+    general_config: StarknetGeneralConfig,
     return_data: impl Into<Vec<Felt>>,
 ) {
-    let entry_point_index = find_entry_point_index(&contract_path, entry_point);
-
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
@@ -58,14 +52,10 @@ fn test_contract(
         .insert(contract_address.clone(), contract_state);
     let mut state = CachedState::new(
         state_reader,
-        Some([(class_hash, contract_class.clone())].into_iter().collect()),
+        Some([(class_hash, contract_class)].into_iter().collect()),
     );
 
-    let entry_point_selector = contract_class
-        .entry_points_by_type()
-        .get(&EntryPointType::External)
-        .map(|x| x[entry_point_index].selector().clone())
-        .unwrap();
+    let entry_point_selector = find_entry_point_selector(entry_point);
     let entry_point = ExecutionEntryPoint::new(
         Address(1111.into()),
         vec![],
@@ -76,7 +66,6 @@ fn test_contract(
         class_hash.into(),
     );
 
-    let general_config = StarknetGeneralConfig::default();
     let tx_execution_context = TransactionExecutionContext::create_for_testing(
         Address(0.into()),
         10,
@@ -110,15 +99,25 @@ fn test_contract(
 
 #[test]
 fn get_block_number_syscall() {
-    test_contract(
-        "tests/syscalls.json",
-        "test_get_block_number",
-        [1; 32],
-        3,
-        Address(1111.into()),
-        Address(0.into()),
-        [felt_str!("1"), felt_str!("0")],
-    )
+    let run = |block_number| {
+        let mut general_config = StarknetGeneralConfig::default();
+        general_config.block_info_mut().block_number = block_number;
+
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_block_number",
+            [1; 32],
+            3,
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            [felt_str!("1"), block_number.into()],
+        );
+    };
+
+    run(0);
+    run(5);
+    run(1000);
 }
 
 #[test]

@@ -1,21 +1,17 @@
 use crate::{starkware_utils::starkware_errors::StarkwareError, utils::Address};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BlockInfo {
-    // The sequence number of the last block created.
-    pub(crate) block_number: u64,
-
-    // Timestamp of the beginning of the last block creation attempt.
-    pub(crate) block_timestamp: u64,
-
-    // L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
-    gas_price: u64,
-
-    // The sequencer address of this block.
-    pub(crate) sequencer_address: Address,
-
-    // The version of StarkNet system (e.g. "0.10.3").
-    starknet_version: String,
+    /// The sequence number of the last block created.
+    pub block_number: u64,
+    /// Timestamp of the beginning of the last block creation attempt.
+    pub block_timestamp: u64,
+    /// L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
+    pub gas_price: u64,
+    /// The sequencer address of this block.
+    pub sequencer_address: Address,
+    /// The version of StarkNet system (e.g. "0.10.3").
+    pub starknet_version: String,
 }
 
 impl BlockInfo {
