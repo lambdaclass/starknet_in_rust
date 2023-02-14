@@ -24,6 +24,9 @@ deps-venv:
 		fastecdsa \
 		cairo-lang==0.10.3
 
+compile-cairo: $(CAIRO_TARGETS)
+compile-starknet: $(STARKNET_TARGETS)
+
 cairo_programs/%.json: cairo_programs/%.cairo
 	cairo-compile $< --output $@
 
@@ -52,10 +55,6 @@ clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
 	-rm -f tests/*.json
-
-compile-cairo: $(CAIRO_TARGETS)
-
-compile-starknet: $(STARKNET_TARGETS)
 
 clippy:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo
