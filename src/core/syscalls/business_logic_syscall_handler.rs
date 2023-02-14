@@ -58,11 +58,10 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        _general_config: StarknetGeneralConfig,
+        general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
-        // TODO: check work arounds to pass block info
-        let block_info = BlockInfo::default();
+        let block_info = general_config.block_info;
         let events = Vec::new();
         let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
