@@ -125,22 +125,15 @@ impl SyscallInfo {
 }
 
 pub fn program_json() -> Result<ProgramJson, SyscallHandlerError> {
-    let path = Path::new(file!())
-        .parent()
-        .ok_or(MissingSyscallsJsonFile)?
-        .join("../../../cairo_syscalls/syscalls.json");
-
-    let file = fs::read_to_string(path).unwrap();
-    serde_json::from_str(&file).map_err(|_| MissingSyscallsJsonFile)
+    let program_data = include_str!("../../../cairo_programs/syscalls.json");
+    serde_json::from_str(program_data).map_err(|_| MissingSyscallsJsonFile)
 }
 
 #[cfg(test)]
 mod tests {
-
-    use num_traits::Num;
-
     use super::SyscallInfo;
     use super::*;
+    use num_traits::Num;
     use std::str::FromStr;
 
     #[test]

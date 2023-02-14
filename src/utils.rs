@@ -22,6 +22,7 @@ use crate::{
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::transaction_type::TransactionType,
     services::api::contract_class::EntryPointType,
+    starknet_storage::storage,
     utils_errors::UtilsError,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
@@ -117,17 +118,10 @@ pub fn to_state_diff_storage_mapping(
 ) -> HashMap<Felt, HashMap<[u8; 32], Address>> {
     let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
     for ((address, key), value) in storage_writes {
-        if storage_updates.contains_key(&address.0) {
-            let mut map = storage_updates.get(&address.0).unwrap().to_owned();
-            map.insert(key, Address(value));
-            storage_updates.insert(address.0, map);
-        } else {
-            let mut new_map: HashMap<[u8; 32], Address> = HashMap::new();
-            new_map.insert(key, Address(value));
-            storage_updates.insert(address.0, new_map);
-        }
+        let mut map = storage_updates.get(&address.0).cloned().unwrap_or_default();
+        map.insert(key, Address(value));
+        storage_updates.insert(address.0, map);
     }
-
     storage_updates
 }
 
@@ -159,7 +153,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let n_deployments = non_optional_calls
         .clone()
         .into_iter()
-        .fold(0, |acc, c| get_call_n_deployments(c));
+        .fold(0, |acc, c| acc + get_call_n_deployments(c));
 
     let mut l2_to_l1_messages = Vec::new();
 

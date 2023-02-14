@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::rc::Rc;
-
 use super::syscall_handler::SyscallHandler;
 use super::syscall_request::*;
 use crate::business_logic::execution::execution_entry_point::ExecutionEntryPoint;
@@ -26,6 +22,9 @@ use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::Felt;
 use num_traits::{One, ToPrimitive, Zero};
+use std::collections::HashMap;
+use std::ops::Deref;
+use std::rc::Rc;
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
@@ -63,9 +62,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         // TODO: check work arounds to pass block info
         let block_info = BlockInfo::default();
         let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext {
-            ..Default::default()
-        };
+        let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();

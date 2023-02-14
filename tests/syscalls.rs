@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 use felt::Felt;
 use num_traits::Num;
 use starknet_rs::{
@@ -40,7 +42,7 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);
-    let state = CachedState::new(
+    let mut state = CachedState::new(
         state_reader,
         Some([(class_hash, contract_class.clone())].into_iter().collect()),
     );
@@ -71,10 +73,10 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
 
     assert_eq!(
         entry_point.execute(
-            state,
-            general_config,
+            &mut state,
+            &general_config,
             &mut resources_manager,
-            tx_execution_context,
+            &tx_execution_context,
         )?,
         CallInfo {
             contract_address,

@@ -31,7 +31,7 @@ use crate::{
 
 use super::contract_state::ContractState;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Clone, Debug, Default)]
 pub struct ExecutionResourcesManager {
     pub(crate) syscall_counter: HashMap<String, u64>,
     pub(crate) cairo_usage: ExecutionResources,
@@ -59,20 +59,6 @@ impl ExecutionResourcesManager {
         self.syscall_counter
             .get(syscall_name)
             .map(ToOwned::to_owned)
-    }
-}
-
-pub fn multiply_resources(rsc: ExecutionResources, other: usize) -> ExecutionResources {
-    let builtin_instance_counter = rsc
-        .builtin_instance_counter
-        .into_iter()
-        .map(|b| (b.0, b.1 * other))
-        .collect();
-
-    ExecutionResources {
-        n_steps: rsc.n_steps * other,
-        n_memory_holes: rsc.n_memory_holes * other,
-        builtin_instance_counter,
     }
 }
 

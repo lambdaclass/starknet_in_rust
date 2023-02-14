@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile_cairo compile-starknet coverage deps deps-macos remove-venv test venv-test
+.PHONY: build check deps deps-macos clean compile_cairo clippy remove-venv venv-test test clean coverage
 
 
 STARKNET_SOURCES=$(wildcard tests/*.cairo)
@@ -7,6 +7,7 @@ STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 
 %.json: %.cairo
 	starknet-compile $< | python3 tests/starknet-bug-workaround.py > $@
+
 
 build:
 	cargo build --release
@@ -29,12 +30,11 @@ deps-macos:
 	deactivate
 
 clean:
-	-rm cairo_syscalls/*json
+	-rm cairo_programs/*json
 	-rm tests/*.json
 
 compile_cairo:
-	cairo-compile cairo_syscalls/syscalls.cairo --output cairo_syscalls/syscalls.json && \
-	starknet-compile cairo_programs/fibonacci.cairo > cairo_programs/fibonacci.json && \
+	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
 	cairo-compile cairo_programs/not_main.cairo --output cairo_programs/not_main.json && \
 	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json
 
