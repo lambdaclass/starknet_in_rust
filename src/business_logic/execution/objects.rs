@@ -11,7 +11,7 @@ use cairo_rs::{
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use felt::Felt;
-use num_traits::{ToPrimitive, Zero};
+use num_traits::ToPrimitive;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -278,26 +278,6 @@ impl TransactionExecutionContext {
             signature,
             transaction_hash,
             version,
-            n_sent_messages: 0,
-            _n_steps,
-        }
-    }
-
-    pub fn create_for_testing(
-        account_contract_address: Address,
-        _max_fee: u64,
-        nonce: Felt,
-        _n_steps: u64,
-        version: u64,
-    ) -> Self {
-        TransactionExecutionContext {
-            n_emitted_events: 0,
-            version,
-            account_contract_address,
-            _max_fee: 0,
-            transaction_hash: Felt::zero(),
-            signature: Vec::new(),
-            nonce,
             n_sent_messages: 0,
             _n_steps,
         }
