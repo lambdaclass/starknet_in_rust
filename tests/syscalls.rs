@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::{felt_str, Felt};
+use felt::Felt;
 use sha3::{Digest, Keccak256};
 use starknet_rs::{
     business_logic::{
@@ -36,16 +36,30 @@ fn test_contract(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
     class_hash: [u8; 32],
-    nonce: usize,
     contract_address: Address,
     caller_address: Address,
     general_config: StarknetGeneralConfig,
+    tx_context: Option<TransactionExecutionContext>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
-    let contract_state = ContractState::new(class_hash, nonce.into(), Default::default());
+    let tx_execution_context = tx_context.unwrap_or_else(|| {
+        TransactionExecutionContext::create_for_testing(
+            Address(0.into()),
+            10,
+            0.into(),
+            general_config.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION,
+        )
+    });
+
+    let contract_state = ContractState::new(
+        class_hash,
+        tx_execution_context.nonce().clone(),
+        Default::default(),
+    );
     let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
     state_reader
         .contract_states_mut()
@@ -66,13 +80,6 @@ fn test_contract(
         class_hash.into(),
     );
 
-    let tx_execution_context = TransactionExecutionContext::create_for_testing(
-        Address(0.into()),
-        10,
-        nonce.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
     let mut resources_manager = ExecutionResourcesManager::default();
 
     assert_eq!(
@@ -107,15 +114,63 @@ fn get_block_number_syscall() {
             "tests/syscalls.json",
             "test_get_block_number",
             [1; 32],
-            3,
             Address(1111.into()),
             Address(0.into()),
             general_config,
-            [felt_str!("1"), block_number.into()],
+            None,
+            [block_number.into()],
         );
     };
 
     run(0);
     run(5);
     run(1000);
+}
+
+#[test]
+fn get_tx_info_syscall() {
+    let run = |version,
+               account_contract_address: Address,
+               max_fee,
+               signature: Vec<Felt>,
+               transaction_hash: Felt,
+               _chain_id: ()| {
+        let general_config = StarknetGeneralConfig::default();
+
+        // TODO: How to test `chain_id`?
+        let n_steps = general_config.invoke_tx_max_n_steps();
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_tx_info",
+            [1; 32],
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            Some(TransactionExecutionContext::new(
+                account_contract_address.clone(),
+                transaction_hash.clone(),
+                signature.clone(),
+                max_fee,
+                3.into(),
+                n_steps,
+                version,
+            )),
+            [
+                version.into(),
+                account_contract_address.0,
+                max_fee.into(),
+                signature.len().into(),
+                signature
+                    .into_iter()
+                    .reduce(|a, b| a + b)
+                    .unwrap_or_default(),
+                transaction_hash,
+                0.into(),
+            ],
+        );
+    };
+
+    run(0, Address::default(), 12, vec![], 0.into(), ());
+    // run(5);
+    // run(1000);
 }
