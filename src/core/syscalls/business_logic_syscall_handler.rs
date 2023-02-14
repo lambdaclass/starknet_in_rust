@@ -43,10 +43,10 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     pub(crate) block_info: BlockInfo,
-    pub(crate) _state: T,
+    pub(crate) state: T,
     pub(crate) starknet_storage_state: ContractStorageState<T>,
-    pub(crate) _internal_calls: Vec<CallInfo>,
-    pub(crate) _expected_syscall_ptr: Relocatable,
+    pub(crate) internal_calls: Vec<CallInfo>,
+    pub(crate) expected_syscall_ptr: Relocatable,
 }
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
@@ -83,10 +83,10 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             general_config,
             tx_info_ptr,
             block_info,
-            _state: state,
+            state,
             starknet_storage_state,
-            _internal_calls: internal_calls,
-            _expected_syscall_ptr: syscall_ptr,
+            internal_calls,
+            expected_syscall_ptr: syscall_ptr,
         }
     }
 
@@ -141,10 +141,10 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             general_config,
             tx_info_ptr,
             block_info,
-            _state: state,
+            state,
             starknet_storage_state,
-            _internal_calls: internal_calls,
-            _expected_syscall_ptr: expected_syscall_ptr,
+            internal_calls,
+            expected_syscall_ptr,
         }
     }
 
@@ -156,7 +156,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         runner: &mut VirtualMachine,
         syscall_stop_ptr: MaybeRelocatable,
     ) -> Result<(), ExecutionError> {
-        let expected_stop_ptr = self._expected_syscall_ptr;
+        let expected_stop_ptr = self.expected_syscall_ptr;
         let syscall_ptr = match syscall_stop_ptr {
             MaybeRelocatable::RelocatableValue(val) => val,
             _ => return Err(ExecutionError::NotARelocatableValue),

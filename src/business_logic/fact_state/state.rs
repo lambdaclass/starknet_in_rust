@@ -60,26 +60,26 @@ pub(crate) struct CarriedState<T>
 where
     T: StateReader + Clone,
 {
-    _parent_state: Option<Rc<RefCell<CarriedState<T>>>>,
-    _state: CachedState<T>,
+    parent_state: Option<Rc<RefCell<CarriedState<T>>>>,
+    state: CachedState<T>,
 }
 
 impl<T: StateReader + Clone> CarriedState<T> {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     pub fn create_from_parent_state(parent_state: CarriedState<T>) -> Self {
-        let cached_state = parent_state._state.clone();
+        let cached_state = parent_state.state.clone();
         let new_state = Some(Rc::new(RefCell::new(parent_state)));
         CarriedState {
-            _parent_state: new_state,
-            _state: cached_state,
+            parent_state: new_state,
+            state: cached_state,
         }
     }
 
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     pub fn create_child_state_for_querying(&self) -> Result<Self, StateError> {
-        match &self._parent_state {
+        match &self.parent_state {
             Some(parent_state) => Ok(CarriedState::create_from_parent_state(
                 parent_state.as_ref().borrow().clone(),
             )),
@@ -90,9 +90,9 @@ impl<T: StateReader + Clone> CarriedState<T> {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     fn apply(&mut self) -> Result<(), StateError> {
-        match &self._parent_state {
+        match &self.parent_state {
             Some(parent_state) => {
-                self._state.apply(&mut parent_state.borrow_mut()._state);
+                self.state.apply(&mut parent_state.borrow_mut().state);
                 Ok(())
             }
             None => Err(StateError::ParentCarriedStateIsNone),
@@ -150,7 +150,7 @@ impl SharedState {
         S: Storage,
         R: StateReader + Clone,
     {
-        let state_cache = current_carried_state._state.cache;
+        let state_cache = current_carried_state.state.cache;
         Ok(self.apply_updates(
             ffc,
             state_cache.class_hash_writes,
@@ -187,9 +187,9 @@ impl SharedState {
 
 #[derive(Default)]
 pub(crate) struct StateDiff {
-    _address_to_class_hash: HashMap<Address, [u8; 32]>,
-    _address_to_nonce: HashMap<Address, Felt>,
-    _storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
+    address_to_class_hash: HashMap<Address, [u8; 32]>,
+    address_to_nonce: HashMap<Address, Felt>,
+    storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
 }
 
 impl StateDiff {
@@ -217,9 +217,9 @@ impl StateDiff {
         );
 
         Ok(StateDiff {
-            _address_to_class_hash: address_to_class_hash,
-            _address_to_nonce: address_to_nonce,
-            _storage_updates: storage_updates,
+            address_to_class_hash,
+            address_to_nonce,
+            storage_updates,
         })
     }
 
@@ -230,11 +230,11 @@ impl StateDiff {
         T: StateReader + Clone,
     {
         let mut cache_state = CachedState::new(state_reader, None);
-        let cache_storage_mapping = to_cache_state_storage_mapping(self._storage_updates.clone());
+        let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
 
         cache_state.cache.set_initial_values(
-            &self._address_to_class_hash,
-            &self._address_to_nonce,
+            &self.address_to_class_hash,
+            &self.address_to_nonce,
             &cache_storage_mapping,
         )?;
         Ok(cache_state)
@@ -243,29 +243,27 @@ impl StateDiff {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     pub fn squash(&mut self, other: StateDiff) -> Result<Self, StarkwareError> {
-        self._address_to_class_hash
-            .extend(other._address_to_class_hash);
-        let address_to_class_hash = self._address_to_class_hash.clone();
+        self.address_to_class_hash
+            .extend(other.address_to_class_hash);
+        let address_to_class_hash = self.address_to_class_hash.clone();
 
-        self._address_to_nonce.extend(other._address_to_nonce);
-        let address_to_nonce = self._address_to_nonce.clone();
+        self.address_to_nonce.extend(other.address_to_nonce);
+        let address_to_nonce = self.address_to_nonce.clone();
 
         let mut storage_updates = HashMap::new();
 
-        let addresses: Vec<Felt> = get_keys(
-            self._storage_updates.clone(),
-            other._storage_updates.clone(),
-        );
+        let addresses: Vec<Felt> =
+            get_keys(self.storage_updates.clone(), other.storage_updates.clone());
 
         for address in addresses {
             let default: HashMap<[u8; 32], Address> = HashMap::new();
             let mut map_a = self
-                ._storage_updates
+                .storage_updates
                 .get(&address)
                 .unwrap_or(&default)
                 .to_owned();
             let map_b = other
-                ._storage_updates
+                .storage_updates
                 .get(&address)
                 .unwrap_or(&default)
                 .to_owned();
@@ -274,9 +272,9 @@ impl StateDiff {
         }
 
         Ok(StateDiff {
-            _address_to_class_hash: address_to_class_hash,
-            _address_to_nonce: address_to_nonce,
-            _storage_updates: storage_updates,
+            address_to_class_hash,
+            address_to_nonce,
+            storage_updates,
         })
     }
 
@@ -289,9 +287,9 @@ impl StateDiff {
     ) -> SharedState {
         previos_state.apply_updates(
             ffc,
-            self._address_to_class_hash.clone(),
-            self._address_to_nonce.clone(),
-            self._storage_updates.clone(),
+            self.address_to_class_hash.clone(),
+            self.address_to_nonce.clone(),
+            self.storage_updates.clone(),
         )
     }
 }

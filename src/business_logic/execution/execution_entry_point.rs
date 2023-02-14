@@ -30,14 +30,14 @@ use num_traits::ToPrimitive;
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
 pub(crate) struct ExecutionEntryPoint {
-    _call_type: CallType,
-    _contract_address: Address,
-    _code_address: Option<Address>,
-    _class_hash: Option<[u8; 32]>,
-    _calldata: Vec<Felt>,
-    _caller_address: Address,
-    _entry_point_selector: Felt,
-    _entry_point_type: EntryPointType,
+    call_type: CallType,
+    contract_address: Address,
+    code_address: Option<Address>,
+    class_hash: Option<[u8; 32]>,
+    calldata: Vec<Felt>,
+    caller_address: Address,
+    entry_point_selector: Felt,
+    entry_point_type: EntryPointType,
 }
 
 impl ExecutionEntryPoint {
@@ -53,14 +53,14 @@ impl ExecutionEntryPoint {
         class_hash: Option<[u8; 32]>,
     ) -> Self {
         ExecutionEntryPoint {
-            _call_type: call_type.unwrap_or(CallType::Call),
-            _contract_address: contract_address,
-            _code_address: None,
-            _class_hash: class_hash,
-            _calldata: calldata,
-            _caller_address: caller_address,
-            _entry_point_selector: entry_point_selector,
-            _entry_point_type: entry_point_type,
+            call_type: call_type.unwrap_or(CallType::Call),
+            contract_address,
+            code_address: None,
+            class_hash,
+            calldata,
+            caller_address,
+            entry_point_selector,
+            entry_point_type,
         }
     }
 
@@ -134,7 +134,7 @@ impl ExecutionEntryPoint {
         // prepare OS context
         let os_context = runner.prepare_os_context();
 
-        validate_contract_deployed(state.clone(), self._contract_address.clone())?;
+        validate_contract_deployed(state.clone(), self.contract_address.clone())?;
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -146,8 +146,8 @@ impl ExecutionEntryPoint {
             tx_execution_context.clone(),
             state.clone(),
             resources_manager.clone(),
-            self._caller_address.clone(),
-            self._contract_address.clone(),
+            self.caller_address.clone(),
+            self.contract_address.clone(),
             general_config.clone(),
             initial_syscall_ptr,
         );
@@ -155,7 +155,7 @@ impl ExecutionEntryPoint {
         runner.hint_processor = SyscallHintProcessor::new(syscall_handler);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
-        let data = self._calldata.clone().iter().map(|d| d.into()).collect();
+        let data = self.calldata.clone().iter().map(|d| d.into()).collect();
         let alloc_pointer = runner
             .hint_processor
             .syscall_handler
@@ -163,9 +163,9 @@ impl ExecutionEntryPoint {
             .into();
 
         let entry_point_args = [
-            &CairoArg::Single(self._entry_point_selector.clone().into()),
+            &CairoArg::Single(self.entry_point_selector.clone().into()),
             &CairoArg::Array(os_context.clone()),
-            &CairoArg::Single(MaybeRelocatable::Int(self._calldata.len().into())),
+            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
             &CairoArg::Single(alloc_pointer),
         ];
 
@@ -200,13 +200,13 @@ impl ExecutionEntryPoint {
     ) -> Result<ContractEntryPoint, ExecutionError> {
         let entry_points = contract_class
             .entry_points_by_type
-            .get(&self._entry_point_type)
+            .get(&self.entry_point_type)
             .ok_or(ExecutionError::InvalidEntryPoints)?
             .clone();
         let filtered_entry_points = entry_points
             .clone()
             .into_iter()
-            .filter(|ep| ep.selector == self._entry_point_selector)
+            .filter(|ep| ep.selector == self.entry_point_selector)
             .collect::<Vec<ContractEntryPoint>>();
 
         if filtered_entry_points.is_empty() && !entry_points.is_empty() {
@@ -231,37 +231,37 @@ impl ExecutionEntryPoint {
             syscall_handler.resources_manager.cairo_usage - previous_cairo_usage;
 
         Ok(CallInfo {
-            caller_address: self._caller_address.clone(),
-            call_type: Some(self._call_type.clone()),
-            contract_address: self._contract_address.clone(),
-            code_address: self._code_address.clone(),
-            class_hash: Some(self.get_code_class_hash(syscall_handler._state)?),
-            entry_point_selector: Some(self._entry_point_selector.clone()),
-            entry_point_type: Some(self._entry_point_type),
-            calldata: self._calldata.clone(),
+            caller_address: self.caller_address.clone(),
+            call_type: Some(self.call_type.clone()),
+            contract_address: self.contract_address.clone(),
+            code_address: self.code_address.clone(),
+            class_hash: Some(self.get_code_class_hash(syscall_handler.state)?),
+            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_type: Some(self.entry_point_type),
+            calldata: self.calldata.clone(),
             retdata,
             execution_resources: execution_resources.filter_unused_builtins(),
             events: syscall_handler.events,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             storage_read_values: syscall_handler.starknet_storage_state.read_values,
             accesed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
-            internal_calls: syscall_handler._internal_calls,
+            internal_calls: syscall_handler.internal_calls,
         })
     }
 
     /// Returns the hash of the executed contract class.
     fn get_code_class_hash<S: StateReader>(&self, state: S) -> Result<[u8; 32], ExecutionError> {
-        if self._class_hash.is_some() {
-            match self._call_type {
-                CallType::Delegate => return Ok(self._class_hash.unwrap()),
+        if self.class_hash.is_some() {
+            match self.call_type {
+                CallType::Delegate => return Ok(self.class_hash.unwrap()),
                 _ => return Err(ExecutionError::CallTypeIsNotDelegate),
             }
         }
-        let code_address = match self._call_type {
-            CallType::Call => Some(self._contract_address.clone()),
+        let code_address = match self.call_type {
+            CallType::Call => Some(self.contract_address.clone()),
             CallType::Delegate => {
-                if self._code_address.is_some() {
-                    self._code_address.clone()
+                if self.code_address.is_some() {
+                    self.code_address.clone()
                 } else {
                     return Err(ExecutionError::AttempToUseNoneCodeAddress);
                 }
