@@ -296,36 +296,31 @@ impl StateDiff {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
-    use felt::Felt;
-
+    use super::StateDiff;
     use crate::{
         business_logic::{
             fact_state::{
                 contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
             },
-            state::{
-                cached_state::{self, CachedState},
-                state_api_objects::BlockInfo,
-            },
+            state::cached_state::CachedState,
         },
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
         utils::Address,
     };
-
-    use super::StateDiff;
+    use felt::Felt;
+    use std::collections::HashMap;
 
     #[test]
     fn test_from_cached_state_without_updates() {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::create([8; 32], Felt::new(109), HashMap::new());
+        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state);
+            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .unwrap();
 
         let cached_state = CachedState::new(state_reader, None);
 
