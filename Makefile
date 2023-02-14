@@ -31,7 +31,6 @@ cairo_programs/%.json: cairo_programs/%.cairo
 	cairo-compile $< --output $@
 
 tests/%.json: tests/%.cairo
-	# starknet-compile $< | python3 tests/starknet-bug-workaround.py > $@
 	starknet-compile $< --output $@
 
 
