@@ -40,7 +40,6 @@ pub(crate) struct GetSequencerAddressRequest {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventStruct {
-    #[allow(unused)] // TODO: Remove once used.
     pub(crate) selector: Felt,
     pub(crate) keys_len: usize,
     pub(crate) keys: Relocatable,
@@ -72,7 +71,6 @@ pub(crate) struct SendMessageToL1SysCall {
     pub(crate) payload_ptr: Relocatable,
 }
 
-#[allow(unused)] // TODO: Remove once used.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LibraryCallStruct {
     pub(crate) selector: Felt,
@@ -81,6 +79,7 @@ pub(crate) struct LibraryCallStruct {
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampRequest {
     pub(crate) selector: Felt,
@@ -96,7 +95,6 @@ pub(crate) struct GetTxSignatureRequest {
     pub(crate) _selector: Felt,
 }
 
-#[allow(unused)] // TODO: Remove once used.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct GetTxInfoRequest {
     pub(crate) selector: Felt,

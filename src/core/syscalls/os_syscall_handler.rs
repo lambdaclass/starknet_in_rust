@@ -1,7 +1,4 @@
-use super::{
-    syscall_handler::SyscallHandler, syscall_request::SyscallRequest,
-    syscall_response::WriteSyscallResponse,
-};
+use super::{syscall_handler::SyscallHandler, syscall_request::SyscallRequest};
 use crate::{
     business_logic::{
         execution::objects::{CallInfo, TransactionExecutionInfo},
@@ -13,13 +10,10 @@ use crate::{
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::{vm_core::VirtualMachine, vm_memory::memory_segments::MemorySegmentManager},
+    vm::vm_core::VirtualMachine,
 };
 use felt::Felt;
-use std::{
-    any::Any,
-    collections::{HashMap, VecDeque},
-};
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug)]
 pub(crate) struct OsSingleStarknetStorage;
@@ -28,6 +22,8 @@ impl OsSingleStarknetStorage {
     // Writes the given value in the given key in ongoing_storage_changes and returns the
     // previous value. This value is needed to create the DictAccess while executing the
     // corresponding storage_write system call.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn write(&self, _key: u64, _value: u64) -> u64 {
         // TO BE IMPLEMENTED
         todo!()
@@ -65,31 +61,31 @@ pub(crate) struct OsSyscallHandler {
 impl SyscallHandler for OsSyscallHandler {
     fn emit_event(
         &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         todo!()
     }
 
     fn library_call(
         &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &mut VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         todo!()
     }
 
     fn send_message_to_l1(
         &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         Ok(())
     }
 
     fn _get_tx_info_ptr(
         &mut self,
-        vm: &mut VirtualMachine,
+        _vm: &mut VirtualMachine,
     ) -> Result<Relocatable, SyscallHandlerError> {
         Ok(*self
             .tx_info_ptr
@@ -99,8 +95,8 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn _deploy(
         &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         let constructor_retdata = self
             .retdata_iterator
@@ -128,9 +124,9 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn _call_contract(
         &mut self,
-        syscall_name: &str,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        _syscall_name: &str,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Result<Vec<Felt>, SyscallHandlerError> {
         Ok(self
             .retdata_iterator
@@ -141,8 +137,8 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn _get_caller_address(
         &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         match self.call_stack.back() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
@@ -152,8 +148,8 @@ impl SyscallHandler for OsSyscallHandler {
 
     fn _get_contract_address(
         &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         match self.call_stack.front() {
             None => Err(SyscallHandlerError::ListIsEmpty)?,
@@ -161,7 +157,7 @@ impl SyscallHandler for OsSyscallHandler {
         }
     }
 
-    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: Address) -> Result<Felt, SyscallHandlerError> {
         self.execute_code_read_iterator
             .pop_front()
             .ok_or(SyscallHandlerError::IteratorEmpty)
@@ -169,7 +165,11 @@ impl SyscallHandler for OsSyscallHandler {
 
     // Advance execute_code_read_iterators since the previous storage value is written
     // in each write operation. See BusinessLogicSysCallHandler._storage_write().
-    fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
+    fn _storage_write(
+        &mut self,
+        _address: Address,
+        _value: Felt,
+    ) -> Result<(), SyscallHandlerError> {
         self.execute_code_read_iterator.pop_front();
         Ok(())
     }
@@ -236,6 +236,8 @@ impl OsSyscallHandler {
     }
     // Called when starting the execution of a transaction.
     // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
         if self.tx_info_ptr.is_some() {
             return Err(SyscallHandlerError::ShouldBeNone(String::from(
@@ -257,10 +259,14 @@ impl OsSyscallHandler {
         Ok(())
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn skip_tx(&mut self) -> Option<TransactionExecutionInfo> {
         self.tx_execution_info_iterator.pop_front()
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn assert_iterators_exhausted(&self) -> Result<(), SyscallHandlerError> {
         if self.deployed_contracts_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
@@ -274,12 +280,16 @@ impl OsSyscallHandler {
         Ok(())
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn exit_call(&mut self) -> Result<Option<CallInfo>, SyscallHandlerError> {
         self.assert_iterators_exhausted()?;
         Ok(self.call_stack.pop_front())
     }
 
     /// Called after the execution of the current transaction complete.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn end_tx(&mut self) -> Result<(), SyscallHandlerError> {
         if self.execute_code_read_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
@@ -306,6 +316,8 @@ impl OsSyscallHandler {
 
     /// Updates the cached storage and returns the storage value before
     /// the write operation.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn execute_syscall_storage_write(
         &self,
         contract_address: &Address,
@@ -319,6 +331,8 @@ impl OsSyscallHandler {
             .write(key, value))
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn enter_call(&mut self) -> Result<(), SyscallHandlerError> {
         self.assert_iterators_exhausted()?;
 
@@ -351,11 +365,10 @@ impl OsSyscallHandler {
 
 #[cfg(test)]
 mod tests {
+    use super::{CallInfo, OsSyscallHandler};
     use crate::business_logic::execution::objects::TransactionExecutionInfo;
-    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-    use crate::core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor};
-    use crate::core::syscalls::syscall_request::CallContractRequest;
+    use crate::core::syscalls::syscall_handler::SyscallHandler;
     use crate::utils::{get_integer, get_relocatable, test_utils::*, Address};
     use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
     use cairo_rs::vm::errors::memory_errors::MemoryError;
@@ -363,16 +376,7 @@ mod tests {
     use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use cairo_rs::vm::vm_core::VirtualMachine;
     use felt::Felt;
-    use std::any::Any;
     use std::collections::{HashMap, HashSet, VecDeque};
-
-    use super::{CallInfo, OsSyscallHandler};
-    use crate::core::syscalls::hint_code::GET_BLOCK_NUMBER;
-    use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::HintProcessorData;
-    use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
-    use cairo_rs::relocatable;
-    use cairo_rs::types::exec_scope::ExecutionScopes;
-    use std::borrow::Cow;
 
     #[test]
     fn get_contract_address() {
