@@ -11,6 +11,7 @@ use felt::Felt;
 use thiserror::Error;
 
 use crate::{
+    business_logic::transaction::error::TransactionError,
     core::errors::{self, syscall_handler_errors::SyscallHandlerError},
     starknet_runner::starknet_runner_error::StarknetRunnerError,
 };
@@ -64,6 +65,8 @@ pub enum ExecutionError {
     NotAnInt,
     #[error("Out of bounds write to a read-only segment.")]
     OutOfBound,
+    #[error("Calling other contracts during validate execution is forbidden")]
+    UnauthorizedActionOnValidate,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]

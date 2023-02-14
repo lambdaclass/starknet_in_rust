@@ -4,8 +4,6 @@ use crate::core::errors::state_errors::StateError;
 use crate::services::api::contract_class::ContractClass;
 use felt::Felt;
 
-use super::state_api_objects::BlockInfo;
-
 use super::state_api::StateReader;
 use crate::utils::Address;
 /// (contract_address, key)

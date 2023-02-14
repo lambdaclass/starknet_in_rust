@@ -18,6 +18,7 @@ use crate::{
             state_cache::StorageEntry,
             update_tracker_state::UpdatesTrackerState,
         },
+        transaction::error::TransactionError,
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::transaction_type::TransactionType,
@@ -263,6 +264,22 @@ pub fn validate_contract_deployed<S: StateReader + Clone>(
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
+}
+
+//* ----------------------------
+//* Internal objects utils
+//* ----------------------------
+
+pub(crate) fn verify_no_calls_to_other_contracts(
+    call_info: &CallInfo,
+) -> Result<(), TransactionError> {
+    let invoked_contract_address = call_info.contract_address.clone();
+    for internal_call in call_info.gen_call_topology() {
+        if internal_call.contract_address != invoked_contract_address {
+            return Err(TransactionError::UnauthorizedActionOnValidate);
+        }
+    }
+    Ok(())
 }
 
 //* -------------------

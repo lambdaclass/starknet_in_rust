@@ -16,6 +16,8 @@ pub(crate) enum TransactionError {
     InvalidFeltConversion,
     #[error("{0}")]
     InvalidNonce(String),
+    #[error("Invalid transaction nonce. Expected: {0} got {1}")]
+    InvalidTransactionNonce(String, String),
     #[error("{0}")]
     StarknetError(String),
     #[error(transparent)]
@@ -30,4 +32,6 @@ pub(crate) enum TransactionError {
     SyscallError(#[from] SyscallHandlerError),
     #[error(transparent)]
     StateError(#[from] StateError),
+    #[error("Calling other contracts during validate execution is forbidden")]
+    UnauthorizedActionOnValidate,
 }
