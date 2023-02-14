@@ -723,8 +723,8 @@ mod tests {
         let addr = Address(0.into());
         let val: Felt = 0.into();
 
-        handler._storage_write(addr.clone(), val.clone());
-        handler._storage_write(addr, val);
+        handler._storage_write(addr.clone(), val.clone()).unwrap();
+        handler._storage_write(addr, val).unwrap();
     }
 
     #[test]
