@@ -14,9 +14,6 @@ pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
 pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
     (L2_TO_L1_MSG_HEADER_SIZE + 1) - LOG_MSG_TO_L1_N_TOPICS;
 
-pub(crate) const TRANSACTION_VERSION: u64 = 1;
-pub(crate) const QUERY_VERSION_BASE: u64 = 2_u64.pow(32);
-
 lazy_static! {
     pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt = Felt::from_str_radix(
         "617075754465154585683856897856256838130216341506379215893724690153393808813",

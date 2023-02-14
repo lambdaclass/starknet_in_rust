@@ -14,8 +14,7 @@ use crate::{
         transaction::transaction_errors::TransactionError,
     },
     definitions::{
-        constants::{EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, TRANSACTION_VERSION},
-        general_config::StarknetGeneralConfig,
+        constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
@@ -145,31 +144,6 @@ impl InternalInvokeFunction {
             );
         Ok(transaction_execution_info)
     }
-}
-
-#[allow(dead_code)]
-pub(crate) fn verify_version(
-    version: u64,
-    only_query: bool,
-    old_supported_versions: Vec<u64>,
-) -> Result<(), TransactionError> {
-    if TRANSACTION_VERSION != 1 {
-        return Err(TransactionError::InvalidTransactionVersion(version));
-    }
-    let mut allowed_versions = old_supported_versions;
-    allowed_versions.push(version);
-
-    if only_query {
-        for v in allowed_versions.clone() {
-            allowed_versions.push(QUERY_VERSION_BASE + v)
-        }
-    }
-
-    if !(allowed_versions.contains(&version)) {
-        return Err(TransactionError::InvalidTransactionVersion(version));
-    }
-
-    Ok(())
 }
 
 fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
