@@ -8,7 +8,6 @@ use std::path::Path;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum SyscallType {
-    #[allow(unused)] // TODO: Remove once used.
     EmitEvent {
         selector: Option<Member>,
         keys_len: Option<Member>,
@@ -16,7 +15,6 @@ pub(crate) enum SyscallType {
         data_len: Option<Member>,
         data: Option<Member>,
     },
-    #[allow(unused)] // TODO: Remove once used.
     GetTxInfo {
         version: Option<Member>,
         account_contract_address: Option<Member>,
@@ -36,7 +34,6 @@ pub(crate) struct SyscallInfo {
     syscall_struct: SyscallType,
 }
 
-#[allow(unused)] // TODO: Remove once used.
 fn get_selector(
     selector: &str,
     identifiers: &HashMap<String, Identifier>,
@@ -49,7 +46,6 @@ fn get_selector(
         .ok_or(MissingSelector)
 }
 
-#[allow(unused)] // TODO: Remove once used.
 fn get_identifier(
     syscall: &str,
     identifiers: &HashMap<String, Identifier>,
@@ -57,13 +53,13 @@ fn get_identifier(
     Ok(identifiers.get(syscall).ok_or(MissingIdentifiers)?.clone())
 }
 
-#[allow(unused)] // TODO: Remove once used.
 fn get_member(key: &str, members: &HashMap<String, Member>) -> Option<Member> {
     members.get(key).map(ToOwned::to_owned)
 }
 
 impl SyscallInfo {
-    #[allow(unused)] // TODO: Remove once used.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn emit_event(
         identifiers: &HashMap<String, Identifier>,
     ) -> Result<SyscallInfo, SyscallHandlerError> {
@@ -90,7 +86,8 @@ impl SyscallInfo {
         })
     }
 
-    #[allow(unused)] // TODO: Remove once used.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn get_tx_info(
         identifiers: &HashMap<String, Identifier>,
     ) -> Result<SyscallInfo, SyscallHandlerError> {
