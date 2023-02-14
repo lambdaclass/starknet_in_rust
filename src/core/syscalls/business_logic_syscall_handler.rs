@@ -154,10 +154,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         runner: &mut VirtualMachine,
         syscall_stop_ptr: MaybeRelocatable,
     ) -> Result<(), ExecutionError> {
-        let expected_stop_ptr = self.expected_syscall_ptr
-            + runner
-                .get_segment_used_size(self.expected_syscall_ptr.segment_index as usize)
-                .ok_or(ExecutionError::InvalidSegmentSize)?;
+        let expected_stop_ptr = self.expected_syscall_ptr;
 
         let syscall_ptr = match syscall_stop_ptr {
             MaybeRelocatable::RelocatableValue(val) => val,
