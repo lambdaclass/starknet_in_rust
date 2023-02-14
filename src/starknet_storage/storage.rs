@@ -1,11 +1,10 @@
-use crate::{
-    business_logic::fact_state::contract_state::ContractState,
-    services::api::contract_class::{self, ContractClass},
-};
-
 use super::{
     dict_storage::{Prefix, StorageKey},
     errors::storage_errors::StorageError,
+};
+use crate::{
+    business_logic::fact_state::contract_state::ContractState,
+    services::api::contract_class::ContractClass,
 };
 use std::str;
 
@@ -164,27 +163,24 @@ impl<T: Storage> FactFetchingContext<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use cairo_rs::types::program::{self, Program};
-    use felt::{Felt, PRIME_STR};
-
+    use super::*;
     use crate::{
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
         utils::test_utils::storage_key,
     };
-
-    use super::*;
+    use cairo_rs::types::program::Program;
+    use felt::Felt;
+    use std::collections::HashMap;
 
     #[test]
     fn new_ffc() {
         let mut ffc = FactFetchingContext::new(DictStorage::new(), Some(2));
 
         let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        ffc.storage.set_float(&fkey, 4.0);
+        ffc.storage.set_float(&fkey, 4.0).unwrap();
 
-        assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0)
+        assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0);
     }
 
     #[test]
@@ -200,6 +196,7 @@ mod tests {
 
         assert_eq!(Ok(contract_state), storage.get_contract_state(&key));
     }
+
     #[test]
     fn get_and_set_contract_class() {
         let mut storage = DictStorage::new();

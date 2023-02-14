@@ -1,5 +1,5 @@
 use crate::{
-    core::errors::{self, syscall_handler_errors::SyscallHandlerError},
+    core::errors::syscall_handler_errors::SyscallHandlerError,
     starknet_runner::starknet_runner_error::StarknetRunnerError,
 };
 use cairo_rs::{
@@ -9,8 +9,6 @@ use cairo_rs::{
         trace_errors::TraceError, vm_errors::VirtualMachineError,
     },
 };
-use felt::Felt;
-use std::error;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

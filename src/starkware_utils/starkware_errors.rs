@@ -1,6 +1,7 @@
+use crate::core::errors::state_errors::StateError;
 use thiserror::Error;
-#[derive(Debug, PartialEq, Error)]
 
+#[derive(Debug, PartialEq, Error)]
 pub enum StarkwareError {
     #[error("Cannot pass calldata to a contract with no constructor.")]
     TransactionFailed,
@@ -12,4 +13,6 @@ pub enum StarkwareError {
     InvalidBlockNumber,
     #[error("Invalid Block Timestamp.")]
     InvalidBlockTimestamp,
+    #[error(transparent)]
+    StateError(#[from] StateError),
 }

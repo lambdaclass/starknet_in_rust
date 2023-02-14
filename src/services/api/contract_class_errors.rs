@@ -1,7 +1,5 @@
-use cairo_rs::types::errors::program_errors::ProgramError;
-use thiserror::Error;
-
 use super::contract_class::ContractEntryPoint;
+use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum ContractClassError {

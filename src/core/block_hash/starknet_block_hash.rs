@@ -1,9 +1,5 @@
 use crate::{
-    core::{
-        errors::syscall_handler_errors::SyscallHandlerError,
-        syscalls::syscall_handler::SyscallHandler,
-    },
-    hash_utils::compute_hash_on_elements,
+    core::errors::syscall_handler_errors::SyscallHandlerError, hash_utils::compute_hash_on_elements,
 };
 use felt::Felt;
 use starknet_crypto::{pedersen_hash, FieldElement};
@@ -59,8 +55,6 @@ pub fn calculate_event_hash(
 
 #[cfg(test)]
 mod tests {
-    use crate::{starknet_storage::dict_storage::DictStorage, utils::test_utils::storage_key};
-
     use super::*;
 
     #[test]

@@ -1,7 +1,7 @@
 use crate::utils::Address;
 use felt::Felt;
 use getset::CopyGetters;
-use num_traits::{Num, Zero};
+use num_traits::Zero;
 
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
@@ -47,6 +47,8 @@ pub struct StarknetGeneralConfig {
 }
 
 impl StarknetGeneralConfig {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn new(
         starknet_os_config: StarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
@@ -81,9 +83,8 @@ impl Default for StarknetGeneralConfig {
 
 #[cfg(test)]
 mod tests {
-    use felt::felt_str;
-
     use super::*;
+    use felt::felt_str;
 
     #[test]
     fn starknet_chain_to_felt() {

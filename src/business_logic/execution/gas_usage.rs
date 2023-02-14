@@ -131,12 +131,9 @@ mod tests {
     use super::get_event_emission_cost;
     use super::*;
     use crate::{
-        business_logic::execution::objects::{
-            L2toL1MessageInfo, OrderedEvent, OrderedL2ToL1Message,
-        },
+        business_logic::execution::objects::{L2toL1MessageInfo, OrderedL2ToL1Message},
         utils::Address,
     };
-    use num_bigint::BigInt;
 
     #[test]
     fn test_event_emission_cost() {

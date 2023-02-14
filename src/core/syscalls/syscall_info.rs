@@ -3,8 +3,6 @@ use crate::core::errors::syscall_handler_errors::SyscallHandlerError::*;
 use cairo_rs::serde::deserialize_program::*;
 use felt::Felt;
 use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum SyscallType {
@@ -134,7 +132,6 @@ mod tests {
     use super::SyscallInfo;
     use super::*;
     use num_traits::Num;
-    use std::str::FromStr;
 
     #[test]
     fn create_syscall_info_emit_event() {

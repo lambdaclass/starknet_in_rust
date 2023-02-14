@@ -1856,7 +1856,7 @@ dependencies = [
 [[package]]
 name = "starknet_api"
 version = "0.1.0"
-source = "git+https://github.com/starkware-libs/starknet-api?branch=main#9a1fca8665bb68dbea7d39cc5a81d41a58acb9f7"
+source = "git+https://github.com/lambdaclass/starknet-api?branch=main#99e02acf3dafc268b833d648f8bb51237eae61d2"
 dependencies = [
  "derive_more",
  "hex",

@@ -1,8 +1,5 @@
 use super::contract_class_errors::ContractClassError;
-use crate::{
-    business_logic::execution::execution_errors::ExecutionError,
-    core::errors::state_errors::StateError, public::abi::AbiType,
-};
+use crate::public::abi::AbiType;
 use cairo_rs::{
     serde::deserialize_program::{
         deserialize_array_of_bigint_hex, deserialize_felt_hex, Attribute, HintParams, Identifier,
@@ -16,7 +13,7 @@ use cairo_rs::{
 use felt::{Felt, PRIME_STR};
 use getset::Getters;
 use serde::{Deserialize, Serialize};
-use starknet_api::state::{ContractClassAbiEntry, EntryPoint};
+use starknet_api::state::EntryPoint;
 use std::{
     collections::HashMap,
     fs::File,
@@ -54,6 +51,8 @@ pub struct ContractClass {
 }
 
 impl ContractClass {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn new(
         program: Program,
         entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,

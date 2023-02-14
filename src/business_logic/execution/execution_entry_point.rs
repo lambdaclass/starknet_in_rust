@@ -4,41 +4,28 @@ use super::{
 };
 use crate::{
     business_logic::{
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{
-            cached_state::CachedState,
-            state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
-        },
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        fact_state::state::ExecutionResourcesManager, state::cached_state::CachedState,
+        state::state_api::StateReader,
     },
     core::syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
+        syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
-    definitions::{
-        constants::TRANSACTION_VERSION,
-        general_config::{self, StarknetGeneralConfig},
-    },
+    definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     starknet_runner::runner::StarknetRunner,
-    utils::{
-        get_deployed_address_class_hash_at_address, get_integer_range, validate_contract_deployed,
-        Address,
-    },
+    utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
-        self,
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
         vm_core::VirtualMachine,
     },
 };
 use felt::Felt;
-use num_traits::{ToPrimitive, Zero};
-use std::collections::VecDeque;
+use num_traits::ToPrimitive;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
@@ -54,6 +41,8 @@ pub struct ExecutionEntryPoint {
 }
 
 impl ExecutionEntryPoint {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn new(
         contract_address: Address,
         calldata: Vec<Felt>,
@@ -79,6 +68,8 @@ impl ExecutionEntryPoint {
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn execute(
         &self,
         state: &mut CachedState<InMemoryStateReader>,
@@ -135,7 +126,7 @@ impl ExecutionEntryPoint {
 
         let mut vm = VirtualMachine::new(false);
 
-        cairo_runner.initialize_function_runner(&mut vm);
+        cairo_runner.initialize_function_runner(&mut vm)?;
 
         let hint_processor = SyscallHintProcessor::new_empty();
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -205,7 +196,7 @@ impl ExecutionEntryPoint {
     fn get_selected_entry_point(
         &self,
         contract_class: ContractClass,
-        class_hash: [u8; 32],
+        _class_hash: [u8; 32],
     ) -> Result<ContractEntryPoint, ExecutionError> {
         let entry_points = contract_class
             .entry_points_by_type
