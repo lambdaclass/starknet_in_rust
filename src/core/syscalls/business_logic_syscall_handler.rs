@@ -149,8 +149,6 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     }
 
     /// Performs post run syscall related tasks.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub(crate) fn post_run(
         &self,
         runner: &mut VirtualMachine,

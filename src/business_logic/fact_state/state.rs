@@ -66,7 +66,7 @@ where
 
 impl<T: StateReader + Clone> CarriedState<T> {
     // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
+    // #[allow(dead_code)]
     pub fn create_from_parent_state(parent_state: CarriedState<T>) -> Self {
         let cached_state = parent_state.state.clone();
         let new_state = Some(Rc::new(RefCell::new(parent_state)));
@@ -104,11 +104,9 @@ impl<T: StateReader + Clone> CarriedState<T> {
 //      SHARED STATE
 // ----------------------
 
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
 pub(crate) struct SharedState {
-    contract_states: HashMap<Felt, ContractState>,
-    block_info: BlockInfo,
+    _contract_states: HashMap<Felt, ContractState>,
+    _block_info: BlockInfo,
 }
 
 impl SharedState {
