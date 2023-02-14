@@ -57,7 +57,7 @@ fn test_contract(
 
     let entry_point_selector = find_entry_point_selector(entry_point);
     let entry_point = ExecutionEntryPoint::new(
-        Address(1111.into()),
+        contract_address.clone(),
         vec![],
         entry_point_selector.clone(),
         caller_address.clone(),
@@ -118,4 +118,24 @@ fn get_block_number_syscall() {
     run(0);
     run(5);
     run(1000);
+}
+
+#[test]
+fn get_contract_address_syscall() {
+    let run = |contract_address: Felt| {
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_contract_address",
+            [1; 32],
+            3,
+            Address(contract_address.clone()),
+            Address(0.into()),
+            StarknetGeneralConfig::default(),
+            [felt_str!("1"), contract_address],
+        );
+    };
+
+    run(1.into());
+    run(5.into());
+    run(1000.into());
 }
