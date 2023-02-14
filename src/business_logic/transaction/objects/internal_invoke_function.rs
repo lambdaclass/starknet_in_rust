@@ -48,20 +48,6 @@ impl InternalInvokeFunction {
         &self.calldata
     }
 
-    fn verify_version(&self) -> Result<(), TransactionError> {
-        verify_version(self.version, false, Vec::new())?;
-
-        if ((self.version != 0) || (self.version != QUERY_VERSION_BASE))
-            && (self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR)
-        {
-            return Err(TransactionError::UnauthorizedEntryPointForInvoke(
-                self.entry_point_selector.clone(),
-            ));
-        }
-
-        Ok(())
-    }
-
     fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
@@ -143,7 +129,6 @@ impl InternalInvokeFunction {
         state: &mut CachedState<InMemoryStateReader>,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
-        self.verify_version()?;
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
@@ -202,4 +187,92 @@ fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Transa
         }
     }
     Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use std::{
+        collections::HashMap,
+        path::{Path, PathBuf},
+    };
+
+    use cairo_rs::types::program::Program;
+
+    use crate::{
+        business_logic::{
+            fact_state::contract_state::ContractState,
+            state::{state_api::State, state_api_objects::BlockInfo},
+        },
+        services::api::contract_class::ContractClass,
+        starknet_storage::{dict_storage::DictStorage, storage::Storage},
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_apply_specific_concurrent_changes() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 0,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: 0.into(),
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state = CachedState::new(state_reader, None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        // Set contract_class
+        let class_hash: [u8; 32] = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        // Set contact_state
+        let contract_state = ContractState::create([1; 32], Felt::new(0), HashMap::new());
+        state.state_reader.ffc.set_contract_state(
+            &internal_invoke_function
+                .contract_address
+                .to_32_bytes()
+                .unwrap(),
+            &contract_state,
+        );
+
+        let result = internal_invoke_function
+            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
+        assert_eq!(
+            result.call_info.as_ref().unwrap().class_hash,
+            Some(class_hash)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().entry_point_selector,
+            Some(internal_invoke_function.entry_point_selector)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().calldata,
+            internal_invoke_function.calldata
+        );
+        assert_eq!(
+            result.call_info.unwrap().retdata,
+            vec![Felt::new(1), Felt::new(144)]
+        );
+    }
 }
