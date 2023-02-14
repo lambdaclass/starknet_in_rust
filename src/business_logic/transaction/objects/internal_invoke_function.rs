@@ -1,7 +1,4 @@
-use std::thread::panicking;
-
 use felt::Felt;
-use num_traits::{Num, Zero};
 
 use crate::{
     business_logic::{
@@ -13,13 +10,9 @@ use crate::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::{
-            cached_state::CachedState, state_api::StateReader,
-            update_tracker_state::UpdatesTrackerState,
-        },
+        state::{cached_state::CachedState, update_tracker_state::UpdatesTrackerState},
         transaction::transaction_errors::TransactionError,
     },
-    core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::{
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, TRANSACTION_VERSION},
         general_config::StarknetGeneralConfig,
@@ -32,7 +25,7 @@ use crate::{
 pub(crate) struct InternalInvokeFunction {
     contract_address: Address,
     entry_point_selector: Felt,
-    entry_point_type: EntryPointType,
+    _entry_point_type: EntryPointType,
     calldata: Vec<Felt>,
     tx_type: TransactionType,
     version: u64,
@@ -44,10 +37,6 @@ pub(crate) struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
-    fn validate_entrypoint_calldata(&self) -> &Vec<Felt> {
-        &self.calldata
-    }
-
     fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
@@ -60,6 +49,7 @@ impl InternalInvokeFunction {
         )
     }
 
+    #[allow(dead_code)]
     fn run_validate_entrypoint(
         &self,
         state: &mut CachedState<InMemoryStateReader>,
@@ -98,6 +88,7 @@ impl InternalInvokeFunction {
 
     ///     Builds the transaction execution context and executes the entry point.
     ///     Returns the CallInfo.
+    #[allow(dead_code)]
     fn run_execute_entrypoint(
         &self,
         state: &mut CachedState<InMemoryStateReader>,
@@ -122,6 +113,7 @@ impl InternalInvokeFunction {
         )
     }
 
+    #[allow(dead_code)]
     fn _apply_specific_concurrent_changes(
         &self,
         // Check this
@@ -155,6 +147,7 @@ impl InternalInvokeFunction {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn verify_version(
     version: u64,
     only_query: bool,
@@ -190,18 +183,12 @@ fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Transa
 }
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::HashMap,
-        path::{Path, PathBuf},
-    };
+    use std::{collections::HashMap, path::PathBuf};
 
-    use cairo_rs::types::program::Program;
+    use num_traits::Num;
 
     use crate::{
-        business_logic::{
-            fact_state::contract_state::ContractState,
-            state::{state_api::State, state_api_objects::BlockInfo},
-        },
+        business_logic::{fact_state::contract_state::ContractState, state::state_api::State},
         services::api::contract_class::ContractClass,
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
     };
@@ -217,7 +204,7 @@ mod tests {
                 16,
             )
             .unwrap(),
-            entry_point_type: EntryPointType::External,
+            _entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
             version: 0,
@@ -229,7 +216,7 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
         let mut state = CachedState::new(state_reader, None);
 
         // Initialize state.contract_classes
@@ -244,14 +231,18 @@ mod tests {
             .unwrap();
 
         // Set contact_state
-        let contract_state = ContractState::create([1; 32], Felt::new(0), HashMap::new());
-        state.state_reader.ffc.set_contract_state(
-            &internal_invoke_function
-                .contract_address
-                .to_32_bytes()
-                .unwrap(),
-            &contract_state,
-        );
+        let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
+        state
+            .state_reader
+            .ffc
+            .set_contract_state(
+                &internal_invoke_function
+                    .contract_address
+                    .to_32_bytes()
+                    .unwrap(),
+                &contract_state,
+            )
+            .unwrap();
 
         let result = internal_invoke_function
             ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())

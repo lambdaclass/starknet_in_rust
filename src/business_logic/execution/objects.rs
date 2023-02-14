@@ -1,28 +1,18 @@
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    hash::Hash,
+use super::execution_errors::ExecutionError;
+use crate::{
+    business_logic::state::state_cache::StorageEntry,
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
+    services::api::contract_class::EntryPointType,
+    utils::{get_big_int, get_integer, get_relocatable, Address},
 };
-
 use cairo_rs::{
-    hint_processor::builtin_hint_processor::secp::signature,
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use felt::Felt;
 use num_traits::{ToPrimitive, Zero};
-
-use super::execution_errors::ExecutionError;
-use crate::{
-    business_logic::state::state_cache::StorageEntry,
-    core::{
-        errors::syscall_handler_errors::SyscallHandlerError, syscalls::syscall_request::FromPtr,
-    },
-    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
-    utils::{get_big_int, get_integer, get_relocatable, Address},
-};
-use crate::{services::api::contract_class::EntryPointType, starknet_storage::storage::Storage};
-
-type ResourcesMapping = HashMap<String, Felt>;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CallType {
@@ -169,7 +159,7 @@ impl CallInfo {
     }
 
     pub fn get_visited_storage_entries(self) -> HashSet<StorageEntry> {
-        let mut storage_entries = self
+        let storage_entries = self
             .accesed_storage_keys
             .into_iter()
             .map(|key| (self.contract_address.clone(), key))
@@ -262,12 +252,12 @@ pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,
     pub(crate) account_contract_address: Address,
-    pub(crate) max_fee: u64,
+    pub(crate) _max_fee: u64,
     pub(crate) transaction_hash: Felt,
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
-    pub(crate) n_steps: u64,
+    pub(crate) _n_steps: u64,
 }
 
 impl TransactionExecutionContext {
@@ -275,41 +265,41 @@ impl TransactionExecutionContext {
         account_contract_address: Address,
         transaction_hash: Felt,
         signature: Vec<Felt>,
-        max_fee: u64,
+        _max_fee: u64,
         nonce: Felt,
-        n_steps: u64,
+        _n_steps: u64,
         version: u64,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
             account_contract_address,
-            max_fee,
+            _max_fee,
             nonce,
             signature,
             transaction_hash,
             version,
             n_sent_messages: 0,
-            n_steps,
+            _n_steps,
         }
     }
 
     pub fn create_for_testing(
         account_contract_address: Address,
-        max_fee: u64,
+        _max_fee: u64,
         nonce: Felt,
-        n_steps: u64,
+        _n_steps: u64,
         version: u64,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
             version,
             account_contract_address,
-            max_fee: 0,
+            _max_fee: 0,
             transaction_hash: Felt::zero(),
             signature: Vec::new(),
             nonce,
             n_sent_messages: 0,
-            n_steps,
+            _n_steps,
         }
     }
 }
@@ -318,7 +308,7 @@ impl TransactionExecutionContext {
 pub(crate) struct TxInfoStruct {
     pub(crate) version: usize,
     pub(crate) account_contract_address: Address,
-    pub(crate) max_fee: u64,
+    pub(crate) _max_fee: u64,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
     pub(crate) transaction_hash: Felt,
@@ -335,7 +325,7 @@ impl TxInfoStruct {
         TxInfoStruct {
             version: tx.version as usize,
             account_contract_address: tx.account_contract_address,
-            max_fee: tx.max_fee,
+            _max_fee: tx._max_fee,
             signature_len: tx.signature.len(),
             signature,
             transaction_hash: tx.transaction_hash,
@@ -348,7 +338,7 @@ impl TxInfoStruct {
         vec![
             MaybeRelocatable::from(Felt::new(self.version)),
             MaybeRelocatable::from(&self.account_contract_address.0),
-            MaybeRelocatable::from(Felt::new(self.max_fee)),
+            MaybeRelocatable::from(Felt::new(self._max_fee)),
             MaybeRelocatable::from(Felt::new(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),
@@ -364,7 +354,7 @@ impl TxInfoStruct {
         let version = get_integer(vm, &tx_info_ptr)?;
 
         let account_contract_address = Address(get_big_int(vm, &(&tx_info_ptr + 1))?);
-        let max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
+        let _max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
             .to_u64()
             .ok_or(SyscallHandlerError::FeltToU64Fail)?;
         let signature_len = get_integer(vm, &(&tx_info_ptr + 3))?;
@@ -376,7 +366,7 @@ impl TxInfoStruct {
         Ok(TxInfoStruct {
             version,
             account_contract_address,
-            max_fee,
+            _max_fee,
             signature_len,
             signature,
             transaction_hash,
@@ -521,7 +511,7 @@ impl TransactionExecutionInfo {
 // --------------------
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct OrderedL2ToL1Message {
+pub struct OrderedL2ToL1Message {
     pub(crate) order: usize,
     pub(crate) to_address: Address,
     pub(crate) payload: Vec<Felt>,
@@ -573,14 +563,8 @@ impl L2toL1MessageInfo {
 
 #[cfg(test)]
 mod tests {
-
-    use std::{collections::VecDeque, ops::Add};
-
+    use super::*;
     use crate::{business_logic::execution::objects::CallInfo, utils::Address};
-
-    use super::{
-        Event, L2toL1MessageInfo, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionInfo,
-    };
 
     #[test]
     fn non_optional_calls_test() {
@@ -717,17 +701,10 @@ mod tests {
         ord_event4.order = 3;
 
         // store events
-        child1.events = Vec::from([ord_event3.clone(), ord_event4.clone()]);
-        child2.events = Vec::from([ord_event1.clone(), ord_event2.clone()]);
+        child1.events = Vec::from([ord_event3, ord_event4]);
+        child2.events = Vec::from([ord_event1, ord_event2]);
 
-        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
-
-        // events
-
-        let event1 = Event::new(ord_event1, child2.caller_address.clone());
-        let event2 = Event::new(ord_event2, child2.caller_address);
-        let event3 = Event::new(ord_event3, child1.caller_address.clone());
-        let event4 = Event::new(ord_event4, child1.caller_address);
+        call_root.internal_calls = [child1, child2].to_vec();
 
         assert!(call_root.get_sorted_events().is_err())
     }
@@ -794,17 +771,10 @@ mod tests {
         ord_msg4.order = 3;
 
         // store events
-        child1.l2_to_l1_messages = Vec::from([ord_msg3.clone(), ord_msg4.clone()]);
-        child2.l2_to_l1_messages = Vec::from([ord_msg1.clone(), ord_msg2.clone()]);
+        child1.l2_to_l1_messages = Vec::from([ord_msg3, ord_msg4]);
+        child2.l2_to_l1_messages = Vec::from([ord_msg1, ord_msg2]);
 
-        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
-
-        // events
-
-        let msg1 = L2toL1MessageInfo::new(ord_msg1, child2.caller_address.clone());
-        let msg2 = L2toL1MessageInfo::new(ord_msg2, child2.caller_address);
-        let msg3 = L2toL1MessageInfo::new(ord_msg3, child1.caller_address.clone());
-        let msg4 = L2toL1MessageInfo::new(ord_msg4, child1.caller_address);
+        call_root.internal_calls = [child1, child2].to_vec();
 
         assert!(call_root.get_sorted_l2_to_l1_messages().is_err())
     }

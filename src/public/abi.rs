@@ -1,7 +1,7 @@
 use felt::Felt;
 use lazy_static::lazy_static;
 use num_traits::Num;
-use std::{any::Any, collections::HashMap};
+use std::collections::HashMap;
 
 pub type AbiType = Vec<HashMap<String, String>>;
 

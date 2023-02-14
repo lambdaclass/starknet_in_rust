@@ -1,8 +1,6 @@
 use felt::Felt;
 use thiserror::Error;
 
-use crate::business_logic::execution::execution_errors::ExecutionError;
-
 #[derive(Debug, PartialEq, Error)]
 pub enum TransactionError {
     #[error("Invalid transaction version {0}")]

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use serde::Deserialize;
 
 use crate::definitions::transaction_type::TransactionType;
 
@@ -9,7 +8,7 @@ use super::execution_errors::ExecutionError;
 
 #[derive(Debug, Clone)]
 pub struct OsResources {
-    execute_syscalls: HashMap<String, ExecutionResources>,
+    _execute_syscalls: HashMap<String, ExecutionResources>,
     execute_txs_inner: HashMap<TransactionType, ExecutionResources>,
 }
 
@@ -17,7 +16,6 @@ pub struct OsResources {
 
 impl OsResources {
     pub fn default() -> Self {
-        let execute_syscalls = HashMap::new();
         let execute_txs_inner: HashMap<TransactionType, ExecutionResources> = HashMap::from([
             (
                 TransactionType::InvokeFunction,
@@ -63,14 +61,14 @@ impl OsResources {
         ]);
 
         OsResources {
-            execute_syscalls,
+            _execute_syscalls: HashMap::new(),
             execute_txs_inner,
         }
     }
 }
 
 pub fn get_additional_os_resources(
-    syscall_counter: HashMap<String, u64>,
+    _syscall_counter: HashMap<String, u64>,
     tx_type: &TransactionType,
 ) -> Result<ExecutionResources, ExecutionError> {
     let os_resources = OsResources::default();

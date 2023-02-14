@@ -1,10 +1,7 @@
-use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-use felt::Felt;
-use thiserror::Error;
-
-use crate::utils_errors::UtilsError;
-
 use super::state_errors::StateError;
+use crate::utils_errors::UtilsError;
+use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum SyscallHandlerError {
@@ -14,8 +11,6 @@ pub enum SyscallHandlerError {
     MissingIdentifiers,
     #[error("Missing selector value")]
     MissingSelector,
-    #[error("Missing file syscalls.json")]
-    MissingSyscallsJsonFile,
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
     #[error("invalid pointer")]

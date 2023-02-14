@@ -1,11 +1,9 @@
-use felt::Felt;
-
+use super::state_cache::StorageEntry;
 use crate::{
     core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
     utils::Address,
 };
-
-use super::{state_api_objects::BlockInfo, state_cache::StorageEntry};
+use felt::Felt;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash.

@@ -1,11 +1,9 @@
-use std::vec;
-
-use felt::{felt_str, Felt};
+use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use felt::Felt;
 use num_integer::Integer;
 use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};
-
-use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use std::vec;
 
 pub fn calculate_contract_address(
     salt: &Address,
@@ -53,9 +51,8 @@ pub(crate) fn compute_hash_on_elements(vec: &[Felt]) -> Result<Felt, SyscallHand
 
 #[cfg(test)]
 mod tests {
-    use felt::felt_str;
-
     use super::*;
+    use felt::felt_str;
 
     #[test]
     fn test_compute_hash_on_elements() {
