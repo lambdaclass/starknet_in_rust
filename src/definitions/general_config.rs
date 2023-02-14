@@ -42,7 +42,8 @@ pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     _contract_storage_commitment_tree_height: u64,
     _global_state_commitment_tree_height: u64,
-    _sequencer_address: Address,
+    #[get_mut = "pub"]
+    sequencer_address: Address,
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
     #[get_mut = "pub"]
@@ -64,7 +65,7 @@ impl StarknetGeneralConfig {
             starknet_os_config,
             _contract_storage_commitment_tree_height: contract_storage_commitment_tree_height,
             _global_state_commitment_tree_height: global_state_commitment_tree_height,
-            _sequencer_address: sequencer_address,
+            sequencer_address,
             invoke_tx_max_n_steps,
             block_info,
         }
@@ -80,7 +81,7 @@ impl Default for StarknetGeneralConfig {
             },
             _contract_storage_commitment_tree_height: 0,
             _global_state_commitment_tree_height: 0,
-            _sequencer_address: Address(0.into()),
+            sequencer_address: Address(0.into()),
             invoke_tx_max_n_steps: 0,
             block_info: BlockInfo::empty(Address::default()),
         }
