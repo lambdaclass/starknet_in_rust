@@ -28,6 +28,8 @@ use crate::{
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::{felt_str, Felt};
 use num_traits::ToPrimitive;
+use sha3::{Digest, Keccak256};
+use starknet_crypto::FieldElement;
 
 //* -------------------
 //*      Address
@@ -277,9 +279,6 @@ pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
 //* -------------------
 //*      Macros
 //* -------------------
-
-use sha3::{Digest, Keccak256};
-use starknet_crypto::FieldElement;
 
 #[cfg(test)]
 #[macro_use]
