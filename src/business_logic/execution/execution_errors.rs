@@ -10,11 +10,16 @@ use cairo_rs::{
 use felt::Felt;
 use thiserror::Error;
 
-use crate::business_logic::transaction::transaction_errors::TransactionError;
+use crate::{
+    business_logic::transaction::transaction_errors::TransactionError,
+    definitions::transaction_type::TransactionType,
+};
 use crate::{
     core::errors::{self, syscall_handler_errors::SyscallHandlerError},
     starknet_runner::starknet_runner_error::StarknetRunnerError,
 };
+
+use super::os_usage::OsResources;
 #[derive(Debug, Error)]
 pub enum ExecutionError {
     #[error("Missing field for TxStruct")]
@@ -83,4 +88,6 @@ pub enum ExecutionError {
     SyscallException(#[from] SyscallHandlerError),
     #[error(transparent)]
     TransactionError(#[from] TransactionError),
+    #[error("Transaction type {0:?} not found in OsResources: {1:?}")]
+    NoneTransactionType(TransactionType, OsResources),
 }

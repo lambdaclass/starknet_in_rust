@@ -173,7 +173,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let tx_syscall_counter = resources_manager.syscall_counter;
 
     // Add additional Cairo resources needed for the OS to run the transaction.
-    let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);
+    let additional_resources = get_additional_os_resources(tx_syscall_counter, &tx_type)?;
     let new_resources = cairo_usage + additional_resources;
     let filtered_builtins = new_resources.filter_unused_builtins();
 
