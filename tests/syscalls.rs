@@ -14,7 +14,10 @@ use starknet_rs::{
         },
         state::cached_state::CachedState,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::{
+        constants::TRANSACTION_VERSION,
+        general_config::{StarknetChainId, StarknetGeneralConfig},
+    },
     services::api::contract_class::{ContractClass, EntryPointType},
     starknet_storage::dict_storage::DictStorage,
     utils::Address,
@@ -134,8 +137,9 @@ fn get_tx_info_syscall() {
                max_fee,
                signature: Vec<Felt>,
                transaction_hash: Felt,
-               _chain_id: ()| {
-        let general_config = StarknetGeneralConfig::default();
+               chain_id| {
+        let mut general_config = StarknetGeneralConfig::default();
+        *general_config.starknet_os_config_mut().chain_id_mut() = chain_id;
 
         // TODO: How to test `chain_id`?
         let n_steps = general_config.invoke_tx_max_n_steps();
@@ -165,12 +169,65 @@ fn get_tx_info_syscall() {
                     .reduce(|a, b| a + b)
                     .unwrap_or_default(),
                 transaction_hash,
-                0.into(),
+                chain_id.to_felt(),
             ],
         );
     };
 
-    run(0, Address::default(), 12, vec![], 0.into(), ());
-    // run(5);
-    // run(1000);
+    run(
+        0,
+        Address::default(),
+        12,
+        vec![],
+        0.into(),
+        StarknetChainId::TestNet,
+    );
+    run(
+        10,
+        Address::default(),
+        12,
+        vec![],
+        0.into(),
+        StarknetChainId::TestNet,
+    );
+    run(
+        10,
+        Address(1111.into()),
+        12,
+        vec![],
+        0.into(),
+        StarknetChainId::TestNet,
+    );
+    run(
+        10,
+        Address(1111.into()),
+        50,
+        vec![],
+        0.into(),
+        StarknetChainId::TestNet,
+    );
+    run(
+        10,
+        Address(1111.into()),
+        50,
+        [0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec(),
+        0.into(),
+        StarknetChainId::TestNet,
+    );
+    run(
+        10,
+        Address(1111.into()),
+        50,
+        [0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec(),
+        12345678.into(),
+        StarknetChainId::TestNet,
+    );
+    run(
+        10,
+        Address(1111.into()),
+        50,
+        [0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec(),
+        12345678.into(),
+        StarknetChainId::TestNet2,
+    );
 }
