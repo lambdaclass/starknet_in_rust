@@ -15,6 +15,15 @@ STARKNET_SOURCES=$(wildcard tests/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 
 
+#
+# VENV rules.
+#
+
+deps-venv:
+	pip install \
+		fastecdsa \
+		cairo-lang==0.10.3
+
 cairo_programs/%.json: cairo_programs/%.cairo
 	cairo-compile $< --output $@
 
@@ -22,21 +31,22 @@ tests/%.json: tests/%.cairo
 	starknet-compile $< | python3 tests/starknet-bug-workaround.py > $@
 
 
-build: compile-cairo
+#
+# Normal rules.
+#
+
+build:
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo
 	cargo build --release
 
-check: compile-cairo
+check:
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo
 	cargo check
 
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-
-deps-venv:
-	pip install \
-		fastecdsa \
-		cairo-lang==0.10.3
 
 clean:
 	-rm -rf starknet-venv/
