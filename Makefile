@@ -47,12 +47,15 @@ compile-cairo: $(CAIRO_TARGETS)
 
 compile-starknet: $(STARKNET_TARGETS)
 
-clippy: compile-cairo
+clippy:
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo
 	cargo clippy --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet
+test:
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo test
 
-coverage: compile-cairo
+coverage:
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo
 	cargo tarpaulin
 	-rm -f default.profraw
