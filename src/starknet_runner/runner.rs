@@ -386,24 +386,15 @@ mod tests {
 
         let path = PathBuf::from("starknet_programs/storage.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let mut entry_points_by_type = HashMap::new();
+        let mut entry_points_by_type = contract_class.entry_points_by_type.clone();
 
-        let storage_entrypoint_selector = Felt::from_str_radix(
-            "927d8c7b62a4c3970850ba50fb9bede72a52b22464bcc9303c6142276927f2",
-            16,
-        )
-        .unwrap();
-
-        entry_points_by_type.insert(
-            EntryPointType::External,
-            [ContractEntryPoint {
-                selector: storage_entrypoint_selector.clone(),
-                offset: Felt::from_str_radix("41", 16).unwrap(),
-            }]
-            .to_vec(),
-        );
-        let contract_class =
-            ContractClass::new(contract_class.program, entry_points_by_type, None).unwrap();
+        let storage_entrypoint_selector = entry_points_by_type
+            .get(&EntryPointType::External)
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .selector
+            .clone();
 
         //* --------------------------------------------
         //*    Create state reader with class hash data
@@ -417,7 +408,6 @@ mod tests {
 
         let address = Address(1111.into());
         let class_hash = [1; 32];
-
         let contract_state = ContractState::create(class_hash, 3.into(), HashMap::new());
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -480,7 +470,7 @@ mod tests {
             retdata: [1.into(), 42.into()].to_vec(),
             execution_resources: ExecutionResources::default(),
             class_hash: Some(class_hash),
-            storage_read_values: vec![42].into_iter().map(|x| x.into()).collect(),
+            storage_read_values: vec![42.into()],
             accesed_storage_keys: expected_accesed_storage_keys,
             ..Default::default()
         };
