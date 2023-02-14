@@ -1,5 +1,7 @@
-use std::error;
-
+use crate::{
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    starknet_runner::starknet_runner_error::StarknetRunnerError,
+};
 use cairo_rs::{
     types::relocatable::Relocatable,
     vm::errors::{
@@ -7,13 +9,8 @@ use cairo_rs::{
         trace_errors::TraceError, vm_errors::VirtualMachineError,
     },
 };
-use felt::Felt;
 use thiserror::Error;
 
-use crate::{
-    core::errors::{self, syscall_handler_errors::SyscallHandlerError},
-    starknet_runner::starknet_runner_error::StarknetRunnerError,
-};
 #[derive(Debug, Error)]
 pub enum ExecutionError {
     #[error("Missing field for TxStruct")]

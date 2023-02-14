@@ -1,10 +1,18 @@
-use std::collections::HashMap;
-
+use super::starknet_runner_error::StarknetRunnerError;
+use crate::{
+    business_logic::{
+        execution::execution_errors::ExecutionError,
+        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+    },
+    core::syscalls::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        syscall_handler::SyscallHintProcessor,
+    },
+};
+use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 use cairo_rs::{
-    hint_processor::hint_processor_definition::HintProcessor,
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
-        errors::vm_errors::VirtualMachineError,
         runners::{
             builtin_runner::BuiltinRunner,
             cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
@@ -13,21 +21,7 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
-use num_traits::ToPrimitive;
-
-use crate::{
-    business_logic::{
-        execution::execution_errors::ExecutionError,
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
-    },
-    core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::{self, SyscallHandler, SyscallHintProcessor},
-    },
-};
-
-use super::starknet_runner_error::StarknetRunnerError;
-use cairo_rs::types::relocatable::MaybeRelocatable::Int;
+use std::collections::HashMap;
 
 pub(crate) struct StarknetRunner {
     pub(crate) cairo_runner: CairoRunner,
@@ -177,7 +171,7 @@ impl StarknetRunner {
     ) -> Result<(), ExecutionError> {
         // The returned values are os_context, retdata_size, retdata_ptr.
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
-        let mut stack_pointer = os_context_end;
+        let stack_pointer = os_context_end;
 
         let stack_ptr = self
             .cairo_runner
@@ -197,31 +191,15 @@ impl StarknetRunner {
 
         self.hint_processor
             .syscall_handler
-            .post_run(&mut self.vm, syscall_stop_ptr);
+            .post_run(&mut self.vm, syscall_stop_ptr)?;
 
         Ok(())
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use std::{
-        collections::HashMap,
-        fs,
-        path::{Path, PathBuf},
-    };
-
-    use cairo_rs::{
-        types::relocatable::MaybeRelocatable,
-        vm::{
-            runners::cairo_runner::{CairoRunner, ExecutionResources},
-            vm_core::VirtualMachine,
-        },
-    };
-    use felt::Felt;
-    use num_traits::{Num, Zero};
-    use starknet_api::state::Program;
-
+mod test {
+    use super::StarknetRunner;
     use crate::{
         business_logic::{
             execution::{
@@ -232,25 +210,30 @@ mod tests {
                 contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
                 state::ExecutionResourcesManager,
             },
-            state::{cached_state::CachedState, state_api_objects::BlockInfo},
+            state::cached_state::CachedState,
         },
-        core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor},
-        definitions::{
-            constants::TRANSACTION_VERSION,
-            general_config::{self, StarknetGeneralConfig},
-        },
-        services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+        core::syscalls::syscall_handler::SyscallHintProcessor,
+        definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+        services::api::contract_class::{ContractClass, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
-        utils::{test_utils::vm, Address},
+        utils::Address,
     };
-
-    use super::StarknetRunner;
+    use cairo_rs::{
+        types::relocatable::MaybeRelocatable,
+        vm::{
+            runners::cairo_runner::{CairoRunner, ExecutionResources},
+            vm_core::VirtualMachine,
+        },
+    };
+    use felt::Felt;
+    use num_traits::Zero;
+    use std::{collections::HashMap, path::PathBuf};
 
     #[test]
     fn get_execution_resources_test_fail() {
         let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
-        let mut vm = VirtualMachine::new(true);
+        let vm = VirtualMachine::new(true);
         let hint_processor = SyscallHintProcessor::new_empty();
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -262,7 +245,7 @@ mod tests {
     fn prepare_os_context_test() {
         let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
-        let mut vm = VirtualMachine::new(true);
+        let vm = VirtualMachine::new(true);
         let hint_processor = SyscallHintProcessor::new_empty();
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -283,7 +266,7 @@ mod tests {
 
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let mut entry_points_by_type = contract_class.entry_points_by_type.clone();
+        let entry_points_by_type = contract_class.entry_points_by_type.clone();
 
         let fib_entrypoint_selector = entry_points_by_type
             .get(&EntryPointType::External)
@@ -305,7 +288,7 @@ mod tests {
 
         let address = Address(1111.into());
         let class_hash = [1; 32];
-        let contract_state = ContractState::create(class_hash, 3.into(), HashMap::new());
+        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
 
         contract_class_cache.insert(class_hash, contract_class);
         let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);

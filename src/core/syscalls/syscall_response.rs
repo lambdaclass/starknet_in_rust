@@ -4,10 +4,7 @@ use super::syscall_request::{
     GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_rs::{
-    types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::vm_core::VirtualMachine,
-};
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
 
 pub(crate) trait WriteSyscallResponse {
@@ -260,17 +257,15 @@ impl WriteSyscallResponse for StorageReadResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_rs::relocatable;
-
     use crate::{
         add_segments,
-        business_logic::state::state_api_objects::BlockInfo,
         core::syscalls::{
             business_logic_syscall_handler::BusinessLogicSyscallHandler,
             syscall_handler::SyscallHandler,
         },
         utils::test_utils::vm,
     };
+    use cairo_rs::relocatable;
 
     #[test]
     fn write_get_caller_address_response() {

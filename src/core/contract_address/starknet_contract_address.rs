@@ -1,34 +1,25 @@
+use crate::{
+    core::errors::contract_address_errors::ContractAddressError,
+    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+};
 use cairo_rs::{
-    hint_processor::{
-        self, builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
-        hint_processor_definition::HintProcessor,
-    },
+    hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
     serde::deserialize_program::Identifier,
     types::{program::Program, relocatable::MaybeRelocatable},
     vm::{
-        self,
-        runners::{
-            builtin_runner::BuiltinRunner,
-            cairo_runner::{CairoArg, CairoRunner},
-        },
+        runners::cairo_runner::{CairoArg, CairoRunner},
         vm_core::VirtualMachine,
     },
 };
 use felt::Felt;
-use num_traits::{pow, Num};
-
-use crate::{
-    core::errors::contract_address_errors::ContractAddressError,
-    hash_utils::{calculate_contract_address, compute_hash_on_elements},
-    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
-    utils::Address,
-};
 use sha3::{Digest, Keccak256};
-use std::{collections::HashMap, hash::Hash, path::Path};
+use std::{collections::HashMap, path::Path};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
 
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
         Path::new("cairo_programs/contracts.json"),
@@ -36,6 +27,8 @@ fn load_program() -> Result<Program, ContractAddressError> {
     )?)
 }
 
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
@@ -62,11 +55,13 @@ fn get_contract_entry_points(
 }
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 fn starknet_keccak(data: &[u8]) -> Felt {
     let mut hasher = Keccak256::new();
     hasher.update(data);
     let mut finalized_hash = hasher.finalize();
-    let mut hashed_slice: &[u8] = finalized_hash.as_slice();
+    let hashed_slice: &[u8] = finalized_hash.as_slice();
 
     // This is the same than doing a mask 3 only with the most significant byte.
     // and then copying the other values.
@@ -77,13 +72,17 @@ fn starknet_keccak(data: &[u8]) -> Felt {
 
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
-fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt {
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
+fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt {
     let keccak_input =
         r#"{"abi": contract_class.abi, "program": contract_class.program}"#.as_bytes();
     starknet_keccak(keccak_input)
 }
 
 /// Returns the serialization of a contract as a list of field elements.
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
@@ -169,6 +168,8 @@ impl From<StructContractClass> for CairoArg {
     }
 }
 
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt, ContractAddressError> {
@@ -178,7 +179,7 @@ pub(crate) fn compute_class_hash(
         &get_contract_class_struct(&program.identifiers, contract_class)?.into();
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all", false)?;
-    runner.initialize_function_runner(&mut vm);
+    runner.initialize_function_runner(&mut vm)?;
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
@@ -206,12 +207,9 @@ pub(crate) fn compute_class_hash(
 
 #[cfg(test)]
 mod tests {
-    use crate::services::api::contract_class;
-
     use super::*;
     use felt::Felt;
-    use num_traits::{pow, Num};
-    use sha3::{Digest, Keccak256};
+    use num_traits::Num;
 
     #[test]
     fn test_starknet_keccak() {

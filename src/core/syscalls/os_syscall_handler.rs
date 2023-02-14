@@ -1,18 +1,25 @@
-use super::syscall_handler::SyscallHandler;
-use super::syscall_request::SyscallRequest;
-use super::syscall_response::WriteSyscallResponse;
-use crate::business_logic::execution::objects::CallInfo;
-use crate::business_logic::execution::objects::TransactionExecutionInfo;
-use crate::business_logic::state::state_api_objects::BlockInfo;
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::services::api::contract_class::EntryPointType;
-use crate::utils::Address;
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-use cairo_rs::vm::vm_core::VirtualMachine;
-use cairo_rs::vm::vm_memory::memory_segments::MemorySegmentManager;
+use super::{
+    syscall_handler::SyscallHandler, syscall_request::SyscallRequest,
+    syscall_response::WriteSyscallResponse,
+};
+use crate::{
+    business_logic::{
+        execution::objects::{CallInfo, TransactionExecutionInfo},
+        state::state_api_objects::BlockInfo,
+    },
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    services::api::contract_class::EntryPointType,
+    utils::Address,
+};
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::{vm_core::VirtualMachine, vm_memory::memory_segments::MemorySegmentManager},
+};
 use felt::Felt;
-use std::any::Any;
-use std::collections::{HashMap, VecDeque};
+use std::{
+    any::Any,
+    collections::{HashMap, VecDeque},
+};
 
 #[derive(Debug)]
 pub(crate) struct OsSingleStarknetStorage;
@@ -441,6 +448,7 @@ mod tests {
 
         assert_eq!(handler.end_tx(), Err(SyscallHandlerError::IteratorNotEmpty))
     }
+
     #[test]
     fn end_tx_err_tx_info_ptr() {
         let tx_info_ptr = Some(Relocatable {
@@ -664,6 +672,7 @@ mod tests {
             Err(SyscallHandlerError::UnexpectedConstructorRetdata)
         );
     }
+
     #[test]
     fn storage_deploy_err_retdata_iterator() {
         let mut handler = OsSyscallHandler::default();
@@ -781,6 +790,7 @@ mod tests {
             Err(SyscallHandlerError::ListIsEmpty)
         )
     }
+
     #[test]
     fn get_caller_address() {
         let mut call_stack = VecDeque::new();
@@ -874,6 +884,7 @@ mod tests {
             ))
         )
     }
+
     #[test]
     fn call_contract_and_write_response() {
         let retdata_iterator = vec![vec![12.into()].into(), vec![6543.into()].into()].into();
