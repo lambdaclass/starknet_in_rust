@@ -22,7 +22,7 @@ use starknet_rs::{
 use std::path::Path;
 
 #[test]
-fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
+fn get_block_number_syscall() {
     // Contract parameters:
     let contract_path = Path::new("tests/syscalls.json");
     let class_hash = [1; 32];
@@ -35,7 +35,8 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     // Contract execution (testing).
-    let contract_class = ContractClass::try_from(contract_path.to_path_buf())?;
+    let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+        .expect("Could not load contract from JSON");
 
     let contract_state = ContractState::new(class_hash, nonce.into(), Default::default());
     let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
@@ -72,12 +73,14 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
     let mut resources_manager = ExecutionResourcesManager::default();
 
     assert_eq!(
-        entry_point.execute(
-            &mut state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context,
-        )?,
+        entry_point
+            .execute(
+                &mut state,
+                &general_config,
+                &mut resources_manager,
+                &tx_execution_context,
+            )
+            .expect("Could not execute contract"),
         CallInfo {
             contract_address,
             caller_address,
@@ -92,6 +95,4 @@ fn get_block_number_syscall() -> Result<(), Box<dyn std::error::Error>> {
             ..Default::default()
         },
     );
-
-    Ok(())
 }
