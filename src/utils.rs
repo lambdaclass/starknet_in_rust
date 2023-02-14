@@ -1,10 +1,3 @@
-use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-    iter::zip,
-    ops::Add,
-};
-
 use crate::{
     business_logic::{
         execution::{
@@ -19,17 +12,20 @@ use crate::{
             update_tracker_state::UpdatesTrackerState,
         },
     },
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
     services::api::contract_class::EntryPointType,
-    starknet_storage::storage,
     utils_errors::UtilsError,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::{felt_str, Felt};
+use felt::Felt;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
 use starknet_crypto::FieldElement;
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
 
 //* -------------------
 //*      Address
@@ -155,7 +151,8 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let n_deployments = non_optional_calls
         .clone()
         .into_iter()
-        .fold(0, |acc, c| acc + get_call_n_deployments(c));
+        .map(get_call_n_deployments)
+        .sum();
 
     let mut l2_to_l1_messages = Vec::new();
 
@@ -261,7 +258,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
 }
 
 pub fn validate_contract_deployed<S: StateReader + Clone>(
-    mut state: S,
+    state: S,
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
@@ -283,6 +280,7 @@ pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
+    #![allow(unused)]
 
     #[macro_export]
     macro_rules! any_box {
@@ -327,14 +325,13 @@ pub mod test_utils {
     pub(crate) use ids_data;
 
     macro_rules! vm {
-        () => {{
-            use felt::Felt;
+        () => {
             VirtualMachine::new(false)
-        }};
+        };
 
-        ($use_trace:expr) => {{
+        ($use_trace:expr) => {
             VirtualMachine::new($use_trace, Vec::new())
-        }};
+        };
     }
     pub(crate) use vm;
 
@@ -482,15 +479,11 @@ pub mod test_utils {
 
 #[cfg(test)]
 mod test {
+    use super::{to_cache_state_storage_mapping, to_state_diff_storage_mapping};
+    use crate::utils::{subtract_mappings, Address};
     use felt::Felt;
     use num_traits::Num;
-    use std::{collections::HashMap, hash::Hash};
-
-    use crate::utils::{subtract_mappings, Address};
-
-    use super::{
-        test_utils::storage_key, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-    };
+    use std::collections::HashMap;
 
     #[test]
     fn to_state_diff_storage_mapping_test() {

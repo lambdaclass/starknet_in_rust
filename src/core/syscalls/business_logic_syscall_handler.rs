@@ -1,29 +1,28 @@
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::rc::Rc;
-
-use super::syscall_handler::SyscallHandler;
-use super::syscall_request::*;
-use crate::business_logic::execution::execution_entry_point::ExecutionEntryPoint;
-use crate::business_logic::execution::execution_errors::ExecutionError;
-use crate::business_logic::execution::objects::*;
-use crate::business_logic::execution::{execution_entry_point, objects::*};
-use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
-use crate::business_logic::fact_state::state::ExecutionResourcesManager;
-use crate::business_logic::state::cached_state::CachedState;
-use crate::business_logic::state::contract_storage_state::ContractStorageState;
-use crate::business_logic::state::state_api::{State, StateReader};
-use crate::business_logic::state::state_api_objects::BlockInfo;
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::definitions::general_config::StarknetGeneralConfig;
-use crate::hash_utils::calculate_contract_address;
-use crate::services::api::contract_class::EntryPointType;
-use crate::starknet_runner::runner::StarknetRunner;
-use crate::starknet_storage::dict_storage::DictStorage;
-use crate::utils::*;
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use cairo_rs::vm::vm_core::VirtualMachine;
+use super::{syscall_handler::SyscallHandler, syscall_request::*};
+use crate::{
+    business_logic::{
+        execution::{execution_errors::ExecutionError, objects::*},
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
+        state::{
+            cached_state::CachedState,
+            contract_storage_state::ContractStorageState,
+            state_api::{State, StateReader},
+            state_api_objects::BlockInfo,
+        },
+    },
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    definitions::general_config::StarknetGeneralConfig,
+    hash_utils::calculate_contract_address,
+    services::api::contract_class::EntryPointType,
+    starknet_storage::dict_storage::DictStorage,
+    utils::*,
+};
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
+};
 use felt::Felt;
 use num_traits::{One, ToPrimitive, Zero};
 
@@ -52,12 +51,12 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     pub fn new(
-        tx_execution_context: TransactionExecutionContext,
+        _tx_execution_context: TransactionExecutionContext,
         state: T,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        general_config: StarknetGeneralConfig,
+        _general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
         // TODO: check work arounds to pass block info
@@ -97,7 +96,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             .increment_syscall_counter(syscall_name, 1);
     }
 
-    pub fn new_for_testing(block_info: BlockInfo, contract_address: Address, state: T) -> Self {
+    pub fn new_for_testing(block_info: BlockInfo, _contract_address: Address, state: T) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
             "deploy".to_string(),
@@ -150,6 +149,8 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     }
 
     /// Performs post run syscall related tasks.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn post_run(
         &self,
         runner: &mut VirtualMachine,
@@ -188,7 +189,7 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             if seg_size != used_size.into() {
                 return Err(ExecutionError::OutOfBound);
             }
-            runner.mark_address_range_as_accessed(segment_ptr, used_size);
+            runner.mark_address_range_as_accessed(segment_ptr, used_size)?;
         }
         Ok(())
     }
@@ -284,6 +285,8 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         todo!()
     }
 
+    // TODO: I give up trying to fix the warnings in this method.
+    #[allow(unused)]
     fn _call_contract(
         &mut self,
         syscall_name: &str,
@@ -371,27 +374,22 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        let request = if let SyscallRequest::GetCallerAddress(request) =
-            self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest);
-        };
+        match self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
+            SyscallRequest::GetCallerAddress(_) => {}
+            _ => return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest),
+        }
 
         Ok(self.caller_address.clone())
     }
+
     fn _get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        if let SyscallRequest::GetContractAddress(request) =
-            self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetContractAddressRequest);
+        match self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
+            SyscallRequest::GetContractAddress(_) => {}
+            _ => return Err(SyscallHandlerError::ExpectedGetContractAddressRequest),
         };
 
         Ok(self.contract_address.clone())
@@ -454,8 +452,7 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("library_call", vm, syscall_ptr);
-        Ok(())
+        self._call_contract_and_write_response("library_call", vm, syscall_ptr)
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
@@ -502,15 +499,11 @@ impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::business_logic::execution::objects::{
-        OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
-    };
-    use crate::business_logic::state::state_api_objects::BlockInfo;
     use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
     use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
     use crate::core::syscalls::hint_code::*;
     use crate::core::syscalls::syscall_handler::*;
-    use crate::utils::{get_integer, test_utils::*};
+    use crate::utils::test_utils::*;
     use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
         BuiltinHintProcessor, HintProcessorData,
     };
@@ -561,6 +554,8 @@ mod tests {
         );
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn deploy_from_zero_error() {
         let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
@@ -599,6 +594,7 @@ mod tests {
         assert_eq!(Relocatable::from((0, 0)), segment_start);
         assert_eq!(expected_value, 7.into());
     }
+
     #[test]
     fn test_get_block_number() {
         let mut syscall = BusinessLogicSyscallHandler::default();

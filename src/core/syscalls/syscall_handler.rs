@@ -1,40 +1,40 @@
-use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use super::hint_code::*;
-use super::os_syscall_handler::OsSyscallHandler;
-use super::syscall_request::*;
-use super::syscall_response::GetBlockNumberResponse;
-use super::syscall_response::GetContractAddressResponse;
-use super::syscall_response::StorageReadResponse;
-use super::syscall_response::{
-    CallContractResponse, GetBlockTimestampResponse, GetCallerAddressResponse,
-    GetSequencerAddressResponse, GetTxInfoResponse, GetTxSignatureResponse, WriteSyscallResponse,
+use super::{
+    business_logic_syscall_handler::BusinessLogicSyscallHandler,
+    hint_code::*,
+    os_syscall_handler::OsSyscallHandler,
+    syscall_request::*,
+    syscall_response::{
+        CallContractResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
+        GetCallerAddressResponse, GetContractAddressResponse, GetSequencerAddressResponse,
+        GetTxInfoResponse, GetTxSignatureResponse, StorageReadResponse, WriteSyscallResponse,
+    },
 };
-use crate::business_logic::execution::objects::TxInfoStruct;
-use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
-use crate::business_logic::state::cached_state::CachedState;
-use crate::business_logic::state::state_api::State;
-use crate::business_logic::state::state_api::StateReader;
-use crate::business_logic::state::state_api_objects::BlockInfo;
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::starknet_storage::dict_storage::DictStorage;
-use crate::starknet_storage::errors::storage_errors::StorageError;
-use crate::utils::get_big_int;
-use crate::utils::Address;
-use cairo_rs::any_box;
-use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
-    BuiltinHintProcessor, HintProcessorData,
+use crate::{
+    business_logic::{
+        execution::objects::TxInfoStruct,
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, state_api_objects::BlockInfo},
+    },
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    utils::Address,
 };
-use cairo_rs::hint_processor::builtin_hint_processor::hint_utils::get_relocatable_from_var_name;
-use cairo_rs::hint_processor::hint_processor_definition::{HintProcessor, HintReference};
-use cairo_rs::serde::deserialize_program::ApTracking;
-use cairo_rs::types::exec_scope::ExecutionScopes;
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-use cairo_rs::vm::errors::hint_errors::HintError;
-use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-use cairo_rs::vm::vm_core::VirtualMachine;
+use cairo_rs::{
+    hint_processor::{
+        builtin_hint_processor::{
+            builtin_hint_processor_definition::{BuiltinHintProcessor, HintProcessorData},
+            hint_utils::get_relocatable_from_var_name,
+        },
+        hint_processor_definition::{HintProcessor, HintReference},
+    },
+    serde::deserialize_program::ApTracking,
+    types::{
+        exec_scope::ExecutionScopes,
+        relocatable::{MaybeRelocatable, Relocatable},
+    },
+    vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
+};
 use felt::Felt;
-use std::any::Any;
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
 //* ---------------------
 //* SyscallHandler Trait
@@ -91,7 +91,7 @@ pub(crate) trait SyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
         };
 
-        self._storage_write(request.address, request.value);
+        self._storage_write(request.address, request.value)?;
 
         Ok(())
     }
@@ -215,11 +215,10 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request =
-            match self._read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
-                SyscallRequest::GetTxSignature(request) => request,
-                _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
-            };
+        match self._read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
+            SyscallRequest::GetTxSignature(_) => {}
+            _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
+        }
 
         let tx_info_pr = self._get_tx_info_ptr(vm)?;
         let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
@@ -342,6 +341,8 @@ impl SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateR
         }
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
         Ok(SyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
@@ -450,6 +451,8 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     }
 }
 
+// TODO: Remove warning inhibitor when finally used.
+#[allow(dead_code)]
 fn get_ids_data(
     reference_ids: &HashMap<String, usize>,
     references: &HashMap<usize, HintReference>,
@@ -483,20 +486,19 @@ fn get_syscall_ptr(
 
 #[cfg(test)]
 mod tests {
-
+    use super::*;
     use crate::business_logic::execution::objects::{
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     };
+    use crate::business_logic::state::state_api::State;
     use crate::utils::test_utils::ids_data;
     use crate::utils::{get_big_int, get_integer, get_relocatable};
     use crate::{
         add_segments, core::syscalls::os_syscall_handler::OsSyscallHandler, utils::test_utils::vm,
     };
-    use crate::{allocate_selector, memory_insert};
+    use crate::{allocate_selector, any_box, memory_insert};
     use cairo_rs::relocatable;
-    use num_traits::{Num, ToPrimitive};
-
-    use super::*;
+    use num_traits::Num;
     use std::collections::VecDeque;
 
     #[test]
@@ -553,7 +555,7 @@ mod tests {
 
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let mut syscall = BusinessLogicSyscallHandler::default();
+        let syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -588,7 +590,6 @@ mod tests {
 
     #[test]
     fn get_sequencer_address_for_business_logic() {
-        let mut syscall = BusinessLogicSyscallHandler::default();
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -710,7 +711,7 @@ mod tests {
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
             n_sent_messages: 52,
-            n_steps: 100000,
+            _n_steps: 100000,
         };
         syscall_handler_hint_processor
             .syscall_handler
@@ -953,18 +954,6 @@ mod tests {
 
     #[test]
     fn test_get_block_number() {
-        let mut syscall = OsSyscallHandler::new(
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            HashMap::new(),
-            None,
-            None,
-            BlockInfo::default(),
-        );
         let mut vm = vm!();
 
         add_segments!(vm, 4);
@@ -1053,7 +1042,7 @@ mod tests {
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
             n_sent_messages: 52,
-            n_steps: 10000,
+            _n_steps: 10000,
         };
         syscall_handler_hint_processor
             .syscall_handler
@@ -1097,7 +1086,8 @@ mod tests {
         );
 
         // StorageReadRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone());
+        vm.insert_value(&relocatable!(2, 1), address.clone())
+            .unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -1156,7 +1146,8 @@ mod tests {
         );
 
         // StorageWriteRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone());
+        vm.insert_value(&relocatable!(2, 1), address.clone())
+            .unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -1194,7 +1185,7 @@ mod tests {
             .starknet_storage_state
             .read(&Address(address).to_32_bytes().unwrap());
 
-        assert_eq!(write.unwrap(), &Felt::new(45));
+        assert_eq!(write, Ok(&Felt::new(45)));
     }
 
     #[test]

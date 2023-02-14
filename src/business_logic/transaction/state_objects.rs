@@ -1,6 +1,3 @@
-use felt::Felt;
-use std::collections::HashMap;
-
 use crate::{
     business_logic::{
         execution::objects::{CallInfo, TransactionExecutionInfo},
@@ -9,23 +6,24 @@ use crate::{
             update_tracker_state::UpdatesTrackerState,
         },
     },
-    definitions::general_config::{self, StarknetGeneralConfig},
+    definitions::general_config::StarknetGeneralConfig,
 };
+use std::collections::HashMap;
 
 pub type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) trait InternalStateTransaction {
     fn get_state_selector_of_many(
-        txs: Vec<impl InternalStateTransaction>,
-        general_config: StarknetGeneralConfig,
+        _txs: Vec<impl InternalStateTransaction>,
+        _general_config: StarknetGeneralConfig,
     ) {
         todo!()
     }
 
     fn apply_state_updates(
         &self,
-        state: impl State,
-        general_config: StarknetGeneralConfig,
+        _state: impl State,
+        _general_config: StarknetGeneralConfig,
     ) -> Option<TransactionExecutionInfo> {
         todo!()
     }

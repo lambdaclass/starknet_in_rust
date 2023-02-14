@@ -1,13 +1,11 @@
-use felt::Felt;
-use thiserror::Error;
-
 use crate::{
-    business_logic::{fact_state::contract_state::ContractState, state::state_cache::StorageEntry},
+    business_logic::state::state_cache::StorageEntry,
     services::api::contract_class_errors::ContractClassError,
-    starknet_storage::errors::storage_errors::StorageError,
-    utils::Address,
+    starknet_storage::errors::storage_errors::StorageError, utils::Address,
     utils_errors::UtilsError,
 };
+use felt::Felt;
+use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
 pub enum StateError {

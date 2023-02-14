@@ -1,8 +1,6 @@
-use crate::business_logic::execution::objects::TransactionExecutionContext;
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::definitions::general_config::StarknetChainId;
 use crate::utils::{get_big_int, get_integer, get_relocatable, Address};
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::types::relocatable::Relocatable;
 use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::Felt;
 
@@ -18,6 +16,8 @@ pub(crate) enum SyscallRequest {
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     CallContract(CallContractRequest),
     GetTxSignature(GetTxSignatureRequest),
     StorageRead(StorageReadRequest),

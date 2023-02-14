@@ -1,19 +1,14 @@
-use std::collections::HashMap;
-
-use felt::Felt;
-use num_traits::ToPrimitive;
-use serde_json::value;
-
-use crate::{
-    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
-    starknet_storage::storage, utils::Address,
-};
-
 use super::{
     state_api::{State, StateReader},
-    state_api_objects::BlockInfo,
     state_cache::StorageEntry,
 };
+use crate::{
+    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
+    utils::Address,
+};
+use felt::Felt;
+use num_traits::ToPrimitive;
+use std::collections::HashMap;
 
 // An implementation of the SyncState API that wraps another SyncState object and contains a cache.
 // All requests are delegated to the wrapped SyncState, and caches are maintained for storage reads
@@ -107,8 +102,7 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         class_hash: &[u8; 32],
         contract_class: &ContractClass,
     ) -> Result<(), StateError> {
-        self.state.set_contract_class(class_hash, contract_class);
-        Ok(())
+        self.state.set_contract_class(class_hash, contract_class)
     }
 
     pub fn deploy_contract(
