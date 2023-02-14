@@ -65,8 +65,6 @@ where
 }
 
 impl<T: StateReader + Clone> CarriedState<T> {
-    // TODO: Remove warning inhibitor when finally used.
-    // #[allow(dead_code)]
     pub fn create_from_parent_state(parent_state: CarriedState<T>) -> Self {
         let cached_state = parent_state.state.clone();
         let new_state = Some(Rc::new(RefCell::new(parent_state)));
