@@ -39,11 +39,9 @@ tests/%.json: tests/%.cairo
 #
 
 build:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo
 	cargo build --release
 
 check:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo
 	cargo check
 
 deps:
@@ -57,7 +55,6 @@ clean:
 	-rm -f tests/*.json
 
 clippy:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo
 	cargo clippy --all-targets -- -D warnings
 
 test:
@@ -65,6 +62,6 @@ test:
 	cargo test
 
 coverage:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo tarpaulin
 	-rm -f default.profraw
