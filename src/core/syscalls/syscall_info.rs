@@ -128,7 +128,7 @@ pub fn program_json() -> Result<ProgramJson, SyscallHandlerError> {
     let path = Path::new(file!())
         .parent()
         .ok_or(MissingSyscallsJsonFile)?
-        .join("../../../cairo_syscalls/syscalls.json");
+        .join("../../../cairo_programs/syscalls.json");
 
     let file = fs::read_to_string(path).unwrap();
     serde_json::from_str(&file).map_err(|_| MissingSyscallsJsonFile)
