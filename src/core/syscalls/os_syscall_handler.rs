@@ -19,9 +19,11 @@ use std::collections::{HashMap, VecDeque};
 pub(crate) struct OsSingleStarknetStorage;
 
 impl OsSingleStarknetStorage {
-    // Writes the given value in the given key in ongoing_storage_changes and returns the
-    // previous value. This value is needed to create the DictAccess while executing the
-    // corresponding storage_write system call.
+    /// Writes the given value in the given key in ongoing_storage_changes and returns the
+    /// previous value. This value is needed to create the DictAccess while executing the
+    /// corresponding storage_write system call.
+    /// TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn write(&self, _key: u64, _value: u64) -> u64 {
         // TO BE IMPLEMENTED
         todo!()
@@ -33,25 +35,25 @@ pub(crate) struct OsSyscallHandler {
     tx_execution_info_iterator: VecDeque<TransactionExecutionInfo>,
     call_iterator: VecDeque<CallInfo>,
 
-    //  A stack that keeps track of the state of the calls being executed now.
-    // The last item is the state of the current call; the one before it, is the
-    // state of the caller (the call the called the current call); and so on.
+    /// A stack that keeps track of the state of the calls being executed now.
+    /// The last item is the state of the current call; the one before it, is the
+    /// state of the caller (the call the called the current call); and so on.
     call_stack: VecDeque<CallInfo>,
-    // An iterator over contract addresses that were deployed during that call.
+    /// An iterator over contract addresses that were deployed during that call.
     deployed_contracts_iterator: VecDeque<Address>, // felt
-    // An iterator to the retdata of its internal calls.
+    /// An iterator to the retdata of its internal calls.
     retdata_iterator: VecDeque<VecDeque<Felt>>, //VEC<felt>
-    // An iterator to the read_values array which is consumed when the transaction
-    // code is executed.
+    /// An iterator to the read_values array which is consumed when the transaction
+    /// code is executed.
     execute_code_read_iterator: VecDeque<Felt>, //felt
-    // StarkNet storage members.
+    /// StarkNet storage members.
     starknet_storage_by_address: HashMap<Felt, OsSingleStarknetStorage>,
-    // A pointer to the Cairo TxInfo struct.
-    // This pointer needs to match the TxInfo pointer that is going to be used during the system
-    // call validation by the StarkNet OS.
-    // Set during enter_tx.
+    /// A pointer to the Cairo TxInfo struct.
+    /// This pointer needs to match the TxInfo pointer that is going to be used during the system
+    /// call validation by the StarkNet OS.
+    /// Set during enter_tx.
     pub(crate) tx_info_ptr: Option<Relocatable>,
-    // The TransactionExecutionInfo for the transaction currently being executed.
+    /// The TransactionExecutionInfo for the transaction currently being executed.
     tx_execution_info: Option<TransactionExecutionInfo>,
     block_info: BlockInfo,
 }
@@ -161,8 +163,8 @@ impl SyscallHandler for OsSyscallHandler {
             .ok_or(SyscallHandlerError::IteratorEmpty)
     }
 
-    // Advance execute_code_read_iterators since the previous storage value is written
-    // in each write operation. See BusinessLogicSysCallHandler._storage_write().
+    /// Advance execute_code_read_iterators since the previous storage value is written
+    /// in each write operation. See BusinessLogicSysCallHandler._storage_write().
     fn _storage_write(
         &mut self,
         _address: Address,
@@ -232,8 +234,9 @@ impl OsSyscallHandler {
             BlockInfo::default(),
         )
     }
-    // Called when starting the execution of a transaction.
-    // 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
+
+    /// Called when starting the execution of a transaction.
+    /// 'tx_info_ptr' is a pointer to the TxInfo struct corresponding to said transaction.
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     fn start_tx(&mut self, tx_info_ptr: Relocatable) -> Result<(), SyscallHandlerError> {
@@ -263,6 +266,8 @@ impl OsSyscallHandler {
         self.tx_execution_info_iterator.pop_front()
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     fn assert_iterators_exhausted(&self) -> Result<(), SyscallHandlerError> {
         if self.deployed_contracts_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
@@ -362,15 +367,22 @@ impl OsSyscallHandler {
 #[cfg(test)]
 mod tests {
     use super::{CallInfo, OsSyscallHandler};
-    use crate::business_logic::execution::objects::TransactionExecutionInfo;
-    use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-    use crate::core::syscalls::syscall_handler::SyscallHandler;
-    use crate::utils::{get_integer, get_relocatable, test_utils::*, Address};
-    use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-    use cairo_rs::vm::errors::memory_errors::MemoryError;
-    use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-    use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-    use cairo_rs::vm::vm_core::VirtualMachine;
+    use crate::{
+        business_logic::execution::objects::TransactionExecutionInfo,
+        core::{
+            errors::syscall_handler_errors::SyscallHandlerError,
+            syscalls::syscall_handler::SyscallHandler,
+        },
+        utils::{get_integer, get_relocatable, test_utils::*, Address},
+    };
+    use cairo_rs::{
+        types::relocatable::{MaybeRelocatable, Relocatable},
+        vm::{
+            errors::{memory_errors::MemoryError, vm_errors::VirtualMachineError},
+            runners::cairo_runner::ExecutionResources,
+            vm_core::VirtualMachine,
+        },
+    };
     use felt::Felt;
     use std::collections::{HashMap, HashSet, VecDeque};
 
