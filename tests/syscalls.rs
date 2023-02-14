@@ -124,7 +124,7 @@ fn get_block_number_syscall() {
 fn get_sequencer_address_syscall() {
     let run = |sequencer_address: Felt| {
         let mut general_config = StarknetGeneralConfig::default();
-        *general_config.sequencer_address_mut() = Address(sequencer_address.clone());
+        general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
 
         test_contract(
             "tests/syscalls.json",
