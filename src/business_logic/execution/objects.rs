@@ -681,17 +681,10 @@ mod tests {
         ord_event4.order = 3;
 
         // store events
-        child1.events = Vec::from([ord_event3.clone(), ord_event4.clone()]);
-        child2.events = Vec::from([ord_event1.clone(), ord_event2.clone()]);
+        child1.events = Vec::from([ord_event3, ord_event4]);
+        child2.events = Vec::from([ord_event1, ord_event2]);
 
-        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
-
-        // events
-
-        Event::new(ord_event1, child2.caller_address.clone());
-        Event::new(ord_event2, child2.caller_address);
-        Event::new(ord_event3, child1.caller_address.clone());
-        Event::new(ord_event4, child1.caller_address);
+        call_root.internal_calls = [child1, child2].to_vec();
 
         assert!(call_root.get_sorted_events().is_err())
     }
@@ -758,17 +751,10 @@ mod tests {
         ord_msg4.order = 3;
 
         // store events
-        child1.l2_to_l1_messages = Vec::from([ord_msg3.clone(), ord_msg4.clone()]);
-        child2.l2_to_l1_messages = Vec::from([ord_msg1.clone(), ord_msg2.clone()]);
+        child1.l2_to_l1_messages = Vec::from([ord_msg3, ord_msg4]);
+        child2.l2_to_l1_messages = Vec::from([ord_msg1, ord_msg2]);
 
-        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
-
-        // events
-
-        L2toL1MessageInfo::new(ord_msg1, child2.caller_address.clone());
-        L2toL1MessageInfo::new(ord_msg2, child2.caller_address);
-        L2toL1MessageInfo::new(ord_msg3, child1.caller_address.clone());
-        L2toL1MessageInfo::new(ord_msg4, child1.caller_address);
+        call_root.internal_calls = [child1, child2].to_vec();
 
         assert!(call_root.get_sorted_l2_to_l1_messages().is_err())
     }
