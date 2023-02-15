@@ -12,8 +12,6 @@ pub struct OsResources {
     execute_txs_inner: HashMap<TransactionType, ExecutionResources>,
 }
 
-// TODO: add the hash maps that are in os_resources.json in cairo-lang
-
 impl OsResources {
     pub fn default() -> Self {
         let execute_txs_inner: HashMap<TransactionType, ExecutionResources> = HashMap::from([
