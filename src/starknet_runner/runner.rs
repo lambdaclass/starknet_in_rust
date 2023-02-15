@@ -213,7 +213,7 @@ mod test {
             state::cached_state::CachedState,
         },
         core::syscalls::syscall_handler::SyscallHintProcessor,
-        definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+        definitions::general_config::StarknetGeneralConfig,
         services::api::contract_class::{ContractClass, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
         utils::{calculate_sn_keccak, Address},
@@ -334,7 +334,7 @@ mod test {
             0,
             10.into(),
             general_config.invoke_tx_max_n_steps,
-            TRANSACTION_VERSION,
+            1,
         );
         let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -438,7 +438,7 @@ mod test {
             0,
             10.into(),
             general_config.invoke_tx_max_n_steps,
-            TRANSACTION_VERSION,
+            1,
         );
         let mut resources_manager = ExecutionResourcesManager::default();
 
