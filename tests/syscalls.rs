@@ -142,12 +142,12 @@ fn send_message_to_l1_syscall() {
             OrderedL2ToL1Message {
                 order: 1,
                 to_address: Address(1111.into()),
-                payload: [1, 2].map(Felt::from).to_vec(),
+                payload: [2, 4].map(Felt::from).to_vec(),
             },
             OrderedL2ToL1Message {
                 order: 2,
                 to_address: Address(1111.into()),
-                payload: [1].map(Felt::from).to_vec(),
+                payload: [3].map(Felt::from).to_vec(),
             },
         ],
         [],
