@@ -20,6 +20,8 @@ use crate::{
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
 use num_traits::ToPrimitive;
+use sha3::{Digest, Keccak256};
+use starknet_crypto::FieldElement;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -262,11 +264,18 @@ pub fn validate_contract_deployed<S: StateReader + Clone>(
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
 
+pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
+    let mut hasher = Keccak256::default();
+    hasher.update(data);
+    let mut result: [u8; 32] = hasher.finalize().into();
+    // Only the first 250 bits from the hash are used.
+    result[0] &= 0b0000_0011;
+    result
+}
+
 //* -------------------
 //*      Macros
 //* -------------------
-
-use starknet_crypto::FieldElement;
 
 #[cfg(test)]
 #[macro_use]
