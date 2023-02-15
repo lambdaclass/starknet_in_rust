@@ -53,7 +53,7 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     pub fn new(
-        _tx_execution_context: TransactionExecutionContext,
+        tx_execution_context: TransactionExecutionContext,
         state: T,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
@@ -63,7 +63,6 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     ) -> Self {
         let block_info = general_config.block_info;
         let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
         let l2_to_l1_messages = Vec::new();
         let general_config = StarknetGeneralConfig::default();

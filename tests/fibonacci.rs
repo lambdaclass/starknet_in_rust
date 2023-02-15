@@ -106,7 +106,7 @@ fn integration_test() {
         entry_point_selector: Some(fib_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata,
-        retdata: [1.into(), 144.into()].to_vec(),
+        retdata: [144.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         ..Default::default()
