@@ -1,10 +1,11 @@
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallType, TransactionExecutionContext},
+            objects::{CallInfo, CallType, TransactionExecutionContext},
         },
         fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
@@ -17,7 +18,10 @@ use starknet_rs::{
     starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 #[test]
 #[ignore = "ignore until the cache issue is fixed"]
@@ -55,7 +59,7 @@ fn integration_storage_test() {
     contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);
     state_reader
-        .contract_states
+        .contract_states_mut()
         .insert(address.clone(), contract_state);
 
     //* ---------------------------------------
@@ -129,11 +133,11 @@ fn integration_storage_test() {
         expected_call_info
     );
 
-    assert!(!state.cache.storage_writes.is_empty());
+    assert!(!state.cache().storage_writes().is_empty());
     assert_eq!(
         state
-            .cache
-            .storage_writes
+            .cache()
+            .storage_writes()
             .get(&(address, expected_key))
             .cloned(),
         Some(Felt::new(42))

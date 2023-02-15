@@ -1,12 +1,13 @@
 use crate::{core::errors::state_errors::StateError, utils::Address};
 use felt::Felt;
+use getset::Getters;
 use std::collections::{HashMap, HashSet};
 
 /// (contract_address, key)
 pub(crate) type StorageEntry = (Address, [u8; 32]);
 
-#[derive(Debug, Default, Clone)]
-pub(crate) struct StateCache {
+#[derive(Debug, Default, Clone, Getters)]
+pub struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
     pub(crate) class_hash_initial_values: HashMap<Address, [u8; 32]>,
     pub(crate) nonce_initial_values: HashMap<Address, Felt>,
@@ -15,6 +16,7 @@ pub(crate) struct StateCache {
     // Writer's cached information.
     pub(crate) class_hash_writes: HashMap<Address, [u8; 32]>,
     pub(crate) nonce_writes: HashMap<Address, Felt>,
+    #[get = "pub"]
     pub(crate) storage_writes: HashMap<StorageEntry, Felt>,
 }
 
