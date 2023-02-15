@@ -512,9 +512,9 @@ impl TransactionExecutionInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OrderedL2ToL1Message {
-    pub(crate) order: usize,
-    pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt>,
+    pub order: usize,
+    pub to_address: Address,
+    pub payload: Vec<Felt>,
 }
 
 impl OrderedL2ToL1Message {

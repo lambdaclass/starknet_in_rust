@@ -1,12 +1,12 @@
 #![deny(warnings)]
 
-use felt::{felt_str, Felt};
+use felt::Felt;
 use sha3::{Digest, Keccak256};
 use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
+            objects::{CallInfo, CallType, OrderedL2ToL1Message, TransactionExecutionContext},
         },
         fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
@@ -40,6 +40,7 @@ fn test_contract(
     contract_address: Address,
     caller_address: Address,
     general_config: StarknetGeneralConfig,
+    l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
@@ -91,6 +92,7 @@ fn test_contract(
             call_type: CallType::Delegate.into(),
             class_hash: class_hash.into(),
             entry_point_selector: Some(entry_point_selector),
+            l2_to_l1_messages,
             retdata: return_data.into(),
             ..Default::default()
         },
@@ -111,11 +113,43 @@ fn get_block_number_syscall() {
             Address(1111.into()),
             Address(0.into()),
             general_config,
-            [felt_str!("1"), block_number.into()],
+            vec![],
+            [block_number.into()],
         );
     };
 
     run(0);
     run(5);
     run(1000);
+}
+
+#[test]
+fn send_message_to_l1_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_send_message_to_l1",
+        [1; 32],
+        3,
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        vec![
+            OrderedL2ToL1Message {
+                order: 0,
+                to_address: Address(1111.into()),
+                payload: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedL2ToL1Message {
+                order: 1,
+                to_address: Address(1111.into()),
+                payload: [1, 2].map(Felt::from).to_vec(),
+            },
+            OrderedL2ToL1Message {
+                order: 2,
+                to_address: Address(1111.into()),
+                payload: [1].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
+    );
 }
