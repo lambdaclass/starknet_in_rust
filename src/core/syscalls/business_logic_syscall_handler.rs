@@ -465,8 +465,6 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
     }
 
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
-        let _read = self.starknet_storage_state.read(&address.to_32_bytes()?)?;
-
         self.starknet_storage_state
             .write(&address.to_32_bytes()?, value);
 
