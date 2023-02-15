@@ -2,8 +2,9 @@ use super::error::TransactionError;
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint, gas_usage,
-            objects::TransactionExecutionContext,
+            execution_entry_point::ExecutionEntryPoint,
+            gas_usage,
+            objects::{CallInfo, TransactionExecutionContext},
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
@@ -27,7 +28,7 @@ pub(crate) fn execute_fee_transfer(
     state: &mut CachedState<InMemoryStateReader>,
     general_config: StarknetGeneralConfig,
     tx_context: TransactionExecutionContext,
-    actual_fee: f64,
+    actual_fee: u64,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee as u64 > tx_context.max_fee {
         return Err(TransactionError::FeeError(
@@ -35,10 +36,10 @@ pub(crate) fn execute_fee_transfer(
         ));
     }
 
-    let fee_token_address = general_config.starknet_os_config.fee_token_address;
+    let fee_token_address = general_config.starknet_os_config.fee_token_address.clone();
 
     let calldata = [
-        general_config.sequencer_address.0,
+        general_config.sequencer_address.0.clone(),
         Felt::from_bytes_be(&actual_fee.to_be_bytes()),
         0.into(),
     ]
@@ -54,7 +55,7 @@ pub(crate) fn execute_fee_transfer(
         fee_token_address,
         calldata,
         entry_point_selector,
-        tx_context.account_contract_address,
+        tx_context.account_contract_address.clone(),
         EntryPointType::External,
         None,
         None,
@@ -62,12 +63,7 @@ pub(crate) fn execute_fee_transfer(
 
     let mut resources_manager = ExecutionResourcesManager::default();
     fee_transfer_call
-        .execute(
-            &mut state,
-            &general_config,
-            &mut resources_manager,
-            &tx_context,
-        )
+        .execute(state, &general_config, &mut resources_manager, &tx_context)
         .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
 }
 
@@ -80,7 +76,7 @@ pub(crate) fn execute_fee_transfer(
 pub(crate) fn calculate_tx_fee(
     resources: HashMap<String, Felt>,
     gas_price: u64,
-    general_config: StarknetGeneralConfig,
+    general_config: &StarknetGeneralConfig,
 ) -> Result<u64, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
@@ -99,10 +95,10 @@ pub(crate) fn calculate_tx_fee(
 // ----------------------------------------------------------------------------------------
 
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
-    general_config: StarknetGeneralConfig,
+    general_config: &StarknetGeneralConfig,
     cairo_resource_usage: HashMap<String, Felt>,
 ) -> Result<f64, TransactionError> {
-    let cairo_resource_fee_weights = general_config.cairo_resource_fee_weights;
+    let cairo_resource_fee_weights = general_config.cairo_resource_fee_weights.clone();
     let cairo_resources_names = cairo_resource_usage
         .clone()
         .into_keys()

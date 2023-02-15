@@ -1,4 +1,8 @@
-use super::{error::TransactionError, state_objects::FeeInfo};
+use super::{
+    error::TransactionError,
+    fee::{calculate_tx_fee, execute_fee_transfer},
+    state_objects::FeeInfo,
+};
 use crate::{
     business_logic::{
         execution::{
@@ -366,21 +370,31 @@ impl InternalDeclare {
         Ok(Some(call_info))
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Calculates and charges the actual fee.
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     pub fn charge_fee(
         &self,
         state: &mut CachedState<InMemoryStateReader>,
         resources: HashMap<String, Felt>,
         general_config: StarknetGeneralConfig,
-    ) -> FeeInfo {
+    ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
-            return (None, 0);
+            return Ok((None, 0));
         }
 
-        todo!()
+        let actual_fee = calculate_tx_fee(
+            resources,
+            general_config.starknet_os_config.gas_price,
+            &general_config,
+        )?;
+
+        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps);
+        let fee_transfer_info =
+            execute_fee_transfer(state, general_config, tx_context, actual_fee)?;
+
+        Ok((Some(fee_transfer_info), actual_fee))
     }
 
     fn handle_nonce(
@@ -415,6 +429,6 @@ impl InternalDeclare {
     ) -> Result<FeeInfo, TransactionError> {
         self.handle_nonce(state)?;
 
-        Ok(self.charge_fee(state, actual_resources, general_config))
+        self.charge_fee(state, actual_resources, general_config)
     }
 }
