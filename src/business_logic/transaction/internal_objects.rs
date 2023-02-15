@@ -284,7 +284,7 @@ impl InternalDeclare {
         Ok(())
     }
 
-    pub fn apply_specific_concurrent_changes<T: State + StateReader>(
+    pub fn apply_specific_concurrent_changes(
         &self,
         state: &mut CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
@@ -430,5 +430,61 @@ impl InternalDeclare {
         self.handle_nonce(state)?;
 
         self.charge_fee(state, actual_resources, general_config)
+    }
+}
+
+// ---------------
+//     Tests
+// ---------------
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, path::PathBuf};
+
+    use felt::Felt;
+    use num_traits::Zero;
+
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        definitions::general_config::{StarknetChainId, StarknetGeneralConfig},
+        services::api::contract_class::ContractClass,
+        starknet_storage::dict_storage::DictStorage,
+        utils::Address,
+    };
+
+    use super::InternalDeclare;
+
+    #[test]
+    fn test_internal_declare() {
+        let path = PathBuf::from("starknet_programs/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let chain_id = StarknetChainId::MainNet.as_u64().unwrap();
+
+        let internal_declare = InternalDeclare::new(
+            contract_class,
+            chain_id,
+            Address(0.into()),
+            5,
+            2,
+            Vec::new(),
+            0.into(),
+        )
+        .unwrap();
+
+        // Instantiate CachedState
+        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state = CachedState::new(state_reader, None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+        // Set contract_class
+        let class_hash: [u8; 32] = [1; 32];
+
+        assert!(internal_declare
+            .apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
+            .is_ok())
     }
 }
