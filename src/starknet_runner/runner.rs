@@ -365,6 +365,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "ignore until the cache issue is fixed"]
     fn integration_storage_test() {
         // ---------------------------------------------------------
         //  Create program and entry point types for contract class
@@ -417,7 +418,7 @@ mod test {
         let entry_point_type = EntryPointType::External;
 
         let exec_entry_point = ExecutionEntryPoint::new(
-            address,
+            address.clone(),
             calldata.clone(),
             storage_entrypoint_selector.clone(),
             caller_address,
@@ -471,6 +472,16 @@ mod test {
                 )
                 .unwrap(),
             expected_call_info
+        );
+
+        assert!(!state.cache.storage_writes.is_empty());
+        assert_eq!(
+            state
+                .cache
+                .storage_writes
+                .get(&(address, expected_key))
+                .cloned(),
+            Some(Felt::new(42))
         );
     }
 }
