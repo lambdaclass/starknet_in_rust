@@ -1,12 +1,12 @@
 #![deny(warnings)]
 
-use felt::{felt_str, Felt};
+use felt::Felt;
 use sha3::{Digest, Keccak256};
 use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
+            objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionContext},
         },
         fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
@@ -21,7 +21,7 @@ use starknet_rs::{
 };
 use std::path::Path;
 
-fn find_entry_point_selector(entry_point: &str) -> Felt {
+fn sn_keccak(entry_point: &str) -> Felt {
     let mut selector: [u8; 32] = Keccak256::new()
         .chain_update(entry_point.as_bytes())
         .finalize()
@@ -40,6 +40,7 @@ fn test_contract(
     contract_address: Address,
     caller_address: Address,
     general_config: StarknetGeneralConfig,
+    events: Vec<OrderedEvent>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
@@ -55,7 +56,7 @@ fn test_contract(
         Some([(class_hash, contract_class)].into_iter().collect()),
     );
 
-    let entry_point_selector = find_entry_point_selector(entry_point);
+    let entry_point_selector = sn_keccak(entry_point);
     let entry_point = ExecutionEntryPoint::new(
         Address(1111.into()),
         vec![],
@@ -92,6 +93,7 @@ fn test_contract(
             class_hash: class_hash.into(),
             entry_point_selector: Some(entry_point_selector),
             retdata: return_data.into(),
+            events,
             ..Default::default()
         },
     );
@@ -111,11 +113,49 @@ fn get_block_number_syscall() {
             Address(1111.into()),
             Address(0.into()),
             general_config,
-            [felt_str!("1"), block_number.into()],
+            vec![],
+            [block_number.into()],
         );
     };
 
     run(0);
     run(5);
     run(1000);
+}
+
+#[test]
+fn emit_event_syscall() {
+    dbg!(sn_keccak("test_event"));
+    test_contract(
+        "tests/syscalls.json",
+        "test_emit_event",
+        [1; 32],
+        3,
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        vec![
+            OrderedEvent {
+                order: 0,
+                keys: vec![sn_keccak("test_event")],
+                data: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 1,
+                keys: vec![sn_keccak("test_event")],
+                data: [2, 4, 6].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 2,
+                keys: vec![sn_keccak("test_event")],
+                data: [1234, 5678, 9012].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 3,
+                keys: vec![sn_keccak("test_event")],
+                data: [2468].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
+    );
 }

@@ -215,9 +215,9 @@ impl Default for CallInfo {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OrderedEvent {
-    order: u64,
-    keys: Vec<Felt>,
-    data: Vec<Felt>,
+    pub order: u64,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
 }
 
 impl OrderedEvent {
