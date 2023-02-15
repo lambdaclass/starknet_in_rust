@@ -115,8 +115,6 @@ impl InternalInvokeFunction {
     #[allow(dead_code)]
     fn _apply_specific_concurrent_changes(
         &self,
-        // Check this
-        // state: UpdatesTrackerState<CachedState<InMemoryStateReader>>,
         state: &mut CachedState<InMemoryStateReader>,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
