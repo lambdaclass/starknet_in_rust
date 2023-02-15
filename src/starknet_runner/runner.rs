@@ -438,7 +438,7 @@ mod test {
             0,
             10.into(),
             general_config.invoke_tx_max_n_steps,
-            TRANSACTION_VERSION,
+            1,
         );
         let mut resources_manager = ExecutionResourcesManager::default();
 
