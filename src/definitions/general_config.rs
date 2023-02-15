@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::utils::Address;
 use felt::Felt;
 use num_traits::Zero;
@@ -49,15 +51,17 @@ impl StarknetChainId {
 pub(crate) struct StarknetOsConfig {
     pub(crate) chain_id: StarknetChainId,
     pub(crate) fee_token_address: Address,
+    pub(crate) gas_price: u64,
 }
 
 #[allow(unused)]
 #[derive(Debug, Clone)]
 pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
-    contract_storage_commitment_tree_height: u64,
+    pub(crate) contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,
-    sequencer_address: Address,
+    pub(crate) sequencer_address: Address,
+    pub(crate) cairo_resource_fee_weights: HashMap<String, f64>,
     pub(crate) invoke_tx_max_n_steps: u64,
 }
 
@@ -77,6 +81,7 @@ impl StarknetGeneralConfig {
             global_state_commitment_tree_height,
             sequencer_address,
             invoke_tx_max_n_steps,
+            cairo_resource_fee_weights: HashMap::new(),
         }
     }
 
@@ -85,11 +90,13 @@ impl StarknetGeneralConfig {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
                 fee_token_address: Address(Felt::zero()),
+                gas_price: 0,
             },
             contract_storage_commitment_tree_height: 0,
             global_state_commitment_tree_height: 0,
             sequencer_address: Address(0.into()),
             invoke_tx_max_n_steps: 0,
+            cairo_resource_fee_weights: HashMap::new(),
         }
     }
 }

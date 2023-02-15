@@ -280,15 +280,18 @@ impl InternalDeclare {
         Ok(())
     }
 
-    pub fn _apply_specific_concurrent_changes<T: State + StateReader>(
+    pub fn apply_specific_concurrent_changes<T: State + StateReader>(
         &self,
-        state: CachedState<InMemoryStateReader>,
-        validate_info: Option<CallInfo>,
+        state: &mut CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
         // validate transaction
-        let resources_manager = ExecutionResourcesManager::default();
+        let mut resources_manager = ExecutionResourcesManager::default();
+
+        let validate_info =
+            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+
         let updates_tracker_state = UpdatesTrackerState::new(state.clone());
         let actual_resources = calculate_tx_resources(
             resources_manager,

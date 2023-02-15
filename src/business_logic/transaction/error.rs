@@ -20,6 +20,10 @@ pub(crate) enum TransactionError {
     InvalidTransactionNonce(String, String),
     #[error("{0}")]
     StarknetError(String),
+    #[error("{0}")]
+    FeeError(String),
+    #[error("Cairo resource names must be contained in fee weights dict")]
+    ResourcesError,
     #[error(transparent)]
     UtilsError(#[from] UtilsError),
     #[error(transparent)]
