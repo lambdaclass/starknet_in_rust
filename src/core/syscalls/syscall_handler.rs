@@ -706,7 +706,7 @@ mod tests {
             n_emitted_events: 50,
             version: 51,
             account_contract_address: Address(260.into()),
-            _max_fee: 261,
+            max_fee: 261,
             transaction_hash: 262.into(),
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
@@ -749,7 +749,7 @@ mod tests {
         );
         assert_eq!(
             get_integer(&vm, &relocatable!(4, 2)),
-            Ok(tx_execution_context._max_fee as usize)
+            Ok(tx_execution_context.max_fee as usize)
         );
         assert_eq!(
             get_integer(&vm, &relocatable!(4, 3)),
@@ -1037,7 +1037,7 @@ mod tests {
             n_emitted_events: 50,
             version: 51,
             account_contract_address: Address(260.into()),
-            _max_fee: 261,
+            max_fee: 261,
             transaction_hash: 262.into(),
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),

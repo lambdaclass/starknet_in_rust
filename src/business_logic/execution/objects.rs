@@ -252,7 +252,7 @@ pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,
     pub(crate) account_contract_address: Address,
-    pub(crate) _max_fee: u64,
+    pub(crate) max_fee: u64,
     pub(crate) transaction_hash: Felt,
     pub(crate) signature: Vec<Felt>,
     pub(crate) nonce: Felt,
@@ -265,21 +265,21 @@ impl TransactionExecutionContext {
         account_contract_address: Address,
         transaction_hash: Felt,
         signature: Vec<Felt>,
-        _max_fee: u64,
+        max_fee: u64,
         nonce: Felt,
-        _n_steps: u64,
+        n_steps: u64,
         version: u64,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
             account_contract_address,
-            _max_fee,
+            max_fee,
             nonce,
             signature,
             transaction_hash,
             version,
             n_sent_messages: 0,
-            _n_steps,
+            _n_steps: n_steps,
         }
     }
 }
@@ -288,7 +288,7 @@ impl TransactionExecutionContext {
 pub(crate) struct TxInfoStruct {
     pub(crate) version: usize,
     pub(crate) account_contract_address: Address,
-    pub(crate) _max_fee: u64,
+    pub(crate) max_fee: u64,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
     pub(crate) transaction_hash: Felt,
@@ -305,7 +305,7 @@ impl TxInfoStruct {
         TxInfoStruct {
             version: tx.version as usize,
             account_contract_address: tx.account_contract_address,
-            _max_fee: tx._max_fee,
+            max_fee: tx.max_fee,
             signature_len: tx.signature.len(),
             signature,
             transaction_hash: tx.transaction_hash,
@@ -318,7 +318,7 @@ impl TxInfoStruct {
         vec![
             MaybeRelocatable::from(Felt::new(self.version)),
             MaybeRelocatable::from(&self.account_contract_address.0),
-            MaybeRelocatable::from(Felt::new(self._max_fee)),
+            MaybeRelocatable::from(Felt::new(self.max_fee)),
             MaybeRelocatable::from(Felt::new(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),
@@ -334,7 +334,7 @@ impl TxInfoStruct {
         let version = get_integer(vm, &tx_info_ptr)?;
 
         let account_contract_address = Address(get_big_int(vm, &(&tx_info_ptr + 1))?);
-        let _max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
+        let max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
             .to_u64()
             .ok_or(SyscallHandlerError::FeltToU64Fail)?;
         let signature_len = get_integer(vm, &(&tx_info_ptr + 3))?;
@@ -346,7 +346,7 @@ impl TxInfoStruct {
         Ok(TxInfoStruct {
             version,
             account_contract_address,
-            _max_fee,
+            max_fee,
             signature_len,
             signature,
             transaction_hash,
