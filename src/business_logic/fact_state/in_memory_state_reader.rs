@@ -10,7 +10,7 @@ use felt::Felt;
 use getset::MutGetters;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, MutGetters)]
+#[derive(Clone, Debug, Default, MutGetters)]
 pub struct InMemoryStateReader {
     pub(crate) ffc: DictStorage,
     #[getset(get_mut = "pub")]

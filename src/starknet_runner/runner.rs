@@ -1,15 +1,10 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
-    business_logic::{
-        execution::execution_errors::ExecutionError,
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
-    },
-    core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::SyscallHintProcessor,
+    business_logic::execution::execution_errors::ExecutionError,
+    core::syscalls::syscall_handler::{
+        SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
-use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -21,22 +16,26 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
-use std::collections::HashMap;
+use num_traits::ToPrimitive;
+use std::{borrow::Cow, collections::HashMap};
 
-pub(crate) struct StarknetRunner {
+pub(crate) struct StarknetRunner<H>
+where
+    H: SyscallHandler,
+{
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
-    pub(crate) hint_processor:
-        SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>>,
+    pub(crate) hint_processor: SyscallHintProcessor<H>,
 }
 
-impl StarknetRunner {
+impl<H> StarknetRunner<H>
+where
+    H: SyscallHandler,
+{
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
-        hint_processor: SyscallHintProcessor<
-            BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
-        >,
+        hint_processor: SyscallHintProcessor<H>,
     ) -> Self {
         StarknetRunner {
             cairo_runner,
@@ -67,17 +66,28 @@ impl StarknetRunner {
     }
 
     pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
-        self.vm
+        let ret_data = self
+            .vm
             .get_return_values(2)
-            .map_err(StarknetRunnerError::MemoryException)?
-            .into_iter()
-            .map(|val| match val {
-                Int(felt) => Ok(felt),
-                MaybeRelocatable::RelocatableValue(r) => {
-                    Ok(self.vm.get_integer(&r).unwrap().into_owned())
-                }
-            })
-            .collect::<Result<Vec<Felt>, _>>()
+            .map_err(StarknetRunnerError::MemoryException)?;
+
+        let n_rets = ret_data[0]
+            .get_int_ref()
+            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+        let ret_ptr = ret_data[1]
+            .get_relocatable()
+            .map_err(|_| StarknetRunnerError::NotARelocatable)?;
+
+        let ret_data = self
+            .vm
+            .get_integer_range(
+                &ret_ptr,
+                n_rets
+                    .to_usize()
+                    .ok_or(StarknetRunnerError::DataConvertionError)?,
+            )
+            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+        Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
     pub(crate) fn prepare_os_context(&mut self) -> Vec<MaybeRelocatable> {
@@ -168,7 +178,10 @@ impl StarknetRunner {
     pub(crate) fn validate_and_process_os_context(
         &mut self,
         initial_os_context: Vec<MaybeRelocatable>,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), ExecutionError>
+    where
+        H: SyscallHandlerPostRun,
+    {
         // The returned values are os_context, retdata_size, retdata_ptr.
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
         let stack_pointer = os_context_end;
@@ -191,7 +204,7 @@ impl StarknetRunner {
 
         self.hint_processor
             .syscall_handler
-            .post_run(&mut self.vm, syscall_stop_ptr)?;
+            .post_run(&mut self.vm, syscall_stop_ptr.get_relocatable()?)?;
 
         Ok(())
     }
@@ -200,11 +213,21 @@ impl StarknetRunner {
 #[cfg(test)]
 mod test {
     use super::StarknetRunner;
-    use crate::core::syscalls::syscall_handler::SyscallHintProcessor;
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler,
+    };
     use cairo_rs::{
         types::relocatable::MaybeRelocatable,
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
+
+    type SyscallHintProcessor = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
+        BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+    >;
 
     #[test]
     fn get_execution_resources_test_fail() {
