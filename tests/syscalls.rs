@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
 use felt::{felt_str, Felt};
-use sha3::{Digest, Keccak256};
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -17,19 +16,9 @@ use starknet_rs::{
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
     starknet_storage::dict_storage::DictStorage,
-    utils::Address,
+    utils::{calculate_sn_keccak, Address},
 };
 use std::path::Path;
-
-fn find_entry_point_selector(entry_point: &str) -> Felt {
-    let mut selector: [u8; 32] = Keccak256::new()
-        .chain_update(entry_point.as_bytes())
-        .finalize()
-        .into();
-    selector[0] &= 3;
-
-    Felt::from_bytes_be(&selector)
-}
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract(
@@ -55,7 +44,7 @@ fn test_contract(
         Some([(class_hash, contract_class)].into_iter().collect()),
     );
 
-    let entry_point_selector = find_entry_point_selector(entry_point);
+    let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
         contract_address.clone(),
         vec![],
