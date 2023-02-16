@@ -49,6 +49,7 @@ impl Address {
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(self.0.clone()))
     }
 }
+
 //* -------------------
 //*  Helper Functions
 //* -------------------
@@ -102,6 +103,15 @@ pub fn felt_to_field_element(value: &Felt) -> Result<FieldElement, SyscallHandle
 
 pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
     Felt::from_bytes_be(&felt.to_bytes_be())
+}
+
+pub fn felt_to_hash(value: &Felt) -> [u8; 32] {
+    let mut output = [0; 32];
+
+    let bytes = value.to_bytes_be();
+    output[32 - bytes.len()..].copy_from_slice(&bytes);
+
+    output
 }
 
 // -------------------
@@ -172,7 +182,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let tx_syscall_counter = resources_manager.syscall_counter;
 
     // Add additional Cairo resources needed for the OS to run the transaction.
-    let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);
+    let additional_resources = get_additional_os_resources(tx_syscall_counter, &tx_type)?;
     let new_resources = cairo_usage + additional_resources;
     let filtered_builtins = new_resources.filter_unused_builtins();
 
@@ -446,7 +456,13 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let mut hint_processor = SyscallHintProcessor::new_empty();
+            let mut hint_processor = $crate::core::syscalls::syscall_handler::SyscallHintProcessor::<
+                $crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler::<
+                    $crate::business_logic::state::cached_state::CachedState<
+                        $crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
+                    >,
+                >,
+            >::new_empty();
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
