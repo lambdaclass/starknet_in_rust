@@ -216,7 +216,6 @@ fn get_tx_info_syscall() {
         let mut general_config = StarknetGeneralConfig::default();
         *general_config.starknet_os_config_mut().chain_id_mut() = chain_id;
 
-        // TODO: How to test `chain_id`?
         let n_steps = general_config.invoke_tx_max_n_steps();
         test_contract(
             "tests/syscalls.json",
