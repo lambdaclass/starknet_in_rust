@@ -85,8 +85,8 @@ impl InternalInvokeFunction {
         Ok(Some(call_info))
     }
 
-    ///     Builds the transaction execution context and executes the entry point.
-    ///     Returns the CallInfo.
+    /// Builds the transaction execution context and executes the entry point.
+    /// Returns the CallInfo.
     #[allow(dead_code)]
     fn run_execute_entrypoint(
         &self,
