@@ -11,8 +11,6 @@ pub enum SyscallHandlerError {
     MissingIdentifiers,
     #[error("Missing selector value")]
     MissingSelector,
-    #[error("Missing file syscalls.json")]
-    MissingSyscallsJsonFile,
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
     #[error("invalid pointer")]

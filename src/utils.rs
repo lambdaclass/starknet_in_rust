@@ -21,6 +21,8 @@ use crate::{
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
 use num_traits::ToPrimitive;
+use sha3::{Digest, Keccak256};
+use starknet_crypto::FieldElement;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -171,7 +173,7 @@ pub fn calculate_tx_resources<S: State + StateReader>(
     let tx_syscall_counter = resources_manager.syscall_counter;
 
     // Add additional Cairo resources needed for the OS to run the transaction.
-    let additional_resources = get_additional_os_resources(tx_syscall_counter, tx_type);
+    let additional_resources = get_additional_os_resources(tx_syscall_counter, &tx_type)?;
     let new_resources = cairo_usage + additional_resources;
     let filtered_builtins = new_resources.filter_unused_builtins();
 
@@ -278,12 +280,18 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     }
     Ok(())
 }
+pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
+    let mut hasher = Keccak256::default();
+    hasher.update(data);
+    let mut result: [u8; 32] = hasher.finalize().try_into().unwrap();
+    // Only the first 250 bits from the hash are used.
+    result[0] &= 0b0000_0011;
+    result
+}
 
 //* -------------------
 //*      Macros
 //* -------------------
-
-use starknet_crypto::FieldElement;
 
 #[cfg(test)]
 #[macro_use]

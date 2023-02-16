@@ -1,3 +1,5 @@
+use crate::business_logic::transaction::transaction_errors::TransactionError;
+use crate::definitions::transaction_type::TransactionType;
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     starknet_runner::starknet_runner_error::StarknetRunnerError,
@@ -10,6 +12,8 @@ use cairo_rs::{
     },
 };
 use thiserror::Error;
+
+use super::os_usage::OsResources;
 
 #[derive(Debug, Error)]
 pub enum ExecutionError {
@@ -79,4 +83,8 @@ pub enum ExecutionError {
     StarknetRunnerException(#[from] StarknetRunnerError),
     #[error(transparent)]
     SyscallException(#[from] SyscallHandlerError),
+    #[error(transparent)]
+    TransactionError(#[from] TransactionError),
+    #[error("Transaction type {0:?} not found in OsResources: {1:?}")]
+    NoneTransactionType(TransactionType, OsResources),
 }

@@ -1,10 +1,10 @@
 .PHONY: build check deps deps-macos clean compile_starknet clippy remove-venv venv-test test clean coverage
-	
-build: 
+
+build:
 	cargo build --release
 
-check: 
-	cargo check 
+check:
+	cargo check
 
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1 && \
@@ -20,14 +20,13 @@ deps-macos:
 	CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install fastecdsa cairo_lang==0.10.1 && \
 	deactivate
 
-clean: 
-	rm cairo_syscalls/*json
+clean:
 	rm cairo_programs/*json
 
 compile_starknet:
-	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
 	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
-	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json 
+	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json && \
+	starknet-compile starknet_programs/storage.cairo > starknet_programs/storage.json 
 
 clippy:
 	cargo clippy --all-targets -- -D warnings
@@ -37,9 +36,9 @@ remove-venv:
 
 venv-test:
 	. starknet-in-rs-venv/bin/activate && \
-	cairo-compile cairo_programs/syscalls.cairo --output cairo_programs/syscalls.json && \
 	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
 	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json && \
+	starknet-compile starknet_programs/storage.cairo > starknet_programs/storage.json && \
 	cargo test
 
 test:

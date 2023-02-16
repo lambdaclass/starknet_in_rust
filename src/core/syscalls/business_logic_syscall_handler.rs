@@ -1,4 +1,6 @@
-use super::{syscall_handler::SyscallHandler, syscall_request::*};
+use super::{
+    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name, syscall_request::*,
+};
 use crate::{
     business_logic::{
         execution::{execution_errors::ExecutionError, objects::*},
@@ -463,8 +465,6 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
     }
 
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
-        let _read = self.starknet_storage_state.read(&address.to_32_bytes()?)?;
-
         self.starknet_storage_state
             .write(&address.to_32_bytes()?, value);
 
@@ -478,7 +478,11 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         self.increment_syscall_count(syscall_name);
-        self.read_syscall_request(syscall_name, vm, syscall_ptr)
+        let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
+
+        println!("syscall_name = {syscall_name}");
+        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        Ok(syscall_request)
     }
 }
 
