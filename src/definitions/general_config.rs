@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-
-use crate::utils::Address;
+use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 use felt::Felt;
+use getset::{CopyGetters, MutGetters};
 use num_traits::Zero;
 
 use super::error::StarknetChainIdError;
@@ -42,15 +42,18 @@ pub(crate) struct StarknetOsConfig {
     pub(crate) gas_price: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, CopyGetters, MutGetters)]
 pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     pub(crate) contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,
     pub(crate) sequencer_address: Address,
     pub(crate) cairo_resource_fee_weights: HashMap<String, f64>,
+    #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
     pub(crate) validate_max_n_steps: u64,
+    #[get_mut = "pub"]
+    pub(crate) block_info: BlockInfo,
 }
 
 impl StarknetGeneralConfig {
@@ -60,8 +63,8 @@ impl StarknetGeneralConfig {
         starknet_os_config: StarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
         global_state_commitment_tree_height: u64,
-        sequencer_address: Address,
         invoke_tx_max_n_steps: u64,
+        block_info: BlockInfo,
     ) -> Self {
         Self {
             starknet_os_config,
@@ -71,10 +74,13 @@ impl StarknetGeneralConfig {
             invoke_tx_max_n_steps,
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,
+            block_info,
         }
     }
+}
 
-    pub(crate) fn default() -> Self {
+impl Default for StarknetGeneralConfig {
+    fn default() -> Self {
         Self {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
@@ -87,6 +93,7 @@ impl StarknetGeneralConfig {
             invoke_tx_max_n_steps: 0,
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,
+            block_info: BlockInfo::empty(Address::default()),
         }
     }
 }

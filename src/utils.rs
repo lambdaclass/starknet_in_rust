@@ -283,7 +283,7 @@ pub(crate) fn verify_no_calls_to_other_contracts(
 pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
     let mut hasher = Keccak256::default();
     hasher.update(data);
-    let mut result: [u8; 32] = hasher.finalize().try_into().unwrap();
+    let mut result: [u8; 32] = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result

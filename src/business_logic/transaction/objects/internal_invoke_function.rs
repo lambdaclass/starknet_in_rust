@@ -197,7 +197,7 @@ mod tests {
         // Set contract_class
         let class_hash: [u8; 32] = [1; 32];
         let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+            ContractClass::try_from(PathBuf::from("tests/fibonacci.json")).unwrap();
         state
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();

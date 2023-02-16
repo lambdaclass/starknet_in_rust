@@ -11,9 +11,7 @@ pub struct ContractState {
 }
 
 impl ContractState {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) fn new(
+    pub fn new(
         contract_hash: [u8; 32],
         nonce: Felt,
         storage_keys: HashMap<[u8; 32], Felt>,
