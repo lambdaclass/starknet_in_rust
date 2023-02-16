@@ -1841,6 +1841,7 @@ dependencies = [
  "cairo-felt",
  "cairo-vm",
  "getset",
+ "lazy_static",
  "num-bigint",
  "num-integer",
  "num-traits",

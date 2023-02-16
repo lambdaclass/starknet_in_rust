@@ -40,3 +40,4 @@ target/
 starknet-venv/
 **/*.json
 default.profraw
+**.DS_Store
