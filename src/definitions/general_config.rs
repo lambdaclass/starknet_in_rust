@@ -44,6 +44,7 @@ pub struct StarknetGeneralConfig {
     _global_state_commitment_tree_height: u64,
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
+    pub(crate) validate_max_n_steps: u64,
     #[get_mut = "pub"]
     pub(crate) block_info: BlockInfo,
 }
@@ -63,6 +64,7 @@ impl StarknetGeneralConfig {
             _contract_storage_commitment_tree_height: contract_storage_commitment_tree_height,
             _global_state_commitment_tree_height: global_state_commitment_tree_height,
             invoke_tx_max_n_steps,
+            validate_max_n_steps: 0,
             block_info,
         }
     }
@@ -78,6 +80,7 @@ impl Default for StarknetGeneralConfig {
             _contract_storage_commitment_tree_height: 0,
             _global_state_commitment_tree_height: 0,
             invoke_tx_max_n_steps: 0,
+            validate_max_n_steps: 0,
             block_info: BlockInfo::empty(Address::default()),
         }
     }
