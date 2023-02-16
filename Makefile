@@ -26,6 +26,8 @@ deps-venv:
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
+	starknet-compile starknet_programs/account_without_validation.cairo  --account_contract > starknet_programs/account_without_validation.json
+
 
 cairo_programs/%.json: cairo_programs/%.cairo
 	cairo-compile $< --output $@
@@ -50,12 +52,6 @@ deps:
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
 
-compile_starknet:
-	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
-	starknet-compile tests/fibonacci.cairo > tests/fibonacci.json && \
-	starknet-compile starknet_programs/account_without_validation.cairo  --account_contract > starknet_programs/account_without_validation.json && \
-	starknet-compile tests/storage.cairo > tests/storage.json 
-
 clean:
 	rm cairo_programs/*json
 	-rm -rf starknet-venv/
@@ -66,7 +62,7 @@ clippy:
 	cargo clippy --all-targets -- -D warnings
 
 test:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet 
 	cargo test
 
 coverage:
