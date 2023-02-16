@@ -79,6 +79,7 @@ pub(crate) struct LibraryCallStruct {
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
 }
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampRequest {
     pub(crate) selector: Felt,

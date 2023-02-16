@@ -4,8 +4,7 @@ use super::{
 };
 use crate::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
-        fact_state::state::ExecutionResourcesManager, state::cached_state::CachedState,
+        fact_state::state::ExecutionResourcesManager, state::state_api::State,
         state::state_api::StateReader,
     },
     core::syscalls::{
@@ -29,7 +28,7 @@ use num_traits::ToPrimitive;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
-pub(crate) struct ExecutionEntryPoint {
+pub struct ExecutionEntryPoint {
     call_type: CallType,
     contract_address: Address,
     code_address: Option<Address>,
@@ -41,8 +40,6 @@ pub(crate) struct ExecutionEntryPoint {
 }
 
 impl ExecutionEntryPoint {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn new(
         contract_address: Address,
         calldata: Vec<Felt>,
@@ -68,20 +65,21 @@ impl ExecutionEntryPoint {
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn execute(
+    pub fn execute<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<CallInfo, ExecutionError> {
+    ) -> Result<CallInfo, ExecutionError>
+    where
+        T: Clone + Default + State + StateReader,
+    {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         let runner = self.run(
             state,
-            &resources_manager.clone(),
+            resources_manager,
             general_config,
             tx_execution_context,
         )?;
@@ -92,7 +90,7 @@ impl ExecutionEntryPoint {
 
         let retdata = runner.get_return_values()?;
 
-        self.build_call_info(
+        self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler,
             retdata,
@@ -105,13 +103,16 @@ impl ExecutionEntryPoint {
     /// self.contract_address.
     /// Returns the corresponding CairoFunctionRunner and BusinessLogicSysCallHandler in order to
     /// retrieve the execution information.
-    fn run(
+    fn run<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         resources_manager: &ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
         tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<StarknetRunner, ExecutionError> {
+    ) -> Result<StarknetRunner<BusinessLogicSyscallHandler<T>>, ExecutionError>
+    where
+        T: Clone + Default + State + StateReader,
+    {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state.clone())?;
         let contract_class = state
@@ -129,7 +130,8 @@ impl ExecutionEntryPoint {
         cairo_runner.initialize_function_runner(&mut vm)?;
 
         let hint_processor = SyscallHintProcessor::new_empty();
-        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        let mut runner: StarknetRunner<BusinessLogicSyscallHandler<T>> =
+            StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // prepare OS context
         let os_context = runner.prepare_os_context();
@@ -221,12 +223,15 @@ impl ExecutionEntryPoint {
         Ok(filtered_entry_points.get(0).unwrap().to_owned())
     }
 
-    fn build_call_info<S: StateReader + Clone>(
+    fn build_call_info<S>(
         &self,
         previous_cairo_usage: ExecutionResources,
-        syscall_handler: BusinessLogicSyscallHandler<CachedState<S>>,
+        syscall_handler: BusinessLogicSyscallHandler<S>,
         retdata: Vec<Felt>,
-    ) -> Result<CallInfo, ExecutionError> {
+    ) -> Result<CallInfo, ExecutionError>
+    where
+        S: Clone + State + StateReader,
+    {
         let execution_resources =
             syscall_handler.resources_manager.cairo_usage - previous_cairo_usage;
 

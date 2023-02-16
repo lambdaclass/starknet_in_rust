@@ -11,7 +11,7 @@ use cairo_rs::{
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use felt::Felt;
-use num_traits::ToPrimitive;
+use num_traits::{ToPrimitive, Zero};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,21 +26,21 @@ pub enum CallType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallInfo {
-    pub(crate) caller_address: Address,
-    pub(crate) call_type: Option<CallType>,
-    pub(crate) contract_address: Address,
-    pub(crate) code_address: Option<Address>,
-    pub(crate) class_hash: Option<[u8; 32]>,
-    pub(crate) entry_point_selector: Option<Felt>,
-    pub(crate) entry_point_type: Option<EntryPointType>,
-    pub(crate) calldata: Vec<Felt>,
-    pub(crate) retdata: Vec<Felt>,
-    pub(crate) execution_resources: ExecutionResources,
-    pub(crate) events: Vec<OrderedEvent>,
-    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub(crate) storage_read_values: Vec<Felt>,
-    pub(crate) accesed_storage_keys: HashSet<[u8; 32]>,
-    pub(crate) internal_calls: Vec<CallInfo>,
+    pub caller_address: Address,
+    pub call_type: Option<CallType>,
+    pub contract_address: Address,
+    pub code_address: Option<Address>,
+    pub class_hash: Option<[u8; 32]>,
+    pub entry_point_selector: Option<Felt>,
+    pub entry_point_type: Option<EntryPointType>,
+    pub calldata: Vec<Felt>,
+    pub retdata: Vec<Felt>,
+    pub execution_resources: ExecutionResources,
+    pub events: Vec<OrderedEvent>,
+    pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub storage_read_values: Vec<Felt>,
+    pub accesed_storage_keys: HashSet<[u8; 32]>,
+    pub internal_calls: Vec<CallInfo>,
 }
 
 impl CallInfo {
@@ -278,6 +278,26 @@ impl TransactionExecutionContext {
             signature,
             transaction_hash,
             version,
+            n_sent_messages: 0,
+            _n_steps: n_steps,
+        }
+    }
+
+    pub fn create_for_testing(
+        account_contract_address: Address,
+        _max_fee: u64,
+        nonce: Felt,
+        n_steps: u64,
+        version: u64,
+    ) -> Self {
+        TransactionExecutionContext {
+            n_emitted_events: 0,
+            version,
+            account_contract_address,
+            max_fee: 0,
+            transaction_hash: Felt::zero(),
+            signature: Vec::new(),
+            nonce,
             n_sent_messages: 0,
             _n_steps: n_steps,
         }

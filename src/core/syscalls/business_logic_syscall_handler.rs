@@ -1,5 +1,7 @@
 use super::{
-    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name, syscall_request::*,
+    syscall_handler::{SyscallHandler, SyscallHandlerPostRun},
+    syscall_info::get_syscall_size_from_name,
+    syscall_request::*,
 };
 use crate::{
     business_logic::{
@@ -7,22 +9,18 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, execution_errors::ExecutionError,
             objects::*,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
+        fact_state::state::ExecutionResourcesManager,
         state::{
-            cached_state::CachedState,
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
             state_api_objects::BlockInfo,
         },
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::{constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::contract_class::EntryPointType,
-    starknet_storage::dict_storage::DictStorage,
     utils::*,
 };
 use cairo_rs::{
@@ -55,18 +53,17 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
+impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
     pub fn new(
         _tx_execution_context: TransactionExecutionContext,
         state: T,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        _general_config: StarknetGeneralConfig,
+        general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
-        // TODO: check work arounds to pass block info
-        let block_info = BlockInfo::default();
+        let block_info = general_config.block_info;
         let events = Vec::new();
         let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
@@ -154,28 +151,6 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         }
     }
 
-    /// Performs post run syscall related tasks.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) fn post_run(
-        &self,
-        runner: &mut VirtualMachine,
-        syscall_stop_ptr: MaybeRelocatable,
-    ) -> Result<(), ExecutionError> {
-        let expected_stop_ptr = self.expected_syscall_ptr;
-        let syscall_ptr = match syscall_stop_ptr {
-            MaybeRelocatable::RelocatableValue(val) => val,
-            _ => return Err(ExecutionError::NotARelocatableValue),
-        };
-        if syscall_ptr != expected_stop_ptr {
-            return Err(ExecutionError::InvalidStopPointer(
-                expected_stop_ptr,
-                syscall_ptr,
-            ));
-        }
-        self.validate_read_only_segments(runner)
-    }
-
     /// Validates that there were no out of bounds writes to read-only segments and marks
     /// them as accessed.
     pub(crate) fn validate_read_only_segments(
@@ -249,7 +224,10 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     }
 }
 
-impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHandler<T> {
+impl<T> SyscallHandler for BusinessLogicSyscallHandler<T>
+where
+    T: Clone + Default + State + StateReader,
+{
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -349,8 +327,6 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         Ok(contract_address)
     }
 
-    // TODO: I give up trying to fix the warnings in this method.
-    #[allow(unused)]
     fn _call_contract(
         &mut self,
         syscall_name: &str,
@@ -364,46 +340,45 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
                 _ => return Err(SyscallHandlerError::ExpectedCallContract),
             };
 
+        let mut class_hash = None;
         let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
 
-        let mut code_address = None;
-        let mut class_hash = None;
-
+        let contract_address;
+        let caller_address;
+        let entry_point_type;
+        let call_type;
         match syscall_name {
             "call_contract" => {
-                code_address = Some(request.contract_address);
-                let contract_address = code_address;
-                let caller_address = self.contract_address.clone();
-                let entry_point_type = EntryPointType::External;
-                let call_type = CallType::Call;
+                contract_address = request.contract_address;
+                caller_address = self.contract_address.clone();
+                entry_point_type = EntryPointType::External;
+                call_type = CallType::Call;
             }
             "delegate_call" => {
-                code_address = Some(request.contract_address);
-                let contract_address = self.contract_address.clone();
-                let caller_address = self.caller_address.clone();
-                let entry_point_type = EntryPointType::External;
-                let call_type = CallType::Delegate;
+                contract_address = self.contract_address.clone();
+                caller_address = self.caller_address.clone();
+                entry_point_type = EntryPointType::External;
+                call_type = CallType::Delegate;
             }
             "delegate_l1_handler" => {
-                code_address = Some(request.contract_address);
-                let contract_address = self.contract_address.clone();
-                let caller_address = self.caller_address.clone();
-                let entry_point_type = EntryPointType::L1Handler;
-                let call_type = CallType::Delegate;
+                contract_address = self.contract_address.clone();
+                caller_address = self.caller_address.clone();
+                entry_point_type = EntryPointType::L1Handler;
+                call_type = CallType::Delegate;
             }
             "library_call" => {
-                class_hash = Some(request.class_hash.to_bytes_be());
-                let contract_address = self.contract_address.clone();
-                let caller_address = self.caller_address.clone();
-                let entry_point_type = EntryPointType::External;
-                let call_type = CallType::Delegate;
+                class_hash = Some(felt_to_hash(&request.class_hash));
+                contract_address = self.contract_address.clone();
+                caller_address = self.caller_address.clone();
+                entry_point_type = EntryPointType::External;
+                call_type = CallType::Delegate;
             }
             "library_call_l1_handler" => {
-                class_hash = Some(request.class_hash.to_bytes_be());
-                let contract_address = self.contract_address.clone();
-                let caller_address = self.caller_address.clone();
-                let entry_point_type = EntryPointType::L1Handler;
-                let call_type = CallType::Delegate;
+                class_hash = Some(felt_to_hash(&request.class_hash));
+                contract_address = self.contract_address.clone();
+                caller_address = self.caller_address.clone();
+                entry_point_type = EntryPointType::L1Handler;
+                call_type = CallType::Delegate;
             }
             _ => {
                 return Err(SyscallHandlerError::UnknownSyscall(
@@ -412,21 +387,24 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
             }
         }
 
-        // let call = self.execute_entry_point(
-        //     call_type,
-        //     class_hash,
-        //     contract_address,
-        //     code_address,
-        //     request.selector,
-        //     entry_point_type,
-        //     calldata,
-        //     caller_address,
-        // )
+        let call = ExecutionEntryPoint::new(
+            contract_address,
+            calldata,
+            EXECUTE_ENTRY_POINT_SELECTOR.clone(),
+            caller_address,
+            entry_point_type,
+            call_type.into(),
+            class_hash,
+        );
 
-        // return self.execute_entry_point(call=call)
-
-        // TODO, remove this once used the commented code.
-        todo!()
+        call.execute(
+            &mut self.state,
+            &self.general_config,
+            &mut self.resources_manager,
+            &self.tx_execution_context,
+        )
+        .map(|x| x.retdata)
+        .map_err(|_| todo!())
     }
 
     fn get_block_info(&self) -> &BlockInfo {
@@ -542,51 +520,81 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        println!("syscall_name = {syscall_name}");
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 }
 
-impl Default for BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>> {
+impl<T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<T>
+where
+    T: Clone + Default + State + StateReader,
+{
+    fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: Relocatable,
+    ) -> Result<(), ExecutionError> {
+        let expected_stop_ptr = self.expected_syscall_ptr;
+        if syscall_stop_ptr != expected_stop_ptr {
+            return Err(ExecutionError::InvalidStopPointer(
+                expected_stop_ptr,
+                syscall_stop_ptr,
+            ));
+        }
+        self.validate_read_only_segments(runner)
+    }
+}
+
+impl<T> Default for BusinessLogicSyscallHandler<T>
+where
+    T: Clone + Default + State + StateReader,
+{
     fn default() -> Self {
-        let cached_state = CachedState::new(
-            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
-            None,
-        );
-
-        let contract_address = Address(0.into());
-
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
-            contract_address,
-            cached_state,
+            Default::default(),
+            Default::default(),
         )
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-    use crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-    use crate::core::syscalls::hint_code::*;
-    use crate::core::syscalls::syscall_handler::*;
-    use crate::utils::test_utils::*;
-    use cairo_rs::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
-        BuiltinHintProcessor, HintProcessorData,
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        core::{
+            errors::syscall_handler_errors::SyscallHandlerError,
+            syscalls::{hint_code::*, syscall_handler::SyscallHandler},
+        },
+        utils::test_utils::*,
     };
-    use cairo_rs::hint_processor::hint_processor_definition::HintProcessor;
-    use cairo_rs::relocatable;
-    use cairo_rs::types::exec_scope::ExecutionScopes;
-    use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-    use cairo_rs::vm::errors::hint_errors::HintError;
-    use cairo_rs::vm::errors::memory_errors::MemoryError;
-    use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
-    use cairo_rs::vm::vm_core::VirtualMachine;
+    use cairo_rs::{
+        hint_processor::{
+            builtin_hint_processor::builtin_hint_processor_definition::{
+                BuiltinHintProcessor, HintProcessorData,
+            },
+            hint_processor_definition::HintProcessor,
+        },
+        relocatable,
+        types::{
+            exec_scope::ExecutionScopes,
+            relocatable::{MaybeRelocatable, Relocatable},
+        },
+        vm::{
+            errors::{
+                hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
+            },
+            vm_core::VirtualMachine,
+        },
+    };
     use felt::Felt;
-    use std::any::Any;
-    use std::borrow::Cow;
-    use std::collections::HashMap;
+    use std::{any::Any, borrow::Cow, collections::HashMap};
+
+    type BusinessLogicSyscallHandler =
+        super::BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {

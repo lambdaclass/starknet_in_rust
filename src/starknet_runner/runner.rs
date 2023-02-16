@@ -1,15 +1,10 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
-    business_logic::{
-        execution::execution_errors::ExecutionError,
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
-    },
-    core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::SyscallHintProcessor,
+    business_logic::execution::execution_errors::ExecutionError,
+    core::syscalls::syscall_handler::{
+        SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
-use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -23,20 +18,23 @@ use cairo_rs::{
 use felt::Felt;
 use std::collections::HashMap;
 
-pub(crate) struct StarknetRunner {
+pub(crate) struct StarknetRunner<H>
+where
+    H: SyscallHandler,
+{
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
-    pub(crate) hint_processor:
-        SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>>,
+    pub(crate) hint_processor: SyscallHintProcessor<H>,
 }
 
-impl StarknetRunner {
+impl<H> StarknetRunner<H>
+where
+    H: SyscallHandler,
+{
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
-        hint_processor: SyscallHintProcessor<
-            BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
-        >,
+        hint_processor: SyscallHintProcessor<H>,
     ) -> Self {
         StarknetRunner {
             cairo_runner,
@@ -72,7 +70,7 @@ impl StarknetRunner {
             .map_err(StarknetRunnerError::MemoryException)?
             .into_iter()
             .map(|val| match val {
-                Int(felt) => Ok(felt),
+                MaybeRelocatable::Int(felt) => Ok(felt),
                 MaybeRelocatable::RelocatableValue(r) => {
                     Ok(self.vm.get_integer(&r).unwrap().into_owned())
                 }
@@ -168,7 +166,10 @@ impl StarknetRunner {
     pub(crate) fn validate_and_process_os_context(
         &mut self,
         initial_os_context: Vec<MaybeRelocatable>,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), ExecutionError>
+    where
+        H: SyscallHandlerPostRun,
+    {
         // The returned values are os_context, retdata_size, retdata_ptr.
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
         let stack_pointer = os_context_end;
@@ -191,7 +192,7 @@ impl StarknetRunner {
 
         self.hint_processor
             .syscall_handler
-            .post_run(&mut self.vm, syscall_stop_ptr)?;
+            .post_run(&mut self.vm, syscall_stop_ptr.get_relocatable()?)?;
 
         Ok(())
     }
@@ -202,35 +203,19 @@ mod test {
     use super::StarknetRunner;
     use crate::{
         business_logic::{
-            execution::{
-                execution_entry_point::ExecutionEntryPoint,
-                objects::{CallInfo, CallType, TransactionExecutionContext},
-            },
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-                state::ExecutionResourcesManager,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::syscalls::syscall_handler::SyscallHintProcessor,
-        definitions::general_config::StarknetGeneralConfig,
-        services::api::contract_class::{ContractClass, EntryPointType},
-        starknet_storage::dict_storage::DictStorage,
-        utils::{calculate_sn_keccak, Address},
+        core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler,
     };
     use cairo_rs::{
         types::relocatable::MaybeRelocatable,
-        vm::{
-            runners::cairo_runner::{CairoRunner, ExecutionResources},
-            vm_core::VirtualMachine,
-        },
+        vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
-    use felt::Felt;
-    use num_traits::Zero;
-    use std::{
-        collections::{HashMap, HashSet},
-        path::PathBuf,
-    };
+
+    type SyscallHintProcessor = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
+        BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+    >;
 
     #[test]
     fn get_execution_resources_test_fail() {
@@ -259,229 +244,5 @@ mod test {
         let expected = Vec::from([MaybeRelocatable::from((0, 0))]);
 
         assert_eq!(os_context, expected);
-    }
-
-    #[test]
-    fn integration_test() {
-        // ---------------------------------------------------------
-        //  Create program and entry point types for contract class
-        // ---------------------------------------------------------
-
-        let path = PathBuf::from("starknet_programs/fibonacci.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
-        let entry_points_by_type = contract_class.entry_points_by_type.clone();
-
-        let fib_entrypoint_selector = entry_points_by_type
-            .get(&EntryPointType::External)
-            .unwrap()
-            .get(0)
-            .unwrap()
-            .selector
-            .clone();
-
-        //* --------------------------------------------
-        //*    Create state reader with class hash data
-        //* --------------------------------------------
-
-        let ffc = DictStorage::new();
-        let contract_class_storage = DictStorage::new();
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-
-        let address = Address(1111.into());
-        let class_hash = [1; 32];
-        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
-
-        contract_class_cache.insert(class_hash, contract_class);
-        let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);
-        state_reader
-            .contract_states
-            .insert(address.clone(), contract_state);
-
-        //* ---------------------------------------
-        //*    Create state with previous data
-        //* ---------------------------------------
-
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
-
-        //* ------------------------------------
-        //*    Create execution entry point
-        //* ------------------------------------
-
-        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
-        let caller_address = Address(0000.into());
-        let entry_point_type = EntryPointType::External;
-
-        let exec_entry_point = ExecutionEntryPoint::new(
-            address,
-            calldata.clone(),
-            fib_entrypoint_selector.clone(),
-            caller_address,
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-        );
-
-        //* --------------------
-        //*   Execute contract
-        //* ---------------------
-        let general_config = StarknetGeneralConfig::default();
-        let tx_execution_context = TransactionExecutionContext::new(
-            Address(0.into()),
-            Felt::zero(),
-            Vec::new(),
-            0,
-            10.into(),
-            general_config.invoke_tx_max_n_steps,
-            1,
-        );
-        let mut resources_manager = ExecutionResourcesManager::default();
-
-        let expected_call_info = CallInfo {
-            caller_address: Address(0.into()),
-            call_type: Some(CallType::Delegate),
-            contract_address: Address(1111.into()),
-            entry_point_selector: Some(fib_entrypoint_selector),
-            entry_point_type: Some(EntryPointType::External),
-            calldata,
-            retdata: [1.into(), 144.into()].to_vec(),
-            execution_resources: ExecutionResources::default(),
-            class_hash: Some(class_hash),
-            ..Default::default()
-        };
-
-        assert_eq!(
-            exec_entry_point
-                .execute(
-                    &mut state,
-                    &general_config,
-                    &mut resources_manager,
-                    &tx_execution_context
-                )
-                .unwrap(),
-            expected_call_info
-        );
-    }
-
-    #[test]
-    #[ignore = "ignore until the cache issue is fixed"]
-    fn integration_storage_test() {
-        // ---------------------------------------------------------
-        //  Create program and entry point types for contract class
-        // ---------------------------------------------------------
-
-        let path = PathBuf::from("starknet_programs/storage.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
-        let entry_points_by_type = contract_class.entry_points_by_type.clone();
-
-        let storage_entrypoint_selector = entry_points_by_type
-            .get(&EntryPointType::External)
-            .unwrap()
-            .get(0)
-            .unwrap()
-            .selector
-            .clone();
-
-        //* --------------------------------------------
-        //*    Create state reader with class hash data
-        //* --------------------------------------------
-
-        let ffc = DictStorage::new();
-        let contract_class_storage = DictStorage::new();
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-
-        let address = Address(1111.into());
-        let class_hash = [1; 32];
-        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
-
-        contract_class_cache.insert(class_hash, contract_class);
-        let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);
-        state_reader
-            .contract_states
-            .insert(address.clone(), contract_state);
-
-        //* ---------------------------------------
-        //*    Create state with previous data
-        //* ---------------------------------------
-
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
-
-        //* ------------------------------------
-        //*    Create execution entry point
-        //* ------------------------------------
-
-        let calldata = [].to_vec();
-        let caller_address = Address(0000.into());
-        let entry_point_type = EntryPointType::External;
-
-        let exec_entry_point = ExecutionEntryPoint::new(
-            address.clone(),
-            calldata.clone(),
-            storage_entrypoint_selector.clone(),
-            caller_address,
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-        );
-
-        //* --------------------
-        //*   Execute contract
-        //* ---------------------
-        let general_config = StarknetGeneralConfig::default();
-        let tx_execution_context = TransactionExecutionContext::new(
-            Address(0.into()),
-            Felt::zero(),
-            Vec::new(),
-            0,
-            10.into(),
-            general_config.invoke_tx_max_n_steps,
-            1,
-        );
-        let mut resources_manager = ExecutionResourcesManager::default();
-
-        let expected_key = calculate_sn_keccak("_counter".as_bytes());
-
-        let mut expected_accesed_storage_keys = HashSet::new();
-        expected_accesed_storage_keys.insert(expected_key);
-
-        let expected_call_info = CallInfo {
-            caller_address: Address(0.into()),
-            call_type: Some(CallType::Delegate),
-            contract_address: Address(1111.into()),
-            entry_point_selector: Some(storage_entrypoint_selector),
-            entry_point_type: Some(EntryPointType::External),
-            calldata,
-            retdata: [1.into(), 42.into()].to_vec(),
-            execution_resources: ExecutionResources::default(),
-            class_hash: Some(class_hash),
-            storage_read_values: vec![42.into()],
-            accesed_storage_keys: expected_accesed_storage_keys,
-            ..Default::default()
-        };
-
-        assert_eq!(
-            exec_entry_point
-                .execute(
-                    &mut state,
-                    &general_config,
-                    &mut resources_manager,
-                    &tx_execution_context
-                )
-                .unwrap(),
-            expected_call_info
-        );
-
-        assert!(!state.cache.storage_writes.is_empty());
-        assert_eq!(
-            state
-                .cache
-                .storage_writes
-                .get(&(address, expected_key))
-                .cloned(),
-            Some(Felt::new(42))
-        );
     }
 }
