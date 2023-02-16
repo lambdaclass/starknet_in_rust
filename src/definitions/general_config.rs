@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 use felt::Felt;
 use getset::{CopyGetters, MutGetters};
 use num_traits::Zero;
+use std::collections::HashMap;
 
 use super::error::StarknetChainIdError;
 
@@ -70,7 +70,7 @@ impl StarknetGeneralConfig {
             starknet_os_config,
             contract_storage_commitment_tree_height: contract_storage_commitment_tree_height,
             global_state_commitment_tree_height: global_state_commitment_tree_height,
-            sequencer_address: sequencer_address,
+            sequencer_address,
             invoke_tx_max_n_steps,
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,
