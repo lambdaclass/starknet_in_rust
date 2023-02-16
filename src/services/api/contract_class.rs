@@ -11,6 +11,7 @@ use cairo_rs::{
     utils::is_subsequence,
 };
 use felt::{Felt, PRIME_STR};
+use getset::Getters;
 use serde::{Deserialize, Serialize};
 use starknet_api::state::EntryPoint;
 use std::{
@@ -30,8 +31,9 @@ pub enum EntryPointType {
     Constructor,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Getters, Hash, PartialEq, Serialize)]
 pub struct ContractEntryPoint {
+    #[getset(get = "pub")]
     pub(crate) selector: Felt,
     pub(crate) offset: Felt,
 }
@@ -40,9 +42,10 @@ pub struct ContractEntryPoint {
 //         Contract Class
 // -------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Getters, PartialEq, Serialize)]
 pub struct ContractClass {
     pub(crate) program: Program,
+    #[getset(get = "pub")]
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub(crate) abi: Option<AbiType>,
 }

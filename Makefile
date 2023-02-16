@@ -1,4 +1,42 @@
-.PHONY: build check deps deps-macos clean compile_starknet clippy remove-venv venv-test test clean coverage
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test
+
+
+OS := $(shell uname)
+ifeq ($(OS), Darwin)
+	CFLAGS  += -I/opt/homebrew/opt/gmp/include
+	LDFLAGS += -L/opt/homebrew/opt/gmp/lib
+endif
+
+
+CAIRO_SOURCES=$(wildcard cairo_programs/*.cairo)
+CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
+
+STARKNET_SOURCES=$(wildcard tests/*.cairo)
+STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
+
+
+#
+# VENV rules.
+#
+
+deps-venv:
+	pip install \
+		fastecdsa \
+		cairo-lang==0.10.3
+
+compile-cairo: $(CAIRO_TARGETS)
+compile-starknet: $(STARKNET_TARGETS)
+
+cairo_programs/%.json: cairo_programs/%.cairo
+	cairo-compile $< --output $@
+
+tests/%.json: tests/%.cairo
+	starknet-compile $< --output $@
+
+
+#
+# Normal rules.
+#
 
 build:
 	cargo build --release
@@ -7,43 +45,23 @@ check:
 	cargo check
 
 deps:
-	cargo install cargo-tarpaulin --version 0.23.1 && \
-	python3 -m venv starknet-in-rs-venv
-	. starknet-in-rs-venv/bin/activate && \
-	pip install cairo_lang==0.10.1 && \
-	deactivate
-
-deps-macos:
-	cargo install cargo-tarpaulin --version 0.23.1 && \
-	python3 -m venv starknet-in-rs-venv
-	. starknet-in-rs-venv/bin/activate && \
-	CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install fastecdsa cairo_lang==0.10.1 && \
-	deactivate
+	cargo install cargo-tarpaulin --version 0.23.1
+	python3 -m venv starknet-venv
+	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
 clean:
-	rm cairo_programs/*json
-
-compile_starknet:
-	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
-	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json && \
-	starknet-compile starknet_programs/storage.cairo > starknet_programs/storage.json 
+	-rm -rf starknet-venv/
+	-rm -f cairo_programs/*.json
+	-rm -f tests/*.json
 
 clippy:
 	cargo clippy --all-targets -- -D warnings
 
-remove-venv:
-	rm -rf starknet-in-rs-venv
-
-venv-test:
-	. starknet-in-rs-venv/bin/activate && \
-	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
-	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json && \
-	starknet-compile starknet_programs/storage.cairo > starknet_programs/storage.json && \
-	cargo test
-
 test:
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo test
 
 coverage:
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo tarpaulin
-	rm -f default.profraw
+	-rm -f default.profraw

@@ -29,11 +29,10 @@ jobs:
     - name: Run clippy
       run: make clippy
     - name: Run tests
-      run: make venv-test
+      run: make test
     - name: Coverage
       run: make coverage
     - name: Upload coverage to codecov.io
       uses: codecov/codecov-action@v3
       with:
         fail_ci_if_error:     true
-

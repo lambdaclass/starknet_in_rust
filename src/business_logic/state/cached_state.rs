@@ -7,6 +7,7 @@ use crate::{
     utils::Address,
 };
 use felt::Felt;
+use getset::Getters;
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
@@ -14,15 +15,16 @@ pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Getters)]
 pub struct CachedState<T: StateReader + Clone> {
     pub(crate) state_reader: T,
+    #[get = "pub"]
     pub(crate) cache: StateCache,
     pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
 impl<T: StateReader + Clone> CachedState<T> {
-    pub(crate) fn new(state_reader: T, contract_class_cache: Option<ContractClassCache>) -> Self {
+    pub fn new(state_reader: T, contract_class_cache: Option<ContractClassCache>) -> Self {
         Self {
             cache: StateCache::default(),
             contract_classes: contract_class_cache,
