@@ -4,7 +4,7 @@ use getset::{CopyGetters, MutGetters};
 use num_traits::Zero;
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum StarknetChainId {
+pub enum StarknetChainId {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     MainNet,
@@ -26,23 +26,24 @@ impl ToString for StarknetChainId {
 }
 
 impl StarknetChainId {
-    pub(crate) fn to_felt(self) -> Felt {
+    pub fn to_felt(self) -> Felt {
         Felt::from_bytes_be(self.to_string().as_bytes())
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct StarknetOsConfig {
+#[derive(Debug, Clone, MutGetters)]
+pub struct StarknetOsConfig {
+    #[get_mut = "pub"]
     pub(crate) chain_id: StarknetChainId,
     pub(crate) _fee_token_address: Address,
 }
 
 #[derive(Clone, Debug, CopyGetters, MutGetters)]
 pub struct StarknetGeneralConfig {
+    #[get_mut = "pub"]
     pub(crate) starknet_os_config: StarknetOsConfig,
     _contract_storage_commitment_tree_height: u64,
     _global_state_commitment_tree_height: u64,
-    _sequencer_address: Address,
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
     pub(crate) validate_max_n_steps: u64,
@@ -57,7 +58,6 @@ impl StarknetGeneralConfig {
         starknet_os_config: StarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
         global_state_commitment_tree_height: u64,
-        sequencer_address: Address,
         invoke_tx_max_n_steps: u64,
         block_info: BlockInfo,
     ) -> Self {
@@ -65,7 +65,6 @@ impl StarknetGeneralConfig {
             starknet_os_config,
             _contract_storage_commitment_tree_height: contract_storage_commitment_tree_height,
             _global_state_commitment_tree_height: global_state_commitment_tree_height,
-            _sequencer_address: sequencer_address,
             invoke_tx_max_n_steps,
             validate_max_n_steps: 0,
             block_info,
@@ -82,7 +81,6 @@ impl Default for StarknetGeneralConfig {
             },
             _contract_storage_commitment_tree_height: 0,
             _global_state_commitment_tree_height: 0,
-            _sequencer_address: Address(0.into()),
             invoke_tx_max_n_steps: 0,
             validate_max_n_steps: 0,
             block_info: BlockInfo::empty(Address::default()),

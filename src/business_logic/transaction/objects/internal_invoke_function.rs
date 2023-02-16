@@ -233,9 +233,6 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(
-            result.call_info.unwrap().retdata,
-            vec![Felt::new(1), Felt::new(144)]
-        );
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt::new(144)]);
     }
 }

@@ -11,6 +11,7 @@ use cairo_rs::{
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use felt::Felt;
+use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::{HashMap, HashSet};
 
@@ -247,7 +248,7 @@ impl Event {
 //  Transaction Structures
 // -------------------------
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Getters)]
 pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,
@@ -255,6 +256,7 @@ pub struct TransactionExecutionContext {
     pub(crate) max_fee: u64,
     pub(crate) transaction_hash: Felt,
     pub(crate) signature: Vec<Felt>,
+    #[get = "pub"]
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
