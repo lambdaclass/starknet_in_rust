@@ -11,7 +11,7 @@ use starknet_rs::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
             state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
+        state::cached_state::{CachedState, ContractClassCache},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -21,7 +21,7 @@ use starknet_rs::{
 use std::path::Path;
 
 #[allow(clippy::too_many_arguments)]
-fn test_contract(
+fn test_contract<'a>(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
     class_hash: [u8; 32],
@@ -29,6 +29,7 @@ fn test_contract(
     contract_address: Address,
     caller_address: Address,
     general_config: StarknetGeneralConfig,
+    extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path)>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
@@ -41,7 +42,20 @@ fn test_contract(
         .insert(contract_address.clone(), contract_state);
     let mut state = CachedState::new(
         state_reader,
-        Some([(class_hash, contract_class)].into_iter().collect()),
+        // Some([(class_hash, contract_class)].into_iter().collect()),
+        {
+            let mut contract_class_cache = ContractClassCache::new();
+            contract_class_cache.insert(class_hash, contract_class);
+
+            for (class_hash, contract_path) in extra_contracts {
+                let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+                    .expect("Could not load extra contract from JSON");
+
+                contract_class_cache.insert(class_hash, contract_class);
+            }
+
+            Some(contract_class_cache)
+        },
     );
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
@@ -100,6 +114,7 @@ fn get_block_number_syscall() {
             Address(1111.into()),
             Address(0.into()),
             general_config,
+            [].into_iter(),
             [felt_str!("1"), block_number.into()],
         );
     };
@@ -123,6 +138,7 @@ fn get_block_timestamp_syscall() {
             Address(1111.into()),
             Address(0.into()),
             general_config,
+            [].into_iter(),
             [felt_str!("1"), block_timestamp.into()],
         );
     };
@@ -130,4 +146,19 @@ fn get_block_timestamp_syscall() {
     run(0);
     run(5);
     run(1000);
+}
+
+#[test]
+fn library_call_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_library_call",
+        [1; 32],
+        3,
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        [([2; 32], Path::new("tests/syscalls-lib.json"))].into_iter(),
+        [],
+    );
 }

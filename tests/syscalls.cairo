@@ -38,22 +38,22 @@ func test_get_block_timestamp{syscall_ptr: felt*}() -> (block_timestamp: felt) {
 }
 
 @external
-func library_call{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt}() {
+func test_library_call{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt}() {
     let (answer) = ISyscallsLib.library_call_stateless_func(
-        class_hash=0x0101010101010101010101010101010101010101010101010101010101010101, a=21, b=2
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202, a=21, b=2
     );
     assert answer = 42;
 
     lib_state.write(10);
     ISyscallsLib.library_call_stateful_func(
-        class_hash=0x0101010101010101010101010101010101010101010101010101010101010101
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202
     );
     let (value) = lib_state.read();
     assert value = 11;
 
     let self_contact_address = get_contract_address();
     let call_contact_address = ISyscallsLib.library_call_stateful_get_contract_address(
-        class_hash=0x0101010101010101010101010101010101010101010101010101010101010101
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202
     );
     assert self_contact_address = call_contact_address;
 
