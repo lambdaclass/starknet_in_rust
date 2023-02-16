@@ -110,6 +110,29 @@ fn get_block_number_syscall() {
 }
 
 #[test]
+fn get_block_timestamp_syscall() {
+    let run = |block_timestamp| {
+        let mut general_config = StarknetGeneralConfig::default();
+        general_config.block_info_mut().block_timestamp = block_timestamp;
+
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_block_timestamp",
+            [1; 32],
+            3,
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            [felt_str!("1"), block_timestamp.into()],
+        );
+    };
+
+    run(0);
+    run(5);
+    run(1000);
+}
+
+#[test]
 fn get_contract_address_syscall() {
     let run = |contract_address: Felt| {
         test_contract(
