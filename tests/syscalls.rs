@@ -133,6 +133,26 @@ fn get_block_timestamp_syscall() {
 }
 
 #[test]
+fn get_caller_address_syscall() {
+    let run = |caller_address: Felt| {
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_caller_address",
+            [1; 32],
+            3,
+            Address(1111.into()),
+            Address(caller_address.clone()),
+            StarknetGeneralConfig::default(),
+            [felt_str!("1"), caller_address],
+        );
+    };
+
+    run(0.into());
+    run(5.into());
+    run(1000.into());
+}
+
+#[test]
 fn get_contract_address_syscall() {
     let run = |contract_address: Felt| {
         test_contract(
