@@ -63,7 +63,7 @@ fn test_contract(
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
-        Address(1111.into()),
+        contract_address.clone(),
         vec![],
         entry_point_selector.clone(),
         caller_address.clone(),
@@ -140,6 +140,69 @@ fn get_block_timestamp_syscall() {
     run(0);
     run(5);
     run(1000);
+}
+
+#[test]
+fn get_caller_address_syscall() {
+    let run = |caller_address: Felt| {
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_caller_address",
+            [1; 32],
+            Address(1111.into()),
+            Address(caller_address.clone()),
+            StarknetGeneralConfig::default(),
+            None,
+            [caller_address],
+        );
+    };
+
+    run(0.into());
+    run(5.into());
+    run(1000.into());
+}
+
+#[test]
+fn get_contract_address_syscall() {
+    let run = |contract_address: Felt| {
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_contract_address",
+            [1; 32],
+            Address(contract_address.clone()),
+            Address(0.into()),
+            StarknetGeneralConfig::default(),
+            None,
+            [contract_address],
+        );
+    };
+
+    run(1.into());
+    run(5.into());
+    run(1000.into());
+}
+
+#[test]
+fn get_sequencer_address_syscall() {
+    let run = |sequencer_address: Felt| {
+        let mut general_config = StarknetGeneralConfig::default();
+        general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
+
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_sequencer_address",
+            [1; 32],
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            None,
+            [sequencer_address],
+        );
+    };
+
+    run(0.into());
+    run(5.into());
+    run(1000.into());
 }
 
 #[test]
