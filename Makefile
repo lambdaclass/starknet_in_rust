@@ -26,6 +26,7 @@ clean:
 compile_starknet:
 	cairo-compile cairo_programs/contracts.cairo --output cairo_programs/contracts.json && \
 	starknet-compile starknet_programs/fibonacci.cairo > starknet_programs/fibonacci.json && \
+	starknet-compile starknet_programs/account_without_validation.cairo  --account_contract > starknet_programs/account_without_validation.json && \
 	starknet-compile starknet_programs/storage.cairo > starknet_programs/storage.json 
 
 clippy:

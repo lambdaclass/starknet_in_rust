@@ -252,8 +252,9 @@ impl InternalDeclare {
         self.sender_address.clone()
     }
 
-    pub fn validate_entrypoint_calldata(&self) -> [u8; 32] {
-        self.class_hash
+    pub fn validate_entrypoint_calldata(&self) -> Vec<Felt> {
+        let bytes = Felt::from_bytes_be(&self.class_hash);
+        Vec::from([bytes])
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
@@ -342,11 +343,7 @@ impl InternalDeclare {
             return Ok(None);
         }
 
-        let calldata = self
-            .validate_entrypoint_calldata()
-            .into_iter()
-            .map(|val| val.into())
-            .collect();
+        let calldata = self.validate_entrypoint_calldata();
 
         let call = ExecutionEntryPoint::new(
             self.account_contract_address(),
@@ -462,14 +459,14 @@ mod tests {
 
     #[test]
     fn test_internal_declare() {
-        let path = PathBuf::from("starknet_programs/fibonacci.json");
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         let internal_declare = InternalDeclare::new(
             contract_class.clone(),
             chain_id,
-            Address(1111.into()),
+            Address(1.into()),
             0,
             0,
             Vec::new(),
@@ -482,7 +479,7 @@ mod tests {
 
         //  ------------ contract data --------------------
 
-        let address = Address(1111.into());
+        let address = Address(1.into());
         let class_hash = [1; 32];
         let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
 
