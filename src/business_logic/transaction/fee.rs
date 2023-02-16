@@ -80,7 +80,7 @@ pub(crate) fn calculate_tx_fee(
 ) -> Result<u64, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
-        .ok_or(TransactionError::FeeError("Invalid fee value".to_string()))?
+        .ok_or_else(|| TransactionError::FeeError("Invalid fee value".to_string()))?
         .to_owned();
 
     let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(general_config, resources)?;

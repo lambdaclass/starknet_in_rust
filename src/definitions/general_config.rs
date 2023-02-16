@@ -69,8 +69,8 @@ impl StarknetGeneralConfig {
     ) -> Self {
         Self {
             starknet_os_config,
-            contract_storage_commitment_tree_height: contract_storage_commitment_tree_height,
-            global_state_commitment_tree_height: global_state_commitment_tree_height,
+            contract_storage_commitment_tree_height,
+            global_state_commitment_tree_height,
             invoke_tx_max_n_steps,
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,

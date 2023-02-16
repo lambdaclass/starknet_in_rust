@@ -76,16 +76,12 @@ impl ExecutionEntryPoint {
         T: Clone + Default + State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
-
-        dbg!("run");
         let runner = self.run(
             state,
             resources_manager,
             general_config,
             tx_execution_context,
         )?;
-
-        dbg!("after run");
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
@@ -178,10 +174,7 @@ impl ExecutionEntryPoint {
         })?;
 
         // cairo runner entry point
-        dbg!("run from entry");
         runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
-
-        dbg!("after run from");
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].

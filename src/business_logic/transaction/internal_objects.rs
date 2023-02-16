@@ -209,7 +209,7 @@ impl InternalDeclare {
         signature: Vec<Felt>,
         nonce: Felt,
     ) -> Result<Self, TransactionError> {
-        let hash = compute_class_hash(&contract_class.clone())?;
+        let hash = compute_class_hash(&contract_class)?;
 
         let class_hash = hash
             .to_bytes_be()
@@ -439,18 +439,23 @@ impl InternalDeclare {
 mod tests {
     use std::{collections::HashMap, path::PathBuf};
 
+    use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use felt::Felt;
-    use num_traits::Zero;
+    use num_traits::{Num, Zero};
 
     use crate::{
         business_logic::{
+            execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
             fact_state::{
                 contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
             },
             state::cached_state::CachedState,
         },
-        definitions::general_config::{StarknetChainId, StarknetGeneralConfig},
-        services::api::contract_class::ContractClass,
+        definitions::{
+            general_config::{StarknetChainId, StarknetGeneralConfig},
+            transaction_type::TransactionType,
+        },
+        services::api::contract_class::{ContractClass, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
         utils::Address,
     };
@@ -486,9 +491,7 @@ mod tests {
         contract_class_cache.insert(class_hash, contract_class);
 
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
-        state_reader
-            .contract_states
-            .insert(address.clone(), contract_state);
+        state_reader.contract_states.insert(address, contract_state);
 
         //* ---------------------------------------
         //*    Create state with previous data
@@ -496,10 +499,56 @@ mod tests {
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
-        println!(
-            "{:?}",
+        //* ---------------------------------------
+        //              Expected result
+        //* ---------------------------------------
+
+        let entry_point_selector = Some(
+            Felt::from_str_radix(
+                "1148189391774113786911959041662034419554430000171893651982484995704491697075",
+                10,
+            )
+            .unwrap(),
+        );
+
+        let calldata = [Felt::from_str_radix(
+            "2901640178084440408246930713802824082113120028809962300981437495334608520882",
+            10,
+        )
+        .unwrap()]
+        .to_vec();
+
+        let validate_info = Some(CallInfo {
+            caller_address: Address(0.into()),
+            call_type: Some(CallType::Call),
+            contract_address: Address(1.into()),
+            entry_point_selector,
+            entry_point_type: Some(EntryPointType::External),
+            calldata,
+            class_hash: Some(class_hash),
+            ..Default::default()
+        });
+
+        let mut actual_resources = HashMap::new();
+        actual_resources.insert("l1_gas_usage".to_string(), 0);
+        let transaction_exec_info = TransactionExecutionInfo {
+            validate_info,
+            call_info: None,
+            fee_transfer_info: None,
+            actual_fee: 0,
+            actual_resources,
+            tx_type: Some(TransactionType::Declare),
+        };
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+
+        assert_eq!(
             internal_declare
                 .apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
+                .unwrap(),
+            transaction_exec_info
         );
     }
 }

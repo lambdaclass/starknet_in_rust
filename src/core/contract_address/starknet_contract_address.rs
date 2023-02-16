@@ -37,7 +37,8 @@ fn get_contract_entry_points(
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
     for entry_point in entry_points {
-        if !(Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()) {
+        if !((Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()))
+        {
             return Err(ContractAddressError::InvalidOffset(
                 entry_point.offset.clone(),
             ));
@@ -223,7 +224,7 @@ mod tests {
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
                 selector: 1.into(),
-                offset: 285.into(),
+                offset: 2.into(),
             }],
         );
         let contract_class = ContractClass {
@@ -236,7 +237,7 @@ mod tests {
             get_contract_entry_points(&contract_class, &EntryPointType::Constructor).unwrap(),
             vec![ContractEntryPoint {
                 selector: 1.into(),
-                offset: 285.into()
+                offset: 2.into()
             }]
         );
         assert_matches!(
@@ -252,21 +253,21 @@ mod tests {
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
                 selector: 3.into(),
-                offset: 285.into(),
+                offset: 2.into(),
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::L1Handler,
             vec![ContractEntryPoint {
                 selector: 4.into(),
-                offset: 285.into(),
+                offset: 2.into(),
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::External,
             vec![ContractEntryPoint {
                 selector: 5.into(),
-                offset: 285.into(),
+                offset: 2.into(),
             }],
         );
         let contract_class = ContractClass {
@@ -277,7 +278,7 @@ mod tests {
         assert_eq!(
             compute_class_hash(&contract_class).unwrap(),
             Felt::from_str_radix(
-                "80645216105174565694368692920098410890941897438829883356170668060797764005",
+                "1809635095607326950459993008040437939724930328662161791121345395618950656878",
                 10
             )
             .unwrap()
