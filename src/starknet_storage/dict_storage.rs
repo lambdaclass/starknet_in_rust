@@ -2,12 +2,14 @@ use super::{errors::storage_errors::StorageError, storage::Storage};
 use std::collections::HashMap;
 
 pub type StorageKey = (Prefix, [u8; 32]);
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct DictStorage {
     storage: HashMap<StorageKey, Vec<u8>>,
 }
 
 impl DictStorage {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn new() -> Self {
         DictStorage {
             storage: HashMap::new(),

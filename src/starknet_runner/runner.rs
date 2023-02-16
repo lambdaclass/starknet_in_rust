@@ -1,15 +1,8 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
-    business_logic::{
-        execution::execution_errors::ExecutionError,
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
-    },
-    core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::SyscallHintProcessor,
-    },
+    business_logic::execution::execution_errors::ExecutionError,
+    core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor},
 };
-use cairo_rs::types::relocatable::MaybeRelocatable::Int;
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -23,20 +16,23 @@ use cairo_rs::{
 use felt::Felt;
 use std::collections::HashMap;
 
-pub(crate) struct StarknetRunner {
+pub(crate) struct StarknetRunner<H>
+where
+    H: SyscallHandler,
+{
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
-    pub(crate) hint_processor:
-        SyscallHintProcessor<BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>>,
+    pub(crate) hint_processor: SyscallHintProcessor<H>,
 }
 
-impl StarknetRunner {
+impl<H> StarknetRunner<H>
+where
+    H: SyscallHandler,
+{
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
-        hint_processor: SyscallHintProcessor<
-            BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
-        >,
+        hint_processor: SyscallHintProcessor<H>,
     ) -> Self {
         StarknetRunner {
             cairo_runner,
@@ -72,7 +68,7 @@ impl StarknetRunner {
             .map_err(StarknetRunnerError::MemoryException)?
             .into_iter()
             .map(|val| match val {
-                Int(felt) => Ok(felt),
+                MaybeRelocatable::Int(felt) => Ok(felt),
                 MaybeRelocatable::RelocatableValue(r) => {
                     Ok(self.vm.get_integer(&r).unwrap().into_owned())
                 }
@@ -191,7 +187,7 @@ impl StarknetRunner {
 
         self.hint_processor
             .syscall_handler
-            .post_run(&mut self.vm, syscall_stop_ptr)?;
+            ._post_run(&mut self.vm, syscall_stop_ptr.get_relocatable()?)?;
 
         Ok(())
     }
@@ -212,7 +208,7 @@ mod test {
             },
             state::cached_state::CachedState,
         },
-        core::syscalls::syscall_handler::SyscallHintProcessor,
+        core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler,
         definitions::general_config::StarknetGeneralConfig,
         services::api::contract_class::{ContractClass, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
@@ -231,6 +227,10 @@ mod test {
         collections::{HashMap, HashSet},
         path::PathBuf,
     };
+
+    type SyscallHintProcessor = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
+        BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+    >;
 
     #[test]
     fn get_execution_resources_test_fail() {
@@ -267,7 +267,7 @@ mod test {
         //  Create program and entry point types for contract class
         // ---------------------------------------------------------
 
-        let path = PathBuf::from("starknet_programs/fibonacci.json");
+        let path = PathBuf::from("tests/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
         let entry_points_by_type = contract_class.entry_points_by_type.clone();
 

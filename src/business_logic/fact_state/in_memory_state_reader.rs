@@ -9,7 +9,7 @@ use crate::{
 use felt::Felt;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct InMemoryStateReader {
     pub(crate) ffc: DictStorage,
     pub(crate) contract_states: HashMap<Address, ContractState>,
@@ -17,6 +17,8 @@ pub(crate) struct InMemoryStateReader {
 }
 
 impl InMemoryStateReader {
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn new(ffc: DictStorage, contract_class_storage: DictStorage) -> Self {
         Self {
             ffc,
