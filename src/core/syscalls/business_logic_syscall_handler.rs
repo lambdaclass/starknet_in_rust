@@ -269,78 +269,54 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Vec<Felt>, SyscallHandlerError> {
-        // Parse request and prepare the call.
-        let request =
-            match self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)? {
-                SyscallRequest::CallContract(request) => request,
-                _ => return Err(SyscallHandlerError::ExpectedCallContract),
-            };
+        let request = self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        let mut class_hash = None;
-        let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
-
+        let class_hash;
         let contract_address;
         let caller_address;
-        let entry_point_type;
         let call_type;
-        match syscall_name {
-            "call_contract" => {
+        let call_data;
+
+        // TODO: What about `delegate_call`, `delegate_l1_handler` and `library_call_l1_handler`?
+        //   The call to `self._read_and_validate_syscall_request()` will always fail in those
+        //   cases.
+        match request {
+            SyscallRequest::LibraryCall(request) => {
+                class_hash = Some(felt_to_hash(&request.class_hash));
+                contract_address = self.contract_address.clone();
+                caller_address = self.caller_address.clone();
+                call_type = CallType::Delegate;
+                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
+            }
+            SyscallRequest::CallContract(request) => {
+                class_hash = None;
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
-                entry_point_type = EntryPointType::External;
                 call_type = CallType::Call;
+                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
             }
-            "delegate_call" => {
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::External;
-                call_type = CallType::Delegate;
-            }
-            "delegate_l1_handler" => {
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::L1Handler;
-                call_type = CallType::Delegate;
-            }
-            "library_call" => {
-                class_hash = Some(felt_to_hash(&request.class_hash));
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::External;
-                call_type = CallType::Delegate;
-            }
-            "library_call_l1_handler" => {
-                class_hash = Some(felt_to_hash(&request.class_hash));
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::L1Handler;
-                call_type = CallType::Delegate;
-            }
-            _ => {
-                return Err(SyscallHandlerError::UnknownSyscall(
-                    syscall_name.to_string(),
-                ))
-            }
+            _ => todo!(),
         }
 
-        let call = ExecutionEntryPoint::new(
+        let entry_point = ExecutionEntryPoint::new(
             contract_address,
-            calldata,
+            call_data,
             EXECUTE_ENTRY_POINT_SELECTOR.clone(),
             caller_address,
-            entry_point_type,
-            call_type.into(),
+            EntryPointType::External,
+            Some(call_type),
             class_hash,
         );
 
-        call.execute(
-            &mut self.state,
-            &self.general_config,
-            &mut self.resources_manager,
-            &self.tx_execution_context,
-        )
-        .map(|x| x.retdata)
-        .map_err(|_| todo!())
+        entry_point
+            .execute(
+                &mut self.state,
+                &self.general_config,
+                &mut self.resources_manager,
+                &self.tx_execution_context,
+            )
+            .map(|x| x.retdata)
+            .map_err(|e| todo!("{}", e))
     }
 
     fn get_block_info(&self) -> &BlockInfo {
