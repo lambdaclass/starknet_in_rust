@@ -45,7 +45,6 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
-    pub(crate) block_info: BlockInfo,
     pub(crate) state: T,
     pub(crate) starknet_storage_state: ContractStorageState<T>,
     pub(crate) internal_calls: Vec<CallInfo>,
@@ -54,7 +53,7 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
 
 impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     pub fn new(
-        _tx_execution_context: TransactionExecutionContext,
+        tx_execution_context: TransactionExecutionContext,
         state: T,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
@@ -62,12 +61,9 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
-        let block_info = general_config.block_info;
         let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
         let l2_to_l1_messages = Vec::new();
-        let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
         let starknet_storage_state =
             ContractStorageState::new(state.clone(), contract_address.clone());
@@ -84,7 +80,6 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
-            block_info,
             state,
             starknet_storage_state,
             internal_calls,
@@ -124,7 +119,8 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
-        let general_config = StarknetGeneralConfig::default();
+        let mut general_config = StarknetGeneralConfig::default();
+        general_config.block_info = block_info;
         let tx_info_ptr = None;
         let starknet_storage_state =
             ContractStorageState::new(state.clone(), contract_address.clone());
@@ -142,7 +138,6 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
-            block_info,
             state,
             starknet_storage_state,
             internal_calls,
@@ -349,7 +344,7 @@ where
     }
 
     fn get_block_info(&self) -> &BlockInfo {
-        &self.block_info
+        &self.general_config.block_info
     }
 
     fn _get_caller_address(

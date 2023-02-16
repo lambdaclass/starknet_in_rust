@@ -16,7 +16,8 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
-use std::collections::HashMap;
+use num_traits::ToPrimitive;
+use std::{borrow::Cow, collections::HashMap};
 
 pub(crate) struct StarknetRunner<H>
 where
@@ -65,17 +66,28 @@ where
     }
 
     pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
-        self.vm
+        let ret_data = self
+            .vm
             .get_return_values(2)
-            .map_err(StarknetRunnerError::MemoryException)?
-            .into_iter()
-            .map(|val| match val {
-                MaybeRelocatable::Int(felt) => Ok(felt),
-                MaybeRelocatable::RelocatableValue(r) => {
-                    Ok(self.vm.get_integer(&r).unwrap().into_owned())
-                }
-            })
-            .collect::<Result<Vec<Felt>, _>>()
+            .map_err(StarknetRunnerError::MemoryException)?;
+
+        let n_rets = ret_data[0]
+            .get_int_ref()
+            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+        let ret_ptr = ret_data[1]
+            .get_relocatable()
+            .map_err(|_| StarknetRunnerError::NotARelocatable)?;
+
+        let ret_data = self
+            .vm
+            .get_integer_range(
+                &ret_ptr,
+                n_rets
+                    .to_usize()
+                    .ok_or(StarknetRunnerError::DataConvertionError)?,
+            )
+            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+        Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
     pub(crate) fn prepare_os_context(&mut self) -> Vec<MaybeRelocatable> {

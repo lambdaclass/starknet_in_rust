@@ -4,7 +4,7 @@ use getset::{CopyGetters, MutGetters};
 use num_traits::Zero;
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum StarknetChainId {
+pub enum StarknetChainId {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     MainNet,
@@ -26,19 +26,21 @@ impl ToString for StarknetChainId {
 }
 
 impl StarknetChainId {
-    pub(crate) fn to_felt(self) -> Felt {
+    pub fn to_felt(self) -> Felt {
         Felt::from_bytes_be(self.to_string().as_bytes())
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct StarknetOsConfig {
+#[derive(Debug, Clone, MutGetters)]
+pub struct StarknetOsConfig {
+    #[get_mut = "pub"]
     pub(crate) chain_id: StarknetChainId,
     pub(crate) _fee_token_address: Address,
 }
 
 #[derive(Clone, Debug, CopyGetters, MutGetters)]
 pub struct StarknetGeneralConfig {
+    #[get_mut = "pub"]
     pub(crate) starknet_os_config: StarknetOsConfig,
     _contract_storage_commitment_tree_height: u64,
     _global_state_commitment_tree_height: u64,
