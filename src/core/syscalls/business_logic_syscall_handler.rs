@@ -20,8 +20,9 @@ use crate::{
     definitions::{constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::EntryPointType,
+    services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
     utils::*,
+    utils_errors::UtilsError,
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -185,10 +186,10 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
         let constructor_entry_points = contract_class
             .entry_points_by_type
             .get(&EntryPointType::Constructor)
-            .unwrap();
-        if constructor_entry_points.len() == 0 {
-            if constructor_calldata.len() != 0 {
-                panic!()
+            .ok_or(ContractClassError::NoneEntryPointType)?;
+        if constructor_entry_points.is_empty() {
+            if !constructor_calldata.is_empty() {
+                return Err(StateError::ConstructorEntryPointsError());
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -212,14 +213,14 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
             None,
         );
 
-        let _x = call
+        let _call_info = call
             .execute(
                 &mut self.state,
                 &self.general_config,
                 &mut self.resources_manager,
-                &mut self.tx_execution_context,
+                &self.tx_execution_context,
             )
-            .unwrap();
+            .map_err(|_| StateError::ExecutionEntryPointError())?;
         Ok(())
     }
 }
@@ -312,12 +313,14 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: [u8; 32] = request.class_hash.to_bytes_be().try_into().unwrap();
+        let class_hash_bytes: [u8; 32] = request
+            .class_hash
+            .to_bytes_be()
+            .try_into()
+            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(request.class_hash.clone()))?;
 
-        let _x = self
-            .state
-            .deploy_contract(contract_address.clone(), class_hash_bytes)
-            .unwrap();
+        self.state
+            .deploy_contract(contract_address.clone(), class_hash_bytes)?;
 
         self.execute_constructor_entry_point(
             &contract_address,
