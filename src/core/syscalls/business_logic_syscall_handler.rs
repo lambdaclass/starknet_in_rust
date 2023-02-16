@@ -269,8 +269,6 @@ where
         todo!()
     }
 
-    // TODO: I give up trying to fix the warnings in this method.
-    #[allow(unused)]
     fn _call_contract(
         &mut self,
         syscall_name: &str,
@@ -284,10 +282,8 @@ where
                 _ => return Err(SyscallHandlerError::ExpectedCallContract),
             };
 
-        let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
-
-        let mut code_address = None;
         let mut class_hash = None;
+        let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
 
         let contract_address;
         let caller_address;
@@ -295,21 +291,18 @@ where
         let call_type;
         match syscall_name {
             "call_contract" => {
-                code_address = Some(request.contract_address.clone());
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
                 entry_point_type = EntryPointType::External;
                 call_type = CallType::Call;
             }
             "delegate_call" => {
-                code_address = Some(request.contract_address);
                 contract_address = self.contract_address.clone();
                 caller_address = self.caller_address.clone();
                 entry_point_type = EntryPointType::External;
                 call_type = CallType::Delegate;
             }
             "delegate_l1_handler" => {
-                code_address = Some(request.contract_address);
                 contract_address = self.contract_address.clone();
                 caller_address = self.caller_address.clone();
                 entry_point_type = EntryPointType::L1Handler;
