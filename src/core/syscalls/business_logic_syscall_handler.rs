@@ -3,7 +3,10 @@ use super::{
 };
 use crate::{
     business_logic::{
-        execution::{execution_errors::ExecutionError, objects::*},
+        execution::{
+            execution_entry_point::ExecutionEntryPoint, execution_errors::ExecutionError,
+            objects::*,
+        },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
@@ -14,9 +17,10 @@ use crate::{
             state_api_objects::BlockInfo,
         },
     },
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
+    public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::contract_class::EntryPointType,
     starknet_storage::dict_storage::DictStorage,
     utils::*,
@@ -195,6 +199,54 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         }
         Ok(())
     }
+
+    fn execute_constructor_entry_point(
+        &mut self,
+        contract_address: &Address,
+        class_hash_bytes: [u8; 32],
+        constructor_calldata: Vec<Felt>,
+    ) -> Result<(), StateError> {
+        let contract_class = self.state.get_contract_class(&class_hash_bytes)?;
+        let constructor_entry_points = contract_class
+            .entry_points_by_type
+            .get(&EntryPointType::Constructor)
+            .unwrap();
+        if constructor_entry_points.len() == 0 {
+            if constructor_calldata.len() != 0 {
+                panic!()
+            }
+
+            let call_info = CallInfo::empty_constructor_call(
+                contract_address.clone(),
+                self.caller_address.clone(),
+                Some(class_hash_bytes),
+            );
+            self.internal_calls.push(call_info);
+
+            return Ok(());
+        }
+        //TODO
+        // check type execute_entry_point_cls
+        let call = ExecutionEntryPoint::new(
+            contract_address.clone(),
+            constructor_calldata,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            self.contract_address.clone(),
+            EntryPointType::Constructor,
+            Some(CallType::Call),
+            None,
+        );
+
+        let _x = call
+            .execute(
+                &mut self.state,
+                &self.general_config,
+                &mut self.resources_manager,
+                &mut self.tx_execution_context,
+            )
+            .unwrap();
+        Ok(())
+    }
 }
 
 impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHandler<T> {
@@ -274,17 +326,27 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
             Address(0.into())
         };
 
-        let _contract_address = calculate_contract_address(
+        let contract_address = Address(calculate_contract_address(
             &Address(request.contract_address_salt),
             class_hash,
             &constructor_calldata,
             deployer_address,
-        )?;
+        )?);
 
         // Initialize the contract.
-        let _class_hash_bytes = request.class_hash.to_bytes_be();
+        let class_hash_bytes: [u8; 32] = request.class_hash.to_bytes_be().try_into().unwrap();
 
-        todo!()
+        let _x = self
+            .state
+            .deploy_contract(contract_address.clone(), class_hash_bytes)
+            .unwrap();
+
+        self.execute_constructor_entry_point(
+            &contract_address,
+            class_hash_bytes,
+            constructor_calldata,
+        )?;
+        Ok(contract_address)
     }
 
     // TODO: I give up trying to fix the warnings in this method.
