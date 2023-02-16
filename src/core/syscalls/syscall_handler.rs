@@ -3,7 +3,7 @@ use super::{
     os_syscall_handler::OsSyscallHandler,
     syscall_request::*,
     syscall_response::{
-        CallContractResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
+        CallContractResponse, DeployResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
         GetCallerAddressResponse, GetContractAddressResponse, GetSequencerAddressResponse,
         GetTxInfoResponse, GetTxSignatureResponse, StorageReadResponse, WriteSyscallResponse,
     },
@@ -104,6 +104,28 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError>;
+
+    fn deploy(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let contract_address = self._deploy(vm, syscall_ptr)?;
+
+        let response = DeployResponse::new(
+            contract_address.0,
+            0.into(),
+            // TODO
+            // Check this
+            Relocatable {
+                segment_index: 0,
+                offset: 0,
+            },
+        );
+        response.write_syscall_response(vm, syscall_ptr)?;
+
+        Ok(())
+    }
 
     fn _read_and_validate_syscall_request(
         &mut self,

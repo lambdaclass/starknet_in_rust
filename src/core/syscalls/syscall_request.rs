@@ -464,3 +464,8 @@ impl CountFields for CallContractRequest {
         5
     }
 }
+impl CountFields for DeployRequestStruct {
+    fn count_fields() -> usize {
+        6
+    }
+}
