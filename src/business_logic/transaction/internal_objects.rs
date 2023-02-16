@@ -4,8 +4,8 @@ use crate::{
         execution::objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         fact_state::state::ExecutionResourcesManager,
         state::{
+            cached_state::CachedState,
             state_api::{State, StateReader},
-            update_tracker_state::UpdatesTrackerState,
         },
     },
     core::{
@@ -77,9 +77,9 @@ impl InternalDeploy {
         self.contract_hash
     }
 
-    pub fn _apply_specific_concurrent_changes<S: State + StateReader>(
+    pub fn _apply_specific_concurrent_changes<S: State + StateReader + Clone>(
         &self,
-        mut state: UpdatesTrackerState<S>,
+        mut state: CachedState<S>,
         _general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
@@ -102,9 +102,9 @@ impl InternalDeploy {
         (fee_transfer_info, actual_fee)
     }
 
-    pub fn handle_empty_constructor<S: State + StateReader>(
+    pub fn handle_empty_constructor<S: State + StateReader + Clone>(
         &self,
-        state: UpdatesTrackerState<S>,
+        state: CachedState<S>,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         if self.constructor_calldata.is_empty() {
             return Err(StarkwareError::TransactionFailed);
@@ -142,9 +142,9 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor<S: State>(
+    pub fn invoke_constructor<S: State + StateReader + Clone>(
         &self,
-        _state: UpdatesTrackerState<S>,
+        _state: CachedState<S>,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo {
         // TODO: uncomment once execute entry point has been implemented
