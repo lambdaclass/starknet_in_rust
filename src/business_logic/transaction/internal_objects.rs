@@ -127,7 +127,7 @@ impl InternalDeploy {
             resources_manager,
             &[Some(call_info.clone())],
             self.tx_type.clone(),
-            state,
+            state.count_actual_storage_changes(),
             None,
         )
         .map_err(|_| StarkwareError::UnexpectedHolesL2toL1Messages)?;

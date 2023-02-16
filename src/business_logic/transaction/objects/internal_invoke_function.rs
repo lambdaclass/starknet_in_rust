@@ -10,7 +10,7 @@ use crate::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::cached_state::{CachedState, ContractClassCache},
+        state::cached_state::CachedState,
         transaction::transaction_errors::TransactionError,
     },
     definitions::{
@@ -116,7 +116,6 @@ impl InternalInvokeFunction {
     fn _apply_specific_concurrent_changes(
         &self,
         state: &mut CachedState<InMemoryStateReader>,
-        contract_classes: Option<ContractClassCache>,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
@@ -126,12 +125,11 @@ impl InternalInvokeFunction {
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
-        let updates_tracker_state = CachedState::new(state.clone(), contract_classes);
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
             self.tx_type.clone(),
-            updates_tracker_state,
+            state.count_actual_storage_changes(),
             None,
         )?;
         let transaction_execution_info =
@@ -218,7 +216,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            ._apply_specific_concurrent_changes(&mut state, None, &StarknetGeneralConfig::default())
+            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
