@@ -310,9 +310,11 @@ pub(crate) trait SyscallHandler {
             )),
         }
     }
+}
 
+pub(crate) trait SyscallHandlerPostRun {
     /// Performs post run syscall related tasks (if any).
-    fn _post_run(
+    fn post_run(
         &self,
         _runner: &mut VirtualMachine,
         _syscall_stop_ptr: Relocatable,

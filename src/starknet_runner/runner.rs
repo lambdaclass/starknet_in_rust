@@ -1,7 +1,9 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
     business_logic::execution::execution_errors::ExecutionError,
-    core::syscalls::syscall_handler::{SyscallHandler, SyscallHintProcessor},
+    core::syscalls::syscall_handler::{
+        SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
+    },
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -164,7 +166,10 @@ where
     pub(crate) fn validate_and_process_os_context(
         &mut self,
         initial_os_context: Vec<MaybeRelocatable>,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), ExecutionError>
+    where
+        H: SyscallHandlerPostRun,
+    {
         // The returned values are os_context, retdata_size, retdata_ptr.
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
         let stack_pointer = os_context_end;
@@ -187,7 +192,7 @@ where
 
         self.hint_processor
             .syscall_handler
-            ._post_run(&mut self.vm, syscall_stop_ptr.get_relocatable()?)?;
+            .post_run(&mut self.vm, syscall_stop_ptr.get_relocatable()?)?;
 
         Ok(())
     }

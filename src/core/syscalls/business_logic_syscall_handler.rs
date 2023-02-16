@@ -1,5 +1,7 @@
 use super::{
-    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name, syscall_request::*,
+    syscall_handler::{SyscallHandler, SyscallHandlerPostRun},
+    syscall_info::get_syscall_size_from_name,
+    syscall_request::*,
 };
 use crate::{
     business_logic::{
@@ -471,8 +473,13 @@ where
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
+}
 
-    fn _post_run(
+impl<T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<T>
+where
+    T: Clone + Default + State + StateReader,
+{
+    fn post_run(
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
