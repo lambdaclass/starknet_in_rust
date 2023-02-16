@@ -28,10 +28,10 @@ compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
 
 cairo_programs/%.json: cairo_programs/%.cairo
-	cairo-compile $< --output $@
+	cairo-compile $< --output $@ || rm $@
 
 tests/%.json: tests/%.cairo
-	starknet-compile $< --output $@
+	starknet-compile $< --output $@ || rm $@
 
 
 #
