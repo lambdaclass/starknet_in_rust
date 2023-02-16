@@ -2,8 +2,9 @@ use super::{errors::storage_errors::StorageError, storage::Storage};
 use std::collections::HashMap;
 
 pub type StorageKey = (Prefix, [u8; 32]);
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct DictStorage {
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DictStorage {
     storage: HashMap<StorageKey, Vec<u8>>,
 }
 

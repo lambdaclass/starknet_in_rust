@@ -18,8 +18,6 @@ use std::{collections::HashMap, path::Path};
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
 
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
         Path::new("cairo_programs/contracts.json"),
@@ -27,8 +25,6 @@ fn load_program() -> Result<Program, ContractAddressError> {
     )?)
 }
 
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
 fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
@@ -55,8 +51,6 @@ fn get_contract_entry_points(
 }
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
 fn starknet_keccak(data: &[u8]) -> Felt {
     let mut hasher = Keccak256::new();
     hasher.update(data);
@@ -72,8 +66,6 @@ fn starknet_keccak(data: &[u8]) -> Felt {
 
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
 fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt {
     let keccak_input =
         r#"{"abi": contract_class.abi, "program": contract_class.program}"#.as_bytes();
@@ -81,8 +73,6 @@ fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt {
 }
 
 /// Returns the serialization of a contract as a list of field elements.
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
 fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
@@ -168,8 +158,6 @@ impl From<StructContractClass> for CairoArg {
     }
 }
 
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt, ContractAddressError> {

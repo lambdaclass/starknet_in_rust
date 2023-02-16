@@ -58,11 +58,10 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        _general_config: StarknetGeneralConfig,
+        general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
-        // TODO: check work arounds to pass block info
-        let block_info = BlockInfo::default();
+        let block_info = general_config.block_info;
         let events = Vec::new();
         let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
@@ -151,24 +150,25 @@ impl<T: State + StateReader + Clone> BusinessLogicSyscallHandler<T> {
     }
 
     /// Performs post run syscall related tasks.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub(crate) fn post_run(
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: MaybeRelocatable,
     ) -> Result<(), ExecutionError> {
         let expected_stop_ptr = self.expected_syscall_ptr;
+
         let syscall_ptr = match syscall_stop_ptr {
             MaybeRelocatable::RelocatableValue(val) => val,
             _ => return Err(ExecutionError::NotARelocatableValue),
         };
+
         if syscall_ptr != expected_stop_ptr {
             return Err(ExecutionError::InvalidStopPointer(
                 expected_stop_ptr,
                 syscall_ptr,
             ));
         }
+
         self.validate_read_only_segments(runner)
     }
 
@@ -480,7 +480,6 @@ impl<T: State + StateReader + Clone> SyscallHandler for BusinessLogicSyscallHand
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        println!("syscall_name = {syscall_name}");
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
