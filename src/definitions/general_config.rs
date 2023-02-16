@@ -33,21 +33,6 @@ impl StarknetChainId {
     pub(crate) fn to_felt(self) -> Felt {
         Felt::from_bytes_be(self.to_string().as_bytes())
     }
-
-    pub(crate) fn as_u64(&self) -> Result<u64, StarknetChainIdError> {
-        let mut id = self.to_string().as_bytes().to_vec();
-
-        match id.len() {
-            (0..=7) | 8 => {
-                id.resize_with(8, || 0);
-                let bytes = id
-                    .try_into()
-                    .map_err(|_| StarknetChainIdError::ConversionErrorToBytes)?;
-                Ok(u64::from_ne_bytes(bytes))
-            }
-            _ => Err(StarknetChainIdError::ConversionErrorToBytes),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

@@ -202,7 +202,7 @@ pub(crate) struct InternalDeclare {
 impl InternalDeclare {
     pub fn new(
         contract_class: ContractClass,
-        chain_id: u64,
+        chain_id: Felt,
         sender_address: Address,
         max_fee: u64,
         version: u64,
@@ -210,9 +210,9 @@ impl InternalDeclare {
         nonce: Felt,
     ) -> Result<Self, TransactionError> {
         let hash = compute_class_hash(&contract_class.clone())?;
+
         let class_hash = hash
-            .to_string()
-            .as_bytes()
+            .to_bytes_be()
             .try_into()
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(hash.clone()))?;
 
@@ -244,6 +244,7 @@ impl InternalDeclare {
         };
 
         internal_declare.verify_version()?;
+
         Ok(internal_declare)
     }
 
@@ -257,7 +258,7 @@ impl InternalDeclare {
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
         // no need to check if its lesser than 0 because it is an usize
-        if self.version > u64::pow(2, 128) {
+        if self.version > u64::pow(2, 63) {
             return Err(TransactionError::StarknetError(
                 "The sender_address field in Declare transactions of version 0, sender should be 1"
                     .to_string(),
@@ -337,7 +338,7 @@ impl InternalDeclare {
         resources_manager: &mut ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
-        if self.version > u64::pow(2, 128) {
+        if self.version > u64::pow(2, 63) {
             return Ok(None);
         }
 
@@ -446,7 +447,9 @@ mod tests {
 
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
+            fact_state::{
+                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+            },
             state::cached_state::CachedState,
         },
         definitions::general_config::{StarknetChainId, StarknetGeneralConfig},
@@ -461,30 +464,45 @@ mod tests {
     fn test_internal_declare() {
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let chain_id = StarknetChainId::MainNet.as_u64().unwrap();
+        let chain_id = StarknetChainId::TestNet.to_felt();
 
         let internal_declare = InternalDeclare::new(
-            contract_class,
+            contract_class.clone(),
             chain_id,
-            Address(0.into()),
-            5,
-            2,
+            Address(1111.into()),
+            0,
+            0,
             Vec::new(),
             0.into(),
         )
         .unwrap();
 
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
-        let mut state = CachedState::new(state_reader, None);
+        let mut contract_class_cache = HashMap::new();
 
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
-        // Set contract_class
-        let class_hash: [u8; 32] = [1; 32];
+        //  ------------ contract data --------------------
 
-        assert!(internal_declare
-            .apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
-            .is_ok())
+        let address = Address(1111.into());
+        let class_hash = [1; 32];
+        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        state_reader
+            .contract_states
+            .insert(address.clone(), contract_state);
+
+        //* ---------------------------------------
+        //*    Create state with previous data
+        //* ---------------------------------------
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        println!(
+            "{:?}",
+            internal_declare
+                .apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
+        );
     }
 }

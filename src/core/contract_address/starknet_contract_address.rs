@@ -34,12 +34,14 @@ fn get_contract_entry_points(
     entry_point_type: &EntryPointType,
 ) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
     let program_length = contract_class.program.data.len();
+
     let entry_points = contract_class
         .entry_points_by_type
         .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
+
     for entry_point in entry_points {
-        if (Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()) {
+        if !(Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()) {
             return Err(ContractAddressError::InvalidOffset(
                 entry_point.offset.clone(),
             ));
@@ -90,7 +92,6 @@ fn get_contract_class_struct(
     let api_version = identifiers.get("__main__.API_VERSION").ok_or_else(|| {
         ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
     })?;
-
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
@@ -177,10 +178,10 @@ pub(crate) fn compute_class_hash(
     let program = load_program()?;
     let contract_class_struct =
         &get_contract_class_struct(&program.identifiers, contract_class)?.into();
+
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all", false)?;
     runner.initialize_function_runner(&mut vm)?;
-
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
     // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
