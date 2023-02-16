@@ -46,7 +46,7 @@ fn test_contract(
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
-        Address(1111.into()),
+        contract_address.clone(),
         vec![],
         entry_point_selector.clone(),
         caller_address.clone(),
@@ -148,6 +148,26 @@ fn get_caller_address_syscall() {
     };
 
     run(0.into());
+    run(5.into());
+    run(1000.into());
+}
+
+#[test]
+fn get_contract_address_syscall() {
+    let run = |contract_address: Felt| {
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_contract_address",
+            [1; 32],
+            3,
+            Address(contract_address.clone()),
+            Address(0.into()),
+            StarknetGeneralConfig::default(),
+            [felt_str!("1"), contract_address],
+        );
+    };
+
+    run(1.into());
     run(5.into());
     run(1000.into());
 }
