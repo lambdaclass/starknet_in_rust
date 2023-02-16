@@ -5,6 +5,7 @@ from starkware.starknet.common.syscalls import (
     get_block_timestamp,
     get_caller_address,
     get_contract_address,
+    get_sequencer_address,
 )
 
 @external
@@ -33,4 +34,11 @@ func test_get_contract_address{syscall_ptr: felt*}() -> (contract_address: felt)
     let contract_address = get_contract_address();
 
     return (contract_address);
+}
+
+@external
+func test_get_sequencer_address{syscall_ptr: felt*}() -> (sequencer_address: felt) {
+    let sequencer_address = get_sequencer_address();
+
+    return (sequencer_address);
 }

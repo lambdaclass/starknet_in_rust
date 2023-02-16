@@ -171,3 +171,26 @@ fn get_contract_address_syscall() {
     run(5.into());
     run(1000.into());
 }
+
+#[test]
+fn get_sequencer_address_syscall() {
+    let run = |sequencer_address: Felt| {
+        let mut general_config = StarknetGeneralConfig::default();
+        general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
+
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_sequencer_address",
+            [1; 32],
+            3,
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            [felt_str!("1"), sequencer_address],
+        );
+    };
+
+    run(0.into());
+    run(5.into());
+    run(1000.into());
+}
