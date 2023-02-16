@@ -28,7 +28,7 @@ use num_traits::ToPrimitive;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
-pub(crate) struct ExecutionEntryPoint {
+pub struct ExecutionEntryPoint {
     call_type: CallType,
     contract_address: Address,
     code_address: Option<Address>,
@@ -40,8 +40,6 @@ pub(crate) struct ExecutionEntryPoint {
 }
 
 impl ExecutionEntryPoint {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn new(
         contract_address: Address,
         calldata: Vec<Felt>,
@@ -81,7 +79,7 @@ impl ExecutionEntryPoint {
 
         let runner = self.run(
             state,
-            &resources_manager.clone(),
+            resources_manager,
             general_config,
             tx_execution_context,
         )?;

@@ -589,7 +589,7 @@ mod tests {
 
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(GET_BLOCK_TIMESTAMP.to_string(), ids_data);
         // invoke syscall
         let mut syscall_handler = SyscallHintProcessor::new_empty();
         syscall_handler

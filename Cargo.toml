@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22" }
 felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22" }
+getset = "0.1.2"
 num-bigint = { version = "0.4", features = ["serde"] }
 num-integer = "0.1.45"
 num-traits = "0.2.15"
