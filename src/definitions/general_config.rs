@@ -47,7 +47,6 @@ pub struct StarknetGeneralConfig {
     pub(crate) starknet_os_config: StarknetOsConfig,
     pub(crate) contract_storage_commitment_tree_height: u64,
     global_state_commitment_tree_height: u64,
-    pub(crate) sequencer_address: Address,
     pub(crate) cairo_resource_fee_weights: HashMap<String, f64>,
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
@@ -70,7 +69,6 @@ impl StarknetGeneralConfig {
             starknet_os_config,
             contract_storage_commitment_tree_height: contract_storage_commitment_tree_height,
             global_state_commitment_tree_height: global_state_commitment_tree_height,
-            sequencer_address,
             invoke_tx_max_n_steps,
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,
@@ -89,7 +87,6 @@ impl Default for StarknetGeneralConfig {
             },
             contract_storage_commitment_tree_height: 0,
             global_state_commitment_tree_height: 0,
-            sequencer_address: Address(0.into()),
             invoke_tx_max_n_steps: 0,
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,

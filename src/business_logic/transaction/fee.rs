@@ -39,7 +39,7 @@ pub(crate) fn execute_fee_transfer(
     let fee_token_address = general_config.starknet_os_config.fee_token_address.clone();
 
     let calldata = [
-        general_config.sequencer_address.0.clone(),
+        general_config.block_info.sequencer_address.0.clone(),
         Felt::from_bytes_be(&actual_fee.to_be_bytes()),
         0.into(),
     ]
