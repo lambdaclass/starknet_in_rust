@@ -271,6 +271,7 @@ where
     ) -> Result<Vec<Felt>, SyscallHandlerError> {
         let request = self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
+        let function_selector;
         let class_hash;
         let contract_address;
         let caller_address;
@@ -282,6 +283,7 @@ where
         //   cases.
         match request {
             SyscallRequest::LibraryCall(request) => {
+                function_selector = request.function_selector;
                 class_hash = Some(felt_to_hash(&request.class_hash));
                 contract_address = self.contract_address.clone();
                 caller_address = self.caller_address.clone();
@@ -289,6 +291,7 @@ where
                 call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
             }
             SyscallRequest::CallContract(request) => {
+                function_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
                 class_hash = None;
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
@@ -301,7 +304,7 @@ where
         let entry_point = ExecutionEntryPoint::new(
             contract_address,
             call_data,
-            EXECUTE_ENTRY_POINT_SELECTOR.clone(),
+            function_selector,
             caller_address,
             EntryPointType::External,
             Some(call_type),

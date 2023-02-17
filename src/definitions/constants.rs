@@ -17,6 +17,7 @@ pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
 pub const TRANSACTION_VERSION: u64 = 1;
 
 lazy_static! {
+    // EXECUTE_ENTRY_POINT_SELECTOR = sn_keccak("__execute__");
     pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt = Felt::from_str_radix(
         "617075754465154585683856897856256838130216341506379215893724690153393808813",
         10,
