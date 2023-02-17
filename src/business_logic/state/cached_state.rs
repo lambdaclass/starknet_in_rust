@@ -56,6 +56,12 @@ impl<T: StateReader + Clone> CachedState<T> {
         // TODO assert: if self.state_reader == parent
         parent.cache.update_writes_from_other(&self.cache);
     }
+
+    pub(crate) fn copy_and_apply(&mut self) -> Self {
+        let mut copied_state = self.clone();
+        copied_state.apply(self);
+        copied_state
+    }
 }
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {

@@ -25,13 +25,13 @@ use num_traits::Zero;
 use std::collections::HashMap;
 
 pub struct InternalDeploy {
-    hash_value: Felt,
-    version: u64,
-    contract_address: Address,
-    _contract_address_salt: Address,
-    contract_hash: [u8; 32],
-    constructor_calldata: Vec<Felt>,
-    tx_type: TransactionType,
+    pub(crate) hash_value: Felt,
+    pub(crate) version: u64,
+    pub(crate) contract_address: Address,
+    pub(crate) contract_address_salt: Address,
+    pub(crate) contract_hash: [u8; 32],
+    pub(crate) constructor_calldata: Vec<Felt>,
+    pub(crate) tx_type: TransactionType,
 }
 
 impl InternalDeploy {
@@ -39,7 +39,7 @@ impl InternalDeploy {
         contract_address_salt: Address,
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt>,
-        chain_id: u64,
+        chain_id: Felt,
         version: u64,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_class_hash(&contract_class)
@@ -66,7 +66,7 @@ impl InternalDeploy {
             hash_value,
             version,
             contract_address,
-            _contract_address_salt: contract_address_salt,
+            contract_address_salt,
             contract_hash,
             constructor_calldata,
             tx_type: TransactionType::Deploy,

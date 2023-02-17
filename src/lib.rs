@@ -1,5 +1,5 @@
 #![deny(warnings)]
-
+#![allow(unused)]
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
@@ -13,5 +13,6 @@ pub mod services;
 pub mod starknet_runner;
 pub mod starknet_storage;
 pub mod starkware_utils;
+pub mod testing;
 pub mod utils;
 pub mod utils_errors;
