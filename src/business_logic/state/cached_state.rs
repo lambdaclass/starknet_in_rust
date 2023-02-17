@@ -135,17 +135,16 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             ));
         }
 
-        let current_class_hash = self.get_class_hash_at(&contract_address)?;
+        // let current_class_hash = self.get_class_hash_at(&contract_address)?;
+        // if current_class_hash == UNINITIALIZED_CLASS_HASH {
+        //     return Err(StateError::ContractAddressUnavailable(
+        //         contract_address.clone(),
+        //     ));
+        // }
 
-        if current_class_hash == UNINITIALIZED_CLASS_HASH {
-            return Err(StateError::ContractAddressUnavailable(
-                contract_address.clone(),
-            ));
-        }
         self.cache
             .class_hash_writes
             .insert(contract_address, class_hash);
-
         Ok(())
     }
 

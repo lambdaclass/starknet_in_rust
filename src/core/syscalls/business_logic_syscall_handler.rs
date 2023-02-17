@@ -321,7 +321,6 @@ where
 
         self.state
             .deploy_contract(contract_address.clone(), class_hash_bytes)?;
-
         self.execute_constructor_entry_point(
             &contract_address,
             class_hash_bytes,
@@ -570,7 +569,7 @@ mod tests {
         },
         core::{
             errors::syscall_handler_errors::SyscallHandlerError,
-            syscalls::{hint_code::*, syscall_handler::SyscallHandler},
+            syscalls::syscall_handler::SyscallHandler,
         },
         utils::test_utils::*,
     };
@@ -619,17 +618,6 @@ mod tests {
                     MaybeRelocatable::from((3, 0))
                 )
             )))
-        );
-    }
-
-    // tests that we are executing correctly our syscall hint processor.
-    #[test]
-    fn cannot_run_syscall_hints() {
-        let hint_code = DEPLOY;
-        let mut vm = vm!();
-        assert_eq!(
-            run_syscall_hint!(vm, HashMap::new(), hint_code),
-            Err(HintError::UnknownHint("Hint not implemented".to_string()))
         );
     }
 

@@ -1294,24 +1294,7 @@ mod tests {
     #[test]
     fn test_bl_deploy_ok() {
         let mut vm = vm!();
-        add_segments!(vm, 5);
-
-        /*
-        pub(crate) struct DeployRequestStruct {
-            // The system call selector (= DEPLOY_SELECTOR).
-            pub(crate) _selector: Felt,
-            // The hash of the class to deploy.
-            pub(crate) class_hash: Felt,
-            // A salt for the new contract address calculation.
-            pub(crate) contract_address_salt: Felt,
-            // The size of the calldata for the constructor.
-            pub(crate) constructor_calldata_size: Felt,
-            // The calldata for the constructor.
-            pub(crate) constructor_calldata: Relocatable,
-            // Used for deterministic contract address deployment.
-            pub(crate) deploy_from_zero: usize,
-        }
-        */
+        add_segments!(vm, 4);
 
         let class_hash = Felt::from_str_radix(
             "1215168005085055857675365806969314642935061883819937321769541068937433120021823",
@@ -1324,7 +1307,7 @@ mod tests {
             [
                 ((1, 0), (2, 0)), //  syscall_ptr
                 ((2, 0), 10),     // DeployRequestStruct._selector
-                // ((2, 1), 11),     // DeployRequestStruct.class_hash
+                // ((2, 1), class_hash),     // DeployRequestStruct.class_hash
                 ((2, 2), 12),     // DeployRequestStruct.contract_address_salt
                 ((2, 3), 0),      // DeployRequestStruct.constructor_calldata_size
                 ((2, 4), (3, 0)), // DeployRequestStruct.constructor_calldata
@@ -1335,19 +1318,21 @@ mod tests {
         vm.insert_value(&relocatable!(2, 1), class_hash.clone())
             .unwrap();
 
-        // syscall_ptr
+        // Hinta data
         let ids_data = ids_data!["syscall_ptr"];
-
         let hint_data = HintProcessorData::new_default(DEPLOY.to_string(), ids_data);
 
-        // invoke syscall
+        // Create SyscallHintProcessor
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
 
+        // Initialize state.set_contract_classes
         syscall_handler_hint_processor
             .syscall_handler
             .state
             .set_contract_classes(HashMap::new())
             .unwrap();
+
+        // Set contract class
         let contract_class =
             ContractClass::try_from(PathBuf::from("tests/fibonacci.json")).unwrap();
         syscall_handler_hint_processor
@@ -1359,21 +1344,23 @@ mod tests {
             )
             .unwrap();
 
-        let a = Felt::from_str_radix(
-            "3233581368158591292633945606292998913869187401587828558898041011188015193859",
-            10,
-        )
-        .unwrap();
-        syscall_handler_hint_processor
-            .syscall_handler
-            .state
-            .cache
-            .class_hash_writes
-            .insert(
-                Address(a.clone()),
-                class_hash.clone().to_bytes_be().try_into().unwrap(),
-            );
+        // Set Address to class hash
+        // let a = Felt::from_str_radix(
+        //     "3233581368158591292633945606292998913869187401587828558898041011188015193859",
+        //     10,
+        // )
+        // .unwrap();
+        // syscall_handler_hint_processor
+        //     .syscall_handler
+        //     .state
+        //     .cache
+        //     .class_hash_writes
+        //     .insert(
+        //         Address(a.clone()),
+        //         class_hash.clone().to_bytes_be().try_into().unwrap(),
+        //     );
 
+        // Execute Deploy hint
         let result = syscall_handler_hint_processor.execute_hint(
             &mut vm,
             &mut ExecutionScopes::new(),
