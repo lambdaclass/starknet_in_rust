@@ -36,7 +36,7 @@ fn test_contract(
 
 
     //* --------------------------------------------
-    //*       Create example contract data
+    //*       Create a default contract data
     //* --------------------------------------------
 
     let contract_address = Address(1111.into());
@@ -57,9 +57,11 @@ fn test_contract(
             TRANSACTION_VERSION,
         );
 
-    //* -----------------------------------------
+    //* --------------------------------------------
     //*  Create starknet state with the contract
-    //* -----------------------------------------
+    //*  (This would be the equivalent of  
+    //*  declaring and deploying the contract)
+    //* -------------------------------------------
 
     let contract_state = ContractState::new(
         class_hash,
@@ -70,6 +72,7 @@ fn test_contract(
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);
+    
     let mut state = CachedState::new(
         state_reader,
         Some([(class_hash, contract_class)].into_iter().collect()),
