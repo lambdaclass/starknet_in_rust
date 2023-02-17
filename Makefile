@@ -31,7 +31,7 @@ cairo_programs/%.json: cairo_programs/%.cairo
 	cairo-compile $< --output $@ || rm $@
 
 tests/%.json: tests/%.cairo
-	starknet-compile $< --output $@ || rm $@
+	starknet-compile --debug_info_with_source $< --output $@ || rm $@
 
 
 #
