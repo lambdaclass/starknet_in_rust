@@ -11,7 +11,7 @@ use crate::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
@@ -194,7 +194,8 @@ impl ExecutionEntryPoint {
         Ok(runner)
     }
 
-    /// Returns the entry point with selector corresponding with self.entry_point_selector.
+    /// Returns the entry point with selector corresponding with self.entry_point_selector, or the
+    /// default if there is one and the requested one is not found.
     fn get_selected_entry_point(
         &self,
         contract_class: ContractClass,
@@ -203,24 +204,27 @@ impl ExecutionEntryPoint {
         let entry_points = contract_class
             .entry_points_by_type
             .get(&self.entry_point_type)
-            .ok_or(ExecutionError::InvalidEntryPoints)?
-            .clone();
-        let filtered_entry_points = entry_points
-            .clone()
-            .into_iter()
-            .filter(|ep| ep.selector == self.entry_point_selector)
-            .collect::<Vec<ContractEntryPoint>>();
+            .ok_or(ExecutionError::InvalidEntryPoints)?;
 
-        if filtered_entry_points.is_empty() && !entry_points.is_empty() {
-            let first_entry_point = entry_points.get(0).unwrap().clone();
+        let mut default_entry_point = None;
+        let entry_point = entry_points
+            .iter()
+            .filter_map(|x| {
+                if x.selector == *DEFAULT_ENTRY_POINT_SELECTOR {
+                    default_entry_point = Some(x);
+                }
 
-            return Ok(first_entry_point);
-        }
+                (x.selector == self.entry_point_selector).then_some(x)
+            })
+            .fold(Ok(None), |acc, x| match acc {
+                Ok(None) => Ok(Some(x)),
+                _ => Err(ExecutionError::NonUniqueEntryPoint),
+            })?;
 
-        if filtered_entry_points.len() != 1 {
-            return Err(ExecutionError::NonUniqueEntryPoint);
-        }
-        Ok(filtered_entry_points.get(0).unwrap().to_owned())
+        entry_point
+            .or(default_entry_point)
+            .cloned()
+            .ok_or(ExecutionError::EntryPointNotFound)
     }
 
     fn build_call_info<S>(
