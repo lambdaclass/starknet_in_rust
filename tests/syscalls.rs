@@ -32,6 +32,7 @@ fn test_contract<'a>(
     caller_address: Address,
     general_config: StarknetGeneralConfig,
     tx_context: Option<TransactionExecutionContext>,
+    accessed_storage_keys: impl Iterator<Item = [u8; 32]>,
     extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path)>,
     return_data: impl Into<Vec<Felt>>,
 ) {
@@ -104,6 +105,7 @@ fn test_contract<'a>(
             call_type: CallType::Delegate.into(),
             class_hash: class_hash.into(),
             entry_point_selector: Some(entry_point_selector),
+            accesed_storage_keys: accessed_storage_keys.collect(),
             retdata: return_data.into(),
             ..Default::default()
         },
@@ -124,7 +126,8 @@ fn get_block_number_syscall() {
             Address(0.into()),
             general_config,
             None,
-            [].into_iter(),
+            empty(),
+            empty(),
             [block_number.into()],
         );
     };
@@ -148,7 +151,8 @@ fn get_block_timestamp_syscall() {
             Address(0.into()),
             general_config,
             None,
-            [].into_iter(),
+            empty(),
+            empty(),
             [block_timestamp.into()],
         );
     };
@@ -170,6 +174,7 @@ fn get_caller_address_syscall() {
             StarknetGeneralConfig::default(),
             None,
             empty(),
+            empty(),
             [caller_address],
         );
     };
@@ -190,6 +195,7 @@ fn get_contract_address_syscall() {
             Address(0.into()),
             StarknetGeneralConfig::default(),
             None,
+            empty(),
             empty(),
             [contract_address],
         );
@@ -214,6 +220,7 @@ fn get_sequencer_address_syscall() {
             Address(0.into()),
             general_config,
             None,
+            empty(),
             empty(),
             [sequencer_address],
         );
@@ -252,6 +259,7 @@ fn get_tx_info_syscall() {
                 n_steps,
                 version,
             )),
+            empty(),
             empty(),
             [
                 version.into(),
@@ -336,6 +344,7 @@ fn library_call_syscall() {
         Address(0.into()),
         StarknetGeneralConfig::default(),
         None,
+        empty(), // [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [([2; 32], Path::new("tests/syscalls-lib.json"))].into_iter(),
         [],
     );
