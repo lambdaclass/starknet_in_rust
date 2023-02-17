@@ -305,3 +305,40 @@ fn get_tx_info_syscall() {
         StarknetChainId::TestNet2,
     );
 }
+
+#[test]
+fn get_tx_signature_syscall() {
+    let run = |signature: Vec<Felt>| {
+        let general_config = StarknetGeneralConfig::default();
+        let n_steps = general_config.invoke_tx_max_n_steps();
+
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_tx_signature",
+            [1; 32],
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            Some(TransactionExecutionContext::new(
+                Address::default(),
+                0.into(),
+                signature.clone(),
+                12,
+                3.into(),
+                n_steps,
+                0,
+            )),
+            [
+                signature.len().into(),
+                signature
+                    .into_iter()
+                    .reduce(|a, b| a + b)
+                    .unwrap_or_default(),
+            ],
+        );
+    };
+
+    run(vec![]);
+    run([0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec());
+    run([0x9A, 0xBC, 0xDE, 0xF0].map(Felt::from).to_vec());
+}

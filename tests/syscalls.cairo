@@ -7,6 +7,7 @@ from starkware.starknet.common.syscalls import (
     get_contract_address,
     get_sequencer_address,
     get_tx_info,
+    get_tx_signature,
 )
 
 func array_sum(len: felt, arr: felt*) -> felt {
@@ -77,4 +78,14 @@ func test_get_tx_info{syscall_ptr: felt*}() -> (
         transaction_hash=tx_info.transaction_hash,
         chain_id=tx_info.chain_id,
     );
+}
+
+@external
+func test_get_tx_signature{syscall_ptr: felt*}() -> (signature_len: felt, signature_hash: felt) {
+    alloc_locals;
+
+    let (local signature_len, local signature) = get_tx_signature();
+    let signature_sum = array_sum(signature_len, signature);
+
+    return (signature_len, signature_sum);
 }
