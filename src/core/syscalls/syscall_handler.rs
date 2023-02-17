@@ -531,6 +531,7 @@ mod tests {
         },
         core::syscalls::os_syscall_handler::OsSyscallHandler,
         memory_insert,
+        services::api::contract_class::ContractClass,
         utils::{
             get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
@@ -538,7 +539,7 @@ mod tests {
     };
     use cairo_rs::relocatable;
     use num_traits::Num;
-    use std::collections::VecDeque;
+    use std::{collections::VecDeque, path::PathBuf};
 
     type BusinessLogicSyscallHandler =
         crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
@@ -1288,5 +1289,100 @@ mod tests {
             get_big_int(&vm, &relocatable!(2, 2)),
             Ok(execute_code_read_operation.get(0).unwrap().clone())
         );
+    }
+
+    #[test]
+    fn test_bl_deploy_ok() {
+        let mut vm = vm!();
+        add_segments!(vm, 5);
+
+        /*
+        pub(crate) struct DeployRequestStruct {
+            // The system call selector (= DEPLOY_SELECTOR).
+            pub(crate) _selector: Felt,
+            // The hash of the class to deploy.
+            pub(crate) class_hash: Felt,
+            // A salt for the new contract address calculation.
+            pub(crate) contract_address_salt: Felt,
+            // The size of the calldata for the constructor.
+            pub(crate) constructor_calldata_size: Felt,
+            // The calldata for the constructor.
+            pub(crate) constructor_calldata: Relocatable,
+            // Used for deterministic contract address deployment.
+            pub(crate) deploy_from_zero: usize,
+        }
+        */
+
+        let class_hash = Felt::from_str_radix(
+            "1215168005085055857675365806969314642935061883819937321769541068937433120021823",
+            10,
+        )
+        .unwrap();
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10),     // DeployRequestStruct._selector
+                // ((2, 1), 11),     // DeployRequestStruct.class_hash
+                ((2, 2), 12),     // DeployRequestStruct.contract_address_salt
+                ((2, 3), 0),      // DeployRequestStruct.constructor_calldata_size
+                ((2, 4), (3, 0)), // DeployRequestStruct.constructor_calldata
+                ((2, 5), 0),      // DeployRequestStruct.deploy_from_zero
+                ((3, 0), 3)
+            ]
+        );
+        vm.insert_value(&relocatable!(2, 1), class_hash.clone())
+            .unwrap();
+
+        // syscall_ptr
+        let ids_data = ids_data!["syscall_ptr"];
+
+        let hint_data = HintProcessorData::new_default(DEPLOY.to_string(), ids_data);
+
+        // invoke syscall
+        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
+
+        syscall_handler_hint_processor
+            .syscall_handler
+            .state
+            .set_contract_classes(HashMap::new())
+            .unwrap();
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("tests/fibonacci.json")).unwrap();
+        syscall_handler_hint_processor
+            .syscall_handler
+            .state
+            .set_contract_class(
+                &class_hash.clone().to_bytes_be().try_into().unwrap(),
+                &contract_class,
+            )
+            .unwrap();
+
+        let a = Felt::from_str_radix(
+            "3233581368158591292633945606292998913869187401587828558898041011188015193859",
+            10,
+        )
+        .unwrap();
+        syscall_handler_hint_processor
+            .syscall_handler
+            .state
+            .cache
+            .class_hash_writes
+            .insert(
+                Address(a.clone()),
+                class_hash.clone().to_bytes_be().try_into().unwrap(),
+            );
+
+        let result = syscall_handler_hint_processor.execute_hint(
+            &mut vm,
+            &mut ExecutionScopes::new(),
+            &any_box!(hint_data),
+            &HashMap::new(),
+        );
+
+        assert_eq!(result, Ok(()));
+
+        // Check VM inserts
     }
 }
