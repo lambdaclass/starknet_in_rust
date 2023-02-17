@@ -8,6 +8,8 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub enum StarknetStateError {
+    #[error("Invalid message hash key passed to l2 messages")]
+    InvalidMessageHash,
     #[error(transparent)]
     SyscallException(#[from] SyscallHandlerError),
     #[error(transparent)]

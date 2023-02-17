@@ -1,4 +1,4 @@
-use felt::Felt;
+use felt::{felt_str, Felt};
 
 use crate::{
     business_logic::{
@@ -13,18 +13,22 @@ use crate::{
         state::{cached_state::CachedState, update_tracker_state::UpdatesTrackerState},
         transaction::transaction_errors::TransactionError,
     },
+    core::transaction_hash::starknet_transaction_hash::{
+        calculate_transaction_hash_common, TransactionHashPrefix,
+    },
     definitions::{
-        constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::{EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
-    utils::{calculate_tx_resources, Address},
+    utils::{calculate_tx_resources, preprocess_invoke_function_fields, Address},
 };
 
 pub(crate) struct InternalInvokeFunction {
-    contract_address: Address,
+    pub(crate) contract_address: Address,
     entry_point_selector: Felt,
-    _entry_point_type: EntryPointType,
+    entry_point_type: EntryPointType,
     calldata: Vec<Felt>,
     tx_type: TransactionType,
     version: u64,
@@ -36,6 +40,53 @@ pub(crate) struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
+    pub fn new(
+        contract_address: Address,
+        entry_point_selector: Felt,
+        max_fee: u64,
+        calldata: Vec<Felt>,
+        signature: Vec<Felt>,
+        chain_id: Felt,
+        nonce: Option<Felt>,
+    ) -> Result<Self, TransactionError> {
+        let version = TRANSACTION_VERSION;
+        let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
+            entry_point_selector.clone(),
+            nonce.clone(),
+            max_fee,
+            version,
+        )?;
+
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::Invoke,
+            version,
+            contract_address.clone(),
+            entry_point_selector_field,
+            &calldata,
+            max_fee,
+            chain_id,
+            &additional_data,
+        )?;
+
+        let validate_entry_point_selector = felt_str!(
+            "626969833899987279399947180575486623810258720106406659648356883742278317941"
+        );
+
+        Ok(InternalInvokeFunction {
+            contract_address,
+            entry_point_selector,
+            entry_point_type: EntryPointType::External,
+            calldata,
+            tx_type: TransactionType::InvokeFunction,
+            version,
+            max_fee,
+            signature,
+            validate_entry_point_selector,
+            nonce: nonce.unwrap(),
+            hash_value,
+        })
+    }
+
     fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
@@ -176,7 +227,7 @@ mod tests {
                 16,
             )
             .unwrap(),
-            _entry_point_type: EntryPointType::External,
+            entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
             version: 0,

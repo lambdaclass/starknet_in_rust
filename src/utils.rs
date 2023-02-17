@@ -11,6 +11,7 @@ use crate::{
             state_cache::StorageEntry,
             update_tracker_state::UpdatesTrackerState,
         },
+        transaction::transaction_errors::TransactionError,
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
@@ -281,6 +282,48 @@ pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result
+}
+
+// ------------------------------------
+//  Invoke internal functions utils
+// ------------------------------------
+
+// Performs validation on fields related to function invocation transaction.
+// InvokeFunction transaction.
+// Deduces and returns fields required for hash calculation of
+
+pub(crate) fn preprocess_invoke_function_fields(
+    entry_point_selector: Felt,
+    nonce: Option<Felt>,
+    max_fee: u64,
+    version: u64,
+) -> Result<(u64, Vec<u64>), TransactionError> {
+    if version > 0 && version < u64::pow(2, 128) {
+        match nonce {
+            Some(_) => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
+            )),
+            None => {
+                let additional_data = Vec::new();
+                let entry_point_selector_field = entry_point_selector
+                    .to_u64()
+                    .ok_or(TransactionError::InvalidFeltConversion)?;
+                Ok((entry_point_selector_field, additional_data))
+            }
+        }
+    } else {
+        match nonce {
+            Some(n) => {
+                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
+                let additional_data = [val].to_vec();
+                let entry_point_selector_field = 0_u64;
+                Ok((entry_point_selector_field, additional_data))
+            }
+            None => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
+            )),
+        }
+    }
 }
 
 //* -------------------
