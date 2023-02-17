@@ -21,9 +21,9 @@ func stateful_func{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
     return ();
 }
 
-// @external
-// func stateful_get_contract_address{syscall_ptr: felt*}() -> (contract_address: felt) {
-//     let contract_address = get_contract_address();
+@external
+func stateful_get_contract_address{syscall_ptr: felt*}() -> (contract_address: felt) {
+    let contract_address = get_contract_address();
 
-//     return (contract_address);
-// }
+    return (contract_address);
+}
