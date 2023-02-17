@@ -413,7 +413,10 @@ where
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
         match &*hint_data.code {
-            DEPLOY => Err(SyscallHandlerError::NotImplemented),
+            DEPLOY => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.deploy(vm, syscall_ptr)
+            }
             EMIT_EVENT_CODE => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.emit_event(vm, syscall_ptr)
