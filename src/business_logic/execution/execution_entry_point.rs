@@ -25,7 +25,6 @@ use cairo_rs::{
 };
 use felt::Felt;
 use num_traits::ToPrimitive;
-use std::borrow::BorrowMut;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
@@ -137,12 +136,7 @@ impl ExecutionEntryPoint {
         // prepare OS context
         let os_context = runner.prepare_os_context();
 
-        validate_contract_deployed(
-            <BusinessLogicSyscallHandler<'_, T> as BorrowMut<T>>::borrow_mut(
-                &mut runner.hint_processor.syscall_handler,
-            ),
-            self.contract_address.clone(),
-        )?;
+        validate_contract_deployed(state, self.contract_address.clone())?;
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
