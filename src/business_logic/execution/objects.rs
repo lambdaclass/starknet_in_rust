@@ -248,7 +248,7 @@ impl Event {
 //  Transaction Structures
 // -------------------------
 
-#[derive(Clone, Default, Getters)]
+#[derive(Clone, Debug, Default, Getters)]
 pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,

@@ -75,7 +75,7 @@ pub(crate) struct SendMessageToL1SysCall {
 pub(crate) struct LibraryCallStruct {
     pub(crate) selector: Felt,
     pub(crate) class_hash: Felt,
-    pub(crate) function_selector: usize,
+    pub(crate) function_selector: Felt,
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
 }
@@ -240,7 +240,7 @@ impl FromPtr for LibraryCallStruct {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &(syscall_ptr))?;
         let class_hash = get_big_int(vm, &(&syscall_ptr + 1))?;
-        let function_selector = get_integer(vm, &(&syscall_ptr + 2))?;
+        let function_selector = get_big_int(vm, &(&syscall_ptr + 2))?;
         let calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
         let calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
         Ok(LibraryCallStruct {

@@ -3,16 +3,17 @@ use crate::{core::errors::state_errors::StateError, utils::Address};
 use felt::Felt;
 use std::collections::HashSet;
 
-pub(crate) struct ContractStorageState<T: State + StateReader> {
-    pub(crate) state: T,
+#[derive(Debug)]
+pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
+    pub(crate) state: &'a mut T,
     pub(crate) contract_address: Address,
     /// Maintain all read request values in chronological order
     pub(crate) read_values: Vec<Felt>,
     pub(crate) accessed_keys: HashSet<[u8; 32]>,
 }
 
-impl<T: State + StateReader> ContractStorageState<T> {
-    pub(crate) fn new(state: T, contract_address: Address) -> Self {
+impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
+    pub(crate) fn new(state: &'a mut T, contract_address: Address) -> Self {
         Self {
             state,
             contract_address,
