@@ -3,6 +3,7 @@ use crate::{core::errors::state_errors::StateError, utils::Address};
 use felt::Felt;
 use std::collections::HashSet;
 
+#[derive(Debug)]
 pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
     pub(crate) state: &'a mut T,
     pub(crate) contract_address: Address,

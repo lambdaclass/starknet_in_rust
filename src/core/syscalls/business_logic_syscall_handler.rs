@@ -34,6 +34,7 @@ use std::borrow::{Borrow, BorrowMut};
 //* BusinessLogicHandler implementation
 //* -----------------------------------
 
+#[derive(Debug)]
 pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
