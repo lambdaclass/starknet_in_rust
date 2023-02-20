@@ -1,5 +1,3 @@
-use felt::Felt;
-
 use crate::{
     business_logic::{
         execution::{
@@ -21,6 +19,7 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
+use felt::Felt;
 
 #[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
@@ -91,8 +90,8 @@ impl InternalInvokeFunction {
         Ok(Some(call_info))
     }
 
-    ///     Builds the transaction execution context and executes the entry point.
-    ///     Returns the CallInfo.
+    /// Builds the transaction execution context and executes the entry point.
+    /// Returns the CallInfo.
     #[allow(dead_code)]
     fn run_execute_entrypoint<T>(
         &self,
