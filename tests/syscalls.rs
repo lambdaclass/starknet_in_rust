@@ -99,6 +99,50 @@ fn test_contract(
 }
 
 #[test]
+fn emit_event_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_emit_event",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        vec![
+            OrderedEvent {
+                order: 0,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 1,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2, 4, 6].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 2,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1234, 5678, 9012].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 3,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2468].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
+    );
+}
+
+#[test]
 fn get_block_number_syscall() {
     let run = |block_number| {
         let mut general_config = StarknetGeneralConfig::default();
@@ -315,45 +359,39 @@ fn get_tx_info_syscall() {
 }
 
 #[test]
-fn emit_event_syscall() {
-    test_contract(
-        "tests/syscalls.json",
-        "test_emit_event",
-        [1; 32],
-        Address(1111.into()),
-        Address(0.into()),
-        StarknetGeneralConfig::default(),
-        None,
-        vec![
-            OrderedEvent {
-                order: 0,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
-                    "test_event".as_bytes(),
-                ))],
-                data: [1, 2, 3].map(Felt::from).to_vec(),
-            },
-            OrderedEvent {
-                order: 1,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
-                    "test_event".as_bytes(),
-                ))],
-                data: [2, 4, 6].map(Felt::from).to_vec(),
-            },
-            OrderedEvent {
-                order: 2,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
-                    "test_event".as_bytes(),
-                ))],
-                data: [1234, 5678, 9012].map(Felt::from).to_vec(),
-            },
-            OrderedEvent {
-                order: 3,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
-                    "test_event".as_bytes(),
-                ))],
-                data: [2468].map(Felt::from).to_vec(),
-            },
-        ],
-        [],
-    );
+fn get_tx_signature_syscall() {
+    let run = |signature: Vec<Felt>| {
+        let general_config = StarknetGeneralConfig::default();
+        let n_steps = general_config.invoke_tx_max_n_steps();
+
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_tx_signature",
+            [1; 32],
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            Some(TransactionExecutionContext::new(
+                Address::default(),
+                0.into(),
+                signature.clone(),
+                12,
+                3.into(),
+                n_steps,
+                0,
+            )),
+            [],
+            [
+                signature.len().into(),
+                signature
+                    .into_iter()
+                    .reduce(|a, b| a + b)
+                    .unwrap_or_default(),
+            ],
+        );
+    };
+
+    run(vec![]);
+    run([0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec());
+    run([0x9A, 0xBC, 0xDE, 0xF0].map(Felt::from).to_vec());
 }
