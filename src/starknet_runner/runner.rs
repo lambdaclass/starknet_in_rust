@@ -32,6 +32,20 @@ impl<H> StarknetRunner<H>
 where
     H: SyscallHandler,
 {
+    pub fn map_hint_processor<H2>(
+        self,
+        hint_processor: SyscallHintProcessor<H2>,
+    ) -> StarknetRunner<H2>
+    where
+        H2: SyscallHandler,
+    {
+        StarknetRunner {
+            cairo_runner: self.cairo_runner,
+            vm: self.vm,
+            hint_processor,
+        }
+    }
+
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
@@ -225,8 +239,8 @@ mod test {
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
 
-    type SyscallHintProcessor = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
-        BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+    type SyscallHintProcessor<'a> = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
+        BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>,
     >;
 
     #[test]
@@ -234,7 +248,10 @@ mod test {
         let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
         let vm = VirtualMachine::new(true);
-        let hint_processor = SyscallHintProcessor::new_empty();
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
@@ -246,7 +263,10 @@ mod test {
         let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
         let vm = VirtualMachine::new(true);
-        let hint_processor = SyscallHintProcessor::new_empty();
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
