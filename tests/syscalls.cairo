@@ -129,3 +129,23 @@ func test_library_call{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 
     return ();
 }
+
+@external
+func test_call_contract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt}(
+    contract_address: felt
+) {
+    let (answer) = ISyscallsLib.stateless_func(contract_address=contract_address, a=21, b=2);
+    assert answer = 42;
+
+    lib_state.write(10);
+    ISyscallsLib.stateful_func(contract_address=contract_address);
+    let (value) = lib_state.read();
+    assert value = 10;
+
+    let (call_contact_address) = ISyscallsLib.stateful_get_contract_address(
+        contract_address=contract_address
+    );
+    assert call_contact_address = contract_address;
+
+    return ();
+}

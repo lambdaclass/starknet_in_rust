@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use felt::Felt;
+use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -11,7 +12,10 @@ use starknet_rs::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
             state::ExecutionResourcesManager,
         },
-        state::cached_state::{CachedState, ContractClassCache},
+        state::{
+            cached_state::{CachedState, ContractClassCache},
+            state_api::State,
+        },
     },
     definitions::{
         constants::TRANSACTION_VERSION,
@@ -34,7 +38,8 @@ fn test_contract<'a>(
     tx_context: Option<TransactionExecutionContext>,
     storage_read_values: impl Into<Vec<Felt>>,
     accessed_storage_keys: impl Iterator<Item = [u8; 32]>,
-    extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path)>,
+    extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>)>,
+    arguments: impl Into<Vec<Felt>>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
@@ -59,28 +64,47 @@ fn test_contract<'a>(
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);
-    let mut state = CachedState::new(
-        state_reader,
-        // Some([(class_hash, contract_class)].into_iter().collect()),
-        {
-            let mut contract_class_cache = ContractClassCache::new();
+
+    let mut storage_entries = Vec::new();
+    let contract_class_cache = {
+        let mut contract_class_cache = ContractClassCache::new();
+        contract_class_cache.insert(class_hash, contract_class);
+
+        for (class_hash, contract_path, contract_address) in extra_contracts {
+            let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+                .expect("Could not load extra contract from JSON");
+
             contract_class_cache.insert(class_hash, contract_class);
 
-            for (class_hash, contract_path) in extra_contracts {
-                let contract_class = ContractClass::try_from(contract_path.to_path_buf())
-                    .expect("Could not load extra contract from JSON");
+            if let Some((contract_address, data)) = contract_address {
+                storage_entries.extend(data.into_iter().map(|(name, value)| {
+                    (
+                        contract_address.clone(),
+                        calculate_sn_keccak(name.as_bytes()),
+                        value,
+                    )
+                }));
 
-                contract_class_cache.insert(class_hash, contract_class);
+                state_reader.contract_states_mut().insert(
+                    contract_address,
+                    ContractState::new(class_hash, Felt::zero(), Default::default()),
+                );
             }
+        }
 
-            Some(contract_class_cache)
-        },
-    );
+        Some(contract_class_cache)
+    };
+    let mut state = CachedState::new(state_reader, contract_class_cache);
+    storage_entries
+        .into_iter()
+        .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
+
+    let calldata = arguments.into();
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
         contract_address.clone(),
-        vec![],
+        calldata.clone(),
         entry_point_selector.clone(),
         caller_address.clone(),
         EntryPointType::External,
@@ -108,6 +132,7 @@ fn test_contract<'a>(
             entry_point_selector: Some(entry_point_selector),
             storage_read_values: storage_read_values.into(),
             accesed_storage_keys: accessed_storage_keys.collect(),
+            calldata,
             retdata: return_data.into(),
             ..Default::default()
         },
@@ -131,6 +156,7 @@ fn get_block_number_syscall() {
             [],
             empty(),
             empty(),
+            [],
             [block_number.into()],
         );
     };
@@ -157,6 +183,7 @@ fn get_block_timestamp_syscall() {
             [],
             empty(),
             empty(),
+            [],
             [block_timestamp.into()],
         );
     };
@@ -180,6 +207,7 @@ fn get_caller_address_syscall() {
             [],
             empty(),
             empty(),
+            [],
             [caller_address],
         );
     };
@@ -203,6 +231,7 @@ fn get_contract_address_syscall() {
             [],
             empty(),
             empty(),
+            [],
             [contract_address],
         );
     };
@@ -229,6 +258,7 @@ fn get_sequencer_address_syscall() {
             [],
             empty(),
             empty(),
+            [],
             [sequencer_address],
         );
     };
@@ -269,6 +299,7 @@ fn get_tx_info_syscall() {
             [],
             empty(),
             empty(),
+            [],
             [
                 version.into(),
                 account_contract_address.0,
@@ -364,6 +395,10 @@ fn get_tx_signature_syscall() {
                 n_steps,
                 0,
             )),
+            [],
+            empty(),
+            empty(),
+            [],
             [
                 signature.len().into(),
                 signature
@@ -391,7 +426,31 @@ fn library_call_syscall() {
         None,
         [11.into()],
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
-        [([2; 32], Path::new("tests/syscalls-lib.json"))].into_iter(),
+        [([2; 32], Path::new("tests/syscalls-lib.json"), None)].into_iter(),
+        [],
+        [],
+    );
+}
+
+#[test]
+fn call_contract_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_call_contract",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [10.into()],
+        [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
+        [(
+            [2u8; 32],
+            Path::new("tests/syscalls-lib.json"),
+            Some((Address(2222.into()), vec![("lib_state", 10.into())])),
+        )]
+        .into_iter(),
+        [2222.into()],
         [],
     );
 }

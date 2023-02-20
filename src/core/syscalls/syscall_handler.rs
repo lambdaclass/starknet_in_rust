@@ -57,6 +57,12 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
+    fn call_contract(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
+
     fn storage_read(
         &mut self,
         vm: &mut VirtualMachine,
@@ -297,6 +303,7 @@ pub(crate) trait SyscallHandler {
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallStruct::from_ptr(vm, syscall_ptr),
+            "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
             "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
             "get_contract_address" => GetContractAddressRequest::from_ptr(vm, syscall_ptr),
             "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
@@ -405,6 +412,10 @@ where
             LIBRARY_CALL => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.library_call(vm, syscall_ptr)
+            }
+            CALL_CONTRACT => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.call_contract(vm, syscall_ptr)
             }
             STORAGE_READ => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
