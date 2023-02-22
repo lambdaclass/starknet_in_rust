@@ -305,7 +305,7 @@ where
             Address(0.into())
         };
 
-        let contract_address = Address(calculate_contract_address(
+        let deploy_contract_address = Address(calculate_contract_address(
             &Address(request.contract_address_salt),
             class_hash,
             &constructor_calldata,
@@ -320,13 +320,13 @@ where
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(request.class_hash.clone()))?;
 
         self.state
-            .deploy_contract(contract_address.clone(), class_hash_bytes)?;
+            .deploy_contract(deploy_contract_address.clone(), class_hash_bytes)?;
         self.execute_constructor_entry_point(
-            &contract_address,
+            &deploy_contract_address,
             class_hash_bytes,
             constructor_calldata,
         )?;
-        Ok(contract_address)
+        Ok(deploy_contract_address)
     }
 
     fn _call_contract(
