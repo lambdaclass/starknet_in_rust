@@ -216,9 +216,9 @@ impl Default for CallInfo {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OrderedEvent {
-    order: u64,
-    keys: Vec<Felt>,
-    data: Vec<Felt>,
+    pub order: u64,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
 }
 
 impl OrderedEvent {
@@ -514,9 +514,9 @@ impl TransactionExecutionInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OrderedL2ToL1Message {
-    pub(crate) order: usize,
-    pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt>,
+    pub order: usize,
+    pub to_address: Address,
+    pub payload: Vec<Felt>,
 }
 
 impl OrderedL2ToL1Message {

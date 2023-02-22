@@ -346,7 +346,7 @@ where
                 &self.tx_execution_context,
             )
             .map(|x| x.retdata)
-            .map_err(|e| todo!("{}", e))
+            .map_err(|_| todo!())
     }
 
     fn get_block_info(&self) -> &BlockInfo {
