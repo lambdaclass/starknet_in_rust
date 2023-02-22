@@ -16,7 +16,7 @@ use crate::{
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
-        errors::syscall_handler_errors::SyscallHandlerError,
+        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
         transaction_hash::starknet_transaction_hash::{
             calculate_deploy_account_transaction_hash, calculate_deploy_transaction_hash,
         },
@@ -243,12 +243,27 @@ impl InternalDeployAccount {
 
     fn _apply_specific_concurrent_changes<S>(
         &self,
-        _status: UpdatesTrackerState<S>,
-        _general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, StateError>
     where
-        S: State,
+        S: Clone + Default + State + StateReader,
     {
+        let contract_class = state.get_contract_class(&self.class_hash)?;
+
+        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
+
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let constructor_call_info = self.handle_constructor(
+            contract_class,
+            state,
+            general_config,
+            &mut resources_manager,
+        )?;
+
+        let validate_info =
+            self.run_validate_entrypoint(state, general_config, &mut resources_manager)?;
+
         todo!()
     }
 

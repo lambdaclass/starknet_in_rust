@@ -154,18 +154,15 @@ pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Tr
 }
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
-
-    use num_traits::Num;
-
+    use super::*;
     use crate::{
         business_logic::{fact_state::contract_state::ContractState, state::state_api::State},
         services::api::contract_class::ContractClass,
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
         utils::felt_to_hash,
     };
-
-    use super::*;
+    use num_traits::Num;
+    use std::{collections::HashMap, path::PathBuf};
 
     #[test]
     fn test_apply_specific_concurrent_changes() {
