@@ -527,7 +527,10 @@ mod tests {
         business_logic::{
             execution::objects::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::{cached_state::CachedState, state_api::State},
+            state::{
+                cached_state::CachedState,
+                state_api::{State, StateReader},
+            },
         },
         core::syscalls::os_syscall_handler::OsSyscallHandler,
         memory_insert,
@@ -1296,11 +1299,6 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 4);
 
-        let class_hash = Felt::from_str_radix(
-            "1215168005085055857675365806969314642935061883819937321769541068937433120021823",
-            10,
-        )
-        .unwrap();
         // insert data to form the request
         memory_insert!(
             vm,
@@ -1315,7 +1313,15 @@ mod tests {
                 ((3, 0), 3)
             ]
         );
-        vm.insert_value(&relocatable!(2, 1), class_hash.clone())
+
+        let class_hash_felt = Felt::from_str_radix(
+            "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
+            16,
+        )
+        .unwrap();
+        let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
+
+        vm.insert_value(&relocatable!(2, 1), class_hash_felt)
             .unwrap();
 
         // Hinta data
@@ -1338,38 +1344,31 @@ mod tests {
         syscall_handler_hint_processor
             .syscall_handler
             .state
-            .set_contract_class(
-                &class_hash.clone().to_bytes_be().try_into().unwrap(),
-                &contract_class,
-            )
+            .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        // Set Address to class hash
-        // let a = Felt::from_str_radix(
-        //     "3233581368158591292633945606292998913869187401587828558898041011188015193859",
-        //     10,
-        // )
-        // .unwrap();
-        // syscall_handler_hint_processor
-        //     .syscall_handler
-        //     .state
-        //     .cache
-        //     .class_hash_writes
-        //     .insert(
-        //         Address(a.clone()),
-        //         class_hash.clone().to_bytes_be().try_into().unwrap(),
-        //     );
-
         // Execute Deploy hint
-        let result = syscall_handler_hint_processor.execute_hint(
-            &mut vm,
-            &mut ExecutionScopes::new(),
-            &any_box!(hint_data),
-            &HashMap::new(),
+        assert_eq!(
+            syscall_handler_hint_processor.execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            ),
+            Ok(())
         );
 
-        assert_eq!(result, Ok(()));
-
         // Check VM inserts
+        // DeployResponse.contract_address
+        let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+
+        // Check State diff
+        assert_eq!(
+            syscall_handler_hint_processor
+                .syscall_handler
+                .state
+                .get_class_hash_at(&Address(deployed_address)),
+            Ok(&class_hash)
+        );
     }
 }
