@@ -8,7 +8,7 @@ use crate::{
             execution_errors::ExecutionError,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::state::ExecutionResourcesManager,
+        fact_state::{contract_state::StateSelector, state::ExecutionResourcesManager},
         state::{
             state_api::{State, StateReader},
             update_tracker_state::UpdatesTrackerState,
@@ -32,7 +32,7 @@ use crate::{
     utils::{calculate_tx_resources, felt_to_hash, Address},
 };
 use felt::Felt;
-use num_traits::Zero;
+use num_traits::{ToPrimitive, Zero};
 use std::collections::HashMap;
 
 pub struct InternalDeploy {
@@ -168,7 +168,7 @@ impl InternalDeploy {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct InternalDeployAccount {
     contract_address: Address,
     _contract_address_salt: Address,
@@ -176,19 +176,22 @@ pub struct InternalDeployAccount {
     constructor_calldata: Vec<Felt>,
     version: u64,
     nonce: u64,
+    max_fee: u64,
+    signature: Vec<Felt>,
+    chain_id: StarknetChainId,
 }
 
 impl InternalDeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: [u8; 32],
-        _max_fee: u64,
+        max_fee: u64,
         version: u64,
         nonce: u64,
         constructor_calldata: Vec<Felt>,
-        _signature: Vec<Felt>,
+        signature: Vec<Felt>,
         contract_address_salt: Address,
-        _chain_id: StarknetChainId,
+        chain_id: StarknetChainId,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = calculate_contract_address(
             &contract_address_salt,
@@ -205,6 +208,9 @@ impl InternalDeployAccount {
             constructor_calldata,
             version,
             nonce,
+            max_fee,
+            signature,
+            chain_id,
         })
     }
 
@@ -228,8 +234,11 @@ impl InternalDeployAccount {
         )
     }
 
-    pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> ! {
-        todo!()
+    pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> StateSelector {
+        StateSelector {
+            contract_addresses: vec![self.contract_address.clone()],
+            class_hashes: vec![self.class_hash],
+        }
     }
 
     fn _apply_specific_concurrent_changes<S>(
@@ -311,15 +320,16 @@ impl InternalDeployAccount {
             calculate_deploy_account_transaction_hash(
                 self.version,
                 &self.contract_address,
-                self.class_hash,
+                Felt::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
-                todo!("max_fee"),
+                self.max_fee,
                 self.nonce,
-                self._contract_address_salt,
-                todo!("chain_id"),
-            ),
-            todo!("signature"),
-            todo!("self.max_fee"),
+                self._contract_address_salt.0.clone(),
+                self.chain_id.to_felt().to_u64().unwrap(),
+            )
+            .unwrap(),
+            self.signature.clone(),
+            self.max_fee,
             self.nonce.into(),
             n_steps,
             self.version,
