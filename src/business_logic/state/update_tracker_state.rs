@@ -1,3 +1,7 @@
+//! An implementation of the SyncState API that wraps another SyncState object and contains a cache.
+//! All requests are delegated to the wrapped SyncState, and caches are maintained for storage reads
+//! and writes.
+
 use super::{
     state_api::{State, StateReader},
     state_cache::StorageEntry,
@@ -10,16 +14,12 @@ use felt::Felt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
-// An implementation of the SyncState API that wraps another SyncState object and contains a cache.
-// All requests are delegated to the wrapped SyncState, and caches are maintained for storage reads
-// and writes.
-
-// The goal of this implementation is to allow more precise and fair computation of the number of
-// storage-writes a single transaction preforms for the purposes of transaction fee calculation.
-// That is, if a given transaction writes to the same storage address multiple times, this should
-// be counted as a single storage-write. Additionally, if a transaction writes a value to storage
-// which is equal to the initial value previously contained in that address, then no change needs
-// to be done and this should not count as a storage-write.
+/// The goal of this implementation is to allow more precise and fair computation of the number of
+/// storage-writes a single transaction preforms for the purposes of transaction fee calculation.
+/// That is, if a given transaction writes to the same storage address multiple times, this should
+/// be counted as a single storage-write. Additionally, if a transaction writes a value to storage
+/// which is equal to the initial value previously contained in that address, then no change needs
+/// to be done and this should not count as a storage-write.
 pub struct UpdatesTrackerState<T: State> {
     pub(crate) state: T,
     pub(crate) storage_initial_values: HashMap<StorageEntry, u64>,
@@ -35,13 +35,12 @@ impl<T: State + StateReader> UpdatesTrackerState<T> {
         }
     }
 
-    // This method writes to a storage cell and updates the cache accordingly. If this is the first
-    // access to the cell (read or write), the method first reads the value at that cell and caches
-    // it.
-    // This read operation is necessary for fee calculation. Because if the transaction writes a
-    // value to storage that is identical to the value previously held at that address, then no
-    // change is made to that cell and it does not count as a storage-change in fee calculation.
-
+    /// This method writes to a storage cell and updates the cache accordingly. If this is the first
+    /// access to the cell (read or write), the method first reads the value at that cell and caches
+    /// it.
+    /// This read operation is necessary for fee calculation. Because if the transaction writes a
+    /// value to storage that is identical to the value previously held at that address, then no
+    /// change is made to that cell and it does not count as a storage-change in fee calculation.
     pub fn set_storage_at(
         &mut self,
         contract_address: Address,

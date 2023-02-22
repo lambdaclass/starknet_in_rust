@@ -143,7 +143,7 @@ impl InternalInvokeFunction {
     }
 }
 
-fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
+pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
     let invoked_contract_address = call_info.contract_address.clone();
     for internal_call in call_info.gen_call_topology() {
         if internal_call.contract_address != invoked_contract_address {
