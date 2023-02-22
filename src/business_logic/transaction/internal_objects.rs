@@ -189,14 +189,23 @@ impl InternalDeployAccount {
     }
 
     pub fn new_for_testing(
-        _contract_class: ContractClass,
-        _max_fee: u64,
-        _contract_address_salt: Address,
-        _constructor_calldata: Vec<Felt>,
-        _chain_id: StarknetChainId,
-        _signature: Vec<Felt>,
-    ) -> Self {
-        todo!()
+        contract_class: &ContractClass,
+        max_fee: u64,
+        contract_address_salt: Address,
+        constructor_calldata: Vec<Felt>,
+        chain_id: StarknetChainId,
+        signature: Vec<Felt>,
+    ) -> Result<Self, ContractAddressError> {
+        Ok(Self::new(
+            felt_to_hash(&compute_class_hash(contract_class)?),
+            max_fee,
+            TRANSACTION_VERSION,
+            0.into(),
+            constructor_calldata,
+            signature,
+            contract_address_salt,
+            chain_id,
+        ))
     }
 
     pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> ! {
