@@ -201,8 +201,7 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
 
             return Ok(());
         }
-        //TODO
-        // check type execute_entry_point_cls
+
         let call = ExecutionEntryPoint::new(
             contract_address.clone(),
             constructor_calldata,

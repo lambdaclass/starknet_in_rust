@@ -115,8 +115,6 @@ pub(crate) trait SyscallHandler {
         let response = DeployResponse::new(
             contract_address.0,
             0.into(),
-            // TODO
-            // Check this
             Relocatable {
                 segment_index: 0,
                 offset: 0,
@@ -1361,6 +1359,13 @@ mod tests {
         // Check VM inserts
         // DeployResponse.contract_address
         let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+        // DeployResponse.constructor_retdata_size
+        assert_eq!(get_big_int(&vm, &relocatable!(2, 7)), Ok(0.into()));
+        // DeployResponse.constructor_retdata
+        assert_eq!(
+            get_relocatable(&vm, &relocatable!(2, 8)),
+            Ok(relocatable!(0, 0))
+        );
 
         // Check State diff
         assert_eq!(
