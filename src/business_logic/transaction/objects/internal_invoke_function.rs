@@ -6,11 +6,7 @@ use crate::{
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::state::ExecutionResourcesManager,
-        state::cached_state::CachedState,
-        state::{
-            state_api::{State, StateReader},
-            update_tracker_state::UpdatesTrackerState,
-        },
+        state::state_api::{State, StateReader},
         transaction::transaction_errors::TransactionError,
     },
     definitions::{
@@ -140,7 +136,7 @@ impl InternalInvokeFunction {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
-            self.tx_type.clone(),
+            self._tx_type.clone(),
             state.count_actual_storage_changes(),
             None,
         )?;

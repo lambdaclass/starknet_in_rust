@@ -88,7 +88,7 @@ impl InternalDeploy {
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
         state.get_contract_class(&class_hash)?;
 
-        self.handle_empty_constructor(state)
+        self.handle_empty_constructor(&mut state)
     }
 
     pub fn _apply_specific_sequential_changes(
@@ -102,9 +102,9 @@ impl InternalDeploy {
         (fee_transfer_info, actual_fee)
     }
 
-    pub fn handle_empty_constructor<S: State + StateReader + Clone>(
+    pub fn handle_empty_constructor<T: State + StateReader>(
         &self,
-        state: CachedState<S>,
+        state: &mut T,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         if self.constructor_calldata.is_empty() {
             return Err(StarkwareError::TransactionFailed);

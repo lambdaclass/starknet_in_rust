@@ -1,10 +1,7 @@
 use crate::{
     business_logic::{
         execution::objects::{CallInfo, TransactionExecutionInfo},
-        state::{
-            cached_state::{CachedState, ContractClassCache},
-            state_api::{State, StateReader},
-        },
+        state::state_api::{State, StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
 };
@@ -30,15 +27,14 @@ pub(crate) trait InternalStateTransaction {
 
     fn sync_apply_state_updates<T>(
         &self,
-        state: T,
-        contract_classes: Option<ContractClassCache>,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
         T: State + StateReader,
     {
         let concurrent_execution_info =
-            self.apply_concurrent_changes(state.clone(), contract_classes, general_config.clone());
+            self.apply_concurrent_changes(state, general_config.clone());
 
         let (fee_transfer_info, actual_fee) = self.apply_sequential_changes(
             state,
@@ -55,17 +51,13 @@ pub(crate) trait InternalStateTransaction {
 
     fn apply_concurrent_changes<T>(
         &self,
-        state: T,
-        contract_classes: Option<ContractClassCache>,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
-        T: State + StateReader + Clone,
+        T: State + StateReader,
     {
-        self._apply_specific_concurrent_changes(
-            CachedState::new(state, contract_classes),
-            general_config,
-        )
+        self._apply_specific_concurrent_changes(state, general_config)
     }
 
     fn apply_sequential_changes<T>(
@@ -86,11 +78,11 @@ pub(crate) trait InternalStateTransaction {
 
     fn _apply_specific_concurrent_changes<T>(
         &self,
-        state: CachedState<T>,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
-        T: State + StateReader + Clone;
+        T: State + StateReader;
 
     fn _apply_specific_sequential_changes<T>(
         &self,
