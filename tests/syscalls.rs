@@ -5,7 +5,7 @@ use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
+            objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionContext},
         },
         fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
@@ -32,6 +32,7 @@ fn test_contract(
     caller_address: Address,
     general_config: StarknetGeneralConfig,
     tx_context: Option<TransactionExecutionContext>,
+    events: impl Into<Vec<OrderedEvent>>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
@@ -91,8 +92,53 @@ fn test_contract(
             class_hash: class_hash.into(),
             entry_point_selector: Some(entry_point_selector),
             retdata: return_data.into(),
+            events: events.into(),
             ..Default::default()
         },
+    );
+}
+
+#[test]
+fn emit_event_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_emit_event",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        vec![
+            OrderedEvent {
+                order: 0,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 1,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2, 4, 6].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 2,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1234, 5678, 9012].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 3,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2468].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
     );
 }
 
@@ -110,6 +156,7 @@ fn get_block_number_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
             [block_number.into()],
         );
     };
@@ -133,6 +180,7 @@ fn get_block_timestamp_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
             [block_timestamp.into()],
         );
     };
@@ -153,6 +201,7 @@ fn get_caller_address_syscall() {
             Address(caller_address.clone()),
             StarknetGeneralConfig::default(),
             None,
+            [],
             [caller_address],
         );
     };
@@ -173,6 +222,7 @@ fn get_contract_address_syscall() {
             Address(0.into()),
             StarknetGeneralConfig::default(),
             None,
+            [],
             [contract_address],
         );
     };
@@ -196,6 +246,7 @@ fn get_sequencer_address_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
             [sequencer_address],
         );
     };
@@ -233,6 +284,7 @@ fn get_tx_info_syscall() {
                 n_steps,
                 version,
             )),
+            vec![],
             [
                 version.into(),
                 account_contract_address.0,
@@ -328,6 +380,7 @@ fn get_tx_signature_syscall() {
                 n_steps,
                 0,
             )),
+            [],
             [
                 signature.len().into(),
                 signature
