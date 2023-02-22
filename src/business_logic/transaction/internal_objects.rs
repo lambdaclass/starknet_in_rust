@@ -6,8 +6,11 @@ use crate::{
             execution_errors::ExecutionError,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::state::ExecutionResourcesManager,
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
         state::{
+            cached_state::CachedState,
             state_api::{State, StateReader},
             update_tracker_state::UpdatesTrackerState,
         },
@@ -83,7 +86,7 @@ impl InternalDeploy {
 
     pub fn _apply_specific_concurrent_changes<S: State + StateReader>(
         &self,
-        mut state: UpdatesTrackerState<S>,
+        mut state: &mut CachedState<InMemoryStateReader>,
         _general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
@@ -106,9 +109,9 @@ impl InternalDeploy {
         (fee_transfer_info, actual_fee)
     }
 
-    pub fn handle_empty_constructor<S: State + StateReader>(
+    pub fn handle_empty_constructor(
         &self,
-        state: UpdatesTrackerState<S>,
+        state: &mut CachedState<InMemoryStateReader>,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         if self.constructor_calldata.is_empty() {
             return Err(StarkwareError::TransactionFailed);
@@ -146,17 +149,17 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor<S: State + StateReader + Clone>(
+    pub fn invoke_constructor(
         &self,
-        state: &mut UpdatesTrackerState<S>,
+        state: &mut CachedState<InMemoryStateReader>,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
         let entry_point_selector = felt_str!(
             "1159040026212278395030414237414753050475174923702621880048416706425641521556"
         );
         let call = ExecutionEntryPoint::new(
-            self.contract_address,
-            self.constructor_calldata,
+            self.contract_address.clone(),
+            self.constructor_calldata.clone(),
             entry_point_selector,
             Address(0.into()),
             EntryPointType::Constructor,
@@ -184,8 +187,8 @@ impl InternalDeploy {
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(call_info)],
-            self.tx_type,
+            &[Some(call_info.clone())],
+            self.tx_type.clone(),
             state,
             None,
         )?;
@@ -195,7 +198,7 @@ impl InternalDeploy {
                 None,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type),
+                Some(self.tx_type.clone()),
             ),
         )
     }

@@ -4,9 +4,11 @@ use crate::{
             execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
-        fact_state::state::ExecutionResourcesManager,
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
         state::{
-            cached_state::UNINITIALIZED_CLASS_HASH,
+            cached_state::{CachedState, UNINITIALIZED_CLASS_HASH},
             state_api::{State, StateReader},
             state_cache::StorageEntry,
             update_tracker_state::UpdatesTrackerState,
@@ -149,11 +151,11 @@ pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
         })
 }
 
-pub fn calculate_tx_resources<S: State + StateReader>(
+pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
-    state: UpdatesTrackerState<S>,
+    state: &mut CachedState<InMemoryStateReader>,
     l1_handler_payload_size: Option<usize>,
 ) -> Result<HashMap<String, usize>, ExecutionError> {
     let (n_modified_contracts, n_storage_changes) = state.count_actual_storage_changes();

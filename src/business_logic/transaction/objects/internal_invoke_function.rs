@@ -176,12 +176,11 @@ impl InternalInvokeFunction {
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
-        let updates_tracker_state = UpdatesTrackerState::new(state.clone());
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
             self.tx_type.clone(),
-            updates_tracker_state,
+            state,
             None,
         )?;
         let transaction_execution_info =
