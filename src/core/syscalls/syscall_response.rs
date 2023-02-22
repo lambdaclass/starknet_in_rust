@@ -259,17 +259,25 @@ mod tests {
     use super::*;
     use crate::{
         add_segments,
-        core::syscalls::{
-            business_logic_syscall_handler::BusinessLogicSyscallHandler,
-            syscall_handler::SyscallHandler,
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
         },
+        core::syscalls::syscall_handler::SyscallHandler,
         utils::test_utils::vm,
     };
     use cairo_rs::relocatable;
 
+    type BusinessLogicSyscallHandler<'a> =
+        crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+            'a,
+            CachedState<InMemoryStateReader>,
+        >;
+
     #[test]
     fn write_get_caller_address_response() {
-        let syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);

@@ -47,6 +47,7 @@ impl Address {
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(self.0.clone()))
     }
 }
+
 //* -------------------
 //*  Helper Functions
 //* -------------------
@@ -100,6 +101,15 @@ pub fn felt_to_field_element(value: &Felt) -> Result<FieldElement, SyscallHandle
 
 pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
     Felt::from_bytes_be(&felt.to_bytes_be())
+}
+
+pub fn felt_to_hash(value: &Felt) -> [u8; 32] {
+    let mut output = [0; 32];
+
+    let bytes = value.to_bytes_be();
+    output[32 - bytes.len()..].copy_from_slice(&bytes);
+
+    output
 }
 
 // -------------------
@@ -241,7 +251,7 @@ where
 //* ----------------------------
 
 pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
-    mut state: S,
+    state: &mut S,
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
     let class_hash: [u8; 32] = state
@@ -255,8 +265,8 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     Ok(class_hash)
 }
 
-pub fn validate_contract_deployed<S: StateReader + Clone>(
-    state: S,
+pub fn validate_contract_deployed<S: StateReader>(
+    state: &mut S,
     contract_address: Address,
 ) -> Result<[u8; 32], ExecutionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
@@ -444,7 +454,14 @@ pub mod test_utils {
         }};
         ($vm:expr, $ids_data:expr, $hint_code:expr) => {{
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
-            let mut hint_processor = SyscallHintProcessor::new_empty();
+            let mut state = CachedState::<InMemoryStateReader>::default();
+            let mut hint_processor = $crate::core::syscalls::syscall_handler::SyscallHintProcessor::<
+                $crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler::<
+                    $crate::business_logic::state::cached_state::CachedState<
+                        $crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
+                    >,
+                >,
+            >::new(BusinessLogicSyscallHandler::default_with(&mut state));
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),

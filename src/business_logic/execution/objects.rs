@@ -11,6 +11,7 @@ use cairo_rs::{
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use felt::Felt;
+use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::{HashMap, HashSet};
 
@@ -215,9 +216,9 @@ impl Default for CallInfo {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OrderedEvent {
-    order: u64,
-    keys: Vec<Felt>,
-    data: Vec<Felt>,
+    pub order: u64,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
 }
 
 impl OrderedEvent {
@@ -247,7 +248,7 @@ impl Event {
 //  Transaction Structures
 // -------------------------
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default, Getters)]
 pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,
@@ -255,6 +256,7 @@ pub struct TransactionExecutionContext {
     pub(crate) max_fee: u64,
     pub(crate) transaction_hash: Felt,
     pub(crate) signature: Vec<Felt>,
+    #[get = "pub"]
     pub(crate) nonce: Felt,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
@@ -512,9 +514,9 @@ impl TransactionExecutionInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OrderedL2ToL1Message {
-    pub(crate) order: usize,
-    pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt>,
+    pub order: usize,
+    pub to_address: Address,
+    pub payload: Vec<Felt>,
 }
 
 impl OrderedL2ToL1Message {

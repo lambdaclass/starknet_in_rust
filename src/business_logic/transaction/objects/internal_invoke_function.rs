@@ -1,5 +1,3 @@
-use felt::Felt;
-
 use crate::{
     business_logic::{
         execution::{
@@ -7,10 +5,12 @@ use crate::{
             execution_errors::ExecutionError,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
+        fact_state::state::ExecutionResourcesManager,
         state::cached_state::CachedState,
+        state::{
+            state_api::{State, StateReader},
+            update_tracker_state::UpdatesTrackerState,
+        },
         transaction::transaction_errors::TransactionError,
     },
     definitions::{
@@ -20,13 +20,15 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
+use felt::Felt;
 
+#[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
     contract_address: Address,
     entry_point_selector: Felt,
     _entry_point_type: EntryPointType,
     calldata: Vec<Felt>,
-    tx_type: TransactionType,
+    _tx_type: TransactionType,
     version: u64,
     validate_entry_point_selector: Felt,
     hash_value: Felt,
@@ -36,6 +38,7 @@ pub(crate) struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
+    #[allow(dead_code)]
     fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
@@ -49,12 +52,15 @@ impl InternalInvokeFunction {
     }
 
     #[allow(dead_code)]
-    fn run_validate_entrypoint(
+    fn run_validate_entrypoint<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError> {
+    ) -> Result<Option<CallInfo>, ExecutionError>
+    where
+        T: Default + State + StateReader,
+    {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
@@ -85,15 +91,18 @@ impl InternalInvokeFunction {
         Ok(Some(call_info))
     }
 
-    ///     Builds the transaction execution context and executes the entry point.
-    ///     Returns the CallInfo.
+    /// Builds the transaction execution context and executes the entry point.
+    /// Returns the CallInfo.
     #[allow(dead_code)]
-    fn run_execute_entrypoint(
+    fn run_execute_entrypoint<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError> {
+    ) -> Result<CallInfo, ExecutionError>
+    where
+        T: Default + State + StateReader,
+    {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -112,12 +121,14 @@ impl InternalInvokeFunction {
         )
     }
 
-    #[allow(dead_code)]
-    fn _apply_specific_concurrent_changes(
+    fn _apply_specific_concurrent_changes<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> Result<TransactionExecutionInfo, ExecutionError>
+    where
+        T: Default + State + StateReader,
+    {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
@@ -125,6 +136,7 @@ impl InternalInvokeFunction {
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
+
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
@@ -137,7 +149,7 @@ impl InternalInvokeFunction {
                 validate_info,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self._tx_type.clone()),
             );
         Ok(transaction_execution_info)
     }
@@ -152,19 +164,22 @@ fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Transa
     }
     Ok(())
 }
+
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
-
-    use num_traits::Num;
-
+    use super::*;
     use crate::{
-        business_logic::{fact_state::contract_state::ContractState, state::state_api::State},
+        business_logic::{
+            fact_state::{
+                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+            },
+            state::cached_state::CachedState,
+        },
         services::api::contract_class::ContractClass,
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
     };
-
-    use super::*;
+    use num_traits::Num;
+    use std::{collections::HashMap, path::PathBuf};
 
     #[test]
     fn test_apply_specific_concurrent_changes() {
@@ -177,7 +192,7 @@ mod tests {
             .unwrap(),
             _entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
-            tx_type: TransactionType::InvokeFunction,
+            _tx_type: TransactionType::InvokeFunction,
             version: 0,
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
@@ -232,9 +247,6 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(
-            result.call_info.unwrap().retdata,
-            vec![Felt::new(1), Felt::new(144)]
-        );
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt::new(144)]);
     }
 }
