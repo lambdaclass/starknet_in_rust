@@ -47,6 +47,8 @@ pub enum ExecutionError {
     ErrorAllocatingSegment,
     #[error("Non-unique entry points are not possible in a ContractClass object")]
     NonUniqueEntryPoint,
+    #[error("Requested entry point was not found")]
+    EntryPointNotFound,
     #[error("Ptr result diverges after calculate final stacks")]
     OsContextPtrNotEqual,
     #[error("Illegal OS ptr offset")]
