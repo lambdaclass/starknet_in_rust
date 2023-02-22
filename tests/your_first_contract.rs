@@ -70,7 +70,7 @@ fn your_first_contract_integration_test() {
     //*    Create execution entry point
     //* ------------------------------------
 
-    let calldata = [].to_vec();
+    let calldata = [1.into()].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
