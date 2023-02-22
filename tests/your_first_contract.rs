@@ -103,7 +103,7 @@ fn your_first_contract_integration_test() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(fib_entrypoint_selector),
+        entry_point_selector: Some(increase_balance_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
