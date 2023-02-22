@@ -5,7 +5,7 @@ use crate::{
     },
     core::errors::state_errors::StateError,
     definitions::general_config::StarknetGeneralConfig,
-    starknet_storage::storage::{FactFetchingContext, Storage},
+    starknet_storage::storage::Storage,
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
@@ -110,7 +110,7 @@ pub(crate) struct SharedState {
 impl SharedState {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub fn empty<S>(_ffc: FactFetchingContext<S>, _general_config: StarknetGeneralConfig) -> Self
+    pub fn empty<S>(_general_config: StarknetGeneralConfig) -> Self
     where
         S: Storage,
     {
@@ -119,7 +119,7 @@ impl SharedState {
 
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub fn to_carried_state<S, R>(&self, _ffc: FactFetchingContext<S>) -> CarriedState<R>
+    pub fn to_carried_state<S, R>(&self) -> CarriedState<R>
     where
         S: Storage,
         R: StateReader + Clone,
@@ -136,35 +136,28 @@ impl SharedState {
 
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub fn apply_state_updates<S, R>(
+    pub fn apply_state_updates<R>(
         &self,
-        ffc: FactFetchingContext<S>,
         _previous_carried_state: CarriedState<R>,
         current_carried_state: CarriedState<R>,
     ) -> Result<Self, StateError>
     where
-        S: Storage,
         R: StateReader + Clone,
     {
         let state_cache = current_carried_state.state.cache;
         Ok(self.apply_updates(
-            ffc,
             state_cache.class_hash_writes,
             state_cache.nonce_writes,
             to_state_diff_storage_mapping(state_cache.storage_writes),
         ))
     }
 
-    pub fn apply_updates<S>(
+    pub fn apply_updates(
         &self,
-        _ffc: FactFetchingContext<S>,
         address_to_class_hash: HashMap<Address, [u8; 32]>,
         address_to_nonce: HashMap<Address, Felt>,
         storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
-    ) -> Self
-    where
-        S: Storage,
-    {
+    ) -> Self {
         let class_addresses: HashSet<Address> = address_to_class_hash.into_keys().collect();
         let nonce_addresses: HashSet<Address> = address_to_nonce.into_keys().collect();
         let storage_addresses: HashSet<Address> =
@@ -175,7 +168,7 @@ impl SharedState {
         accesed_addresses.extend(storage_addresses);
 
         // TODO:
-        // let current_contract_states = self.contract_states.get_leaves(ffc, accesed_addresses)
+        // let current_contract_states = self.contract_states.get_leaves(accesed_addresses)
 
         todo!()
     }
@@ -276,13 +269,8 @@ impl StateDiff {
 
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub fn commit<T: Storage>(
-        &self,
-        ffc: FactFetchingContext<T>,
-        previous_state: SharedState,
-    ) -> SharedState {
+    pub fn commit<T: Storage>(&self, previous_state: SharedState) -> SharedState {
         previous_state.apply_updates(
-            ffc,
             self.address_to_class_hash.clone(),
             self.address_to_nonce.clone(),
             self.storage_updates.clone(),
