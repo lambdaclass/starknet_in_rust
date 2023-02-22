@@ -1,6 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.messages import send_message_to_l1
 from starkware.starknet.common.syscalls import (
     emit_event,
     get_block_number,
@@ -110,4 +111,24 @@ func test_get_tx_signature{syscall_ptr: felt*}() -> (signature_len: felt, signat
     let signature_sum = array_sum(signature_len, signature);
 
     return (signature_len, signature_sum);
+}
+
+@external
+func test_send_message_to_l1{syscall_ptr: felt*}() {
+    let (payload) = alloc();
+    assert payload[0] = 1;
+    assert payload[1] = 2;
+    assert payload[2] = 3;
+    send_message_to_l1(1111, 3, payload);
+
+    let (payload) = alloc();
+    assert payload[0] = 2;
+    assert payload[1] = 4;
+    send_message_to_l1(1111, 2, payload);
+
+    let (payload) = alloc();
+    assert payload[0] = 3;
+    send_message_to_l1(1111, 1, payload);
+
+    return ();
 }
