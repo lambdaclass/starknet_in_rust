@@ -254,15 +254,9 @@ mod tests {
 
     #[test]
     fn cached_state_deploy_contract_test() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
-
-        state_reader
-            .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
-            .unwrap();
 
         let mut cached_state = CachedState::new(state_reader, None);
 
