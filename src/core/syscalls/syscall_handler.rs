@@ -507,7 +507,7 @@ mod tests {
         core::syscalls::os_syscall_handler::OsSyscallHandler,
         memory_insert,
         utils::{
-            get_big_int, get_integer, get_relocatable,
+            felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
         },
     };
@@ -1203,7 +1203,7 @@ mod tests {
         let write = syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
-            .read(&Address(address).to_32_bytes().unwrap());
+            .read(&felt_to_hash(&address));
 
         assert_eq!(write, Ok(&Felt::new(45)));
     }

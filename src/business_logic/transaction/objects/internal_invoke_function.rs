@@ -1,5 +1,3 @@
-use felt::Felt;
-
 use crate::{
     business_logic::{
         execution::{
@@ -20,6 +18,7 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
+use felt::Felt;
 
 pub(crate) struct InternalInvokeFunction {
     contract_address: Address,
@@ -163,6 +162,7 @@ mod tests {
         business_logic::{fact_state::contract_state::ContractState, state::state_api::State},
         services::api::contract_class::ContractClass,
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
+        utils::felt_to_hash,
     };
 
     use super::*;
@@ -208,10 +208,7 @@ mod tests {
             .state_reader
             .ffc
             .set_contract_state(
-                &internal_invoke_function
-                    .contract_address
-                    .to_32_bytes()
-                    .unwrap(),
+                &felt_to_hash(&internal_invoke_function.contract_address.0),
                 &contract_state,
             )
             .unwrap();

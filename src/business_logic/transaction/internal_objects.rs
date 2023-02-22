@@ -10,10 +10,7 @@ use crate::{
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
-        errors::{
-            contract_address_errors::ContractAddressError,
-            syscall_handler_errors::SyscallHandlerError,
-        },
+        errors::syscall_handler_errors::SyscallHandlerError,
         transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
@@ -176,15 +173,22 @@ pub struct InternalDeployAccount {
 impl InternalDeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        _class_hash: [u8; 32],
+        class_hash: [u8; 32],
         _max_fee: u64,
         _version: u64,
         _nonce: Felt,
-        _constructor_calldata: Vec<Felt>,
+        constructor_calldata: Vec<Felt>,
         _signature: Vec<Felt>,
-        _contract_address_salt: Address,
+        contract_address_salt: Address,
         _chain_id: StarknetChainId,
-    ) -> Self {
+    ) -> Result<Self, SyscallHandlerError> {
+        let contract_address = calculate_contract_address(
+            &contract_address_salt,
+            &Felt::from_bytes_be(&class_hash),
+            &constructor_calldata,
+            Address(Felt::zero()),
+        )?;
+
         todo!()
     }
 
@@ -195,8 +199,8 @@ impl InternalDeployAccount {
         constructor_calldata: Vec<Felt>,
         chain_id: StarknetChainId,
         signature: Vec<Felt>,
-    ) -> Result<Self, ContractAddressError> {
-        Ok(Self::new(
+    ) -> Result<Self, SyscallHandlerError> {
+        Self::new(
             felt_to_hash(&compute_class_hash(contract_class)?),
             max_fee,
             TRANSACTION_VERSION,
@@ -205,7 +209,7 @@ impl InternalDeployAccount {
             signature,
             contract_address_salt,
             chain_id,
-        ))
+        )
     }
 
     pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> ! {

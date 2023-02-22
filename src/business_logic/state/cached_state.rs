@@ -166,17 +166,16 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
 #[cfg(test)]
 mod tests {
-    use cairo_rs::types::program::Program;
-
+    use super::*;
     use crate::{
         business_logic::fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
         },
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
+        utils::felt_to_hash,
     };
-
-    use super::*;
+    use cairo_rs::types::program::Program;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
@@ -187,7 +186,7 @@ mod tests {
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .set_contract_state(&felt_to_hash(&contract_address.0), &contract_state)
             .unwrap();
 
         let mut cached_state = CachedState::new(state_reader, None);
@@ -263,7 +262,7 @@ mod tests {
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .set_contract_state(&felt_to_hash(&contract_address.0), &contract_state)
             .unwrap();
 
         let mut cached_state = CachedState::new(state_reader, None);

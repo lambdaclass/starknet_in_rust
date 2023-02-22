@@ -436,13 +436,13 @@ where
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
-            .read(&address.to_32_bytes()?)?
+            .read(&felt_to_hash(&address.0))?
             .clone())
     }
 
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
         self.starknet_storage_state
-            .write(&address.to_32_bytes()?, value);
+            .write(&felt_to_hash(&address.0), value);
 
         Ok(())
     }

@@ -301,7 +301,7 @@ mod test {
             state::cached_state::CachedState,
         },
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
-        utils::Address,
+        utils::{felt_to_hash, Address},
     };
     use felt::Felt;
     use std::collections::HashMap;
@@ -315,7 +315,7 @@ mod test {
 
         state_reader
             .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .set_contract_state(&felt_to_hash(&contract_address.0), &contract_state)
             .unwrap();
 
         let cached_state = CachedState::new(state_reader, None);
