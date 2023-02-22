@@ -343,16 +343,6 @@ where
         }
     }
 
-    pub fn new_empty() -> Self
-    where
-        H: Default,
-    {
-        SyscallHintProcessor {
-            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: Default::default(),
-        }
-    }
-
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
@@ -515,21 +505,23 @@ mod tests {
     use num_traits::Num;
     use std::collections::VecDeque;
 
-    type BusinessLogicSyscallHandler =
+    type BusinessLogicSyscallHandler<'a> =
         crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+            'a,
             CachedState<InMemoryStateReader>,
         >;
-    type SyscallHintProcessor = super::SyscallHintProcessor<BusinessLogicSyscallHandler>;
+    type SyscallHintProcessor<'a> = super::SyscallHintProcessor<BusinessLogicSyscallHandler<'a>>;
 
     #[test]
     fn read_send_message_to_l1_request() {
-        let syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 3);
 
         memory_insert!(
             vm,
-            [((1, 0), 0), ((1, 1), 1), ((1, 2), 2), ((1, 4), (2, 0))]
+            [((1, 0), 0), ((1, 1), 1), ((1, 2), 2), ((1, 3), (2, 0))]
         );
         assert_eq!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
@@ -544,7 +536,8 @@ mod tests {
 
     #[test]
     fn read_deploy_syscall_request() {
-        let syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -575,7 +568,8 @@ mod tests {
 
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -590,8 +584,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(GET_BLOCK_TIMESTAMP.to_string(), ids_data);
+
         // invoke syscall
-        let mut syscall_handler = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -618,8 +615,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
+
         // invoke syscall
-        let mut syscall_handler = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -666,8 +666,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(EMIT_EVENT_CODE.to_string(), ids_data);
+
         // invoke syscall
-        let mut syscall_handler = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -719,8 +722,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+
         // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler_hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
@@ -823,8 +829,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+
         // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler_hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         syscall_handler_hint_processor.syscall_handler.tx_info_ptr =
             Some(relocatable!(7, 0).into());
@@ -898,8 +907,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(GET_CALLER_ADDRESS.to_string(), ids_data);
+
         // invoke syscall
-        let mut hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -930,7 +942,7 @@ mod tests {
                 ((1, 1), 0),
                 ((1, 2), 1),
                 ((1, 3), 2),
-                ((1, 5), (2, 0)),
+                ((1, 4), (2, 0)),
                 ((2, 0), 18),
                 ((2, 1), 12)
             ]
@@ -940,8 +952,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(SEND_MESSAGE_TO_L1.to_string(), ids_data);
+
         // invoke syscall
-        let mut hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -985,7 +1000,9 @@ mod tests {
             ]
         );
 
-        let mut hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let hint_data =
             HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
@@ -1014,8 +1031,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
+
         // invoke syscall
-        let mut hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -1050,8 +1070,11 @@ mod tests {
         let ids_data = ids_data!["syscall_ptr"];
 
         let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
+
         // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler_hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
@@ -1114,7 +1137,9 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
 
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler_hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let storage_value = Felt::new(3);
         syscall_handler_hint_processor
@@ -1174,7 +1199,9 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_WRITE.to_string(), ids_data);
 
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler_hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         syscall_handler_hint_processor
             .syscall_handler
