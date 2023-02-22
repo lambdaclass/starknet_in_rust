@@ -34,7 +34,7 @@ use crate::{
     utils_errors::UtilsError,
 };
 use felt::{felt_str, Felt};
-use num_traits::{Num, Zero};
+use num_traits::Zero;
 use std::collections::HashMap;
 
 pub struct InternalDeploy {
@@ -200,6 +200,7 @@ pub(crate) struct InternalDeclare {
 //                        Functions
 // ------------------------------------------------------------
 impl InternalDeclare {
+    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt,
@@ -433,11 +434,9 @@ impl InternalDeclare {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
-
-    use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
     use felt::Felt;
-    use num_traits::{Num, Zero};
+    use num_traits::Num;
+    use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
         business_logic::{

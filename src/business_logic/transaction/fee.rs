@@ -3,7 +3,6 @@ use crate::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            gas_usage,
             objects::{CallInfo, TransactionExecutionContext},
         },
         fact_state::{
@@ -11,13 +10,12 @@ use crate::{
         },
         state::cached_state::CachedState,
     },
-    definitions::general_config::{self, StarknetGeneralConfig},
+    definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
 };
 use felt::{felt_str, Felt};
-use num_traits::{Num, ToPrimitive};
-use std::cmp;
-use std::collections::{HashMap, HashSet};
+use num_traits::ToPrimitive;
+use std::collections::HashMap;
 
 // ----------------------------------------------------------------------------
 /// Transfers the amount actual_fee from the caller account to the sequencer.

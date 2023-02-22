@@ -11,8 +11,7 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub(crate) enum TransactionError {
-    #[error("could not convert felt to u64")]
-    InvalidFeltConversion,
+    #[allow(dead_code)] // TODO: delete this once used
     #[error("{0}")]
     InvalidNonce(String),
     #[error("Invalid transaction nonce. Expected: {0} got {1}")]

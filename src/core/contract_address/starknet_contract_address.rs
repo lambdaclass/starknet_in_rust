@@ -38,7 +38,7 @@ fn get_contract_entry_points(
 
     let program_len = program_length.into();
     for entry_point in entry_points {
-        if !(entry_point.offset < program_len) {
+        if entry_point.offset > program_len {
             return Err(ContractAddressError::InvalidOffset(
                 entry_point.offset.clone(),
             ));
