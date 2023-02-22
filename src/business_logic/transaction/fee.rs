@@ -19,6 +19,7 @@ use num_traits::{Num, ToPrimitive};
 use std::cmp;
 use std::collections::{HashMap, HashSet};
 
+// ----------------------------------------------------------------------------
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
 
@@ -38,12 +39,12 @@ pub(crate) fn execute_fee_transfer(
 
     let calldata = [
         general_config.block_info.sequencer_address.0.clone(),
-        Felt::from_bytes_be(&actual_fee.to_be_bytes()),
+        Felt::from(actual_fee),
         0.into(),
     ]
     .to_vec();
 
-    // String is the identifier used to validate the call
+    // Value generated from `get_selector_from_name('TRANSFER_ENTRY_POINT_SELECTOR')`.
     let entry_point_selector =
         felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
 
@@ -63,6 +64,7 @@ pub(crate) fn execute_fee_transfer(
         .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
 }
 
+// ----------------------------------------------------------------------------------------
 /// Calculates the fee of a transaction given its execution resources.
 /// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
@@ -83,6 +85,7 @@ pub(crate) fn calculate_tx_fee(
     Ok(total_l1_gas_usage.ceil() as u64 * gas_price)
 }
 
+// ----------------------------------------------------------------------------------------
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
 /// I.e., returns the heaviest Cairo resource weight (in terms of L1 gas), as the size of
 /// a proof is determined similarly - by the (normalized) largest segment.
@@ -91,24 +94,21 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     general_config: &StarknetGeneralConfig,
     cairo_resource_usage: HashMap<String, Felt>,
 ) -> Result<f64, TransactionError> {
-    let cairo_resource_fee_weights = general_config.cairo_resource_fee_weights.clone();
-    let cairo_resources_names = cairo_resource_usage
-        .clone()
-        .into_keys()
-        .collect::<HashSet<String>>();
-    let resources_weights = cairo_resource_fee_weights
-        .clone()
-        .into_keys()
-        .collect::<HashSet<String>>();
-
-    if !resources_weights.is_subset(&cairo_resources_names) {
+    // Ensure that every key in `general_config.cairo_resource_fee_weights` is present in
+    // `cairo_resource_usage`.
+    if !general_config
+        .cairo_resource_fee_weights
+        .iter()
+        .map(|(k, _)| k.as_str())
+        .all(|k| cairo_resource_usage.contains_key(k))
+    {
         return Err(TransactionError::ResourcesError);
     }
 
     // Convert Cairo usage to L1 gas usage.
     Ok(max_of_keys(
         &cairo_resource_usage,
-        &cairo_resource_fee_weights,
+        &general_config.cairo_resource_fee_weights,
     ))
 }
 
