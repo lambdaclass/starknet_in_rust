@@ -4,8 +4,6 @@ use getset::{CopyGetters, MutGetters};
 use num_traits::Zero;
 use std::collections::HashMap;
 
-use super::error::StarknetChainIdError;
-
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum StarknetChainId {

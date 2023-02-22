@@ -133,7 +133,7 @@ pub(crate) fn calculate_declare_transaction_hash(
     let class_hash =
         compute_class_hash(&contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
-    let (calldata, additional_data) = if version > u64::pow(2, 63) {
+    let (calldata, additional_data) = if version > 0x8000_0000_0000_0000 {
         let value = class_hash
             .to_u64()
             .ok_or(SyscallHandlerError::InvalidFeltConversion)?;

@@ -30,7 +30,7 @@ use crate::{
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
-    utils::{calculate_tx_resources, verify_no_calls_to_other_contracts, Address},
+    utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
     utils_errors::UtilsError,
 };
 use felt::Felt;
@@ -211,10 +211,7 @@ impl InternalDeclare {
     ) -> Result<Self, TransactionError> {
         let hash = compute_class_hash(&contract_class)?;
 
-        let class_hash = hash
-            .to_bytes_be()
-            .try_into()
-            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(hash.clone()))?;
+        let class_hash = felt_to_hash(&hash);
 
         let hash_value = calculate_declare_transaction_hash(
             contract_class,
@@ -259,7 +256,7 @@ impl InternalDeclare {
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
         // no need to check if its lesser than 0 because it is an usize
-        if self.version > u64::pow(2, 63) {
+        if self.version > 0x8000_0000_0000_0000 {
             return Err(TransactionError::StarknetError(
                 "The sender_address field in Declare transactions of version 0, sender should be 1"
                     .to_string(),
@@ -399,7 +396,7 @@ impl InternalDeclare {
         &self,
         state: &mut CachedState<InMemoryStateReader>,
     ) -> Result<(), TransactionError> {
-        if self.version > u64::pow(2, 128) {
+        if self.version > 0x8000_0000_0000_0000 {
             return Err(TransactionError::StarknetError(
                 "Don't handle nonce for version 0".to_string(),
             ));

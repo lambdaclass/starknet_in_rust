@@ -14,15 +14,13 @@ use crate::{
     definitions::general_config::{self, StarknetGeneralConfig},
     services::api::contract_class::EntryPointType,
 };
-use felt::Felt;
+use felt::{felt_str, Felt};
 use num_traits::{Num, ToPrimitive};
 use std::cmp;
 use std::collections::{HashMap, HashSet};
 
-// ----------------------------------------------------------------------------------------
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-// ----------------------------------------------------------------------------------------
 
 pub(crate) fn execute_fee_transfer(
     state: &mut CachedState<InMemoryStateReader>,
@@ -45,11 +43,9 @@ pub(crate) fn execute_fee_transfer(
     ]
     .to_vec();
 
-    let entry_point_selector = Felt::from_str_radix(
-        "232670485425082704932579856502088130646006032362877466777181098476241604910",
-        10,
-    )
-    .unwrap();
+    // String is the identifier used to validate the call
+    let entry_point_selector =
+        felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
 
     let fee_transfer_call = ExecutionEntryPoint::new(
         fee_token_address,
@@ -67,11 +63,9 @@ pub(crate) fn execute_fee_transfer(
         .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
 }
 
-// ----------------------------------------------------------------------------------------
 /// Calculates the fee of a transaction given its execution resources.
 /// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
-// ----------------------------------------------------------------------------------------
 
 pub(crate) fn calculate_tx_fee(
     resources: HashMap<String, Felt>,
@@ -88,11 +82,10 @@ pub(crate) fn calculate_tx_fee(
 
     Ok(total_l1_gas_usage.ceil() as u64 * gas_price)
 }
-// ----------------------------------------------------------------------------------------
+
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
 /// I.e., returns the heaviest Cairo resource weight (in terms of L1 gas), as the size of
 /// a proof is determined similarly - by the (normalized) largest segment.
-// ----------------------------------------------------------------------------------------
 
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
     general_config: &StarknetGeneralConfig,
@@ -114,16 +107,16 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
 
     // Convert Cairo usage to L1 gas usage.
     Ok(max_of_keys(
-        cairo_resource_usage,
-        cairo_resource_fee_weights,
+        &cairo_resource_usage,
+        &cairo_resource_fee_weights,
     ))
 }
 
-fn max_of_keys(cairo_rsc: HashMap<String, Felt>, weights: HashMap<String, f64>) -> f64 {
+fn max_of_keys(cairo_rsc: &HashMap<String, Felt>, weights: &HashMap<String, f64>) -> f64 {
     let mut max = 0.0_f64;
     for (k, v) in weights {
         let val = cairo_rsc
-            .get(&k)
+            .get(k)
             .unwrap_or(&0.into())
             .to_f64()
             .unwrap_or(0.0_f64);

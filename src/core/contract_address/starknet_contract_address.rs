@@ -36,9 +36,9 @@ fn get_contract_entry_points(
         .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
+    let program_len = program_length.into();
     for entry_point in entry_points {
-        if !((Felt::from(0) <= entry_point.offset) && (entry_point.offset < program_length.into()))
-        {
+        if !(entry_point.offset < program_len) {
             return Err(ContractAddressError::InvalidOffset(
                 entry_point.offset.clone(),
             ));

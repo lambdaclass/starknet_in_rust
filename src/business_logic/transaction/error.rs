@@ -6,7 +6,6 @@ use crate::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
     },
-    definitions::error::StarknetChainIdError,
     utils_errors::UtilsError,
 };
 
@@ -28,8 +27,6 @@ pub(crate) enum TransactionError {
     UtilsError(#[from] UtilsError),
     #[error(transparent)]
     ContractAddressError(#[from] ContractAddressError),
-    #[error(transparent)]
-    StarknetChaindIdError(#[from] StarknetChainIdError),
     #[error(transparent)]
     ExecutionError(#[from] ExecutionError),
     #[error(transparent)]
