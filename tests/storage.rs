@@ -24,13 +24,12 @@ use std::{
 };
 
 #[test]
-#[ignore = "ignore until the cache issue is fixed"]
 fn integration_storage_test() {
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("starknet_programs/storage.json");
+    let path = PathBuf::from("tests/storage.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
@@ -113,7 +112,7 @@ fn integration_storage_test() {
         entry_point_selector: Some(storage_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata,
-        retdata: [1.into(), 42.into()].to_vec(),
+        retdata: [42.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         storage_read_values: vec![42.into()],
