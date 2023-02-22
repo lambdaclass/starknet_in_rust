@@ -268,14 +268,16 @@ mod tests {
     };
     use cairo_rs::relocatable;
 
-    type BusinessLogicSyscallHandler =
+    type BusinessLogicSyscallHandler<'a> =
         crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+            'a,
             CachedState<InMemoryStateReader>,
         >;
 
     #[test]
     fn write_get_caller_address_response() {
-        let syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);

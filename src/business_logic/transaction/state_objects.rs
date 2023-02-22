@@ -30,14 +30,14 @@ pub(crate) trait InternalStateTransaction {
 
     fn sync_apply_state_updates<T>(
         &self,
-        state: T,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
-        T: State + StateReader + Clone,
+        T: State + StateReader,
     {
         let concurrent_execution_info =
-            self.apply_concurrent_changes(state.clone(), general_config.clone());
+            self.apply_concurrent_changes(state, general_config.clone());
 
         let (fee_transfer_info, actual_fee) = self.apply_sequential_changes(
             state,
@@ -54,7 +54,7 @@ pub(crate) trait InternalStateTransaction {
 
     fn apply_concurrent_changes<T>(
         &self,
-        state: T,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
@@ -63,12 +63,15 @@ pub(crate) trait InternalStateTransaction {
         self._apply_specific_concurrent_changes(UpdatesTrackerState::new(state), general_config)
     }
 
-    fn apply_sequential_changes(
+    fn apply_sequential_changes<T>(
         &self,
-        state: impl State,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
         actual_resources: HashMap<String, usize>,
-    ) -> FeeInfo {
+    ) -> FeeInfo
+    where
+        T: State,
+    {
         self._apply_specific_sequential_changes(state, general_config, actual_resources)
     }
 
@@ -84,10 +87,12 @@ pub(crate) trait InternalStateTransaction {
     where
         T: State;
 
-    fn _apply_specific_sequential_changes(
+    fn _apply_specific_sequential_changes<T>(
         &self,
-        state: impl State,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
         actual_resources: HashMap<String, usize>,
-    ) -> FeeInfo;
+    ) -> FeeInfo
+    where
+        T: State;
 }
