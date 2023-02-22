@@ -30,12 +30,14 @@ use cairo_rs::{
 };
 use felt::Felt;
 use num_traits::{One, ToPrimitive, Zero};
+use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------
 //* BusinessLogicHandler implementation
 //* -----------------------------------
 
-pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
+#[derive(Debug)]
+pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -47,32 +49,26 @@ pub struct BusinessLogicSyscallHandler<T: State + StateReader> {
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
-    pub(crate) block_info: BlockInfo,
-    pub(crate) state: T,
-    pub(crate) starknet_storage_state: ContractStorageState<T>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
+impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new(
-        _tx_execution_context: TransactionExecutionContext,
-        state: T,
+        tx_execution_context: TransactionExecutionContext,
+        state: &'a mut T,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
     ) -> Self {
-        let block_info = general_config.block_info;
         let events = Vec::new();
-        let tx_execution_context = TransactionExecutionContext::default();
         let read_only_segments = Vec::new();
         let l2_to_l1_messages = Vec::new();
-        let general_config = StarknetGeneralConfig::default();
         let tx_info_ptr = None;
-        let starknet_storage_state =
-            ContractStorageState::new(state.clone(), contract_address.clone());
+        let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
         let internal_calls = Vec::new();
 
@@ -86,12 +82,18 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
-            block_info,
-            state,
             starknet_storage_state,
             internal_calls,
             expected_syscall_ptr: syscall_ptr,
         }
+    }
+
+    pub fn default_with(state: &'a mut T) -> Self {
+        BusinessLogicSyscallHandler::new_for_testing(
+            BlockInfo::default(),
+            Default::default(),
+            state,
+        )
     }
 
     /// Increments the syscall count for a given `syscall_name` by 1.
@@ -100,7 +102,11 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
             .increment_syscall_counter(syscall_name, 1);
     }
 
-    pub fn new_for_testing(block_info: BlockInfo, _contract_address: Address, state: T) -> Self {
+    pub fn new_for_testing(
+        block_info: BlockInfo,
+        _contract_address: Address,
+        state: &'a mut T,
+    ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
             "deploy".to_string(),
@@ -126,10 +132,10 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
-        let general_config = StarknetGeneralConfig::default();
+        let mut general_config = StarknetGeneralConfig::default();
+        general_config.block_info = block_info;
         let tx_info_ptr = None;
-        let starknet_storage_state =
-            ContractStorageState::new(state.clone(), contract_address.clone());
+        let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
         let internal_calls = Vec::new();
         let expected_syscall_ptr = Relocatable::from((0, 0));
@@ -144,8 +150,6 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
             l2_to_l1_messages,
             general_config,
             tx_info_ptr,
-            block_info,
-            state,
             starknet_storage_state,
             internal_calls,
             expected_syscall_ptr,
@@ -182,7 +186,10 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
         class_hash_bytes: [u8; 32],
         constructor_calldata: Vec<Felt>,
     ) -> Result<(), StateError> {
-        let contract_class = self.state.get_contract_class(&class_hash_bytes)?;
+        let contract_class = self
+            .starknet_storage_state
+            .state
+            .get_contract_class(&class_hash_bytes)?;
         let constructor_entry_points = contract_class
             .entry_points_by_type
             .get(&EntryPointType::Constructor)
@@ -214,7 +221,7 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
 
         let _call_info = call
             .execute(
-                &mut self.state,
+                self.starknet_storage_state.state,
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
@@ -224,9 +231,27 @@ impl<T: State + StateReader + Clone + Default> BusinessLogicSyscallHandler<T> {
     }
 }
 
-impl<T> SyscallHandler for BusinessLogicSyscallHandler<T>
+impl<'a, T> Borrow<T> for BusinessLogicSyscallHandler<'a, T>
 where
-    T: Clone + Default + State + StateReader,
+    T: State + StateReader,
+{
+    fn borrow(&self) -> &T {
+        self.starknet_storage_state.state
+    }
+}
+
+impl<'a, T> BorrowMut<T> for BusinessLogicSyscallHandler<'a, T>
+where
+    T: State + StateReader,
+{
+    fn borrow_mut(&mut self) -> &mut T {
+        self.starknet_storage_state.state
+    }
+}
+
+impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
+where
+    T: Default + State + StateReader,
 {
     fn emit_event(
         &mut self,
@@ -318,7 +343,8 @@ where
             .try_into()
             .map_err(|_| UtilsError::FeltToFixBytesArrayFail(request.class_hash.clone()))?;
 
-        self.state
+        self.starknet_storage_state
+            .state
             .deploy_contract(deploy_contract_address.clone(), class_hash_bytes)?;
         self.execute_constructor_entry_point(
             &deploy_contract_address,
@@ -399,7 +425,7 @@ where
         );
 
         call.execute(
-            &mut self.state,
+            self.starknet_storage_state.state,
             &self.general_config,
             &mut self.resources_manager,
             &self.tx_execution_context,
@@ -409,7 +435,7 @@ where
     }
 
     fn get_block_info(&self) -> &BlockInfo {
-        &self.block_info
+        &self.general_config.block_info
     }
 
     fn _get_caller_address(
@@ -526,9 +552,9 @@ where
     }
 }
 
-impl<T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<T>
+impl<'a, T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<'a, T>
 where
-    T: Clone + Default + State + StateReader,
+    T: Default + State + StateReader,
 {
     fn post_run(
         &self,
@@ -543,19 +569,6 @@ where
             ));
         }
         self.validate_read_only_segments(runner)
-    }
-}
-
-impl<T> Default for BusinessLogicSyscallHandler<T>
-where
-    T: Clone + Default + State + StateReader,
-{
-    fn default() -> Self {
-        BusinessLogicSyscallHandler::new_for_testing(
-            BlockInfo::default(),
-            Default::default(),
-            Default::default(),
-        )
     }
 }
 
@@ -594,8 +607,8 @@ mod tests {
     use felt::Felt;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 
-    type BusinessLogicSyscallHandler =
-        super::BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>;
+    type BusinessLogicSyscallHandler<'a> =
+        super::BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -623,7 +636,8 @@ mod tests {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     fn deploy_from_zero_error() {
-        let mut syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -648,7 +662,8 @@ mod tests {
 
     #[test]
     fn can_allocate_segment() {
-        let mut syscall_handler = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
 
@@ -663,7 +678,8 @@ mod tests {
 
     #[test]
     fn test_get_block_number() {
-        let mut syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -682,7 +698,8 @@ mod tests {
 
     #[test]
     fn test_get_contract_address_ok() {
-        let mut syscall = BusinessLogicSyscallHandler::default();
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);

@@ -16,7 +16,8 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
-use std::collections::HashMap;
+use num_traits::ToPrimitive;
+use std::{borrow::Cow, collections::HashMap};
 
 pub(crate) struct StarknetRunner<H>
 where
@@ -31,6 +32,20 @@ impl<H> StarknetRunner<H>
 where
     H: SyscallHandler,
 {
+    pub fn map_hint_processor<H2>(
+        self,
+        hint_processor: SyscallHintProcessor<H2>,
+    ) -> StarknetRunner<H2>
+    where
+        H2: SyscallHandler,
+    {
+        StarknetRunner {
+            cairo_runner: self.cairo_runner,
+            vm: self.vm,
+            hint_processor,
+        }
+    }
+
     pub fn new(
         cairo_runner: CairoRunner,
         vm: VirtualMachine,
@@ -65,17 +80,28 @@ where
     }
 
     pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
-        self.vm
+        let ret_data = self
+            .vm
             .get_return_values(2)
-            .map_err(StarknetRunnerError::MemoryException)?
-            .into_iter()
-            .map(|val| match val {
-                MaybeRelocatable::Int(felt) => Ok(felt),
-                MaybeRelocatable::RelocatableValue(r) => {
-                    Ok(self.vm.get_integer(&r).unwrap().into_owned())
-                }
-            })
-            .collect::<Result<Vec<Felt>, _>>()
+            .map_err(StarknetRunnerError::MemoryException)?;
+
+        let n_rets = ret_data[0]
+            .get_int_ref()
+            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+        let ret_ptr = ret_data[1]
+            .get_relocatable()
+            .map_err(|_| StarknetRunnerError::NotARelocatable)?;
+
+        let ret_data = self
+            .vm
+            .get_integer_range(
+                &ret_ptr,
+                n_rets
+                    .to_usize()
+                    .ok_or(StarknetRunnerError::DataConvertionError)?,
+            )
+            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+        Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
     pub(crate) fn prepare_os_context(&mut self) -> Vec<MaybeRelocatable> {
@@ -213,8 +239,8 @@ mod test {
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
 
-    type SyscallHintProcessor = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
-        BusinessLogicSyscallHandler<CachedState<InMemoryStateReader>>,
+    type SyscallHintProcessor<'a> = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
+        BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>,
     >;
 
     #[test]
@@ -222,7 +248,10 @@ mod test {
         let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
         let vm = VirtualMachine::new(true);
-        let hint_processor = SyscallHintProcessor::new_empty();
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
@@ -234,7 +263,10 @@ mod test {
         let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
         let vm = VirtualMachine::new(true);
-        let hint_processor = SyscallHintProcessor::new_empty();
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
