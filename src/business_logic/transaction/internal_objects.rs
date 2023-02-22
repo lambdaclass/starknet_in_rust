@@ -1,7 +1,11 @@
 use super::state_objects::FeeInfo;
 use crate::{
     business_logic::{
-        execution::objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+        execution::{
+            execution_entry_point::ExecutionEntryPoint,
+            execution_errors::ExecutionError,
+            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+        },
         fact_state::state::ExecutionResourcesManager,
         state::{
             state_api::{State, StateReader},
@@ -15,12 +19,12 @@ use crate::{
     },
     definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
     hash_utils::calculate_contract_address,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address},
     utils_errors::UtilsError,
 };
-use felt::Felt;
+use felt::{felt_str, Felt};
 use num_traits::Zero;
 use std::collections::HashMap;
 
@@ -142,17 +146,25 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor<S: State>(
+    pub fn invoke_constructor<S: State + StateReader + Clone>(
         &self,
-        _state: UpdatesTrackerState<S>,
+        state: &mut UpdatesTrackerState<S>,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo {
-        // TODO: uncomment once execute entry point has been implemented
-        // let call = ExecuteEntryPoint.create()
-        // let call_info = call.execute()
-        // actual_resources = calculate_tx_resources()
+    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+        let entry_point_selector = felt_str!(
+            "1159040026212278395030414237414753050475174923702621880048416706425641521556"
+        );
+        let call = ExecutionEntryPoint::new(
+            self.contract_address,
+            self.constructor_calldata,
+            entry_point_selector,
+            Address(0.into()),
+            EntryPointType::Constructor,
+            None,
+            None,
+        );
 
-        let _tx_execution_context = TransactionExecutionContext::new(
+        let tx_execution_context = TransactionExecutionContext::new(
             Address(Felt::zero()),
             self.hash_value.clone(),
             Vec::new(),
@@ -162,7 +174,29 @@ impl InternalDeploy {
             self.version,
         );
 
-        let _resources_manager = ExecutionResourcesManager::default();
-        todo!()
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = call.execute(
+            state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+        )?;
+
+        let actual_resources = calculate_tx_resources(
+            resources_manager,
+            &[Some(call_info)],
+            self.tx_type,
+            state,
+            None,
+        )?;
+
+        Ok(
+            TransactionExecutionInfo::create_concurrent_stage_execution_info(
+                None,
+                Some(call_info),
+                actual_resources,
+                Some(self.tx_type),
+            ),
+        )
     }
 }
