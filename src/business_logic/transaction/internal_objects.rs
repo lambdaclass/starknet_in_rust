@@ -10,18 +10,21 @@ use crate::{
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
-        errors::syscall_handler_errors::SyscallHandlerError,
+        errors::{
+            contract_address_errors::ContractAddressError,
+            syscall_handler_errors::SyscallHandlerError,
+        },
         transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
+        constants::TRANSACTION_VERSION,
         general_config::{StarknetChainId, StarknetGeneralConfig},
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class::ContractClass,
     starkware_utils::starkware_errors::StarkwareError,
-    utils::{calculate_tx_resources, Address},
-    utils_errors::UtilsError,
+    utils::{calculate_tx_resources, felt_to_hash, Address},
 };
 use felt::Felt;
 use num_traits::Zero;
@@ -47,11 +50,7 @@ impl InternalDeploy {
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_class_hash(&contract_class)
             .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
-        let contract_hash: [u8; 32] = class_hash
-            .to_string()
-            .as_bytes()
-            .try_into()
-            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(class_hash.clone()))?;
+        let contract_hash: [u8; 32] = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &class_hash,
@@ -86,9 +85,7 @@ impl InternalDeploy {
         _general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
-        let class_hash: [u8; 32] = self.contract_hash[..]
-            .try_into()
-            .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
+        let class_hash: [u8; 32] = self.contract_hash;
         state.get_contract_class(&class_hash)?;
 
         self.handle_empty_constructor(state)
@@ -113,18 +110,14 @@ impl InternalDeploy {
             return Err(StarkwareError::TransactionFailed);
         }
 
-        let class_hash: [u8; 32] = self.contract_hash[..]
-            .try_into()
-            .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
+        let class_hash: [u8; 32] = self.contract_hash;
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
             Address(0.into()),
             Some(class_hash),
         );
 
-        let resources_manager = ExecutionResourcesManager {
-            ..Default::default()
-        };
+        let resources_manager = ExecutionResourcesManager::default();
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
