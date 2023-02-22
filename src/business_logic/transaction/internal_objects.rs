@@ -33,7 +33,7 @@ use crate::{
     utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
     utils_errors::UtilsError,
 };
-use felt::Felt;
+use felt::{felt_str, Felt};
 use num_traits::{Num, Zero};
 use std::collections::HashMap;
 
@@ -222,11 +222,10 @@ impl InternalDeclare {
             nonce.clone(),
         )?;
 
-        let validate_entry_point_selector = Felt::from_str_radix(
-            "1148189391774113786911959041662034419554430000171893651982484995704491697075",
-            10,
-        )
-        .unwrap();
+        // Value generated from get_selector_from_name(VALIDATE_DECLARE_ENTRY_POINT_NAME)
+        let validate_entry_point_selector = felt_str!(
+            "1148189391774113786911959041662034419554430000171893651982484995704491697075"
+        );
 
         let internal_declare = InternalDeclare {
             class_hash,
@@ -336,7 +335,7 @@ impl InternalDeclare {
         resources_manager: &mut ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
-        if self.version > u64::pow(2, 63) {
+        if self.version > 0x8000_0000_0000_0000 {
             return Ok(None);
         }
 
@@ -540,7 +539,6 @@ mod tests {
         // ---------------------
         //      Comparison
         // ---------------------
-
         assert_eq!(
             internal_declare
                 .apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
