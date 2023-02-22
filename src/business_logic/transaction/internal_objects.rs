@@ -295,7 +295,7 @@ impl InternalDeclare {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
-        let updates_tracker_state = UpdatesTrackerState::new(state.clone());
+        let mut updates_tracker_state = UpdatesTrackerState::new(state);
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![validate_info.clone()],
