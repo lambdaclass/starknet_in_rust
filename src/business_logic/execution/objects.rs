@@ -216,9 +216,9 @@ impl Default for CallInfo {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OrderedEvent {
-    order: u64,
-    keys: Vec<Felt>,
-    data: Vec<Felt>,
+    pub order: u64,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
 }
 
 impl OrderedEvent {
@@ -248,7 +248,7 @@ impl Event {
 //  Transaction Structures
 // -------------------------
 
-#[derive(Clone, Default, Getters)]
+#[derive(Clone, Debug, Default, Getters)]
 pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,
