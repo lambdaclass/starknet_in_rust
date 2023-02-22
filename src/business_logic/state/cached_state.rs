@@ -126,25 +126,24 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
     fn deploy_contract(
         &mut self,
-        contract_address: Address,
+        deployed_contract_address: Address,
         class_hash: [u8; 32],
     ) -> Result<(), StateError> {
-        if contract_address == Address(0.into()) {
+        if deployed_contract_address == Address(0.into()) {
             return Err(StateError::ContractAddressOutOfRangeAddress(
-                contract_address.clone(),
+                deployed_contract_address.clone(),
             ));
         }
 
-        // let current_class_hash = self.get_class_hash_at(&contract_address)?;
-        // if current_class_hash == UNINITIALIZED_CLASS_HASH {
-        //     return Err(StateError::ContractAddressUnavailable(
-        //         contract_address.clone(),
-        //     ));
-        // }
+        if self.get_class_hash_at(&deployed_contract_address).is_ok() {
+            return Err(StateError::ContractAddressUnavailable(
+                deployed_contract_address.clone(),
+            ));
+        }
 
         self.cache
             .class_hash_writes
-            .insert(contract_address, class_hash);
+            .insert(deployed_contract_address, class_hash);
         Ok(())
     }
 
