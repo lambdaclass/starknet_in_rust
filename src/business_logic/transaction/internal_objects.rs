@@ -13,7 +13,10 @@ use crate::{
         errors::syscall_handler_errors::SyscallHandlerError,
         transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
     },
-    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+    definitions::{
+        general_config::{StarknetChainId, StarknetGeneralConfig},
+        transaction_type::TransactionType,
+    },
     hash_utils::calculate_contract_address,
     services::api::contract_class::ContractClass,
     starkware_utils::starkware_errors::StarkwareError,
@@ -163,6 +166,82 @@ impl InternalDeploy {
         );
 
         let _resources_manager = ExecutionResourcesManager::default();
+        todo!()
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct InternalDeployAccount {
+    _contract_address: Address,
+    _contract_address_salt: Address,
+    _class_hash: [u8; 32],
+    _constructor_calldata: Vec<Felt>,
+    _version: u64,
+    _nonce: u64,
+}
+
+impl InternalDeployAccount {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        _class_hash: [u8; 32],
+        _max_fee: u64,
+        _version: u64,
+        _nonce: Felt,
+        _constructor_calldata: Vec<Felt>,
+        _signature: Vec<Felt>,
+        _contract_address_salt: Address,
+        _chain_id: StarknetChainId,
+    ) -> Self {
+        todo!()
+    }
+
+    pub fn new_for_testing(
+        _contract_class: ContractClass,
+        _max_fee: u64,
+        _contract_address_salt: Address,
+        _constructor_calldata: Vec<Felt>,
+        _chain_id: StarknetChainId,
+        _signature: Vec<Felt>,
+    ) -> Self {
+        todo!()
+    }
+
+    pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> ! {
+        todo!()
+    }
+
+    fn _apply_specific_concurrent_changes<S>(
+        &self,
+        _status: UpdatesTrackerState<S>,
+        _general_config: StarknetGeneralConfig,
+    ) -> TransactionExecutionInfo
+    where
+        S: State,
+    {
+        todo!()
+    }
+
+    pub fn handle_constructor<S>(
+        _contract_class: ContractClass,
+        _state: S,
+        _general_config: StarknetGeneralConfig,
+        _resources_manager: ExecutionResourcesManager,
+    ) -> CallInfo
+    where
+        S: State,
+    {
+        todo!()
+    }
+
+    pub fn run_constructor_entrypoint<S>(
+        &self,
+        _state: UpdatesTrackerState<S>,
+        _general_config: StarknetGeneralConfig,
+        _resources_manager: ExecutionResourcesManager,
+    ) -> CallInfo
+    where
+        S: State + StateReader,
+    {
         todo!()
     }
 }
