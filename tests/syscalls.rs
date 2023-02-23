@@ -13,7 +13,7 @@ use starknet_rs::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
             state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
+        state::cached_state::{CachedState, ContractClassCache},
     },
     definitions::{
         constants::TRANSACTION_VERSION,
@@ -23,10 +23,10 @@ use starknet_rs::{
     starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
-use std::path::Path;
+use std::{iter::empty, path::Path};
 
 #[allow(clippy::too_many_arguments)]
-fn test_contract(
+fn test_contract<'a>(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
     class_hash: [u8; 32],
@@ -36,6 +36,9 @@ fn test_contract(
     tx_context: Option<TransactionExecutionContext>,
     events: impl Into<Vec<OrderedEvent>>,
     l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
+    storage_read_values: impl Into<Vec<Felt>>,
+    accessed_storage_keys: impl Iterator<Item = [u8; 32]>,
+    extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path)>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
@@ -60,10 +63,19 @@ fn test_contract(
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);
-    let mut state = CachedState::new(
-        state_reader,
-        Some([(class_hash, contract_class)].into_iter().collect()),
-    );
+    let mut state = CachedState::new(state_reader, {
+        let mut contract_class_cache = ContractClassCache::new();
+        contract_class_cache.insert(class_hash, contract_class);
+
+        for (class_hash, contract_path) in extra_contracts {
+            let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+                .expect("Could not load extra contract from JSON");
+
+            contract_class_cache.insert(class_hash, contract_class);
+        }
+
+        Some(contract_class_cache)
+    });
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
@@ -94,9 +106,11 @@ fn test_contract(
             call_type: CallType::Delegate.into(),
             class_hash: class_hash.into(),
             entry_point_selector: Some(entry_point_selector),
-            l2_to_l1_messages: l2_to_l1_messages.into(),
-            retdata: return_data.into(),
             events: events.into(),
+            l2_to_l1_messages: l2_to_l1_messages.into(),
+            storage_read_values: storage_read_values.into(),
+            accessed_storage_keys: accessed_storage_keys.collect(),
+            retdata: return_data.into(),
             ..Default::default()
         },
     );
@@ -144,6 +158,9 @@ fn emit_event_syscall() {
         ],
         [],
         [],
+        empty(),
+        empty(),
+        [],
     );
 }
 
@@ -163,6 +180,9 @@ fn get_block_number_syscall() {
             None,
             [],
             [],
+            [],
+            empty(),
+            empty(),
             [block_number.into()],
         );
     };
@@ -188,6 +208,9 @@ fn get_block_timestamp_syscall() {
             None,
             [],
             [],
+            [],
+            empty(),
+            empty(),
             [block_timestamp.into()],
         );
     };
@@ -210,6 +233,9 @@ fn get_caller_address_syscall() {
             None,
             [],
             [],
+            [],
+            empty(),
+            empty(),
             [caller_address],
         );
     };
@@ -232,6 +258,9 @@ fn get_contract_address_syscall() {
             None,
             [],
             [],
+            [],
+            empty(),
+            empty(),
             [contract_address],
         );
     };
@@ -257,6 +286,9 @@ fn get_sequencer_address_syscall() {
             None,
             [],
             [],
+            [],
+            empty(),
+            empty(),
             [sequencer_address],
         );
     };
@@ -296,6 +328,9 @@ fn get_tx_info_syscall() {
             )),
             [],
             [],
+            [],
+            empty(),
+            empty(),
             [
                 version.into(),
                 account_contract_address.0,
@@ -393,6 +428,9 @@ fn get_tx_signature_syscall() {
             )),
             [],
             [],
+            [],
+            empty(),
+            empty(),
             [
                 signature.len().into(),
                 signature
@@ -406,6 +444,44 @@ fn get_tx_signature_syscall() {
     run(vec![]);
     run([0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec());
     run([0x9A, 0xBC, 0xDE, 0xF0].map(Felt::from).to_vec());
+}
+
+#[test]
+fn library_call_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_library_call",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [11.into()],
+        [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
+        [([2; 32], Path::new("tests/syscalls-lib.json"))].into_iter(),
+        [],
+    );
+}
+
+#[test]
+fn library_call_l1_handler_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_library_call_l1_handler",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [5.into()],
+        [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
+        [([2; 32], Path::new("tests/syscalls-lib.json"))].into_iter(),
+        [],
+    );
 }
 
 #[test]
@@ -436,6 +512,9 @@ fn send_message_to_l1_syscall() {
                 payload: [3].map(Felt::from).to_vec(),
             },
         ],
+        [],
+        empty(),
+        empty(),
         [],
     );
 }

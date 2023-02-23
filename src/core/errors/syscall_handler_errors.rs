@@ -2,7 +2,7 @@ use super::state_errors::StateError;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum SyscallHandlerError {
     #[error("Missing Member")]
     MissingMember,

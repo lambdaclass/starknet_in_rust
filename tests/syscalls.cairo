@@ -1,6 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.messages import send_message_to_l1
 from starkware.starknet.common.syscalls import (
     emit_event,
@@ -11,10 +12,27 @@ from starkware.starknet.common.syscalls import (
     get_sequencer_address,
     get_tx_info,
     get_tx_signature,
+    library_call_l1_handler,
 )
+
+@storage_var
+func lib_state() -> (res: felt) {
+}
 
 @event
 func test_event(a: felt, b: felt, c: felt) {
+}
+
+@contract_interface
+namespace ISyscallsLib {
+    func stateless_func(a: felt, b: felt) -> (answer: felt) {
+    }
+
+    func stateful_func() {
+    }
+
+    func stateful_get_contract_address() -> (contract_address: felt) {
+    }
 }
 
 func array_sum(len: felt, arr: felt*) -> felt {
@@ -111,6 +129,49 @@ func test_get_tx_signature{syscall_ptr: felt*}() -> (signature_len: felt, signat
     let signature_sum = array_sum(signature_len, signature);
 
     return (signature_len, signature_sum);
+}
+
+@external
+func test_library_call{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt}() {
+    let (answer) = ISyscallsLib.library_call_stateless_func(
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202, a=21, b=2
+    );
+    assert answer = 42;
+
+    lib_state.write(10);
+    ISyscallsLib.library_call_stateful_func(
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202
+    );
+    let (value) = lib_state.read();
+    assert value = 11;
+
+    let self_contact_address = get_contract_address();
+    let call_contact_address = ISyscallsLib.library_call_stateful_get_contract_address(
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202
+    );
+    assert self_contact_address = call_contact_address;
+
+    return ();
+}
+
+@external
+func test_library_call_l1_handler{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt
+}() {
+    let (calldata) = alloc();
+    assert calldata[0] = 5;
+
+    library_call_l1_handler(
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202,
+        // function_selector=sn_keccak('on_event'),
+        function_selector=0x017349c3c55c7256afc81e94a9d2edda4a45c30dae18b50f9909c6467cd80577,
+        calldata_size=1,
+        calldata=calldata,
+    );
+    let (answer) = lib_state.read();
+    assert answer = 5;
+
+    return ();
 }
 
 @external
