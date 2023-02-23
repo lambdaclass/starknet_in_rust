@@ -12,16 +12,16 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default, MutGetters)]
 pub struct InMemoryStateReader {
-    pub(crate) ffc: DictStorage,
+    pub(crate) storage: DictStorage,
     #[getset(get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
     pub(crate) contract_class_storage: DictStorage,
 }
 
 impl InMemoryStateReader {
-    pub fn new(ffc: DictStorage, contract_class_storage: DictStorage) -> Self {
+    pub fn new(storage: DictStorage, contract_class_storage: DictStorage) -> Self {
         Self {
-            ffc,
+            storage,
             contract_states: HashMap::new(),
             contract_class_storage,
         }
@@ -33,7 +33,7 @@ impl InMemoryStateReader {
     ) -> Result<&ContractState, StateError> {
         if !self.contract_states.contains_key(contract_address) {
             let result = self
-                .ffc
+                .storage
                 .get_contract_state(&felt_to_hash(&contract_address.0))?;
             self.contract_states
                 .insert(contract_address.clone(), result);
@@ -89,7 +89,7 @@ mod tests {
         let contract_state = ContractState::new([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .ffc
+            .storage
             .set_contract_state(&felt_to_hash(&contract_address.0), &contract_state)
             .unwrap();
 

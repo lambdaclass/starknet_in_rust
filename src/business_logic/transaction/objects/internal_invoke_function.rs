@@ -217,7 +217,7 @@ mod tests {
         let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
         state
             .state_reader
-            .ffc
+            .storage
             .set_contract_state(
                 &felt_to_hash(&internal_invoke_function.contract_address.0),
                 &contract_state,
