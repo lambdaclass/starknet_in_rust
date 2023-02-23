@@ -40,7 +40,7 @@ pub struct CallInfo {
     pub events: Vec<OrderedEvent>,
     pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub storage_read_values: Vec<Felt>,
-    pub accesed_storage_keys: HashSet<[u8; 32]>,
+    pub accessed_storage_keys: HashSet<[u8; 32]>,
     pub internal_calls: Vec<CallInfo>,
 }
 
@@ -72,7 +72,7 @@ impl CallInfo {
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             storage_read_values: Vec::new(),
-            accesed_storage_keys: HashSet::new(),
+            accessed_storage_keys: HashSet::new(),
             internal_calls: Vec::new(),
         }
     }
@@ -161,7 +161,7 @@ impl CallInfo {
 
     pub fn get_visited_storage_entries(self) -> HashSet<StorageEntry> {
         let storage_entries = self
-            .accesed_storage_keys
+            .accessed_storage_keys
             .into_iter()
             .map(|key| (self.contract_address.clone(), key))
             .collect::<HashSet<(Address, [u8; 32])>>();
@@ -198,7 +198,7 @@ impl Default for CallInfo {
             retdata: Vec::new(),
             entry_point_selector: None,
             l2_to_l1_messages: Vec::new(),
-            accesed_storage_keys: HashSet::new(),
+            accessed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,
@@ -216,9 +216,9 @@ impl Default for CallInfo {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OrderedEvent {
-    order: u64,
-    keys: Vec<Felt>,
-    data: Vec<Felt>,
+    pub order: u64,
+    pub keys: Vec<Felt>,
+    pub data: Vec<Felt>,
 }
 
 impl OrderedEvent {
@@ -229,7 +229,7 @@ impl OrderedEvent {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Event {
-    pub from_addres: Address,
+    pub from_address: Address,
     pub keys: Vec<Felt>,
     pub data: Vec<Felt>,
 }
@@ -237,7 +237,7 @@ pub struct Event {
 impl Event {
     pub fn new(event_content: OrderedEvent, emitting_contract_address: Address) -> Self {
         Event {
-            from_addres: emitting_contract_address,
+            from_address: emitting_contract_address,
             keys: event_content.keys,
             data: event_content.data,
         }
@@ -514,9 +514,9 @@ impl TransactionExecutionInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OrderedL2ToL1Message {
-    pub(crate) order: usize,
-    pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt>,
+    pub order: usize,
+    pub to_address: Address,
+    pub payload: Vec<Felt>,
 }
 
 impl OrderedL2ToL1Message {

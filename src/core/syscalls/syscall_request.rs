@@ -312,7 +312,7 @@ impl FromPtr for SendMessageToL1SysCall {
         let _selector = get_big_int(vm, &syscall_ptr)?;
         let to_address = Address(get_big_int(vm, &(&syscall_ptr + 1))?);
         let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
-        let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 4))?;
+        let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 3))?;
 
         Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
             _selector,

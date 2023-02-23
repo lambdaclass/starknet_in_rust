@@ -6,7 +6,9 @@ use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
+            objects::{
+                CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+            },
         },
         fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
@@ -36,6 +38,8 @@ fn test_contract<'a>(
     caller_address: Address,
     general_config: StarknetGeneralConfig,
     tx_context: Option<TransactionExecutionContext>,
+    events: impl Into<Vec<OrderedEvent>>,
+    l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
     storage_read_values: impl Into<Vec<Felt>>,
     accessed_storage_keys: impl Iterator<Item = [u8; 32]>,
     extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>)>,
@@ -130,12 +134,88 @@ fn test_contract<'a>(
             call_type: CallType::Delegate.into(),
             class_hash: class_hash.into(),
             entry_point_selector: Some(entry_point_selector),
+            events: events.into(),
+            l2_to_l1_messages: l2_to_l1_messages.into(),
             storage_read_values: storage_read_values.into(),
-            accesed_storage_keys: accessed_storage_keys.collect(),
+            accessed_storage_keys: accessed_storage_keys.collect(),
             calldata,
             retdata: return_data.into(),
             ..Default::default()
         },
+    );
+}
+
+#[test]
+fn call_contract_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_call_contract",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [10.into()],
+        [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
+        [(
+            [2u8; 32],
+            Path::new("tests/syscalls-lib.json"),
+            Some((Address(2222.into()), vec![("lib_state", 10.into())])),
+        )]
+        .into_iter(),
+        [2222.into()],
+        [],
+    );
+}
+
+#[test]
+fn emit_event_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_emit_event",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [
+            OrderedEvent {
+                order: 0,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 1,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2, 4, 6].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 2,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1234, 5678, 9012].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 3,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2468].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
+        [],
+        empty(),
+        empty(),
+        [],
+        [],
     );
 }
 
@@ -153,6 +233,8 @@ fn get_block_number_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
+            [],
             [],
             empty(),
             empty(),
@@ -181,6 +263,8 @@ fn get_block_timestamp_syscall() {
             general_config,
             None,
             [],
+            [],
+            [],
             empty(),
             empty(),
             [],
@@ -205,6 +289,8 @@ fn get_caller_address_syscall() {
             StarknetGeneralConfig::default(),
             None,
             [],
+            [],
+            [],
             empty(),
             empty(),
             [],
@@ -228,6 +314,8 @@ fn get_contract_address_syscall() {
             Address(0.into()),
             StarknetGeneralConfig::default(),
             None,
+            [],
+            [],
             [],
             empty(),
             empty(),
@@ -255,6 +343,8 @@ fn get_sequencer_address_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
+            [],
             [],
             empty(),
             empty(),
@@ -296,6 +386,8 @@ fn get_tx_info_syscall() {
                 n_steps,
                 version,
             )),
+            [],
+            [],
             [],
             empty(),
             empty(),
@@ -396,6 +488,8 @@ fn get_tx_signature_syscall() {
                 0,
             )),
             [],
+            [],
+            [],
             empty(),
             empty(),
             [],
@@ -424,33 +518,53 @@ fn library_call_syscall() {
         Address(0.into()),
         StarknetGeneralConfig::default(),
         None,
+        [],
+        [],
         [11.into()],
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
-        [([2; 32], Path::new("tests/syscalls-lib.json"), None)].into_iter(),
+        [(
+            [2; 32],
+            Path::new("tests/syscalls-lib.json"),
+            Default::default(),
+        )]
+        .into_iter(),
         [],
         [],
     );
 }
 
 #[test]
-fn call_contract_syscall() {
+fn send_message_to_l1_syscall() {
     test_contract(
         "tests/syscalls.json",
-        "test_call_contract",
+        "test_send_message_to_l1",
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
         StarknetGeneralConfig::default(),
         None,
-        [10.into()],
-        [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
-        [(
-            [2u8; 32],
-            Path::new("tests/syscalls-lib.json"),
-            Some((Address(2222.into()), vec![("lib_state", 10.into())])),
-        )]
-        .into_iter(),
-        [2222.into()],
+        [],
+        [
+            OrderedL2ToL1Message {
+                order: 0,
+                to_address: Address(1111.into()),
+                payload: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedL2ToL1Message {
+                order: 1,
+                to_address: Address(1111.into()),
+                payload: [2, 4].map(Felt::from).to_vec(),
+            },
+            OrderedL2ToL1Message {
+                order: 2,
+                to_address: Address(1111.into()),
+                payload: [3].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
+        empty(),
+        empty(),
+        [],
         [],
     );
 }

@@ -407,7 +407,7 @@ mod tests {
             retdata: Vec::new(),
             entry_point_selector: None,
             l2_to_l1_messages: Vec::new(),
-            accesed_storage_keys: HashSet::new(),
+            accessed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,

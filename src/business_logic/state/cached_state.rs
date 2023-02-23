@@ -108,6 +108,20 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .get_storage(storage_entry)
             .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
     }
+
+    fn count_actual_storage_changes(&mut self) -> (usize, usize) {
+        let storage_updates = self
+            .cache
+            .storage_writes
+            .clone()
+            .into_iter()
+            .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
+            .collect::<HashMap<StorageEntry, Felt>>();
+
+        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
+
+        (modified_contrats.len(), storage_updates.len())
+    }
 }
 
 impl<T: StateReader + Clone> State for CachedState<T> {
