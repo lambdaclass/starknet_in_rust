@@ -8,7 +8,7 @@ use crate::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
             execution_errors::ExecutionError,
-            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+            objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
@@ -248,7 +248,7 @@ impl InternalDeclare {
         self.sender_address.clone()
     }
 
-    pub fn validate_entrypoint_calldata(&self) -> Vec<Felt> {
+    pub fn get_calldata(&self) -> Vec<Felt> {
         let bytes = Felt::from_bytes_be(&self.class_hash);
         Vec::from([bytes])
     }
@@ -282,9 +282,9 @@ impl InternalDeclare {
         Ok(())
     }
 
-    pub fn apply_specific_concurrent_changes(
+    pub fn apply_specific_concurrent_changes<S: Default + State + StateReader>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut S,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
@@ -294,12 +294,11 @@ impl InternalDeclare {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
-        let mut updates_tracker_state = UpdatesTrackerState::new(state);
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![validate_info.clone()],
             TransactionType::Declare,
-            updates_tracker_state,
+            state.count_actual_storage_changes(),
             None,
         )?;
 
@@ -329,9 +328,9 @@ impl InternalDeclare {
         )
     }
 
-    pub fn run_validate_entrypoint(
+    pub fn run_validate_entrypoint<S: Default + State + StateReader>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
@@ -339,19 +338,19 @@ impl InternalDeclare {
             return Ok(None);
         }
 
-        let calldata = self.validate_entrypoint_calldata();
+        let calldata = self.get_calldata();
 
-        let call = ExecutionEntryPoint::new(
+        let entry_point = ExecutionEntryPoint::new(
             self.account_contract_address(),
             calldata,
             self.validate_entry_point_selector.clone(),
             Address(Felt::zero()),
             EntryPointType::External,
-            None,
-            None,
+            Some(CallType::Delegate),
+            self.class_hash,
         );
 
-        let call_info = call.execute(
+        let call_info = entry_point.execute(
             state,
             &general_config,
             resources_manager,
@@ -433,16 +432,13 @@ impl InternalDeclare {
 
 #[cfg(test)]
 mod tests {
-    use felt::Felt;
-    use num_traits::Num;
+    use felt::felt_str;
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
         business_logic::{
             execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         definitions::{
@@ -478,14 +474,10 @@ mod tests {
 
         //  ------------ contract data --------------------
 
-        let address = Address(1.into());
-        let class_hash = [1; 32];
-        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
-
+        let class_hash = internal_declare.class_hash;
         contract_class_cache.insert(class_hash, contract_class);
 
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
-        state_reader.contract_states.insert(address, contract_state);
+        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         //* ---------------------------------------
         //*    Create state with previous data
@@ -497,19 +489,15 @@ mod tests {
         //              Expected result
         //* ---------------------------------------
 
-        let entry_point_selector = Some(
-            Felt::from_str_radix(
-                "1148189391774113786911959041662034419554430000171893651982484995704491697075",
-                10,
-            )
-            .unwrap(),
-        );
+        // Value generated from selector _validate_declare_
+        let entry_point_selector = Some(felt_str!(
+            "1148189391774113786911959041662034419554430000171893651982484995704491697075"
+        ));
 
-        let calldata = [Felt::from_str_radix(
-            "2901640178084440408246930713802824082113120028809962300981437495334608520882",
-            10,
-        )
-        .unwrap()]
+        // Calldata is the class hash represented as a Felt
+        let calldata = [felt_str!(
+            "2901640178084440408246930713802824082113120028809962300981437495334608520882"
+        )]
         .to_vec();
 
         let validate_info = Some(CallInfo {

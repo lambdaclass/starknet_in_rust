@@ -6,7 +6,10 @@ use crate::{
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
+        state::{
+            cached_state::UNINITIALIZED_CLASS_HASH,
+            state_api::{State, StateReader},
+        },
         transaction::transaction_errors::TransactionError,
     },
     definitions::{
@@ -72,7 +75,7 @@ impl InternalInvokeFunction {
             Address(0.into()),
             EntryPointType::External,
             None,
-            None,
+            *UNINITIALIZED_CLASS_HASH,
         );
 
         let call_info = call.execute(
@@ -106,7 +109,7 @@ impl InternalInvokeFunction {
             Address(0.into()),
             EntryPointType::External,
             None,
-            None,
+            *UNINITIALIZED_CLASS_HASH,
         );
 
         call.execute(
