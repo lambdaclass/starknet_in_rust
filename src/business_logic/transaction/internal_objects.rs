@@ -1,7 +1,11 @@
 use super::state_objects::FeeInfo;
 use crate::{
     business_logic::{
-        execution::objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+        execution::{
+            execution_entry_point::ExecutionEntryPoint,
+            execution_errors::ExecutionError,
+            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+        },
         fact_state::state::ExecutionResourcesManager,
         state::{
             cached_state::CachedState,
@@ -15,7 +19,7 @@ use crate::{
     },
     definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
     hash_utils::calculate_contract_address,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address},
     utils_errors::UtilsError,
@@ -77,10 +81,10 @@ impl InternalDeploy {
         self.contract_hash
     }
 
-    pub fn _apply_specific_concurrent_changes<S: State + StateReader + Clone>(
+    pub fn _apply_specific_concurrent_changes<S: State + StateReader + Clone + Default>(
         &self,
         mut state: CachedState<S>,
-        _general_config: StarknetGeneralConfig,
+        general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: [u8; 32] = self.contract_hash[..]
@@ -88,7 +92,12 @@ impl InternalDeploy {
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
         state.get_contract_class(&class_hash)?;
 
-        self.handle_empty_constructor(&mut state)
+        if class_hash == [0; 32] {
+            self.handle_empty_constructor(&mut state)
+        } else {
+            self.invoke_constructor(&mut state, general_config)
+                .map_err(StarkwareError::InvokeConstructor)
+        }
     }
 
     pub fn _apply_specific_sequential_changes(
@@ -142,17 +151,33 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor<S: State + StateReader + Clone>(
+    pub fn invoke_constructor<S: State + StateReader + Clone + Default>(
         &self,
-        _state: CachedState<S>,
+        state: &mut S,
         general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo {
+    ) -> Result<TransactionExecutionInfo, ExecutionError> {
         // TODO: uncomment once execute entry point has been implemented
-        // let call = ExecuteEntryPoint.create()
-        // let call_info = call.execute()
-        // actual_resources = calculate_tx_resources()
+        // let call = ExecuteEntryPoint.create();
+        // let call_info = call.execute();
+        //  actual_resources = calculate_tx_resources();
+        let call = ExecutionEntryPoint::new(
+            // contract_address
+            self.contract_address.clone(),
+            // calldata
+            self.constructor_calldata.clone(),
+            // entry_point_selector
+            Felt::zero(),
+            // caller_address
+            Address(0.into()),
+            // entry_point_type
+            EntryPointType::Constructor,
+            // call_type
+            None,
+            // class_hash
+            None,
+        );
 
-        let _tx_execution_context = TransactionExecutionContext::new(
+        let tx_execution_context = TransactionExecutionContext::new(
             Address(Felt::zero()),
             self.hash_value.clone(),
             Vec::new(),
@@ -162,7 +187,30 @@ impl InternalDeploy {
             self.version,
         );
 
-        let _resources_manager = ExecutionResourcesManager::default();
-        todo!()
+        let mut resources_manager = ExecutionResourcesManager::default();
+
+        let call_info = call.execute(
+            state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+        )?;
+
+        let actual_resources = calculate_tx_resources(
+            resources_manager,
+            &[Some(call_info.clone())],
+            self.tx_type.clone(),
+            state.count_actual_storage_changes(),
+            None,
+        )?;
+
+        Ok(
+            TransactionExecutionInfo::create_concurrent_stage_execution_info(
+                None,
+                Some(call_info),
+                actual_resources,
+                Some(self.tx_type.clone()),
+            ),
+        )
     }
 }
