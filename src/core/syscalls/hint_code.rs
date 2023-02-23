@@ -26,6 +26,9 @@ pub(crate) const LIBRARY_CALL_L1_HANDLER: &str =
 pub(crate) const LIBRARY_CALL: &str =
     "syscall_handler.library_call(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
+pub(crate) const CALL_CONTRACT: &str =
+    "syscall_handler.call_contract(segments=segments, syscall_ptr=ids.syscall_ptr)";
+
 pub(crate) const GET_TX_SIGNATURE: &str =
     "syscall_handler.get_tx_signature(segments=segments, syscall_ptr=ids.syscall_ptr)";
 

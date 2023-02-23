@@ -17,7 +17,7 @@ use crate::{
         },
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::{constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
+    definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     services::api::contract_class::EntryPointType,
     starknet_storage::errors::storage_errors::StorageError,
@@ -329,7 +329,7 @@ where
                     "call_contract" => EntryPointType::External,
                     _ => todo!(),
                 };
-                function_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+                function_selector = request.function_selector;
                 class_hash = None;
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
@@ -456,6 +456,14 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
+    }
+
+    fn call_contract(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
