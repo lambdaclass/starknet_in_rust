@@ -519,10 +519,12 @@ mod tests {
                 cached_state::CachedState,
                 state_api::{State, StateReader},
             },
+            transaction::objects::internal_invoke_function::InternalInvokeFunction,
         },
         core::syscalls::os_syscall_handler::OsSyscallHandler,
+        definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         memory_insert,
-        services::api::contract_class::ContractClass,
+        services::api::contract_class::{ContractClass, EntryPointType},
         utils::{
             get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
@@ -1405,5 +1407,121 @@ mod tests {
                 .get_class_hash_at(&Address(deployed_address)),
             Ok(&class_hash)
         );
+    }
+
+    #[test]
+    fn test_deploy_and_invoke() {
+        let mut vm = vm!();
+        add_segments!(vm, 4);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10),     // DeployRequestStruct._selector
+                // ((2, 1), class_hash),     // DeployRequestStruct.class_hash
+                ((2, 2), 12),     // DeployRequestStruct.contract_address_salt
+                ((2, 3), 1),      // DeployRequestStruct.constructor_calldata_size
+                ((2, 4), (3, 0)), // DeployRequestStruct.constructor_calldata
+                ((2, 5), 0),      // DeployRequestStruct.deploy_from_zero
+                ((3, 0), 250)     // constructor
+            ]
+        );
+
+        let class_hash_felt = Felt::from_str_radix(
+            "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
+            16,
+        )
+        .unwrap();
+        let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
+
+        vm.insert_value(&relocatable!(2, 1), class_hash_felt)
+            .unwrap();
+
+        // Hinta data
+        let ids_data = ids_data!["syscall_ptr"];
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)".to_string(),
+            ids_data,
+        );
+
+        // Create SyscallHintProcessor
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler_hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        // Initialize state.set_contract_classes
+        syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state
+            .set_contract_classes(HashMap::new())
+            .unwrap();
+
+        // Set contract class
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("tests/storage_var_and_constructor.json"))
+                .unwrap();
+        syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        // Execute Deploy hint
+        assert_eq!(
+            syscall_handler_hint_processor.execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            ),
+            Ok(())
+        );
+
+        // Check VM inserts
+        // DeployResponse.contract_address
+        let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+        // DeployResponse.constructor_retdata_size
+        assert_eq!(get_big_int(&vm, &relocatable!(2, 7)), Ok(0.into()));
+        // DeployResponse.constructor_retdata
+        assert_eq!(
+            get_relocatable(&vm, &relocatable!(2, 8)),
+            Ok(relocatable!(0, 0))
+        );
+
+        // Check State diff
+        assert_eq!(
+            syscall_handler_hint_processor
+                .syscall_handler
+                .starknet_storage_state
+                .state
+                .get_class_hash_at(&Address(deployed_address.clone())),
+            Ok(&class_hash)
+        );
+
+        let internal_invoke_function = InternalInvokeFunction::new(
+            Address(deployed_address),
+            Felt::from_str_radix(
+                "283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c",
+                16,
+            )
+            .unwrap(),
+            EntryPointType::External,
+            vec![10.into()],
+            TransactionType::InvokeFunction,
+            0,
+            0.into(),
+            0.into(),
+            Vec::new(),
+            0,
+            0.into(),
+        );
+
+        let result = internal_invoke_function
+            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default());
+
+        println!("result: {:?}", result);
     }
 }
