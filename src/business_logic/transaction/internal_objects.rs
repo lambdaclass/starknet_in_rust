@@ -443,13 +443,14 @@ mod tests {
             },
             state::cached_state::CachedState,
         },
+        core::contract_address::starknet_contract_address::compute_class_hash,
         definitions::{
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
         services::api::contract_class::{ContractClass, EntryPointType},
         starknet_storage::dict_storage::DictStorage,
-        utils::Address,
+        utils::{felt_to_hash, Address},
     };
 
     use super::InternalDeclare;
@@ -483,7 +484,7 @@ mod tests {
         let sender_address = Address(1.into());
         let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
 
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(class_hash, contract_class.clone());
 
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
         state_reader
@@ -504,6 +505,9 @@ mod tests {
             "1148189391774113786911959041662034419554430000171893651982484995704491697075"
         ));
 
+        let class_hash_felt = compute_class_hash(&contract_class).unwrap();
+        let expected_class_hash = felt_to_hash(&class_hash_felt);
+
         // Calldata is the class hash represented as a Felt
         let calldata = [felt_str!(
             "2901640178084440408246930713802824082113120028809962300981437495334608520882"
@@ -517,7 +521,7 @@ mod tests {
             entry_point_selector,
             entry_point_type: Some(EntryPointType::External),
             calldata,
-            class_hash: Some(class_hash),
+            class_hash: Some(expected_class_hash),
             ..Default::default()
         });
 
