@@ -267,20 +267,20 @@ impl InternalDeployAccount {
 
         let validate_info = self
             .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .ok_or_else(|| todo!())?;
+            .map_err::<StateError, _>(|_| todo!())?;
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(constructor_call_info), Some(validate_info)],
+            &[Some(constructor_call_info.clone()), validate_info.clone()],
             TransactionType::DeployAccount,
-            state,
+            state.count_actual_storage_changes(),
             None,
         )
         .map_err::<StateError, _>(|_| todo!())?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                Some(validate_info),
+                validate_info,
                 Some(constructor_call_info),
                 actual_resources,
                 Some(TransactionType::DeployAccount),
@@ -377,30 +377,39 @@ impl InternalDeployAccount {
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Option<CallInfo>
+    ) -> Result<Option<CallInfo>, ExecutionError>
     where
-        S: State + StateReader,
+        S: Default + State + StateReader,
     {
         if self.version == 0 {
-            return None;
+            return Ok(None);
         }
 
         let call = ExecutionEntryPoint::new(
-            self.contract_address,
+            self.contract_address.clone(),
             [
                 Felt::from_bytes_be(&self.class_hash),
-                self.contract_address_salt.0,
+                self.contract_address_salt.0.clone(),
             ]
             .into_iter()
             .chain(self.constructor_calldata.iter().cloned())
             .collect(),
-            *VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
+            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
             Address(Felt::zero()),
             EntryPointType::External,
             None,
             None,
         );
 
-        todo!()
+        let call_info = call.execute(
+            state,
+            general_config,
+            resources_manager,
+            &self.get_execution_context(general_config.validate_max_n_steps),
+        )?;
+
+        verify_no_calls_to_other_contracts(&call_info)?;
+
+        Ok(Some(call_info))
     }
 }
