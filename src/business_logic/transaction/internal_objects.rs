@@ -203,7 +203,6 @@ impl InternalDeployAccount {
             Address(Felt::zero()),
         )?;
 
-        // TODO: Remaining fields (from base class).
         Ok(Self {
             contract_address: Address(contract_address),
             contract_address_salt,
@@ -250,7 +249,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StateError>
     where
-        S: Clone + Default + State + StateReader,
+        S: Default + State + StateReader,
     {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
@@ -297,7 +296,7 @@ impl InternalDeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, ExecutionError>
     where
-        S: Clone + Default + State + StateReader,
+        S: Default + State + StateReader,
     {
         let num_constructors = contract_class
             .entry_points_by_type
@@ -328,7 +327,7 @@ impl InternalDeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, ExecutionError>
     where
-        S: Clone + Default + State + StateReader,
+        S: Default + State + StateReader,
     {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
