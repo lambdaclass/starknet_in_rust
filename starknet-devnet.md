@@ -39,7 +39,7 @@
 
 - Add some funds to the account:
     ```
-    sh add-funds.sh <your-new-address>
+    sh scripts/add-funds.sh <your-new-address>
     ```
     
 - Deploy the account:
@@ -56,7 +56,7 @@
 
 - Declare the contract:
     ```
-    starknet declare --contract contract.json --feeder_gateway_url http://127.0.0.1:5050/ --gateway_url http://127.0.0.1:5050/
+    starknet declare --contract fibonacci_compiled.json --feeder_gateway_url http://127.0.0.1:5050/ --gateway_url http://127.0.0.1:5050/
     ```
 
 - Deploy the contract:
@@ -72,3 +72,6 @@
     ```
     starknet get_transaction_trace --hash 0x614526ed889c1223b6dbfd370386f74ab537bbfa5dc463bff3b86245cc59290 --feeder_gateway_url http://127.0.0.1:5050/ --gateway_url http://127.0.0.1:5050/
     ```
+
+## Notes
+In case you turn off the devnet server, the state will become wrong. You need to run `rm -rf ~/.starknet_accounts` in order to properly restart the state. 
