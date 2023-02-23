@@ -109,7 +109,7 @@ fn test_contract<'a>(
             events: events.into(),
             l2_to_l1_messages: l2_to_l1_messages.into(),
             storage_read_values: storage_read_values.into(),
-            accesed_storage_keys: accessed_storage_keys.collect(),
+            accessed_storage_keys: accessed_storage_keys.collect(),
             retdata: return_data.into(),
             ..Default::default()
         },

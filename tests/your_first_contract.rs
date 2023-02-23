@@ -116,7 +116,7 @@ fn your_first_contract_integration_test() {
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accesed_storage_keys: expected_accessed_storage_keys,
+        accessed_storage_keys: expected_accessed_storage_keys,
         ..Default::default()
     };
 
