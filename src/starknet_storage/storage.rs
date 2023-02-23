@@ -146,21 +146,6 @@ pub trait Storage {
     }
 }
 
-//* -------------------------
-//*   FactFetching contract
-//* -------------------------
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FactFetchingContext<T: Storage> {
-    storage: T,
-    n_workers: Option<usize>,
-}
-
-impl<T: Storage> FactFetchingContext<T> {
-    pub fn new(storage: T, n_workers: Option<usize>) -> Self {
-        FactFetchingContext { storage, n_workers }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,16 +157,6 @@ mod tests {
     use cairo_rs::types::program::Program;
     use felt::Felt;
     use std::collections::HashMap;
-
-    #[test]
-    fn new_ffc() {
-        let mut ffc = FactFetchingContext::new(DictStorage::new(), Some(2));
-
-        let fkey = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
-        ffc.storage.set_float(&fkey, 4.0).unwrap();
-
-        assert_eq!(ffc.storage.get_float(&fkey).unwrap(), 4.0);
-    }
 
     #[test]
     fn get_and_set_contract_state() {
