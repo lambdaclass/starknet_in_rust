@@ -12,7 +12,6 @@ use crate::{
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
-            update_tracker_state::UpdatesTrackerState,
         },
     },
     core::{
@@ -84,9 +83,9 @@ impl InternalDeploy {
         self.contract_hash
     }
 
-    pub fn _apply_specific_concurrent_changes<S: State + StateReader>(
+    pub fn _apply_specific_concurrent_changes<S: Default + State + StateReader + Clone>(
         &self,
-        mut state: &mut CachedState<InMemoryStateReader>,
+        mut state: CachedState<S>,
         _general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
@@ -95,7 +94,7 @@ impl InternalDeploy {
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
         state.get_contract_class(&class_hash)?;
 
-        self.handle_empty_constructor(state)
+        self.handle_empty_constructor(&mut state)
     }
 
     pub fn _apply_specific_sequential_changes(
@@ -109,9 +108,9 @@ impl InternalDeploy {
         (fee_transfer_info, actual_fee)
     }
 
-    pub fn handle_empty_constructor(
+    pub fn handle_empty_constructor<T: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         if self.constructor_calldata.is_empty() {
             return Err(StarkwareError::TransactionFailed);
@@ -130,11 +129,13 @@ impl InternalDeploy {
             ..Default::default()
         };
 
+        let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
             self.tx_type.clone(),
             state,
+            changes,
             None,
         )
         .map_err(|_| StarkwareError::UnexpectedHolesL2toL1Messages)?;
@@ -149,9 +150,9 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor(
+    pub fn invoke_constructor<S: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut S,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
         let entry_point_selector = felt_str!(
@@ -185,11 +186,13 @@ impl InternalDeploy {
             &tx_execution_context,
         )?;
 
+        let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
             self.tx_type.clone(),
             state,
+            changes,
             None,
         )?;
 

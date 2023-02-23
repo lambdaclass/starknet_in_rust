@@ -5,7 +5,9 @@ use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
+            objects::{
+                CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+            },
         },
         fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
@@ -32,6 +34,8 @@ fn test_contract(
     caller_address: Address,
     general_config: StarknetGeneralConfig,
     tx_context: Option<TransactionExecutionContext>,
+    events: impl Into<Vec<OrderedEvent>>,
+    l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
     return_data: impl Into<Vec<Felt>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
@@ -90,9 +94,56 @@ fn test_contract(
             call_type: CallType::Delegate.into(),
             class_hash: class_hash.into(),
             entry_point_selector: Some(entry_point_selector),
+            l2_to_l1_messages: l2_to_l1_messages.into(),
             retdata: return_data.into(),
+            events: events.into(),
             ..Default::default()
         },
+    );
+}
+
+#[test]
+fn emit_event_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_emit_event",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [
+            OrderedEvent {
+                order: 0,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 1,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2, 4, 6].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 2,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [1234, 5678, 9012].map(Felt::from).to_vec(),
+            },
+            OrderedEvent {
+                order: 3,
+                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                    "test_event".as_bytes(),
+                ))],
+                data: [2468].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
+        [],
     );
 }
 
@@ -110,6 +161,8 @@ fn get_block_number_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
+            [],
             [block_number.into()],
         );
     };
@@ -133,6 +186,8 @@ fn get_block_timestamp_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
+            [],
             [block_timestamp.into()],
         );
     };
@@ -153,6 +208,8 @@ fn get_caller_address_syscall() {
             Address(caller_address.clone()),
             StarknetGeneralConfig::default(),
             None,
+            [],
+            [],
             [caller_address],
         );
     };
@@ -173,6 +230,8 @@ fn get_contract_address_syscall() {
             Address(0.into()),
             StarknetGeneralConfig::default(),
             None,
+            [],
+            [],
             [contract_address],
         );
     };
@@ -196,6 +255,8 @@ fn get_sequencer_address_syscall() {
             Address(0.into()),
             general_config,
             None,
+            [],
+            [],
             [sequencer_address],
         );
     };
@@ -233,6 +294,8 @@ fn get_tx_info_syscall() {
                 n_steps,
                 version,
             )),
+            [],
+            [],
             [
                 version.into(),
                 account_contract_address.0,
@@ -303,5 +366,76 @@ fn get_tx_info_syscall() {
         [0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec(),
         12345678.into(),
         StarknetChainId::TestNet2,
+    );
+}
+
+#[test]
+fn get_tx_signature_syscall() {
+    let run = |signature: Vec<Felt>| {
+        let general_config = StarknetGeneralConfig::default();
+        let n_steps = general_config.invoke_tx_max_n_steps();
+
+        test_contract(
+            "tests/syscalls.json",
+            "test_get_tx_signature",
+            [1; 32],
+            Address(1111.into()),
+            Address(0.into()),
+            general_config,
+            Some(TransactionExecutionContext::new(
+                Address::default(),
+                0.into(),
+                signature.clone(),
+                12,
+                3.into(),
+                n_steps,
+                0,
+            )),
+            [],
+            [],
+            [
+                signature.len().into(),
+                signature
+                    .into_iter()
+                    .reduce(|a, b| a + b)
+                    .unwrap_or_default(),
+            ],
+        );
+    };
+
+    run(vec![]);
+    run([0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec());
+    run([0x9A, 0xBC, 0xDE, 0xF0].map(Felt::from).to_vec());
+}
+
+#[test]
+fn send_message_to_l1_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_send_message_to_l1",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [
+            OrderedL2ToL1Message {
+                order: 0,
+                to_address: Address(1111.into()),
+                payload: [1, 2, 3].map(Felt::from).to_vec(),
+            },
+            OrderedL2ToL1Message {
+                order: 1,
+                to_address: Address(1111.into()),
+                payload: [2, 4].map(Felt::from).to_vec(),
+            },
+            OrderedL2ToL1Message {
+                order: 2,
+                to_address: Address(1111.into()),
+                payload: [3].map(Felt::from).to_vec(),
+            },
+        ],
+        [],
     );
 }

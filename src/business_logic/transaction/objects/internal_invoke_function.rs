@@ -1,5 +1,3 @@
-use felt::{felt_str, Felt};
-
 use crate::{
     business_logic::{
         execution::{
@@ -7,10 +5,8 @@ use crate::{
             execution_errors::ExecutionError,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{cached_state::CachedState, update_tracker_state::UpdatesTrackerState},
+        fact_state::state::ExecutionResourcesManager,
+        state::state_api::{State, StateReader},
         transaction::transaction_errors::TransactionError,
     },
     core::transaction_hash::starknet_transaction_hash::{
@@ -24,7 +20,9 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, preprocess_invoke_function_fields, Address},
 };
+use felt::{felt_str, Felt};
 
+#[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
     pub(crate) contract_address: Address,
     entry_point_selector: Felt,
@@ -100,12 +98,15 @@ impl InternalInvokeFunction {
     }
 
     #[allow(dead_code)]
-    fn run_validate_entrypoint(
+    fn run_validate_entrypoint<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError> {
+    ) -> Result<Option<CallInfo>, ExecutionError>
+    where
+        T: Default + State + StateReader,
+    {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
@@ -136,15 +137,18 @@ impl InternalInvokeFunction {
         Ok(Some(call_info))
     }
 
-    ///     Builds the transaction execution context and executes the entry point.
-    ///     Returns the CallInfo.
+    /// Builds the transaction execution context and executes the entry point.
+    /// Returns the CallInfo.
     #[allow(dead_code)]
-    fn run_execute_entrypoint(
+    fn run_execute_entrypoint<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError> {
+    ) -> Result<CallInfo, ExecutionError>
+    where
+        T: Default + State + StateReader,
+    {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -163,12 +167,14 @@ impl InternalInvokeFunction {
         )
     }
 
-    #[allow(dead_code)]
-    fn _apply_specific_concurrent_changes(
+    fn _apply_specific_concurrent_changes<T>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut T,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> Result<TransactionExecutionInfo, ExecutionError>
+    where
+        T: Default + State + StateReader + Clone,
+    {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
@@ -176,11 +182,14 @@ impl InternalInvokeFunction {
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
+
+        let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
             self.tx_type.clone(),
             state,
+            changes,
             None,
         )?;
         let transaction_execution_info =
@@ -203,19 +212,22 @@ fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Transa
     }
     Ok(())
 }
+
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
-
-    use num_traits::Num;
-
+    use super::*;
     use crate::{
-        business_logic::{fact_state::contract_state::ContractState, state::state_api::State},
+        business_logic::{
+            fact_state::{
+                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+            },
+            state::cached_state::CachedState,
+        },
         services::api::contract_class::ContractClass,
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
     };
-
-    use super::*;
+    use num_traits::Num;
+    use std::{collections::HashMap, path::PathBuf};
 
     #[test]
     fn test_apply_specific_concurrent_changes() {
