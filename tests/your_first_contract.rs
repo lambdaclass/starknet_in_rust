@@ -78,7 +78,7 @@ fn your_first_contract_integration_test() {
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
+        address,
         calldata.clone(),
         increase_balance_selector.clone(),
         caller_address,
