@@ -22,7 +22,10 @@ use crate::{
         },
     },
     definitions::{
-        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
+        constants::{
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION,
+            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
+        },
         general_config::{StarknetChainId, StarknetGeneralConfig},
         transaction_type::TransactionType,
     },
@@ -171,7 +174,7 @@ impl InternalDeploy {
 #[derive(Clone, Debug)]
 pub struct InternalDeployAccount {
     contract_address: Address,
-    _contract_address_salt: Address,
+    contract_address_salt: Address,
     class_hash: [u8; 32],
     constructor_calldata: Vec<Felt>,
     version: u64,
@@ -203,7 +206,7 @@ impl InternalDeployAccount {
         // TODO: Remaining fields (from base class).
         Ok(Self {
             contract_address: Address(contract_address),
-            _contract_address_salt: contract_address_salt,
+            contract_address_salt,
             class_hash,
             constructor_calldata,
             version,
@@ -254,17 +257,36 @@ impl InternalDeployAccount {
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let constructor_call_info = self.handle_constructor(
-            contract_class,
+        let constructor_call_info = self
+            .handle_constructor(
+                contract_class,
+                state,
+                general_config,
+                &mut resources_manager,
+            )
+            .map_err::<StateError, _>(|_| todo!())?;
+
+        let validate_info = self
+            .run_validate_entrypoint(state, &mut resources_manager, general_config)
+            .ok_or_else(|| todo!())?;
+
+        let actual_resources = calculate_tx_resources(
+            resources_manager,
+            &[Some(constructor_call_info), Some(validate_info)],
+            TransactionType::DeployAccount,
             state,
-            general_config,
-            &mut resources_manager,
-        )?;
+            None,
+        )
+        .map_err::<StateError, _>(|_| todo!())?;
 
-        let validate_info =
-            self.run_validate_entrypoint(state, general_config, &mut resources_manager)?;
-
-        todo!()
+        Ok(
+            TransactionExecutionInfo::create_concurrent_stage_execution_info(
+                Some(validate_info),
+                Some(constructor_call_info),
+                actual_resources,
+                Some(TransactionType::DeployAccount),
+            ),
+        )
     }
 
     pub fn handle_constructor<S>(
@@ -339,7 +361,7 @@ impl InternalDeployAccount {
                 &self.constructor_calldata,
                 self.max_fee,
                 self.nonce,
-                self._contract_address_salt.0.clone(),
+                self.contract_address_salt.0.clone(),
                 self.chain_id.to_felt().to_u64().unwrap(),
             )
             .unwrap(),
@@ -349,5 +371,37 @@ impl InternalDeployAccount {
             n_steps,
             self.version,
         )
+    }
+
+    pub fn run_validate_entrypoint<S>(
+        &self,
+        state: &mut S,
+        resources_manager: &mut ExecutionResourcesManager,
+        general_config: &StarknetGeneralConfig,
+    ) -> Option<CallInfo>
+    where
+        S: State + StateReader,
+    {
+        if self.version == 0 {
+            return None;
+        }
+
+        let call = ExecutionEntryPoint::new(
+            self.contract_address,
+            [
+                Felt::from_bytes_be(&self.class_hash),
+                self.contract_address_salt.0,
+            ]
+            .into_iter()
+            .chain(self.constructor_calldata.iter().cloned())
+            .collect(),
+            *VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
+            Address(Felt::zero()),
+            EntryPointType::External,
+            None,
+            None,
+        );
+
+        todo!()
     }
 }
