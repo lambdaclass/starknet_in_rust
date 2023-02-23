@@ -18,6 +18,8 @@ pub const TRANSACTION_VERSION: u64 = 1;
 
 lazy_static! {
     pub static ref DEFAULT_ENTRY_POINT_SELECTOR: Felt = Felt::zero();
+
+    // EXECUTE_ENTRY_POINT_SELECTOR = sn_keccak("__execute__");
     pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt = Felt::from_str_radix(
         "617075754465154585683856897856256838130216341506379215893724690153393808813",
         10,

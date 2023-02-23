@@ -167,7 +167,7 @@ mod tests {
     fn calculate_transaction_hash_common_test() {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
         let version = 0;
-        let contract_addres = Address(42.into());
+        let contract_address = Address(42.into());
         let entry_point_selector = 100;
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
@@ -182,7 +182,7 @@ mod tests {
         let result = calculate_transaction_hash_common(
             tx_hash_prefix,
             version,
-            contract_addres,
+            contract_address,
             entry_point_selector,
             &calldata,
             max_fee,

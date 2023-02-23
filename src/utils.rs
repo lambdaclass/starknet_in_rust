@@ -6,10 +6,8 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
-            cached_state::UNINITIALIZED_CLASS_HASH,
-            state_api::{State, StateReader},
+            cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
             state_cache::StorageEntry,
-            update_tracker_state::UpdatesTrackerState,
         },
         transaction::error::TransactionError,
     },
@@ -149,14 +147,14 @@ pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
         })
 }
 
-pub fn calculate_tx_resources<S: State + StateReader>(
+pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
-    state: UpdatesTrackerState<S>,
+    storage_changes: (usize, usize),
     l1_handler_payload_size: Option<usize>,
 ) -> Result<HashMap<String, usize>, ExecutionError> {
-    let (n_modified_contracts, n_storage_changes) = state.count_actual_storage_changes();
+    let (n_modified_contracts, n_storage_changes) = storage_changes;
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
     let n_deployments = non_optional_calls

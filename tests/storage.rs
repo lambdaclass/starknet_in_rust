@@ -24,13 +24,12 @@ use std::{
 };
 
 #[test]
-#[ignore = "ignore until the cache issue is fixed"]
 fn integration_storage_test() {
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("starknet_programs/storage.json");
+    let path = PathBuf::from("tests/storage.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
@@ -103,8 +102,8 @@ fn integration_storage_test() {
 
     let expected_key = calculate_sn_keccak("_counter".as_bytes());
 
-    let mut expected_accesed_storage_keys = HashSet::new();
-    expected_accesed_storage_keys.insert(expected_key);
+    let mut expected_accessed_storage_keys = HashSet::new();
+    expected_accessed_storage_keys.insert(expected_key);
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
@@ -113,11 +112,11 @@ fn integration_storage_test() {
         entry_point_selector: Some(storage_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata,
-        retdata: [1.into(), 42.into()].to_vec(),
+        retdata: [42.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         storage_read_values: vec![42.into()],
-        accesed_storage_keys: expected_accesed_storage_keys,
+        accessed_storage_keys: expected_accessed_storage_keys,
         ..Default::default()
     };
 

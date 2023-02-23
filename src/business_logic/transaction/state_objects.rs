@@ -1,10 +1,7 @@
 use crate::{
     business_logic::{
         execution::objects::{CallInfo, TransactionExecutionInfo},
-        state::{
-            state_api::{State, StateReader},
-            update_tracker_state::UpdatesTrackerState,
-        },
+        state::state_api::{State, StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
 };
@@ -51,7 +48,7 @@ pub(crate) trait InternalStateTransaction {
     where
         T: State + StateReader,
     {
-        self._apply_specific_concurrent_changes(UpdatesTrackerState::new(state), general_config)
+        self._apply_specific_concurrent_changes(state, general_config)
     }
 
     fn apply_sequential_changes<T>(
@@ -72,11 +69,11 @@ pub(crate) trait InternalStateTransaction {
 
     fn _apply_specific_concurrent_changes<T>(
         &self,
-        state: UpdatesTrackerState<T>,
+        state: &mut T,
         general_config: StarknetGeneralConfig,
     ) -> TransactionExecutionInfo
     where
-        T: State;
+        T: State + StateReader;
 
     fn _apply_specific_sequential_changes<T>(
         &self,

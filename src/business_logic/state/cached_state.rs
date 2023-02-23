@@ -11,7 +11,7 @@ use getset::Getters;
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
-pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
+pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -51,7 +51,7 @@ impl<T: StateReader + Clone> CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    ///Apply updates to parent state
+    /// Apply updates to parent state.
     pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
         parent.cache.update_writes_from_other(&self.cache);
@@ -107,6 +107,20 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         self.cache
             .get_storage(storage_entry)
             .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
+    }
+
+    fn count_actual_storage_changes(&mut self) -> (usize, usize) {
+        let storage_updates = self
+            .cache
+            .storage_writes
+            .clone()
+            .into_iter()
+            .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
+            .collect::<HashMap<StorageEntry, Felt>>();
+
+        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
+
+        (modified_contrats.len(), storage_updates.len())
     }
 }
 
