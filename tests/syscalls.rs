@@ -63,23 +63,19 @@ fn test_contract<'a>(
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);
-    let mut state = CachedState::new(
-        state_reader,
-        // Some([(class_hash, contract_class)].into_iter().collect()),
-        {
-            let mut contract_class_cache = ContractClassCache::new();
+    let mut state = CachedState::new(state_reader, {
+        let mut contract_class_cache = ContractClassCache::new();
+        contract_class_cache.insert(class_hash, contract_class);
+
+        for (class_hash, contract_path) in extra_contracts {
+            let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+                .expect("Could not load extra contract from JSON");
+
             contract_class_cache.insert(class_hash, contract_class);
+        }
 
-            for (class_hash, contract_path) in extra_contracts {
-                let contract_class = ContractClass::try_from(contract_path.to_path_buf())
-                    .expect("Could not load extra contract from JSON");
-
-                contract_class_cache.insert(class_hash, contract_class);
-            }
-
-            Some(contract_class_cache)
-        },
-    );
+        Some(contract_class_cache)
+    });
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
