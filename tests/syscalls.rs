@@ -109,7 +109,7 @@ fn test_contract<'a>(
             events: events.into(),
             l2_to_l1_messages: l2_to_l1_messages.into(),
             storage_read_values: storage_read_values.into(),
-            accesed_storage_keys: accessed_storage_keys.collect(),
+            accessed_storage_keys: accessed_storage_keys.collect(),
             retdata: return_data.into(),
             ..Default::default()
         },
@@ -459,6 +459,25 @@ fn library_call_syscall() {
         [],
         [],
         [11.into()],
+        [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
+        [([2; 32], Path::new("tests/syscalls-lib.json"))].into_iter(),
+        [],
+    );
+}
+
+#[test]
+fn library_call_l1_handler_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_library_call_l1_handler",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [5.into()],
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [([2; 32], Path::new("tests/syscalls-lib.json"))].into_iter(),
         [],

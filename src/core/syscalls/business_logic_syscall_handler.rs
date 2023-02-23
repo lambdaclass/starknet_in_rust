@@ -299,6 +299,7 @@ where
     ) -> Result<Vec<Felt>, SyscallHandlerError> {
         let request = self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
+        let entry_point_type;
         let function_selector;
         let class_hash;
         let contract_address;
@@ -306,11 +307,16 @@ where
         let call_type;
         let call_data;
 
-        // TODO: What about `delegate_call`, `delegate_l1_handler` and `library_call_l1_handler`?
+        // TODO: What about `delegate_call`, `delegate_l1_handler`?
         //   The call to `self._read_and_validate_syscall_request()` will always fail in those
         //   cases.
         match request {
             SyscallRequest::LibraryCall(request) => {
+                entry_point_type = match syscall_name {
+                    "library_call" => EntryPointType::External,
+                    "library_call_l1_handler" => EntryPointType::L1Handler,
+                    _ => todo!(),
+                };
                 function_selector = request.function_selector;
                 class_hash = Some(felt_to_hash(&request.class_hash));
                 contract_address = self.contract_address.clone();
@@ -319,6 +325,10 @@ where
                 call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
             }
             SyscallRequest::CallContract(request) => {
+                entry_point_type = match syscall_name {
+                    "call_contract" => EntryPointType::External,
+                    _ => todo!(),
+                };
                 function_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
                 class_hash = None;
                 contract_address = request.contract_address;
@@ -334,7 +344,7 @@ where
             call_data,
             function_selector,
             caller_address,
-            EntryPointType::External,
+            entry_point_type,
             Some(call_type),
             class_hash,
         );
@@ -438,6 +448,14 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._call_contract_and_write_response("library_call", vm, syscall_ptr)
+    }
+
+    fn library_call_l1_handler(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
