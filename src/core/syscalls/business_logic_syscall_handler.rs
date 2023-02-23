@@ -307,7 +307,7 @@ where
         let call_type;
         let call_data;
 
-        // TODO: What about `delegate_call`, `delegate_l1_handler` and `library_call_l1_handler`?
+        // TODO: What about `delegate_call`, `delegate_l1_handler`?
         //   The call to `self._read_and_validate_syscall_request()` will always fail in those
         //   cases.
         match request {
