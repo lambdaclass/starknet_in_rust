@@ -7,6 +7,15 @@ from starkware.starknet.common.syscalls import get_contract_address
 func lib_state() -> (res: felt) {
 }
 
+@l1_handler
+func on_event{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt}(
+    from_address: felt
+) {
+    lib_state.write(from_address);
+
+    return ();
+}
+
 @external
 func stateless_func{syscall_ptr: felt*}(a: felt, b: felt) -> (answer: felt) {
     let answer = a * b;

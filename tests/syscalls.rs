@@ -534,6 +534,31 @@ fn library_call_syscall() {
 }
 
 #[test]
+fn library_call_l1_handler_syscall() {
+    test_contract(
+        "tests/syscalls.json",
+        "test_library_call_l1_handler",
+        [1; 32],
+        Address(1111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [5.into()],
+        [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
+        [(
+            [2; 32],
+            Path::new("tests/syscalls-lib.json"),
+            Default::default(),
+        )]
+        .into_iter(),
+        [],
+        [],
+    );
+}
+
+#[test]
 fn send_message_to_l1_syscall() {
     test_contract(
         "tests/syscalls.json",
