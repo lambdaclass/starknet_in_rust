@@ -42,7 +42,7 @@ pub(crate) fn execute_fee_transfer(
     ]
     .to_vec();
 
-    // Value generated from `get_selector_from_name('TRANSFER_ENTRY_POINT_SELECTOR')`.
+    // Value generated from transfer selector: 'TRANSFER_ENTRY_POINT_SELECTOR'.
     let entry_point_selector =
         felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
 
