@@ -1,11 +1,6 @@
-use super::contract_state::ContractState;
 use crate::{
-    business_logic::state::{
-        cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo,
-    },
+    business_logic::state::{cached_state::CachedState, state_api::StateReader},
     core::errors::state_errors::StateError,
-    definitions::general_config::StarknetGeneralConfig,
-    starknet_storage::storage::{FactFetchingContext, Storage},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
@@ -14,11 +9,7 @@ use crate::{
 };
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Clone, Debug, Default)]
 pub struct ExecutionResourcesManager {
@@ -95,89 +86,6 @@ impl<T: StateReader + Clone> CarriedState<T> {
             }
             None => Err(StateError::ParentCarriedStateIsNone),
         }
-    }
-}
-
-// ----------------------
-//      SHARED STATE
-// ----------------------
-
-pub(crate) struct SharedState {
-    _contract_states: HashMap<Felt, ContractState>,
-    _block_info: BlockInfo,
-}
-
-impl SharedState {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn empty<S>(_ffc: FactFetchingContext<S>, _general_config: StarknetGeneralConfig) -> Self
-    where
-        S: Storage,
-    {
-        todo!()
-    }
-
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn to_carried_state<S, R>(&self, _ffc: FactFetchingContext<S>) -> CarriedState<R>
-    where
-        S: Storage,
-        R: StateReader + Clone,
-    {
-        // let state_reader = "Patricia_state_reader"; // TODO: change it to patricia reader once it is available
-        // let state = CachedState::new(self.block_info, state_reader, None);
-
-        // CarriedState {
-        //     parent_state: None,
-        //     state,
-        // }
-        todo!()
-    }
-
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn apply_state_updates<S, R>(
-        &self,
-        ffc: FactFetchingContext<S>,
-        _previous_carried_state: CarriedState<R>,
-        current_carried_state: CarriedState<R>,
-    ) -> Result<Self, StateError>
-    where
-        S: Storage,
-        R: StateReader + Clone,
-    {
-        let state_cache = current_carried_state.state.cache;
-        Ok(self.apply_updates(
-            ffc,
-            state_cache.class_hash_writes,
-            state_cache.nonce_writes,
-            to_state_diff_storage_mapping(state_cache.storage_writes),
-        ))
-    }
-
-    pub fn apply_updates<S>(
-        &self,
-        _ffc: FactFetchingContext<S>,
-        address_to_class_hash: HashMap<Address, [u8; 32]>,
-        address_to_nonce: HashMap<Address, Felt>,
-        storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
-    ) -> Self
-    where
-        S: Storage,
-    {
-        let class_addresses: HashSet<Address> = address_to_class_hash.into_keys().collect();
-        let nonce_addresses: HashSet<Address> = address_to_nonce.into_keys().collect();
-        let storage_addresses: HashSet<Address> =
-            storage_updates.into_keys().map(Address).collect();
-        let mut accesed_addresses: HashSet<Address> = HashSet::new();
-        accesed_addresses.extend(class_addresses);
-        accesed_addresses.extend(nonce_addresses);
-        accesed_addresses.extend(storage_addresses);
-
-        // TODO:
-        // let current_contract_states = self.contract_states.get_leaves(ffc, accesed_addresses)
-
-        todo!()
     }
 }
 
@@ -272,21 +180,6 @@ impl StateDiff {
             address_to_nonce,
             storage_updates,
         })
-    }
-
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn commit<T: Storage>(
-        &self,
-        ffc: FactFetchingContext<T>,
-        previous_state: SharedState,
-    ) -> SharedState {
-        previous_state.apply_updates(
-            ffc,
-            self.address_to_class_hash.clone(),
-            self.address_to_nonce.clone(),
-            self.storage_updates.clone(),
-        )
     }
 }
 
