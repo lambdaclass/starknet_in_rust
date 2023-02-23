@@ -15,8 +15,8 @@ func increase_balance{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr,
 }(amount: felt) {
-    let (res) = balance.read();
-    balance.write(res + amount);
+    //let (res) = balance.read();
+    balance.write(amount);
     return ();
 }
 

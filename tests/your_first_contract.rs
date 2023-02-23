@@ -18,9 +18,12 @@ use starknet_rs::{
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
     starknet_storage::dict_storage::DictStorage,
-    utils::Address,
+    utils::{calculate_sn_keccak, Address},
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 #[test]
 fn your_first_contract_integration_test() {
@@ -98,6 +101,10 @@ fn your_first_contract_integration_test() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
+    let expected_key = calculate_sn_keccak("balance".as_bytes());
+
+    let mut expected_accessed_storage_keys = HashSet::new();
+    expected_accessed_storage_keys.insert(expected_key);
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
@@ -106,9 +113,10 @@ fn your_first_contract_integration_test() {
         entry_point_selector: Some(increase_balance_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata,
-        retdata: [144.into()].to_vec(),
+        retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
+        accesed_storage_keys: expected_accessed_storage_keys,
         ..Default::default()
     };
 
