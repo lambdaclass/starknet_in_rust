@@ -20,14 +20,14 @@ use std::collections::HashMap;
 /// be counted as a single storage-write. Additionally, if a transaction writes a value to storage
 /// which is equal to the initial value previously contained in that address, then no change needs
 /// to be done and this should not count as a storage-write.
-pub struct UpdatesTrackerState<T: State> {
-    pub(crate) state: T,
+pub struct UpdatesTrackerState<'a, T: State> {
+    pub(crate) state: &'a mut T,
     pub(crate) storage_initial_values: HashMap<StorageEntry, u64>,
     pub(crate) storage_writes: HashMap<StorageEntry, u64>,
 }
 
-impl<T: State + StateReader> UpdatesTrackerState<T> {
-    pub fn new(state: T) -> Self {
+impl<'a, T: State + StateReader> UpdatesTrackerState<'a, T> {
+    pub fn new(state: &'a mut T) -> Self {
         UpdatesTrackerState {
             state,
             storage_initial_values: HashMap::new(),
