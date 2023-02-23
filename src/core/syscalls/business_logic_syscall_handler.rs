@@ -16,10 +16,11 @@ use crate::{
             state_api_objects::BlockInfo,
         },
     },
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::{constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     hash_utils::calculate_contract_address,
     services::api::contract_class::EntryPointType,
+    starknet_storage::errors::storage_errors::StorageError,
     utils::*,
 };
 use cairo_rs::{
@@ -461,10 +462,13 @@ where
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
-        Ok(self
-            .starknet_storage_state
-            .read(&address.to_32_bytes()?)?
-            .clone())
+        Ok(
+            match self.starknet_storage_state.read(&address.to_32_bytes()?) {
+                Ok(x) => x.clone(),
+                Err(StateError::StorageError(StorageError::ErrorFetchingData)) => Felt::zero(),
+                Err(e) => return Err(e.into()),
+            },
+        )
     }
 
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
@@ -519,7 +523,7 @@ mod tests {
             errors::syscall_handler_errors::SyscallHandlerError,
             syscalls::{hint_code::*, syscall_handler::SyscallHandler},
         },
-        utils::test_utils::*,
+        utils::{test_utils::*, Address},
     };
     use cairo_rs::{
         hint_processor::{
@@ -541,6 +545,7 @@ mod tests {
         },
     };
     use felt::Felt;
+    use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 
     type BusinessLogicSyscallHandler<'a> =
@@ -658,5 +663,16 @@ mod tests {
             syscall._get_contract_address(&vm, relocatable!(1, 0)),
             Ok(syscall.contract_address)
         )
+    }
+
+    #[test]
+    fn test_storage_read_empty() {
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
+
+        assert_eq!(
+            syscall_handler._storage_read(Address(Felt::zero())),
+            Ok(Felt::zero()),
+        );
     }
 }
