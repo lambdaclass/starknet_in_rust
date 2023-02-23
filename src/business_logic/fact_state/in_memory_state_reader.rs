@@ -66,7 +66,12 @@ impl StateReader for InMemoryStateReader {
             .get(&storage_entry.1)
             .ok_or(StateError::NoneStoragLeaf(storage_entry.1))
     }
+
+    fn count_actual_storage_changes(&mut self) -> (usize, usize) {
+        todo!()
+    }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
