@@ -6,10 +6,7 @@ use crate::{
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::state::ExecutionResourcesManager,
-        state::{
-            state_api::{State, StateReader},
-            update_tracker_state::UpdatesTrackerState,
-        },
+        state::state_api::{State, StateReader},
         transaction::transaction_errors::TransactionError,
     },
     definitions::{
@@ -135,12 +132,12 @@ impl InternalInvokeFunction {
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
-        let updates_tracker_state = UpdatesTrackerState::new(state);
+
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
             self._tx_type.clone(),
-            updates_tracker_state,
+            state.count_actual_storage_changes(),
             None,
         )?;
         let transaction_execution_info =
