@@ -1,8 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
-
-use felt::Felt;
-use num_traits::Zero;
-
+use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::{
     business_logic::{
         execution::{
@@ -35,9 +31,11 @@ use crate::{
     starknet_storage::dict_storage::DictStorage,
     utils::Address,
 };
+use felt::Felt;
+use num_traits::Zero;
+use std::{collections::HashMap, hash::Hash};
 
-use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
-
+// ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub(crate) struct StarknetState {
     pub(crate) state: CachedState<InMemoryStateReader>,
@@ -67,6 +65,7 @@ impl StarknetState {
         }
     }
 
+    // ------------------------------------------------------------------------------------
     /// Declares a contract class.
     /// Returns the class hash and the execution info.
     /// Args:
@@ -75,9 +74,9 @@ impl StarknetState {
         todo!()
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // ----------------------------------------------------------
     /// Invokes a contract function. Returns the execution info.
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
@@ -100,10 +99,9 @@ impl StarknetState {
         Ok(self.execute_tx(&mut tx))
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // -------------------------------------------------------------------------
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     pub fn execute_entry_point_raw(
         &mut self,
@@ -139,6 +137,7 @@ impl StarknetState {
         Ok(call_info)
     }
 
+    // --------------------------------------------------------------------------------------
     /// Deploys a contract. Returns the contract address and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract returned by compile_starknet_files().
@@ -200,9 +199,9 @@ impl StarknetState {
         Ok(())
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // -----------------------------------
     /// Consumes the given message hash.
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    // -----------------------------------
 
     pub fn consume_message_hash(
         &mut self,
