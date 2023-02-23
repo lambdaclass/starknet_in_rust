@@ -81,7 +81,7 @@ fn integration_test() {
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
-        Some(class_hash),
+        class_hash,
     );
 
     //* --------------------

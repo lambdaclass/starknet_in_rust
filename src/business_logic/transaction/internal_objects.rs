@@ -438,7 +438,9 @@ mod tests {
     use crate::{
         business_logic::{
             execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
-            fact_state::in_memory_state_reader::InMemoryStateReader,
+            fact_state::{
+                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+            },
             state::cached_state::CachedState,
         },
         definitions::{
@@ -475,10 +477,18 @@ mod tests {
         //  ------------ contract data --------------------
 
         let class_hash = internal_declare.class_hash;
+        contract_class_cache.insert(class_hash, contract_class.clone());
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
+
         contract_class_cache.insert(class_hash, contract_class);
 
-        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
-
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        state_reader
+            .contract_states
+            .insert(sender_address, contract_state);
         //* ---------------------------------------
         //*    Create state with previous data
         //* ---------------------------------------
@@ -502,7 +512,7 @@ mod tests {
 
         let validate_info = Some(CallInfo {
             caller_address: Address(0.into()),
-            call_type: Some(CallType::Call),
+            call_type: Some(CallType::Delegate),
             contract_address: Address(1.into()),
             entry_point_selector,
             entry_point_type: Some(EntryPointType::External),
