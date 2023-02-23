@@ -1334,8 +1334,7 @@ mod tests {
                 ((2, 2), 12),     // DeployRequestStruct.contract_address_salt
                 ((2, 3), 0),      // DeployRequestStruct.constructor_calldata_size
                 ((2, 4), (3, 0)), // DeployRequestStruct.constructor_calldata
-                ((2, 5), 0),      // DeployRequestStruct.deploy_from_zero
-                ((3, 0), 3)
+                ((2, 5), 0)       // DeployRequestStruct.deploy_from_zero
             ]
         );
 
