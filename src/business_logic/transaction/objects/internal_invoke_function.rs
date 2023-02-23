@@ -34,6 +34,34 @@ pub(crate) struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
+    #[allow(dead_code, clippy::too_many_arguments)]
+    pub fn new(
+        contract_address: Address,
+        entry_point_selector: Felt,
+        _entry_point_type: EntryPointType,
+        calldata: Vec<Felt>,
+        _tx_type: TransactionType,
+        version: u64,
+        validate_entry_point_selector: Felt,
+        hash_value: Felt,
+        signature: Vec<Felt>,
+        max_fee: u64,
+        nonce: Felt,
+    ) -> Self {
+        Self {
+            contract_address,
+            entry_point_selector,
+            _entry_point_type,
+            calldata,
+            _tx_type,
+            version,
+            validate_entry_point_selector,
+            hash_value,
+            signature,
+            max_fee,
+            nonce,
+        }
+    }
     #[allow(dead_code)]
     fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
@@ -117,7 +145,7 @@ impl InternalInvokeFunction {
         )
     }
 
-    fn _apply_specific_concurrent_changes<T>(
+    pub(crate) fn _apply_specific_concurrent_changes<T>(
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
