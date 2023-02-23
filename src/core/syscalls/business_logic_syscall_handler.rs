@@ -465,7 +465,12 @@ where
         Ok(
             match self.starknet_storage_state.read(&address.to_32_bytes()?) {
                 Ok(x) => x.clone(),
-                Err(StateError::StorageError(StorageError::ErrorFetchingData)) => Felt::zero(),
+                Err(
+                    StateError::StorageError(StorageError::ErrorFetchingData)
+                    | StateError::EmptyKeyInStorage
+                    | StateError::NoneStoragLeaf(_)
+                    | StateError::NoneStorage(_),
+                ) => Felt::zero(),
                 Err(e) => return Err(e.into()),
             },
         )
