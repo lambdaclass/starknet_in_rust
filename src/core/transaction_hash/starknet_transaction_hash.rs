@@ -1,8 +1,14 @@
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
-    hash_utils::compute_hash_on_elements, utils::Address,
+    core::{
+        contract_address::starknet_contract_address::compute_class_hash,
+        errors::syscall_handler_errors::SyscallHandlerError,
+    },
+    hash_utils::compute_hash_on_elements,
+    services::api::contract_class::ContractClass,
+    utils::Address,
 };
 use felt::{felt_str, Felt};
+use num_traits::ToPrimitive;
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
@@ -48,7 +54,7 @@ pub fn calculate_transaction_hash_common(
     entry_point_selector: u64,
     calldata: &[Felt],
     max_fee: u64,
-    chain_id: u64,
+    chain_id: Felt,
     additional_data: &[u64],
 ) -> Result<Felt, SyscallHandlerError> {
     let calldata_hash = compute_hash_on_elements(calldata)?;
@@ -60,7 +66,7 @@ pub fn calculate_transaction_hash_common(
         entry_point_selector.into(),
         calldata_hash,
         max_fee.into(),
-        chain_id.into(),
+        chain_id,
     ];
 
     data_to_hash.extend(additional_data.iter().map(|n| (*n).into()));
@@ -99,7 +105,7 @@ pub fn calculate_deploy_account_transaction_hash(
     max_fee: u64,
     nonce: u64,
     salt: u64,
-    chain_id: u64,
+    chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
     let mut calldata: Vec<Felt> = vec![class_hash, salt.into()];
     calldata.extend_from_slice(constructor_calldata);
@@ -113,6 +119,41 @@ pub fn calculate_deploy_account_transaction_hash(
         max_fee,
         chain_id,
         &[nonce],
+    )
+}
+
+pub(crate) fn calculate_declare_transaction_hash(
+    contract_class: ContractClass,
+    chain_id: Felt,
+    sender_address: Address,
+    max_fee: u64,
+    version: u64,
+    nonce: Felt,
+) -> Result<Felt, SyscallHandlerError> {
+    let class_hash =
+        compute_class_hash(&contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+
+    let (calldata, additional_data) = if version > 0x8000_0000_0000_0000 {
+        let value = class_hash
+            .to_u64()
+            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
+        (Vec::new(), [value].to_vec())
+    } else {
+        let value = nonce
+            .to_u64()
+            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
+        ([class_hash].to_vec(), [value].to_vec())
+    };
+
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::Declare,
+        version,
+        sender_address,
+        0,
+        &calldata,
+        max_fee,
+        chain_id,
+        &additional_data,
     )
 }
 
@@ -130,7 +171,7 @@ mod tests {
         let entry_point_selector = 100;
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
-        let chain_id = 1;
+        let chain_id = 1.into();
         let additional_data: Vec<u64> = Vec::new();
 
         // Expected value taken from Python implementation of calculate_transaction_hash_common function

@@ -113,7 +113,7 @@ fn test_contract<'a>(
         caller_address.clone(),
         EntryPointType::External,
         CallType::Delegate.into(),
-        class_hash.into(),
+        Some(class_hash),
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

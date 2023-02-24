@@ -19,7 +19,7 @@ pub enum SyscallHandlerError {
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
     FeltToU64Fail,
-    #[error("Couldn't compure hash")]
+    #[error("Couldn't compute hash")]
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
     ExpectedDeployRequestStruct,
@@ -77,6 +77,8 @@ pub enum SyscallHandlerError {
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
+    #[error("could not convert felt to u64")]
+    InvalidFeltConversion,
     #[error("Could not compute hash")]
     ErrorComputingHash,
     #[error(transparent)]

@@ -2,7 +2,9 @@ use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address}
 use felt::Felt;
 use getset::{CopyGetters, MutGetters};
 use num_traits::Zero;
+use std::collections::HashMap;
 
+#[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum StarknetChainId {
     // TODO: Remove warning inhibitor when finally used.
@@ -35,15 +37,17 @@ impl StarknetChainId {
 pub struct StarknetOsConfig {
     #[get_mut = "pub"]
     pub(crate) chain_id: StarknetChainId,
-    pub(crate) _fee_token_address: Address,
+    pub(crate) fee_token_address: Address,
+    pub(crate) gas_price: u64,
 }
 
 #[derive(Clone, Debug, CopyGetters, MutGetters)]
 pub struct StarknetGeneralConfig {
     #[get_mut = "pub"]
     pub(crate) starknet_os_config: StarknetOsConfig,
-    _contract_storage_commitment_tree_height: u64,
+    pub(crate) _contract_storage_commitment_tree_height: u64,
     _global_state_commitment_tree_height: u64,
+    pub(crate) cairo_resource_fee_weights: HashMap<String, f64>,
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
     pub(crate) validate_max_n_steps: u64,
@@ -56,16 +60,17 @@ impl StarknetGeneralConfig {
     #[allow(dead_code)]
     pub(crate) fn new(
         starknet_os_config: StarknetOsConfig,
-        contract_storage_commitment_tree_height: u64,
-        global_state_commitment_tree_height: u64,
+        _contract_storage_commitment_tree_height: u64,
+        _global_state_commitment_tree_height: u64,
         invoke_tx_max_n_steps: u64,
         block_info: BlockInfo,
     ) -> Self {
         Self {
             starknet_os_config,
-            _contract_storage_commitment_tree_height: contract_storage_commitment_tree_height,
-            _global_state_commitment_tree_height: global_state_commitment_tree_height,
+            _contract_storage_commitment_tree_height,
+            _global_state_commitment_tree_height,
             invoke_tx_max_n_steps,
+            cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,
             block_info,
         }
@@ -77,11 +82,13 @@ impl Default for StarknetGeneralConfig {
         Self {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
-                _fee_token_address: Address(Felt::zero()),
+                fee_token_address: Address(Felt::zero()),
+                gas_price: 0,
             },
             _contract_storage_commitment_tree_height: 0,
             _global_state_commitment_tree_height: 0,
             invoke_tx_max_n_steps: 0,
+            cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,
             block_info: BlockInfo::empty(Address::default()),
         }

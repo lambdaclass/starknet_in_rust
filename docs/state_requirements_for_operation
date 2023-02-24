@@ -1,0 +1,14 @@
+In general, in order to perform operations on the state we need at least one funded account X and a fee token contract deployed.
+
+Lets divide the requirements in differents scenarios:
+
+- Non-account: X declares the contract using an external *Declare* transaction and pays for its __validate_declare__ execution. Then, the only way to deploy the account is through the **syscall deploy()** which will eventually be called during an **InvokeTransaction** which a funded account pays for.
+- Account (not first one): it's declared the same. To deploy, you can either use DeployAccount external transaction (which indeed exists especially for the first account deployment, but can also be used regularly for accounts); or, through the syscall deploy() as above. Again, a funded account needs to pay for this.
+In case of DeployAccount the account being deployed can pay for itself if the money was prepared beforehand in the fee token contract using a deposit from L1 (the addresses in ERC20 can be of a nonexistent account).
+- First account: you can't execute transactions on an entirely empty state.
+Minimal content of a state to allow full system operation (which will not be paid for):
+    - A deployed fee token contract with at least one funded account.
+    - A declared account contract.
+From there, the first account must be deployed using an external DeployAccount transaction (and pay for itself, preparing the money in advance in the ERC20, as above).
+
+Now you have an L2 deployed account and can continue.
