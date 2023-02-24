@@ -80,7 +80,7 @@ impl InternalDeploy {
 
     pub fn _apply_specific_concurrent_changes<S: State + StateReader + Clone + Default>(
         &self,
-        mut state: S,
+        state: &mut S,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
@@ -94,10 +94,10 @@ impl InternalDeploy {
             .entry_points_by_type
             .get(&EntryPointType::Constructor)
         {
-            Some(entry_points) if entry_points.len() > 0 => self
-                .invoke_constructor(&mut state, general_config)
+            Some(entry_points) if !entry_points.is_empty() => self
+                .invoke_constructor(state, general_config)
                 .map_err(StarkwareError::InvokeConstructor),
-            _ => self.handle_empty_constructor(&mut state),
+            _ => self.handle_empty_constructor(state),
         }
     }
 
@@ -256,9 +256,23 @@ mod tests {
             tx_type: TransactionType::Deploy,
         };
 
-        let result = internal_deploy
-            ._apply_specific_concurrent_changes(state, StarknetGeneralConfig::default())
+        let _result = internal_deploy
+            ._apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
             .unwrap();
-        dbg!(&result);
+
+        assert_eq!(
+            state.get_class_hash_at(&Address(1.into())).unwrap(),
+            &class_hash
+        );
+
+        let var = [
+            2, 1, 104, 54, 165, 107, 113, 240, 208, 38, 137, 230, 158, 50, 111, 79, 76, 27, 144,
+            87, 22, 78, 245, 146, 103, 28, 240, 211, 124, 128, 64, 192,
+        ];
+
+        assert_eq!(
+            state.get_storage_at(&(Address(1.into()), var)).unwrap(),
+            &Felt::from(10)
+        );
     }
 }
