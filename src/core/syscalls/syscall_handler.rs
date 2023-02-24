@@ -1411,6 +1411,9 @@ mod tests {
 
     #[test]
     fn test_deploy_and_invoke() {
+        /*
+        DEPLOY
+        */
         let mut vm = vm!();
         add_segments!(vm, 4);
 
@@ -1501,8 +1504,11 @@ mod tests {
             Ok(&class_hash)
         );
 
+        /*
+        INVOKE
+        */
         let internal_invoke_function = InternalInvokeFunction::new(
-            Address(deployed_address),
+            Address(deployed_address.clone()),
             Felt::from_str_radix(
                 "283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c",
                 16,
@@ -1519,9 +1525,22 @@ mod tests {
             0.into(),
         );
 
+        // Invoke result
         let result = internal_invoke_function
-            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default());
+            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
 
-        println!("result: {:?}", result);
+        let result_call_info = result.call_info.unwrap();
+
+        assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
+        assert_eq!(result_call_info.contract_address, Address(deployed_address));
+        assert_eq!(result_call_info.class_hash, Some(class_hash));
+        assert_eq!(
+            result_call_info.entry_point_type,
+            Some(EntryPointType::External)
+        );
+        assert_eq!(result_call_info.calldata, vec![10.into()]);
+        assert_eq!(result_call_info.retdata, vec![260.into()]);
+        assert_eq!(result_call_info.storage_read_values, vec![250.into()]);
     }
 }
