@@ -11,7 +11,7 @@ use getset::Getters;
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
-pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
+pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -51,7 +51,7 @@ impl<T: StateReader + Clone> CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    ///Apply updates to parent state
+    /// Apply updates to parent state.
     pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
         parent.cache.update_writes_from_other(&self.cache);

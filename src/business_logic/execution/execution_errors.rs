@@ -1,3 +1,4 @@
+use super::os_usage::OsResources;
 use crate::business_logic::transaction::transaction_errors::TransactionError;
 use crate::definitions::transaction_type::TransactionType;
 use crate::{
@@ -12,8 +13,6 @@ use cairo_rs::{
     },
 };
 use thiserror::Error;
-
-use super::os_usage::OsResources;
 
 #[derive(Debug, Error)]
 pub enum ExecutionError {
@@ -67,6 +66,8 @@ pub enum ExecutionError {
     NotAnInt,
     #[error("Out of bounds write to a read-only segment.")]
     OutOfBound,
+    #[error("Calling other contracts during validate execution is forbidden")]
+    UnauthorizedActionOnValidate,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]

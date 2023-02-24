@@ -153,7 +153,7 @@ impl WriteSyscallResponse for CallContractResponse {
         )?;
         vm.insert_value(
             &(syscall_ptr + CallContractRequest::count_fields() + 1),
-            &self.retdata,
+            self.retdata,
         )?;
         Ok(())
     }

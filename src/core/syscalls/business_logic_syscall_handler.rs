@@ -17,7 +17,7 @@ use crate::{
         },
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::{constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
+    definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
@@ -361,78 +361,67 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Vec<Felt>, SyscallHandlerError> {
-        // Parse request and prepare the call.
-        let request =
-            match self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)? {
-                SyscallRequest::CallContract(request) => request,
-                _ => return Err(SyscallHandlerError::ExpectedCallContract),
-            };
+        let request = self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        let mut class_hash = None;
-        let calldata = get_integer_range(vm, &request.calldata, request.calldata_size)?;
-
+        let entry_point_type;
+        let function_selector;
+        let class_hash;
         let contract_address;
         let caller_address;
-        let entry_point_type;
         let call_type;
-        match syscall_name {
-            "call_contract" => {
+        let call_data;
+
+        // TODO: What about `delegate_call`, `delegate_l1_handler`?
+        //   The call to `self._read_and_validate_syscall_request()` will always fail in those
+        //   cases.
+        match request {
+            SyscallRequest::LibraryCall(request) => {
+                entry_point_type = match syscall_name {
+                    "library_call" => EntryPointType::External,
+                    "library_call_l1_handler" => EntryPointType::L1Handler,
+                    _ => todo!(),
+                };
+                function_selector = request.function_selector;
+                class_hash = Some(felt_to_hash(&request.class_hash));
+                contract_address = self.contract_address.clone();
+                caller_address = self.caller_address.clone();
+                call_type = CallType::Delegate;
+                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
+            }
+            SyscallRequest::CallContract(request) => {
+                entry_point_type = match syscall_name {
+                    "call_contract" => EntryPointType::External,
+                    _ => todo!(),
+                };
+                function_selector = request.function_selector;
+                class_hash = None;
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
-                entry_point_type = EntryPointType::External;
                 call_type = CallType::Call;
+                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
             }
-            "delegate_call" => {
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::External;
-                call_type = CallType::Delegate;
-            }
-            "delegate_l1_handler" => {
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::L1Handler;
-                call_type = CallType::Delegate;
-            }
-            "library_call" => {
-                class_hash = Some(felt_to_hash(&request.class_hash));
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::External;
-                call_type = CallType::Delegate;
-            }
-            "library_call_l1_handler" => {
-                class_hash = Some(felt_to_hash(&request.class_hash));
-                contract_address = self.contract_address.clone();
-                caller_address = self.caller_address.clone();
-                entry_point_type = EntryPointType::L1Handler;
-                call_type = CallType::Delegate;
-            }
-            _ => {
-                return Err(SyscallHandlerError::UnknownSyscall(
-                    syscall_name.to_string(),
-                ))
-            }
+            _ => todo!(),
         }
 
-        let call = ExecutionEntryPoint::new(
+        let entry_point = ExecutionEntryPoint::new(
             contract_address,
-            calldata,
-            EXECUTE_ENTRY_POINT_SELECTOR.clone(),
+            call_data,
+            function_selector,
             caller_address,
             entry_point_type,
-            call_type.into(),
+            Some(call_type),
             class_hash,
         );
 
-        call.execute(
-            self.starknet_storage_state.state,
-            &self.general_config,
-            &mut self.resources_manager,
-            &self.tx_execution_context,
-        )
-        .map(|x| x.retdata)
-        .map_err(|_| todo!())
+        entry_point
+            .execute(
+                self.starknet_storage_state.state,
+                &self.general_config,
+                &mut self.resources_manager,
+                &self.tx_execution_context,
+            )
+            .map(|x| x.retdata)
+            .map_err(|_| todo!())
     }
 
     fn get_block_info(&self) -> &BlockInfo {
@@ -523,6 +512,22 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self._call_contract_and_write_response("library_call", vm, syscall_ptr)
+    }
+
+    fn library_call_l1_handler(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
+    }
+
+    fn call_contract(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self._call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
