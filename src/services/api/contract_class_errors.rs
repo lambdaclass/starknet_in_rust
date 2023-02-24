@@ -9,6 +9,8 @@ pub enum ContractClassError {
     MissingConstractorEndpoint,
     #[error("Given builtins are not in appropiate order")]
     DisorderedBuiltins,
+    #[error("Entry point type not found")]
+    NoneEntryPointType,
     #[error("Invalid value for field prime: {0}. Expected: {1}.")]
     InvalidPrime(String, String),
     #[error("Entry points must be unique and sorted. Found: {0:?}")]

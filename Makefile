@@ -26,12 +26,14 @@ deps-venv:
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
+	starknet-compile starknet_programs/account_without_validation.cairo  --account_contract > starknet_programs/account_without_validation.json
+
 
 cairo_programs/%.json: cairo_programs/%.cairo
-	cairo-compile $< --output $@
+	cairo-compile $< --output $@ || rm $@
 
 tests/%.json: tests/%.cairo
-	starknet-compile $< --output $@
+	starknet-compile --debug_info_with_source $< --output $@ || rm $@
 
 
 #
@@ -49,7 +51,9 @@ deps:
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
+
 clean:
+	rm cairo_programs/*json
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
 	-rm -f tests/*.json
@@ -58,7 +62,7 @@ clippy:
 	cargo clippy --all-targets -- -D warnings
 
 test:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
+	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet 
 	cargo test
 
 coverage:

@@ -1,5 +1,3 @@
-use std::ops::Add;
-
 use felt::Felt;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};

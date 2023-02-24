@@ -76,14 +76,12 @@ impl ExecutionEntryPoint {
         T: Default + State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
-
         let runner = self.run(
             state,
             resources_manager,
             general_config,
             tx_execution_context,
         )?;
-
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
@@ -177,7 +175,6 @@ impl ExecutionEntryPoint {
 
         // cairo runner entry point
         runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
-
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
@@ -255,7 +252,7 @@ impl ExecutionEntryPoint {
             events: syscall_handler.events,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             storage_read_values: syscall_handler.starknet_storage_state.read_values,
-            accesed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
+            accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
             internal_calls: syscall_handler.internal_calls,
         })
     }

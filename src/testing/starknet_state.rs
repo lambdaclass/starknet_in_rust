@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use felt::Felt;
 use num_traits::Zero;
@@ -15,22 +15,16 @@ use crate::{
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
         },
         transaction::{
-            internal_objects::InternalDeploy,
-            objects::internal_invoke_function::InternalInvokeFunction,
-            state_objects::InternalStateTransaction, transaction::Transaction,
-            transaction_errors::TransactionError,
+            error::TransactionError, internal_objects::InternalDeploy,
+            objects::internal_invoke_function::InternalInvokeFunction, transaction::Transaction,
         },
     },
-    definitions::{
-        constants::TRANSACTION_VERSION,
-        general_config::{self, StarknetChainId, StarknetGeneralConfig},
-    },
+    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
         contract_class::{ContractClass, EntryPointType},
-        messages::{self, StarknetMessageToL1},
+        messages::StarknetMessageToL1,
     },
     starknet_storage::dict_storage::DictStorage,
     utils::Address,

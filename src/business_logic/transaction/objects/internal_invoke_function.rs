@@ -7,7 +7,7 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-        transaction::transaction_errors::TransactionError,
+        transaction::error::TransactionError,
     },
     core::transaction_hash::starknet_transaction_hash::{
         calculate_transaction_hash_common, TransactionHashPrefix,

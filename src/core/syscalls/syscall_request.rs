@@ -1,7 +1,8 @@
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use crate::utils::{get_big_int, get_integer, get_relocatable, Address};
-use cairo_rs::types::relocatable::Relocatable;
-use cairo_rs::vm::vm_core::VirtualMachine;
+use crate::{
+    core::errors::syscall_handler_errors::SyscallHandlerError,
+    utils::{get_big_int, get_integer, get_relocatable, Address},
+};
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
 
 #[derive(Debug, PartialEq)]
@@ -16,8 +17,6 @@ pub(crate) enum SyscallRequest {
     GetSequencerAddress(GetSequencerAddressRequest),
     GetBlockNumber(GetBlockNumberRequest),
     GetBlockTimestamp(GetBlockTimestampRequest),
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     CallContract(CallContractRequest),
     GetTxSignature(GetTxSignatureRequest),
     StorageRead(StorageReadRequest),
@@ -27,10 +26,10 @@ pub(crate) enum SyscallRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallContractRequest {
     pub(crate) selector: Felt,
-    pub(crate) calldata: Relocatable,
-    pub(crate) calldata_size: usize,
     pub(crate) contract_address: Address,
-    pub(crate) class_hash: Felt,
+    pub(crate) function_selector: Felt,
+    pub(crate) calldata_size: usize,
+    pub(crate) calldata: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -75,7 +74,7 @@ pub(crate) struct SendMessageToL1SysCall {
 pub(crate) struct LibraryCallStruct {
     pub(crate) selector: Felt,
     pub(crate) class_hash: Felt,
-    pub(crate) function_selector: usize,
+    pub(crate) function_selector: Felt,
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
 }
@@ -148,6 +147,12 @@ impl From<LibraryCallStruct> for SyscallRequest {
     }
 }
 
+impl From<CallContractRequest> for SyscallRequest {
+    fn from(call_contract_request: CallContractRequest) -> SyscallRequest {
+        SyscallRequest::CallContract(call_contract_request)
+    }
+}
+
 impl From<GetCallerAddressRequest> for SyscallRequest {
     fn from(get_caller_address_request: GetCallerAddressRequest) -> SyscallRequest {
         SyscallRequest::GetCallerAddress(get_caller_address_request)
@@ -159,6 +164,7 @@ impl From<GetSequencerAddressRequest> for SyscallRequest {
         SyscallRequest::GetSequencerAddress(get_sequencer_address_request)
     }
 }
+
 impl From<GetBlockTimestampRequest> for SyscallRequest {
     fn from(get_block_timestamp_request: GetBlockTimestampRequest) -> SyscallRequest {
         SyscallRequest::GetBlockTimestamp(get_block_timestamp_request)
@@ -240,12 +246,33 @@ impl FromPtr for LibraryCallStruct {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &(syscall_ptr))?;
         let class_hash = get_big_int(vm, &(&syscall_ptr + 1))?;
-        let function_selector = get_integer(vm, &(&syscall_ptr + 2))?;
+        let function_selector = get_big_int(vm, &(&syscall_ptr + 2))?;
         let calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
         let calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
         Ok(LibraryCallStruct {
             selector,
             class_hash,
+            function_selector,
+            calldata_size,
+            calldata,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for CallContractRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, &(syscall_ptr))?;
+        let contract_address = Address(get_big_int(vm, &(&syscall_ptr + 1))?);
+        let function_selector = get_big_int(vm, &(&syscall_ptr + 2))?;
+        let calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
+        let calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
+        Ok(CallContractRequest {
+            selector,
+            contract_address,
             function_selector,
             calldata_size,
             calldata,
@@ -462,5 +489,10 @@ impl CountFields for StorageReadRequest {
 impl CountFields for CallContractRequest {
     fn count_fields() -> usize {
         5
+    }
+}
+impl CountFields for DeployRequestStruct {
+    fn count_fields() -> usize {
+        6
     }
 }
