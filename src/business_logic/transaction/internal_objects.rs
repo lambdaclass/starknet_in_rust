@@ -22,10 +22,7 @@ use crate::{
         },
     },
     definitions::{
-        constants::{
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION,
-            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
-        },
+        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
         general_config::{StarknetChainId, StarknetGeneralConfig},
         transaction_type::TransactionType,
     },
