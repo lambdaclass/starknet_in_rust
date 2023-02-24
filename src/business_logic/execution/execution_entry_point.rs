@@ -4,9 +4,8 @@ use super::{
 };
 use crate::{
     business_logic::{
-        fact_state::state::ExecutionResourcesManager,
+        fact_state::state::ExecutionResourcesManager, state::state_api::State,
         state::state_api::StateReader,
-        state::{cached_state::UNINITIALIZED_CLASS_HASH, state_api::State},
     },
     core::syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -33,7 +32,7 @@ pub struct ExecutionEntryPoint {
     call_type: CallType,
     contract_address: Address,
     code_address: Option<Address>,
-    class_hash: [u8; 32],
+    class_hash: Option<[u8; 32]>,
     calldata: Vec<Felt>,
     caller_address: Address,
     entry_point_selector: Felt,
@@ -48,7 +47,7 @@ impl ExecutionEntryPoint {
         caller_address: Address,
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
-        class_hash: [u8; 32],
+        class_hash: Option<[u8; 32]>,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
@@ -136,7 +135,6 @@ impl ExecutionEntryPoint {
         let os_context = runner.prepare_os_context();
 
         validate_contract_deployed(state, self.contract_address.clone())?;
-        dbg!("pass validate");
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -264,9 +262,9 @@ impl ExecutionEntryPoint {
         &self,
         state: &mut S,
     ) -> Result<[u8; 32], ExecutionError> {
-        if self.class_hash != *UNINITIALIZED_CLASS_HASH {
+        if self.class_hash.is_some() {
             match self.call_type {
-                CallType::Delegate => return Ok(self.class_hash),
+                CallType::Delegate => return Ok(self.class_hash.unwrap()),
                 _ => return Err(ExecutionError::CallTypeIsNotDelegate),
             }
         }

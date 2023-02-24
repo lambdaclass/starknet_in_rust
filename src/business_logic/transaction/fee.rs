@@ -8,7 +8,7 @@ use crate::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::cached_state::{CachedState, UNINITIALIZED_CLASS_HASH},
+        state::cached_state::CachedState,
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
@@ -53,7 +53,7 @@ pub(crate) fn execute_fee_transfer(
         tx_context.account_contract_address.clone(),
         EntryPointType::External,
         None,
-        *UNINITIALIZED_CLASS_HASH,
+        None,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
