@@ -23,7 +23,6 @@ use starknet_rs::{
 };
 use std::path::Path;
 
-#[allow(clippy::too_many_arguments)]
 fn test_contract(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
