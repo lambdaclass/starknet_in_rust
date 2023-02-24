@@ -216,26 +216,6 @@ impl InternalDeployAccount {
         })
     }
 
-    pub fn new_for_testing(
-        contract_class: &ContractClass,
-        max_fee: u64,
-        contract_address_salt: Address,
-        constructor_calldata: Vec<Felt>,
-        chain_id: StarknetChainId,
-        signature: Vec<Felt>,
-    ) -> Result<Self, SyscallHandlerError> {
-        Self::new(
-            felt_to_hash(&compute_class_hash(contract_class).unwrap()),
-            max_fee,
-            TRANSACTION_VERSION,
-            0,
-            constructor_calldata,
-            signature,
-            contract_address_salt,
-            chain_id,
-        )
-    }
-
     pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> StateSelector {
         StateSelector {
             contract_addresses: vec![self.contract_address.clone()],
