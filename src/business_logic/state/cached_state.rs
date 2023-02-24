@@ -140,7 +140,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
             .collect::<HashMap<StorageEntry, Felt>>();
 
-        let modified_contrats = storage_updates.clone().into_keys().map(|k| k.0);
+        let modified_contrats = storage_updates.keys();
 
         (modified_contrats.len(), storage_updates.len())
     }
