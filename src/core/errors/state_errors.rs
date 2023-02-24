@@ -41,4 +41,8 @@ pub enum StateError {
     ContractClassError(#[from] ContractClassError),
     #[error(transparent)]
     UtilsError(#[from] UtilsError),
+    #[error("constructor entry points must be empty")]
+    ConstructorEntryPointsError(),
+    #[error("Error in ExecutionEntryPoint")]
+    ExecutionEntryPointError(),
 }

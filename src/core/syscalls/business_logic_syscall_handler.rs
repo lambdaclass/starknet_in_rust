@@ -19,9 +19,11 @@ use crate::{
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
-    services::api::contract_class::EntryPointType,
+    public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+    services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
     starknet_storage::errors::storage_errors::StorageError,
     utils::*,
+    utils_errors::UtilsError,
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -53,7 +55,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -178,6 +180,56 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         }
         Ok(())
     }
+
+    fn execute_constructor_entry_point(
+        &mut self,
+        contract_address: &Address,
+        class_hash_bytes: [u8; 32],
+        constructor_calldata: Vec<Felt>,
+    ) -> Result<(), StateError> {
+        let contract_class = self
+            .starknet_storage_state
+            .state
+            .get_contract_class(&class_hash_bytes)?;
+        let constructor_entry_points = contract_class
+            .entry_points_by_type
+            .get(&EntryPointType::Constructor)
+            .ok_or(ContractClassError::NoneEntryPointType)?;
+        if constructor_entry_points.is_empty() {
+            if !constructor_calldata.is_empty() {
+                return Err(StateError::ConstructorEntryPointsError());
+            }
+
+            let call_info = CallInfo::empty_constructor_call(
+                contract_address.clone(),
+                self.caller_address.clone(),
+                Some(class_hash_bytes),
+            );
+            self.internal_calls.push(call_info);
+
+            return Ok(());
+        }
+
+        let call = ExecutionEntryPoint::new(
+            contract_address.clone(),
+            constructor_calldata,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            self.contract_address.clone(),
+            EntryPointType::Constructor,
+            Some(CallType::Call),
+            None,
+        );
+
+        let _call_info = call
+            .execute(
+                self.starknet_storage_state.state,
+                &self.general_config,
+                &mut self.resources_manager,
+                &self.tx_execution_context,
+            )
+            .map_err(|_| StateError::ExecutionEntryPointError())?;
+        Ok(())
+    }
 }
 
 impl<'a, T> Borrow<T> for BusinessLogicSyscallHandler<'a, T>
@@ -278,17 +330,29 @@ where
             Address(0.into())
         };
 
-        let _contract_address = calculate_contract_address(
+        let deploy_contract_address = Address(calculate_contract_address(
             &Address(request.contract_address_salt),
             class_hash,
             &constructor_calldata,
             deployer_address,
-        )?;
+        )?);
 
         // Initialize the contract.
-        let _class_hash_bytes = request.class_hash.to_bytes_be();
+        let class_hash_bytes: [u8; 32] = request
+            .class_hash
+            .to_bytes_be()
+            .try_into()
+            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(request.class_hash.clone()))?;
 
-        todo!()
+        self.starknet_storage_state
+            .state
+            .deploy_contract(deploy_contract_address.clone(), class_hash_bytes)?;
+        self.execute_constructor_entry_point(
+            &deploy_contract_address,
+            class_hash_bytes,
+            constructor_calldata,
+        )?;
+        Ok(deploy_contract_address)
     }
 
     fn _call_contract(
@@ -526,7 +590,7 @@ mod tests {
         },
         core::{
             errors::syscall_handler_errors::SyscallHandlerError,
-            syscalls::{hint_code::*, syscall_handler::SyscallHandler},
+            syscalls::syscall_handler::SyscallHandler,
         },
         utils::{test_utils::*, Address},
     };
@@ -576,17 +640,6 @@ mod tests {
                     MaybeRelocatable::from((3, 0))
                 )
             )))
-        );
-    }
-
-    // tests that we are executing correctly our syscall hint processor.
-    #[test]
-    fn cannot_run_syscall_hints() {
-        let hint_code = DEPLOY;
-        let mut vm = vm!();
-        assert_eq!(
-            run_syscall_hint!(vm, HashMap::new(), hint_code),
-            Err(HintError::UnknownHint("Hint not implemented".to_string()))
         );
     }
 
