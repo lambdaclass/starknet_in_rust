@@ -27,7 +27,7 @@ pub(crate) fn execute_fee_transfer(
     tx_context: TransactionExecutionContext,
     actual_fee: u64,
 ) -> Result<CallInfo, TransactionError> {
-    if actual_fee as u64 > tx_context.max_fee {
+    if actual_fee > tx_context.max_fee {
         return Err(TransactionError::FeeError(
             "Actual fee exceeded max fee.".to_string(),
         ));
@@ -96,8 +96,8 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     // `cairo_resource_usage`.
     if !general_config
         .cairo_resource_fee_weights
-        .iter()
-        .map(|(k, _)| k.as_str())
+        .keys()
+        .map(|k| k.as_str())
         .all(|k| cairo_resource_usage.contains_key(k))
     {
         return Err(TransactionError::ResourcesError);

@@ -20,7 +20,7 @@ use crate::{
             error::TransactionError,
             internal_objects::{InternalDeclare, InternalDeploy},
             objects::internal_invoke_function::InternalInvokeFunction,
-            transaction::Transaction,
+            transactions::Transaction,
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},

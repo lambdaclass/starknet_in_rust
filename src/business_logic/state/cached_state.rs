@@ -74,7 +74,7 @@ impl<T: StateReader + Clone> CachedState<T> {
             .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
             .collect::<HashMap<StorageEntry, Felt>>();
 
-        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
+        let modified_contrats = storage_updates.clone().into_keys().map(|k| k.0);
 
         (modified_contrats.len(), storage_updates.len())
     }
@@ -140,7 +140,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
             .collect::<HashMap<StorageEntry, Felt>>();
 
-        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
+        let modified_contrats = storage_updates.clone().into_keys().map(|k| k.0);
 
         (modified_contrats.len(), storage_updates.len())
     }
