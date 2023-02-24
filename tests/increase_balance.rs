@@ -26,15 +26,16 @@ use std::{
 };
 
 #[test]
-fn your_first_contract_integration_test() {
+fn hello_starknet_increase_balance() {
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("tests/your_first_contract.json");
+    let path = PathBuf::from("tests/increase_balance.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
+    // External entry point, increase_balance function increase_balance.cairo:L13
     let increase_balance_selector = entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
@@ -47,7 +48,7 @@ fn your_first_contract_integration_test() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let ffc = DictStorage::new();
+    let storage = DictStorage::new();
     let contract_class_storage = DictStorage::new();
     let mut contract_class_cache = HashMap::new();
 
@@ -58,7 +59,7 @@ fn your_first_contract_integration_test() {
     let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
 
     contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);
+    let mut state_reader = InMemoryStateReader::new(storage, contract_class_storage);
     state_reader
         .contract_states_mut()
         .insert(address.clone(), contract_state);
@@ -116,7 +117,7 @@ fn your_first_contract_integration_test() {
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accesed_storage_keys: expected_accessed_storage_keys,
+        accessed_storage_keys: expected_accessed_storage_keys,
         ..Default::default()
     };
 
