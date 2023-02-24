@@ -1,11 +1,7 @@
 use super::state_objects::FeeInfo;
 use crate::{
     business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            execution_errors::ExecutionError,
-            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
-        },
+        execution::objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         fact_state::state::ExecutionResourcesManager,
         state::{
             cached_state::CachedState,
@@ -81,7 +77,7 @@ impl InternalDeploy {
         self.contract_hash
     }
 
-    pub fn _apply_specific_concurrent_changes<S: State + StateReader + Clone + Default>(
+    pub fn _apply_specific_concurrent_changes<S: State + StateReader + Clone>(
         &self,
         mut state: CachedState<S>,
         general_config: StarknetGeneralConfig,
@@ -90,13 +86,11 @@ impl InternalDeploy {
         let class_hash: [u8; 32] = self.contract_hash[..]
             .try_into()
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
-        state.get_contract_class(&class_hash)?;
+        let contract_class = state.get_contract_class(&class_hash)?;
 
-        if class_hash == [0; 32] {
-            self.handle_empty_constructor(&mut state)
-        } else {
-            self.invoke_constructor(&mut state, general_config)
-                .map_err(StarkwareError::InvokeConstructor)
+        match contract_class.entry_points_by_type.get(&EntryPointType::Constructor) {
+            Some(entry_points) if entry_points.len() > 0 => Ok(self.invoke_constructor(state, general_config)),
+            _ => self.handle_empty_constructor(&mut state)
         }
     }
 
@@ -151,33 +145,17 @@ impl InternalDeploy {
         )
     }
 
-    pub fn invoke_constructor<S: State + StateReader + Clone + Default>(
+    pub fn invoke_constructor<S: State + StateReader + Clone>(
         &self,
-        state: &mut S,
+        _state: CachedState<S>,
         general_config: StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> TransactionExecutionInfo {
         // TODO: uncomment once execute entry point has been implemented
-        // let call = ExecuteEntryPoint.create();
-        // let call_info = call.execute();
-        //  actual_resources = calculate_tx_resources();
-        let call = ExecutionEntryPoint::new(
-            // contract_address
-            self.contract_address.clone(),
-            // calldata
-            self.constructor_calldata.clone(),
-            // entry_point_selector
-            Felt::zero(),
-            // caller_address
-            Address(0.into()),
-            // entry_point_type
-            EntryPointType::Constructor,
-            // call_type
-            None,
-            // class_hash
-            None,
-        );
+        // let call = ExecuteEntryPoint.create()
+        // let call_info = call.execute()
+        // actual_resources = calculate_tx_resources()
 
-        let tx_execution_context = TransactionExecutionContext::new(
+        let _tx_execution_context = TransactionExecutionContext::new(
             Address(Felt::zero()),
             self.hash_value.clone(),
             Vec::new(),
@@ -187,30 +165,26 @@ impl InternalDeploy {
             self.version,
         );
 
-        let mut resources_manager = ExecutionResourcesManager::default();
-
-        let call_info = call.execute(
-            state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context,
-        )?;
-
-        let actual_resources = calculate_tx_resources(
-            resources_manager,
-            &[Some(call_info.clone())],
-            self.tx_type.clone(),
-            state.count_actual_storage_changes(),
-            None,
-        )?;
-
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                None,
-                Some(call_info),
-                actual_resources,
-                Some(self.tx_type.clone()),
-            ),
-        )
+        let _resources_manager = ExecutionResourcesManager::default();
+        todo!()
     }
 }
+
+/*#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        business_logic::{
+         //   transaction::objects::internal_invoke_function::InternalInvokeFunction,
+            fact_state::{
+                /*contract_state::ContractState,*/ in_memory_state_reader::InMemoryStateReader,
+            },
+            state::cached_state::CachedState,
+        },
+        services::api::contract_class::ContractClass, //EntryPointType},
+        starknet_storage::dict_storage::DictStorage//, storage::Storage},
+    };
+    //use num_traits::Num;
+    use std::{collections::HashMap, path::PathBuf};
+
+}*/
