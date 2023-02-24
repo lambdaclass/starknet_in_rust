@@ -11,7 +11,6 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
-            cached_state::UNINITIALIZED_CLASS_HASH,
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
             state_api_objects::BlockInfo,
@@ -347,7 +346,7 @@ where
             caller_address,
             entry_point_type,
             Some(call_type),
-            class_hash.unwrap_or(*UNINITIALIZED_CLASS_HASH),
+            class_hash,
         );
 
         entry_point

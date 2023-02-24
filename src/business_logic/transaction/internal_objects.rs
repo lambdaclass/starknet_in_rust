@@ -347,7 +347,7 @@ impl InternalDeclare {
             Address(Felt::zero()),
             EntryPointType::External,
             Some(CallType::Delegate),
-            self.class_hash,
+            Some(self.class_hash),
         );
 
         let call_info = entry_point.execute(
