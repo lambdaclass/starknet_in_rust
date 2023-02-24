@@ -10,20 +10,11 @@ use std::collections::HashMap;
 pub type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) trait InternalStateTransaction {
-    fn get_state_selector_of_many(
-        _txs: Vec<impl InternalStateTransaction>,
-        _general_config: StarknetGeneralConfig,
-    ) {
-        todo!()
-    }
-
     fn apply_state_updates(
         &self,
-        _state: impl State,
-        _general_config: StarknetGeneralConfig,
-    ) -> Option<TransactionExecutionInfo> {
-        todo!()
-    }
+        state: impl State,
+        general_config: StarknetGeneralConfig,
+    ) -> Option<TransactionExecutionInfo>;
 
     fn sync_apply_state_updates<T>(
         &self,

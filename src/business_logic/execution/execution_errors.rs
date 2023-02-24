@@ -66,6 +66,8 @@ pub enum ExecutionError {
     NotAnInt,
     #[error("Out of bounds write to a read-only segment.")]
     OutOfBound,
+    #[error("Calling other contracts during validate execution is forbidden")]
+    UnauthorizedActionOnValidate,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]
