@@ -88,9 +88,14 @@ impl InternalDeploy {
             .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
         let contract_class = state.get_contract_class(&class_hash)?;
 
-        match contract_class.entry_points_by_type.get(&EntryPointType::Constructor) {
-            Some(entry_points) if entry_points.len() > 0 => Ok(self.invoke_constructor(state, general_config)),
-            _ => self.handle_empty_constructor(&mut state)
+        match contract_class
+            .entry_points_by_type
+            .get(&EntryPointType::Constructor)
+        {
+            Some(entry_points) if entry_points.len() > 0 => {
+                Ok(self.invoke_constructor(state, general_config))
+            }
+            _ => self.handle_empty_constructor(&mut state),
         }
     }
 
