@@ -214,6 +214,31 @@ impl InternalDeploy {
             ),
         )
     }
+
+    pub fn new_for_testing(contract_class: ContractClass, constructor_calldata: Vec<Felt>) -> Self {
+        Self::new(
+            Address(0.into()),
+            contract_class,
+            constructor_calldata,
+            0,
+            0,
+        )
+        .unwrap()
+    }
+}
+
+impl Default for InternalDeploy {
+    fn default() -> Self {
+        Self {
+            hash_value: 0.into(),
+            version: 0,
+            contract_address: Address(1.into()),
+            _contract_address_salt: Address(0.into()),
+            contract_hash: [1; 32],
+            constructor_calldata: vec![],
+            tx_type: TransactionType::Deploy,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -250,7 +275,7 @@ mod tests {
             hash_value: 0.into(),
             version: 0,
             contract_address: Address(1.into()),
-            _contract_address_salt: Address(1111.into()),
+            _contract_address_salt: Address(0.into()),
             contract_hash: class_hash,
             constructor_calldata: vec![10.into()],
             tx_type: TransactionType::Deploy,
