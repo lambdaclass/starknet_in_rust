@@ -12,6 +12,7 @@ from starkware.starknet.common.syscalls import (
     get_sequencer_address,
     get_tx_info,
     get_tx_signature,
+    library_call_l1_handler,
 )
 
 @storage_var
@@ -41,6 +42,26 @@ func array_sum(len: felt, arr: felt*) -> felt {
 
     let sum_of_rest = array_sum(len - 1, arr + 1);
     return arr[0] + sum_of_rest;
+}
+
+@external
+func test_call_contract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt}(
+    contract_address: felt
+) {
+    let (answer) = ISyscallsLib.stateless_func(contract_address=contract_address, a=21, b=2);
+    assert answer = 42;
+
+    lib_state.write(10);
+    ISyscallsLib.stateful_func(contract_address=contract_address);
+    let (value) = lib_state.read();
+    assert value = 10;
+
+    let (call_contact_address) = ISyscallsLib.stateful_get_contract_address(
+        contract_address=contract_address
+    );
+    assert call_contact_address = contract_address;
+
+    return ();
 }
 
 @external
@@ -149,6 +170,26 @@ func test_library_call{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
         class_hash=0x0202020202020202020202020202020202020202020202020202020202020202
     );
     assert self_contact_address = call_contact_address;
+
+    return ();
+}
+
+@external
+func test_library_call_l1_handler{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt
+}() {
+    let (calldata) = alloc();
+    assert calldata[0] = 5;
+
+    library_call_l1_handler(
+        class_hash=0x0202020202020202020202020202020202020202020202020202020202020202,
+        // function_selector=sn_keccak('on_event'),
+        function_selector=0x017349c3c55c7256afc81e94a9d2edda4a45c30dae18b50f9909c6467cd80577,
+        calldata_size=1,
+        calldata=calldata,
+    );
+    let (answer) = lib_state.read();
+    assert answer = 5;
 
     return ();
 }
