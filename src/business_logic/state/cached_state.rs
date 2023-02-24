@@ -3,8 +3,9 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
-    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
-    utils::Address,
+    core::errors::state_errors::StateError,
+    services::api::contract_class::ContractClass,
+    utils::{subtract_mappings, Address},
 };
 use felt::Felt;
 use getset::Getters;
@@ -132,17 +133,12 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
-        let storage_updates = self
-            .cache
-            .storage_writes
-            .clone()
-            .into_iter()
-            .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
-            .collect::<HashMap<StorageEntry, Felt>>();
-
-        let modified_contrats = storage_updates.keys();
-
-        (modified_contrats.len(), storage_updates.len())
+        let storage_updates = subtract_mappings(
+            self.cache.storage_writes.clone(),
+            self.cache.storage_initial_values.clone(),
+        );
+        let modified_contracts = storage_updates.keys().map(|k| k.0.clone()).len();
+        (modified_contracts, storage_updates.len())
     }
 }
 
