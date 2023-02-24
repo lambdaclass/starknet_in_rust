@@ -17,8 +17,10 @@ use crate::{
             state_api::{State, StateReader},
         },
         transaction::{
-            error::TransactionError, internal_objects::InternalDeploy,
-            objects::internal_invoke_function::InternalInvokeFunction, transaction::Transaction,
+            error::TransactionError,
+            internal_objects::{InternalDeclare, InternalDeploy},
+            objects::internal_invoke_function::InternalInvokeFunction,
+            transaction::Transaction,
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
@@ -42,6 +44,7 @@ pub(crate) struct StarknetState {
 }
 
 impl StarknetState {
+    #![allow(unused)] // TODO: delete once used
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
@@ -65,8 +68,31 @@ impl StarknetState {
     /// Returns the class hash and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract returned by compile_starknet_files()
-    pub fn declare(&self, contract_class: ContractClass) -> (Vec<u8>, TransactionExecutionInfo) {
-        todo!()
+    pub fn declare(
+        &mut self,
+        contract_class: ContractClass,
+    ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
+        let tx = InternalDeclare::new(
+            contract_class.clone(),
+            self.chain_id(),
+            Address(1.into()),
+            0,
+            0,
+            Vec::new(),
+            0.into(),
+        )?;
+
+        self.state
+            .contract_classes
+            .as_mut()
+            .ok_or(TransactionError::MissingClassStorage)?
+            .insert(tx.class_hash, contract_class);
+
+        let mut state = self.state.copy_and_apply();
+        let tx_execution_info =
+            tx.apply_specific_concurrent_changes(&mut state, self.general_config.clone())?;
+
+        Ok((tx.class_hash, tx_execution_info))
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

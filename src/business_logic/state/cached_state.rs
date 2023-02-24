@@ -63,6 +63,8 @@ impl<T: StateReader + Clone> CachedState<T> {
         copied_state
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn count_actual_storage_changes(&mut self) -> (usize, usize) {
         let storage_updates = self
             .cache

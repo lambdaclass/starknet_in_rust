@@ -33,8 +33,8 @@ impl Transaction {
 
     pub fn apply_state_updates(
         &self,
-        state_copy: CachedState<InMemoryStateReader>,
-        general_config: &StarknetGeneralConfig,
+        _state_copy: CachedState<InMemoryStateReader>,
+        _general_config: &StarknetGeneralConfig,
     ) -> TransactionExecutionInfo {
         todo!()
     }

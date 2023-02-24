@@ -1,7 +1,6 @@
 use thiserror::Error;
 
 use crate::{
-    business_logic::execution::execution_errors::ExecutionError,
     core::errors::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
@@ -10,7 +9,7 @@ use crate::{
 };
 
 #[derive(Debug, Error)]
-pub(crate) enum TransactionError {
+pub enum TransactionError {
     #[allow(dead_code)] // TODO: delete this once used
     #[error("Invalid felt convertion to u64")]
     InvalidFeltConversion,
@@ -24,12 +23,16 @@ pub(crate) enum TransactionError {
     FeeError(String),
     #[error("Cairo resource names must be contained in fee weights dict")]
     ResourcesError,
+    #[error("Could not calculate resources")]
+    ResourcesCalculationError,
+    #[error("Could not run validate entrypoint")]
+    RunValidationError,
+    #[error("Missing contract class storage")]
+    MissingClassStorage,
     #[error(transparent)]
     UtilsError(#[from] UtilsError),
     #[error(transparent)]
     ContractAddressError(#[from] ContractAddressError),
-    #[error(transparent)]
-    ExecutionError(#[from] ExecutionError),
     #[error(transparent)]
     SyscallError(#[from] SyscallHandlerError),
     #[error(transparent)]

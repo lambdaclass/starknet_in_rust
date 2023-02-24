@@ -40,6 +40,8 @@ pub struct InternalDeploy {
     pub(crate) hash_value: Felt,
     pub(crate) version: u64,
     pub(crate) contract_address: Address,
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) contract_address_salt: Address,
     pub(crate) contract_hash: [u8; 32],
     pub(crate) constructor_calldata: Vec<Felt>,
@@ -140,7 +142,6 @@ impl InternalDeploy {
             resources_manager,
             &[Some(call_info.clone())],
             self.tx_type.clone(),
-            state,
             changes,
             None,
         )
@@ -197,7 +198,6 @@ impl InternalDeploy {
             resources_manager,
             &[Some(call_info.clone())],
             self.tx_type.clone(),
-            state,
             changes,
             None,
         )?;
@@ -325,17 +325,19 @@ impl InternalDeclare {
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+        let validate_info = self
+            .run_validate_entrypoint(state, &mut resources_manager, general_config)
+            .map_err(|_| TransactionError::RunValidationError)?;
 
+        let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![validate_info.clone()],
             TransactionType::Declare,
-            state,
-            state.count_actual_storage_changes(),
+            changes,
             None,
-        )?;
+        )
+        .map_err(|_| TransactionError::ResourcesCalculationError)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(

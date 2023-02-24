@@ -6,8 +6,7 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
-            cached_state::UNINITIALIZED_CLASS_HASH,
-            state_api::{State, StateReader},
+            cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
             state_cache::StorageEntry,
         },
         transaction::error::TransactionError,
@@ -148,17 +147,13 @@ pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
         })
 }
 
-pub fn calculate_tx_resources<S>(
+pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
-    state: &mut S,
     storage_changes: (usize, usize),
     l1_handler_payload_size: Option<usize>,
-) -> Result<HashMap<String, usize>, ExecutionError>
-where
-    S: State + StateReader + Clone,
-{
+) -> Result<HashMap<String, usize>, ExecutionError> {
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
@@ -313,7 +308,6 @@ pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
 pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt,
     nonce: Option<Felt>,
-    max_fee: u64,
     version: u64,
 ) -> Result<(u64, Vec<u64>), TransactionError> {
     if version > 0 && version < u64::pow(2, 128) {

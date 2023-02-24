@@ -51,7 +51,6 @@ impl InternalInvokeFunction {
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
-            max_fee,
             version,
         )?;
 
@@ -188,7 +187,6 @@ impl InternalInvokeFunction {
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
             self.tx_type.clone(),
-            state,
             changes,
             None,
         )?;
