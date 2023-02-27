@@ -23,7 +23,7 @@ use crate::{
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
-        general_config::{StarknetChainId, StarknetGeneralConfig},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
@@ -178,7 +178,7 @@ pub struct InternalDeployAccount {
     nonce: u64,
     max_fee: u64,
     signature: Vec<Felt>,
-    chain_id: StarknetChainId,
+    chain_id: Felt,
 }
 
 impl InternalDeployAccount {
@@ -191,7 +191,7 @@ impl InternalDeployAccount {
         constructor_calldata: Vec<Felt>,
         signature: Vec<Felt>,
         contract_address_salt: Address,
-        chain_id: StarknetChainId,
+        chain_id: Felt,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = calculate_contract_address(
             &contract_address_salt,
@@ -220,7 +220,7 @@ impl InternalDeployAccount {
         }
     }
 
-    fn _apply_specific_concurrent_changes<S>(
+    pub fn _apply_specific_concurrent_changes<S>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -338,7 +338,7 @@ impl InternalDeployAccount {
                 self.max_fee,
                 self.nonce,
                 self.contract_address_salt.0.clone(),
-                self.chain_id.to_felt().to_u64().unwrap(),
+                self.chain_id.to_u64().unwrap(),
             )
             .unwrap(),
             self.signature.clone(),
