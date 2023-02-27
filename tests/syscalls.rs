@@ -1,7 +1,7 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use felt::Felt;
-use num_traits::Zero;
+use num_traits::{Num, Zero};
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -45,6 +45,7 @@ fn test_contract<'a>(
     extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>)>,
     arguments: impl Into<Vec<Felt>>,
     return_data: impl Into<Vec<Felt>>,
+    internal_calls: Vec<CallInfo>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
@@ -103,7 +104,10 @@ fn test_contract<'a>(
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
 
+    // let x = state.get_contract_class(&[2;32]).unwrap();
+    // println!("x: {:?}", x);
     let calldata = arguments.into();
+    dbg!(&calldata);
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
@@ -140,6 +144,7 @@ fn test_contract<'a>(
             accessed_storage_keys: accessed_storage_keys.collect(),
             calldata,
             retdata: return_data.into(),
+            internal_calls,
             ..Default::default()
         },
     );
@@ -167,6 +172,7 @@ fn call_contract_syscall() {
         .into_iter(),
         [2222.into()],
         [],
+        Vec::new(),
     );
 }
 
@@ -216,6 +222,7 @@ fn emit_event_syscall() {
         empty(),
         [],
         [],
+        Vec::new(),
     );
 }
 
@@ -240,6 +247,7 @@ fn get_block_number_syscall() {
             empty(),
             [],
             [block_number.into()],
+            Vec::new(),
         );
     };
 
@@ -269,6 +277,7 @@ fn get_block_timestamp_syscall() {
             empty(),
             [],
             [block_timestamp.into()],
+            Vec::new(),
         );
     };
 
@@ -295,6 +304,7 @@ fn get_caller_address_syscall() {
             empty(),
             [],
             [caller_address],
+            Vec::new(),
         );
     };
 
@@ -321,6 +331,7 @@ fn get_contract_address_syscall() {
             empty(),
             [],
             [contract_address],
+            Vec::new(),
         );
     };
 
@@ -350,6 +361,7 @@ fn get_sequencer_address_syscall() {
             empty(),
             [],
             [sequencer_address],
+            Vec::new(),
         );
     };
 
@@ -404,6 +416,7 @@ fn get_tx_info_syscall() {
                 transaction_hash,
                 chain_id.to_felt(),
             ],
+            Vec::new(),
         );
     };
 
@@ -500,6 +513,7 @@ fn get_tx_signature_syscall() {
                     .reduce(|a, b| a + b)
                     .unwrap_or_default(),
             ],
+            Vec::new(),
         );
     };
 
@@ -530,6 +544,7 @@ fn library_call_syscall() {
         .into_iter(),
         [],
         [],
+        Vec::new(),
     );
 }
 
@@ -555,6 +570,7 @@ fn library_call_l1_handler_syscall() {
         .into_iter(),
         [],
         [],
+        Vec::new(),
     );
 }
 
@@ -591,5 +607,41 @@ fn send_message_to_l1_syscall() {
         empty(),
         [],
         [],
+        Vec::new(),
+    );
+}
+
+#[test]
+fn deploy_syscall() {
+    let deploy_address = Felt::from_str_radix(
+        "2771739216117269195266211756239816992170608283088994568066688164855938378843",
+        10,
+    )
+    .unwrap();
+
+    let deploy_class_hash = [2u8; 32];
+    test_contract(
+        "tests/syscalls.json",
+        "test_deploy",
+        [1; 32],
+        Address(11111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [],
+        [].into_iter(),
+        [(deploy_class_hash, Path::new("tests/storage.json"), None)].into_iter(),
+        [Felt::from_bytes_be(deploy_class_hash.as_ref()), 0.into()],
+        [deploy_address.clone()],
+        vec![CallInfo {
+            caller_address: Address(0.into()),
+            contract_address: Address(deploy_address),
+            entry_point_type: Some(EntryPointType::Constructor),
+            call_type: Some(CallType::Call),
+            class_hash: Some(deploy_class_hash),
+            ..Default::default()
+        }],
     );
 }

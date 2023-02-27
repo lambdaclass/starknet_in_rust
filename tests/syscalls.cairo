@@ -13,6 +13,7 @@ from starkware.starknet.common.syscalls import (
     get_tx_info,
     get_tx_signature,
     library_call_l1_handler,
+    deploy,
 )
 
 @storage_var
@@ -212,4 +213,20 @@ func test_send_message_to_l1{syscall_ptr: felt*}() {
     send_message_to_l1(1111, 1, payload);
 
     return ();
+}
+
+@external
+func test_deploy{syscall_ptr: felt*}(
+    class_hash: felt,
+    contract_address_salt: felt
+) -> (contract_address: felt) {
+
+    let contract_address = deploy(
+        class_hash,
+        contract_address_salt,
+        0,
+        syscall_ptr,
+        1);
+
+    return (contract_address);
 }
