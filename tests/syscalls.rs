@@ -645,3 +645,40 @@ fn deploy_syscall() {
         }],
     );
 }
+
+#[test]
+fn deploy_with_constructor_syscall() {
+    let deploy_address = Felt::from_str_radix(
+        "61956907203782517318335437536462535199340115817938156158070235163997828534",
+        10,
+    )
+    .unwrap();
+
+    let deploy_class_hash = [2u8; 32];
+    test_contract(
+        "tests/syscalls.json",
+        "test_deploy_with_constructor",
+        [1; 32],
+        Address(11111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [],
+        [].into_iter(),
+        [(
+            deploy_class_hash,
+            Path::new("tests/storage_var_and_constructor.json"),
+            None,
+        )]
+        .into_iter(),
+        [
+            Felt::from_bytes_be(deploy_class_hash.as_ref()),
+            0.into(),
+            550.into(),
+        ],
+        [deploy_address],
+        Vec::new(),
+    );
+}

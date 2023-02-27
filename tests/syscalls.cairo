@@ -230,3 +230,25 @@ func test_deploy{syscall_ptr: felt*}(
 
     return (contract_address);
 }
+
+@external
+func test_deploy_with_constructor{syscall_ptr: felt*}(
+    class_hash: felt,
+    contract_address_salt: felt,
+    constructor: felt
+) -> (contract_address: felt) {
+    // Allocate an array.
+    let (ptr) = alloc();
+
+    // Populate some values in the array.
+    assert [ptr] = constructor;
+    
+    let contract_address = deploy(
+        class_hash,
+        contract_address_salt,
+        1,
+        ptr,
+        1);
+
+    return (contract_address);
+}
