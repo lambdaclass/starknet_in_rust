@@ -25,8 +25,8 @@ pub enum TransactionError {
     ResourcesError,
     #[error("Could not calculate resources")]
     ResourcesCalculationError,
-    #[error("Could not run validate entrypoint")]
-    RunValidationError,
+    #[error("{0}")]
+    RunValidationError(String),
     #[error("Missing contract class storage")]
     MissingClassStorage,
     #[error(transparent)]

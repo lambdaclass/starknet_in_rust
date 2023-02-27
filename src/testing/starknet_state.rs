@@ -89,8 +89,7 @@ impl StarknetState {
             .insert(tx.class_hash, contract_class);
 
         let mut state = self.state.copy_and_apply();
-        let tx_execution_info =
-            tx.apply_specific_concurrent_changes(&mut state, self.general_config.clone())?;
+        let tx_execution_info = tx.apply_state_updates(&mut state, self.general_config.clone())?;
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -277,5 +276,38 @@ impl StarknetState {
             self.chain_id(),
             Some(nonce),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+
+    #[test]
+    fn test_deploy() {
+        let mut starknet_state = StarknetState::new(None);
+        let path = PathBuf::from("tests/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let contract_address_salt = Address(1.into());
+        let exec = (Address(1.into()), TransactionExecutionInfo::default());
+        assert_eq!(
+            starknet_state
+                .deploy(contract_class, constructor_calldata, contract_address_salt)
+                .unwrap(),
+            exec
+        );
+    }
+
+    #[test]
+    fn test_declare() {
+        let mut starknet_state = StarknetState::new(None);
+        let path = PathBuf::from("tests/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        let exec = ([1; 32], TransactionExecutionInfo::default());
+        assert_eq!(starknet_state.declare(contract_class).unwrap(), exec);
     }
 }

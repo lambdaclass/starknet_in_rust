@@ -11,7 +11,7 @@ use crate::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
-    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
+    definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
@@ -76,12 +76,14 @@ impl ExecutionEntryPoint {
         T: Default + State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
+
         let runner = self.run(
             state,
             resources_manager,
             general_config,
             tx_execution_context,
         )?;
+
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
@@ -116,15 +118,20 @@ impl ExecutionEntryPoint {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| ExecutionError::MissigContractClass)?;
+        dbg!("after contract class");
 
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
         // create starknet runner
+        dbg!("after entrty point");
 
         let mut vm = VirtualMachine::new(false);
 
         let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)?;
+        dbg!("after cairo runner");
+
         cairo_runner.initialize_function_runner(&mut vm)?;
+        dbg!("after initialize runner");
 
         let mut tmp_state = T::default();
         let hint_processor =
@@ -135,7 +142,7 @@ impl ExecutionEntryPoint {
         let os_context = runner.prepare_os_context();
 
         validate_contract_deployed(state, self.contract_address.clone())?;
-
+        dbg!("after validate");
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
             Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
@@ -202,26 +209,27 @@ impl ExecutionEntryPoint {
             .entry_points_by_type
             .get(&self.entry_point_type)
             .ok_or(ExecutionError::InvalidEntryPoints)?;
+        println!("entry points {:?}", entry_points);
+        // let mut default_entry_point = None;
+        // let entry_point = entry_points
+        //     .iter()
+        //     .filter_map(|x| {
+        //         if x.selector == *DEFAULT_ENTRY_POINT_SELECTOR {
+        //             default_entry_point = Some(x);
+        //         }
 
-        let mut default_entry_point = None;
-        let entry_point = entry_points
-            .iter()
-            .filter_map(|x| {
-                if x.selector == *DEFAULT_ENTRY_POINT_SELECTOR {
-                    default_entry_point = Some(x);
-                }
-
-                (x.selector == self.entry_point_selector).then_some(x)
-            })
-            .fold(Ok(None), |acc, x| match acc {
-                Ok(None) => Ok(Some(x)),
-                _ => Err(ExecutionError::NonUniqueEntryPoint),
-            })?;
-
-        entry_point
-            .or(default_entry_point)
-            .cloned()
-            .ok_or(ExecutionError::EntryPointNotFound)
+        //         (x.selector == self.entry_point_selector).then_some(x)
+        //     })
+        //     .fold(Ok(None), |acc, x| match acc {
+        //         Ok(None) => Ok(Some(x)),
+        //         _ => Err(ExecutionError::NonUniqueEntryPoint),
+        //     })?;
+        // println!("entry point {:?}", entry_point);
+        Ok(entry_points[0].clone())
+        // entry_point
+        //     .or(default_entry_point)
+        //     .cloned()
+        //     .ok_or(ExecutionError::EntryPointNotFound)
     }
 
     fn build_call_info<S>(

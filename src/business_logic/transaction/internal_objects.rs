@@ -10,9 +10,7 @@ use crate::{
             execution_errors::ExecutionError,
             objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
+        fact_state::state::ExecutionResourcesManager,
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
@@ -30,7 +28,7 @@ use crate::{
     services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
-    utils_errors::UtilsError,
+    //utils_errors::UtilsError,
 };
 use felt::{felt_str, Felt};
 use num_traits::Zero;
@@ -58,24 +56,22 @@ impl InternalDeploy {
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_class_hash(&contract_class)
             .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
-        let contract_hash: [u8; 32] = class_hash
-            .to_string()
-            .as_bytes()
-            .try_into()
-            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(class_hash.clone()))?;
+
+        let contract_hash: [u8; 32] = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &class_hash,
             &constructor_calldata[..],
             Address(0.into()),
         )?);
-
+        dbg!("before hash value");
         let hash_value = calculate_deploy_transaction_hash(
             version,
             contract_address.clone(),
             &constructor_calldata,
             chain_id,
         )?;
+        dbg!("after hash value");
         Ok(InternalDeploy {
             hash_value,
             version,
@@ -319,7 +315,7 @@ impl InternalDeclare {
     pub fn apply_specific_concurrent_changes<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
-        general_config: StarknetGeneralConfig,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
         // validate transaction
@@ -327,7 +323,7 @@ impl InternalDeclare {
 
         let validate_info = self
             .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .map_err(|_| TransactionError::RunValidationError)?;
+            .map_err(|e| TransactionError::RunValidationError(e.to_string()))?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -369,7 +365,7 @@ impl InternalDeclare {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: StarknetGeneralConfig,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
         if self.version > 0x8000_0000_0000_0000 {
             return Ok(None);
@@ -404,10 +400,10 @@ impl InternalDeclare {
     // Calculates and charges the actual fee.
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    pub fn charge_fee(
+    pub fn charge_fee<S: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
-        resources: HashMap<String, Felt>,
+        state: &mut S,
+        resources: HashMap<String, usize>,
         general_config: StarknetGeneralConfig,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
@@ -427,9 +423,9 @@ impl InternalDeclare {
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
-    fn handle_nonce(
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut S,
     ) -> Result<(), TransactionError> {
         if self.version > 0x8000_0000_0000_0000 {
             return Err(TransactionError::StarknetError(
@@ -451,15 +447,38 @@ impl InternalDeclare {
         Ok(())
     }
 
-    pub fn apply_specific_sequential_changes(
+    pub fn apply_specific_sequential_changes<S: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut S,
         general_config: StarknetGeneralConfig,
-        actual_resources: HashMap<String, Felt>,
+        actual_resources: HashMap<String, usize>,
     ) -> Result<FeeInfo, TransactionError> {
         self.handle_nonce(state)?;
 
         self.charge_fee(state, actual_resources, general_config)
+    }
+
+    pub fn apply_state_updates<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+        general_config: StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let concurrent_exec_info =
+            self.apply_specific_concurrent_changes(state, &general_config)?;
+
+        let (fee_transfer_info, actual_fee) = self.apply_specific_sequential_changes(
+            state,
+            general_config,
+            concurrent_exec_info.actual_resources.clone(),
+        )?;
+
+        Ok(
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                concurrent_exec_info,
+                actual_fee,
+                fee_transfer_info,
+            ),
+        )
     }
 }
 
@@ -581,7 +600,7 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
+                .apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
                 .unwrap(),
             transaction_exec_info
         );
