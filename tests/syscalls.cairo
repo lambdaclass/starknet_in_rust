@@ -14,6 +14,7 @@ from starkware.starknet.common.syscalls import (
     get_tx_signature,
     library_call_l1_handler,
     deploy,
+    call_contract,
 )
 
 @storage_var
@@ -33,6 +34,21 @@ namespace ISyscallsLib {
     }
 
     func stateful_get_contract_address() -> (contract_address: felt) {
+    }
+}
+
+@contract_interface
+namespace StorageVarAndConstructor {
+    func get_constant() -> (answer: felt) {
+    }
+
+    func set_constant(num: felt) -> (){
+    }
+
+    func sum_constant(num: felt) -> (answer: felt){
+    }
+
+    func mult_constant(num: felt) -> (answer: felt) {
     }
 }
 
@@ -251,4 +267,34 @@ func test_deploy_with_constructor{syscall_ptr: felt*}(
         1);
 
     return (contract_address);
+}
+
+@external
+func test_deploy_and_call_contract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    class_hash: felt,
+    contract_address_salt: felt,
+    constructor: felt,
+    new_constant:felt,
+) -> (answer: felt) {
+    // Set constructor.
+    let (ptr) = alloc();
+    assert [ptr] = constructor;
+    
+    // Deploy contract
+    let (contract_address) = deploy(
+        class_hash,
+        contract_address_salt,
+        1,
+        ptr,
+        1);
+
+    // Call contract
+    let (answer) = StorageVarAndConstructor.mult_constant(contract_address=contract_address, num=4);
+    assert answer = (constructor * 4);
+
+    StorageVarAndConstructor.set_constant(contract_address=contract_address, num=new_constant);
+
+    let constant = StorageVarAndConstructor.get_constant(contract_address=contract_address);
+
+    return (constant);
 }

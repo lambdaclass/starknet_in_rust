@@ -682,3 +682,36 @@ fn deploy_with_constructor_syscall() {
         Vec::new(),
     );
 }
+
+#[test]
+fn test_deploy_and_call_contract_syscall() {
+    let new_contant = Felt::new(3);
+    let deploy_class_hash = [2u8; 32];
+    test_contract(
+        "tests/syscalls.json",
+        "test_deploy_and_call_contract",
+        [1; 32],
+        Address(11111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [],
+        [].into_iter(),
+        [(
+            deploy_class_hash,
+            Path::new("tests/storage_var_and_constructor.json"),
+            None,
+        )]
+        .into_iter(),
+        [
+            Felt::from_bytes_be(deploy_class_hash.as_ref()),
+            0.into(),
+            550.into(),
+            new_contant.clone(),
+        ],
+        [new_contant],
+        Vec::new(),
+    );
+}

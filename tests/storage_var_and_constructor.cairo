@@ -19,6 +19,12 @@ func get_constant{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
     }
 
 @external
+func set_constant{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr} ( _constant: felt) -> () {
+    constant.write(_constant);
+    return ();
+    }
+
+@external
 func sum_constant{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr} (n) -> (res: felt) {
     let (c) = constant.read();
     return (c + n,);
