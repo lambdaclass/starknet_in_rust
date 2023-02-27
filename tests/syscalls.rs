@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 
 use felt::Felt;
 use num_traits::{Num, Zero};
@@ -104,10 +104,7 @@ fn test_contract<'a>(
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
 
-    // let x = state.get_contract_class(&[2;32]).unwrap();
-    // println!("x: {:?}", x);
     let calldata = arguments.into();
-    dbg!(&calldata);
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(

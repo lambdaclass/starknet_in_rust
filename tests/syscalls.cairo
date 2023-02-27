@@ -14,7 +14,6 @@ from starkware.starknet.common.syscalls import (
     get_tx_signature,
     library_call_l1_handler,
     deploy,
-    call_contract,
 )
 
 @storage_var
@@ -253,10 +252,8 @@ func test_deploy_with_constructor{syscall_ptr: felt*}(
     contract_address_salt: felt,
     constructor: felt
 ) -> (contract_address: felt) {
-    // Allocate an array.
+    // Set constructor.
     let (ptr) = alloc();
-
-    // Populate some values in the array.
     assert [ptr] = constructor;
     
     let contract_address = deploy(
