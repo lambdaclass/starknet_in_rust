@@ -1,7 +1,7 @@
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 use felt::Felt;
 use getset::{CopyGetters, Getters, MutGetters};
-use num_traits::Zero;
+use num_traits::{Num, Zero};
 use std::collections::HashMap;
 
 #[allow(unused)]
@@ -74,6 +74,24 @@ impl StarknetGeneralConfig {
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 0,
             block_info,
+        }
+    }
+}
+
+impl StarknetGeneralConfig {
+    pub fn new_for_testing() -> StarknetGeneralConfig {
+        StarknetGeneralConfig {
+            starknet_os_config: StarknetOsConfig {
+                chain_id: StarknetChainId::TestNet,
+                fee_token_address: Address(Felt::from_str_radix("1001", 16).unwrap()), // this is hardcoded, should be TEST_ERC20_CONTRACT_ADDRESS
+                gas_price: 0,
+            },
+            _contract_storage_commitment_tree_height: 0,
+            _global_state_commitment_tree_height: 0,
+            invoke_tx_max_n_steps: 1_000_000,
+            cairo_resource_fee_weights: HashMap::new(),
+            validate_max_n_steps: 1_000_000,
+            block_info: BlockInfo::empty(Address(Felt::from_str_radix("1000", 16).unwrap())), // this is hardcoded, should be TEST_SEQUENCER_ADDRESS
         }
     }
 }
