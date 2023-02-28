@@ -1,8 +1,14 @@
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
-    hash_utils::compute_hash_on_elements, utils::Address,
+    core::{
+        contract_address::starknet_contract_address::compute_class_hash,
+        errors::syscall_handler_errors::SyscallHandlerError,
+    },
+    hash_utils::compute_hash_on_elements,
+    services::api::contract_class::ContractClass,
+    utils::Address,
 };
 use felt::{felt_str, Felt};
+use num_traits::ToPrimitive;
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
@@ -74,14 +80,17 @@ pub fn calculate_deploy_transaction_hash(
     constructor_calldata: &[Felt],
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
-    //todo!("Provide a constant CONSTRUCTOR_ENTRY_POINT_SELECTOR.")
+    let entry_point_selector =
+        felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556");
+    let entry = entry_point_selector
+        .to_u64()
+        .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
+
     calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
-        // TODO: A constant CONSTRUCTOR_ENTRY_POINT_SELECTOR must be provided here.
-        // See https://github.com/starkware-libs/cairo-lang/blob/9889fbd522edc5eff603356e1912e20642ae20af/src/starkware/starknet/public/abi.py#L53
-        todo!(),
+        entry,
         constructor_calldata,
         // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
         0,
@@ -116,6 +125,41 @@ pub fn calculate_deploy_account_transaction_hash(
     )
 }
 
+pub(crate) fn calculate_declare_transaction_hash(
+    contract_class: ContractClass,
+    chain_id: Felt,
+    sender_address: Address,
+    max_fee: u64,
+    version: u64,
+    nonce: Felt,
+) -> Result<Felt, SyscallHandlerError> {
+    let class_hash =
+        compute_class_hash(&contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+
+    let (calldata, additional_data) = if version > 0x8000_0000_0000_0000 {
+        let value = class_hash
+            .to_u64()
+            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
+        (Vec::new(), [value].to_vec())
+    } else {
+        let value = nonce
+            .to_u64()
+            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
+        ([class_hash].to_vec(), [value].to_vec())
+    };
+
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::Declare,
+        version,
+        sender_address,
+        0,
+        &calldata,
+        max_fee,
+        chain_id,
+        &additional_data,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use felt::felt_str;
@@ -126,7 +170,7 @@ mod tests {
     fn calculate_transaction_hash_common_test() {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
         let version = 0;
-        let contract_addres = Address(42.into());
+        let contract_address = Address(42.into());
         let entry_point_selector = 100;
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
@@ -141,7 +185,7 @@ mod tests {
         let result = calculate_transaction_hash_common(
             tx_hash_prefix,
             version,
-            contract_addres,
+            contract_address,
             entry_point_selector,
             &calldata,
             max_fee,

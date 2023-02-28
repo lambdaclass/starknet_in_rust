@@ -33,11 +33,11 @@ impl Storage for DictStorage {
         Ok(())
     }
     fn get_value(&self, key: &StorageKey) -> Option<Vec<u8>> {
-        self.storage.get(&*key).cloned()
+        self.storage.get(key).cloned()
     }
     fn delete_value(&mut self, key: &StorageKey) -> Result<Vec<u8>, StorageError> {
         self.storage
-            .remove(&*key)
+            .remove(key)
             .ok_or(StorageError::RemoveMissingKey)
     }
 }

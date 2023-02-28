@@ -115,18 +115,27 @@ impl ExecutionEntryPoint {
     {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state)?;
+        //println!("class hash que usa {:?}", class_hash);
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| ExecutionError::MissigContractClass)?;
 
+        //println!("contract_class {:?}", contract_class.entry_points_by_type);
+        //dbg!("after contract class");
+
         // fetch selected entry point
+        //dbg!("before entrty point");
         let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
         // create starknet runner
+        //dbg!("after entrty point");
 
         let mut vm = VirtualMachine::new(false);
 
         let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)?;
+        //dbg!("after cairo runner");
+
         cairo_runner.initialize_function_runner(&mut vm)?;
+        //dbg!("after initialize runner");
 
         let mut tmp_state = T::default();
         let hint_processor =
@@ -137,7 +146,7 @@ impl ExecutionEntryPoint {
         let os_context = runner.prepare_os_context();
 
         validate_contract_deployed(state, self.contract_address.clone())?;
-
+        //dbg!("after validate");
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
             Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
@@ -177,7 +186,6 @@ impl ExecutionEntryPoint {
 
         // cairo runner entry point
         runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
-
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
@@ -206,6 +214,9 @@ impl ExecutionEntryPoint {
             .get(&self.entry_point_type)
             .ok_or(ExecutionError::InvalidEntryPoints)?;
 
+        //println!("entry point selector {:?}", self.entry_point_selector);
+        //println!("entry point {:?}", entry_points);
+
         let mut default_entry_point = None;
         let entry_point = entry_points
             .iter()
@@ -220,7 +231,8 @@ impl ExecutionEntryPoint {
                 Ok(None) => Ok(Some(x)),
                 _ => Err(ExecutionError::NonUniqueEntryPoint),
             })?;
-
+        //println!("entry point {:?}", entry_point);
+        //Ok(entry_points[0].clone())
         entry_point
             .or(default_entry_point)
             .cloned()
@@ -255,7 +267,7 @@ impl ExecutionEntryPoint {
             events: syscall_handler.events,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             storage_read_values: syscall_handler.starknet_storage_state.read_values,
-            accesed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
+            accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
             internal_calls: syscall_handler.internal_calls,
         })
     }
@@ -271,6 +283,7 @@ impl ExecutionEntryPoint {
                 _ => return Err(ExecutionError::CallTypeIsNotDelegate),
             }
         }
+        //println!("state {:?}", self);
         let code_address = match self.call_type {
             CallType::Call => Some(self.contract_address.clone()),
             CallType::Delegate => {
@@ -282,6 +295,7 @@ impl ExecutionEntryPoint {
             }
         };
 
+        //println!("code_address {:?}", code_address);
         get_deployed_address_class_hash_at_address(state, code_address.unwrap())
     }
 }

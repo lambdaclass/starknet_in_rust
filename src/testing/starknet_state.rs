@@ -1,4 +1,9 @@
 use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
+use std::collections::HashMap;
+
+use felt::Felt;
+use num_traits::Zero;
+
 use crate::{
     business_logic::{
         execution::{
@@ -11,29 +16,22 @@ use crate::{
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
         },
         transaction::{
-            internal_objects::InternalDeploy,
+            error::TransactionError,
+            internal_objects::{InternalDeclare, InternalDeploy},
             objects::internal_invoke_function::InternalInvokeFunction,
-            state_objects::InternalStateTransaction, transaction::Transaction,
-            transaction_errors::TransactionError,
+            transactions::Transaction,
         },
     },
-    definitions::{
-        constants::TRANSACTION_VERSION,
-        general_config::{self, StarknetChainId, StarknetGeneralConfig},
-    },
+    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
         contract_class::{ContractClass, EntryPointType},
-        messages::{self, StarknetMessageToL1},
+        messages::StarknetMessageToL1,
     },
     starknet_storage::dict_storage::DictStorage,
     utils::Address,
 };
-use felt::Felt;
-use num_traits::Zero;
-use std::{collections::HashMap, hash::Hash};
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
@@ -46,6 +44,7 @@ pub(crate) struct StarknetState {
 }
 
 impl StarknetState {
+    #![allow(unused)] // TODO: delete once used
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
@@ -70,8 +69,35 @@ impl StarknetState {
     /// Returns the class hash and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract returned by compile_starknet_files()
-    pub fn declare(&self, contract_class: ContractClass) -> (Vec<u8>, TransactionExecutionInfo) {
-        todo!()
+    pub fn declare(
+        &mut self,
+        contract_class: ContractClass,
+    ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
+        let tx = InternalDeclare::new(
+            contract_class.clone(),
+            self.chain_id(),
+            Address(1.into()),
+            0,
+            0,
+            Vec::new(),
+            0.into(),
+        )?;
+
+        self.state
+            .contract_classes
+            .as_mut()
+            .ok_or(TransactionError::MissingClassStorage)?
+            .insert(tx.class_hash, contract_class);
+
+        // println!(
+        //     "contract classes {:?}",
+        //     self.state.contract_classes.as_ref().unwrap().len()
+        // );
+
+        let mut state = self.state.copy_and_apply();
+        let tx_execution_info = tx.apply_state_updates(&mut state, self.general_config.clone())?;
+
+        Ok((tx.class_hash, tx_execution_info))
     }
 
     // ----------------------------------------------------------
@@ -256,5 +282,84 @@ impl StarknetState {
             self.chain_id(),
             Some(nonce),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::{
+        business_logic::fact_state::contract_state::ContractState,
+        core::contract_address::starknet_contract_address::compute_class_hash, utils::felt_to_hash,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_deploy() {
+        let mut starknet_state = StarknetState::new(None);
+        let path = PathBuf::from("tests/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let contract_address_salt = Address(1.into());
+        let exec = (Address(1.into()), TransactionExecutionInfo::default());
+        assert_eq!(
+            starknet_state
+                .deploy(contract_class, constructor_calldata, contract_address_salt)
+                .unwrap(),
+            exec
+        );
+    }
+
+    #[test]
+    fn test_declare() {
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        // hack store account contract
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+        contract_class_cache.insert(class_hash, contract_class.clone());
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+        let contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
+
+        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        state_reader
+            .contract_states
+            .insert(sender_address, contract_state.clone());
+
+        //* --------------------------------------------
+        //*    Create starknet state with previous data
+        //* --------------------------------------------
+
+        let state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        let mut starknet_state = StarknetState::new(None);
+
+        starknet_state.state = state;
+        starknet_state
+            .state
+            .state_reader
+            .contract_states
+            .insert(Address(1.into()), contract_state);
+
+        // --------------------------------------------
+        //      Test declare with starknet state
+        // --------------------------------------------
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let exec = ([1; 32], TransactionExecutionInfo::default());
+        assert_eq!(starknet_state.declare(fib_contract_class).unwrap(), exec);
     }
 }

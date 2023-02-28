@@ -1,5 +1,3 @@
-use std::ops::Add;
-
 use felt::Felt;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
@@ -41,7 +39,7 @@ impl StarknetMessageToL1 {
             .collect::<Vec<u8>>();
         let mut hasher = Keccak256::new();
         hasher.update(data);
-        let mut finalized_hash = hasher.finalize();
+        let finalized_hash = hasher.finalize();
         finalized_hash.as_slice().to_vec()
     }
 }

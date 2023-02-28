@@ -3,7 +3,6 @@ use thiserror::Error;
 use crate::{
     business_logic::execution::execution_errors::ExecutionError,
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::general_config::StarknetChainId,
 };
 
 #[derive(Debug, Error)]

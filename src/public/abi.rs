@@ -11,4 +11,9 @@ lazy_static! {
         10,
     )
     .unwrap();
+    pub static ref CONSTRUCTOR_ENTRY_POINT_SELECTOR: Felt = Felt::from_str_radix(
+        "1159040026212278395030414237414753050475174923702621880048416706425641521556",
+        10,
+    )
+    .unwrap();
 }

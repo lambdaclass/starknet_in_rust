@@ -3,15 +3,16 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
-    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
-    utils::Address,
+    core::errors::state_errors::StateError,
+    services::api::contract_class::ContractClass,
+    utils::{subtract_mappings, Address},
 };
 use felt::Felt;
 use getset::Getters;
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
-pub(crate) type ContractClassCache = HashMap<[u8; 32], ContractClass>;
+pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -51,7 +52,7 @@ impl<T: StateReader + Clone> CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
-    ///Apply updates to parent state
+    /// Apply updates to parent state.
     pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
         parent.cache.update_writes_from_other(&self.cache);
@@ -63,6 +64,8 @@ impl<T: StateReader + Clone> CachedState<T> {
         copied_state
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub(crate) fn count_actual_storage_changes(&mut self) -> (usize, usize) {
         let storage_updates = self
             .cache
@@ -72,7 +75,7 @@ impl<T: StateReader + Clone> CachedState<T> {
             .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
             .collect::<HashMap<StorageEntry, Felt>>();
 
-        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
+        let modified_contrats = storage_updates.clone().into_keys().map(|k| k.0);
 
         (modified_contrats.len(), storage_updates.len())
     }
@@ -130,17 +133,12 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
-        let storage_updates = self
-            .cache
-            .storage_writes
-            .clone()
-            .into_iter()
-            .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
-            .collect::<HashMap<StorageEntry, Felt>>();
-
-        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
-
-        (modified_contrats.len(), storage_updates.len())
+        let storage_updates = subtract_mappings(
+            self.cache.storage_writes.clone(),
+            self.cache.storage_initial_values.clone(),
+        );
+        let modified_contracts = storage_updates.keys().map(|k| k.0.clone()).len();
+        (modified_contracts, storage_updates.len())
     }
 }
 
@@ -160,26 +158,24 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
     fn deploy_contract(
         &mut self,
-        contract_address: Address,
+        deploy_contract_address: Address,
         class_hash: [u8; 32],
     ) -> Result<(), StateError> {
-        if contract_address == Address(0.into()) {
+        if deploy_contract_address == Address(0.into()) {
             return Err(StateError::ContractAddressOutOfRangeAddress(
-                contract_address.clone(),
+                deploy_contract_address.clone(),
             ));
         }
 
-        let current_class_hash = self.get_class_hash_at(&contract_address)?;
-
-        if current_class_hash == UNINITIALIZED_CLASS_HASH {
+        if self.get_class_hash_at(&deploy_contract_address).is_ok() {
             return Err(StateError::ContractAddressUnavailable(
-                contract_address.clone(),
+                deploy_contract_address.clone(),
             ));
         }
+
         self.cache
             .class_hash_writes
-            .insert(contract_address, class_hash);
-
+            .insert(deploy_contract_address, class_hash);
         Ok(())
     }
 
@@ -290,15 +286,9 @@ mod tests {
 
     #[test]
     fn cached_state_deploy_contract_test() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
-
-        state_reader
-            .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
-            .unwrap();
 
         let mut cached_state = CachedState::new(state_reader, None);
 

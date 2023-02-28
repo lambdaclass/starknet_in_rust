@@ -4,15 +4,12 @@ use crate::{
             execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
+        fact_state::state::ExecutionResourcesManager,
         state::{
-            cached_state::{CachedState, UNINITIALIZED_CLASS_HASH},
-            state_api::{State, StateReader},
+            cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
             state_cache::StorageEntry,
         },
-        transaction::transaction_errors::TransactionError,
+        transaction::error::TransactionError,
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
@@ -150,17 +147,13 @@ pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
         })
 }
 
-pub fn calculate_tx_resources<S>(
+pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
-    state: &mut S,
     storage_changes: (usize, usize),
     l1_handler_payload_size: Option<usize>,
-) -> Result<HashMap<String, usize>, ExecutionError>
-where
-    S: State + StateReader + Clone,
-{
+) -> Result<HashMap<String, usize>, ExecutionError> {
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
@@ -280,6 +273,21 @@ pub fn validate_contract_deployed<S: StateReader>(
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
 
+//* ----------------------------
+//* Internal objects utils
+//* ----------------------------
+
+pub(crate) fn verify_no_calls_to_other_contracts(
+    call_info: &CallInfo,
+) -> Result<(), TransactionError> {
+    let invoked_contract_address = call_info.contract_address.clone();
+    for internal_call in call_info.gen_call_topology() {
+        if internal_call.contract_address != invoked_contract_address {
+            return Err(TransactionError::UnauthorizedActionOnValidate);
+        }
+    }
+    Ok(())
+}
 pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
     let mut hasher = Keccak256::default();
     hasher.update(data);
@@ -300,7 +308,6 @@ pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
 pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt,
     nonce: Option<Felt>,
-    max_fee: u64,
     version: u64,
 ) -> Result<(u64, Vec<u64>), TransactionError> {
     if version > 0 && version < u64::pow(2, 128) {

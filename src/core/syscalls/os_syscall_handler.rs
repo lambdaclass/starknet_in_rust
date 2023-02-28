@@ -75,6 +75,22 @@ impl SyscallHandler for OsSyscallHandler {
         todo!()
     }
 
+    fn library_call_l1_handler(
+        &mut self,
+        _vm: &mut VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+
+    fn call_contract(
+        &mut self,
+        _vm: &mut VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+
     fn send_message_to_l1(
         &mut self,
         _vm: &VirtualMachine,
@@ -399,7 +415,7 @@ mod tests {
             retdata: Vec::new(),
             entry_point_selector: None,
             l2_to_l1_messages: Vec::new(),
-            accesed_storage_keys: HashSet::new(),
+            accessed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
             execution_resources: ExecutionResources {
                 n_steps: 0,
