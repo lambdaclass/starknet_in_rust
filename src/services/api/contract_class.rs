@@ -141,6 +141,14 @@ impl TryFrom<PathBuf> for ContractClass {
     type Error = io::Error;
 
     fn try_from(path: PathBuf) -> io::Result<Self> {
+        ContractClass::try_from(&path)
+    }
+}
+
+impl TryFrom<&PathBuf> for ContractClass {
+    type Error = io::Error;
+
+    fn try_from(path: &PathBuf) -> io::Result<Self> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::state::ContractClass =
