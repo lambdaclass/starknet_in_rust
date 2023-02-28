@@ -76,7 +76,6 @@ brew install gmp
 In Mac you'll also need to tell the script where to find the gmp lib:
 ```shell
 export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib
-sh build_envs.sh
 ```
 
 
