@@ -4,7 +4,7 @@ use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
-        state::cached_state::CachedState,
+        state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::ContractClass,
@@ -121,4 +121,36 @@ fn create_account_tx_test_state(
     );
 
     Ok((general_config, cached_state))
+}
+
+#[test]
+fn test_create_account_tx_test_state() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    println!("{}", serde_json::to_string(&Felt::zero()).unwrap());
+
+    let value = state
+        .get_storage_at(&(
+            general_config
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
+            felt_to_hash(&*TEST_ERC20_ACCOUNT_BALANCE_KEY),
+        ))
+        .unwrap();
+    println!("value = {:?}", value);
+    assert_eq!(value, &2.into());
+
+    let class_hash = state.get_class_hash_at(&*TEST_CONTRACT_ADDRESS).unwrap();
+    println!("value = {class_hash:?}");
+    assert_eq!(class_hash, &felt_to_hash(&*TEST_CLASS_HASH));
+
+    let contract_class = state
+        .get_contract_class(&felt_to_hash(&*TEST_ERC20_CONTRACT_CLASS_HASH))
+        .unwrap();
+    // println!("value = {contract_class:?}");
+    assert_eq!(
+        contract_class,
+        get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+    );
 }
