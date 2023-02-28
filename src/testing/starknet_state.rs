@@ -89,11 +89,6 @@ impl StarknetState {
             .ok_or(TransactionError::MissingClassStorage)?
             .insert(tx.class_hash, contract_class);
 
-        // println!(
-        //     "contract classes {:?}",
-        //     self.state.contract_classes.as_ref().unwrap().len()
-        // );
-
         let mut state = self.state.copy_and_apply();
         let tx_execution_info = tx.apply_state_updates(&mut state, self.general_config.clone())?;
 
@@ -324,7 +319,7 @@ mod tests {
         // hack store account contract
         let hash = compute_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        contract_class_cache.insert(class_hash.clone(), contract_class.clone());
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -336,7 +331,7 @@ mod tests {
         let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
         state_reader
             .contract_states
-            .insert(sender_address, contract_state.clone());
+            .insert(sender_address.clone(), contract_state.clone());
 
         //* --------------------------------------------
         //*    Create starknet state with previous data
@@ -359,7 +354,36 @@ mod tests {
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
 
-        let exec = ([1; 32], TransactionExecutionInfo::default());
-        assert_eq!(starknet_state.declare(fib_contract_class).unwrap(), exec);
+        let (_fee, _exec_info) = starknet_state.declare(fib_contract_class.clone()).unwrap();
+
+        //* ---------------------------------------
+        //              Expected result
+        //* ---------------------------------------
+
+        // ----- calculate fib class hash ---------
+        let hash = compute_class_hash(&fib_contract_class).unwrap();
+        let fib_class_hash = felt_to_hash(&hash);
+
+        // check that state has store has store accounts class hash
+        assert_eq!(
+            starknet_state
+                .state
+                .get_class_hash_at(&sender_address)
+                .unwrap()
+                .to_owned(),
+            class_hash
+        );
+
+        // check that state has store fib class hash
+        assert_eq!(
+            starknet_state
+                .state
+                .contract_classes
+                .unwrap()
+                .get(&fib_class_hash)
+                .unwrap()
+                .to_owned(),
+            fib_contract_class
+        );
     }
 }
