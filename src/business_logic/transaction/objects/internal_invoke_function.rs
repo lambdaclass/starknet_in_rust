@@ -171,7 +171,6 @@ mod tests {
             state::cached_state::CachedState,
         },
         services::api::contract_class::ContractClass,
-        starknet_storage::{dict_storage::DictStorage, storage::Storage},
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
@@ -197,7 +196,7 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
         let mut state = CachedState::new(state_reader, None);
 
         // Initialize state.contract_classes
@@ -213,17 +212,10 @@ mod tests {
 
         // Set contact_state
         let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
-        state
-            .state_reader
-            .ffc
-            .set_contract_state(
-                &internal_invoke_function
-                    .contract_address
-                    .to_32_bytes()
-                    .unwrap(),
-                &contract_state,
-            )
-            .unwrap();
+        state.state_reader.contract_states.insert(
+            internal_invoke_function.contract_address.clone(),
+            contract_state.clone(),
+        );
 
         let result = internal_invoke_function
             ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())

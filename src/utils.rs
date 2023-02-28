@@ -26,6 +26,8 @@ use std::{
     hash::Hash,
 };
 
+pub type ClassHash = [u8; 32];
+
 //* -------------------
 //*      Address
 //* -------------------

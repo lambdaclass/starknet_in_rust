@@ -45,4 +45,6 @@ pub enum StateError {
     ConstructorEntryPointsError(),
     #[error("Error in ExecutionEntryPoint")]
     ExecutionEntryPointError(),
+    #[error("No class hash declared in class_hash_to_contract_class")]
+    MissingClassHash(),
 }

@@ -24,10 +24,9 @@ use starknet_rs::{
         general_config::{StarknetChainId, StarknetGeneralConfig},
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
-use std::{iter::empty, path::Path};
+use std::{collections::HashMap, iter::empty, path::Path};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -64,7 +63,7 @@ fn test_contract<'a>(
         tx_execution_context.nonce().clone(),
         Default::default(),
     );
-    let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);

@@ -185,22 +185,20 @@ mod tests {
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
         },
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
-        starknet_storage::{dict_storage::DictStorage, storage::Storage},
     };
 
     use super::*;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
-            .unwrap();
+            .contract_states
+            .insert(contract_address.clone(), contract_state.clone());
 
         let mut cached_state = CachedState::new(state_reader, None);
 
@@ -221,7 +219,7 @@ mod tests {
 
     #[test]
     fn get_contract_class_from_state_reader() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let contract_class = ContractClass::new(
             Program::default(),
@@ -234,9 +232,8 @@ mod tests {
         .expect("Error creating contract class");
 
         state_reader
-            .contract_class_storage
-            .set_contract_class(&[0; 32], &contract_class)
-            .unwrap();
+            .class_hash_to_contract_class
+            .insert([0; 32], contract_class.clone());
 
         let mut cached_state = CachedState::new(state_reader, None);
 
@@ -252,7 +249,7 @@ mod tests {
     #[test]
     fn cached_state_storage_test() {
         let mut cached_state = CachedState::new(
-            InMemoryStateReader::new(DictStorage::new(), DictStorage::new()),
+            InMemoryStateReader::new(HashMap::new(), HashMap::new()),
             None,
         );
 
@@ -268,7 +265,7 @@ mod tests {
 
     #[test]
     fn cached_state_deploy_contract_test() {
-        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let contract_address = Address(32123.into());
 
@@ -281,7 +278,7 @@ mod tests {
 
     #[test]
     fn get_and_set_storage() {
-        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let contract_address = Address(31.into());
         let storage_key = [18; 32];

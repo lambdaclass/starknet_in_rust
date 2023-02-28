@@ -449,7 +449,6 @@ mod tests {
             transaction_type::TransactionType,
         },
         services::api::contract_class::{ContractClass, EntryPointType},
-        starknet_storage::dict_storage::DictStorage,
         utils::{felt_to_hash, Address},
     };
 
@@ -489,7 +488,7 @@ mod tests {
 
         contract_class_cache.insert(class_hash, contract_class.clone());
 
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
         state_reader
             .contract_states
             .insert(sender_address, contract_state);
