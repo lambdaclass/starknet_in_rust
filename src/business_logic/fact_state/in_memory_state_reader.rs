@@ -120,9 +120,7 @@ mod tests {
 
         state_reader
             .class_hash_to_contract_class
-            .insert([0; 32], contract_class.clone())
-            .unwrap();
-
+            .insert([0; 32], contract_class.clone());
         assert_eq!(
             state_reader.get_contract_class(&contract_class_key),
             Ok(contract_class)

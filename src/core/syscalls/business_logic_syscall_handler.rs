@@ -538,7 +538,8 @@ where
                     StateError::StorageError(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_),
+                    | StateError::NoneStorage(_)
+                    | StateError::NoneContractState(_),
                 ) => Felt::zero(),
                 Err(e) => return Err(e.into()),
             },
