@@ -25,6 +25,7 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
   * [Dependencies](#dependencies)
   * [Installation](#installation)
 - [Usage](#-usage)
+  * [Running simple contracts](#running-simple-contracts)
   * [Testing](#testing)
 - [Contributing](#-contributing)
 - [Related Projects](#-related-projects)
@@ -62,7 +63,9 @@ Check the [Makefile](/Makefile) for additional targets.
 
 ## 🚀 Usage
 
-This project is in an early stage and not ready to be used yet.
+### Running simple contracts
+
+You can find a tutorial on running contracts [here](/contract_execution_examples).
 
 ### Testing
 Run the following command:
