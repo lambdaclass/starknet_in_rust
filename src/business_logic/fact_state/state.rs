@@ -207,7 +207,7 @@ mod test {
 
         state_reader
             .contract_states
-            .insert(contract_address.clone(), contract_state.clone());
+            .insert(contract_address, contract_state);
 
         let cached_state = CachedState::new(state_reader, None);
 

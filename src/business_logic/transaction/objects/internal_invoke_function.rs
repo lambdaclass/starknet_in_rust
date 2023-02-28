@@ -214,7 +214,7 @@ mod tests {
         let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
         state.state_reader.contract_states.insert(
             internal_invoke_function.contract_address.clone(),
-            contract_state.clone(),
+            contract_state,
         );
 
         let result = internal_invoke_function

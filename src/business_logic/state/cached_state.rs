@@ -233,7 +233,7 @@ mod tests {
 
         state_reader
             .class_hash_to_contract_class
-            .insert([0; 32], contract_class.clone());
+            .insert([0; 32], contract_class);
 
         let mut cached_state = CachedState::new(state_reader, None);
 
