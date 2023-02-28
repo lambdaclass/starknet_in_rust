@@ -47,7 +47,7 @@ where
 #[allow(dead_code)]
 fn create_account_tx_test_state(
 ) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = StarknetGeneralConfig::new_for_testing();
 
     let test_contract_class_hash = TEST_CLASS_HASH.clone();
     let test_account_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone();
