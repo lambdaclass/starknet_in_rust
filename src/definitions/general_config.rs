@@ -1,6 +1,6 @@
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 use felt::Felt;
-use getset::{CopyGetters, MutGetters};
+use getset::{CopyGetters, Getters, MutGetters};
 use num_traits::Zero;
 use std::collections::HashMap;
 
@@ -33,17 +33,18 @@ impl StarknetChainId {
     }
 }
 
-#[derive(Debug, Clone, MutGetters)]
+#[derive(Debug, Clone, Getters, MutGetters)]
 pub struct StarknetOsConfig {
     #[get_mut = "pub"]
     pub(crate) chain_id: StarknetChainId,
+    #[get = "pub"]
     pub(crate) fee_token_address: Address,
     pub(crate) gas_price: u64,
 }
 
-#[derive(Clone, Debug, CopyGetters, MutGetters)]
+#[derive(Clone, Debug, CopyGetters, Getters, MutGetters)]
 pub struct StarknetGeneralConfig {
-    #[get_mut = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) starknet_os_config: StarknetOsConfig,
     pub(crate) _contract_storage_commitment_tree_height: u64,
     _global_state_commitment_tree_height: u64,
