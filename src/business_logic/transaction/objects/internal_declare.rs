@@ -14,7 +14,7 @@ use crate::{
         state::state_api::{State, StateReader},
         transaction::{
             error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer},
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
         },
     },
     core::{

@@ -20,7 +20,7 @@ use crate::{
         transaction::{
             error::TransactionError,
             objects::{
-                interal_declare::InternalDeclare, internal_deploy::InternalDeploy,
+                internal_declare::InternalDeclare, internal_deploy::InternalDeploy,
                 internal_invoke_function::InternalInvokeFunction,
             },
             transactions::Transaction,
