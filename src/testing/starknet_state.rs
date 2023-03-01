@@ -411,7 +411,8 @@ mod tests {
         let fib_path = PathBuf::from("tests/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
 
-        let (_fee, _exec_info) = starknet_state.declare(fib_contract_class.clone()).unwrap();
+        let (ret_class_hash, _exec_info) =
+            starknet_state.declare(fib_contract_class.clone()).unwrap();
 
         //* ---------------------------------------
         //              Expected result
@@ -420,6 +421,9 @@ mod tests {
         // ----- calculate fib class hash ---------
         let hash = compute_class_hash(&fib_contract_class).unwrap();
         let fib_class_hash = felt_to_hash(&hash);
+
+        // check that it return the correct clash hash
+        assert_eq!(ret_class_hash, fib_class_hash);
 
         // check that state has store has store accounts class hash
         assert_eq!(
