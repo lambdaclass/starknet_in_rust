@@ -52,7 +52,7 @@ pub struct StarknetGeneralConfig {
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
     pub(crate) validate_max_n_steps: u64,
-    #[get_mut = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) block_info: BlockInfo,
 }
 

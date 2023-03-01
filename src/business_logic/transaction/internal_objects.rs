@@ -423,10 +423,10 @@ impl InternalDeclare {
 
 #[derive(Clone, Debug)]
 pub struct InternalDeployAccount {
-    contract_address: Address,
-    contract_address_salt: Address,
-    class_hash: [u8; 32],
-    constructor_calldata: Vec<Felt>,
+    pub contract_address: Address,
+    pub contract_address_salt: Address,
+    pub class_hash: [u8; 32],
+    pub constructor_calldata: Vec<Felt>,
     version: u64,
     nonce: u64,
     max_fee: u64,
@@ -473,7 +473,7 @@ impl InternalDeployAccount {
         }
     }
 
-    fn _apply_specific_concurrent_changes<S>(
+    pub fn _apply_specific_concurrent_changes<S>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
