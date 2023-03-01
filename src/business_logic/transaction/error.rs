@@ -5,6 +5,7 @@ use crate::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
     },
+    starkware_utils::starkware_errors::StarkwareError,
     utils_errors::UtilsError,
 };
 
@@ -39,4 +40,6 @@ pub enum TransactionError {
     StateError(#[from] StateError),
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
+    #[error(transparent)]
+    StarkwareException(#[from] StarkwareError),
 }

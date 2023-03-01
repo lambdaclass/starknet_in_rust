@@ -51,7 +51,7 @@ pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: u64,
     contract_address: Address,
-    entry_point_selector: u64,
+    entry_point_selector: Felt,
     calldata: &[Felt],
     max_fee: u64,
     chain_id: Felt,
@@ -63,7 +63,7 @@ pub fn calculate_transaction_hash_common(
         tx_hash_prefix.get_prefix(),
         version.into(),
         contract_address.0,
-        entry_point_selector.into(),
+        entry_point_selector,
         calldata_hash,
         max_fee.into(),
         chain_id,
@@ -82,15 +82,12 @@ pub fn calculate_deploy_transaction_hash(
 ) -> Result<Felt, SyscallHandlerError> {
     let entry_point_selector =
         felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556");
-    let entry = entry_point_selector
-        .to_u64()
-        .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
 
     calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
-        entry,
+        entry_point_selector,
         constructor_calldata,
         // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
         0,
@@ -117,7 +114,7 @@ pub fn calculate_deploy_account_transaction_hash(
         TransactionHashPrefix::DeployAccount,
         version,
         contract_address,
-        0,
+        0.into(),
         &calldata,
         max_fee,
         chain_id,
@@ -152,7 +149,7 @@ pub(crate) fn calculate_declare_transaction_hash(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
-        0,
+        0.into(),
         &calldata,
         max_fee,
         chain_id,
@@ -171,7 +168,7 @@ mod tests {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
         let version = 0;
         let contract_address = Address(42.into());
-        let entry_point_selector = 100;
+        let entry_point_selector = 100.into();
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
         let chain_id = 1.into();

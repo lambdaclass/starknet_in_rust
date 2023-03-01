@@ -1,14 +1,15 @@
 use crate::{
     business_logic::{
         execution::objects::TransactionExecutionInfo,
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        state::state_api::{State, StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
     utils::Address,
 };
 
 use super::{
-    internal_objects::InternalDeploy, objects::internal_invoke_function::InternalInvokeFunction,
+    error::TransactionError,
+    objects::{internal_deploy::InternalDeploy, internal_invoke_function::InternalInvokeFunction},
 };
 
 pub(crate) enum Transaction {
@@ -31,11 +32,14 @@ impl Transaction {
         }
     }
 
-    pub fn apply_state_updates(
+    pub fn apply_state_updates<S: Default + State + StateReader + Clone>(
         &self,
-        _state_copy: CachedState<InMemoryStateReader>,
-        _general_config: &StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo {
-        todo!()
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        match self {
+            Transaction::Deploy(tx) => tx.apply_state_updates(state, general_config),
+            Transaction::InvokeFunction(_) => todo!(),
+        }
     }
 }

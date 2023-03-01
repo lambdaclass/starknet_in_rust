@@ -58,7 +58,7 @@ impl InternalInvokeFunction {
             TransactionHashPrefix::Invoke,
             version,
             contract_address.clone(),
-            entry_point_selector_field,
+            entry_point_selector_field.into(),
             &calldata,
             max_fee,
             chain_id,

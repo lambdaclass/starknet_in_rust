@@ -19,8 +19,10 @@ use crate::{
         },
         transaction::{
             error::TransactionError,
-            internal_objects::{InternalDeclare, InternalDeploy},
-            objects::internal_invoke_function::InternalInvokeFunction,
+            objects::{
+                interal_declare::InternalDeclare, internal_deploy::InternalDeploy,
+                internal_invoke_function::InternalInvokeFunction,
+            },
             transactions::Transaction,
         },
     },
@@ -117,7 +119,7 @@ impl StarknetState {
         )?;
 
         let mut tx = Transaction::InvokeFunction(tx);
-        Ok(self.execute_tx(&mut tx))
+        self.execute_tx(&mut tx)
     }
 
     // -------------------------------------------------------------------------
@@ -184,16 +186,19 @@ impl StarknetState {
         self.state
             .set_contract_class(&tx.contract_hash(), &contract_class)?;
 
-        let tx_execution_info = self.execute_tx(&mut tx);
+        let tx_execution_info = self.execute_tx(&mut tx)?;
         Ok((tx.contract_address(), tx_execution_info))
     }
 
-    pub fn execute_tx(&mut self, tx: &mut Transaction) -> TransactionExecutionInfo {
-        let state_copy = self.state.copy_and_apply();
-        let tx = tx.apply_state_updates(state_copy, &self.general_config);
+    pub fn execute_tx(
+        &mut self,
+        tx: &mut Transaction,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let mut state_copy = self.state.copy_and_apply();
+        let tx = tx.apply_state_updates(&mut state_copy, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info);
-        tx
+        Ok(tx)
     }
 
     pub fn add_messages_and_events(
@@ -351,7 +356,7 @@ mod tests {
         // --------------------------------------------
         //      Test declare with starknet state
         // --------------------------------------------
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_path = PathBuf::from("tests/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
 
         let (_fee, _exec_info) = starknet_state.declare(fib_contract_class.clone()).unwrap();
