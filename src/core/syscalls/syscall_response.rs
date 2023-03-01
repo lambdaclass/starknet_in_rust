@@ -1,7 +1,7 @@
 use super::syscall_request::{
-    CallContractRequest, CountFields, GetBlockNumberRequest, GetBlockTimestampRequest,
-    GetCallerAddressRequest, GetContractAddressRequest, GetSequencerAddressRequest,
-    GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
+    CallContractRequest, CountFields, DeployRequestStruct, GetBlockNumberRequest,
+    GetBlockTimestampRequest, GetCallerAddressRequest, GetContractAddressRequest,
+    GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
@@ -70,6 +70,13 @@ pub(crate) struct StorageReadResponse {
     value: Felt,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeployResponse {
+    contract_address: Felt,
+    constructor_retdata_size: Felt,
+    constructor_retdata: Relocatable,
+}
+
 impl GetTxInfoResponse {
     pub fn new(tx_info: Relocatable) -> Self {
         GetTxInfoResponse { tx_info }
@@ -118,6 +125,19 @@ impl StorageReadResponse {
 impl GetBlockNumberResponse {
     pub(crate) fn new(block_number: u64) -> Self {
         Self { block_number }
+    }
+}
+impl DeployResponse {
+    pub(crate) fn new(
+        contract_address: Felt,
+        constructor_retdata_size: Felt,
+        constructor_retdata: Relocatable,
+    ) -> Self {
+        Self {
+            contract_address,
+            constructor_retdata_size,
+            constructor_retdata,
+        }
     }
 }
 
@@ -235,6 +255,28 @@ impl WriteSyscallResponse for GetTxInfoResponse {
         vm.insert_value(
             &(syscall_ptr + GetTxInfoRequest::count_fields()),
             self.tx_info,
+        )?;
+        Ok(())
+    }
+}
+
+impl WriteSyscallResponse for DeployResponse {
+    fn write_syscall_response(
+        &self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        vm.insert_value(
+            &(syscall_ptr + DeployRequestStruct::count_fields()),
+            self.contract_address.clone(),
+        )?;
+        vm.insert_value(
+            &(syscall_ptr + DeployRequestStruct::count_fields() + 1),
+            self.constructor_retdata_size.clone(),
+        )?;
+        vm.insert_value(
+            &(syscall_ptr + DeployRequestStruct::count_fields() + 2),
+            self.constructor_retdata,
         )?;
         Ok(())
     }

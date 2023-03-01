@@ -1,5 +1,5 @@
 use super::os_usage::OsResources;
-use crate::business_logic::transaction::transaction_errors::TransactionError;
+use crate::business_logic::transaction::error::TransactionError;
 use crate::definitions::transaction_type::TransactionType;
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -66,6 +66,8 @@ pub enum ExecutionError {
     NotAnInt,
     #[error("Out of bounds write to a read-only segment.")]
     OutOfBound,
+    #[error("Calling other contracts during validate execution is forbidden")]
+    UnauthorizedActionOnValidate,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]

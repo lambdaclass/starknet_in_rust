@@ -1,7 +1,7 @@
 use crate::{
     business_logic::{
         execution::{
-            execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            error::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
         fact_state::state::ExecutionResourcesManager,
@@ -9,6 +9,7 @@ use crate::{
             cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
             state_cache::StorageEntry,
         },
+        transaction::error::TransactionError,
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
@@ -255,6 +256,21 @@ pub fn validate_contract_deployed<S: StateReader>(
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
 
+//* ----------------------------
+//* Internal objects utils
+//* ----------------------------
+
+pub(crate) fn verify_no_calls_to_other_contracts(
+    call_info: &CallInfo,
+) -> Result<(), TransactionError> {
+    let invoked_contract_address = call_info.contract_address.clone();
+    for internal_call in call_info.gen_call_topology() {
+        if internal_call.contract_address != invoked_contract_address {
+            return Err(TransactionError::UnauthorizedActionOnValidate);
+        }
+    }
+    Ok(())
+}
 pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
     let mut hasher = Keccak256::default();
     hasher.update(data);

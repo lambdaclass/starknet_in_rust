@@ -1,5 +1,5 @@
 use super::{
-    execution_errors::ExecutionError,
+    error::ExecutionError,
     objects::{CallInfo, CallType, TransactionExecutionContext},
 };
 use crate::{
@@ -76,7 +76,6 @@ impl ExecutionEntryPoint {
         T: Default + State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
-
         let runner = self.run(
             state,
             resources_manager,
@@ -89,7 +88,6 @@ impl ExecutionEntryPoint {
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values()?;
-
         self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler,
@@ -177,7 +175,6 @@ impl ExecutionEntryPoint {
 
         // cairo runner entry point
         runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
-
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].

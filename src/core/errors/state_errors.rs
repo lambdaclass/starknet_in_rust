@@ -38,4 +38,8 @@ pub enum StateError {
     StorageError(#[from] StorageError),
     #[error(transparent)]
     ContractClassError(#[from] ContractClassError),
+    #[error("constructor entry points must be empty")]
+    ConstructorEntryPointsError(),
+    #[error("Error in ExecutionEntryPoint")]
+    ExecutionEntryPointError(),
 }

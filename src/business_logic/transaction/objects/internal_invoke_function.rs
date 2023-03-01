@@ -1,13 +1,13 @@
 use crate::{
     business_logic::{
         execution::{
+            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
-            execution_errors::ExecutionError,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-        transaction::transaction_errors::TransactionError,
+        transaction::error::TransactionError,
     },
     definitions::{
         constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,

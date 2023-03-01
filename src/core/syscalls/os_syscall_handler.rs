@@ -83,6 +83,14 @@ impl SyscallHandler for OsSyscallHandler {
         todo!()
     }
 
+    fn call_contract(
+        &mut self,
+        _vm: &mut VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+
     fn send_message_to_l1(
         &mut self,
         _vm: &VirtualMachine,
