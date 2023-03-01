@@ -22,8 +22,9 @@ use std::path::PathBuf;
 
 #[test]
 fn test_internal_calls() {
-    let contract_class = ContractClass::try_from(PathBuf::from("tests/internal_calls.json"))
-        .expect("Could not load contract from JSON");
+    let contract_class =
+        ContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
+            .expect("Could not load contract from JSON");
 
     let general_config = StarknetGeneralConfig::default();
     let tx_execution_context = TransactionExecutionContext::create_for_testing(

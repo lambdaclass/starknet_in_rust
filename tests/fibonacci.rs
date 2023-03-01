@@ -28,7 +28,7 @@ fn integration_test() {
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("tests/fibonacci.json");
+    let path = PathBuf::from("starknet_programs/fibonacci.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
