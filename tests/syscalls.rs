@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::Felt;
+use felt::{felt_str, Felt};
 use num_traits::{Num, Zero};
 use starknet_rs::{
     business_logic::{
@@ -27,7 +27,7 @@ use starknet_rs::{
     starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
-use std::{iter::empty, path::Path};
+use std::{collections::HashSet, iter::empty, path::Path};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -44,8 +44,8 @@ fn test_contract<'a>(
     accessed_storage_keys: impl Iterator<Item = [u8; 32]>,
     extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>)>,
     arguments: impl Into<Vec<Felt>>,
+    internal_calls: impl Into<Vec<CallInfo>>,
     return_data: impl Into<Vec<Felt>>,
-    internal_calls: Vec<CallInfo>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
@@ -141,7 +141,7 @@ fn test_contract<'a>(
             accessed_storage_keys: accessed_storage_keys.collect(),
             calldata,
             retdata: return_data.into(),
-            internal_calls,
+            internal_calls: internal_calls.into(),
             ..Default::default()
         },
     );
@@ -150,7 +150,7 @@ fn test_contract<'a>(
 #[test]
 fn call_contract_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_call_contract",
         [1; 32],
         Address(1111.into()),
@@ -163,20 +163,65 @@ fn call_contract_syscall() {
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2u8; 32],
-            Path::new("tests/syscalls-lib.json"),
+            Path::new("starknet_programs/syscalls-lib.json"),
             Some((Address(2222.into()), vec![("lib_state", 10.into())])),
         )]
         .into_iter(),
         [2222.into()],
+        [
+            CallInfo {
+                caller_address: Address(1111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: Address(2222.into()),
+                class_hash: Some([2; 32]),
+                entry_point_selector: Some(felt_str!(
+                    "546798550696557601108301130560784308389743068254417260590354407164968886745"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![21.into(), 2.into()],
+                retdata: vec![42.into()],
+                ..Default::default()
+            },
+            CallInfo {
+                caller_address: Address(1111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: Address(2222.into()),
+                class_hash: Some([2; 32]),
+                entry_point_selector: Some(felt_str!(
+                    "1785358123477195475640323002883645042461033713657726545236059599395452130340"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                storage_read_values: vec![10.into()],
+                accessed_storage_keys: [[
+                    3, 189, 169, 58, 108, 116, 165, 116, 249, 48, 17, 133, 28, 149, 186, 141, 157,
+                    76, 34, 41, 77, 210, 154, 246, 164, 151, 207, 138, 139, 182, 155, 161,
+                ]]
+                .into_iter()
+                .collect(),
+                ..Default::default()
+            },
+            CallInfo {
+                caller_address: Address(1111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: Address(2222.into()),
+                class_hash: Some([2; 32]),
+                entry_point_selector: Some(felt_str!(
+                    "112922190346416634085028859628276991723232552244844834791336220661833684932"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![],
+                retdata: vec![2222.into()],
+                ..Default::default()
+            },
+        ],
         [],
-        Vec::new(),
     );
 }
 
 #[test]
 fn emit_event_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_emit_event",
         [1; 32],
         Address(1111.into()),
@@ -219,7 +264,7 @@ fn emit_event_syscall() {
         empty(),
         [],
         [],
-        Vec::new(),
+        [],
     );
 }
 
@@ -230,7 +275,7 @@ fn get_block_number_syscall() {
         general_config.block_info_mut().block_number = block_number;
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_block_number",
             [1; 32],
             Address(1111.into()),
@@ -243,8 +288,8 @@ fn get_block_number_syscall() {
             empty(),
             empty(),
             [],
+            [],
             [block_number.into()],
-            Vec::new(),
         );
     };
 
@@ -260,7 +305,7 @@ fn get_block_timestamp_syscall() {
         general_config.block_info_mut().block_timestamp = block_timestamp;
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_block_timestamp",
             [1; 32],
             Address(1111.into()),
@@ -273,8 +318,8 @@ fn get_block_timestamp_syscall() {
             empty(),
             empty(),
             [],
+            [],
             [block_timestamp.into()],
-            Vec::new(),
         );
     };
 
@@ -287,7 +332,7 @@ fn get_block_timestamp_syscall() {
 fn get_caller_address_syscall() {
     let run = |caller_address: Felt| {
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_caller_address",
             [1; 32],
             Address(1111.into()),
@@ -300,8 +345,8 @@ fn get_caller_address_syscall() {
             empty(),
             empty(),
             [],
+            [],
             [caller_address],
-            Vec::new(),
         );
     };
 
@@ -314,7 +359,7 @@ fn get_caller_address_syscall() {
 fn get_contract_address_syscall() {
     let run = |contract_address: Felt| {
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_contract_address",
             [1; 32],
             Address(contract_address.clone()),
@@ -327,8 +372,8 @@ fn get_contract_address_syscall() {
             empty(),
             empty(),
             [],
+            [],
             [contract_address],
-            Vec::new(),
         );
     };
 
@@ -344,7 +389,7 @@ fn get_sequencer_address_syscall() {
         general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_sequencer_address",
             [1; 32],
             Address(1111.into()),
@@ -357,8 +402,8 @@ fn get_sequencer_address_syscall() {
             empty(),
             empty(),
             [],
+            [],
             [sequencer_address],
-            Vec::new(),
         );
     };
 
@@ -380,7 +425,7 @@ fn get_tx_info_syscall() {
 
         let n_steps = general_config.invoke_tx_max_n_steps();
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_tx_info",
             [1; 32],
             Address(1111.into()),
@@ -401,6 +446,7 @@ fn get_tx_info_syscall() {
             empty(),
             empty(),
             [],
+            [],
             [
                 version.into(),
                 account_contract_address.0,
@@ -413,7 +459,6 @@ fn get_tx_info_syscall() {
                 transaction_hash,
                 chain_id.to_felt(),
             ],
-            Vec::new(),
         );
     };
 
@@ -482,7 +527,7 @@ fn get_tx_signature_syscall() {
         let n_steps = general_config.invoke_tx_max_n_steps();
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_tx_signature",
             [1; 32],
             Address(1111.into()),
@@ -503,6 +548,7 @@ fn get_tx_signature_syscall() {
             empty(),
             empty(),
             [],
+            [],
             [
                 signature.len().into(),
                 signature
@@ -510,7 +556,6 @@ fn get_tx_signature_syscall() {
                     .reduce(|a, b| a + b)
                     .unwrap_or_default(),
             ],
-            Vec::new(),
         );
     };
 
@@ -522,7 +567,7 @@ fn get_tx_signature_syscall() {
 #[test]
 fn library_call_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_library_call",
         [1; 32],
         Address(1111.into()),
@@ -535,20 +580,65 @@ fn library_call_syscall() {
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2; 32],
-            Path::new("tests/syscalls-lib.json"),
+            Path::new("starknet_programs/syscalls-lib.json"),
             Default::default(),
         )]
         .into_iter(),
         [],
+        [
+            CallInfo {
+                caller_address: Address(0.into()),
+                call_type: Some(CallType::Delegate),
+                contract_address: Address(1111.into()),
+                class_hash: Some([2; 32]),
+                entry_point_selector: Some(felt_str!(
+                    "546798550696557601108301130560784308389743068254417260590354407164968886745"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![21.into(), 2.into()],
+                retdata: vec![42.into()],
+                ..Default::default()
+            },
+            CallInfo {
+                caller_address: Address(0.into()),
+                call_type: Some(CallType::Delegate),
+                contract_address: Address(1111.into()),
+                class_hash: Some([2; 32]),
+                entry_point_selector: Some(felt_str!(
+                    "1785358123477195475640323002883645042461033713657726545236059599395452130340"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                storage_read_values: vec![10.into()],
+                accessed_storage_keys: [[
+                    3, 189, 169, 58, 108, 116, 165, 116, 249, 48, 17, 133, 28, 149, 186, 141, 157,
+                    76, 34, 41, 77, 210, 154, 246, 164, 151, 207, 138, 139, 182, 155, 161,
+                ]]
+                .into_iter()
+                .collect(),
+                ..Default::default()
+            },
+            CallInfo {
+                caller_address: Address(0.into()),
+                call_type: Some(CallType::Delegate),
+                contract_address: Address(1111.into()),
+                class_hash: Some([2; 32]),
+                entry_point_selector: Some(felt_str!(
+                    "112922190346416634085028859628276991723232552244844834791336220661833684932"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![],
+                retdata: vec![1111.into()],
+                ..Default::default()
+            },
+        ],
         [],
-        Vec::new(),
     );
 }
 
 #[test]
 fn library_call_l1_handler_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_library_call_l1_handler",
         [1; 32],
         Address(1111.into()),
@@ -561,20 +651,37 @@ fn library_call_l1_handler_syscall() {
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2; 32],
-            Path::new("tests/syscalls-lib.json"),
+            Path::new("starknet_programs/syscalls-lib.json"),
             Default::default(),
         )]
         .into_iter(),
         [],
+        [CallInfo {
+            caller_address: Address(0.into()),
+            call_type: Some(CallType::Delegate),
+            contract_address: Address(1111.into()),
+            class_hash: Some([2; 32]),
+            entry_point_selector: Some(felt_str!(
+                "656009366490248190408749506916536936590180267800242448338092634532990158199"
+            )),
+            entry_point_type: Some(EntryPointType::L1Handler),
+            calldata: vec![5.into()],
+            accessed_storage_keys: [[
+                3, 189, 169, 58, 108, 116, 165, 116, 249, 48, 17, 133, 28, 149, 186, 141, 157, 76,
+                34, 41, 77, 210, 154, 246, 164, 151, 207, 138, 139, 182, 155, 161,
+            ]]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        }],
         [],
-        Vec::new(),
     );
 }
 
 #[test]
 fn send_message_to_l1_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_send_message_to_l1",
         [1; 32],
         Address(1111.into()),
@@ -604,7 +711,7 @@ fn send_message_to_l1_syscall() {
         empty(),
         [],
         [],
-        Vec::new(),
+        [],
     );
 }
 
@@ -618,7 +725,7 @@ fn deploy_syscall() {
 
     let deploy_class_hash = [2u8; 32];
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_deploy",
         [1; 32],
         Address(11111.into()),
@@ -629,17 +736,22 @@ fn deploy_syscall() {
         [],
         [],
         [].into_iter(),
-        [(deploy_class_hash, Path::new("tests/storage.json"), None)].into_iter(),
+        [(
+            deploy_class_hash,
+            Path::new("starknet_programs/storage.json"),
+            None,
+        )]
+        .into_iter(),
         [Felt::from_bytes_be(deploy_class_hash.as_ref()), 0.into()],
-        [deploy_address.clone()],
         vec![CallInfo {
             caller_address: Address(0.into()),
-            contract_address: Address(deploy_address),
+            contract_address: Address(deploy_address.clone()),
             entry_point_type: Some(EntryPointType::Constructor),
             call_type: Some(CallType::Call),
             class_hash: Some(deploy_class_hash),
             ..Default::default()
         }],
+        [deploy_address],
     );
 }
 
@@ -653,7 +765,7 @@ fn deploy_with_constructor_syscall() {
 
     let deploy_class_hash = [2u8; 32];
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_deploy_with_constructor",
         [1; 32],
         Address(11111.into()),
@@ -666,7 +778,7 @@ fn deploy_with_constructor_syscall() {
         [].into_iter(),
         [(
             deploy_class_hash,
-            Path::new("tests/storage_var_and_constructor.json"),
+            Path::new("starknet_programs/storage_var_and_constructor.json"),
             None,
         )]
         .into_iter(),
@@ -675,17 +787,29 @@ fn deploy_with_constructor_syscall() {
             0.into(),
             550.into(),
         ],
+        [],
         [deploy_address],
-        Vec::new(),
     );
 }
 
 #[test]
 fn test_deploy_and_call_contract_syscall() {
-    let new_contant = Felt::new(3);
+    let constructor_constant = Felt::new(550);
+    let new_constant = Felt::new(3);
+    let constant_storage_key: [u8; 32] = [
+        2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27, 162, 147,
+        169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
+    ];
     let deploy_class_hash = [2u8; 32];
+    let deploy_address = Address(
+        Felt::from_str_radix(
+            "61956907203782517318335437536462535199340115817938156158070235163997828534",
+            10,
+        )
+        .unwrap(),
+    );
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_deploy_and_call_contract",
         [1; 32],
         Address(11111.into()),
@@ -698,17 +822,80 @@ fn test_deploy_and_call_contract_syscall() {
         [].into_iter(),
         [(
             deploy_class_hash,
-            Path::new("tests/storage_var_and_constructor.json"),
+            Path::new("starknet_programs/storage_var_and_constructor.json"),
             None,
         )]
         .into_iter(),
         [
             Felt::from_bytes_be(deploy_class_hash.as_ref()),
             0.into(),
-            550.into(),
-            new_contant.clone(),
+            constructor_constant.clone(),
+            new_constant.clone(),
         ],
-        [new_contant],
-        Vec::new(),
+        [
+        // Invoke storage_var_and_constructor.cairo mult_constant function
+        CallInfo {
+            caller_address: Address(11111.into()),
+            call_type: Some(CallType::Call),
+            contract_address: deploy_address.clone(),
+            code_address: None,
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(
+                Felt::from_str_radix(
+                    "1576037374104670872807053137865113122553607263175471701007015754752102201893",
+                    10,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![4.into()],
+            retdata: vec![(constructor_constant.clone() * Felt::new(4))],
+            storage_read_values: vec![constructor_constant],
+            accessed_storage_keys: HashSet::from([constant_storage_key]),
+            ..Default::default()
+        },
+        // Invoke storage_var_and_constructor.cairo set_constant function
+        CallInfo {
+            caller_address: Address(11111.into()),
+            call_type: Some(CallType::Call),
+            contract_address: deploy_address.clone(),
+            code_address: None,
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(
+                Felt::from_str_radix(
+                    "1201037417712951658445715615949920673423990292207294106968654696818998525373",
+                    10,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![new_constant.clone()],
+            retdata: vec![],
+            storage_read_values: vec![],
+            accessed_storage_keys: HashSet::from([constant_storage_key]),
+            ..Default::default()
+        },
+        // Invoke storage_var_and_constructor.cairo get_constant function
+        CallInfo {
+            caller_address: Address(11111.into()),
+            call_type: Some(CallType::Call),
+            contract_address: deploy_address,
+            code_address: None,
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(
+                Felt::from_str_radix(
+                    "915547745133109687566886827729966789818200062539892992518817034473866315209",
+                    10,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![],
+            retdata: vec![new_constant.clone()],
+            storage_read_values: vec![new_constant.clone()],
+            accessed_storage_keys: HashSet::from([constant_storage_key]),
+            ..Default::default()
+        }        ],
+        [new_constant],
     );
 }

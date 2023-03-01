@@ -1,7 +1,7 @@
 use crate::{
     business_logic::{
         execution::{
-            execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            error::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
         fact_state::state::ExecutionResourcesManager,
@@ -14,7 +14,6 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
     services::api::contract_class::EntryPointType,
-    utils_errors::UtilsError,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
@@ -32,22 +31,6 @@ use std::{
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
 pub struct Address(pub Felt);
-
-impl Address {
-    pub(crate) fn to_32_bytes(&self) -> Result<[u8; 32], UtilsError> {
-        let mut result = self.0.to_bytes_be();
-        if result.len() > 32 {
-            return Err(UtilsError::FeltToFixBytesArrayFail(self.0.clone()));
-        }
-        for _i in result.len()..32 {
-            result.insert(0, 0)
-        }
-
-        result
-            .try_into()
-            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(self.0.clone()))
-    }
-}
 
 //* -------------------
 //*  Helper Functions
@@ -510,10 +493,9 @@ pub mod test_utils {
 
 #[cfg(test)]
 mod test {
-    use super::{to_cache_state_storage_mapping, to_state_diff_storage_mapping};
-    use crate::utils::{subtract_mappings, Address};
-    use felt::Felt;
-    use num_traits::Num;
+    use super::*;
+    use felt::{felt_str, Felt};
+    use num_traits::{One, Zero};
     use std::collections::HashMap;
 
     #[test]
@@ -620,36 +602,31 @@ mod test {
     }
 
     #[test]
-    fn address_to_32_bytes() {
-        assert_eq!(Address(0.into()).to_32_bytes(), Ok([0; 32]));
+    fn test_felt_to_hash() {
+        assert_eq!(felt_to_hash(&Felt::zero()), [0; 32]);
         assert_eq!(
-            Address(1.into()).to_32_bytes(),
-            Ok([
+            felt_to_hash(&Felt::one()),
+            [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1
-            ])
+            ],
         );
         assert_eq!(
-            Address(257.into()).to_32_bytes(),
-            Ok([
+            felt_to_hash(&257.into()),
+            [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 1, 1
-            ])
+            ],
         );
 
-        let address = Address(
-            Felt::from_str_radix(
-                "2151680050850558576753658069693146429350618838199373217695410689374331200218",
-                10,
-            )
-            .unwrap(),
-        );
         assert_eq!(
-            address.to_32_bytes(),
-            Ok([
+            felt_to_hash(&felt_str!(
+                "2151680050850558576753658069693146429350618838199373217695410689374331200218"
+            )),
+            [
                 4, 193, 206, 200, 202, 13, 38, 110, 16, 37, 89, 67, 39, 3, 185, 128, 123, 117, 218,
                 224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
-            ])
+            ],
         );
     }
 }

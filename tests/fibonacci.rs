@@ -28,7 +28,7 @@ fn integration_test() {
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("tests/fibonacci.json");
+    let path = PathBuf::from("starknet_programs/fibonacci.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
@@ -44,7 +44,7 @@ fn integration_test() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let ffc = DictStorage::new();
+    let storage = DictStorage::new();
     let contract_class_storage = DictStorage::new();
     let mut contract_class_cache = HashMap::new();
 
@@ -55,7 +55,7 @@ fn integration_test() {
     let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
 
     contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::new(ffc, contract_class_storage);
+    let mut state_reader = InMemoryStateReader::new(storage, contract_class_storage);
     state_reader
         .contract_states_mut()
         .insert(address.clone(), contract_state);

@@ -160,6 +160,7 @@ impl From<StructContractClass> for CairoArg {
     }
 }
 
+// TODO: Maybe this could be hard-coded (to avoid returning a result)?
 pub(crate) fn compute_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt, ContractAddressError> {

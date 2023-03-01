@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     business_logic::{
-        execution::{execution_errors::ExecutionError, objects::TxInfoStruct},
+        execution::{error::ExecutionError, objects::TxInfoStruct},
         state::state_api_objects::BlockInfo,
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -550,7 +550,7 @@ mod tests {
         memory_insert,
         services::api::contract_class::{ContractClass, EntryPointType},
         utils::{
-            get_big_int, get_integer, get_relocatable,
+            felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
         },
     };
@@ -1283,7 +1283,7 @@ mod tests {
         let write = syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
-            .read(&Address(address).to_32_bytes().unwrap());
+            .read(&felt_to_hash(&address));
 
         assert_eq!(write, Ok(&Felt::new(45)));
     }
@@ -1392,7 +1392,7 @@ mod tests {
 
         // Set contract class
         let contract_class =
-            ContractClass::try_from(PathBuf::from("tests/fibonacci.json")).unwrap();
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
@@ -1486,9 +1486,10 @@ mod tests {
             .unwrap();
 
         // Set contract class
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("tests/storage_var_and_constructor.json"))
-                .unwrap();
+        let contract_class = ContractClass::try_from(PathBuf::from(
+            "starknet_programs/storage_var_and_constructor.json",
+        ))
+        .unwrap();
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
