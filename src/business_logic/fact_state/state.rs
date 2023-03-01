@@ -193,23 +193,21 @@ mod test {
             },
             state::cached_state::CachedState,
         },
-        starknet_storage::{dict_storage::DictStorage, storage::Storage},
-        utils::{felt_to_hash, Address},
+        utils::Address,
     };
     use felt::Felt;
     use std::collections::HashMap;
 
     #[test]
     fn test_from_cached_state_without_updates() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .storage
-            .set_contract_state(&felt_to_hash(&contract_address.0), &contract_state)
-            .unwrap();
+            .contract_states
+            .insert(contract_address, contract_state);
 
         let cached_state = CachedState::new(state_reader, None);
 
