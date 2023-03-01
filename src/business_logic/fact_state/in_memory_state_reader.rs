@@ -4,7 +4,7 @@ use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
     starknet_storage::{dict_storage::DictStorage, storage::Storage},
-    utils::Address,
+    utils::{felt_to_hash, Address},
 };
 use felt::Felt;
 use getset::MutGetters;
@@ -12,16 +12,16 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default, MutGetters)]
 pub struct InMemoryStateReader {
-    pub(crate) ffc: DictStorage,
+    pub(crate) storage: DictStorage,
     #[getset(get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
     pub(crate) contract_class_storage: DictStorage,
 }
 
 impl InMemoryStateReader {
-    pub fn new(ffc: DictStorage, contract_class_storage: DictStorage) -> Self {
+    pub fn new(storage: DictStorage, contract_class_storage: DictStorage) -> Self {
         Self {
-            ffc,
+            storage,
             contract_states: HashMap::new(),
             contract_class_storage,
         }
@@ -33,8 +33,8 @@ impl InMemoryStateReader {
     ) -> Result<&ContractState, StateError> {
         if !self.contract_states.contains_key(contract_address) {
             let result = self
-                .ffc
-                .get_contract_state(&contract_address.to_32_bytes()?)?;
+                .storage
+                .get_contract_state(&felt_to_hash(&contract_address.0))?;
             self.contract_states
                 .insert(contract_address.clone(), result);
         }
@@ -89,8 +89,8 @@ mod tests {
         let contract_state = ContractState::new([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .ffc
-            .set_contract_state(&contract_address.to_32_bytes().unwrap(), &contract_state)
+            .storage
+            .set_contract_state(&felt_to_hash(&contract_address.0), &contract_state)
             .unwrap();
 
         assert_eq!(

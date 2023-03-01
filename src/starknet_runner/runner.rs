@@ -1,6 +1,6 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
-    business_logic::execution::execution_errors::ExecutionError,
+    business_logic::execution::error::ExecutionError,
     core::syscalls::syscall_handler::{
         SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },

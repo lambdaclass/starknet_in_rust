@@ -1,13 +1,13 @@
 use crate::{
     business_logic::{
         execution::{
+            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
-            execution_errors::ExecutionError,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-        transaction::transaction_errors::TransactionError,
+        transaction::error::TransactionError,
     },
     definitions::{
         constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
@@ -132,6 +132,7 @@ impl InternalInvokeFunction {
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
+
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
@@ -150,7 +151,7 @@ impl InternalInvokeFunction {
     }
 }
 
-fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
+pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
     let invoked_contract_address = call_info.contract_address.clone();
     for internal_call in call_info.gen_call_topology() {
         if internal_call.contract_address != invoked_contract_address {
@@ -172,6 +173,7 @@ mod tests {
         },
         services::api::contract_class::ContractClass,
         starknet_storage::{dict_storage::DictStorage, storage::Storage},
+        utils::felt_to_hash,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
@@ -215,12 +217,9 @@ mod tests {
         let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
         state
             .state_reader
-            .ffc
+            .storage
             .set_contract_state(
-                &internal_invoke_function
-                    .contract_address
-                    .to_32_bytes()
-                    .unwrap(),
+                &felt_to_hash(&internal_invoke_function.contract_address.0),
                 &contract_state,
             )
             .unwrap();

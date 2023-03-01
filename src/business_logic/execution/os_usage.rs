@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-
+use super::error::ExecutionError;
 use crate::definitions::transaction_type::TransactionType;
-
-use super::execution_errors::ExecutionError;
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct OsResources {

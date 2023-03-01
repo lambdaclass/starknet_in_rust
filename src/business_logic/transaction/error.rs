@@ -1,17 +1,12 @@
+use crate::core::errors::{
+    contract_address_errors::ContractAddressError, state_errors::StateError,
+    syscall_handler_errors::SyscallHandlerError,
+};
+use felt::Felt;
 use thiserror::Error;
 
-use crate::{
-    business_logic::execution::execution_errors::ExecutionError,
-    core::errors::{
-        contract_address_errors::ContractAddressError, state_errors::StateError,
-        syscall_handler_errors::SyscallHandlerError,
-    },
-    utils_errors::UtilsError,
-};
-
 #[derive(Debug, Error)]
-pub(crate) enum TransactionError {
-    #[allow(dead_code)] // TODO: delete this once used
+pub enum TransactionError {
     #[error("{0}")]
     InvalidNonce(String),
     #[error("Invalid transaction nonce. Expected: {0} got {1}")]
@@ -23,15 +18,15 @@ pub(crate) enum TransactionError {
     #[error("Cairo resource names must be contained in fee weights dict")]
     ResourcesError,
     #[error(transparent)]
-    UtilsError(#[from] UtilsError),
-    #[error(transparent)]
     ContractAddressError(#[from] ContractAddressError),
-    #[error(transparent)]
-    ExecutionError(#[from] ExecutionError),
     #[error(transparent)]
     SyscallError(#[from] SyscallHandlerError),
     #[error(transparent)]
     StateError(#[from] StateError),
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
+    #[error("The entry_point_selector must be 617075754465154585683856897856256838130216341506379215893724690153393808813, found {0:?}")]
+    UnauthorizedEntryPointForInvoke(Felt),
+    #[error("Error ExecutionEntryPoint")]
+    ExecutionEntryPointError,
 }

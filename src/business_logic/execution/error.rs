@@ -1,8 +1,8 @@
 use super::os_usage::OsResources;
-use crate::business_logic::transaction::transaction_errors::TransactionError;
-use crate::definitions::transaction_type::TransactionType;
 use crate::{
+    business_logic::transaction::error::TransactionError,
     core::errors::syscall_handler_errors::SyscallHandlerError,
+    definitions::transaction_type::TransactionType,
     starknet_runner::starknet_runner_error::StarknetRunnerError,
 };
 use cairo_rs::{

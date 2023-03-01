@@ -1,5 +1,5 @@
 use super::{
-    execution_errors::ExecutionError,
+    error::ExecutionError,
     objects::{CallInfo, CallType, TransactionExecutionContext},
 };
 use crate::{
