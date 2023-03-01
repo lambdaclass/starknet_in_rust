@@ -178,16 +178,14 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
 #[cfg(test)]
 mod tests {
-    use cairo_rs::types::program::Program;
-
+    use super::*;
     use crate::{
         business_logic::fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
         },
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
-
-    use super::*;
+    use cairo_rs::types::program::Program;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {

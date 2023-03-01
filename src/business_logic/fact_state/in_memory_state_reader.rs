@@ -59,7 +59,7 @@ impl StateReader for InMemoryStateReader {
         let contract_state = self.get_contract_state(&storage_entry.0)?;
         contract_state
             .storage_keys
-            .get(&storage_entry.1)
+            .get(&Felt::from_bytes_be(&storage_entry.1))
             .ok_or(StateError::NoneStoragLeaf(storage_entry.1))
     }
 

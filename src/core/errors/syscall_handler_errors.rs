@@ -1,5 +1,4 @@
 use super::state_errors::StateError;
-use crate::utils_errors::UtilsError;
 use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
 use thiserror::Error;
 
@@ -83,6 +82,4 @@ pub enum SyscallHandlerError {
     ErrorComputingHash,
     #[error(transparent)]
     StateError(#[from] StateError),
-    #[error(transparent)]
-    UtilsError(#[from] UtilsError),
 }

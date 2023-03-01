@@ -50,16 +50,35 @@ It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust im
 
 ### Installation
 
-Run the following make targets to have a working environment:
+Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 ```bash
 $ make deps
 $ source starknet-in-rs-venv/bin/activate
-$ make compile_cairo
+$ make compile-cairo
 $ deactivate
 $ make build
 ```
-
 Check the [Makefile](/Makefile) for additional targets.
+
+#### How to manually install the script dependencies
+
+`cairo-lang` requires the `gmp` library to build.
+You can install it on Debian-based GNU/Linux distributions with:
+```shell
+sudo apt install -y libgmp3-dev
+```
+
+In Mac you can use Homebrew:
+```shell
+brew install gmp
+```
+
+In Mac you'll also need to tell the script where to find the gmp lib:
+```shell
+export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib
+```
+
+
 
 ## 🚀 Usage
 
