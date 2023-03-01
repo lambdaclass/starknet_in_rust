@@ -15,6 +15,8 @@ use felt::{felt_str, Felt};
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
+pub type FeeInfo = (Option<CallInfo>, u64);
+
 // ----------------------------------------------------------------------------
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
