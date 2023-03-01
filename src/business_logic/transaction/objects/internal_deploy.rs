@@ -205,8 +205,7 @@ impl InternalDeploy {
         state: &mut S,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info =
-            self.apply_specific_concurrent_changes(state, &general_config)?;
+        let concurrent_exec_info = self.apply_specific_concurrent_changes(state, general_config)?;
 
         let (fee_transfer_info, actual_fee) = self.apply_specific_sequential_changes(
             state,

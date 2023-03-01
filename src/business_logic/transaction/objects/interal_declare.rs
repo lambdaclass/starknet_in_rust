@@ -201,7 +201,7 @@ impl InternalDeclare {
 
         let call_info = entry_point.execute(
             state,
-            &general_config,
+            general_config,
             resources_manager,
             &self.get_execution_context(general_config.invoke_tx_max_n_steps),
         )?;
@@ -385,7 +385,7 @@ mod tests {
             .contract_classes
             .as_mut()
             .unwrap()
-            .insert(fib_class_hash, fib_contract_class.clone());
+            .insert(fib_class_hash, fib_contract_class);
 
         //* ---------------------------------------
         //              Expected result
