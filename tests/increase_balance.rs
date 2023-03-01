@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
@@ -23,16 +25,17 @@ use std::{
 };
 
 #[test]
-fn integration_storage_test() {
+fn hello_starknet_increase_balance() {
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("starknet_programs/storage.json");
+    let path = PathBuf::from("starknet_programs/increase_balance.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    let storage_entrypoint_selector = entry_points_by_type
+    // External entry point, increase_balance function increase_balance.cairo:L13
+    let increase_balance_selector = entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
@@ -68,14 +71,14 @@ fn integration_storage_test() {
     //*    Create execution entry point
     //* ------------------------------------
 
-    let calldata = [].to_vec();
+    let calldata = [1.into()].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
+        address,
         calldata.clone(),
-        storage_entrypoint_selector.clone(),
+        increase_balance_selector.clone(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -96,8 +99,7 @@ fn integration_storage_test() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-
-    let expected_key = calculate_sn_keccak("_counter".as_bytes());
+    let expected_key = calculate_sn_keccak("balance".as_bytes());
 
     let mut expected_accessed_storage_keys = HashSet::new();
     expected_accessed_storage_keys.insert(expected_key);
@@ -106,13 +108,12 @@ fn integration_storage_test() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(storage_entrypoint_selector),
+        entry_point_selector: Some(increase_balance_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata,
-        retdata: [42.into()].to_vec(),
+        retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        storage_read_values: vec![42.into()],
         accessed_storage_keys: expected_accessed_storage_keys,
         ..Default::default()
     };
@@ -127,15 +128,5 @@ fn integration_storage_test() {
             )
             .unwrap(),
         expected_call_info
-    );
-
-    assert!(!state.cache().storage_writes().is_empty());
-    assert_eq!(
-        state
-            .cache()
-            .storage_writes()
-            .get(&(address, expected_key))
-            .cloned(),
-        Some(Felt::new(42))
     );
 }

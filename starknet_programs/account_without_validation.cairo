@@ -1,3 +1,5 @@
+// @compile-flags += --account_contract
+
 // A dummy account contract without any validations.
 
 %lang starknet

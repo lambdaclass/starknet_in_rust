@@ -42,12 +42,12 @@ fn test_contract(
     let class_hash = [1; 32];
 
     //* --------------------------------------------
-    //*          Create default context 
+    //*          Create default context
     //* --------------------------------------------
 
     let general_config = StarknetGeneralConfig::default();
 
-    let tx_execution_context = 
+    let tx_execution_context =
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
@@ -58,7 +58,7 @@ fn test_contract(
 
     //* --------------------------------------------
     //*  Create starknet state with the contract
-    //*  (This would be the equivalent of  
+    //*  (This would be the equivalent of
     //*  declaring and deploying the contract)
     //* -------------------------------------------
 
@@ -71,7 +71,7 @@ fn test_contract(
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);
-    
+
     let mut state = CachedState::new(
         state_reader,
         Some([(class_hash, contract_class)].into_iter().collect()),
@@ -122,7 +122,7 @@ fn test_contract(
 #[test]
 fn test_fibonacci(){
     test_contract(
-        "tests/fibonacci.json",
+        "starknet_programs/fibonacci.json",
         "fib",
         [1.into(), 1.into(), 10.into()].to_vec(),
         [144.into()].to_vec(),
@@ -131,7 +131,7 @@ fn test_fibonacci(){
 
 #[test]
 fn test_factorial(){
-    test_contract("tests/factorial.json",
+    test_contract("starknet_programs/factorial.json",
         "factorial",
         [10.into()].to_vec(),
         [3628800.into()].to_vec()

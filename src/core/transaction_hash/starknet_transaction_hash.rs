@@ -104,10 +104,10 @@ pub fn calculate_deploy_account_transaction_hash(
     constructor_calldata: &[Felt],
     max_fee: u64,
     nonce: u64,
-    salt: u64,
+    salt: Felt,
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
-    let mut calldata: Vec<Felt> = vec![class_hash, salt.into()];
+    let mut calldata: Vec<Felt> = vec![class_hash, salt];
     calldata.extend_from_slice(constructor_calldata);
 
     calculate_transaction_hash_common(

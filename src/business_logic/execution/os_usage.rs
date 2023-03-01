@@ -4,7 +4,7 @@ use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 
 use crate::definitions::transaction_type::TransactionType;
 
-use super::execution_errors::ExecutionError;
+use super::error::ExecutionError;
 
 #[derive(Debug, Clone)]
 pub struct OsResources {

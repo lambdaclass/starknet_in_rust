@@ -1,13 +1,11 @@
-use thiserror::Error;
-
 use crate::{
     core::errors::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
     },
     starkware_utils::starkware_errors::StarkwareError,
-    utils_errors::UtilsError,
 };
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum TransactionError {
@@ -32,8 +30,6 @@ pub enum TransactionError {
     MissingClassStorage,
     #[error("Unimplemented state updates")]
     NotImplemented,
-    #[error(transparent)]
-    UtilsError(#[from] UtilsError),
     #[error(transparent)]
     ContractAddressError(#[from] ContractAddressError),
     #[error(transparent)]

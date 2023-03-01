@@ -1,4 +1,4 @@
-use super::execution_errors::ExecutionError;
+use super::error::ExecutionError;
 use crate::{
     business_logic::state::state_cache::StorageEntry,
     core::errors::syscall_handler_errors::SyscallHandlerError,
