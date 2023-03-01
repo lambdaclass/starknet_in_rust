@@ -15,15 +15,15 @@ use starknet_rs::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
-    starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 #[test]
 fn test_internal_calls() {
-    let contract_class = ContractClass::try_from(PathBuf::from("tests/internal_calls.json"))
-        .expect("Could not load contract from JSON");
+    let contract_class =
+        ContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
+            .expect("Could not load contract from JSON");
 
     let general_config = StarknetGeneralConfig::default();
     let tx_execution_context = TransactionExecutionContext::create_for_testing(
@@ -39,7 +39,7 @@ fn test_internal_calls() {
         tx_execution_context.nonce().clone(),
         Default::default(),
     );
-    let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
     state_reader
         .contract_states_mut()
         .insert(Address(1111.into()), contract_state);

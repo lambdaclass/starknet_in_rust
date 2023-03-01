@@ -107,6 +107,7 @@ pub trait Storage {
         Ok(String::from(str))
     }
 
+    // TODO: Change key type to &Address.
     fn set_contract_state(
         &mut self,
         key: &[u8; 32],
@@ -117,6 +118,7 @@ pub trait Storage {
         self.set_value(&(Prefix::ContractState, *key), contract_state)
     }
 
+    // TODO: Change key type to &Address.
     fn get_contract_state(&self, key: &[u8; 32]) -> Result<ContractState, StorageError> {
         let ser_contract_state = self
             .get_value(&(Prefix::ContractState, *key))
@@ -126,6 +128,7 @@ pub trait Storage {
         Ok(contract_state)
     }
 
+    // TODO: Change key type to &Address.
     fn get_contract_class(&self, key: &[u8; 32]) -> Result<ContractClass, StorageError> {
         let ser_contract_class = self
             .get_value(&(Prefix::ContractClass, *key))
@@ -135,6 +138,7 @@ pub trait Storage {
         Ok(contract_class)
     }
 
+    // TODO: Change key type to &Address.
     fn set_contract_class(
         &mut self,
         key: &[u8; 32],
