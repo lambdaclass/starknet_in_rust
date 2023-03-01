@@ -1,9 +1,7 @@
 use thiserror::Error;
 
 use crate::{
-    business_logic::{
-        execution::execution_errors::ExecutionError, transaction::error::TransactionError,
-    },
+    business_logic::{execution::error::ExecutionError, transaction::error::TransactionError},
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
 };
 

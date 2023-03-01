@@ -71,7 +71,7 @@ impl InternalDeclare {
         let hash_value = calculate_declare_transaction_hash(
             contract_class,
             chain_id,
-            &sender_address,
+            sender_address.clone(),
             max_fee,
             version,
             nonce.clone(),
@@ -470,7 +470,7 @@ impl InternalDeployAccount {
             self.contract_address.clone(),
             calculate_deploy_account_transaction_hash(
                 self.version,
-                &self.contract_address,
+                self.contract_address,
                 Felt::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
                 self.max_fee,

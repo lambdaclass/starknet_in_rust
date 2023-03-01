@@ -1,5 +1,5 @@
 use crate::business_logic::execution::{
-    execution_errors::ExecutionError,
+    error::ExecutionError,
     objects::{CallInfo, Event, L2toL1MessageInfo, TransactionExecutionInfo},
 };
 

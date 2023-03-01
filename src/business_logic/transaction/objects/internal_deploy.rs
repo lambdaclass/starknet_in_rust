@@ -1,8 +1,8 @@
 use crate::{
     business_logic::{
         execution::{
+            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
-            execution_errors::ExecutionError,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::state::ExecutionResourcesManager,
@@ -85,9 +85,7 @@ impl InternalDeploy {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
-        let class_hash: [u8; 32] = self.contract_hash[..]
-            .try_into()
-            .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
+        let class_hash: [u8; 32] = self.contract_hash;
         state.get_contract_class(&class_hash)?;
 
         self.handle_empty_constructor(state)
@@ -112,9 +110,7 @@ impl InternalDeploy {
             return Err(StarkwareError::TransactionFailed);
         }
 
-        let class_hash: [u8; 32] = self.contract_hash[..]
-            .try_into()
-            .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
+        let class_hash: [u8; 32] = self.contract_hash;
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
             Address(0.into()),

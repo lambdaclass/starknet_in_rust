@@ -31,7 +31,6 @@ use crate::{
         contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
-    starknet_storage::dict_storage::DictStorage,
     utils::Address,
 };
 
@@ -49,7 +48,7 @@ impl StarknetState {
     #![allow(unused)] // TODO: delete once used
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
-        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let state = CachedState::new(state_reader, Some(HashMap::new()));
 
@@ -385,7 +384,7 @@ mod tests {
         // but for testing reasons its ok
         let contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
 
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
         state_reader
             .contract_states
             .insert(sender_address.clone(), contract_state.clone());
