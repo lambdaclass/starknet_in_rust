@@ -91,7 +91,7 @@ impl StarknetState {
             .insert(tx.class_hash, contract_class);
 
         let mut state = self.state.copy_and_apply();
-        let tx_execution_info = tx.apply_state_updates(&mut state, self.general_config.clone())?;
+        let tx_execution_info = tx.execute(&mut state, self.general_config.clone())?;
 
         Ok((tx.class_hash, tx_execution_info))
     }

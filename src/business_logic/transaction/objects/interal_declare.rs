@@ -127,7 +127,7 @@ impl InternalDeclare {
         Ok(())
     }
 
-    pub fn apply_specific_concurrent_changes<S: Default + State + StateReader + Clone>(
+    pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -262,28 +262,18 @@ impl InternalDeclare {
         Ok(())
     }
 
-    pub fn apply_specific_sequential_changes<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-        general_config: StarknetGeneralConfig,
-        actual_resources: HashMap<String, usize>,
-    ) -> Result<FeeInfo, TransactionError> {
-        self.handle_nonce(state)?;
-        self.charge_fee(state, actual_resources, general_config)
-    }
-
-    pub fn apply_state_updates<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info =
-            self.apply_specific_concurrent_changes(state, &general_config)?;
+        let concurrent_exec_info = self.apply(state, &general_config)?;
 
-        let (fee_transfer_info, actual_fee) = self.apply_specific_sequential_changes(
+        self.handle_nonce(state)?;
+        let (fee_transfer_info, actual_fee) = self.charge_fee(
             state,
-            general_config,
             concurrent_exec_info.actual_resources.clone(),
+            general_config,
         )?;
 
         Ok(
@@ -383,7 +373,7 @@ mod tests {
             .contract_classes
             .as_mut()
             .unwrap()
-            .insert(fib_class_hash, fib_contract_class.clone());
+            .insert(fib_class_hash, fib_contract_class);
 
         //* ---------------------------------------
         //              Expected result
@@ -430,7 +420,7 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
+                .apply(&mut state, &StarknetGeneralConfig::default())
                 .unwrap(),
             transaction_exec_info
         );
