@@ -1,1 +1,1 @@
-pub(crate) mod internal_invoke_function;
+pub mod internal_invoke_function;
