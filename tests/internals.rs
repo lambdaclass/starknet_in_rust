@@ -8,7 +8,6 @@ use starknet_rs::{
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::ContractClass,
-    starknet_storage::dict_storage::DictStorage,
     utils::{felt_to_hash, Address},
 };
 use std::{collections::HashMap, path::PathBuf};
@@ -94,7 +93,7 @@ fn create_account_tx_test_state(
 
     let cached_state = CachedState::new(
         {
-            let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+            let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
             for (contract_address, class_hash) in address_to_class_hash {
                 let storage_keys = storage_view
