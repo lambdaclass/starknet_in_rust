@@ -194,7 +194,7 @@ impl StarknetState {
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut state_copy = self.state.copy_and_apply();
-        let tx = tx.apply_state_updates(&mut state_copy, &self.general_config)?;
+        let tx = tx.execute(&mut state_copy, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info);
         Ok(tx)

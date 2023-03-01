@@ -167,7 +167,7 @@ impl InternalInvokeFunction {
         )
     }
 
-    fn _apply_specific_concurrent_changes<T>(
+    fn _apply<T>(
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
@@ -271,7 +271,7 @@ mod tests {
         );
 
         let result = internal_invoke_function
-            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
+            ._apply(&mut state, &StarknetGeneralConfig::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));

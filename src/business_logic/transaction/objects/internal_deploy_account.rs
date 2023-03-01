@@ -80,7 +80,7 @@ impl InternalDeployAccount {
         }
     }
 
-    fn _apply_specific_concurrent_changes<S>(
+    fn apply<S>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -166,7 +166,7 @@ impl InternalDeployAccount {
     where
         S: Default + State + StateReader,
     {
-        let call = ExecutionEntryPoint::new(
+        let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
             CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
@@ -176,7 +176,7 @@ impl InternalDeployAccount {
             None,
         );
 
-        let call_info = call.execute(
+        let call_info = entry_point.execute(
             state,
             general_config,
             resources_manager,

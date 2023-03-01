@@ -7,7 +7,7 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-        transaction::{error::TransactionError, state_objects::FeeInfo},
+        transaction::error::TransactionError,
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
@@ -23,7 +23,6 @@ use crate::{
 };
 use felt::{felt_str, Felt};
 use num_traits::Zero;
-use std::collections::HashMap;
 
 pub struct InternalDeploy {
     pub(crate) hash_value: Felt,
@@ -79,7 +78,7 @@ impl InternalDeploy {
         self.contract_hash
     }
 
-    pub fn apply_specific_concurrent_changes<S: Default + State + StateReader + Clone>(
+    pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -87,19 +86,7 @@ impl InternalDeploy {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: [u8; 32] = self.contract_hash;
         state.get_contract_class(&class_hash)?;
-
         self.handle_empty_constructor(state)
-    }
-
-    pub fn apply_specific_sequential_changes<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-        general_config: &StarknetGeneralConfig,
-        actual_resources: HashMap<String, usize>,
-    ) -> FeeInfo {
-        let fee_transfer_info = None;
-        let actual_fee = 0;
-        (fee_transfer_info, actual_fee)
     }
 
     pub fn handle_empty_constructor<T: Default + State + StateReader + Clone>(
@@ -196,18 +183,13 @@ impl InternalDeploy {
         )
     }
 
-    pub fn apply_state_updates<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply_specific_concurrent_changes(state, general_config)?;
-
-        let (fee_transfer_info, actual_fee) = self.apply_specific_sequential_changes(
-            state,
-            general_config,
-            concurrent_exec_info.actual_resources.clone(),
-        );
+        let concurrent_exec_info = self.apply(state, general_config)?;
+        let (fee_transfer_info, actual_fee) = (None, 0);
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(

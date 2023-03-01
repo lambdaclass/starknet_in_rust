@@ -32,13 +32,13 @@ impl Transaction {
         }
     }
 
-    pub fn apply_state_updates<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Deploy(tx) => tx.apply_state_updates(state, general_config),
+            Transaction::Deploy(tx) => tx.execute(state, general_config),
             Transaction::InvokeFunction(_) => Err(TransactionError::NotImplemented),
         }
     }
