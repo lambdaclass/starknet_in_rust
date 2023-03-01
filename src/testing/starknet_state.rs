@@ -70,7 +70,7 @@ impl StarknetState {
     /// Declares a contract class.
     /// Returns the class hash and the execution info.
     /// Args:
-    /// contract_class - a compiled StarkNet contract returned by compile_starknet_files()
+    /// contract_class - a compiled StarkNet contract
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
@@ -163,8 +163,8 @@ impl StarknetState {
     // --------------------------------------------------------------------------------------
     /// Deploys a contract. Returns the contract address and the execution info.
     /// Args:
-    /// contract_class - a compiled StarkNet contract returned by compile_starknet_files().
-    /// contract_address_salt - If supplied, a hexadecimal string or an integer representing
+    /// contract_class - a compiled StarkNet contract
+    /// contract_address_salt
     /// the salt to use for deploying. Otherwise, the salt is randomized.
 
     // TODO: ask for contract_address_salt
@@ -289,9 +289,13 @@ impl StarknetState {
 mod tests {
     use std::path::PathBuf;
 
+    use felt::felt_str;
+
     use crate::{
-        business_logic::fact_state::contract_state::ContractState,
-        core::contract_address::starknet_contract_address::compute_class_hash, utils::felt_to_hash,
+        business_logic::{execution::objects::CallType, fact_state::contract_state::ContractState},
+        core::contract_address::starknet_contract_address::compute_class_hash,
+        definitions::transaction_type::TransactionType,
+        utils::felt_to_hash,
     };
 
     use super::*;
@@ -303,12 +307,60 @@ mod tests {
         let contract_class = ContractClass::try_from(path).unwrap();
         let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
-        let exec = (Address(1.into()), TransactionExecutionInfo::default());
+
+        // expected results
+
+        // ----- calculate fib class hash ---------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let address = Address(felt_str!(
+            "3173424428166065804253636112972198402746524727884605069568266184332607747575"
+        ));
+
+        let mut actual_resources = HashMap::new();
+        actual_resources.insert("l1_gas_usage".to_string(), 1224);
+        let transaction_exec_info = TransactionExecutionInfo {
+            validate_info: None,
+            call_info: Some(CallInfo {
+                caller_address: Address(0.into()),
+                call_type: Some(CallType::Call),
+                contract_address: address.clone(),
+                code_address: None,
+                class_hash: Some(class_hash),
+                entry_point_selector: None,
+                entry_point_type: Some(EntryPointType::Constructor),
+                ..Default::default()
+            }),
+            fee_transfer_info: None,
+            actual_fee: 0,
+            actual_resources,
+            tx_type: Some(TransactionType::Deploy),
+        };
+
+        // check result is correct
+        let exec = (address, transaction_exec_info);
         assert_eq!(
             starknet_state
-                .deploy(contract_class, constructor_calldata, contract_address_salt)
+                .deploy(
+                    contract_class.clone(),
+                    constructor_calldata,
+                    contract_address_salt
+                )
                 .unwrap(),
             exec
+        );
+
+        // check that properly stored contract class
+        assert_eq!(
+            starknet_state
+                .state
+                .contract_classes
+                .unwrap()
+                .get(&class_hash)
+                .unwrap()
+                .to_owned(),
+            contract_class
         );
     }
 
@@ -338,11 +390,11 @@ mod tests {
             .contract_states
             .insert(sender_address.clone(), contract_state.clone());
 
+        let state = CachedState::new(state_reader, Some(contract_class_cache));
+
         //* --------------------------------------------
         //*    Create starknet state with previous data
         //* --------------------------------------------
-
-        let state = CachedState::new(state_reader, Some(contract_class_cache));
 
         let mut starknet_state = StarknetState::new(None);
 

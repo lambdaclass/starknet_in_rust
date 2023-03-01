@@ -73,8 +73,6 @@ impl InternalDeclare {
             "1148189391774113786911959041662034419554430000171893651982484995704491697075"
         );
 
-        //println!("selector hardcodeado {:?}", validate_entry_point_selector);
-
         let internal_declare = InternalDeclare {
             class_hash,
             sender_address,
@@ -136,13 +134,13 @@ impl InternalDeclare {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
+
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
-
         let validate_info = self
             .run_validate_entrypoint(state, &mut resources_manager, general_config)
             .map_err(|e| TransactionError::RunValidationError(e.to_string()))?;
-        //dbg!("pass validate info");
+
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -190,8 +188,6 @@ impl InternalDeclare {
         }
 
         let calldata = self.get_calldata();
-
-        //println!("code address {:?}", self.account_contract_address());
 
         let entry_point = ExecutionEntryPoint::new(
             self.account_contract_address(),

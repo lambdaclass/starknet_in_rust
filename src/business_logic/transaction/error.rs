@@ -30,6 +30,8 @@ pub enum TransactionError {
     RunValidationError(String),
     #[error("Missing contract class storage")]
     MissingClassStorage,
+    #[error("Unimplemented state updates")]
+    NotImplemented,
     #[error(transparent)]
     UtilsError(#[from] UtilsError),
     #[error(transparent)]
@@ -38,6 +40,7 @@ pub enum TransactionError {
     SyscallError(#[from] SyscallHandlerError),
     #[error(transparent)]
     StateError(#[from] StateError),
+
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
     #[error(transparent)]

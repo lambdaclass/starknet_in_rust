@@ -56,7 +56,7 @@ impl InternalDeploy {
             &constructor_calldata[..],
             Address(0.into()),
         )?);
-        //dbg!("before hash value");
+
         let hash_value = calculate_deploy_transaction_hash(
             version,
             contract_address.clone(),

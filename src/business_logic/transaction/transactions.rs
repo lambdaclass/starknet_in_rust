@@ -39,7 +39,7 @@ impl Transaction {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Deploy(tx) => tx.apply_state_updates(state, general_config),
-            Transaction::InvokeFunction(_) => todo!(),
+            Transaction::InvokeFunction(_) => Err(TransactionError::NotImplemented),
         }
     }
 }
