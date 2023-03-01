@@ -148,7 +148,7 @@ fn test_contract<'a>(
 #[test]
 fn call_contract_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_call_contract",
         [1; 32],
         Address(1111.into()),
@@ -161,7 +161,7 @@ fn call_contract_syscall() {
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2u8; 32],
-            Path::new("tests/syscalls-lib.json"),
+            Path::new("starknet_programs/syscalls-lib.json"),
             Some((Address(2222.into()), vec![("lib_state", 10.into())])),
         )]
         .into_iter(),
@@ -173,7 +173,7 @@ fn call_contract_syscall() {
 #[test]
 fn emit_event_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_emit_event",
         [1; 32],
         Address(1111.into()),
@@ -226,7 +226,7 @@ fn get_block_number_syscall() {
         general_config.block_info_mut().block_number = block_number;
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_block_number",
             [1; 32],
             Address(1111.into()),
@@ -255,7 +255,7 @@ fn get_block_timestamp_syscall() {
         general_config.block_info_mut().block_timestamp = block_timestamp;
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_block_timestamp",
             [1; 32],
             Address(1111.into()),
@@ -281,7 +281,7 @@ fn get_block_timestamp_syscall() {
 fn get_caller_address_syscall() {
     let run = |caller_address: Felt| {
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_caller_address",
             [1; 32],
             Address(1111.into()),
@@ -307,7 +307,7 @@ fn get_caller_address_syscall() {
 fn get_contract_address_syscall() {
     let run = |contract_address: Felt| {
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_contract_address",
             [1; 32],
             Address(contract_address.clone()),
@@ -336,7 +336,7 @@ fn get_sequencer_address_syscall() {
         general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_sequencer_address",
             [1; 32],
             Address(1111.into()),
@@ -371,7 +371,7 @@ fn get_tx_info_syscall() {
 
         let n_steps = general_config.invoke_tx_max_n_steps();
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_tx_info",
             [1; 32],
             Address(1111.into()),
@@ -472,7 +472,7 @@ fn get_tx_signature_syscall() {
         let n_steps = general_config.invoke_tx_max_n_steps();
 
         test_contract(
-            "tests/syscalls.json",
+            "starknet_programs/syscalls.json",
             "test_get_tx_signature",
             [1; 32],
             Address(1111.into()),
@@ -511,7 +511,7 @@ fn get_tx_signature_syscall() {
 #[test]
 fn library_call_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_library_call",
         [1; 32],
         Address(1111.into()),
@@ -524,7 +524,7 @@ fn library_call_syscall() {
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2; 32],
-            Path::new("tests/syscalls-lib.json"),
+            Path::new("starknet_programs/syscalls-lib.json"),
             Default::default(),
         )]
         .into_iter(),
@@ -536,7 +536,7 @@ fn library_call_syscall() {
 #[test]
 fn library_call_l1_handler_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_library_call_l1_handler",
         [1; 32],
         Address(1111.into()),
@@ -549,7 +549,7 @@ fn library_call_l1_handler_syscall() {
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2; 32],
-            Path::new("tests/syscalls-lib.json"),
+            Path::new("starknet_programs/syscalls-lib.json"),
             Default::default(),
         )]
         .into_iter(),
@@ -561,7 +561,7 @@ fn library_call_l1_handler_syscall() {
 #[test]
 fn send_message_to_l1_syscall() {
     test_contract(
-        "tests/syscalls.json",
+        "starknet_programs/syscalls.json",
         "test_send_message_to_l1",
         [1; 32],
         Address(1111.into()),

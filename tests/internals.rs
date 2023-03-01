@@ -14,7 +14,7 @@ use starknet_rs::{
 use std::{collections::HashMap, path::PathBuf};
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
-const ERC20_CONTRACT_PATH: &str = "starknet_programs/erc20_contract_without_some_syscalls.json";
+const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
 const TEST_CONTRACT_PATH: &str = "starknet_programs/test_contract.json";
 
 lazy_static! {

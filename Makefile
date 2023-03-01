@@ -11,7 +11,7 @@ endif
 CAIRO_SOURCES=$(wildcard cairo_programs/*.cairo)
 CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
 
-STARKNET_SOURCES=$(wildcard tests/*.cairo)
+STARKNET_SOURCES=$(wildcard starknet_programs/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 
 
@@ -26,24 +26,13 @@ deps-venv:
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
-	starknet-compile \
-		--account_contract \
-		starknet_programs/account_without_validation.cairo \
-		--output starknet_programs/account_without_validation.json
-
-	starknet-compile \
-		starknet_programs/test_contract.cairo \
-		--output starknet_programs/test_contract.json
-	cd starknet_programs/ && starknet-compile \
-		blockifier/ERC20_without_some_syscalls/ERC20/ERC20.cairo \
-		--output erc20_contract_without_some_syscalls.json
 
 
 cairo_programs/%.json: cairo_programs/%.cairo
-	cairo-compile $< --output $@ || rm $@
+	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
-tests/%.json: tests/%.cairo
-	starknet-compile --debug_info_with_source $< --output $@ || rm $@
+starknet_programs/%.json: starknet_programs/%.cairo
+	cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 
 #
@@ -63,7 +52,6 @@ deps:
 
 
 clean:
-	rm cairo_programs/*json
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
 	-rm -f starknet_programs/*.json

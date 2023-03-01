@@ -31,7 +31,7 @@ fn hello_starknet_increase_balance() {
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("tests/increase_balance.json");
+    let path = PathBuf::from("starknet_programs/increase_balance.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
