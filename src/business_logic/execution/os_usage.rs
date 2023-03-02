@@ -12,8 +12,8 @@ pub struct OsResources {
     execute_txs_inner: HashMap<TransactionType, ExecutionResources>,
 }
 
-impl OsResources {
-    pub fn default() -> Self {
+impl Default for OsResources {
+    fn default() -> Self {
         let execute_txs_inner: HashMap<TransactionType, ExecutionResources> = HashMap::from([
             (
                 TransactionType::InvokeFunction,

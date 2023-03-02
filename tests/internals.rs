@@ -5,7 +5,7 @@ use starknet_rs::{
     business_logic::{
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
         state::{cached_state::CachedState, state_api::StateReader},
-        transaction::internal_objects::InternalDeclare,
+        transaction::objects::internal_declare::InternalDeclare,
     },
     definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
     services::api::contract_class::ContractClass,
@@ -140,16 +140,16 @@ fn test_create_account_tx_test_state() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&*TEST_ERC20_ACCOUNT_BALANCE_KEY),
+            felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
     assert_eq!(value, &2.into());
 
-    let class_hash = state.get_class_hash_at(&*TEST_CONTRACT_ADDRESS).unwrap();
-    assert_eq!(class_hash, &felt_to_hash(&*TEST_CLASS_HASH));
+    let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
+    assert_eq!(class_hash, &felt_to_hash(&TEST_CLASS_HASH));
 
     let contract_class = state
-        .get_contract_class(&felt_to_hash(&*TEST_ERC20_CONTRACT_CLASS_HASH))
+        .get_contract_class(&felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
         .unwrap();
     assert_eq!(
         contract_class,
@@ -172,8 +172,8 @@ fn declare_tx() -> InternalDeclare {
         validate_entry_point_selector: felt_str!(
             "1148189391774113786911959041662034419554430000171893651982484995704491697075"
         ),
-        version: 1,
-        max_fee: 2,
+        version: 0,
+        max_fee: 0,
         signature: vec![],
         nonce: 0.into(),
         hash_value: 0.into(),
@@ -185,9 +185,7 @@ fn test_declare_tx() {
 
     let declare_tx = declare_tx();
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    let result = declare_tx
-        .apply_specific_concurrent_changes(&mut state, general_config)
-        .unwrap();
+    let result = declare_tx.execute(&mut state, general_config).unwrap();
     dbg!(&result);
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 

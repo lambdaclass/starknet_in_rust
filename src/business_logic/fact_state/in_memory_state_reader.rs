@@ -41,7 +41,7 @@ impl StateReader for InMemoryStateReader {
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
         let contract_class = self
             .class_hash_to_contract_class
-            .get(&*class_hash)
+            .get(class_hash)
             .ok_or(StateError::MissingClassHash())
             .cloned()?;
         contract_class.validate()?;

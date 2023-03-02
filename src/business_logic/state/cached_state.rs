@@ -3,8 +3,9 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
-    core::errors::state_errors::StateError, services::api::contract_class::ContractClass,
-    utils::Address,
+    core::errors::state_errors::StateError,
+    services::api::contract_class::ContractClass,
+    utils::{subtract_mappings, Address},
 };
 use felt::Felt;
 use getset::Getters;
@@ -55,6 +56,28 @@ impl<T: StateReader + Clone> CachedState<T> {
     pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
         parent.cache.update_writes_from_other(&self.cache);
+    }
+
+    pub(crate) fn copy_and_apply(&mut self) -> Self {
+        let mut copied_state = self.clone();
+        copied_state.apply(self);
+        copied_state
+    }
+
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
+    pub(crate) fn count_actual_storage_changes(&mut self) -> (usize, usize) {
+        let storage_updates = self
+            .cache
+            .storage_writes
+            .clone()
+            .into_iter()
+            .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
+            .collect::<HashMap<StorageEntry, Felt>>();
+
+        let modified_contrats = storage_updates.clone().into_keys().map(|k| k.0);
+
+        (modified_contrats.len(), storage_updates.len())
     }
 }
 
@@ -110,17 +133,12 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
-        let storage_updates = self
-            .cache
-            .storage_writes
-            .clone()
-            .into_iter()
-            .filter(|(k, _v)| !self.cache.storage_initial_values.contains_key(k))
-            .collect::<HashMap<StorageEntry, Felt>>();
-
-        let modified_contrats = storage_updates.clone().into_iter().map(|(k, _v)| k.0);
-
-        (modified_contrats.len(), storage_updates.len())
+        let storage_updates = subtract_mappings(
+            self.cache.storage_writes.clone(),
+            self.cache.storage_initial_values.clone(),
+        );
+        let modified_contracts = storage_updates.keys().map(|k| k.0.clone()).len();
+        (modified_contracts, storage_updates.len())
     }
 }
 
