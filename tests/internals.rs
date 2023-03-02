@@ -5,8 +5,9 @@ use starknet_rs::{
     business_logic::{
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
         state::{cached_state::CachedState, state_api::StateReader},
+        transaction::internal_objects::InternalDeclare,
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
     services::api::contract_class::ContractClass,
     utils::{felt_to_hash, Address},
 };
@@ -15,6 +16,7 @@ use std::{collections::HashMap, path::PathBuf};
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
 const TEST_CONTRACT_PATH: &str = "starknet_programs/test_contract.json";
+const TEST_EMPTY_CONTRACT_PATH: &str = "starknet_programs/empty_contract.json";
 
 lazy_static! {
     // Addresses.
@@ -24,6 +26,7 @@ lazy_static! {
     // Class hashes.
     static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt = felt_str!("273");
     static ref TEST_CLASS_HASH: Felt = felt_str!("272");
+    static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt = felt_str!("274");
     static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt = felt_str!("4112");
 
     // Storage keys.
@@ -51,6 +54,7 @@ fn create_account_tx_test_state(
     let test_contract_class_hash = TEST_CLASS_HASH.clone();
     let test_account_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone();
     let test_erc20_class_hash = TEST_ERC20_CONTRACT_CLASS_HASH.clone();
+    let test_empty_contract_class_hash = TEST_EMPTY_CONTRACT_CLASS_HASH.clone();
     let class_hash_to_class = HashMap::from([
         (
             test_account_class_hash.clone(),
@@ -64,6 +68,10 @@ fn create_account_tx_test_state(
             test_erc20_class_hash.clone(),
             get_contract_class(ERC20_CONTRACT_PATH)?,
         ),
+        // (
+        //     test_empty_contract_class_hash.clone(),
+        //     get_contract_class(TEST_EMPTY_CONTRACT_PATH)?,
+        // ),
     ]);
 
     let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
@@ -147,4 +155,41 @@ fn test_create_account_tx_test_state() {
         contract_class,
         get_contract_class(ERC20_CONTRACT_PATH).unwrap()
     );
+
+    // let contract_class2 = state
+    //     .get_contract_class(&felt_to_hash(&*TEST_EMPTY_CONTRACT_CLASS_HASH))
+    //     .unwrap();
+    // assert_eq!(
+    //     contract_class2,
+    //     get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap()
+    // );
+}
+fn declare_tx() -> InternalDeclare {
+    InternalDeclare {
+        class_hash: felt_to_hash(&*TEST_EMPTY_CONTRACT_CLASS_HASH),
+        sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        tx_type: TransactionType::Declare,
+        validate_entry_point_selector: felt_str!(
+            "1148189391774113786911959041662034419554430000171893651982484995704491697075"
+        ),
+        version: 1,
+        max_fee: 2,
+        signature: vec![],
+        nonce: 0.into(),
+        hash_value: 0.into(),
+    }
+}
+#[test]
+fn test_declare_tx() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    let declare_tx = declare_tx();
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
+    let result = declare_tx
+        .apply_specific_concurrent_changes(&mut state, general_config)
+        .unwrap();
+    dbg!(&result);
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
+
+    todo!()
 }

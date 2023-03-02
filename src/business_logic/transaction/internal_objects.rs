@@ -178,16 +178,17 @@ impl InternalDeploy {
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pub(crate) struct InternalDeclare {
-    pub(crate) class_hash: [u8; 32],
-    pub(crate) sender_address: Address,
-    pub(crate) tx_type: TransactionType,
-    pub(crate) validate_entry_point_selector: Felt,
-    pub(crate) version: u64,
-    pub(crate) max_fee: u64,
-    pub(crate) signature: Vec<Felt>,
-    pub(crate) nonce: Felt,
-    pub(crate) hash_value: Felt,
+#[derive(Debug)]
+pub struct InternalDeclare {
+    pub class_hash: [u8; 32],
+    pub sender_address: Address,
+    pub tx_type: TransactionType,
+    pub validate_entry_point_selector: Felt,
+    pub version: u64,
+    pub max_fee: u64,
+    pub signature: Vec<Felt>,
+    pub nonce: Felt,
+    pub hash_value: Felt,
 }
 
 // ------------------------------------------------------------
@@ -257,16 +258,18 @@ impl InternalDeclare {
             ));
         }
 
-        if !self.max_fee.is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
-            ));
-        }
+        if self.version.is_zero() {
+            if !self.max_fee.is_zero() {
+                return Err(TransactionError::StarknetError(
+                    "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
+                ));
+            }
 
-        if !self.nonce.is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
-            ));
+            if !self.nonce.is_zero() {
+                return Err(TransactionError::StarknetError(
+                    "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
+                ));
+            }
         }
 
         if !self.signature.len().is_zero() {
@@ -341,8 +344,8 @@ impl InternalDeclare {
             self.validate_entry_point_selector.clone(),
             Address(Felt::zero()),
             EntryPointType::External,
-            Some(CallType::Delegate),
-            Some(self.class_hash),
+            None,
+            None,
         );
 
         let call_info = entry_point.execute(
