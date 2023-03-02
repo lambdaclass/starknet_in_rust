@@ -13,14 +13,19 @@ use starknet_rs::{
         },
         state::cached_state::CachedState,
     },
-    core::contract_address::starknet_contract_address::compute_class_hash,
+    core::{
+        contract_address::starknet_contract_address::compute_class_hash,
+        transaction_hash::starknet_transaction_hash::{
+            calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
+        },
+    },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     hash_utils::calculate_contract_address,
     serde_structs::contract_abi::read_abi,
     server::{
         add_address, add_class_hash, get_contract_from_address, get_contract_from_class_hash,
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::ContractClass,
     starknet_storage::dict_storage::DictStorage,
     utils::{felt_to_hash, Address},
 };
@@ -71,9 +76,20 @@ fn declare_parser(args: &DeclareArgs) {
     let contract_class = ContractClass::try_from(&args.contract).unwrap();
     let class_hash = compute_class_hash(&contract_class).unwrap();
     add_class_hash(&(&class_hash).to_biguint().to_str_radix(16), &args.contract);
+
+    let tx_hash = calculate_declare_transaction_hash(
+        contract_class,
+        Felt::zero(),
+        Address(0.into()),
+        0,
+        0,
+        0.into(),
+    )
+    .unwrap();
     println!(
-        "Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x",
-        class_hash.to_biguint()
+        "Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}",
+        class_hash.to_biguint(),
+        tx_hash.to_biguint()
     );
 }
 
@@ -91,7 +107,14 @@ fn deploy_parser(args: &DeployArgs) {
     )
     .unwrap();
     add_address(&address.to_str_radix(16), &contract_name);
-    println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x", address.to_biguint());
+    let tx_hash = calculate_deploy_transaction_hash(
+        0,
+        Address(address.clone()),
+        &constructor_calldata,
+        Felt::zero(),
+    )
+    .unwrap();
+    println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", address.to_biguint(), tx_hash.to_biguint());
 }
 
 fn invoke_parser(args: &InvokeArgs) {
@@ -102,16 +125,18 @@ fn invoke_parser(args: &InvokeArgs) {
     let function_entrypoint_indexes = read_abi(&args.abi);
 
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
+    let (entry_point_index, entry_point_type) =
+        function_entrypoint_indexes.get(&args.function).unwrap();
 
     let entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::External)
+        .get(entry_point_type)
         .unwrap()
-        .get(*function_entrypoint_indexes.get(&args.function).unwrap())
+        .get(*entry_point_index)
         .unwrap()
         .selector()
         .clone();
 
-    let contract_state = ContractState::new(felt_to_hash(&class_hash), 3.into(), HashMap::new());
+    let contract_state = ContractState::new(felt_to_hash(&class_hash), 0.into(), HashMap::new());
 
     let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
     state_reader
@@ -133,7 +158,7 @@ fn invoke_parser(args: &InvokeArgs) {
         calldata,
         entrypoint_selector,
         Address(0.into()),
-        EntryPointType::External,
+        *entry_point_type,
         Some(CallType::Delegate),
         Some(felt_to_hash(&class_hash)),
     );
@@ -150,7 +175,7 @@ fn invoke_parser(args: &InvokeArgs) {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let data = exec_entry_point
+    exec_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -158,7 +183,10 @@ fn invoke_parser(args: &InvokeArgs) {
             &tx_execution_context,
         )
         .unwrap();
-    println!("{data:?}");
+    println!(
+        "Invoke transaction was sent.\nContract address: {}\nTransaction hash: 0x",
+        &args.address
+    );
 }
 
 fn main() {

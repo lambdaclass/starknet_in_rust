@@ -51,7 +51,7 @@ impl InternalDeploy {
         contract_address_salt: Address,
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt>,
-        chain_id: u64,
+        chain_id: Felt,
         version: u64,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_class_hash(&contract_class)

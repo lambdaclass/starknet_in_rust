@@ -1,6 +1,7 @@
+use crate::utils::calculate_sn_keccak;
 use felt::Felt;
 use lazy_static::lazy_static;
-use num_traits::{Num, Zero};
+use num_traits::Zero;
 
 pub(crate) const L2_TO_L1_MSG_HEADER_SIZE: usize = 3;
 pub(crate) const L1_TO_L2_MSG_HEADER_SIZE: usize = 5;
@@ -18,11 +19,8 @@ pub const TRANSACTION_VERSION: u64 = 1;
 
 lazy_static! {
     pub static ref DEFAULT_ENTRY_POINT_SELECTOR: Felt = Felt::zero();
-
-    // EXECUTE_ENTRY_POINT_SELECTOR = sn_keccak("__execute__");
-    pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt = Felt::from_str_radix(
-        "617075754465154585683856897856256838130216341506379215893724690153393808813",
-        10,
-    )
-    .unwrap();
+    pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt =
+        Felt::from_bytes_be(&calculate_sn_keccak(b"__execute__"));
+    pub static ref CONSTRUCTOR_ENTRY_POINT_SELECTOR: Felt =
+        Felt::from_bytes_be(&calculate_sn_keccak(b"constructor"));
 }
