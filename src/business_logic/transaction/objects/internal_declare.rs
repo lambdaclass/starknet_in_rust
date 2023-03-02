@@ -156,7 +156,7 @@ impl InternalDeclare {
                 validate_info,
                 None,
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self.tx_type),
             ),
         )
     }

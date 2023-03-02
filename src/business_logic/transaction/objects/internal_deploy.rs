@@ -109,7 +109,7 @@ impl InternalDeploy {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
-            self.tx_type.clone(),
+            self.tx_type,
             changes,
             None,
         )
@@ -120,7 +120,7 @@ impl InternalDeploy {
                 None,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self.tx_type),
             ),
         )
     }
@@ -165,7 +165,7 @@ impl InternalDeploy {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
-            self.tx_type.clone(),
+            self.tx_type,
             changes,
             None,
         )?;
@@ -175,7 +175,7 @@ impl InternalDeploy {
                 None,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self.tx_type),
             ),
         )
     }
