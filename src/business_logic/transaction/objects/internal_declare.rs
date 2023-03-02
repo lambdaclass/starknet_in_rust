@@ -19,6 +19,7 @@ use crate::{
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
+        errors::state_errors::StateError,
         transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
@@ -41,6 +42,7 @@ pub struct InternalDeclare {
     pub signature: Vec<Felt>,
     pub nonce: Felt,
     pub hash_value: Felt,
+    pub contract_class: ContractClass,
 }
 
 // ------------------------------------------------------------
@@ -61,7 +63,7 @@ impl InternalDeclare {
         let class_hash = felt_to_hash(&hash);
 
         let hash_value = calculate_declare_transaction_hash(
-            contract_class,
+            &contract_class,
             chain_id,
             sender_address.clone(),
             max_fee,
@@ -81,6 +83,7 @@ impl InternalDeclare {
             signature,
             nonce,
             hash_value,
+            contract_class,
         };
 
         internal_declare.verify_version()?;
@@ -267,7 +270,19 @@ impl InternalDeclare {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, &general_config)?;
 
-        self.handle_nonce(state)?;
+        // Set contract class
+        match state.get_contract_class(&self.class_hash) {
+            Err(StateError::MissingClassHash()) => {
+                // Class is undeclared; declare it.
+                state.set_contract_class(&self.class_hash, &self.contract_class)?;
+            }
+            Err(error) => return Err(error.into()),
+            Ok(_) => {
+                // Class is already declared; cannot redeclare.
+                return Err(TransactionError::ClassAlreadyDeclared(self.class_hash));
+            }
+        }
+
         let (fee_transfer_info, actual_fee) = self.charge_fee(
             state,
             concurrent_exec_info.actual_resources.clone(),
@@ -355,7 +370,6 @@ mod tests {
 
         // ----- calculate fib class hash ---------
         let hash = compute_class_hash(&fib_contract_class).unwrap();
-        let fib_class_hash = felt_to_hash(&hash);
 
         // declare tx
         let internal_declare = InternalDeclare::new(
@@ -368,14 +382,6 @@ mod tests {
             0.into(),
         )
         .unwrap();
-
-        // this simulate the setting done while declaring with starknet state
-
-        state
-            .contract_classes
-            .as_mut()
-            .unwrap()
-            .insert(fib_class_hash, fib_contract_class);
 
         //* ---------------------------------------
         //              Expected result

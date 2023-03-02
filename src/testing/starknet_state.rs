@@ -75,7 +75,7 @@ impl StarknetState {
         contract_class: ContractClass,
     ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
-            contract_class.clone(),
+            contract_class,
             self.chain_id(),
             Address(Felt::one()),
             0,
@@ -83,12 +83,6 @@ impl StarknetState {
             Vec::new(),
             0.into(),
         )?;
-
-        self.state
-            .contract_classes
-            .as_mut()
-            .ok_or(TransactionError::MissingClassStorage)?
-            .insert(tx.class_hash, contract_class);
 
         let mut state = self.state.apply_to_copy();
         let tx_execution_info = tx.execute(&mut state, self.general_config.clone())?;

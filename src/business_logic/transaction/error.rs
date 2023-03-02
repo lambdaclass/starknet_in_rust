@@ -36,9 +36,10 @@ pub enum TransactionError {
     SyscallError(#[from] SyscallHandlerError),
     #[error(transparent)]
     StateError(#[from] StateError),
-
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
+    #[error("Class hash {0:?} already declared")]
+    ClassAlreadyDeclared([u8; 32]),
     #[error(transparent)]
     StarkwareException(#[from] StarkwareError),
 }
