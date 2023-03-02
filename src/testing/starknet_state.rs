@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn test_deploy() {
         let mut starknet_state = StarknetState::new(None);
-        let path = PathBuf::from("tests/fibonacci.json");
+        let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
         let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
