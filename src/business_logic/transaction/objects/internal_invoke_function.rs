@@ -36,7 +36,7 @@ pub(crate) struct InternalInvokeFunction {
     hash_value: Felt,
     signature: Vec<Felt>,
     max_fee: u64,
-    nonce: Felt,
+    nonce: Option<Felt>,
 }
 
 impl InternalInvokeFunction {
@@ -79,21 +79,26 @@ impl InternalInvokeFunction {
             max_fee,
             signature,
             validate_entry_point_selector,
-            nonce: nonce.unwrap_or(0.into()),
+            nonce,
             hash_value,
         })
     }
 
-    fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
-        TransactionExecutionContext::new(
+    fn get_execution_context(
+        &self,
+        n_steps: u64,
+    ) -> Result<TransactionExecutionContext, TransactionError> {
+        Ok(TransactionExecutionContext::new(
             self.contract_address.clone(),
             self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone(),
+            self.nonce
+                .clone()
+                .ok_or(TransactionError::InvalidNonce("Nonce is None".to_string()))?,
             n_steps,
             self.version,
-        )
+        ))
     }
 
     #[allow(dead_code)]
@@ -128,7 +133,9 @@ impl InternalInvokeFunction {
             state,
             general_config,
             resources_manager,
-            &self.get_execution_context(general_config.validate_max_n_steps),
+            &self
+                .get_execution_context(general_config.validate_max_n_steps)
+                .map_err(|_| ExecutionError::InvalidTxContext)?,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
@@ -163,7 +170,9 @@ impl InternalInvokeFunction {
             state,
             general_config,
             resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps),
+            &self
+                .get_execution_context(general_config.invoke_tx_max_n_steps)
+                .map_err(|_| ExecutionError::InvalidTxContext)?,
         )
     }
 
@@ -286,7 +295,7 @@ mod tests {
             hash_value: 0.into(),
             signature: Vec::new(),
             max_fee: 0,
-            nonce: 0.into(),
+            nonce: Some(0.into()),
         };
 
         // Instantiate CachedState

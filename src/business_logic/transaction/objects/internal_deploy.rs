@@ -29,10 +29,10 @@ pub struct InternalDeploy {
     pub(crate) contract_address: Address,
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub contract_address_salt: Address,
-    pub contract_hash: [u8; 32],
-    pub constructor_calldata: Vec<Felt>,
-    pub tx_type: TransactionType,
+    pub(crate) contract_address_salt: Address,
+    pub(crate) contract_hash: [u8; 32],
+    pub(crate) constructor_calldata: Vec<Felt>,
+    pub(crate) tx_type: TransactionType,
 }
 
 impl InternalDeploy {
