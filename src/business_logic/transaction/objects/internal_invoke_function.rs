@@ -17,11 +17,12 @@ use crate::{
         general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
+    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
-use felt::{felt_str, Felt};
-use num_traits::ToPrimitive;
+use felt::Felt;
+use num_traits::{ToPrimitive, Zero};
 
 #[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
@@ -59,16 +60,14 @@ impl InternalInvokeFunction {
             TransactionHashPrefix::Invoke,
             version,
             contract_address.clone(),
-            entry_point_selector_field.into(),
+            entry_point_selector_field,
             &calldata,
             max_fee,
             chain_id,
             &additional_data,
         )?;
 
-        let validate_entry_point_selector = felt_str!(
-            "626969833899987279399947180575486623810258720106406659648356883742278317941"
-        );
+        let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InternalInvokeFunction {
             contract_address,
@@ -80,7 +79,7 @@ impl InternalInvokeFunction {
             max_fee,
             signature,
             validate_entry_point_selector,
-            nonce: nonce.unwrap(),
+            nonce: nonce.unwrap_or(0.into()),
             hash_value,
         })
     }
@@ -190,7 +189,7 @@ impl InternalInvokeFunction {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
-            self.tx_type.clone(),
+            self.tx_type,
             changes,
             None,
         )?;
@@ -200,7 +199,7 @@ impl InternalInvokeFunction {
                 validate_info,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self.tx_type),
             );
         Ok(transaction_execution_info)
     }
@@ -228,7 +227,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt,
     nonce: Option<Felt>,
     version: u64,
-) -> Result<(u64, Vec<u64>), TransactionError> {
+) -> Result<(Felt, Vec<u64>), TransactionError> {
     if version > 0 && version < u64::pow(2, 128) {
         match nonce {
             Some(_) => Err(TransactionError::InvalidNonce(
@@ -236,9 +235,7 @@ pub(crate) fn preprocess_invoke_function_fields(
             )),
             None => {
                 let additional_data = Vec::new();
-                let entry_point_selector_field = entry_point_selector
-                    .to_u64()
-                    .ok_or(TransactionError::InvalidFeltConversion)?;
+                let entry_point_selector_field = entry_point_selector;
                 Ok((entry_point_selector_field, additional_data))
             }
         }
@@ -247,7 +244,7 @@ pub(crate) fn preprocess_invoke_function_fields(
             Some(n) => {
                 let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
                 let additional_data = [val].to_vec();
-                let entry_point_selector_field = 0_u64;
+                let entry_point_selector_field = Felt::zero();
                 Ok((entry_point_selector_field, additional_data))
             }
             None => Err(TransactionError::InvalidNonce(

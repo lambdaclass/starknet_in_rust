@@ -26,7 +26,7 @@ impl StarknetMessageToL1 {
         encoding.push(self.from_address.0.clone());
         encoding.push(self.to_address.0.clone());
         encoding.push(self.payload.len().into());
-        encoding.append(&mut self.payload.clone());
+        encoding.extend_from_slice(&self.payload);
 
         encoding
     }

@@ -2,7 +2,7 @@ use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo}
 use std::collections::HashMap;
 
 use felt::Felt;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
 use crate::{
     business_logic::{
@@ -77,7 +77,7 @@ impl StarknetState {
         let tx = InternalDeclare::new(
             contract_class.clone(),
             self.chain_id(),
-            Address(1.into()),
+            Address(Felt::one()),
             0,
             0,
             Vec::new(),
@@ -90,7 +90,7 @@ impl StarknetState {
             .ok_or(TransactionError::MissingClassStorage)?
             .insert(tx.class_hash, contract_class);
 
-        let mut state = self.state.copy_and_apply();
+        let mut state = self.state.apply_to_copy();
         let tx_execution_info = tx.execute(&mut state, self.general_config.clone())?;
 
         Ok((tx.class_hash, tx_execution_info))
@@ -142,7 +142,7 @@ impl StarknetState {
             None,
         );
 
-        let mut state_copy = self.state.copy_and_apply();
+        let mut state_copy = self.state.apply_to_copy();
         let mut resources_manager = ExecutionResourcesManager::default();
 
         let tx_execution_context = TransactionExecutionContext::default();
@@ -193,7 +193,7 @@ impl StarknetState {
         &mut self,
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut state_copy = self.state.copy_and_apply();
+        let mut state_copy = self.state.apply_to_copy();
         let tx = tx.execute(&mut state_copy, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info);
@@ -224,10 +224,7 @@ impl StarknetState {
         Ok(())
     }
 
-    // -----------------------------------
     /// Consumes the given message hash.
-    // -----------------------------------
-
     pub fn consume_message_hash(
         &mut self,
         message_hash: Vec<u8>,
@@ -302,7 +299,7 @@ mod tests {
     #[test]
     fn test_deploy() {
         let mut starknet_state = StarknetState::new(None);
-        let path = PathBuf::from("tests/fibonacci.json");
+        let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
         let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
@@ -407,7 +404,7 @@ mod tests {
         // --------------------------------------------
         //      Test declare with starknet state
         // --------------------------------------------
-        let fib_path = PathBuf::from("tests/fibonacci.json");
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
 
         let (ret_class_hash, _exec_info) =

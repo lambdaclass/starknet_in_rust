@@ -19,7 +19,6 @@ use crate::{
     services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, felt_to_hash, Address},
-    //utils_errors::UtilsError,
 };
 use felt::{felt_str, Felt};
 use num_traits::Zero;
@@ -52,8 +51,8 @@ impl InternalDeploy {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &class_hash,
-            &constructor_calldata[..],
-            Address(0.into()),
+            &constructor_calldata,
+            Address(Felt::zero()),
         )?);
 
         let hash_value = calculate_deploy_transaction_hash(
@@ -100,19 +99,17 @@ impl InternalDeploy {
         let class_hash: [u8; 32] = self.contract_hash;
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
-            Address(0.into()),
+            Address(Felt::zero()),
             Some(class_hash),
         );
 
-        let resources_manager = ExecutionResourcesManager {
-            ..Default::default()
-        };
+        let resources_manager = ExecutionResourcesManager::default();
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
-            self.tx_type.clone(),
+            self.tx_type,
             changes,
             None,
         )
@@ -123,7 +120,7 @@ impl InternalDeploy {
                 None,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self.tx_type),
             ),
         )
     }
@@ -140,7 +137,7 @@ impl InternalDeploy {
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
             entry_point_selector,
-            Address(0.into()),
+            Address(Felt::zero()),
             EntryPointType::Constructor,
             None,
             None,
@@ -168,7 +165,7 @@ impl InternalDeploy {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
-            self.tx_type.clone(),
+            self.tx_type,
             changes,
             None,
         )?;
@@ -178,7 +175,7 @@ impl InternalDeploy {
                 None,
                 Some(call_info),
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self.tx_type),
             ),
         )
     }

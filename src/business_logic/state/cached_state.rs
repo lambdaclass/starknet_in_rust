@@ -58,7 +58,7 @@ impl<T: StateReader + Clone> CachedState<T> {
         parent.cache.update_writes_from_other(&self.cache);
     }
 
-    pub(crate) fn copy_and_apply(&mut self) -> Self {
+    pub(crate) fn apply_to_copy(&mut self) -> Self {
         let mut copied_state = self.clone();
         copied_state.apply(self);
         copied_state
@@ -66,7 +66,7 @@ impl<T: StateReader + Clone> CachedState<T> {
 
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub(crate) fn count_actual_storage_changes(&mut self) -> (usize, usize) {
+    pub(crate) fn count_actual_storage_changes(&self) -> (usize, usize) {
         let storage_updates = self
             .cache
             .storage_writes
