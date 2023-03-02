@@ -108,17 +108,18 @@ impl InternalDeclare {
                     .to_string(),
             ));
         }
+        if self.version.is_zero() {
+            if !self.max_fee.is_zero() {
+                return Err(TransactionError::StarknetError(
+                    "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
+                ));
+            }
 
-        if !self.max_fee.is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
-            ));
-        }
-
-        if !self.nonce.is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
-            ));
+            if !self.nonce.is_zero() {
+                return Err(TransactionError::StarknetError(
+                    "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
+                ));
+            }
         }
 
         if !self.signature.len().is_zero() {
@@ -364,12 +365,8 @@ mod tests {
 
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
-        dbg!("found the file");
 
         let chain_id = StarknetChainId::TestNet.to_felt();
-
-        // ----- calculate fib class hash ---------
-        let hash = compute_class_hash(&fib_contract_class).unwrap();
 
         // declare tx
         let internal_declare = InternalDeclare::new(

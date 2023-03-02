@@ -60,7 +60,7 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
     let mut resources_manager = ExecutionResourcesManager::default();
     fee_transfer_call
         .execute(state, &general_config, &mut resources_manager, &tx_context)
-        .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
+        .map_err(|e| TransactionError::FeeError(e.to_string()))
 }
 
 // ----------------------------------------------------------------------------------------
