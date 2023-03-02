@@ -75,6 +75,8 @@ pub enum ExecutionError {
     MemoryException(#[from] MemoryError),
     #[error("Expected Relocatable; found None")]
     InvalidInitialFp,
+    #[error("Transaction context is invalid")]
+    InvalidTxContext,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]
