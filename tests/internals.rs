@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use num_traits::{One, ToPrimitive, Zero};
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, OrderedEvent, TransactionExecutionInfo},
+        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
         state::{
             cached_state::CachedState,
@@ -147,6 +147,11 @@ fn expected_validate_call_info(
         entry_point_selector: entry_point_selector.into(),
         calldata,
         contract_address: storage_address,
+
+        // Entries **not** in blockifier.
+        class_hash: Some(felt_to_hash(&*TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+        call_type: Some(CallType::Call),
+
         ..Default::default()
     }
 }
@@ -289,6 +294,11 @@ fn test_deploy_account() {
         entry_point_type: EntryPointType::Constructor.into(),
         entry_point_selector: CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone().into(),
         contract_address: deploy_account_tx.contract_address.clone(),
+
+        // Entries **not** in blockifier.
+        class_hash: Some(felt_to_hash(&*TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+        call_type: Some(CallType::Call),
+
         ..Default::default()
     };
 
