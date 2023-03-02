@@ -313,7 +313,12 @@ fn test_deploy_account() {
         expected_execute_call_info.into(),
         expected_fee_transfer_call_info.into(),
         ACTUAL_FEE.to_u64().unwrap(),
-        Default::default(),
+        // Entries **not** in blockifier.
+        // Default::default(),
+        [("l1_gas_usage", 3672)]
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect(),
         TransactionType::DeployAccount.into(),
     );
     assert_eq!(tx_info, expected_execution_info);
