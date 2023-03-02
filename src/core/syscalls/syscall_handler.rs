@@ -1390,7 +1390,7 @@ mod tests {
 
         // Set contract class
         let contract_class =
-            ContractClass::try_from(PathBuf::from("tests/fibonacci.json")).unwrap();
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state

@@ -172,8 +172,6 @@ mod tests {
             state::cached_state::CachedState,
         },
         services::api::contract_class::ContractClass,
-        starknet_storage::{dict_storage::DictStorage, storage::Storage},
-        utils::felt_to_hash,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
@@ -199,7 +197,7 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
         let mut state = CachedState::new(state_reader, None);
 
         // Initialize state.contract_classes
@@ -208,21 +206,17 @@ mod tests {
         // Set contract_class
         let class_hash: [u8; 32] = [1; 32];
         let contract_class =
-            ContractClass::try_from(PathBuf::from("tests/fibonacci.json")).unwrap();
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         state
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
         // Set contact_state
         let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
-        state
-            .state_reader
-            .storage
-            .set_contract_state(
-                &felt_to_hash(&internal_invoke_function.contract_address.0),
-                &contract_state,
-            )
-            .unwrap();
+        state.state_reader.contract_states.insert(
+            internal_invoke_function.contract_address.clone(),
+            contract_state,
+        );
 
         let result = internal_invoke_function
             ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())

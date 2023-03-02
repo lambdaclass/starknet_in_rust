@@ -13,21 +13,19 @@ use starknet_rs::{
     },
     definitions::{
         constants::{
-            TRANSACTION_VERSION, TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
-            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION, TRANSFER_ENTRY_POINT_SELECTOR,
+            TRANSFER_EVENT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
         general_config::{StarknetChainId, StarknetGeneralConfig},
         transaction_type::TransactionType,
     },
-    public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::contract_class::{ContractClass, EntryPointType},
-    starknet_storage::dict_storage::DictStorage,
     utils::{felt_to_hash, Address},
 };
 use std::{collections::HashMap, path::PathBuf};
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
-const ERC20_CONTRACT_PATH: &str = "starknet_programs/erc20_contract_without_some_syscalls.json";
+const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
 const TEST_CONTRACT_PATH: &str = "starknet_programs/test_contract.json";
 
 lazy_static! {
@@ -110,7 +108,7 @@ fn create_account_tx_test_state(
 
     let cached_state = CachedState::new(
         {
-            let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+            let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
             for (contract_address, class_hash) in address_to_class_hash {
                 let storage_keys = storage_view
@@ -221,8 +219,6 @@ fn validate_final_balances<S>(
 fn test_create_account_tx_test_state() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
-    println!("{}", serde_json::to_string(&Felt::zero()).unwrap());
-
     let value = state
         .get_storage_at(&(
             general_config
@@ -232,17 +228,14 @@ fn test_create_account_tx_test_state() {
             felt_to_hash(&*TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
-    println!("value = {:?}", value);
     assert_eq!(value, &2.into());
 
     let class_hash = state.get_class_hash_at(&*TEST_CONTRACT_ADDRESS).unwrap();
-    println!("value = {class_hash:?}");
     assert_eq!(class_hash, &felt_to_hash(&*TEST_CLASS_HASH));
 
     let contract_class = state
         .get_contract_class(&felt_to_hash(&*TEST_ERC20_CONTRACT_CLASS_HASH))
         .unwrap();
-    // println!("value = {contract_class:?}");
     assert_eq!(
         contract_class,
         get_contract_class(ERC20_CONTRACT_PATH).unwrap()

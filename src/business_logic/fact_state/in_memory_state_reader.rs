@@ -3,8 +3,7 @@ use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
-    starknet_storage::{dict_storage::DictStorage, storage::Storage},
-    utils::{felt_to_hash, Address},
+    utils::{Address, ClassHash},
 };
 use felt::Felt;
 use getset::MutGetters;
@@ -12,18 +11,19 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default, MutGetters)]
 pub struct InMemoryStateReader {
-    pub(crate) storage: DictStorage,
     #[getset(get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
-    pub(crate) contract_class_storage: DictStorage,
+    pub(crate) class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
 
 impl InMemoryStateReader {
-    pub fn new(storage: DictStorage, contract_class_storage: DictStorage) -> Self {
+    pub fn new(
+        contract_states: HashMap<Address, ContractState>,
+        class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
+    ) -> Self {
         Self {
-            storage,
-            contract_states: HashMap::new(),
-            contract_class_storage,
+            contract_states,
+            class_hash_to_contract_class,
         }
     }
 
@@ -31,14 +31,6 @@ impl InMemoryStateReader {
         &mut self,
         contract_address: &Address,
     ) -> Result<&ContractState, StateError> {
-        if !self.contract_states.contains_key(contract_address) {
-            let result = self
-                .storage
-                .get_contract_state(&felt_to_hash(&contract_address.0))?;
-            self.contract_states
-                .insert(contract_address.clone(), result);
-        }
-
         self.contract_states
             .get(contract_address)
             .ok_or_else(|| StateError::NoneContractState(contract_address.clone()))
@@ -46,12 +38,16 @@ impl InMemoryStateReader {
 }
 
 impl StateReader for InMemoryStateReader {
-    fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
-        let contract_class = self.contract_class_storage.get_contract_class(class_hash)?;
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
+        let contract_class = self
+            .class_hash_to_contract_class
+            .get(&*class_hash)
+            .ok_or(StateError::MissingClassHash())
+            .cloned()?;
         contract_class.validate()?;
         Ok(contract_class)
     }
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
         Ok(&self.get_contract_state(contract_address)?.contract_hash)
     }
 
@@ -75,23 +71,19 @@ impl StateReader for InMemoryStateReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        services::api::contract_class::{ContractEntryPoint, EntryPointType},
-        starknet_storage::dict_storage::DictStorage,
-    };
+    use crate::services::api::contract_class::{ContractEntryPoint, EntryPointType};
     use cairo_rs::types::program::Program;
 
     #[test]
     fn get_contract_state_test() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::new([1; 32], Felt::new(109), HashMap::new());
 
         state_reader
-            .storage
-            .set_contract_state(&felt_to_hash(&contract_address.0), &contract_state)
-            .unwrap();
+            .contract_states
+            .insert(contract_address.clone(), contract_state.clone());
 
         assert_eq!(
             state_reader.get_contract_state(&contract_address),
@@ -113,7 +105,7 @@ mod tests {
 
     #[test]
     fn get_contract_class_test() {
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
 
         let contract_class_key = [0; 32];
         let contract_class = ContractClass::new(
@@ -127,10 +119,8 @@ mod tests {
         .expect("Error creating contract class");
 
         state_reader
-            .contract_class_storage
-            .set_contract_class(&[0; 32], &contract_class)
-            .unwrap();
-
+            .class_hash_to_contract_class
+            .insert([0; 32], contract_class.clone());
         assert_eq!(
             state_reader.get_contract_class(&contract_class_key),
             Ok(contract_class)
