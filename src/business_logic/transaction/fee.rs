@@ -98,7 +98,6 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     if !general_config
         .cairo_resource_fee_weights
         .keys()
-        .map(|k| k.as_str())
         .all(|k| cairo_resource_usage.contains_key(k))
     {
         return Err(TransactionError::ResourcesError);

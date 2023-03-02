@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use felt::{felt_str, Felt};
+use felt::Felt;
 use num_traits::Zero;
 
 use crate::{
@@ -21,15 +21,16 @@ use crate::{
         contract_address::starknet_contract_address::compute_class_hash,
         transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
-    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+    definitions::{
+        constants::VALIDATE_DECLARE_ENTRY_POINT_NAME, general_config::StarknetGeneralConfig,
+        transaction_type::TransactionType,
+    },
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
 };
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pub(crate) struct InternalDeclare {
     pub(crate) class_hash: [u8; 32],
     pub(crate) sender_address: Address,
@@ -67,10 +68,8 @@ impl InternalDeclare {
             version,
             nonce.clone(),
         )?;
-        // Value generated from get_selector_from_name(VALIDATE_DECLARE_ENTRY_POINT_NAME)
-        let validate_entry_point_selector = felt_str!(
-            "1148189391774113786911959041662034419554430000171893651982484995704491697075"
-        );
+
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_NAME.clone();
 
         let internal_declare = InternalDeclare {
             class_hash,
@@ -251,7 +250,7 @@ impl InternalDeclare {
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
-                self.nonce.clone().to_string(),
+                self.nonce.to_string(),
             ));
         }
 
@@ -291,7 +290,8 @@ impl InternalDeclare {
 
 #[cfg(test)]
 mod tests {
-    use felt::felt_str;
+    use felt::{felt_str, Felt};
+    use num_traits::One;
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
@@ -304,6 +304,7 @@ mod tests {
         },
         core::contract_address::starknet_contract_address::compute_class_hash,
         definitions::{
+            constants::VALIDATE_DECLARE_ENTRY_POINT_NAME,
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
@@ -346,8 +347,10 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("tests/fibonacci.json");
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        dbg!("found the file");
+
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // ----- calculate fib class hash ---------
@@ -379,9 +382,7 @@ mod tests {
         //* ---------------------------------------
 
         // Value generated from selector _validate_declare_
-        let entry_point_selector = Some(felt_str!(
-            "1148189391774113786911959041662034419554430000171893651982484995704491697075"
-        ));
+        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_NAME.clone());
 
         let class_hash_felt = compute_class_hash(&contract_class).unwrap();
         let expected_class_hash = felt_to_hash(&class_hash_felt);
@@ -395,7 +396,7 @@ mod tests {
         let validate_info = Some(CallInfo {
             caller_address: Address(0.into()),
             call_type: Some(CallType::Call),
-            contract_address: Address(1.into()),
+            contract_address: Address(Felt::one()),
             entry_point_selector,
             entry_point_type: Some(EntryPointType::External),
             calldata,

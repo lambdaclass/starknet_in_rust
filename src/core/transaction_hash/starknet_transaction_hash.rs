@@ -3,6 +3,7 @@ use crate::{
         contract_address::starknet_contract_address::compute_class_hash,
         errors::syscall_handler_errors::SyscallHandlerError,
     },
+    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,
     services::api::contract_class::ContractClass,
     utils::Address,
@@ -80,8 +81,7 @@ pub fn calculate_deploy_transaction_hash(
     constructor_calldata: &[Felt],
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
-    let entry_point_selector =
-        felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556");
+    let entry_point_selector = CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone();
 
     calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
@@ -92,7 +92,7 @@ pub fn calculate_deploy_transaction_hash(
         // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
         0,
         chain_id,
-        &Vec::new(),
+        &[],
     )
 }
 
