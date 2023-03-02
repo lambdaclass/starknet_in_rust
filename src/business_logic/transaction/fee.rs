@@ -15,6 +15,7 @@ use felt::{felt_str, Felt};
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
+// second element is the actual fee that the transaction uses
 pub type FeeInfo = (Option<CallInfo>, u64);
 
 // ----------------------------------------------------------------------------

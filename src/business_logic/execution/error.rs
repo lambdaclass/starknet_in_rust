@@ -68,7 +68,7 @@ pub enum ExecutionError {
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
     #[error("Call to another contract has been done")]
-    OtherContractCalls,
+    InvalidContractCall,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]

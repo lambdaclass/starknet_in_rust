@@ -80,6 +80,8 @@ impl InternalDeployAccount {
         }
     }
 
+    /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
+    /// the contract that is being declared. Then it returns the transaction execution info of the run.
     fn apply<S>(
         &self,
         state: &mut S,
@@ -184,7 +186,7 @@ impl InternalDeployAccount {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::OtherContractCalls)?;
+            .map_err(|_| ExecutionError::InvalidContractCall)?;
         Ok(call_info)
     }
 
@@ -247,7 +249,7 @@ impl InternalDeployAccount {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::OtherContractCalls)?;
+            .map_err(|_| ExecutionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }

@@ -183,6 +183,8 @@ impl InternalDeploy {
         )
     }
 
+    /// Calculates actual fee used by the transaction using the execution
+    /// info returned by apply(), then updates the transaction execution info with the data of the fee.  
     pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,

@@ -18,9 +18,10 @@ use crate::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
-    utils::{calculate_tx_resources, preprocess_invoke_function_fields, Address},
+    utils::{calculate_tx_resources, Address},
 };
 use felt::{felt_str, Felt};
+use num_traits::ToPrimitive;
 
 #[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
@@ -132,7 +133,7 @@ impl InternalInvokeFunction {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::OtherContractCalls)?;
+            .map_err(|_| ExecutionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }
@@ -167,6 +168,8 @@ impl InternalInvokeFunction {
         )
     }
 
+    /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
+    /// the contract that is being declared. Then it returns the transaction execution info of the run.
     fn _apply<T>(
         &self,
         state: &mut T,
@@ -203,6 +206,10 @@ impl InternalInvokeFunction {
     }
 }
 
+// ------------------------------------
+//  Invoke internal functions utils
+// ------------------------------------
+
 pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
     let invoked_contract_address = call_info.contract_address.clone();
     for internal_call in call_info.gen_call_topology() {
@@ -211,6 +218,43 @@ pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Tr
         }
     }
     Ok(())
+}
+
+// Performs validation on fields related to function invocation transaction.
+// InvokeFunction transaction.
+// Deduces and returns fields required for hash calculation of
+
+pub(crate) fn preprocess_invoke_function_fields(
+    entry_point_selector: Felt,
+    nonce: Option<Felt>,
+    version: u64,
+) -> Result<(u64, Vec<u64>), TransactionError> {
+    if version > 0 && version < u64::pow(2, 128) {
+        match nonce {
+            Some(_) => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
+            )),
+            None => {
+                let additional_data = Vec::new();
+                let entry_point_selector_field = entry_point_selector
+                    .to_u64()
+                    .ok_or(TransactionError::InvalidFeltConversion)?;
+                Ok((entry_point_selector_field, additional_data))
+            }
+        }
+    } else {
+        match nonce {
+            Some(n) => {
+                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
+                let additional_data = [val].to_vec();
+                let entry_point_selector_field = 0_u64;
+                Ok((entry_point_selector_field, additional_data))
+            }
+            None => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
+            )),
+        }
+    }
 }
 
 #[cfg(test)]
