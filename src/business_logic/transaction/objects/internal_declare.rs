@@ -14,7 +14,7 @@ use crate::{
         state::state_api::{State, StateReader},
         transaction::{
             error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer},
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
         },
     },
     core::{
@@ -127,8 +127,8 @@ impl InternalDeclare {
         Ok(())
     }
 
-    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate 
-    /// the contract that is being declared. Then it returns the transaction execution info of the run. 
+    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
+    /// the contract that is being declared. Then it returns the transaction execution info of the run.
     pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
@@ -212,7 +212,6 @@ impl InternalDeclare {
         Ok(Some(call_info))
     }
 
-
     /// Calculates and charges the actual fee.
     pub fn charge_fee<S: Default + State + StateReader + Clone>(
         &self,
@@ -260,7 +259,7 @@ impl InternalDeclare {
 
         Ok(())
     }
-    /// Calculates actual fee used by the transaction using the execution 
+    /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.  
     pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
