@@ -1,6 +1,7 @@
 use super::{
     hint_code::*,
     os_syscall_handler::OsSyscallHandler,
+    other_syscalls,
     syscall_request::*,
     syscall_response::{
         CallContractResponse, DeployResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
@@ -399,7 +400,10 @@ where
             .execute_hint(vm, exec_scopes, hint_data, constants)
         {
             Ok(()) => Ok(false),
-            Err(HintError::UnknownHint(_)) => Ok(true),
+            Err(HintError::UnknownHint(e)) => {
+                dbg!(e);
+                Ok(true)
+            }
             Err(e) => Err(e),
         }
     }
@@ -409,13 +413,15 @@ where
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        _constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt>,
     ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
-        match &*hint_data.code {
+        match hint_data.code.as_str() {
+            ADDR_BOUND_PRIME => other_syscalls::addr_bound_prime(vm, hint_data, constants),
+            ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data, constants),
             DEPLOY => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.deploy(vm, syscall_ptr)

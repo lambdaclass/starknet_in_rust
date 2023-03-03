@@ -149,7 +149,7 @@ fn expected_validate_call_info(
         contract_address: storage_address,
 
         // Entries **not** in blockifier.
-        class_hash: Some(felt_to_hash(&*TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
         call_type: Some(CallType::Call),
 
         ..Default::default()
@@ -252,7 +252,7 @@ fn test_deploy_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
     let deploy_account_tx = InternalDeployAccount::new(
-        felt_to_hash(&*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         2,
         TRANSACTION_VERSION,
         Default::default(),
@@ -275,28 +275,28 @@ fn test_deploy_account() {
     );
 
     let tx_info = deploy_account_tx
-        ._apply_specific_concurrent_changes(&mut state, &general_config)
+        .execute(&mut state, &general_config)
         .unwrap();
 
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
         [
-            Felt::from_bytes_be(&deploy_account_tx.class_hash),
-            deploy_account_tx.contract_address_salt.0.clone(),
+            Felt::from_bytes_be(deploy_account_tx.class_hash()),
+            deploy_account_tx.contract_address_salt().0.clone(),
         ]
         .into_iter()
-        .chain(deploy_account_tx.constructor_calldata.clone())
+        .chain(deploy_account_tx.constructor_calldata().clone())
         .collect(),
-        deploy_account_tx.contract_address.clone(),
+        deploy_account_tx.contract_address().clone(),
     );
 
     let expected_execute_call_info = CallInfo {
         entry_point_type: EntryPointType::Constructor.into(),
         entry_point_selector: CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone().into(),
-        contract_address: deploy_account_tx.contract_address.clone(),
+        contract_address: deploy_account_tx.contract_address().clone(),
 
         // Entries **not** in blockifier.
-        class_hash: Some(felt_to_hash(&*TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
         call_type: Some(CallType::Call),
 
         ..Default::default()
@@ -304,7 +304,7 @@ fn test_deploy_account() {
 
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &general_config,
-        &deploy_account_tx.contract_address,
+        deploy_account_tx.contract_address(),
         ACTUAL_FEE.to_u64().unwrap(),
     );
 
@@ -324,7 +324,7 @@ fn test_deploy_account() {
     assert_eq!(tx_info, expected_execution_info);
 
     let nonce_from_state = state
-        .get_nonce_at(&deploy_account_tx.contract_address)
+        .get_nonce_at(deploy_account_tx.contract_address())
         .unwrap();
     assert_eq!(nonce_from_state, &Felt::one());
 
@@ -336,7 +336,7 @@ fn test_deploy_account() {
     );
 
     let class_hash_from_state = state
-        .get_class_hash_at(&deploy_account_tx.contract_address)
+        .get_class_hash_at(deploy_account_tx.contract_address())
         .unwrap();
-    assert_eq!(class_hash_from_state, &deploy_account_tx.class_hash);
+    assert_eq!(class_hash_from_state, deploy_account_tx.class_hash());
 }
