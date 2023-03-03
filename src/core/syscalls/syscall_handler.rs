@@ -400,10 +400,7 @@ where
             .execute_hint(vm, exec_scopes, hint_data, constants)
         {
             Ok(()) => Ok(false),
-            Err(HintError::UnknownHint(e)) => {
-                dbg!(e);
-                Ok(true)
-            }
+            Err(HintError::UnknownHint(_)) => Ok(true),
             Err(e) => Err(e),
         }
     }
