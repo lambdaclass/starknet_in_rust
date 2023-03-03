@@ -1,0 +1,15 @@
+[package]
+name = "fuzzer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+honggfuzz = { version = "0.5.55", default-features = false }
+starknet-rs =  { path = "../" }
+felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22" }
+num-traits = "0.2.15"
+starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "main", features = ["testing"] }
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+tempfile = "3.2.0"
