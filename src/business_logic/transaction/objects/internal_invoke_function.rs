@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     business_logic::{
         execution::{
@@ -7,75 +9,104 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-        transaction::error::TransactionError,
+        transaction::{
+            error::TransactionError,
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+        },
+    },
+    core::transaction_hash::starknet_transaction_hash::{
+        calculate_transaction_hash_common, TransactionHashPrefix,
     },
     definitions::{
-        constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::{EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
+    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt;
+use num_traits::{ToPrimitive, Zero};
 
-#[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
-    contract_address: Address,
+    pub(crate) contract_address: Address,
     entry_point_selector: Felt,
-    _entry_point_type: EntryPointType,
+    #[allow(dead_code)]
+    entry_point_type: EntryPointType,
     calldata: Vec<Felt>,
-    _tx_type: TransactionType,
+    tx_type: TransactionType,
     version: u64,
     validate_entry_point_selector: Felt,
     hash_value: Felt,
     signature: Vec<Felt>,
     max_fee: u64,
-    nonce: Felt,
+    nonce: Option<Felt>,
 }
 
 impl InternalInvokeFunction {
-    #[allow(dead_code, clippy::too_many_arguments)]
+    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt,
-        _entry_point_type: EntryPointType,
-        calldata: Vec<Felt>,
-        _tx_type: TransactionType,
-        version: u64,
-        validate_entry_point_selector: Felt,
-        hash_value: Felt,
-        signature: Vec<Felt>,
         max_fee: u64,
-        nonce: Felt,
-    ) -> Self {
-        Self {
+        calldata: Vec<Felt>,
+        signature: Vec<Felt>,
+        chain_id: Felt,
+        nonce: Option<Felt>,
+    ) -> Result<Self, TransactionError> {
+        let version = TRANSACTION_VERSION;
+        let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
+            entry_point_selector.clone(),
+            nonce.clone(),
+            version,
+        )?;
+
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::Invoke,
+            version,
+            contract_address.clone(),
+            entry_point_selector_field,
+            &calldata,
+            max_fee,
+            chain_id,
+            &additional_data,
+        )?;
+
+        let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+
+        Ok(InternalInvokeFunction {
             contract_address,
             entry_point_selector,
-            _entry_point_type,
+            entry_point_type: EntryPointType::External,
             calldata,
-            _tx_type,
+            tx_type: TransactionType::InvokeFunction,
             version,
-            validate_entry_point_selector,
-            hash_value,
-            signature,
             max_fee,
+            signature,
+            validate_entry_point_selector,
             nonce,
-        }
+            hash_value,
+        })
     }
-    #[allow(dead_code)]
-    fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
-        TransactionExecutionContext::new(
+
+    fn get_execution_context(
+        &self,
+        n_steps: u64,
+    ) -> Result<TransactionExecutionContext, TransactionError> {
+        Ok(TransactionExecutionContext::new(
             self.contract_address.clone(),
             self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone(),
+            self.nonce
+                .clone()
+                .ok_or(TransactionError::InvalidNonce("Nonce is None".to_string()))?,
             n_steps,
             self.version,
-        )
+        ))
     }
 
-    #[allow(dead_code)]
     fn run_validate_entrypoint<T>(
         &self,
         state: &mut T,
@@ -107,17 +138,19 @@ impl InternalInvokeFunction {
             state,
             general_config,
             resources_manager,
-            &self.get_execution_context(general_config.validate_max_n_steps),
+            &self
+                .get_execution_context(general_config.validate_max_n_steps)
+                .map_err(|_| ExecutionError::InvalidTxContext)?,
         )?;
 
-        verify_no_calls_to_other_contracts(&call_info)?;
+        verify_no_calls_to_other_contracts(&call_info)
+            .map_err(|_| ExecutionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    #[allow(dead_code)]
     fn run_execute_entrypoint<T>(
         &self,
         state: &mut T,
@@ -141,17 +174,21 @@ impl InternalInvokeFunction {
             state,
             general_config,
             resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps),
+            &self
+                .get_execution_context(general_config.invoke_tx_max_n_steps)
+                .map_err(|_| ExecutionError::InvalidTxContext)?,
         )
     }
 
-    pub(crate) fn _apply_specific_concurrent_changes<T>(
+    /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
+    /// the contract that is being declared. Then it returns the transaction execution info of the run.
+    pub fn apply<T>(
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError>
     where
-        T: Default + State + StateReader,
+        T: Default + State + StateReader + Clone,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
@@ -161,23 +198,80 @@ impl InternalInvokeFunction {
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
 
+        let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
-            self._tx_type.clone(),
-            state.count_actual_storage_changes(),
+            self.tx_type,
+            changes,
             None,
         )?;
+
         let transaction_execution_info =
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 validate_info,
                 Some(call_info),
                 actual_resources,
-                Some(self._tx_type.clone()),
+                Some(self.tx_type),
             );
         Ok(transaction_execution_info)
     }
+
+    fn charge_fee<S>(
+        &self,
+        state: &mut S,
+        resources: &HashMap<String, usize>,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<FeeInfo, TransactionError>
+    where
+        S: Clone + Default + State + StateReader,
+    {
+        if self.max_fee.is_zero() {
+            return Ok((None, 0));
+        }
+
+        let actual_fee = calculate_tx_fee(
+            resources,
+            general_config.starknet_os_config.gas_price,
+            general_config,
+        )?;
+
+        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
+        let fee_transfer_info =
+            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+
+        Ok((Some(fee_transfer_info), actual_fee))
+    }
+
+    /// Calculates actual fee used by the transaction using the execution
+    /// info returned by apply(), then updates the transaction execution info with the data of the fee.  
+    pub fn execute<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+        let concurrent_exec_info = self.apply(state, general_config)?;
+        let (fee_transfer_info, actual_fee) = self
+            .charge_fee(
+                state,
+                &concurrent_exec_info.actual_resources,
+                general_config,
+            )
+            .map_err(|e| ExecutionError::FeeCalculationError(e.to_string()))?;
+
+        Ok(
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                concurrent_exec_info,
+                actual_fee,
+                fee_transfer_info,
+            ),
+        )
+    }
 }
+
+// ------------------------------------
+//  Invoke internal functions utils
+// ------------------------------------
 
 pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
     let invoked_contract_address = call_info.contract_address.clone();
@@ -187,6 +281,41 @@ pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Tr
         }
     }
     Ok(())
+}
+
+// Performs validation on fields related to function invocation transaction.
+// InvokeFunction transaction.
+// Deduces and returns fields required for hash calculation of
+
+pub(crate) fn preprocess_invoke_function_fields(
+    entry_point_selector: Felt,
+    nonce: Option<Felt>,
+    version: u64,
+) -> Result<(Felt, Vec<u64>), TransactionError> {
+    if version == 0 || version == u64::MAX {
+        match nonce {
+            Some(_) => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
+            )),
+            None => {
+                let additional_data = Vec::new();
+                let entry_point_selector_field = entry_point_selector;
+                Ok((entry_point_selector_field, additional_data))
+            }
+        }
+    } else {
+        match nonce {
+            Some(n) => {
+                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
+                let additional_data = [val].to_vec();
+                let entry_point_selector_field = Felt::zero();
+                Ok((entry_point_selector_field, additional_data))
+            }
+            None => Err(TransactionError::InvalidNonce(
+                "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
+            )),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -213,15 +342,15 @@ mod tests {
                 16,
             )
             .unwrap(),
-            _entry_point_type: EntryPointType::External,
+            entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
-            _tx_type: TransactionType::InvokeFunction,
+            tx_type: TransactionType::InvokeFunction,
             version: 0,
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
             max_fee: 0,
-            nonce: 0.into(),
+            nonce: Some(0.into()),
         };
 
         // Instantiate CachedState
@@ -247,7 +376,7 @@ mod tests {
         );
 
         let result = internal_invoke_function
-            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &StarknetGeneralConfig::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));

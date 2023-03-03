@@ -132,16 +132,16 @@ fn test_create_account_tx_test_state() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&*TEST_ERC20_ACCOUNT_BALANCE_KEY),
+            felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
     assert_eq!(value, &2.into());
 
-    let class_hash = state.get_class_hash_at(&*TEST_CONTRACT_ADDRESS).unwrap();
-    assert_eq!(class_hash, &felt_to_hash(&*TEST_CLASS_HASH));
+    let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
+    assert_eq!(class_hash, &felt_to_hash(&TEST_CLASS_HASH));
 
     let contract_class = state
-        .get_contract_class(&felt_to_hash(&*TEST_ERC20_CONTRACT_CLASS_HASH))
+        .get_contract_class(&felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
         .unwrap();
     assert_eq!(
         contract_class,

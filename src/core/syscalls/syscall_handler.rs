@@ -1539,20 +1539,17 @@ mod tests {
                 16,
             )
             .unwrap(),
-            EntryPointType::External,
+            0,
             vec![10.into()],
-            TransactionType::InvokeFunction,
-            0,
-            0.into(),
-            0.into(),
             Vec::new(),
-            0,
             0.into(),
-        );
+            Some(0.into()),
+        )
+        .unwrap();
 
         // Invoke result
         let result = internal_invoke_function
-            ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &StarknetGeneralConfig::default())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

@@ -5,10 +5,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext},
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::cached_state::CachedState,
+        fact_state::state::ExecutionResourcesManager,
+        state::state_api::{State, StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
@@ -17,17 +15,20 @@ use felt::{felt_str, Felt};
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
+// second element is the actual fee that the transaction uses
+pub type FeeInfo = (Option<CallInfo>, u64);
+
 // ----------------------------------------------------------------------------
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
 
-pub(crate) fn execute_fee_transfer(
-    state: &mut CachedState<InMemoryStateReader>,
-    general_config: StarknetGeneralConfig,
-    tx_context: TransactionExecutionContext,
+pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
+    state: &mut S,
+    general_config: &StarknetGeneralConfig,
+    tx_context: &TransactionExecutionContext,
     actual_fee: u64,
 ) -> Result<CallInfo, TransactionError> {
-    if actual_fee as u64 > tx_context.max_fee {
+    if actual_fee > tx_context.max_fee {
         return Err(TransactionError::FeeError(
             "Actual fee exceeded max fee.".to_string(),
         ));
@@ -58,7 +59,7 @@ pub(crate) fn execute_fee_transfer(
 
     let mut resources_manager = ExecutionResourcesManager::default();
     fee_transfer_call
-        .execute(state, &general_config, &mut resources_manager, &tx_context)
+        .execute(state, general_config, &mut resources_manager, tx_context)
         .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
 }
 
@@ -68,7 +69,7 @@ pub(crate) fn execute_fee_transfer(
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
 
 pub(crate) fn calculate_tx_fee(
-    resources: HashMap<String, Felt>,
+    resources: &HashMap<String, usize>,
     gas_price: u64,
     general_config: &StarknetGeneralConfig,
 ) -> Result<u64, TransactionError> {
@@ -90,14 +91,13 @@ pub(crate) fn calculate_tx_fee(
 
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
     general_config: &StarknetGeneralConfig,
-    cairo_resource_usage: HashMap<String, Felt>,
+    cairo_resource_usage: &HashMap<String, usize>,
 ) -> Result<f64, TransactionError> {
     // Ensure that every key in `general_config.cairo_resource_fee_weights` is present in
     // `cairo_resource_usage`.
     if !general_config
         .cairo_resource_fee_weights
-        .iter()
-        .map(|(k, _)| k.as_str())
+        .keys()
         .all(|k| cairo_resource_usage.contains_key(k))
     {
         return Err(TransactionError::ResourcesError);
@@ -105,19 +105,15 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
 
     // Convert Cairo usage to L1 gas usage.
     Ok(max_of_keys(
-        &cairo_resource_usage,
+        cairo_resource_usage,
         &general_config.cairo_resource_fee_weights,
     ))
 }
 
-fn max_of_keys(cairo_rsc: &HashMap<String, Felt>, weights: &HashMap<String, f64>) -> f64 {
+fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64>) -> f64 {
     let mut max = 0.0_f64;
     for (k, v) in weights {
-        let val = cairo_rsc
-            .get(k)
-            .unwrap_or(&0.into())
-            .to_f64()
-            .unwrap_or(0.0_f64);
+        let val = cairo_rsc.get(k).unwrap_or(&0).to_f64().unwrap_or(0.0_f64);
         max = f64::max(max, val * v);
     }
     max
