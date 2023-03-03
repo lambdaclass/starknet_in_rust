@@ -78,7 +78,7 @@ pub enum ExecutionError {
     #[error("Transaction context is invalid")]
     InvalidTxContext,
     #[error("{0}")]
-    FeeErrorCalculation(String),
+    FeeCalculationError(String),
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]

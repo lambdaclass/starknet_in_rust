@@ -257,7 +257,7 @@ impl InternalInvokeFunction {
                 &concurrent_exec_info.actual_resources,
                 general_config,
             )
-            .map_err(|e| ExecutionError::FeeErrorCalculation(e.to_string()))?;
+            .map_err(|e| ExecutionError::FeeCalculationError(e.to_string()))?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
