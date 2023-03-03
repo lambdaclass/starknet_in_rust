@@ -1,5 +1,5 @@
 use super::state_errors::StateError;
-use cairo_rs::vm::errors::vm_errors::VirtualMachineError;
+use cairo_rs::vm::errors::{hint_errors::HintError, vm_errors::VirtualMachineError};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
@@ -82,4 +82,6 @@ pub enum SyscallHandlerError {
     ErrorComputingHash,
     #[error(transparent)]
     StateError(#[from] StateError),
+    #[error(transparent)]
+    HintError(#[from] HintError),
 }

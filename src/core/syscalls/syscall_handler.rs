@@ -495,7 +495,10 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|e| HintError::UnknownHint(e.to_string()))?;
+                .map_err(|e| match e {
+                    SyscallHandlerError::HintError(e) => e,
+                    _ => HintError::UnknownHint(e.to_string()),
+                })?;
         }
         Ok(())
     }
