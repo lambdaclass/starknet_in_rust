@@ -22,7 +22,10 @@ use starknet_rs::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{felt_to_hash, Address},
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
@@ -48,7 +51,7 @@ lazy_static! {
         felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
 
     // Others.
-    static ref ACTUAL_FEE: Felt = 2.into();
+    static ref ACTUAL_FEE: Felt = Felt::zero();
 }
 
 fn get_contract_class<P>(path: P) -> Result<ContractClass, Box<dyn std::error::Error>>
@@ -185,6 +188,16 @@ fn expected_fee_transfer_call_info(
                 Felt::zero(),
             ],
         }],
+
+        // Entries **not** in blockifier.
+        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        call_type: Some(CallType::Call),
+        accessed_storage_keys: HashSet::from([
+            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
+            todo!(),
+        ]),
+        storage_read_values: vec![Felt::zero(), Felt::zero()],
+
         ..Default::default()
     }
 }
@@ -233,7 +246,7 @@ fn test_create_account_tx_test_state() {
             felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
-    assert_eq!(value, &2.into());
+    assert_eq!(value, &*ACTUAL_FEE);
 
     let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
     assert_eq!(class_hash, &felt_to_hash(&TEST_CLASS_HASH));
@@ -313,7 +326,7 @@ fn test_deploy_account() {
         expected_execute_call_info.into(),
         expected_fee_transfer_call_info.into(),
         ACTUAL_FEE.to_u64().unwrap(),
-        // Entries **not** in blockifier.
+        // Entry **not** in blockifier.
         // Default::default(),
         [("l1_gas_usage", 3672)]
             .into_iter()
