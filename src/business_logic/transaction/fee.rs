@@ -24,8 +24,8 @@ pub type FeeInfo = (Option<CallInfo>, u64);
 
 pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
     state: &mut S,
-    general_config: StarknetGeneralConfig,
-    tx_context: TransactionExecutionContext,
+    general_config: &StarknetGeneralConfig,
+    tx_context: &TransactionExecutionContext,
     actual_fee: u64,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_context.max_fee {
@@ -59,8 +59,8 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
 
     let mut resources_manager = ExecutionResourcesManager::default();
     fee_transfer_call
-        .execute(state, &general_config, &mut resources_manager, &tx_context)
-        .map_err(|e| TransactionError::FeeError(e.to_string()))
+        .execute(state, general_config, &mut resources_manager, tx_context)
+        .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
 }
 
 // ----------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
 
 pub(crate) fn calculate_tx_fee(
-    resources: HashMap<String, usize>,
+    resources: &HashMap<String, usize>,
     gas_price: u64,
     general_config: &StarknetGeneralConfig,
 ) -> Result<u64, TransactionError> {
@@ -91,7 +91,7 @@ pub(crate) fn calculate_tx_fee(
 
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
     general_config: &StarknetGeneralConfig,
-    cairo_resource_usage: HashMap<String, usize>,
+    cairo_resource_usage: &HashMap<String, usize>,
 ) -> Result<f64, TransactionError> {
     // Ensure that every key in `general_config.cairo_resource_fee_weights` is present in
     // `cairo_resource_usage`.
@@ -105,7 +105,7 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
 
     // Convert Cairo usage to L1 gas usage.
     Ok(max_of_keys(
-        &cairo_resource_usage,
+        cairo_resource_usage,
         &general_config.cairo_resource_fee_weights,
     ))
 }

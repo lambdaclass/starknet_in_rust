@@ -173,7 +173,7 @@ fn test_declare_tx() {
 
     let declare_tx = declare_tx();
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    let result = declare_tx.execute(&mut state, general_config).unwrap();
+    let result = declare_tx.execute(&mut state, &general_config).unwrap();
     dbg!(&result);
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
     todo!()

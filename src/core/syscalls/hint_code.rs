@@ -48,7 +48,7 @@ pub(crate) const GET_BLOCK_NUMBER: &str =
     "syscall_handler.get_block_number(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
 // *************************
-//     Syscall hints
+//     Normal hints
 // *************************
 
 pub(crate) const ADDR_BOUND_PRIME: &str =

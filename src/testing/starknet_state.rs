@@ -85,7 +85,7 @@ impl StarknetState {
         )?;
 
         let mut state = self.state.apply_to_copy();
-        let tx_execution_info = tx.execute(&mut state, self.general_config.clone())?;
+        let tx_execution_info = tx.execute(&mut state, &self.general_config)?;
 
         Ok((tx.class_hash, tx_execution_info))
     }
