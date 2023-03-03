@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use felt::{felt_str, Felt};
-use num_traits::Zero;
+use num_traits::{Num, Zero};
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -26,7 +26,7 @@ use starknet_rs::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
-use std::{collections::HashMap, iter::empty, path::Path};
+use std::{collections::HashMap, collections::HashSet, iter::empty, path::Path};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -711,5 +711,190 @@ fn send_message_to_l1_syscall() {
         [],
         [],
         [],
+    );
+}
+
+#[test]
+fn deploy_syscall() {
+    let deploy_address = Felt::from_str_radix(
+        "2771739216117269195266211756239816992170608283088994568066688164855938378843",
+        10,
+    )
+    .unwrap();
+
+    let deploy_class_hash = [2u8; 32];
+    test_contract(
+        "starknet_programs/syscalls.json",
+        "test_deploy",
+        [1; 32],
+        Address(11111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [],
+        [].into_iter(),
+        [(
+            deploy_class_hash,
+            Path::new("starknet_programs/storage.json"),
+            None,
+        )]
+        .into_iter(),
+        [Felt::from_bytes_be(deploy_class_hash.as_ref()), 0.into()],
+        vec![CallInfo {
+            caller_address: Address(0.into()),
+            contract_address: Address(deploy_address.clone()),
+            entry_point_type: Some(EntryPointType::Constructor),
+            call_type: Some(CallType::Call),
+            class_hash: Some(deploy_class_hash),
+            ..Default::default()
+        }],
+        [deploy_address],
+    );
+}
+
+#[test]
+fn deploy_with_constructor_syscall() {
+    let deploy_address = Felt::from_str_radix(
+        "61956907203782517318335437536462535199340115817938156158070235163997828534",
+        10,
+    )
+    .unwrap();
+
+    let deploy_class_hash = [2u8; 32];
+    test_contract(
+        "starknet_programs/syscalls.json",
+        "test_deploy_with_constructor",
+        [1; 32],
+        Address(11111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [],
+        [].into_iter(),
+        [(
+            deploy_class_hash,
+            Path::new("starknet_programs/storage_var_and_constructor.json"),
+            None,
+        )]
+        .into_iter(),
+        [
+            Felt::from_bytes_be(deploy_class_hash.as_ref()),
+            0.into(),
+            550.into(),
+        ],
+        [],
+        [deploy_address],
+    );
+}
+
+#[test]
+fn test_deploy_and_call_contract_syscall() {
+    let constructor_constant = Felt::new(550);
+    let new_constant = Felt::new(3);
+    let constant_storage_key: [u8; 32] = [
+        2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27, 162, 147,
+        169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
+    ];
+    let deploy_class_hash = [2u8; 32];
+    let deploy_address = Address(
+        Felt::from_str_radix(
+            "61956907203782517318335437536462535199340115817938156158070235163997828534",
+            10,
+        )
+        .unwrap(),
+    );
+    test_contract(
+        "starknet_programs/syscalls.json",
+        "test_deploy_and_call_contract",
+        [1; 32],
+        Address(11111.into()),
+        Address(0.into()),
+        StarknetGeneralConfig::default(),
+        None,
+        [],
+        [],
+        [],
+        [].into_iter(),
+        [(
+            deploy_class_hash,
+            Path::new("starknet_programs/storage_var_and_constructor.json"),
+            None,
+        )]
+        .into_iter(),
+        [
+            Felt::from_bytes_be(deploy_class_hash.as_ref()),
+            0.into(),
+            constructor_constant.clone(),
+            new_constant.clone(),
+        ],
+        [
+        // Invoke storage_var_and_constructor.cairo mult_constant function
+        CallInfo {
+            caller_address: Address(11111.into()),
+            call_type: Some(CallType::Call),
+            contract_address: deploy_address.clone(),
+            code_address: None,
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(
+                Felt::from_str_radix(
+                    "1576037374104670872807053137865113122553607263175471701007015754752102201893",
+                    10,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![4.into()],
+            retdata: vec![(constructor_constant.clone() * Felt::new(4))],
+            storage_read_values: vec![constructor_constant],
+            accessed_storage_keys: HashSet::from([constant_storage_key]),
+            ..Default::default()
+        },
+        // Invoke storage_var_and_constructor.cairo set_constant function
+        CallInfo {
+            caller_address: Address(11111.into()),
+            call_type: Some(CallType::Call),
+            contract_address: deploy_address.clone(),
+            code_address: None,
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(
+                Felt::from_str_radix(
+                    "1201037417712951658445715615949920673423990292207294106968654696818998525373",
+                    10,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![new_constant.clone()],
+            retdata: vec![],
+            storage_read_values: vec![],
+            accessed_storage_keys: HashSet::from([constant_storage_key]),
+            ..Default::default()
+        },
+        // Invoke storage_var_and_constructor.cairo get_constant function
+        CallInfo {
+            caller_address: Address(11111.into()),
+            call_type: Some(CallType::Call),
+            contract_address: deploy_address,
+            code_address: None,
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(
+                Felt::from_str_radix(
+                    "915547745133109687566886827729966789818200062539892992518817034473866315209",
+                    10,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![],
+            retdata: vec![new_constant.clone()],
+            storage_read_values: vec![new_constant.clone()],
+            accessed_storage_keys: HashSet::from([constant_storage_key]),
+            ..Default::default()
+        }        ],
+        [new_constant],
     );
 }
