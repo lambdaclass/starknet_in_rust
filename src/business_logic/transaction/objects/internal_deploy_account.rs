@@ -1,6 +1,4 @@
-use felt::Felt;
-use num_traits::Zero;
-
+use super::internal_invoke_function::verify_no_calls_to_other_contracts;
 use crate::{
     business_logic::{
         execution::{
@@ -10,6 +8,10 @@ use crate::{
         },
         fact_state::{contract_state::StateSelector, state::ExecutionResourcesManager},
         state::state_api::{State, StateReader},
+        transaction::{
+            error::TransactionError,
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+        },
     },
     core::{
         errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
@@ -24,8 +26,9 @@ use crate::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_tx_resources, Address},
 };
-
-use super::internal_invoke_function::verify_no_calls_to_other_contracts;
+use felt::Felt;
+use num_traits::Zero;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
 pub struct InternalDeployAccount {
@@ -78,6 +81,27 @@ impl InternalDeployAccount {
             contract_addresses: vec![self.contract_address.clone()],
             class_hashes: vec![self.class_hash],
         }
+    }
+
+    pub fn execute<S>(
+        &self,
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, TransactionError>
+    where
+        S: Clone + Default + State + StateReader,
+    {
+        let tx_info = self.apply(state, general_config)?;
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &tx_info.actual_resources, general_config)?;
+
+        Ok(
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                tx_info,
+                actual_fee,
+                fee_transfer_info,
+            ),
+        )
     }
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
@@ -252,5 +276,31 @@ impl InternalDeployAccount {
             .map_err(|_| ExecutionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
+    }
+
+    fn charge_fee<S>(
+        &self,
+        state: &mut S,
+        resources: &HashMap<String, usize>,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<FeeInfo, TransactionError>
+    where
+        S: Clone + Default + State + StateReader,
+    {
+        if self.max_fee.is_zero() {
+            return Ok((None, 0));
+        }
+
+        let actual_fee = calculate_tx_fee(
+            resources,
+            general_config.starknet_os_config.gas_price,
+            general_config,
+        )?;
+
+        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps);
+        let fee_transfer_info =
+            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+
+        Ok((Some(fee_transfer_info), actual_fee))
     }
 }
