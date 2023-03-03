@@ -7,6 +7,7 @@ pub mod business_logic;
 pub mod core;
 pub mod definitions;
 pub mod hash_utils;
+pub mod parser_errors;
 pub mod public;
 pub mod serde_structs;
 pub mod server;
