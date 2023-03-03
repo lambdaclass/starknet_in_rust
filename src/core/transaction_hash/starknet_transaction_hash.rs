@@ -64,7 +64,7 @@ pub fn calculate_transaction_hash_common(
         tx_hash_prefix.get_prefix(),
         version.into(),
         contract_address.0,
-        entry_point_selector.into(),
+        entry_point_selector,
         calldata_hash,
         max_fee.into(),
         chain_id,
@@ -85,14 +85,12 @@ pub fn calculate_deploy_transaction_hash(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
-        // TODO: A constant CONSTRUCTOR_ENTRY_POINT_SELECTOR must be provided here.
-        // See https://github.com/starkware-libs/cairo-lang/blob/9889fbd522edc5eff603356e1912e20642ae20af/src/starkware/starknet/public/abi.py#L53
         CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
         // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
         constructor_calldata,
         0,
         chain_id,
-        &Vec::new(),
+        &[],
     )
 }
 
@@ -104,10 +102,10 @@ pub fn calculate_deploy_account_transaction_hash(
     constructor_calldata: &[Felt],
     max_fee: u64,
     nonce: u64,
-    salt: u64,
+    salt: Felt,
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
-    let mut calldata: Vec<Felt> = vec![class_hash, salt.into()];
+    let mut calldata: Vec<Felt> = vec![class_hash, salt];
     calldata.extend_from_slice(constructor_calldata);
 
     calculate_transaction_hash_common(
@@ -168,7 +166,7 @@ mod tests {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
         let version = 0;
         let contract_address = Address(42.into());
-        let entry_point_selector = Felt::new(100);
+        let entry_point_selector = 100.into();
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
         let chain_id = 1.into();

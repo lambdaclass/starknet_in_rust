@@ -6,8 +6,7 @@ use super::{
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint, execution_errors::ExecutionError,
-            objects::*,
+            error::ExecutionError, execution_entry_point::ExecutionEntryPoint, objects::*,
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
@@ -23,7 +22,6 @@ use crate::{
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
     starknet_storage::errors::storage_errors::StorageError,
     utils::*,
-    utils_errors::UtilsError,
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -338,11 +336,7 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: [u8; 32] = request
-            .class_hash
-            .to_bytes_be()
-            .try_into()
-            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(request.class_hash.clone()))?;
+        let class_hash_bytes: [u8; 32] = felt_to_hash(&request.class_hash);
 
         self.starknet_storage_state
             .state
@@ -420,7 +414,12 @@ where
                 &mut self.resources_manager,
                 &self.tx_execution_context,
             )
-            .map(|x| x.retdata)
+            .map(|x| {
+                let retdata = x.retdata.clone();
+                self.internal_calls.push(x);
+
+                retdata
+            })
             .map_err(|_| todo!())
     }
 
@@ -532,13 +531,14 @@ where
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
         Ok(
-            match self.starknet_storage_state.read(&address.to_32_bytes()?) {
+            match self.starknet_storage_state.read(&felt_to_hash(&address.0)) {
                 Ok(x) => x.clone(),
                 Err(
                     StateError::StorageError(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_),
+                    | StateError::NoneStorage(_)
+                    | StateError::NoneContractState(_),
                 ) => Felt::zero(),
                 Err(e) => return Err(e.into()),
             },
@@ -547,7 +547,7 @@ where
 
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
         self.starknet_storage_state
-            .write(&address.to_32_bytes()?, value);
+            .write(&felt_to_hash(&address.0), value);
 
         Ok(())
     }

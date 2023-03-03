@@ -26,7 +26,6 @@ use starknet_rs::{
         add_address, add_class_hash, get_contract_from_address, get_contract_from_class_hash,
     },
     services::api::contract_class::ContractClass,
-    starknet_storage::dict_storage::DictStorage,
     utils::{felt_to_hash, Address},
 };
 use std::{collections::HashMap, path::PathBuf};
@@ -138,7 +137,7 @@ fn invoke_parser(args: &InvokeArgs) {
 
     let contract_state = ContractState::new(felt_to_hash(&class_hash), 0.into(), HashMap::new());
 
-    let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
     state_reader
         .contract_states_mut()
         .insert(Address(contract_address.clone()), contract_state);

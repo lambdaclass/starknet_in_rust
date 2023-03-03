@@ -17,7 +17,7 @@ pub struct BlockInfo {
 impl BlockInfo {
     pub fn empty(sequencer_address: Address) -> Self {
         BlockInfo {
-            block_number: 1,
+            block_number: 0,
             block_timestamp: 0,
             gas_price: 0,
             sequencer_address,

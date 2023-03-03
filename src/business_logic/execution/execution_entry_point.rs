@@ -1,5 +1,5 @@
 use super::{
-    execution_errors::ExecutionError,
+    error::ExecutionError,
     objects::{CallInfo, CallType, TransactionExecutionContext},
 };
 use crate::{
@@ -76,18 +76,19 @@ impl ExecutionEntryPoint {
         T: Default + State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
+
         let runner = self.run(
             state,
             resources_manager,
             general_config,
             tx_execution_context,
         )?;
+
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values()?;
-
         self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler,
@@ -122,7 +123,6 @@ impl ExecutionEntryPoint {
         // create starknet runner
 
         let mut vm = VirtualMachine::new(false);
-
         let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)?;
         cairo_runner.initialize_function_runner(&mut vm)?;
 

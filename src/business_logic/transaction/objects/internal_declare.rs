@@ -1,188 +1,37 @@
-use super::{
-    error::TransactionError,
-    fee::{calculate_tx_fee, execute_fee_transfer},
-    state_objects::FeeInfo,
-};
+use std::collections::HashMap;
+
+use felt::Felt;
+use num_traits::Zero;
+
 use crate::{
     business_logic::{
         execution::{
+            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
-            execution_errors::ExecutionError,
-            objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
+            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{
-            cached_state::CachedState,
-            state_api::{State, StateReader},
+        fact_state::state::ExecutionResourcesManager,
+        state::state_api::{State, StateReader},
+        transaction::{
+            error::TransactionError,
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
         },
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
-        errors::syscall_handler_errors::SyscallHandlerError,
-        transaction_hash::starknet_transaction_hash::{
-            calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
-        },
+        transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
-    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
-    hash_utils::calculate_contract_address,
+    definitions::{
+        constants::VALIDATE_DECLARE_ENTRY_POINT_NAME, general_config::StarknetGeneralConfig,
+        transaction_type::TransactionType,
+    },
     services::api::contract_class::{ContractClass, EntryPointType},
-    starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
-    utils_errors::UtilsError,
 };
-use felt::{felt_str, Felt};
-use num_traits::Zero;
-use std::collections::HashMap;
-
-pub struct InternalDeploy {
-    hash_value: Felt,
-    version: u64,
-    contract_address: Address,
-    _contract_address_salt: Address,
-    contract_hash: [u8; 32],
-    constructor_calldata: Vec<Felt>,
-    tx_type: TransactionType,
-}
-
-impl InternalDeploy {
-    pub fn new(
-        contract_address_salt: Address,
-        contract_class: ContractClass,
-        constructor_calldata: Vec<Felt>,
-        chain_id: Felt,
-        version: u64,
-    ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_class_hash(&contract_class)
-            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
-        let contract_hash: [u8; 32] = class_hash
-            .to_string()
-            .as_bytes()
-            .try_into()
-            .map_err(|_| UtilsError::FeltToFixBytesArrayFail(class_hash.clone()))?;
-        let contract_address = Address(calculate_contract_address(
-            &contract_address_salt,
-            &class_hash,
-            &constructor_calldata[..],
-            Address(0.into()),
-        )?);
-
-        let hash_value = calculate_deploy_transaction_hash(
-            version,
-            contract_address.clone(),
-            &constructor_calldata,
-            chain_id,
-        )?;
-        Ok(InternalDeploy {
-            hash_value,
-            version,
-            contract_address,
-            _contract_address_salt: contract_address_salt,
-            contract_hash,
-            constructor_calldata,
-            tx_type: TransactionType::Deploy,
-        })
-    }
-
-    pub fn class_hash(&self) -> [u8; 32] {
-        self.contract_hash
-    }
-
-    pub fn _apply_specific_concurrent_changes<S: State + StateReader + Clone>(
-        &self,
-        mut state: CachedState<S>,
-        _general_config: StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
-        let class_hash: [u8; 32] = self.contract_hash[..]
-            .try_into()
-            .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
-        state.get_contract_class(&class_hash)?;
-
-        self.handle_empty_constructor(&mut state)
-    }
-
-    pub fn _apply_specific_sequential_changes(
-        &self,
-        _state: impl State,
-        _general_config: StarknetGeneralConfig,
-        _actual_resources: HashMap<String, Felt>,
-    ) -> FeeInfo {
-        let fee_transfer_info = None;
-        let actual_fee = 0;
-        (fee_transfer_info, actual_fee)
-    }
-
-    pub fn handle_empty_constructor<T: State + StateReader>(
-        &self,
-        state: &mut T,
-    ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        if self.constructor_calldata.is_empty() {
-            return Err(StarkwareError::TransactionFailed);
-        }
-
-        let class_hash: [u8; 32] = self.contract_hash[..]
-            .try_into()
-            .map_err(|_| StarkwareError::IncorrectClassHashSize)?;
-        let call_info = CallInfo::empty_constructor_call(
-            self.contract_address.clone(),
-            Address(0.into()),
-            Some(class_hash),
-        );
-
-        let resources_manager = ExecutionResourcesManager {
-            ..Default::default()
-        };
-
-        let actual_resources = calculate_tx_resources(
-            resources_manager,
-            &[Some(call_info.clone())],
-            self.tx_type.clone(),
-            state.count_actual_storage_changes(),
-            None,
-        )
-        .map_err(|_| StarkwareError::UnexpectedHolesL2toL1Messages)?;
-
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                None,
-                Some(call_info),
-                actual_resources,
-                Some(self.tx_type.clone()),
-            ),
-        )
-    }
-
-    pub fn invoke_constructor<S: State + StateReader + Clone>(
-        &self,
-        _state: CachedState<S>,
-        general_config: StarknetGeneralConfig,
-    ) -> TransactionExecutionInfo {
-        // TODO: uncomment once execute entry point has been implemented
-        // let call = ExecuteEntryPoint.create()
-        // let call_info = call.execute()
-        // actual_resources = calculate_tx_resources()
-
-        let _tx_execution_context = TransactionExecutionContext::new(
-            Address(Felt::zero()),
-            self.hash_value.clone(),
-            Vec::new(),
-            0,
-            Felt::zero(),
-            general_config.invoke_tx_max_n_steps,
-            self.version,
-        );
-
-        let _resources_manager = ExecutionResourcesManager::default();
-        todo!()
-    }
-}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pub(crate) struct InternalDeclare {
     pub(crate) class_hash: [u8; 32],
     pub(crate) sender_address: Address,
@@ -210,7 +59,6 @@ impl InternalDeclare {
         nonce: Felt,
     ) -> Result<Self, TransactionError> {
         let hash = compute_class_hash(&contract_class)?;
-
         let class_hash = felt_to_hash(&hash);
 
         let hash_value = calculate_declare_transaction_hash(
@@ -222,10 +70,7 @@ impl InternalDeclare {
             nonce.clone(),
         )?;
 
-        // Value generated from get_selector_from_name(VALIDATE_DECLARE_ENTRY_POINT_NAME)
-        let validate_entry_point_selector = felt_str!(
-            "1148189391774113786911959041662034419554430000171893651982484995704491697075"
-        );
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_NAME.clone();
 
         let internal_declare = InternalDeclare {
             class_hash,
@@ -282,32 +127,37 @@ impl InternalDeclare {
         Ok(())
     }
 
-    pub fn apply_specific_concurrent_changes<S: Default + State + StateReader>(
+    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
+    /// the contract that is being declared. Then it returns the transaction execution info of the run.
+    pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
-        general_config: StarknetGeneralConfig,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
+
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
+        let validate_info = self
+            .run_validate_entrypoint(state, &mut resources_manager, general_config)
+            .map_err(|e| TransactionError::RunValidationError(e.to_string()))?;
 
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
-
+        let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![validate_info.clone()],
             TransactionType::Declare,
-            state.count_actual_storage_changes(),
+            changes,
             None,
-        )?;
+        )
+        .map_err(|_| TransactionError::ResourcesCalculationError)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 validate_info,
                 None,
                 actual_resources,
-                Some(self.tx_type.clone()),
+                Some(self.tx_type),
             ),
         )
     }
@@ -315,7 +165,6 @@ impl InternalDeclare {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Internal Account Functions
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
@@ -332,7 +181,7 @@ impl InternalDeclare {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: StarknetGeneralConfig,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
         if self.version > 0x8000_0000_0000_0000 {
             return Ok(None);
@@ -346,13 +195,13 @@ impl InternalDeclare {
             self.validate_entry_point_selector.clone(),
             Address(Felt::zero()),
             EntryPointType::External,
-            Some(CallType::Delegate),
-            Some(self.class_hash),
+            None,
+            None,
         );
 
         let call_info = entry_point.execute(
             state,
-            &general_config,
+            general_config,
             resources_manager,
             &self.get_execution_context(general_config.invoke_tx_max_n_steps),
         )?;
@@ -363,15 +212,12 @@ impl InternalDeclare {
         Ok(Some(call_info))
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    // Calculates and charges the actual fee.
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    pub fn charge_fee(
+    /// Calculates and charges the actual fee.
+    pub fn charge_fee<S: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
-        resources: HashMap<String, Felt>,
-        general_config: StarknetGeneralConfig,
+        state: &mut S,
+        resources: &HashMap<String, usize>,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -380,19 +226,19 @@ impl InternalDeclare {
         let actual_fee = calculate_tx_fee(
             resources,
             general_config.starknet_os_config.gas_price,
-            &general_config,
+            general_config,
         )?;
 
         let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, tx_context, actual_fee)?;
+            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
-    fn handle_nonce(
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
+        state: &mut S,
     ) -> Result<(), TransactionError> {
         if self.version > 0x8000_0000_0000_0000 {
             return Err(TransactionError::StarknetError(
@@ -405,7 +251,7 @@ impl InternalDeclare {
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
-                self.nonce.clone().to_string(),
+                self.nonce.to_string(),
             ));
         }
 
@@ -413,16 +259,29 @@ impl InternalDeclare {
 
         Ok(())
     }
-
-    pub fn apply_specific_sequential_changes(
+    /// Calculates actual fee used by the transaction using the execution
+    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
-        state: &mut CachedState<InMemoryStateReader>,
-        general_config: StarknetGeneralConfig,
-        actual_resources: HashMap<String, Felt>,
-    ) -> Result<FeeInfo, TransactionError> {
-        self.handle_nonce(state)?;
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let concurrent_exec_info = self.apply(state, general_config)?;
 
-        self.charge_fee(state, actual_resources, general_config)
+        self.handle_nonce(state)?;
+        let (fee_transfer_info, actual_fee) = self.charge_fee(
+            state,
+            &concurrent_exec_info.actual_resources,
+            general_config,
+        )?;
+
+        Ok(
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                concurrent_exec_info,
+                actual_fee,
+                fee_transfer_info,
+            ),
+        )
     }
 }
 
@@ -432,7 +291,9 @@ impl InternalDeclare {
 
 #[cfg(test)]
 mod tests {
-    use felt::felt_str;
+    use super::*;
+    use felt::{felt_str, Felt};
+    use num_traits::One;
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
@@ -443,26 +304,62 @@ mod tests {
             },
             state::cached_state::CachedState,
         },
-        core::contract_address::starknet_contract_address::compute_class_hash,
         definitions::{
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
         services::api::contract_class::{ContractClass, EntryPointType},
-        starknet_storage::dict_storage::DictStorage,
         utils::{felt_to_hash, Address},
     };
 
     use super::InternalDeclare;
 
     #[test]
-    fn test_internal_declare() {
+    fn declare_fibonacci() {
+        // accounts contract class must be store before running declarartion of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class.clone());
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+        let contract_state = ContractState::new(class_hash, 1.into(), HashMap::new());
+
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        state_reader
+            .contract_states
+            .insert(sender_address, contract_state);
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        dbg!("found the file");
+
         let chain_id = StarknetChainId::TestNet.to_felt();
 
+        // ----- calculate fib class hash ---------
+        let hash = compute_class_hash(&fib_contract_class).unwrap();
+        let fib_class_hash = felt_to_hash(&hash);
+
+        // declare tx
         let internal_declare = InternalDeclare::new(
-            contract_class.clone(),
+            fib_contract_class.clone(),
             chain_id,
             Address(1.into()),
             0,
@@ -472,55 +369,34 @@ mod tests {
         )
         .unwrap();
 
-        // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        // this simulate the setting done while declaring with starknet state
 
-        //  ------------ contract data --------------------
-
-        let class_hash = internal_declare.class_hash;
-        contract_class_cache.insert(class_hash, contract_class.clone());
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
-
-        contract_class_cache.insert(class_hash, contract_class.clone());
-
-        let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
-        state_reader
-            .contract_states
-            .insert(sender_address, contract_state);
-        //* ---------------------------------------
-        //*    Create state with previous data
-        //* ---------------------------------------
-
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        state
+            .contract_classes
+            .as_mut()
+            .unwrap()
+            .insert(fib_class_hash, fib_contract_class);
 
         //* ---------------------------------------
         //              Expected result
         //* ---------------------------------------
 
         // Value generated from selector _validate_declare_
-        let entry_point_selector = Some(felt_str!(
-            "1148189391774113786911959041662034419554430000171893651982484995704491697075"
-        ));
+        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_NAME.clone());
 
         let class_hash_felt = compute_class_hash(&contract_class).unwrap();
         let expected_class_hash = felt_to_hash(&class_hash_felt);
 
         // Calldata is the class hash represented as a Felt
         let calldata = [felt_str!(
-            "2901640178084440408246930713802824082113120028809962300981437495334608520882"
+            "3263750508471340057496742110279857589794844827005189048727502686976772849721"
         )]
         .to_vec();
 
         let validate_info = Some(CallInfo {
             caller_address: Address(0.into()),
-            call_type: Some(CallType::Delegate),
-            contract_address: Address(1.into()),
+            call_type: Some(CallType::Call),
+            contract_address: Address(Felt::one()),
             entry_point_selector,
             entry_point_type: Some(EntryPointType::External),
             calldata,
@@ -544,7 +420,7 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply_specific_concurrent_changes(&mut state, StarknetGeneralConfig::default())
+                .apply(&mut state, &StarknetGeneralConfig::default())
                 .unwrap(),
             transaction_exec_info
         );

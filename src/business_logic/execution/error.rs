@@ -1,5 +1,4 @@
 use super::os_usage::OsResources;
-use crate::business_logic::transaction::transaction_errors::TransactionError;
 use crate::definitions::transaction_type::TransactionType;
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -68,12 +67,16 @@ pub enum ExecutionError {
     OutOfBound,
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
+    #[error("Call to another contract has been done")]
+    InvalidContractCall,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]
     MemoryException(#[from] MemoryError),
     #[error("Expected Relocatable; found None")]
     InvalidInitialFp,
+    #[error("Transaction context is invalid")]
+    InvalidTxContext,
     #[error(transparent)]
     VmException(#[from] VirtualMachineError),
     #[error(transparent)]
@@ -84,8 +87,6 @@ pub enum ExecutionError {
     StarknetRunnerException(#[from] StarknetRunnerError),
     #[error(transparent)]
     SyscallException(#[from] SyscallHandlerError),
-    #[error(transparent)]
-    TransactionError(#[from] TransactionError),
     #[error("Transaction type {0:?} not found in OsResources: {1:?}")]
     NoneTransactionType(TransactionType, OsResources),
 }
