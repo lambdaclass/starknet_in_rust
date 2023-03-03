@@ -465,11 +465,13 @@ mod tests {
             )
             .unwrap();
 
+        // fibonacci selector
         let selector = Felt::from_str_radix(
             "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             16,
         )
         .unwrap();
+
         let tx_info = starknet_state
             .invoke_raw(
                 contract_address,
@@ -491,6 +493,7 @@ mod tests {
         );
         let mut actual_resources = HashMap::new();
         actual_resources.insert("l1_gas_usage".to_string(), 0);
+
         let expected_info = TransactionExecutionInfo {
             validate_info: None,
             call_info: Some(CallInfo {
