@@ -116,7 +116,7 @@ impl ExecutionEntryPoint {
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
             .get_contract_class(&class_hash)
-            .map_err(|_| ExecutionError::MissigContractClass)?;
+            .map_err(|_| ExecutionError::MissingContractClass)?;
 
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
