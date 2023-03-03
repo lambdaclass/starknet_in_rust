@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     business_logic::{
         execution::{
@@ -7,7 +9,10 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-        transaction::error::TransactionError,
+        transaction::{
+            error::TransactionError,
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+        },
     },
     core::transaction_hash::starknet_transaction_hash::{
         calculate_transaction_hash_common, TransactionHashPrefix,
@@ -211,6 +216,57 @@ impl InternalInvokeFunction {
                 Some(self.tx_type),
             );
         Ok(transaction_execution_info)
+    }
+
+    fn _charge_fee<S>(
+        &self,
+        state: &mut S,
+        resources: &HashMap<String, usize>,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<FeeInfo, TransactionError>
+    where
+        S: Clone + Default + State + StateReader,
+    {
+        if self.max_fee.is_zero() {
+            return Ok((None, 0));
+        }
+
+        let actual_fee = calculate_tx_fee(
+            resources,
+            general_config.starknet_os_config.gas_price,
+            general_config,
+        )?;
+
+        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
+        let fee_transfer_info =
+            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+
+        Ok((Some(fee_transfer_info), actual_fee))
+    }
+
+    /// Calculates actual fee used by the transaction using the execution
+    /// info returned by apply(), then updates the transaction execution info with the data of the fee.  
+    pub fn _execute<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+        let concurrent_exec_info = self._apply(state, general_config)?;
+        let (fee_transfer_info, actual_fee) = self
+            ._charge_fee(
+                state,
+                &concurrent_exec_info.actual_resources,
+                general_config,
+            )
+            .map_err(|e| ExecutionError::FeeErrorCalculation(e.to_string()))?;
+
+        Ok(
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                concurrent_exec_info,
+                actual_fee,
+                fee_transfer_info,
+            ),
+        )
     }
 }
 
