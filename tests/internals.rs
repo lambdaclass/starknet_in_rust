@@ -10,7 +10,8 @@ use starknet_rs::{
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     definitions::{
-        constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::EXECUTE_ENTRY_POINT_SELECTOR,
+        general_config::{StarknetChainId, StarknetGeneralConfig},
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -138,16 +139,16 @@ fn test_create_account_tx_test_state() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&*TEST_ERC20_ACCOUNT_BALANCE_KEY),
+            felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
     assert_eq!(value, &2.into());
 
-    let class_hash = state.get_class_hash_at(&*TEST_CONTRACT_ADDRESS).unwrap();
-    assert_eq!(class_hash, &felt_to_hash(&*TEST_CLASS_HASH));
+    let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
+    assert_eq!(class_hash, &felt_to_hash(&TEST_CLASS_HASH));
 
     let contract_class = state
-        .get_contract_class(&felt_to_hash(&*TEST_ERC20_CONTRACT_CLASS_HASH))
+        .get_contract_class(&felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
         .unwrap();
     assert_eq!(
         contract_class,
@@ -159,22 +160,20 @@ fn invoke_tx(calldata: Vec<Felt>) -> InternalInvokeFunction {
     InternalInvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        EntryPointType::External,
-        calldata,
-        TransactionType::InvokeFunction,
         1,
-        Felt::zero(),
-        Felt::zero(),
+        calldata,
         vec![],
-        0,
-        Felt::zero(),
+        StarknetChainId::TestNet.to_felt(),
+        Some(Felt::zero()),
     )
+    .unwrap()
 }
 
 #[test]
 fn test_invoke_tx() {
+    println!("0");
     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
-
+    println!("1");
     // TODO Should add builtins?
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
@@ -182,15 +181,13 @@ fn test_invoke_tx() {
         Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
         Felt::from(1),                 // CONTRACT_CALLDATA LEN
         Felt::from(2),                 // CONTRACT_CALLDATA
-    ]; // ACA TENGO QUE AGREGAR EL HASH DEL ENTRYPOINT, LOS PARAMS Y EL ADDRESS DEL CONTRATO
+    ];
     let invoke_tx = invoke_tx(calldata.clone());
-
+    println!("2");
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
-    let result = invoke_tx
-        ._apply_specific_concurrent_changes(state, starknet_general_config)
-        .unwrap();
-
+    let result = invoke_tx.execute(state, starknet_general_config).unwrap();
+    println!("3");
     let expected_validate_call_info = CallInfo {
         caller_address: Address(Felt::zero()),
         call_type: Some(CallType::Call),
@@ -321,155 +318,6 @@ fn test_invoke_tx() {
 
     assert_eq!(result, expected_execution_info);
 
-    // let ours = TransactionExecutionInfo {
-    //     validate_info: None,
-    //     call_info: Some(CallInfo {
-    //         caller_address: Address(0),
-    //         call_type: Some(Call),
-    //         contract_address: Address(257),
-    //         code_address: None,
-    //         class_hash: Some([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]),
-    //         entry_point_selector: Some(617075754465154585683856897856256838130216341506379215893724690153393808813),
-    //         entry_point_type: Some(External),
-    //         calldata: [256, 1629174963900209270929724181518648239607275954724935556801269374828746872577, 1, 2],
-    //         retdata: [2],
-    //         execution_resources: ExecutionResources {
-    //             n_steps: 0,
-    //             n_memory_holes: 0,
-    //             builtin_instance_counter: {}
-    //         },
-    //         events: [],
-    //         l2_to_l1_messages: [],
-    //         storage_read_values: [],
-    //         accessed_storage_keys: {},
-    //         internal_calls: [
-    //             CallInfo {
-    //                 caller_address: Address(257),
-    //                 call_type: Some(Call),
-    //                 contract_address: Address(256),
-    //                 code_address: None,
-    //                 class_hash: Some([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]),
-    //                 entry_point_selector: Some(1629174963900209270929724181518648239607275954724935556801269374828746872577),
-    //                 entry_point_type: Some(External),
-    //                 calldata: [2],
-    //                 retdata: [2],
-    //                 execution_resources: ExecutionResources {
-    //                     n_steps: 0,
-    //                     n_memory_holes: 0,
-    //                     builtin_instance_counter: {}
-    //                 },
-    //                 events: [],
-    //                 l2_to_l1_messages: [],
-    //                 storage_read_values: [],
-    //                 accessed_storage_keys: {},
-    //                 internal_calls: []
-    //             }
-    //         ]
-    //     }),
-    //     fee_transfer_info: None,
-    //     actual_fee: 0,
-    //     actual_resources: HashMap::from([("l1_gas_usage", 0)]),
-    //     tx_type: Some(TransactionType::InvokeFunction)
-    // };
-
-    // let theirs = TransactionExecutionInfo {
-    //     validate_info: Some(CallInfo {
-    //         caller_address: Address(0),
-    //         call_type: Some(Call),
-    //         contract_address: Address(256),
-    //         code_address: None,
-    //         class_hash: None,
-    //         entry_point_selector: Some(626969833899987279399947180575486623810258720106406659648356883742278317941),
-    //         entry_point_type: Some(External),
-    //         calldata: [256,
-    //         1629174963900209270929724181518648239607275954724935556801269374828746872577,
-    //         1,
-    //         2],
-    //         retdata: [1],
-    //         execution_resources: ExecutionResources {
-    //             n_steps: 0,
-    //             n_memory_holes: 0,
-    //             builtin_instance_counter: {}
-    //         },
-    //         events: [],
-    //         l2_to_l1_messages: [],
-    //         storage_read_values: [],
-    //         accessed_storage_keys: {},
-    //         internal_calls: []
-    //     }),
-    //     call_info: Some(CallInfo {
-    //         caller_address: Address(0),
-    //         call_type: Some(Call),
-    //         contract_address: Address(256),
-    //         code_address: None,
-    //         class_hash: None,
-    //         entry_point_selector: Some(617075754465154585683856897856256838130216341506379215893724690153393808813),
-    //         entry_point_type: Some(External),
-    //         calldata: [256,
-    //         1629174963900209270929724181518648239607275954724935556801269374828746872577,
-    //         1,
-    //         2],
-    //         retdata: [2],
-    //         execution_resources: ExecutionResources {
-    //             n_steps: 0,
-    //             n_memory_holes: 0,
-    //             builtin_instance_counter: {}
-    //         },
-    //         events: [],
-    //         l2_to_l1_messages: [],
-    //         storage_read_values: [],
-    //         accessed_storage_keys: {},
-    //         internal_calls: [CallInfo {
-    //             caller_address: Address(257),
-    //             call_type: Some(Call),
-    //             contract_address: Address(0),
-    //             code_address: None,
-    //             class_hash: None,
-    //             entry_point_selector: Some(1629174963900209270929724181518648239607275954724935556801269374828746872577),
-    //             entry_point_type: Some(EntryPointType::External),
-    //             calldata: [2],
-    //             retdata: [2],
-    //             execution_resources: ExecutionResources {
-    //                 n_steps: 0,
-    //                 n_memory_holes: 0,
-    //                 builtin_instance_counter: {}
-    //             },
-    //             events: [],
-    //             l2_to_l1_messages: [],
-    //             storage_read_values: [],
-    //             accessed_storage_keys: {},
-    //             internal_calls: []
-    //         }]
-    //     }),
-    //     fee_transfer_info: Some(CallInfo {
-    //         caller_address: Address(257),
-    //         call_type: Some(Call),
-    //         contract_address: Address(256),
-    //         code_address: None,
-    //         class_hash: None,
-    //         entry_point_selector: Some(232670485425082704932579856502088130646006032362877466777181098476241604910),
-    //         entry_point_type: Some(External),
-    //         calldata: [4096,
-    //         1,
-    //         0],
-    //         retdata: [1],
-    //         execution_resources: ExecutionResources {
-    //             n_steps: 0,
-    //             n_memory_holes: 0,
-    //             builtin_instance_counter: {}
-    //         },
-    //         events: [OrderedEvent {
-    //             order: 0,
-    //             keys: [271746229759260285552388728919865295615886751538523744128730118297934206697],
-    //             data: [257, 4096, 1, 0] }],
-    //         l2_to_l1_messages: [],
-    //         storage_read_values: [],
-    //         accessed_storage_keys: {},
-    //         internal_calls: []
-    //     }),
-    //     actual_fee: 1,
-    //     actual_resources: {},
-    //     tx_type: Some(InvokeFunction) };
     // // Build expected validate call info.
     // let expected_account_address = ContractAddress(patricia_key!(TEST_ACCOUNT_CONTRACT_ADDRESS));
     // let expected_validate_call_info = expected_validate_call_info(
