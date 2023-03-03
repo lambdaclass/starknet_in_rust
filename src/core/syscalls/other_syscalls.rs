@@ -51,7 +51,6 @@ pub fn addr_bound_prime(
 pub fn addr_is_250(
     vm: &mut VirtualMachine,
     hint_data: &HintProcessorData,
-    _constants: &HashMap<String, Felt>,
 ) -> Result<(), SyscallHandlerError> {
     let addr = get_integer_from_var_name("addr", vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
     let is_250 = if addr.as_ref().bits() <= 250 {

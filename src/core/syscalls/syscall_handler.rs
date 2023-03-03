@@ -418,7 +418,7 @@ where
 
         match hint_data.code.as_str() {
             ADDR_BOUND_PRIME => other_syscalls::addr_bound_prime(vm, hint_data, constants),
-            ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data, constants),
+            ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data),
             DEPLOY => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.deploy(vm, syscall_ptr)
