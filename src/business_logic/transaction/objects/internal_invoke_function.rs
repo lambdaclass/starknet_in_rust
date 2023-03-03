@@ -85,10 +85,11 @@ impl InternalInvokeFunction {
     where
         T: Default + State + StateReader,
     {
+        println!("entry_point_selector: {}", self.entry_point_selector);
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-
+        println!("version: {}", self.version);
         if self.version == 0 {
             return Ok(None);
         }
@@ -103,12 +104,16 @@ impl InternalInvokeFunction {
             None,
         );
 
+        println!("call: {:?}", call);
+
         let call_info = call.execute(
             state,
             general_config,
             resources_manager,
             &self.get_execution_context(general_config.validate_max_n_steps),
         )?;
+
+        println!("call_info: {:?}", call_info);
 
         verify_no_calls_to_other_contracts(&call_info)?;
 
