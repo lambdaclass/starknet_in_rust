@@ -84,8 +84,8 @@ impl StarknetState {
             0.into(),
         )?;
 
-        let mut state = self.state.apply_to_copy();
-        let tx_execution_info = tx.execute(&mut state, &self.general_config)?;
+        let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
+        self.state = self.state.apply_to_copy();
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -424,14 +424,11 @@ mod tests {
                 .to_owned(),
             class_hash
         );
-
         // check that state has store fib class hash
         assert_eq!(
             starknet_state
                 .state
-                .contract_classes
-                .unwrap()
-                .get(&fib_class_hash)
+                .get_contract_class(&fib_class_hash)
                 .unwrap()
                 .to_owned(),
             fib_contract_class
