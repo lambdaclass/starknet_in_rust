@@ -67,7 +67,7 @@ impl<T: StateReader + Clone> CachedState<T> {
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
-        if !(self.get_contract_classes()?.contains_key(class_hash)) {
+        if !self.get_contract_classes()?.contains_key(class_hash) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
             self.set_contract_class(class_hash, &contract_class)?;
         }
