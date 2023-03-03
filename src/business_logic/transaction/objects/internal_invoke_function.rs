@@ -187,7 +187,7 @@ impl InternalInvokeFunction {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    fn apply<T>(
+    pub fn apply<T>(
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
@@ -297,7 +297,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     nonce: Option<Felt>,
     version: u64,
 ) -> Result<(Felt, Vec<u64>), TransactionError> {
-    if version > 0 && version < u64::pow(2, 128) {
+    if version == 0 || version == u64::MAX {
         match nonce {
             Some(_) => Err(TransactionError::InvalidNonce(
                 "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
