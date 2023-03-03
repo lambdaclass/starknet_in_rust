@@ -9,12 +9,16 @@ use crate::{
 
 use super::{
     error::TransactionError,
-    objects::{internal_deploy::InternalDeploy, internal_invoke_function::InternalInvokeFunction},
+    objects::{
+        internal_declare::InternalDeclare, internal_deploy::InternalDeploy,
+        internal_invoke_function::InternalInvokeFunction,
+    },
 };
 
-pub(crate) enum Transaction {
+pub enum Transaction {
     Deploy(InternalDeploy),
     InvokeFunction(InternalInvokeFunction),
+    Declare(InternalDeclare),
 }
 
 impl Transaction {
@@ -29,6 +33,7 @@ impl Transaction {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
             Transaction::InvokeFunction(tx) => tx.contract_address.clone(),
+            Transaction::Declare(tx) => tx.account_contract_address(),
         }
     }
 
@@ -40,6 +45,7 @@ impl Transaction {
         match self {
             Transaction::Deploy(tx) => tx.execute(state, general_config),
             Transaction::InvokeFunction(_) => Err(TransactionError::NotImplemented),
+            Transaction::Declare(tx) => tx.execute(state, general_config),
         }
     }
 }

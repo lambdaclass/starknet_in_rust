@@ -1,4 +1,5 @@
 use crate::{
+    business_logic::execution::error::ExecutionError,
     core::errors::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
@@ -41,4 +42,6 @@ pub enum TransactionError {
     UnauthorizedActionOnValidate,
     #[error(transparent)]
     StarkwareException(#[from] StarkwareError),
+    #[error(transparent)]
+    ExecutionError(#[from] ExecutionError),
 }

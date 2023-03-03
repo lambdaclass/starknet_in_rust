@@ -2,15 +2,15 @@
 
 use business_logic::{
     execution::{
-        error::ExecutionError,
         execution_entry_point::ExecutionEntryPoint,
-        objects::{CallType, TransactionExecutionContext},
+        objects::{CallType, TransactionExecutionContext, TransactionExecutionInfo},
     },
     fact_state::state::ExecutionResourcesManager,
     state::{
         cached_state::CachedState,
         state_api::{State, StateReader},
     },
+    transaction::{error::TransactionError, transactions::Transaction},
 };
 use definitions::general_config::StarknetGeneralConfig;
 use felt::Felt;
@@ -33,6 +33,8 @@ pub mod starkware_utils;
 pub mod testing;
 pub mod utils;
 
+type TransactionResult<T> = Result<T, TransactionError>;
+
 #[derive(Debug)]
 pub struct ContractCall {
     contract_address: Address,
@@ -53,7 +55,7 @@ impl Starknet {
         resources_manager: &mut ExecutionResourcesManager,
         config: &StarknetGeneralConfig,
         tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<Vec<Felt>, ExecutionError>
+    ) -> TransactionResult<Vec<Felt>>
     where
         T: State + StateReader + Clone + Default,
     {
@@ -71,5 +73,31 @@ impl Starknet {
             entrypoint.execute(state, config, resources_manager, tx_execution_context)?;
 
         Ok(call_info.retdata)
+    }
+
+    pub fn estimate_fee<T>(
+        state: &CachedState<T>,
+        tx: Transaction,
+        config: &StarknetGeneralConfig,
+    ) -> TransactionResult<u64>
+    where
+        T: State + StateReader + Clone + Default,
+    {
+        let mut state_copy = state.clone();
+        tx.execute(&mut state_copy, config)
+            .map(|tx_exec| tx_exec.actual_fee)
+            .map_err(Into::into)
+    }
+
+    pub fn execute_tx<T>(
+        &self,
+        state: &mut CachedState<T>,
+        tx: Transaction,
+        config: &StarknetGeneralConfig,
+    ) -> TransactionResult<TransactionExecutionInfo>
+    where
+        T: State + StateReader + Clone + Default,
+    {
+        tx.execute(state, config).map_err(Into::into)
     }
 }

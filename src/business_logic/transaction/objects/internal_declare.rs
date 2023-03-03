@@ -31,7 +31,7 @@ use crate::{
 
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
-pub(crate) struct InternalDeclare {
+pub struct InternalDeclare {
     pub(crate) class_hash: [u8; 32],
     pub(crate) sender_address: Address,
     pub(crate) tx_type: TransactionType,
