@@ -381,7 +381,7 @@ impl TxInfoStruct {
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TransactionExecutionInfo {
     pub(crate) validate_info: Option<CallInfo>,
     pub(crate) call_info: Option<CallInfo>,

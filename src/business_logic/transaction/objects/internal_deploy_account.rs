@@ -27,14 +27,19 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt;
+use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Getters)]
 pub struct InternalDeployAccount {
+    #[getset(get = "pub")]
     contract_address: Address,
+    #[getset(get = "pub")]
     contract_address_salt: Address,
+    #[getset(get = "pub")]
     class_hash: [u8; 32],
+    #[getset(get = "pub")]
     constructor_calldata: Vec<Felt>,
     version: u64,
     nonce: u64,
@@ -44,7 +49,6 @@ pub struct InternalDeployAccount {
 }
 
 impl InternalDeployAccount {
-    #![allow(unused)] // TODO: delete once used
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: [u8; 32],

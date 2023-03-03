@@ -47,7 +47,6 @@ pub(crate) struct InternalDeclare {
 //                        Functions
 // ------------------------------------------------------------
 impl InternalDeclare {
-    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt,
