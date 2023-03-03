@@ -4,11 +4,11 @@ use cairo_rs::{
         builtin_hint_processor_definition::HintProcessorData,
         hint_utils::{get_integer_from_var_name, insert_value_from_var_name},
     },
-    vm::vm_core::VirtualMachine,
+    vm::{errors::vm_errors::VirtualMachineError, vm_core::VirtualMachine},
 };
 use felt::Felt;
 use num_traits::{One, Zero};
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Shl};
 
 pub fn addr_bound_prime(
     vm: &mut VirtualMachine,
@@ -23,6 +23,19 @@ pub fn addr_bound_prime(
     // "assert (2**250 < ADDR_BOUND <= 2**251) and (2 * 2**250 < PRIME) and (",
     // "        ADDR_BOUND * 2 > PRIME), \\",
     // "    'normalize_address() cannot be used with the current constants.'",
+    let lower_bound = Felt::from(1).shl(250u32);
+    let upper_bound = Felt::from(1).shl(251u32);
+    if !(&lower_bound < addr_bound && addr_bound <= &upper_bound) {
+        // return Err(VirtualMachineError::Hint(
+        //     todo!(),
+        //     HintError::AssertionFailed(
+        //         "normalize_address() cannot be used with the current constants.".to_string(),
+        //     )
+        //     .into(),
+        // )
+        // .into());
+        todo!()
+    }
 
     let addr =
         get_integer_from_var_name("addr", vm, &hint_data.ids_data, &hint_data.ap_tracking).unwrap();
@@ -39,7 +52,10 @@ pub fn addr_bound_prime(
         &hint_data.ids_data,
         &hint_data.ap_tracking,
     )
-    .unwrap();
+    .map_err::<VirtualMachineError, _>(|_| {
+        // VirtualMachineError::Hint(todo!(), e.into())
+        todo!()
+    })?;
 
     Ok(())
 }
