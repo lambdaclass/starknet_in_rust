@@ -1,11 +1,11 @@
-use crate::{business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH, utils::Address};
+/* use crate::{business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH, utils::Address};
 use felt::Felt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct ContractState {
-    pub(crate) contract_hash: [u8; 32],
+    pub(crate) contract_hash: [u8; 32], //class_hash
     pub(crate) nonce: Felt,
     pub(crate) storage_keys: HashMap<Felt, Felt>,
 }
@@ -47,3 +47,4 @@ pub struct StateSelector {
     pub contract_addresses: Vec<Address>,
     pub class_hashes: Vec<[u8; 32]>,
 }
+ */

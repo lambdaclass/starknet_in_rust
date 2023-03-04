@@ -181,7 +181,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+            in_memory_state_reader::InMemoryStateReader,
         },
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
 
         let contract_address = Address(32123.into());
         let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn get_contract_class_from_state_reader() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
 
         let contract_class = ContractClass::new(
             Program::default(),
@@ -247,7 +247,7 @@ mod tests {
     #[test]
     fn cached_state_storage_test() {
         let mut cached_state = CachedState::new(
-            InMemoryStateReader::new(HashMap::new(), HashMap::new()),
+            InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new()),
             None,
         );
 
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn cached_state_deploy_contract_test() {
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
 
         let contract_address = Address(32123.into());
 
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn get_and_set_storage() {
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
 
         let contract_address = Address(31.into());
         let storage_key = [18; 32];

@@ -189,7 +189,7 @@ mod test {
     use crate::{
         business_logic::{
             fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+                in_memory_state_reader::InMemoryStateReader,
             },
             state::cached_state::CachedState,
         },
@@ -200,14 +200,23 @@ mod test {
 
     #[test]
     fn test_from_cached_state_without_updates() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
+        let class_hash = [9; 32];
+        let nonce = Felt::new(42); 
+        let storage_entry = (contract_address, [17; 32]);
+        let storage_value = Felt::new(402);
 
-        state_reader
-            .contract_states
-            .insert(contract_address, contract_state);
+        state_reader.address_to_class_hash.insert(
+            contract_address.clone(), 
+            class_hash.clone());
+        state_reader.address_to_nonce.insert(
+            contract_address.clone(),
+            nonce.clone());
+        state_reader.address_to_storage.insert(
+            storage_entry.clone(),
+            storage_value.clone());
 
         let cached_state = CachedState::new(state_reader, None);
 

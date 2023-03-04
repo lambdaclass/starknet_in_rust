@@ -11,7 +11,7 @@ use crate::{
             objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::{
-            contract_state::StateSelector, in_memory_state_reader::InMemoryStateReader,
+            in_memory_state_reader::InMemoryStateReader,
             state::ExecutionResourcesManager,
         },
         state::{
@@ -706,7 +706,7 @@ mod tests {
 
         contract_class_cache.insert(class_hash, contract_class.clone());
 
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
         state_reader
             .contract_states
             .insert(sender_address, contract_state);
