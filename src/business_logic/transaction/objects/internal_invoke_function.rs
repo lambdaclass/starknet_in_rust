@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     business_logic::{
         execution::{
@@ -7,7 +9,10 @@ use crate::{
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-        transaction::error::TransactionError,
+        transaction::{
+            error::TransactionError,
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+        },
     },
     core::transaction_hash::starknet_transaction_hash::{
         calculate_transaction_hash_common, TransactionHashPrefix,
@@ -24,10 +29,10 @@ use crate::{
 use felt::Felt;
 use num_traits::Zero;
 
-#[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
     pub(crate) contract_address: Address,
     entry_point_selector: Felt,
+    #[allow(dead_code)]
     entry_point_type: EntryPointType,
     calldata: Vec<Felt>,
     tx_type: TransactionType,
@@ -40,6 +45,7 @@ pub(crate) struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
+    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt,
@@ -101,7 +107,6 @@ impl InternalInvokeFunction {
         ))
     }
 
-    #[allow(dead_code)]
     fn run_validate_entrypoint<T>(
         &self,
         state: &mut T,
@@ -146,7 +151,6 @@ impl InternalInvokeFunction {
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    #[allow(dead_code)]
     fn run_execute_entrypoint<T>(
         &self,
         state: &mut T,
@@ -178,7 +182,7 @@ impl InternalInvokeFunction {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    fn _apply<T>(
+    pub fn apply<T>(
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
@@ -212,6 +216,57 @@ impl InternalInvokeFunction {
             );
         Ok(transaction_execution_info)
     }
+
+    fn charge_fee<S>(
+        &self,
+        state: &mut S,
+        resources: &HashMap<String, usize>,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<FeeInfo, TransactionError>
+    where
+        S: Clone + Default + State + StateReader,
+    {
+        if self.max_fee.is_zero() {
+            return Ok((None, 0));
+        }
+
+        let actual_fee = calculate_tx_fee(
+            resources,
+            general_config.starknet_os_config.gas_price,
+            general_config,
+        )?;
+
+        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
+        let fee_transfer_info =
+            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+
+        Ok((Some(fee_transfer_info), actual_fee))
+    }
+
+    /// Calculates actual fee used by the transaction using the execution
+    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    pub fn execute<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+        let concurrent_exec_info = self.apply(state, general_config)?;
+        let (fee_transfer_info, actual_fee) = self
+            .charge_fee(
+                state,
+                &concurrent_exec_info.actual_resources,
+                general_config,
+            )
+            .map_err(|e| ExecutionError::FeeCalculationError(e.to_string()))?;
+
+        Ok(
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                concurrent_exec_info,
+                actual_fee,
+                fee_transfer_info,
+            ),
+        )
+    }
 }
 
 // ------------------------------------
@@ -237,7 +292,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     nonce: Option<Felt>,
     version: u64,
 ) -> Result<(Felt, Vec<Felt>), TransactionError> {
-    if version > 0 && version < u64::pow(2, 128) {
+    if version == 0 || version == u64::MAX {
         match nonce {
             Some(_) => Err(TransactionError::InvalidNonce(
                 "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
@@ -320,7 +375,7 @@ mod tests {
         );
 
         let result = internal_invoke_function
-            ._apply(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &StarknetGeneralConfig::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
