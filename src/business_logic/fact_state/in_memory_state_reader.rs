@@ -13,7 +13,7 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt>,
-    pub(crate) address_to_storage: HashMap<StorageEntry, Felt>, // Question: StorageEntry or StorageKey?
+    pub(crate) address_to_storage: HashMap<StorageEntry, Felt>,
     pub(crate) class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
 
@@ -103,12 +103,6 @@ mod tests {
             .address_to_storage
             .insert(storage_entry.clone(), storage_value.clone());
 
-        /*
-        assert_eq!(
-            state_reader.get_contract_state(&contract_address),
-            Ok(TODO)s
-        );
-        */
         assert_eq!(
             state_reader.get_class_hash_at(&contract_address),
             Ok(&class_hash)

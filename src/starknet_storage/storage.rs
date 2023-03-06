@@ -1,11 +1,5 @@
-use super::{
-    dict_storage::{Prefix, StorageKey},
-    errors::storage_errors::StorageError,
-};
-use crate::{
-    utils::Address,
-    services::api::contract_class::ContractClass,
-};
+use super::errors::storage_errors::StorageError;
+use crate::{services::api::contract_class::ContractClass, utils::Address};
 use std::str;
 
 /* -----------------------------------------------------------------------------------
@@ -94,11 +88,13 @@ pub trait Storage {
         Ok(f64::from_bits(u64::from_be_bytes(float_bytes)))
     }
 
+    // Converts a string to its byte form inside a vector and stores it
     fn set_str(&mut self, key: &[u8; 32], value: &str) -> Result<(), StorageError> {
         let val = value.as_bytes().to_vec();
         self.set_value(&(Prefix::Str, *key), val)
     }
 
+    // Retrieves
     fn get_str(&self, key: &[u8; 32]) -> Result<String, StorageError> {
         let val = self
             .get_value(&(Prefix::Str, *key))
@@ -115,6 +111,7 @@ pub trait Storage {
         storage_entry_key: [u8; 32],
         storage_entry_value: Felt,
     ) -> Result<(), StorageError> {
+        let contract_state = vec![];
         self.set_value(&(Prefix::ContractState, *key), contract_state)
     }
 
@@ -149,6 +146,20 @@ pub trait Storage {
         self.set_value(&(Prefix::ContractClass, *key), contract_class)
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+pub enum Prefix {
+    Int,
+    Float,
+    Str,
+    Address,
+    ClassHash,
+    Felt, // nonce
+    StorageEntry,
+    ContractClass,
+}
+
+pub type StorageKey = (Prefix, [u8; 32]);
 
 #[cfg(test)]
 mod tests {

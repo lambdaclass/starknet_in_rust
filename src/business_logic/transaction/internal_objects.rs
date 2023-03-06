@@ -11,8 +11,8 @@ use crate::{
             objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::{
-            contract_state::StateSelector,
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+            contract_state::StateSelector, in_memory_state_reader::InMemoryStateReader,
+            state::ExecutionResourcesManager,
         },
         state::{
             cached_state::CachedState,
