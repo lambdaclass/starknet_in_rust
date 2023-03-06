@@ -649,7 +649,7 @@ impl InternalDeployAccount {
 
 #[cfg(test)]
 mod tests {
-    use felt::felt_str;
+    use felt::{felt_str, Felt};
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{

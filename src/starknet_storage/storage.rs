@@ -151,7 +151,7 @@ pub enum Prefix {
 
 pub type StorageKey = (Prefix, [u8; 32]);
 
-/* Tests are disabled because the DictStorage type has been eliminated and the Storage trait currently has no implementations 
+/* Tests are disabled because the DictStorage type has been eliminated and the Storage trait currently has no implementations
 #[cfg(test)]
 mod tests {
     use super::*;

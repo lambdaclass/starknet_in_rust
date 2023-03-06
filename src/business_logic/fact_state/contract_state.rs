@@ -1,4 +1,7 @@
-use crate::{business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH, utils::{Address, ClassHash}};
+use crate::{
+    business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,
+    utils::{Address, ClassHash},
+};
 use felt::Felt;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +14,12 @@ pub struct ContractState {
 }
 
 impl ContractState {
-    pub fn new(class_hash: ClassHash, nonce: Felt, storage_key: [u8; 32], storage_value: Felt) -> Self {
+    pub fn new(
+        class_hash: ClassHash,
+        nonce: Felt,
+        storage_key: [u8; 32],
+        storage_value: Felt,
+    ) -> Self {
         Self {
             class_hash,
             nonce,
@@ -26,7 +34,7 @@ impl ContractState {
         Self {
             class_hash: *UNINITIALIZED_CLASS_HASH,
             nonce: 0.into(),
-            storage_key: [0; 32], 
+            storage_key: [0; 32],
             storage_value: Felt::new(0),
         }
     }
