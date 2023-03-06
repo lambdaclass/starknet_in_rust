@@ -1,25 +1,21 @@
 use super::errors::storage_errors::StorageError;
-use crate::{services::api::contract_class::ContractClass, utils::Address};
+use crate::{
+    business_logic::fact_state::contract_state::ContractState,
+    services::api::contract_class::ContractClass,
+};
 use std::str;
 
 /* -----------------------------------------------------------------------------------
    -----------------------------------------------------------------------------------
-
     This module implements the trait for the the storages operations.
     The trait default functions handle the different data types that can be stored,
     some assumptions and work arounds have been taken for this.
-
     * All data types are turned into Vec<u8> before being passed to the set_value function.
     This is due to rust restrictions on parameter types for the functions in traits.
-
     * The same is true for get_value but this returns an Option because there may be nothing in the storage for a given key.
-
     * float types are assumed to be f32, in case of needing to store f64, get_double and set_double functions can be implemented.
-
     * Strings are assumed to be UTF-8 valid encoding, using a different format falls in an error.
-
     * get_str returns a String type rather than a str to avoid lifetimes or reference issues.
-
   -----------------------------------------------------------------------------------
   -----------------------------------------------------------------------------------
 */
@@ -88,13 +84,11 @@ pub trait Storage {
         Ok(f64::from_bits(u64::from_be_bytes(float_bytes)))
     }
 
-    // Converts a string to its byte form inside a vector and stores it
     fn set_str(&mut self, key: &[u8; 32], value: &str) -> Result<(), StorageError> {
         let val = value.as_bytes().to_vec();
         self.set_value(&(Prefix::Str, *key), val)
     }
 
-    // Retrieves
     fn get_str(&self, key: &[u8; 32]) -> Result<String, StorageError> {
         let val = self
             .get_value(&(Prefix::Str, *key))
@@ -103,35 +97,34 @@ pub trait Storage {
         Ok(String::from(str))
     }
 
+    // TODO: Change key type to &Address.
     fn set_contract_state(
         &mut self,
-        key: &Address,
-        class_hash: ClassHash,
-        nonce: Felt,
-        storage_entry_key: [u8; 32],
-        storage_entry_value: Felt,
+        key: &[u8; 32],
+        value: &ContractState,
     ) -> Result<(), StorageError> {
-        let contract_state = vec![];
+        let contract_state = serde_json::to_string(value)?.as_bytes().to_vec();
+
         self.set_value(&(Prefix::ContractState, *key), contract_state)
     }
 
     // TODO: Change key type to &Address.
     fn get_contract_state(&self, key: &[u8; 32]) -> Result<ContractState, StorageError> {
-        let ser_contract_state = self
+        let set_contract_state = self
             .get_value(&(Prefix::ContractState, *key))
             .ok_or(StorageError::ErrorFetchingData)?;
 
-        let contract_state: ContractState = serde_json::from_slice(&ser_contract_state)?;
+        let contract_state: ContractState = serde_json::from_slice(&set_contract_state)?;
         Ok(contract_state)
     }
 
     // TODO: Change key type to &Address.
     fn get_contract_class(&self, key: &[u8; 32]) -> Result<ContractClass, StorageError> {
-        let ser_contract_class = self
+        let set_contract_class = self
             .get_value(&(Prefix::ContractClass, *key))
             .ok_or(StorageError::ErrorFetchingData)?;
 
-        let contract_class: ContractClass = serde_json::from_slice(&ser_contract_class)?;
+        let contract_class: ContractClass = serde_json::from_slice(&set_contract_class)?;
         Ok(contract_class)
     }
 
@@ -152,26 +145,24 @@ pub enum Prefix {
     Int,
     Float,
     Str,
-    Address,
-    ClassHash,
-    Felt, // nonce
-    StorageEntry,
+    ContractState,
     ContractClass,
 }
 
 pub type StorageKey = (Prefix, [u8; 32]);
 
+/* Tests are disabled because the DictStorage type has been eliminated and the Storage trait currently has no implementations 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
-        starknet_storage::dict_storage::DictStorage,
         utils::test_utils::storage_key,
     };
     use cairo_rs::types::program::Program;
     use felt::Felt;
     use std::collections::HashMap;
+
 
     #[test]
     fn get_and_set_contract_state() {
@@ -179,7 +170,7 @@ mod tests {
 
         let key = storage_key!("0000000000000000000000000000000000000000000000000000000000000000");
 
-        let contract_state = ContractState::new([8; 32], Felt::new(9), HashMap::new());
+        let contract_state = ContractState::new([8; 32], Felt::new(9), [42; 32], Felt::new(777));
         storage
             .set_contract_state(&key, &contract_state)
             .expect("Error setting contract state");
@@ -210,3 +201,5 @@ mod tests {
         assert_eq!(Ok(contract_class), storage.get_contract_class(&key));
     }
 }
+
+*/
