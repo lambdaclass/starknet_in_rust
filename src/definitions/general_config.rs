@@ -85,7 +85,7 @@ impl StarknetGeneralConfig {
         StarknetGeneralConfig {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
-                fee_token_address: Address(TEST_ERC20_CONTRACT_ADDRESS.clone()), // this is hardcoded, should be TEST_ERC20_CONTRACT_ADDRESS
+                fee_token_address: Address(TEST_ERC20_CONTRACT_ADDRESS.clone()),
                 gas_price: 0,
             },
             _contract_storage_commitment_tree_height: 0,
