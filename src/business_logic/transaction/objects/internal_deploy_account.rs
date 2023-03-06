@@ -42,7 +42,7 @@ pub struct InternalDeployAccount {
     #[getset(get = "pub")]
     constructor_calldata: Vec<Felt>,
     version: u64,
-    nonce: u64,
+    nonce: Felt,
     max_fee: u64,
     signature: Vec<Felt>,
     chain_id: StarknetChainId,
@@ -54,7 +54,7 @@ impl InternalDeployAccount {
         class_hash: [u8; 32],
         max_fee: u64,
         version: u64,
-        nonce: u64,
+        nonce: Felt,
         constructor_calldata: Vec<Felt>,
         signature: Vec<Felt>,
         contract_address_salt: Address,
@@ -96,6 +96,8 @@ impl InternalDeployAccount {
         S: Clone + Default + State + StateReader,
     {
         let tx_info = self.apply(state, general_config)?;
+
+        self.handle_nonce(state)?;
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_info.actual_resources, general_config)?;
 
@@ -187,6 +189,30 @@ impl InternalDeployAccount {
         }
     }
 
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        if self.version > 0x8000_0000_0000_0000 {
+            return Err(TransactionError::StarknetError(
+                "Don't handle nonce for version 0".to_string(),
+            ));
+        }
+
+        let contract_address = self.contract_address.clone();
+        let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
+        if current_nonce != self.nonce {
+            return Err(TransactionError::InvalidTransactionNonce(
+                current_nonce.to_string(),
+                self.nonce.to_string(),
+            ));
+        }
+
+        state.increment_nonce(&contract_address)?;
+
+        Ok(())
+    }
+
     pub fn run_constructor_entrypoint<S>(
         &self,
         state: &mut S,
@@ -227,14 +253,14 @@ impl InternalDeployAccount {
                 Felt::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
                 self.max_fee,
-                self.nonce,
+                self.nonce.clone(),
                 self.contract_address_salt.0.clone(),
                 self.chain_id.to_felt(),
             )
             .unwrap(),
             self.signature.clone(),
             self.max_fee,
-            self.nonce.into(),
+            self.nonce.clone(),
             n_steps,
             self.version,
         )

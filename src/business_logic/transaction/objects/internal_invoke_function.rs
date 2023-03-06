@@ -22,7 +22,7 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt;
-use num_traits::{ToPrimitive, Zero};
+use num_traits::Zero;
 
 #[allow(dead_code)]
 pub(crate) struct InternalInvokeFunction {
@@ -236,7 +236,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt,
     nonce: Option<Felt>,
     version: u64,
-) -> Result<(Felt, Vec<u64>), TransactionError> {
+) -> Result<(Felt, Vec<Felt>), TransactionError> {
     if version > 0 && version < u64::pow(2, 128) {
         match nonce {
             Some(_) => Err(TransactionError::InvalidNonce(
@@ -251,8 +251,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     } else {
         match nonce {
             Some(n) => {
-                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
-                let additional_data = [val].to_vec();
+                let additional_data = vec![n];
                 let entry_point_selector_field = Felt::zero();
                 Ok((entry_point_selector_field, additional_data))
             }

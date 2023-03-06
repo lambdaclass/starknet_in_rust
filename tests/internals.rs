@@ -62,7 +62,6 @@ where
     Ok(ContractClass::try_from(path.into())?)
 }
 
-#[allow(dead_code)]
 fn create_account_tx_test_state(
 ) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let general_config = StarknetGeneralConfig::new_for_testing();
@@ -301,6 +300,12 @@ fn test_deploy_account() {
         ),
         ACTUAL_FEE.clone(),
     );
+
+    // Statement **not** in blockifier.
+    state
+        .cache_mut()
+        .nonce_initial_values_mut()
+        .insert(deploy_account_tx.contract_address().clone(), Felt::zero());
 
     let tx_info = deploy_account_tx
         .execute(&mut state, &general_config)
