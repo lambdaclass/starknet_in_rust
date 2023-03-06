@@ -370,7 +370,7 @@ mod tests {
 
         // declare tx
         let internal_declare = InternalDeclare::new(
-            fib_contract_class.clone(),
+            fib_contract_class,
             chain_id,
             Address(1.into()),
             0,

@@ -1,7 +1,7 @@
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 use felt::Felt;
 use getset::{CopyGetters, Getters, MutGetters};
-use num_traits::{Num, Zero};
+use num_traits::Zero;
 use std::collections::HashMap;
 
 use super::constants::{TEST_ERC20_CONTRACT_ADDRESS, TEST_SEQUENCER_ADDRESS};

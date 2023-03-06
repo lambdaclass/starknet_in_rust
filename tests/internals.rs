@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
+        execution::objects::{CallType, OrderedEvent},
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
         state::{cached_state::CachedState, state_api::StateReader},
         transaction::objects::internal_declare::InternalDeclare,
@@ -165,7 +165,7 @@ fn test_create_account_tx_test_state() {
 fn declare_tx() -> InternalDeclare {
     InternalDeclare {
         contract_class: get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap(),
-        class_hash: felt_to_hash(&*TEST_EMPTY_CONTRACT_CLASS_HASH),
+        class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_NAME.clone(),
@@ -195,7 +195,7 @@ fn test_declare_tx() {
 
     assert_eq!(
         validate_info.class_hash,
-        Some(felt_to_hash(&*TEST_ACCOUNT_CONTRACT_CLASS_HASH))
+        Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH))
     );
 
     assert_eq!(
@@ -233,7 +233,7 @@ fn test_declare_tx() {
 
     assert_eq!(
         fee_transfer_info.class_hash,
-        Some(felt_to_hash(&*TEST_ERC20_CONTRACT_CLASS_HASH))
+        Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
     );
 
     assert_eq!(fee_transfer_info.call_type, Some(CallType::Call));
@@ -307,5 +307,4 @@ fn test_declare_tx() {
         ])
     );
     assert_eq!(fee_transfer_info.l2_to_l1_messages, Vec::new());
-    ()
 }

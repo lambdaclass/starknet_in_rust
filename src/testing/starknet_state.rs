@@ -429,8 +429,7 @@ mod tests {
             starknet_state
                 .state
                 .get_contract_class(&fib_class_hash)
-                .unwrap()
-                .to_owned(),
+                .unwrap(),
             fib_contract_class
         );
     }
