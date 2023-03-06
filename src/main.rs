@@ -83,10 +83,10 @@ fn declare_parser(args: &DeclareArgs) -> Result<(), ParserError> {
     let tx_hash = calculate_declare_transaction_hash(
         contract_class,
         Felt::zero(),
-        Address(0.into()),
+        Address(Felt::zero()),
         0,
         0,
-        0.into(),
+        Felt::zero(),
     )
     .map_err(ParserError::ComputeTransactionHashError)?;
     println!(
