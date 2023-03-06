@@ -175,7 +175,7 @@ fn invoke_parser(args: &InvokeArgs) -> Result<(), ParserError> {
 
     let general_config = StarknetGeneralConfig::default();
     let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
+        Address(Felt::zero()),
         Felt::zero(),
         Vec::new(),
         0,
