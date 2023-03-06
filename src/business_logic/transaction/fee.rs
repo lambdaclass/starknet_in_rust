@@ -8,7 +8,9 @@ use crate::{
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::{
+        constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+    },
     services::api::contract_class::EntryPointType,
 };
 use felt::{felt_str, Felt};
@@ -44,8 +46,7 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
     .to_vec();
 
     // Value generated from transfer selector: 'TRANSFER_ENTRY_POINT_SELECTOR'.
-    let entry_point_selector =
-        felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
+    let entry_point_selector = TRANSFER_ENTRY_POINT_SELECTOR.clone();
 
     let fee_transfer_call = ExecutionEntryPoint::new(
         fee_token_address,

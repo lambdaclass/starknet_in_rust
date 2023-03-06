@@ -380,12 +380,12 @@ impl TxInfoStruct {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct TransactionExecutionInfo {
-    pub(crate) validate_info: Option<CallInfo>,
-    pub(crate) call_info: Option<CallInfo>,
-    pub(crate) fee_transfer_info: Option<CallInfo>,
-    pub(crate) actual_fee: u64,
-    pub(crate) actual_resources: HashMap<String, usize>,
-    pub(crate) tx_type: Option<TransactionType>,
+    pub validate_info: Option<CallInfo>,
+    pub call_info: Option<CallInfo>,
+    pub fee_transfer_info: Option<CallInfo>,
+    pub actual_fee: u64,
+    pub actual_resources: HashMap<String, usize>,
+    pub tx_type: Option<TransactionType>,
 }
 
 impl TransactionExecutionInfo {

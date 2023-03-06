@@ -4,6 +4,8 @@ use getset::{CopyGetters, Getters, MutGetters};
 use num_traits::{Num, Zero};
 use std::collections::HashMap;
 
+use super::constants::{TEST_ERC20_CONTRACT_ADDRESS, TEST_SEQUENCER_ADDRESS};
+
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub enum StarknetChainId {
@@ -83,7 +85,7 @@ impl StarknetGeneralConfig {
         StarknetGeneralConfig {
             starknet_os_config: StarknetOsConfig {
                 chain_id: StarknetChainId::TestNet,
-                fee_token_address: Address(Felt::from_str_radix("1001", 16).unwrap()), // this is hardcoded, should be TEST_ERC20_CONTRACT_ADDRESS
+                fee_token_address: Address(TEST_ERC20_CONTRACT_ADDRESS.clone()), // this is hardcoded, should be TEST_ERC20_CONTRACT_ADDRESS
                 gas_price: 0,
             },
             _contract_storage_commitment_tree_height: 0,
@@ -91,7 +93,7 @@ impl StarknetGeneralConfig {
             invoke_tx_max_n_steps: 1_000_000,
             cairo_resource_fee_weights: HashMap::new(),
             validate_max_n_steps: 1_000_000,
-            block_info: BlockInfo::empty(Address(Felt::from_str_radix("1000", 16).unwrap())), // this is hardcoded, should be TEST_SEQUENCER_ADDRESS
+            block_info: BlockInfo::empty(Address(TEST_SEQUENCER_ADDRESS.clone())),
         }
     }
 }
