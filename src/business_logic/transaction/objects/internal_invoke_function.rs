@@ -56,14 +56,12 @@ impl InternalInvokeFunction {
         chain_id: Felt,
         nonce: Option<Felt>,
     ) -> Result<Self, TransactionError> {
-        println!("InternalInvokeFunction::new() 1");
         let version = TRANSACTION_VERSION;
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
             version,
         )?;
-        println!("InternalInvokeFunction::new() 2");
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
@@ -74,7 +72,6 @@ impl InternalInvokeFunction {
             chain_id,
             &additional_data,
         )?;
-        println!("InternalInvokeFunction::new() 3");
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InternalInvokeFunction {
@@ -118,11 +115,9 @@ impl InternalInvokeFunction {
     where
         T: Default + State + StateReader,
     {
-        println!("entry_point_selector: {}", self.entry_point_selector);
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        println!("version: {}", self.version);
         if self.version == 0 {
             return Ok(None);
         }
@@ -136,8 +131,6 @@ impl InternalInvokeFunction {
             None,
             None,
         );
-
-        println!("call: {:?}", call);
 
         let call_info = call.execute(
             state,
