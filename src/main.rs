@@ -108,7 +108,7 @@ fn deploy_parser(args: &DeployArgs) -> Result<(), ParserError> {
         &Felt::from_str_radix(&args.class_hash[2..], 16)
             .map_err(|_| ParserError::ParseHashError(args.class_hash.clone()))?,
         &constructor_calldata,
-        Address(0.into()),
+        Address(Felt::zero()),
     )
     .map_err(ParserError::ComputeAddressError)?;
     add_address(&address.to_str_radix(16), &contract_name);
