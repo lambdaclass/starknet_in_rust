@@ -11,8 +11,8 @@ use crate::{
             objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::{
-            in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            contract_state::StateSelector,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{
             cached_state::CachedState,
@@ -40,7 +40,6 @@ use crate::{
 use felt::{felt_str, Felt};
 use num_traits::Zero;
 use std::collections::HashMap;
-
 pub struct InternalDeploy {
     hash_value: Felt,
     version: u64,
@@ -656,9 +655,7 @@ mod tests {
     use crate::{
         business_logic::{
             execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         core::contract_address::starknet_contract_address::compute_class_hash,
@@ -702,14 +699,27 @@ mod tests {
         // this is not conceptually correct as the sender address would be an
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
-        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
+        let nonce = Felt::new(189028);
+        let storage_entry = (sender_address, [777; 32]);
+        let storage_value = Felt::new(2190);
 
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
         state_reader
-            .contract_states
-            .insert(sender_address, contract_state);
+            .address_to_class_hash
+            .insert(sender_address.clone(), class_hash.clone());
+        state_reader
+            .address_to_nonce
+            .insert(sender_address.clone(), nonce.clone());
+        state_reader
+            .address_to_storage
+            .insert(storage_entry.clone(), storage_value.clone());
+        contract_class_cache.insert(class_hash, contract_class.clone());
         //* ---------------------------------------
         //*    Create state with previous data
         //* ---------------------------------------

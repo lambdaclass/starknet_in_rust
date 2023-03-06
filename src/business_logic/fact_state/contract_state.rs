@@ -1,3 +1,4 @@
+use crate::utils::Address;
 /* use crate::{business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH, utils::Address};
 use felt::Felt;
 use serde::{Deserialize, Serialize};
@@ -41,10 +42,10 @@ impl ContractState {
         !self.initialized()
     }
 }
+ */
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StateSelector {
     pub contract_addresses: Vec<Address>,
     pub class_hashes: Vec<[u8; 32]>,
 }
- */

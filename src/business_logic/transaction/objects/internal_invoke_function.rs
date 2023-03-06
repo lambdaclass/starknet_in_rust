@@ -166,9 +166,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::{
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         services::api::contract_class::ContractClass,
@@ -197,7 +195,12 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
         let mut state = CachedState::new(state_reader, None);
 
         // Initialize state.contract_classes
@@ -212,11 +215,20 @@ mod tests {
             .unwrap();
 
         // Set contact_state
-        let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
-        state.state_reader.contract_states.insert(
-            internal_invoke_function.contract_address.clone(),
-            contract_state,
-        );
+        let contract_address = Address(4.into());
+        let nonce = Felt::new(189028);
+        let storage_entry = (contract_address, [777; 32]);
+        let storage_value = Felt::new(2190);
+
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash.clone());
+        state_reader
+            .address_to_nonce
+            .insert(contract_address.clone(), nonce.clone());
+        state_reader
+            .address_to_storage
+            .insert(storage_entry.clone(), storage_value.clone());
 
         let result = internal_invoke_function
             ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())

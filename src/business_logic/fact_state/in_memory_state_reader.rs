@@ -21,7 +21,7 @@ impl InMemoryStateReader {
     pub fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt>,
-        address_to_storage: HashMap<StorageEntry, Felt>, 
+        address_to_storage: HashMap<StorageEntry, Felt>,
         class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
     ) -> Self {
         Self {
@@ -45,25 +45,25 @@ impl StateReader for InMemoryStateReader {
     }
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
         let class_hash = self
-        .address_to_class_hash
-        .get(contract_address)
-        .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
+            .address_to_class_hash
+            .get(contract_address)
+            .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
         class_hash
     }
 
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
         let nonce = self
-        .address_to_nonce
-        .get(contract_address)
-        .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
+            .address_to_nonce
+            .get(contract_address)
+            .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
         nonce
     }
 
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
         let storage = self
-        .address_to_storage
-        .get(storage_entry)
-        .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()));
+            .address_to_storage
+            .get(storage_entry)
+            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()));
         storage
     }
 
@@ -80,23 +80,28 @@ mod tests {
 
     #[test]
     fn get_contract_state_test() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
         let contract_address = Address(37810.into());
         let class_hash = [1; 32];
-        let nonce = Felt::new(109); 
+        let nonce = Felt::new(109);
         let storage_entry = (contract_address, [8; 32]);
         let storage_value = Felt::new(800);
 
-        state_reader.address_to_class_hash.insert(
-            contract_address.clone(), 
-            class_hash.clone());
-        state_reader.address_to_nonce.insert(
-            contract_address.clone(),
-            nonce.clone());
-        state_reader.address_to_storage.insert(
-            storage_entry.clone(),
-            storage_value.clone());
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash.clone());
+        state_reader
+            .address_to_nonce
+            .insert(contract_address.clone(), nonce.clone());
+        state_reader
+            .address_to_storage
+            .insert(storage_entry.clone(), storage_value.clone());
 
         /*
         assert_eq!(
@@ -108,10 +113,7 @@ mod tests {
             state_reader.get_class_hash_at(&contract_address),
             Ok(&class_hash)
         );
-        assert_eq!(
-            state_reader.get_nonce_at(&contract_address),
-            Ok(&nonce)
-        );
+        assert_eq!(state_reader.get_nonce_at(&contract_address), Ok(&nonce));
         assert_eq!(
             state_reader.get_storage_at(&storage_entry),
             Ok(&storage_value)
@@ -120,7 +122,12 @@ mod tests {
 
     #[test]
     fn get_contract_class_test() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
         let contract_class_key = [0; 32];
         let contract_class = ContractClass::new(

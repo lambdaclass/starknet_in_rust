@@ -3,7 +3,7 @@ use super::{
     errors::storage_errors::StorageError,
 };
 use crate::{
-    business_logic::fact_state::contract_state::ContractState,
+    utils::Address,
     services::api::contract_class::ContractClass,
 };
 use std::str;
@@ -107,14 +107,14 @@ pub trait Storage {
         Ok(String::from(str))
     }
 
-    // TODO: Change key type to &Address.
     fn set_contract_state(
         &mut self,
-        key: &[u8; 32],
-        value: &ContractState,
+        key: &Address,
+        class_hash: ClassHash,
+        nonce: Felt,
+        storage_entry_key: [u8; 32],
+        storage_entry_value: Felt,
     ) -> Result<(), StorageError> {
-        let contract_state = serde_json::to_string(value)?.as_bytes().to_vec();
-
         self.set_value(&(Prefix::ContractState, *key), contract_state)
     }
 

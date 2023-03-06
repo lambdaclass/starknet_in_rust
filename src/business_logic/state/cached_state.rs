@@ -180,44 +180,58 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 mod tests {
     use super::*;
     use crate::{
-        business_logic::fact_state::{
-            in_memory_state_reader::InMemoryStateReader,
-        },
+        business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
     use cairo_rs::types::program::Program;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
-        let contract_address = Address(32123.into());
-        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
+        let contract_address = Address(4242.into());
+        let class_hash = [3; 32];
+        let nonce = Felt::new(47602);
+        let storage_entry = (contract_address, [531; 32]);
+        let storage_value = Felt::new(1);
 
         state_reader
-            .contract_states
-            .insert(contract_address.clone(), contract_state.clone());
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash.clone());
+        state_reader
+            .address_to_nonce
+            .insert(contract_address.clone(), nonce.clone());
+        state_reader
+            .address_to_storage
+            .insert(storage_entry.clone(), storage_value.clone());
 
         let mut cached_state = CachedState::new(state_reader, None);
 
         assert_eq!(
             cached_state.get_class_hash_at(&contract_address),
-            Ok(&contract_state.contract_hash)
+            Ok(&class_hash)
         );
-        assert_eq!(
-            cached_state.get_nonce_at(&contract_address),
-            Ok(&contract_state.nonce)
-        );
+        assert_eq!(cached_state.get_nonce_at(&contract_address), Ok(&nonce));
         cached_state.increment_nonce(&contract_address).unwrap();
         assert_eq!(
             cached_state.get_nonce_at(&contract_address),
-            Ok(&(contract_state.nonce + Felt::new(1)))
+            Ok(&(nonce + Felt::new(1)))
         );
     }
 
     #[test]
     fn get_contract_class_from_state_reader() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
         let contract_class = ContractClass::new(
             Program::default(),
@@ -247,7 +261,12 @@ mod tests {
     #[test]
     fn cached_state_storage_test() {
         let mut cached_state = CachedState::new(
-            InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new()),
+            InMemoryStateReader::new(
+                HashMap::new(),
+                HashMap::new(),
+                HashMap::new(),
+                HashMap::new(),
+            ),
             None,
         );
 
@@ -263,7 +282,12 @@ mod tests {
 
     #[test]
     fn cached_state_deploy_contract_test() {
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
         let contract_address = Address(32123.into());
 
@@ -276,7 +300,12 @@ mod tests {
 
     #[test]
     fn get_and_set_storage() {
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
         let contract_address = Address(31.into());
         let storage_key = [18; 32];

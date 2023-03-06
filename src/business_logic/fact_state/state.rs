@@ -188,9 +188,7 @@ mod test {
     use super::StateDiff;
     use crate::{
         business_logic::{
-            fact_state::{
-                in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         utils::Address,
@@ -200,23 +198,28 @@ mod test {
 
     #[test]
     fn test_from_cached_state_without_updates() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new(), HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
 
         let contract_address = Address(32123.into());
         let class_hash = [9; 32];
-        let nonce = Felt::new(42); 
+        let nonce = Felt::new(42);
         let storage_entry = (contract_address, [17; 32]);
         let storage_value = Felt::new(402);
 
-        state_reader.address_to_class_hash.insert(
-            contract_address.clone(), 
-            class_hash.clone());
-        state_reader.address_to_nonce.insert(
-            contract_address.clone(),
-            nonce.clone());
-        state_reader.address_to_storage.insert(
-            storage_entry.clone(),
-            storage_value.clone());
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash.clone());
+        state_reader
+            .address_to_nonce
+            .insert(contract_address.clone(), nonce.clone());
+        state_reader
+            .address_to_storage
+            .insert(storage_entry.clone(), storage_value.clone());
 
         let cached_state = CachedState::new(state_reader, None);
 
