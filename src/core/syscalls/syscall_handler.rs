@@ -1,6 +1,7 @@
 use super::{
     hint_code::*,
     os_syscall_handler::OsSyscallHandler,
+    other_syscalls,
     syscall_request::*,
     syscall_response::{
         CallContractResponse, DeployResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
@@ -409,13 +410,15 @@ where
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        _constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt>,
     ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
-        match &*hint_data.code {
+        match hint_data.code.as_str() {
+            ADDR_BOUND_PRIME => other_syscalls::addr_bound_prime(vm, hint_data, constants),
+            ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data),
             DEPLOY => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.deploy(vm, syscall_ptr)
@@ -492,7 +495,10 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|e| HintError::UnknownHint(e.to_string()))?;
+                .map_err(|e| match e {
+                    SyscallHandlerError::HintError(e) => e,
+                    _ => HintError::UnknownHint(e.to_string()),
+                })?;
         }
         Ok(())
     }
@@ -543,10 +549,12 @@ mod tests {
                 cached_state::CachedState,
                 state_api::{State, StateReader},
             },
+            transaction::objects::internal_invoke_function::InternalInvokeFunction,
         },
         core::syscalls::os_syscall_handler::OsSyscallHandler,
+        definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         memory_insert,
-        services::api::contract_class::ContractClass,
+        services::api::contract_class::{ContractClass, EntryPointType},
         utils::{
             felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
@@ -1429,5 +1437,138 @@ mod tests {
                 .get_class_hash_at(&Address(deployed_address)),
             Ok(&class_hash)
         );
+    }
+
+    #[test]
+    fn test_deploy_and_invoke() {
+        /*
+        DEPLOY
+        */
+        let mut vm = vm!();
+        add_segments!(vm, 4);
+
+        // insert data to form the request
+        memory_insert!(
+            vm,
+            [
+                ((1, 0), (2, 0)), //  syscall_ptr
+                ((2, 0), 10),     // DeployRequestStruct._selector
+                // ((2, 1), class_hash),     // DeployRequestStruct.class_hash
+                ((2, 2), 12),     // DeployRequestStruct.contract_address_salt
+                ((2, 3), 1),      // DeployRequestStruct.constructor_calldata_size
+                ((2, 4), (3, 0)), // DeployRequestStruct.constructor_calldata
+                ((2, 5), 0),      // DeployRequestStruct.deploy_from_zero
+                ((3, 0), 250)     // constructor
+            ]
+        );
+
+        let class_hash_felt = Felt::from_str_radix(
+            "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
+            16,
+        )
+        .unwrap();
+        let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
+
+        vm.insert_value(&relocatable!(2, 1), class_hash_felt)
+            .unwrap();
+
+        // Hinta data
+        let ids_data = ids_data!["syscall_ptr"];
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)".to_string(),
+            ids_data,
+        );
+
+        // Create SyscallHintProcessor
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut syscall_handler_hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        // Initialize state.set_contract_classes
+        syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state
+            .set_contract_classes(HashMap::new())
+            .unwrap();
+
+        // Set contract class
+        let contract_class = ContractClass::try_from(PathBuf::from(
+            "starknet_programs/storage_var_and_constructor.json",
+        ))
+        .unwrap();
+        syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        // Execute Deploy hint
+        assert_eq!(
+            syscall_handler_hint_processor.execute_hint(
+                &mut vm,
+                &mut ExecutionScopes::new(),
+                &any_box!(hint_data),
+                &HashMap::new(),
+            ),
+            Ok(())
+        );
+
+        // Check VM inserts
+        // DeployResponse.contract_address
+        let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+        // DeployResponse.constructor_retdata_size
+        assert_eq!(get_big_int(&vm, &relocatable!(2, 7)), Ok(0.into()));
+        // DeployResponse.constructor_retdata
+        assert_eq!(
+            get_relocatable(&vm, &relocatable!(2, 8)),
+            Ok(relocatable!(0, 0))
+        );
+
+        // Check State diff
+        assert_eq!(
+            syscall_handler_hint_processor
+                .syscall_handler
+                .starknet_storage_state
+                .state
+                .get_class_hash_at(&Address(deployed_address.clone())),
+            Ok(&class_hash)
+        );
+
+        /*
+        INVOKE
+        */
+        let internal_invoke_function = InternalInvokeFunction::new(
+            Address(deployed_address.clone()),
+            Felt::from_str_radix(
+                "283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c",
+                16,
+            )
+            .unwrap(),
+            0,
+            vec![10.into()],
+            Vec::new(),
+            0.into(),
+            Some(0.into()),
+        )
+        .unwrap();
+
+        // Invoke result
+        let result = internal_invoke_function
+            .apply(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        let result_call_info = result.call_info.unwrap();
+
+        assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
+        assert_eq!(result_call_info.contract_address, Address(deployed_address));
+        assert_eq!(result_call_info.class_hash, Some(class_hash));
+        assert_eq!(
+            result_call_info.entry_point_type,
+            Some(EntryPointType::External)
+        );
+        assert_eq!(result_call_info.calldata, vec![10.into()]);
+        assert_eq!(result_call_info.retdata, vec![260.into()]);
+        assert_eq!(result_call_info.storage_read_values, vec![250.into()]);
     }
 }
