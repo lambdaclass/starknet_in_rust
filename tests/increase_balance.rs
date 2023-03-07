@@ -10,13 +10,9 @@ use starknet_rs::{
             objects::{CallInfo, CallType, TransactionExecutionContext},
         },
         fact_state::{
-            in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::{
-            cached_state::CachedState,
-            state_cache::StorageEntry,
-        }
+        state::{cached_state::CachedState, state_cache::StorageEntry},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -57,7 +53,7 @@ fn hello_starknet_increase_balance() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let nonce = Felt::zero();
-    let storage_entry:StorageEntry = (address.clone(), [1; 32]).into();
+    let storage_entry: StorageEntry = (address.clone(), [1; 32]).into();
     let storage = Felt::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
@@ -71,7 +67,6 @@ fn hello_starknet_increase_balance() {
     state_reader
         .address_to_storage
         .insert(storage_entry.clone(), storage.clone());
-
 
     //* ---------------------------------------
     //*    Create state with previous data
