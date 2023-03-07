@@ -4,27 +4,21 @@ use crate::{
 };
 use felt::Felt;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct ContractState {
     pub(crate) class_hash: ClassHash,
     pub(crate) nonce: Felt,
-    pub(crate) storage_key: [u8; 32],
-    pub(crate) storage_value: Felt,
+    pub(crate) storage_keys: HashMap<Felt, Felt>,
 }
 
 impl ContractState {
-    pub fn new(
-        class_hash: ClassHash,
-        nonce: Felt,
-        storage_key: [u8; 32],
-        storage_value: Felt,
-    ) -> Self {
+    pub fn new(class_hash: ClassHash, nonce: Felt, storage_keys: HashMap<Felt, Felt>) -> Self {
         Self {
             class_hash,
             nonce,
-            storage_key,
-            storage_value,
+            storage_keys,
         }
     }
 
@@ -34,8 +28,7 @@ impl ContractState {
         Self {
             class_hash: *UNINITIALIZED_CLASS_HASH,
             nonce: 0.into(),
-            storage_key: [0; 32],
-            storage_value: Felt::new(0),
+            storage_keys: HashMap::new(),
         }
     }
 
