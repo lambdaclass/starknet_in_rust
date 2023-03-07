@@ -56,7 +56,6 @@ impl InMemoryStateReader {
 
         // }
     }
-    
 }
 
 impl StateReader for InMemoryStateReader {
