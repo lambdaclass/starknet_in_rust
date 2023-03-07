@@ -308,3 +308,24 @@ fn test_declare_tx() {
     );
     assert_eq!(fee_transfer_info.l2_to_l1_messages, Vec::new());
 }
+
+#[test]
+fn test_state_for_declare_tx() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    let declare_tx = declare_tx();
+    // Check ContractClass is not set before the declare_tx
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
+    assert_eq!(
+        state.get_nonce_at(&declare_tx.sender_address),
+        Ok(&0.into())
+    );
+    // Execute declare_tx
+    assert!(declare_tx.execute(&mut state, &general_config).is_ok());
+    dbg!("start");
+    dbg!(&state);
+    assert_eq!(
+        state.get_nonce_at(&declare_tx.sender_address),
+        Ok(&1.into())
+    );
+}
