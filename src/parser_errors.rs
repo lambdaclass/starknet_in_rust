@@ -1,7 +1,8 @@
 use crate::{
     business_logic::execution::error::ExecutionError,
     core::errors::{
-        contract_address_errors::ContractAddressError, syscall_handler_errors::SyscallHandlerError,
+        contract_address_errors::ContractAddressError, state_errors::StateError,
+        syscall_handler_errors::SyscallHandlerError,
     },
     services::api::contract_class::EntryPointType,
 };
@@ -27,4 +28,8 @@ pub enum ParserError {
     EntryPointIndex(usize),
     #[error(transparent)]
     ExecuteFromEntryPointError(ExecutionError),
+    #[error(transparent)]
+    ServerError(std::io::Error),
+    #[error(transparent)]
+    StateError(StateError),
 }

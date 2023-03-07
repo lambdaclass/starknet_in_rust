@@ -17,7 +17,7 @@ use crate::{
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
-use num_traits::ToPrimitive;
+use num_traits::{Num, ToPrimitive};
 use sha3::{Digest, Keccak256};
 use starknet_crypto::FieldElement;
 use std::{
@@ -96,6 +96,18 @@ pub fn felt_to_hash(value: &Felt) -> [u8; 32] {
     output[32 - bytes.len()..].copy_from_slice(&bytes);
 
     output
+}
+
+pub fn string_to_hash(class_string: &String) -> [u8; 32] {
+    let parsed_felt = Felt::from_str_radix(
+        if &class_string[..2] == "0x" {
+            &class_string[2..]
+        } else {
+            &class_string
+        },
+        16,
+    );
+    felt_to_hash(&parsed_felt.unwrap())
 }
 
 // -------------------
