@@ -700,7 +700,7 @@ mod tests {
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
         let nonce = Felt::new(189028);
-        let storage_entry = (sender_address.clone(), [189; 32]);
+        let storage_entry = (sender_address.clone(), Felt::new(10));
         let storage_value = Felt::new(2190);
 
         let mut state_reader = InMemoryStateReader::new(

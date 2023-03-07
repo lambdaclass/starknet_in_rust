@@ -103,10 +103,15 @@ fn create_account_tx_test_state(
                     })
                     .collect();
 
-                state_reader.contract_states_mut().insert(
-                    contract_address,
-                    ContractState::new(felt_to_hash(&class_hash), Felt::zero(), storage_keys),
-                );
+                state_reader
+                    .address_to_class_hash
+                    .insert(contract_address.clone(), class_hash.clone());
+                state_reader
+                    .address_to_nonce
+                    .insert(address.clone(), nonce.clone());
+                state_reader
+                    .address_to_storage
+                    .insert(storage_entry.clone(), storage.clone());
             }
 
             state_reader
