@@ -197,7 +197,7 @@ mod tests {
         let contract_address = Address(4242.into());
         let class_hash = [3; 32];
         let nonce = Felt::new(47602);
-        let storage_entry = (contract_address, [531; 32]);
+        let storage_entry = (contract_address.clone(), [101; 32]);
         let storage_value = Felt::new(1);
 
         state_reader

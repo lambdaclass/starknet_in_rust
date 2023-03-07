@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 /// (contract_address, key)
 // TODO: Change [u8; 32] to Felt.
-pub(crate) type StorageEntry = (Address, [u8; 32]);
+pub type StorageEntry = (Address, Felt);
 
 #[derive(Debug, Default, Clone, Getters)]
 pub struct StateCache {

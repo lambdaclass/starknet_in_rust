@@ -93,7 +93,7 @@ fn create_account_tx_test_state(
 
     let cached_state = CachedState::new(
         {
-            let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+            let mut state_reader = InMemoryStateReader::default();
 
             for (contract_address, class_hash) in address_to_class_hash {
                 let storage_keys = storage_view

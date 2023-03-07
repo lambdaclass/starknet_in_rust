@@ -195,13 +195,13 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::new(
+        let mut state_reader = InMemoryStateReader::new(
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
         );
-        let mut state = CachedState::new(state_reader, None);
+        let mut state = CachedState::new(state_reader.clone(), None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -217,7 +217,7 @@ mod tests {
         // Set contact_state
         let contract_address = Address(4.into());
         let nonce = Felt::new(189028);
-        let storage_entry = (contract_address, [777; 32]);
+        let storage_entry = (contract_address.clone(), [222; 32]);
         let storage_value = Felt::new(2190);
 
         state_reader

@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use felt::Felt;
+use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -8,16 +9,18 @@ use starknet_rs::{
             objects::{CallType, TransactionExecutionContext},
         },
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
+        state::{
+            cached_state::CachedState,
+            state_cache::StorageEntry,
+        }
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 #[test]
 fn test_internal_calls() {
@@ -34,15 +37,22 @@ fn test_internal_calls() {
         TRANSACTION_VERSION,
     );
 
-    let contract_state = ContractState::new(
-        [0x01; 32],
-        tx_execution_context.nonce().clone(),
-        Default::default(),
-    );
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [0; 32].into();
+    let nonce = Felt::zero();
+    let storage_entry: StorageEntry = (address.clone(), [1; 32]).into();
+    let storage = Felt::zero();
+
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(Address(1111.into()), contract_state);
+        .address_to_class_hash
+        .insert(address.clone(), class_hash.clone());
+    state_reader
+        .address_to_nonce
+        .insert(address.clone(), nonce.clone());
+    state_reader
+        .address_to_storage
+        .insert(storage_entry.clone(), storage.clone());
 
     let mut state = CachedState::new(
         state_reader,

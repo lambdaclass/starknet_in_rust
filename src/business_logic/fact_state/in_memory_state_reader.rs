@@ -11,10 +11,13 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, Default, MutGetters)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
-    pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
-    pub(crate) address_to_nonce: HashMap<Address, Felt>,
-    pub(crate) address_to_storage: HashMap<StorageEntry, Felt>,
-    pub(crate) class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
+    pub address_to_class_hash: HashMap<Address, ClassHash>, // TODO: needs to be pub(crate)
+    #[getset(get_mut = "pub")]
+    pub address_to_nonce: HashMap<Address, Felt>, // TODO: needs to be pub(crate)
+    #[getset(get_mut = "pub")]
+    pub address_to_storage: HashMap<StorageEntry, Felt>, // TODO: needs to be pub(crate)
+    #[getset(get_mut = "pub")]
+    pub class_hash_to_contract_class: HashMap<ClassHash, ContractClass>, // TODO: needs to be pub(crate)
 }
 
 impl InMemoryStateReader {
@@ -90,7 +93,7 @@ mod tests {
         let contract_address = Address(37810.into());
         let class_hash = [1; 32];
         let nonce = Felt::new(109);
-        let storage_entry = (contract_address, [8; 32]);
+        let storage_entry = (contract_address.clone(), [8; 32]);
         let storage_value = Felt::new(800);
 
         state_reader
