@@ -1,4 +1,4 @@
-use super::contract_state::ContractState;
+use super::{contract_state::ContractState, state::StateDiff};
 use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
@@ -35,6 +35,28 @@ impl InMemoryStateReader {
             .get(contract_address)
             .ok_or_else(|| StateError::NoneContractState(contract_address.clone()))
     }
+
+    /// Applies the given StateDiff to the InMemoryStateReader.
+    pub fn apply_diff(&mut self, state_diff: StateDiff) {
+        // update the class hashes:
+        // Here we add a new contract state for each new deployed contract.
+        for (addr, class_hash) in state_diff.address_to_class_hash.into_iter() {
+            let new_contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
+            self.contract_states.insert(addr, new_contract_state);
+        }
+
+        // update the nonces
+        for (addr, new_nonce) in state_diff.address_to_nonce.into_iter() {
+            let mut contract_state = self.contract_states.get_mut(&addr).unwrap();
+            contract_state.nonce = new_nonce;
+        }
+
+        // update the storage
+        // for (felt, ) in state_diff.storage_updates.into_iter() {
+
+        // }
+    }
+    
 }
 
 impl StateReader for InMemoryStateReader {

@@ -90,7 +90,7 @@ impl<T: StateReader + Clone> CarriedState<T> {
 }
 
 #[derive(Default)]
-pub(crate) struct StateDiff {
+pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, [u8; 32]>,
     pub(crate) address_to_nonce: HashMap<Address, Felt>,
     pub(crate) storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,

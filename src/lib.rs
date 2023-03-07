@@ -1,21 +1,13 @@
 #![deny(warnings)]
 
-use business_logic::{
-    execution::{
-        execution_entry_point::ExecutionEntryPoint,
-        objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
-    },
-    fact_state::state::ExecutionResourcesManager,
-    state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-    },
-    transaction::{error::TransactionError, transactions::Transaction},
+use business_logic::execution::objects::TransactionExecutionInfo;
+use business_logic::state::{
+    cached_state::CachedState,
+    state_api::{State, StateReader},
 };
+use business_logic::transaction::{error::TransactionError, transactions::Transaction};
 use definitions::general_config::StarknetGeneralConfig;
 use felt::Felt;
-use services::api::contract_class::EntryPointType;
-use utils::{Address, ClassHash};
 
 #[cfg(test)]
 #[macro_use]
