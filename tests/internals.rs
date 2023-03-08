@@ -343,6 +343,7 @@ fn expected_transaction_execution_info() -> TransactionExecutionInfo {
 #[test]
 fn test_invoke_tx() {
     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    println!("INITIAL STATE: {:#?}", state);
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
         test_contract_address,                                       // CONTRACT_ADDRESS
@@ -351,12 +352,35 @@ fn test_invoke_tx() {
         Felt::from(2),                                               // CONTRACT_CALLDATA
     ];
     let invoke_tx = invoke_tx(calldata);
-
+    println!("SENDER ADDRESS: {:#?}", invoke_tx);
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
     let result = invoke_tx.execute(state, starknet_general_config).unwrap();
-
+    //println!("FINAL STATE: {:#?}", state);
+    assert!(false);
     let expected_execution_info = expected_transaction_execution_info();
 
     assert_eq!(result, expected_execution_info);
 }
+
+// #[test]
+// fn test_invoke_tx_state() {
+//     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+
+//     let expected_initial_state = expected_initial_state();
+//     assert_eq!(state, &expected_initial_state);
+
+//     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+//     let calldata = vec![
+//         test_contract_address,                                       // CONTRACT_ADDRESS
+//         Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+//         Felt::from(1),                                               // CONTRACT_CALLDATA LEN
+//         Felt::from(2),                                               // CONTRACT_CALLDATA
+//     ];
+//     let invoke_tx = invoke_tx(calldata);
+
+//     invoke_tx.execute(state, starknet_general_config).unwrap();
+
+//     // let expected_final_state = expected_final_state();
+//     // assert_eq!(state, &expected_final_state);
+// }

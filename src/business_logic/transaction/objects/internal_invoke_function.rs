@@ -30,6 +30,7 @@ use felt::Felt;
 use num_traits::{ToPrimitive, Zero};
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct InternalInvokeFunction {
     pub(crate) contract_address: Address,
     entry_point_selector: Felt,
@@ -264,6 +265,28 @@ impl InternalInvokeFunction {
                 fee_transfer_info,
             ),
         )
+    }
+
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        if self.version == 0 {
+            return Ok(());
+        }
+
+        let contract_address = self.contract_address.clone();
+        let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
+        if current_nonce != self.nonce.as_ref().ok_or(err).to_owned() {
+            return Err(TransactionError::InvalidTransactionNonce(
+                current_nonce.to_string(),
+                self.nonce.as_ref().unwrap().to_owned().to_string(),
+            ));
+        }
+
+        state.increment_nonce(&contract_address)?;
+
+        Ok(())
     }
 }
 
