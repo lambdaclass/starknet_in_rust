@@ -271,6 +271,7 @@ impl InternalDeclare {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
 
+        self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
             Err(StateError::MissingClassHash()) => {
