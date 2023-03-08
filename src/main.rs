@@ -5,18 +5,12 @@ use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
 use starknet_rs::{
     business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallType, TransactionExecutionContext},
-        },
-        fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
-        },
+        fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
+        transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
@@ -92,7 +86,7 @@ struct AppState {
 fn declare_parser(
     cached_state: &mut CachedState<InMemoryStateReader>,
     args: &DeclareArgs,
-) -> Result<(), ParserError> {
+) -> Result<(Felt, Felt), ParserError> {
     let contract_class =
         ContractClass::try_from(&args.contract).map_err(ParserError::OpenFileError)?;
     let class_hash =
@@ -110,18 +104,13 @@ fn declare_parser(
         Felt::zero(),
     )
     .map_err(ParserError::ComputeTransactionHashError)?;
-    println!(
-        "Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}",
-        class_hash.to_biguint(),
-        tx_hash.to_biguint()
-    );
-    Ok(())
+    Ok((class_hash, tx_hash))
 }
 
 fn deploy_parser(
     cached_state: &mut CachedState<InMemoryStateReader>,
     args: &DeployArgs,
-) -> Result<(), ParserError> {
+) -> Result<(Felt, Felt), ParserError> {
     let constructor_calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
         None => Vec::new(),
@@ -129,7 +118,7 @@ fn deploy_parser(
     let address = calculate_contract_address(
         &Address(args.salt.into()),
         &Felt::from_str_radix(&args.class_hash[2..], 16)
-            .map_err(|_| ParserError::ParseHashError(args.class_hash.clone()))?,
+            .map_err(|_| ParserError::ParseFeltError(args.class_hash.clone()))?,
         &constructor_calldata,
         Address(0.into()),
     )
@@ -145,18 +134,21 @@ fn deploy_parser(
         Felt::zero(),
     )
     .map_err(ParserError::ComputeTransactionHashError)?;
-    println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", address.to_biguint(), tx_hash.to_biguint());
-    Ok(())
+    Ok((address, tx_hash))
 }
 
 fn invoke_parser(
-    mut cached_state: CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader>,
     args: &InvokeArgs,
-) -> Result<(), ParserError> {
-    let contract_address = Felt::from_str_radix(&args.address[2..], 16).unwrap();
+) -> Result<(Felt, Felt), ParserError> {
+    let contract_address = Address(
+        Felt::from_str_radix(&args.address[2..], 16)
+            .map_err(|_| ParserError::ParseFeltError(args.address.clone()))?,
+    );
     let class_hash = cached_state
-        .get_class_hash_at(&Address(contract_address.clone()))
-        .unwrap();
+        .get_class_hash_at(&contract_address)
+        .unwrap()
+        .clone();
     let contract_class = cached_state.get_contract_class(&class_hash).unwrap();
     let function_entrypoint_indexes = read_abi(&args.abi);
 
@@ -173,52 +165,28 @@ fn invoke_parser(
         .selector()
         .clone();
 
-    let contract_state = ContractState::new(class_hash.clone(), 0.into(), HashMap::new());
-    cached_state
-        .state_reader()
-        .contract_states_mut()
-        .insert(Address(contract_address.clone()), contract_state);
-
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
         None => Vec::new(),
     };
-
-    let exec_entry_point = ExecutionEntryPoint::new(
-        Address(contract_address.clone()),
-        calldata.clone(),
+    let internal_invoke = InternalInvokeFunction::new(
+        contract_address.clone(),
         entrypoint_selector.clone(),
-        Address(0.into()),
-        *entry_point_type,
-        Some(CallType::Delegate),
-        Some(*class_hash),
-    );
-
-    let general_config = StarknetGeneralConfig::default();
-    let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt::zero(),
-        Vec::new(),
         0,
-        10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-    let mut resources_manager = ExecutionResourcesManager::default();
-
-    exec_entry_point
-        .execute(
-            &mut cached_state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context,
-        )
+        calldata.clone(),
+        vec![],
+        Felt::zero(),
+        Some(Felt::zero()),
+    )
+    .map_err(ParserError::TransactionError)?;
+    let _tx_info = internal_invoke
+        .apply(cached_state, &StarknetGeneralConfig::default())
         .map_err(ParserError::ExecuteFromEntryPointError)?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
-        0,
-        Address(contract_address),
+        TRANSACTION_VERSION,
+        contract_address.clone(),
         entrypoint_selector,
         &calldata,
         0,
@@ -227,12 +195,7 @@ fn invoke_parser(
     )
     .map_err(ParserError::ComputeTransactionHashError)?;
 
-    println!(
-        "Invoke transaction was sent.\nContract address: {}\nTransaction hash: 0x{:x}",
-        &args.address,
-        tx_hash.to_bigint()
-    );
-    Ok(())
+    Ok((contract_address.0, tx_hash))
 }
 
 async fn devnet_parser(devnet_args: &DevnetArgs) -> Result<(), ParserError> {
@@ -246,7 +209,7 @@ async fn devnet_parser(devnet_args: &DevnetArgs) -> Result<(), ParserError> {
 async fn declare_req(data: web::Data<AppState>, args: web::Json<DeclareArgs>) -> HttpResponse {
     let mut cached_state = data.cached_state.lock().unwrap();
     match declare_parser(&mut cached_state, &args) {
-        Ok(_) => HttpResponse::Ok().body("declared!"),
+        Ok(t) => HttpResponse::Ok().json(t),
         Err(e) => HttpResponse::ExpectationFailed().body(e.to_string()),
     }
 }
@@ -255,16 +218,16 @@ async fn declare_req(data: web::Data<AppState>, args: web::Json<DeclareArgs>) ->
 async fn deploy_req(data: web::Data<AppState>, args: web::Json<DeployArgs>) -> HttpResponse {
     let mut cached_state = data.cached_state.lock().unwrap();
     match deploy_parser(&mut cached_state, &args) {
-        Ok(_) => HttpResponse::Ok().body("declared!"),
+        Ok(t) => HttpResponse::Ok().json(t),
         Err(e) => HttpResponse::ExpectationFailed().body(e.to_string()),
     }
 }
 
 #[post("/invoke")]
 async fn invoke_req(data: web::Data<AppState>, args: web::Json<InvokeArgs>) -> HttpResponse {
-    let cached_state = data.cached_state.lock().unwrap().to_owned();
-    match invoke_parser(cached_state, &args) {
-        Ok(_) => HttpResponse::Ok().body("declared!"),
+    let mut cached_state = data.cached_state.lock().unwrap();
+    match invoke_parser(&mut cached_state, &args) {
+        Ok(t) => HttpResponse::Ok().json(t),
         Err(e) => HttpResponse::ExpectationFailed().body(e.to_string()),
     }
 }
@@ -298,8 +261,15 @@ async fn main() -> Result<(), ParserError> {
                 .post("http://127.0.0.1:7878/declare")
                 .send_json(&declare_args)
                 .await;
-            let body = response.unwrap().body().await;
-            println!("{body:?}");
+            match response {
+                Ok(mut resp) => {
+                    match resp.json::<(Felt, Felt)>().await {
+                        Ok(body) => println!("Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Err(e) => println!("{e}")
+                    }
+                },
+                Err(ref e) => println!("{e}"),
+            };
             Ok(())
         }
         Commands::Deploy(deploy_args) => {
@@ -307,8 +277,15 @@ async fn main() -> Result<(), ParserError> {
                 .post("http://127.0.0.1:7878/deploy")
                 .send_json(&deploy_args)
                 .await;
-            let body = response.unwrap().body().await;
-            println!("{body:?}");
+            match response {
+                Ok(mut resp) => {
+                    match resp.json::<(Felt, Felt)>().await {
+                        Ok(body) => println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Err(e) => println!("{e}")
+                    }
+                },
+                Err(ref e) => println!("{e}"),
+            };
             Ok(())
         }
         Commands::Invoke(invoke_args) => {
@@ -316,8 +293,15 @@ async fn main() -> Result<(), ParserError> {
                 .post("http://127.0.0.1:7878/invoke")
                 .send_json(&invoke_args)
                 .await;
-            let body = response.unwrap().body().await;
-            println!("{body:?}");
+            match response {
+                Ok(mut resp) => {
+                    match resp.json::<(Felt, Felt)>().await {
+                        Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Err(e) => println!("{e}")
+                    }
+                },
+                Err(ref e) => println!("{e}"),
+            };
             Ok(())
         }
         Commands::Devnet(devnet_args) => devnet_parser(devnet_args).await,

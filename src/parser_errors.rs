@@ -1,5 +1,5 @@
 use crate::{
-    business_logic::execution::error::ExecutionError,
+    business_logic::{execution::error::ExecutionError, transaction::error::TransactionError},
     core::errors::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
@@ -19,7 +19,7 @@ pub enum ParserError {
     #[error(transparent)]
     ComputeTransactionHashError(SyscallHandlerError),
     #[error("Failed to convert {0} to Felt")]
-    ParseHashError(String),
+    ParseFeltError(String),
     #[error("Failed to get entry point for function `{0}`")]
     FunctionEntryPointError(String),
     #[error("Failed to get entry point selector by type`{0:?}`")]
@@ -32,4 +32,6 @@ pub enum ParserError {
     ServerError(std::io::Error),
     #[error(transparent)]
     StateError(StateError),
+    #[error(transparent)]
+    TransactionError(TransactionError),
 }
