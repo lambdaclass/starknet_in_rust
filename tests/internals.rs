@@ -211,7 +211,7 @@ fn expected_fee_transfer_call_info(
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
         ]),
-        storage_read_values: vec![Felt::zero(), Felt::zero()],
+        storage_read_values: vec![Felt::zero(), Felt::zero(), Felt::zero(), Felt::zero()],
 
         ..Default::default()
     }

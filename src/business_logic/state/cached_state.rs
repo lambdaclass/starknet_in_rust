@@ -82,10 +82,14 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
-            let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
+            let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
+                Ok(x) => Cow::Borrowed(x),
+                Err(StateError::NoneContractState(_)) => Cow::Owned([0; 32]),
+                Err(e) => return Err(e),
+            };
             self.cache
                 .class_hash_initial_values
-                .insert(contract_address.clone(), *class_hash);
+                .insert(contract_address.clone(), class_hash.into_owned());
         }
 
         self.cache
@@ -163,10 +167,14 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             ));
         }
 
-        if self.get_class_hash_at(&deploy_contract_address).is_ok() {
-            return Err(StateError::ContractAddressUnavailable(
-                deploy_contract_address.clone(),
-            ));
+        match self.get_class_hash_at(&deploy_contract_address) {
+            Ok(x) if x == &[0; 32] => {}
+            Ok(_) => {
+                return Err(StateError::ContractAddressUnavailable(
+                    deploy_contract_address.clone(),
+                ))
+            }
+            _ => {}
         }
 
         self.cache
