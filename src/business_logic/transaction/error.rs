@@ -30,13 +30,14 @@ pub enum TransactionError {
     MissingClassStorage,
     #[error("Unimplemented state updates")]
     NotImplemented,
+    #[error("{0}")]
+    InvokeExecutionError(String),
     #[error(transparent)]
     ContractAddressError(#[from] ContractAddressError),
     #[error(transparent)]
     SyscallError(#[from] SyscallHandlerError),
     #[error(transparent)]
     StateError(#[from] StateError),
-
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
     #[error("The entry_point_selector must be 617075754465154585683856897856256838130216341506379215893724690153393808813, found {0:?}")]
