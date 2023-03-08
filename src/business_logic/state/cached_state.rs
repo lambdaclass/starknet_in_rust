@@ -5,11 +5,13 @@ use super::{
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
+    starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address},
 };
 use felt::Felt;
 use getset::{Getters, MutGetters};
-use std::collections::HashMap;
+use num_traits::Zero;
+use std::{borrow::Cow, collections::HashMap};
 
 // K: class_hash V: ContractClass
 pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
@@ -105,10 +107,20 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
-            let value = self.state_reader.get_storage_at(storage_entry)?;
+            let value = match self.state_reader.get_storage_at(storage_entry) {
+                Ok(x) => Cow::Borrowed(x),
+                Err(
+                    StateError::StorageError(StorageError::ErrorFetchingData)
+                    | StateError::EmptyKeyInStorage
+                    | StateError::NoneStoragLeaf(_)
+                    | StateError::NoneStorage(_)
+                    | StateError::NoneContractState(_),
+                ) => Cow::Owned(Felt::zero()),
+                Err(e) => return Err(e),
+            };
             self.cache
                 .storage_initial_values
-                .insert(storage_entry.clone(), value.clone());
+                .insert(storage_entry.clone(), value.into_owned());
         }
 
         self.cache
@@ -260,7 +272,10 @@ mod tests {
         assert_eq!(cached_state.get_storage_at(&storage_entry), Ok(&value));
 
         let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
-        assert!(cached_state.get_storage_at(&storage_entry_2).is_err());
+        assert_eq!(
+            cached_state.get_storage_at(&storage_entry_2).unwrap(),
+            &Felt::zero(),
+        );
     }
 
     #[test]
