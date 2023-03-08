@@ -18,6 +18,7 @@ use crate::{
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
 use num_traits::{Num, ToPrimitive};
+use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use starknet_crypto::FieldElement;
 use std::{
@@ -31,7 +32,7 @@ pub type ClassHash = [u8; 32];
 //*      Address
 //* -------------------
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt);
 
 //* -------------------
