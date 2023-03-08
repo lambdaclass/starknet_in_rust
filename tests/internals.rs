@@ -226,11 +226,7 @@ fn expected_execute_call_info() -> CallInfo {
         code_address: None,
         class_hash: Some(TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
         entry_point_selector: Some(
-            Felt::from_str_radix(
-                "015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad",
-                16,
-            )
-            .unwrap(),
+            EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         ),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
