@@ -29,7 +29,6 @@ use crate::{
 use felt::Felt;
 use num_traits::{ToPrimitive, Zero};
 
-#[allow(dead_code)]
 pub struct InternalInvokeFunction {
     pub(crate) contract_address: Address,
     entry_point_selector: Felt,
