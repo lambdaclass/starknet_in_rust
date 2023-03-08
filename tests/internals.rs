@@ -287,11 +287,7 @@ fn expected_validate_call_info() -> CallInfo {
             0, 1, 17,
         ]),
         entry_point_selector: Some(
-            Felt::from_str_radix(
-                "0162da33a4585851fe8d3af3c2a9c60b557814e221e0d4f30ff0b2189d9c7775",
-                16,
-            )
-            .unwrap(),
+        VALIDATE_ENTRY_POINT_SELECTOR.clone()
         ),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
