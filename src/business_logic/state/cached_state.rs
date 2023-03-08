@@ -8,7 +8,7 @@ use crate::{
     utils::{subtract_mappings, Address},
 };
 use felt::Felt;
-use getset::{Getters, MutGetters};
+use getset::Getters;
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
@@ -16,9 +16,9 @@ pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
-#[derive(Debug, Clone, Default, Getters, MutGetters)]
+#[derive(Debug, Clone, Default, Getters)]
 pub struct CachedState<T: StateReader + Clone> {
-    #[get_mut = "pub"]
+    #[get = "pub"]
     pub(crate) state_reader: T,
     #[get = "pub"]
     pub(crate) cache: StateCache,
