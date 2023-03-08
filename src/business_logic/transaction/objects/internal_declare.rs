@@ -243,10 +243,8 @@ impl InternalDeclare {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "Don't handle nonce for version 0".to_string(),
-            ));
+        if self.version == 0 {
+            return Ok(());
         }
 
         let contract_address = self.account_contract_address();
@@ -269,6 +267,7 @@ impl InternalDeclare {
         state: &mut S,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        self.handle_nonce(state)?;
         let concurrent_exec_info = self.apply(state, general_config)?;
 
         // Set contract class

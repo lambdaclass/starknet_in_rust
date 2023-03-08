@@ -123,14 +123,15 @@ fn create_account_tx_test_state(
                 );
             }
 
+            for (class_hash, contract_class) in class_hash_to_class {
+                state_reader
+                    .class_hash_to_contract_class_mut()
+                    .insert(felt_to_hash(&class_hash), contract_class);
+            }
+
             state_reader
         },
-        Some(
-            class_hash_to_class
-                .into_iter()
-                .map(|(k, v)| (felt_to_hash(&k), v))
-                .collect(),
-        ),
+        Some(HashMap::new()),
     );
 
     Ok((general_config, cached_state))
@@ -322,7 +323,6 @@ fn test_state_for_declare_tx() {
     );
     // Execute declare_tx
     assert!(declare_tx.execute(&mut state, &general_config).is_ok());
-    dbg!("start");
     dbg!(&state);
     assert_eq!(
         state.get_nonce_at(&declare_tx.sender_address),

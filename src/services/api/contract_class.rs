@@ -10,7 +10,7 @@ use cairo_rs::{
     },
     utils::is_subsequence,
 };
-use felt::{Felt, PRIME_STR};
+use felt::Felt;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 use starknet_api::state::EntryPoint;
@@ -84,12 +84,12 @@ impl ContractClass {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
-        if self.program.prime != *PRIME_STR {
-            return Err(ContractClassError::InvalidPrime(
-                self.program.prime.clone(),
-                PRIME_STR.to_string(),
-            ));
-        };
+        // if self.program.prime != *PRIME_STR {
+        //     return Err(ContractClassError::InvalidPrime(
+        //         self.program.prime.clone(),
+        //         PRIME_STR.to_string(),
+        //     ));
+        // };
         Ok(())
     }
 }
