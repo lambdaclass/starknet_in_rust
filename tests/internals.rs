@@ -188,11 +188,7 @@ fn expected_fee_transfer_info() -> CallInfo {
         internal_calls: vec![],
         events: vec![OrderedEvent {
             order: 0,
-            keys: vec![Felt::from_str_radix(
-                "0099cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9",
-                16,
-            )
-            .unwrap()],
+            keys: vec![TRANSFER_EVENT_SELECTOR.clone()],
             data: vec![
                 Felt::from(257),
                 Felt::from(4096),
