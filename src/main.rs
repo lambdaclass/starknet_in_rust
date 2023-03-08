@@ -42,6 +42,7 @@ enum Commands {
     Declare(DeclareArgs),
     Deploy(DeployArgs),
     Invoke(InvokeArgs),
+    #[command(name = "starknet_in_rust")]
     Devnet(DevnetArgs),
 }
 
