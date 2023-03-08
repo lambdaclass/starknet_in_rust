@@ -5,10 +5,7 @@ use crate::{
             os_usage::get_additional_os_resources,
         },
         fact_state::state::ExecutionResourcesManager,
-        state::{
-            cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
-            state_cache::StorageEntry,
-        },
+        state::{cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader},
         transaction::error::TransactionError,
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -20,10 +17,7 @@ use felt::Felt;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
 use starknet_crypto::FieldElement;
-use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-};
+use std::{collections::HashMap, hash::Hash};
 
 pub type ClassHash = [u8; 32];
 
@@ -99,29 +93,13 @@ pub fn felt_to_hash(value: &Felt) -> [u8; 32] {
 }
 
 // -------------------
-//    STATE UTILS
+//    State utils
 // -------------------
-
-/// Converts CachedState storage mapping to StateDiff storage mapping.
-/// See to_cached_state_storage_mapping documentation.
-
-pub fn to_state_diff_storage_mapping(
-    storage_writes: HashMap<StorageEntry, Felt>,
-) -> HashMap<Felt, HashMap<[u8; 32], Address>> {
-    let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
-    for ((address, key), value) in storage_writes {
-        let mut map = storage_updates.get(&address.0).cloned().unwrap_or_default();
-        map.insert(key, Address(value));
-        storage_updates.insert(address.0, map);
-    }
-    storage_updates
-}
 
 /// Returns the total resources needed to include the most recent transaction in a StarkNet batch
 /// (recent w.r.t. application on the given state) i.e., L1 gas usage and Cairo execution resources.
 /// Used for transaction fee; calculation is made as if the transaction is the first in batch, for
 /// consistency.
-
 pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
     call_info
         .gen_call_topology()
@@ -182,7 +160,6 @@ pub fn calculate_tx_resources(
 /// Returns a mapping containing key-value pairs from a that are not included in b (if
 /// a key appears in b with a different value, it will be part of the output).
 /// Uses to take only updated cells from a mapping.
-
 fn contained_and_not_updated<K, V>(key: &K, value: &V, map: HashMap<K, V>) -> bool
 where
     K: Hash + Eq,
@@ -201,35 +178,6 @@ where
         .into_iter()
         .filter(|(k, v)| contained_and_not_updated(k, v, map_b.clone()))
         .collect()
-}
-
-/// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
-/// storage mapping (Tuple of address and key map to the associated value).
-
-pub fn to_cache_state_storage_mapping(
-    map: HashMap<Felt, HashMap<[u8; 32], Address>>,
-) -> HashMap<StorageEntry, Felt> {
-    let mut storage_writes = HashMap::new();
-    for (address, contract_storage) in map {
-        for (key, value) in contract_storage {
-            storage_writes.insert((Address(address.clone()), key), value.0);
-        }
-    }
-    storage_writes
-}
-
-// get a vector of keys from two hashmaps
-
-pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
-where
-    K: Hash + Eq,
-{
-    let mut keys1: HashSet<K> = map_a.into_keys().collect();
-    let keys2: HashSet<K> = map_b.into_keys().collect();
-
-    keys1.extend(keys2);
-
-    keys1.into_iter().collect()
 }
 
 //* ----------------------------
@@ -498,37 +446,37 @@ mod test {
     use super::*;
     use felt::{felt_str, Felt};
     use num_traits::{One, Zero};
-    use std::collections::HashMap;
 
     #[test]
-    fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
-        let address1: Address = Address(1.into());
-        let key1 = [0; 32];
-        let value1: Felt = 2.into();
-
-        let address2: Address = Address(3.into());
-        let key2 = [1; 32];
-
-        let value2: Felt = 4.into();
-
-        storage.insert((address1.clone(), key1), value1.clone());
-        storage.insert((address2.clone(), key2), value2.clone());
-
-        let map = to_state_diff_storage_mapping(storage);
-
+    fn test_felt_to_hash() {
+        assert_eq!(felt_to_hash(&Felt::zero()), [0; 32]);
         assert_eq!(
-            *map.get(&address1.0).unwrap().get(&key1).unwrap(),
-            Address(value1)
+            felt_to_hash(&Felt::one()),
+            [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1
+            ],
         );
         assert_eq!(
-            *map.get(&address2.0).unwrap().get(&key2).unwrap(),
-            Address(value2)
+            felt_to_hash(&257.into()),
+            [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 1, 1
+            ],
+        );
+
+        assert_eq!(
+            felt_to_hash(&felt_str!(
+                "2151680050850558576753658069693146429350618838199373217695410689374331200218"
+            )),
+            [
+                4, 193, 206, 200, 202, 13, 38, 110, 16, 37, 89, 67, 39, 3, 185, 128, 123, 117, 218,
+                224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
+            ],
         );
     }
 
     #[test]
-
     fn subtract_mappings_test() {
         let mut a = HashMap::new();
         let mut b = HashMap::new();
@@ -574,61 +522,5 @@ mod test {
         f.insert(6, 7);
 
         assert_eq!(subtract_mappings(e, f), HashMap::new())
-    }
-
-    #[test]
-
-    fn to_cache_state_storage_mapping_test() {
-        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
-        let address1: Address = Address(1.into());
-        let key1 = [0; 32];
-        let value1: Felt = 2.into();
-
-        let address2: Address = Address(3.into());
-        let key2 = [1; 32];
-
-        let value2: Felt = 4.into();
-
-        storage.insert((address1.clone(), key1), value1.clone());
-        storage.insert((address2.clone(), key2), value2.clone());
-
-        let state_dff = to_state_diff_storage_mapping(storage);
-        let cache_storage = to_cache_state_storage_mapping(state_dff);
-
-        let mut expected_res = HashMap::new();
-
-        expected_res.insert((Address(address1.0), key1), value1);
-        expected_res.insert((Address(address2.0), key2), value2);
-
-        assert_eq!(cache_storage, expected_res)
-    }
-
-    #[test]
-    fn test_felt_to_hash() {
-        assert_eq!(felt_to_hash(&Felt::zero()), [0; 32]);
-        assert_eq!(
-            felt_to_hash(&Felt::one()),
-            [
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 1
-            ],
-        );
-        assert_eq!(
-            felt_to_hash(&257.into()),
-            [
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 1, 1
-            ],
-        );
-
-        assert_eq!(
-            felt_to_hash(&felt_str!(
-                "2151680050850558576753658069693146429350618838199373217695410689374331200218"
-            )),
-            [
-                4, 193, 206, 200, 202, 13, 38, 110, 16, 37, 89, 67, 39, 3, 185, 128, 123, 117, 218,
-                224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
-            ],
-        );
     }
 }

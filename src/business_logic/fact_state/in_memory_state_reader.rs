@@ -1,4 +1,4 @@
-use super::{contract_state::ContractState, state::StateDiff};
+use super::{contract_state::ContractState, state_diff::StateDiff};
 use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
@@ -52,7 +52,7 @@ impl InMemoryStateReader {
         }
 
         // update the storage
-        // for (felt, ) in state_diff.storage_updates.into_iter() {
+        // for (felt, change) in state_diff.storage_updates.into_iter() {
 
         // }
     }

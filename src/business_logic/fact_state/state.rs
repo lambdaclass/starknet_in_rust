@@ -1,14 +1,8 @@
 use crate::{
     business_logic::state::{cached_state::CachedState, state_api::StateReader},
     core::errors::state_errors::StateError,
-    starkware_utils::starkware_errors::StarkwareError,
-    utils::{
-        get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-        Address,
-    },
 };
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Clone, Debug, Default)]
@@ -41,10 +35,6 @@ impl ExecutionResourcesManager {
             .map(ToOwned::to_owned)
     }
 }
-
-// ----------------------
-//      SHARED STATE
-// ----------------------
 
 #[derive(Debug, Clone)]
 pub(crate) struct CarriedState<T>
@@ -86,133 +76,5 @@ impl<T: StateReader + Clone> CarriedState<T> {
             }
             None => Err(StateError::ParentCarriedStateIsNone),
         }
-    }
-}
-
-#[derive(Default)]
-pub struct StateDiff {
-    pub(crate) address_to_class_hash: HashMap<Address, [u8; 32]>,
-    pub(crate) address_to_nonce: HashMap<Address, Felt>,
-    pub(crate) storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
-}
-
-impl StateDiff {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
-    where
-        T: StateReader + Clone,
-    {
-        let state_cache = cached_state.cache;
-
-        let substracted_maps = subtract_mappings(
-            state_cache.storage_writes,
-            state_cache.storage_initial_values,
-        );
-
-        let storage_updates = to_state_diff_storage_mapping(substracted_maps);
-
-        let address_to_nonce =
-            subtract_mappings(state_cache.nonce_writes, state_cache.nonce_initial_values);
-
-        let address_to_class_hash = subtract_mappings(
-            state_cache.class_hash_writes,
-            state_cache.class_hash_initial_values,
-        );
-
-        Ok(StateDiff {
-            address_to_class_hash,
-            address_to_nonce,
-            storage_updates,
-        })
-    }
-
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn to_cached_state<T>(&self, state_reader: T) -> Result<CachedState<T>, StateError>
-    where
-        T: StateReader + Clone,
-    {
-        let mut cache_state = CachedState::new(state_reader, None);
-        let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
-
-        cache_state.cache.set_initial_values(
-            &self.address_to_class_hash,
-            &self.address_to_nonce,
-            &cache_storage_mapping,
-        )?;
-        Ok(cache_state)
-    }
-
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn squash(&mut self, other: StateDiff) -> Result<Self, StarkwareError> {
-        self.address_to_class_hash
-            .extend(other.address_to_class_hash);
-        let address_to_class_hash = self.address_to_class_hash.clone();
-
-        self.address_to_nonce.extend(other.address_to_nonce);
-        let address_to_nonce = self.address_to_nonce.clone();
-
-        let mut storage_updates = HashMap::new();
-
-        let addresses: Vec<Felt> =
-            get_keys(self.storage_updates.clone(), other.storage_updates.clone());
-
-        for address in addresses {
-            let default: HashMap<[u8; 32], Address> = HashMap::new();
-            let mut map_a = self
-                .storage_updates
-                .get(&address)
-                .unwrap_or(&default)
-                .to_owned();
-            let map_b = other
-                .storage_updates
-                .get(&address)
-                .unwrap_or(&default)
-                .to_owned();
-            map_a.extend(map_b);
-            storage_updates.insert(address, map_a.clone());
-        }
-
-        Ok(StateDiff {
-            address_to_class_hash,
-            address_to_nonce,
-            storage_updates,
-        })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::StateDiff;
-    use crate::{
-        business_logic::{
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
-            state::cached_state::CachedState,
-        },
-        utils::Address,
-    };
-    use felt::Felt;
-    use std::collections::HashMap;
-
-    #[test]
-    fn test_from_cached_state_without_updates() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-
-        let contract_address = Address(32123.into());
-        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
-
-        state_reader
-            .contract_states
-            .insert(contract_address, contract_state);
-
-        let cached_state = CachedState::new(state_reader, None);
-
-        let diff = StateDiff::from_cached_state(cached_state).unwrap();
-
-        assert_eq!(0, diff.storage_updates.len());
     }
 }
