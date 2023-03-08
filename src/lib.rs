@@ -10,7 +10,6 @@ pub mod hash_utils;
 pub mod parser_errors;
 pub mod public;
 pub mod serde_structs;
-pub mod server;
 pub mod services;
 pub mod starknet_runner;
 pub mod starknet_storage;
