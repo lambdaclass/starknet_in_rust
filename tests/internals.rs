@@ -10,10 +10,13 @@ use starknet_rs::{
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     definitions::{
-        constants::EXECUTE_ENTRY_POINT_SELECTOR,
+        constants::{
+            EXECUTE_ENTRY_POINT_SELECTOR, TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
+        },
         general_config::{StarknetChainId, StarknetGeneralConfig},
         transaction_type::TransactionType,
     },
+    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, felt_to_hash, Address},
 };
@@ -179,7 +182,7 @@ fn expected_fee_transfer_info() -> CallInfo {
         contract_address: Address(Felt::from(4097)),
         code_address: None,
         class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
-        entry_point_selector: TRANSFER_ENTRY_POINT_SELECTOR.clone(),
+        entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt::from(4096), Felt::zero(), Felt::zero()],
         retdata: vec![Felt::from(1)],
@@ -224,10 +227,8 @@ fn expected_execute_call_info() -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
-        class_hash: Some(TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
-        entry_point_selector: Some(
-            EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        ),
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt::from(256),
@@ -245,7 +246,7 @@ fn expected_execute_call_info() -> CallInfo {
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             call_type: Some(CallType::Call),
-            class_hash: Some(TEST_CLASS_HASH.clone()),
+            class_hash: Some(felt_to_hash(&TEST_CLASS_HASH.clone())),
             entry_point_selector: Some(
                 Felt::from_str_radix(
                     "039a1491f76903a16feed0a6433bec78de4c73194944e1118e226820ad479701",
@@ -275,10 +276,8 @@ fn expected_validate_call_info() -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
-        class_hash: Some(TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
-        entry_point_selector: Some(
-        VALIDATE_ENTRY_POINT_SELECTOR.clone()
-        ),
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt::from(256),
