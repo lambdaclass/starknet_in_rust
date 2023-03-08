@@ -107,7 +107,7 @@ impl StateDiff {
 }
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
-pub fn to_state_diff_storage_mapping(
+fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt>,
 ) -> HashMap<Address, HashMap<[u8; 32], Felt>> {
     let mut storage_updates: HashMap<Address, HashMap<[u8; 32], Felt>> = HashMap::new();
@@ -121,7 +121,7 @@ pub fn to_state_diff_storage_mapping(
 
 /// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
 /// storage mapping (Tuple of address and key map to the associated value).
-pub fn to_cache_state_storage_mapping(
+fn to_cache_state_storage_mapping(
     map: HashMap<Address, HashMap<[u8; 32], Felt>>,
 ) -> HashMap<StorageEntry, Felt> {
     let mut storage_writes = HashMap::new();
@@ -134,7 +134,7 @@ pub fn to_cache_state_storage_mapping(
 }
 
 /// Get a vector of keys from two hashmaps
-pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
+fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
 where
     K: Hash + Eq,
 {
