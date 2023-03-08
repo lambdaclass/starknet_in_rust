@@ -145,23 +145,20 @@ fn invoke_parser(
         Felt::from_str_radix(&args.address[2..], 16)
             .map_err(|_| ParserError::ParseFeltError(args.address.clone()))?,
     );
-    let class_hash = cached_state
-        .get_class_hash_at(&contract_address)
-        .unwrap()
-        .clone();
+    let class_hash = *cached_state.get_class_hash_at(&contract_address).unwrap();
     let contract_class = cached_state.get_contract_class(&class_hash).unwrap();
     let function_entrypoint_indexes = read_abi(&args.abi);
 
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
-        .ok_or(ParserError::FunctionEntryPointError(args.function.clone()))?;
+        .ok_or_else(|| ParserError::FunctionEntryPointError(args.function.clone()))?;
 
     let entrypoint_selector = entry_points_by_type
         .get(entry_point_type)
-        .ok_or(ParserError::EntryPointType(entry_point_type.clone()))?
+        .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
-        .ok_or(ParserError::EntryPointIndex(entry_point_index.clone()))?
+        .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
         .selector()
         .clone();
 

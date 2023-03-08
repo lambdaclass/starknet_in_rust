@@ -15,7 +15,7 @@ use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CallType {
     Call,
     Delegate,

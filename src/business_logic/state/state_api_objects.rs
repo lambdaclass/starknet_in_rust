@@ -1,6 +1,6 @@
 use crate::{starkware_utils::starkware_errors::StarkwareError, utils::Address};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockInfo {
     /// The sequence number of the last block created.
     pub block_number: u64,

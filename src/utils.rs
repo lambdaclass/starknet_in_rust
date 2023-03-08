@@ -104,7 +104,7 @@ pub fn string_to_hash(class_string: &String) -> [u8; 32] {
         if &class_string[..2] == "0x" {
             &class_string[2..]
         } else {
-            &class_string
+            class_string
         },
         16,
     );

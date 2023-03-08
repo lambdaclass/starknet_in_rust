@@ -1,7 +1,7 @@
 use super::contract_class::ContractEntryPoint;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum ContractClassError {
     #[error("A contract may have at most 1 constructor")]
     MultipleConstructors,

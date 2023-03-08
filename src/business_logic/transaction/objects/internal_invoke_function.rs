@@ -100,7 +100,7 @@ impl InternalInvokeFunction {
             self.max_fee,
             self.nonce
                 .clone()
-                .ok_or(TransactionError::InvalidNonce("Nonce is None".to_string()))?,
+                .ok_or_else(|| TransactionError::InvalidNonce("Nonce is None".to_string()))?,
             n_steps,
             self.version,
         ))
