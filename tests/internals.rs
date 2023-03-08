@@ -224,10 +224,7 @@ fn expected_execute_call_info() -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
-        class_hash: Some([
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 1, 17,
-        ]),
+        class_hash: Some(TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
         entry_point_selector: Some(
             Felt::from_str_radix(
                 "015d40a3d6ca2ac30f4031e42be28da9b056fef9bb7357ac5e85627ee876e5ad",
