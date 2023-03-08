@@ -193,14 +193,12 @@ impl InternalDeployAccount {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "Don't handle nonce for version 0".to_string(),
-            ));
+        if self.version == 0 {
+            return Ok(());
         }
 
-        let contract_address = self.contract_address.clone();
-        let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
+        let contract_address = &self.contract_address;
+        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -208,7 +206,7 @@ impl InternalDeployAccount {
             ));
         }
 
-        state.increment_nonce(&contract_address)?;
+        state.increment_nonce(contract_address)?;
 
         Ok(())
     }

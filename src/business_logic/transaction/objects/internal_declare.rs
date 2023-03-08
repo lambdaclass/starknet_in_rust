@@ -85,10 +85,6 @@ impl InternalDeclare {
         Ok(internal_declare)
     }
 
-    pub fn account_contract_address(&self) -> Address {
-        self.sender_address.clone()
-    }
-
     pub fn get_calldata(&self) -> Vec<Felt> {
         let bytes = Felt::from_bytes_be(&self.class_hash);
         Vec::from([bytes])
@@ -186,7 +182,7 @@ impl InternalDeclare {
         let calldata = self.get_calldata();
 
         let entry_point = ExecutionEntryPoint::new(
-            self.account_contract_address(),
+            self.sender_address.clone(),
             calldata,
             self.validate_entry_point_selector.clone(),
             Address(Felt::zero()),
@@ -236,14 +232,12 @@ impl InternalDeclare {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "Don't handle nonce for version 0".to_string(),
-            ));
+        if self.version == 0 {
+            return Ok(());
         }
 
-        let contract_address = self.account_contract_address();
-        let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
+        let contract_address = &self.sender_address;
+        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -251,7 +245,7 @@ impl InternalDeclare {
             ));
         }
 
-        state.increment_nonce(&contract_address)?;
+        state.increment_nonce(contract_address)?;
 
         Ok(())
     }
