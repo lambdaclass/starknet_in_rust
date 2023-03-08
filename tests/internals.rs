@@ -179,13 +179,7 @@ fn expected_fee_transfer_info() -> CallInfo {
         contract_address: Address(Felt::from(4097)),
         code_address: None,
         class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
-        entry_point_selector: Some(
-            Felt::from_str_radix(
-                "0083afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e",
-                16,
-            )
-            .unwrap(),
-        ),
+        entry_point_selector: TRANSFER_ENTRY_POINT_SELECTOR.clone(),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt::from(4096), Felt::zero(), Felt::zero()],
         retdata: vec![Felt::from(1)],
