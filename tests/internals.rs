@@ -6,7 +6,7 @@ use starknet_rs::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
         state::{
-            cached_state::CachedState,
+            cached_state::{CachedState, ContractClassCache},
             state_api::{State, StateReader},
         },
         transaction::objects::internal_deploy_account::InternalDeployAccount,
@@ -71,15 +71,15 @@ fn create_account_tx_test_state(
     let test_erc20_class_hash = TEST_ERC20_CONTRACT_CLASS_HASH.clone();
     let class_hash_to_class = HashMap::from([
         (
-            test_account_class_hash.clone(),
+            felt_to_hash(&test_account_class_hash),
             get_contract_class(ACCOUNT_CONTRACT_PATH)?,
         ),
         (
-            test_contract_class_hash.clone(),
+            felt_to_hash(&test_contract_class_hash),
             get_contract_class(TEST_CONTRACT_PATH)?,
         ),
         (
-            test_erc20_class_hash.clone(),
+            felt_to_hash(&test_erc20_class_hash),
             get_contract_class(ERC20_CONTRACT_PATH)?,
         ),
     ]);
@@ -97,12 +97,12 @@ fn create_account_tx_test_state(
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
-    let test_erc20_sequencer_balance_key = TEST_ERC20_SEQUENCER_BALANCE_KEY.clone();
+    // let test_erc20_sequencer_balance_key = TEST_ERC20_SEQUENCER_BALANCE_KEY.clone();
     let storage_view = HashMap::from([
-        (
-            (test_erc20_address.clone(), test_erc20_sequencer_balance_key),
-            Felt::zero(),
-        ),
+        // (
+        //     (test_erc20_address.clone(), test_erc20_sequencer_balance_key),
+        //     Felt::zero(),
+        // ),
         (
             (test_erc20_address, test_erc20_account_balance_key),
             ACTUAL_FEE.clone(),
@@ -111,7 +111,7 @@ fn create_account_tx_test_state(
 
     let cached_state = CachedState::new(
         {
-            let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+            let mut state_reader = InMemoryStateReader::new(HashMap::new(), class_hash_to_class);
 
             for (contract_address, class_hash) in address_to_class_hash {
                 let storage_keys = storage_view
@@ -129,12 +129,13 @@ fn create_account_tx_test_state(
 
             state_reader
         },
-        Some(
-            class_hash_to_class
-                .into_iter()
-                .map(|(k, v)| (felt_to_hash(&k), v))
-                .collect(),
-        ),
+        // Some(
+        //     class_hash_to_class
+        //         .into_iter()
+        //         .map(|(k, v)| (felt_to_hash(&k), v))
+        //         .collect(),
+        // ),
+        Some(Default::default()),
     );
 
     Ok((general_config, cached_state))
@@ -301,6 +302,13 @@ fn test_deploy_account() {
         ACTUAL_FEE.clone(),
     );
 
+    let (state_before, state_after) = expected_deploy_account_states();
+    if state != state_before {
+        println!(" left: {state:#?}");
+        println!("right: {state_before:#?}");
+        panic!();
+    }
+
     // Statement **not** in blockifier.
     state
         .cache_mut()
@@ -310,6 +318,12 @@ fn test_deploy_account() {
     let tx_info = deploy_account_tx
         .execute(&mut state, &general_config)
         .unwrap();
+
+    if state != state_after {
+        println!(" left: {state:#?}");
+        println!("right: {state_after:#?}");
+        panic!();
+    }
 
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
@@ -372,4 +386,162 @@ fn test_deploy_account() {
         .get_class_hash_at(deploy_account_tx.contract_address())
         .unwrap();
     assert_eq!(class_hash_from_state, deploy_account_tx.class_hash());
+}
+
+fn expected_deploy_account_states() -> (
+    CachedState<InMemoryStateReader>,
+    CachedState<InMemoryStateReader>,
+) {
+    let mut state_before = CachedState::new(
+        InMemoryStateReader::new(
+            HashMap::from([
+                (
+                    Address(0x101.into()),
+                    ContractState::new(felt_to_hash(&0x111.into()), Default::default(), Default::default()),
+                ),
+                (
+                    Address(0x100.into()),
+                    ContractState::new(felt_to_hash(&0x110.into()), Default::default(), Default::default()),
+                ),
+                (
+                    Address(0x1001.into()),
+                    ContractState::new(
+                        felt_to_hash(&0x1010.into()),
+                        Default::default(),
+                        HashMap::from([
+                            (
+                                felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"),
+                                Felt::zero(),
+                            ),
+                        ]),
+                    ),
+                )
+            ]),
+            HashMap::from([
+                (felt_to_hash(&0x110.into()), ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap()),
+                (felt_to_hash(&0x111.into()), ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap()),
+                (felt_to_hash(&0x1010.into()), ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap()),
+            ]),
+        ),
+        Some(ContractClassCache::new()),
+    );
+    state_before.set_storage_at(
+        &(
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "2542253978940891427830343982984992363331567580652119103860970381451088310289"
+            )),
+        ),
+        0.into(),
+    );
+
+    let mut state_after = state_before.clone();
+    state_after.cache_mut().nonce_initial_values_mut().insert(
+        Address(felt_str!(
+            "386181506763903095743576862849245034886954647214831045800703908858571591162"
+        )),
+        Felt::zero(),
+    );
+    state_after
+        .cache_mut()
+        .class_hash_initial_values_mut()
+        .insert(Address(0x1001.into()), felt_to_hash(&0x1010.into()));
+    state_after
+        .cache_mut()
+        .class_hash_initial_values_mut()
+        .insert(
+            Address(felt_str!(
+                "386181506763903095743576862849245034886954647214831045800703908858571591162"
+            )),
+            [0; 32],
+        );
+    state_after.cache_mut().storage_initial_values_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "2542253978940891427830343982984992363331567580652119103860970381451088310290"
+            )),
+        ),
+        Felt::zero(),
+    );
+    state_after.cache_mut().storage_initial_values_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "3229073099929281304021185011369329892856197542079132996799046100564060768275"
+            )),
+        ),
+        Felt::zero(),
+    );
+    state_after.cache_mut().storage_initial_values_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "3229073099929281304021185011369329892856197542079132996799046100564060768274"
+            )),
+        ),
+        Felt::zero(),
+    );
+    state_after.cache_mut().nonce_writes_mut().insert(
+        Address(felt_str!(
+            "386181506763903095743576862849245034886954647214831045800703908858571591162"
+        )),
+        1.into(),
+    );
+    state_after.cache_mut().class_hash_writes_mut().insert(
+        Address(felt_str!(
+            "386181506763903095743576862849245034886954647214831045800703908858571591162"
+        )),
+        felt_to_hash(&0x111.into()),
+    );
+    state_after.cache_mut().storage_writes_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "2542253978940891427830343982984992363331567580652119103860970381451088310290"
+            )),
+        ),
+        Felt::zero(),
+    );
+    state_after.cache_mut().storage_writes_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "2542253978940891427830343982984992363331567580652119103860970381451088310289"
+            )),
+        ),
+        Felt::zero(),
+    );
+    state_after.cache_mut().storage_writes_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "3229073099929281304021185011369329892856197542079132996799046100564060768275"
+            )),
+        ),
+        Felt::zero(),
+    );
+    state_after.cache_mut().storage_writes_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&felt_str!(
+                "3229073099929281304021185011369329892856197542079132996799046100564060768274"
+            )),
+        ),
+        Felt::zero(),
+    );
+    state_after
+        .set_contract_class(
+            &felt_to_hash(&0x1010.into()),
+            &ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap(),
+        )
+        .unwrap();
+    state_after
+        .set_contract_class(
+            &felt_to_hash(&0x111.into()),
+            &ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap(),
+        )
+        .unwrap();
+
+    (state_before, state_after)
 }
