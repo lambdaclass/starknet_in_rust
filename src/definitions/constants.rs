@@ -24,6 +24,9 @@ lazy_static! {
     pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt =
         felt_str!("617075754465154585683856897856256838130216341506379215893724690153393808813");
 
+    // Value generated from get_selector_from_name('__validate_declare__')
+    pub static ref VALIDATE_DECLARE_ENTRY_POINT_NAME: Felt =
+        felt_str!("1148189391774113786911959041662034419554430000171893651982484995704491697075");
     /// Value generated from `get_selector_from_name('__validate_deploy__')`.
     pub static ref VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR: Felt =
         felt_str!("1554466106298962091002569854891683800203193677547440645928814916929210362005");

@@ -3,6 +3,7 @@ use crate::{
         contract_address::starknet_contract_address::compute_class_hash,
         errors::syscall_handler_errors::SyscallHandlerError,
     },
+    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,
     services::api::contract_class::ContractClass,
     utils::Address,
@@ -51,7 +52,7 @@ pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: u64,
     contract_address: &Address,
-    entry_point_selector: u64,
+    entry_point_selector: Felt,
     calldata: &[Felt],
     max_fee: u64,
     chain_id: Felt,
@@ -63,7 +64,7 @@ pub fn calculate_transaction_hash_common(
         tx_hash_prefix.get_prefix(),
         version.into(),
         contract_address.0.clone(),
-        entry_point_selector.into(),
+        entry_point_selector,
         calldata_hash,
         max_fee.into(),
         chain_id,
@@ -75,25 +76,24 @@ pub fn calculate_transaction_hash_common(
 }
 
 pub fn calculate_deploy_transaction_hash(
-    _version: u64,
-    _contract_address: Address,
-    _constructor_calldata: &[Felt],
-    _chain_id: u64,
+    version: u64,
+    contract_address: &Address,
+    constructor_calldata: &[Felt],
+    chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
-    todo!("Provide a constant CONSTRUCTOR_ENTRY_POINT_SELECTOR.")
-    // calculate_transaction_hash_common(
-    //     TransactionHashPrefix::Deploy,
-    //     version,
-    //     contract_address,
-    //     // TODO: A constant CONSTRUCTOR_ENTRY_POINT_SELECTOR must be provided here.
-    //     // See https://github.com/starkware-libs/cairo-lang/blob/9889fbd522edc5eff603356e1912e20642ae20af/src/starkware/starknet/public/abi.py#L53
-    //     todo!(),
-    //     constructor_calldata,
-    //     // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
-    //     0,
-    //     chain_id,
-    //     &Vec::new(),
-    // )
+    let entry_point_selector = CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone();
+
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::Deploy,
+        version,
+        contract_address,
+        entry_point_selector,
+        constructor_calldata,
+        // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
+        0,
+        chain_id,
+        &[],
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -114,7 +114,7 @@ pub fn calculate_deploy_account_transaction_hash(
         TransactionHashPrefix::DeployAccount,
         version,
         contract_address,
-        0,
+        0.into(),
         &calldata,
         max_fee,
         chain_id,
@@ -125,7 +125,7 @@ pub fn calculate_deploy_account_transaction_hash(
 pub(crate) fn calculate_declare_transaction_hash(
     contract_class: ContractClass,
     chain_id: Felt,
-    sender_address: Address,
+    sender_address: &Address,
     max_fee: u64,
     version: u64,
     nonce: Felt,
@@ -137,19 +137,19 @@ pub(crate) fn calculate_declare_transaction_hash(
         let value = class_hash
             .to_u64()
             .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        (Vec::new(), [value].to_vec())
+        (Vec::new(), vec![value])
     } else {
         let value = nonce
             .to_u64()
             .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        ([class_hash].to_vec(), [value].to_vec())
+        (vec![class_hash], vec![value])
     };
 
     calculate_transaction_hash_common(
         TransactionHashPrefix::Declare,
         version,
-        &sender_address,
-        0,
+        sender_address,
+        0.into(),
         &calldata,
         max_fee,
         chain_id,
@@ -168,7 +168,7 @@ mod tests {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
         let version = 0;
         let contract_address = Address(42.into());
-        let entry_point_selector = 100;
+        let entry_point_selector = 100.into();
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
         let chain_id = 1.into();

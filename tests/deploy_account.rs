@@ -6,18 +6,17 @@ use starknet_rs::{
         execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
-        transaction::internal_objects::InternalDeployAccount,
+        transaction::objects::internal_deploy_account::InternalDeployAccount,
     },
-    definitions::transaction_type::TransactionType,
+    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
     services::api::contract_class::{ContractClass, EntryPointType},
-    starknet_storage::dict_storage::DictStorage,
     utils::{felt_to_hash, Address},
 };
 use std::path::PathBuf;
 
 #[test]
 fn internal_deploy_account() {
-    let state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+    let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
     let mut state = CachedState::new(state_reader, None);
 
     state.set_contract_classes(Default::default()).unwrap();
@@ -54,12 +53,12 @@ fn internal_deploy_account() {
         Address(felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         )),
-        felt_str!("1536727068981429685321"),
+        StarknetChainId::TestNet,
     )
     .unwrap();
 
     let tx_info = internal_deploy_account
-        ._apply_specific_concurrent_changes(&mut state, &Default::default())
+        .execute(&mut state, &Default::default())
         .unwrap();
 
     assert_eq!(

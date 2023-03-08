@@ -4,7 +4,7 @@ use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 
 use crate::definitions::transaction_type::TransactionType;
 
-use super::execution_errors::ExecutionError;
+use super::error::ExecutionError;
 
 #[derive(Debug, Clone)]
 pub struct OsResources {
@@ -12,8 +12,8 @@ pub struct OsResources {
     execute_txs_inner: HashMap<TransactionType, ExecutionResources>,
 }
 
-impl OsResources {
-    pub fn default() -> Self {
+impl Default for OsResources {
+    fn default() -> Self {
         let execute_txs_inner: HashMap<TransactionType, ExecutionResources> = HashMap::from([
             (
                 TransactionType::InvokeFunction,
@@ -74,6 +74,6 @@ pub fn get_additional_os_resources(
     Ok(os_resources
         .execute_txs_inner
         .get(tx_type)
-        .ok_or_else(|| ExecutionError::NoneTransactionType(tx_type.clone(), os_resources.clone()))?
+        .ok_or_else(|| ExecutionError::NoneTransactionType(*tx_type, os_resources.clone()))?
         .clone())
 }

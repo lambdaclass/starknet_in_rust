@@ -6,8 +6,7 @@ use super::{
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint, execution_errors::ExecutionError,
-            objects::*,
+            error::ExecutionError, execution_entry_point::ExecutionEntryPoint, objects::*,
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
@@ -415,7 +414,12 @@ where
                 &mut self.resources_manager,
                 &self.tx_execution_context,
             )
-            .map(|x| x.retdata)
+            .map(|x| {
+                let retdata = x.retdata.clone();
+                self.internal_calls.push(x);
+
+                retdata
+            })
             .map_err(|_| todo!())
     }
 
@@ -533,7 +537,8 @@ where
                     StateError::StorageError(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_),
+                    | StateError::NoneStorage(_)
+                    | StateError::NoneContractState(_),
                 ) => Felt::zero(),
                 Err(e) => return Err(e.into()),
             },

@@ -1,4 +1,4 @@
-use super::execution_errors::ExecutionError;
+use super::error::ExecutionError;
 use crate::{
     business_logic::state::state_cache::StorageEntry,
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -146,8 +146,8 @@ impl CallInfo {
             for ordered_msg in call.l2_to_l1_messages {
                 let l2tol1msg =
                     L2toL1MessageInfo::new(ordered_msg.clone(), call.caller_address.clone());
-                starknet_events.remove(ordered_msg.order as usize - 1);
-                starknet_events.insert(ordered_msg.order as usize - 1, Some(l2tol1msg));
+                starknet_events.remove(ordered_msg.order - 1);
+                starknet_events.insert(ordered_msg.order - 1, Some(l2tol1msg));
             }
         }
 
@@ -378,7 +378,7 @@ impl TxInfoStruct {
     }
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct TransactionExecutionInfo {
     pub(crate) validate_info: Option<CallInfo>,
     pub(crate) call_info: Option<CallInfo>,

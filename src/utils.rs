@@ -1,7 +1,7 @@
 use crate::{
     business_logic::{
         execution::{
-            execution_errors::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            error::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
         fact_state::state::ExecutionResourcesManager,
@@ -24,6 +24,8 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
+
+pub type ClassHash = [u8; 32];
 
 //* -------------------
 //*      Address
