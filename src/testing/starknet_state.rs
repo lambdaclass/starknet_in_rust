@@ -1,9 +1,4 @@
 use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
-use std::collections::HashMap;
-
-use felt::Felt;
-use num_traits::{One, Zero};
-
 use crate::{
     business_logic::{
         execution::{
@@ -33,6 +28,9 @@ use crate::{
     },
     utils::Address,
 };
+use felt::Felt;
+use num_traits::{One, Zero};
+use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
@@ -45,7 +43,8 @@ pub(crate) struct StarknetState {
 }
 
 impl StarknetState {
-    #![allow(unused)] // TODO: delete once used
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
@@ -70,6 +69,8 @@ impl StarknetState {
     /// Returns the class hash and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
@@ -98,7 +99,8 @@ impl StarknetState {
 
     // ----------------------------------------------------------
     /// Invokes a contract function. Returns the execution info.
-
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
@@ -108,7 +110,7 @@ impl StarknetState {
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx = self.create_invoke_function(
+        let tx = self.create_invoke_function(
             contract_address,
             selector,
             calldata,
@@ -124,7 +126,8 @@ impl StarknetState {
     // -------------------------------------------------------------------------
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn execute_entry_point_raw(
         &mut self,
         contract_address: Address,
@@ -154,7 +157,7 @@ impl StarknetState {
         )?;
 
         let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));
-        self.add_messages_and_events(&exec_info);
+        self.add_messages_and_events(&exec_info)?;
 
         Ok(call_info)
     }
@@ -165,8 +168,9 @@ impl StarknetState {
     /// contract_class - a compiled StarkNet contract
     /// contract_address_salt
     /// the salt to use for deploying. Otherwise, the salt is randomized.
-
     // TODO: ask for contract_address_salt
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn deploy(
         &mut self,
         contract_class: ContractClass,
@@ -196,7 +200,8 @@ impl StarknetState {
         self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
-        self.add_messages_and_events(&tx_execution_info);
+        self.add_messages_and_events(&tx_execution_info)
+            .map_err(|x| TransactionError::StarknetError(x.to_string()))?;
         Ok(tx)
     }
 
@@ -225,6 +230,8 @@ impl StarknetState {
     }
 
     /// Consumes the given message hash.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn consume_message_hash(
         &mut self,
         message_hash: Vec<u8>,

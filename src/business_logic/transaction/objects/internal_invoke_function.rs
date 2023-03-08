@@ -45,7 +45,6 @@ pub(crate) struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
-    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt,

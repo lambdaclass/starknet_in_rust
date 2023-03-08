@@ -44,7 +44,6 @@ pub struct InternalDeployAccount {
 }
 
 impl InternalDeployAccount {
-    #![allow(unused)] // TODO: delete once used
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: [u8; 32],

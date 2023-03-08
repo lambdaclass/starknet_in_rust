@@ -33,8 +33,6 @@ impl<T: StateReader + Clone> CachedState<T> {
         }
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn set_contract_classes(
         &mut self,
         contract_classes: ContractClassCache,

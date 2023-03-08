@@ -47,7 +47,8 @@ pub(crate) struct InternalDeclare {
 //                        Functions
 // ------------------------------------------------------------
 impl InternalDeclare {
-    #![allow(unused)] // TODO: delete once used
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt,

@@ -9,7 +9,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum TransactionError {
-    #[allow(dead_code)] // TODO: delete this once used
     #[error("Invalid felt convertion to u64")]
     InvalidFeltConversion,
     #[error("{0}")]
