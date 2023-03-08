@@ -25,11 +25,13 @@ use starknet_rs::{
             calculate_transaction_hash_common, TransactionHashPrefix,
         },
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::{
+        constants::{DECLARE_VERSION, TRANSACTION_VERSION},
+        general_config::StarknetGeneralConfig,
+    },
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::contract_abi::read_abi,
-    server::devnet::{add_class_hash, get_contract_from_address},
     services::api::contract_class::ContractClass,
     utils::{felt_to_hash, string_to_hash, Address},
 };
@@ -98,15 +100,14 @@ fn declare_parser(
     cached_state
         .set_contract_class(&felt_to_hash(&class_hash), &contract_class)
         .map_err(ParserError::StateError)?;
-    add_class_hash(&(&class_hash).to_biguint().to_str_radix(16), &args.contract);
 
     let tx_hash = calculate_declare_transaction_hash(
         contract_class,
         Felt::zero(),
         Address(0.into()),
         0,
-        0,
-        0.into(),
+        DECLARE_VERSION,
+        Felt::zero(),
     )
     .map_err(ParserError::ComputeTransactionHashError)?;
     println!(
@@ -149,7 +150,7 @@ fn deploy_parser(
 }
 
 fn invoke_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    mut cached_state: CachedState<InMemoryStateReader>,
     args: &InvokeArgs,
 ) -> Result<(), ParserError> {
     let contract_address = Felt::from_str_radix(&args.address[2..], 16).unwrap();
@@ -173,16 +174,10 @@ fn invoke_parser(
         .clone();
 
     let contract_state = ContractState::new(class_hash.clone(), 0.into(), HashMap::new());
-
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-    state_reader
+    cached_state
+        .state_reader()
         .contract_states_mut()
         .insert(Address(contract_address.clone()), contract_state);
-
-    let mut state = CachedState::new(
-        state_reader,
-        Some(HashMap::from([(class_hash.clone(), contract_class)])),
-    );
 
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
@@ -213,7 +208,7 @@ fn invoke_parser(
 
     exec_entry_point
         .execute(
-            &mut state,
+            &mut cached_state,
             &general_config,
             &mut resources_manager,
             &tx_execution_context,
@@ -267,8 +262,8 @@ async fn deploy_req(data: web::Data<AppState>, args: web::Json<DeployArgs>) -> H
 
 #[post("/invoke")]
 async fn invoke_req(data: web::Data<AppState>, args: web::Json<InvokeArgs>) -> HttpResponse {
-    let mut cached_state = data.cached_state.lock().unwrap();
-    match invoke_parser(&mut cached_state, &args) {
+    let cached_state = data.cached_state.lock().unwrap().to_owned();
+    match invoke_parser(cached_state, &args) {
         Ok(_) => HttpResponse::Ok().body("declared!"),
         Err(e) => HttpResponse::ExpectationFailed().body(e.to_string()),
     }
