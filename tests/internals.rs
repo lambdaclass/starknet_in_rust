@@ -34,8 +34,8 @@ lazy_static! {
     // Addresses.
     static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
-    pub static ref TEST_SEQUENCER_ADDRESS: Felt =
-    felt_str!("4096");
+    pub static ref TEST_SEQUENCER_ADDRESS: Address =
+    Address(felt_str!("4096"));
     pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
     Address(felt_str!("4097"));
 
@@ -73,7 +73,7 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
         0,
         0,
         1_000_000,
-        BlockInfo::empty(Address(TEST_SEQUENCER_ADDRESS.clone())),
+        BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
     )
 }
 
@@ -313,7 +313,7 @@ fn test_declare_tx() {
 
     assert_eq!(
         fee_transfer_info.calldata,
-        vec![TEST_SEQUENCER_ADDRESS.clone(), 0.into(), 0.into()]
+        vec![TEST_SEQUENCER_ADDRESS.clone().0, 0.into(), 0.into()]
     );
 
     assert_eq!(
@@ -336,7 +336,7 @@ fn test_declare_tx() {
             )],
             vec![
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,
-                TEST_SEQUENCER_ADDRESS.clone(),
+                TEST_SEQUENCER_ADDRESS.clone().0,
                 0.into(),
                 0.into()
             ]
