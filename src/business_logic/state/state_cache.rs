@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 // TODO: Change [u8; 32] to Felt.
 pub(crate) type StorageEntry = (Address, [u8; 32]);
 
-#[derive(Debug, Default, Clone, Getters)]
+#[derive(Debug, Default, Clone, Getters, PartialEq)]
 pub struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
     pub(crate) class_hash_initial_values: HashMap<Address, [u8; 32]>,
@@ -22,9 +22,25 @@ pub struct StateCache {
 }
 
 impl StateCache {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) fn new() -> Self {
+    pub fn new(
+        class_hash_initial_values: HashMap<Address, [u8; 32]>,
+        nonce_initial_values: HashMap<Address, Felt>,
+        storage_initial_values: HashMap<StorageEntry, Felt>,
+        class_hash_writes: HashMap<Address, [u8; 32]>,
+        nonce_writes: HashMap<Address, Felt>,
+        storage_writes: HashMap<StorageEntry, Felt>,
+    ) -> Self {
+        Self {
+            class_hash_initial_values,
+            nonce_initial_values,
+            storage_initial_values,
+            class_hash_writes,
+            nonce_writes,
+            storage_writes,
+        }
+    }
+
+    pub(crate) fn default() -> Self {
         Self {
             class_hash_initial_values: HashMap::new(),
             nonce_initial_values: HashMap::new(),
@@ -110,7 +126,7 @@ mod tests {
 
     #[test]
     fn state_chache_set_initial_values() {
-        let mut state_cache = StateCache::new();
+        let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [8; 32])]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);
@@ -131,7 +147,7 @@ mod tests {
 
     #[test]
     fn state_chache_update_writes_from_other() {
-        let mut state_cache = StateCache::new();
+        let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [11; 32])]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(20.into()), [1; 32]), 18.into())]);
@@ -140,7 +156,7 @@ mod tests {
             .set_initial_values(&address_to_class_hash, &address_to_nonce, &storage_updates)
             .expect("Error setting StateCache values");
 
-        let mut other_state_cache = StateCache::new();
+        let mut other_state_cache = StateCache::default();
         let other_address_to_class_hash = HashMap::from([(Address(10.into()), [13; 32])]);
         let other_address_to_nonce = HashMap::from([(Address(401.into()), 100.into())]);
         let other_storage_updates = HashMap::from([((Address(4002.into()), [2; 32]), 101.into())]);
