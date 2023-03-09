@@ -44,8 +44,10 @@ impl Transaction {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Deploy(tx) => tx.execute(state, general_config),
-            Transaction::InvokeFunction(_) => Err(TransactionError::NotImplemented),
             Transaction::Declare(tx) => tx.execute(state, general_config),
+            Transaction::InvokeFunction(tx) => tx
+                .execute(state, general_config)
+                .map_err(|e| TransactionError::InvokeExecutionError(e.to_string())),
         }
     }
 }

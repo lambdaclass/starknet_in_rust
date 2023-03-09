@@ -1,4 +1,4 @@
 pub mod error;
 pub mod fee;
-pub(crate) mod objects;
+pub mod objects;
 pub mod transactions;
