@@ -20,6 +20,7 @@ lazy_static! {
     /// Value generated from `get_selector_from_name('constructor')`.
     pub static ref CONSTRUCTOR_ENTRY_POINT_SELECTOR: Felt =
         felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556");
+    /// Value generated from `get_selector_from_name('__default__')`.
     pub static ref DEFAULT_ENTRY_POINT_SELECTOR: Felt = Felt::zero();
     /// Value generated from `get_selector_from_name('__execute__')`.
     pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt =
@@ -29,7 +30,7 @@ lazy_static! {
         felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
 
     // Value generated from get_selector_from_name('__validate_declare__')
-    pub static ref VALIDATE_DECLARE_ENTRY_POINT_NAME: Felt =
+    pub static ref VALIDATE_DECLARE_ENTRY_POINT_SELECTOR: Felt =
         felt_str!("1148189391774113786911959041662034419554430000171893651982484995704491697075");
     /// Value generated from `get_selector_from_name('__validate_deploy__')`.
     pub static ref VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR: Felt =
