@@ -43,8 +43,8 @@ lazy_static! {
     // Storage keys.
     static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt =
         felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
-    static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt =
-        felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
+    // static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt =
+    //     felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
 
     // Others.
     static ref ACTUAL_FEE: Felt = 2.into();
@@ -93,17 +93,10 @@ fn create_account_tx_test_state(
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
-    let test_erc20_sequencer_balance_key = TEST_ERC20_SEQUENCER_BALANCE_KEY.clone();
-    let storage_view = HashMap::from([
-        (
-            (test_erc20_address.clone(), test_erc20_sequencer_balance_key),
-            Felt::zero(),
-        ),
-        (
-            (test_erc20_address, test_erc20_account_balance_key),
-            ACTUAL_FEE.clone(),
-        ),
-    ]);
+    let storage_view = HashMap::from([(
+        (test_erc20_address, test_erc20_account_balance_key),
+        ACTUAL_FEE.clone(),
+    )]);
 
     let cached_state = CachedState::new(
         {
@@ -323,9 +316,37 @@ fn test_state_for_declare_tx() {
     );
     // Execute declare_tx
     assert!(declare_tx.execute(&mut state, &general_config).is_ok());
-    dbg!(&state);
+    // dbg!("start");
+    // dbg!(&state);
     assert_eq!(
         state.get_nonce_at(&declare_tx.sender_address),
         Ok(&1.into())
+    );
+
+    let state_reader = state.state_reader();
+    assert_eq!(
+        state_reader.contract_states(),
+        &HashMap::from([
+            (
+                Address(4097.into()),
+                ContractState::new(
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                    0.into(),
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), 2.into())])
+                )
+            ),
+            (
+                Address(256.into()),
+                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), 0.into(), HashMap::new())
+            ),
+            (
+                Address(257.into()),
+                ContractState::new(
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                    0.into(),
+                    HashMap::new(),
+                )
+            ),
+        ])
     );
 }

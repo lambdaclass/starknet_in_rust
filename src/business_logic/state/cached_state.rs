@@ -18,9 +18,11 @@ pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x0
 
 #[derive(Debug, Clone, Default, Getters)]
 pub struct CachedState<T: StateReader + Clone> {
+    #[get = "pub"]
     pub(crate) state_reader: T,
     #[get = "pub"]
     pub(crate) cache: StateCache,
+    #[get = "pub"]
     pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
