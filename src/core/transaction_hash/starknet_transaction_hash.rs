@@ -123,7 +123,7 @@ pub fn calculate_deploy_account_transaction_hash(
 }
 
 pub(crate) fn calculate_declare_transaction_hash(
-    contract_class: ContractClass,
+    contract_class: &ContractClass,
     chain_id: Felt,
     sender_address: &Address,
     max_fee: u64,
@@ -131,7 +131,7 @@ pub(crate) fn calculate_declare_transaction_hash(
     nonce: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
     let class_hash =
-        compute_class_hash(&contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+        compute_class_hash(contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
     let (calldata, additional_data) = if version > 0x8000_0000_0000_0000 {
         let value = class_hash
