@@ -291,10 +291,7 @@ fn test_declare_tx() {
 
     assert_eq!(fee_transfer_info.internal_calls, Vec::new());
 
-    assert_eq!(
-        fee_transfer_info.storage_read_values,
-        vec![2.into(), 0.into()]
-    );
+    assert_eq!(fee_transfer_info.storage_read_values, vec![2.into()]);
     assert_eq!(
         fee_transfer_info.accessed_storage_keys,
         HashSet::from([
@@ -344,7 +341,7 @@ fn test_state_for_declare_tx() {
         state_reader.contract_states(),
         &HashMap::from([
             (
-                Address(4097.into()),
+                Address(TEST_ERC20_CONTRACT_ADDRESS.clone()),
                 ContractState::new(
                     felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
                     0.into(),
@@ -352,11 +349,11 @@ fn test_state_for_declare_tx() {
                 )
             ),
             (
-                Address(256.into()),
+                TEST_CONTRACT_ADDRESS.clone(),
                 ContractState::new(felt_to_hash(&TEST_CLASS_HASH), 0.into(), HashMap::new())
             ),
             (
-                Address(257.into()),
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
                 ContractState::new(
                     felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
                     0.into(),
