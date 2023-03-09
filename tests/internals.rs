@@ -5,8 +5,14 @@ use num_traits::{Num, Zero};
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-        fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
-        state::{cached_state::CachedState, state_api::StateReader},
+        fact_state::{
+            contract_state::ContractState,
+            in_memory_state_reader::{self, InMemoryStateReader},
+        },
+        state::{
+            cached_state::{CachedState, ContractClassCache},
+            state_api::{State, StateReader},
+        },
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     definitions::{
@@ -30,6 +36,7 @@ lazy_static! {
     // Addresses.
     static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
+    static ref TEST_ERC20_CONTRACT_ADDRESS: Address = Address(felt_str!("4097"));
 
     // Class hashes.
     static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt = felt_str!("273");
@@ -89,12 +96,12 @@ fn create_account_tx_test_state(
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
-    let test_erc20_sequencer_balance_key = TEST_ERC20_SEQUENCER_BALANCE_KEY.clone();
+    //let test_erc20_sequencer_balance_key = TEST_ERC20_SEQUENCER_BALANCE_KEY.clone();
     let storage_view = HashMap::from([
-        (
-            (test_erc20_address.clone(), test_erc20_sequencer_balance_key),
-            Felt::zero(),
-        ),
+        // (
+        //     (test_erc20_address.clone(), test_erc20_sequencer_balance_key),
+        //     Felt::zero(),
+        // ),
         (
             (test_erc20_address, test_erc20_account_balance_key),
             ACTUAL_FEE.clone(),
@@ -108,8 +115,9 @@ fn create_account_tx_test_state(
             for (contract_address, class_hash) in address_to_class_hash {
                 let storage_keys = storage_view
                     .iter()
-                    .filter_map(|((k0, k1), v)| {
-                        (k0 == &contract_address).then_some((k1.clone(), v.clone()))
+                    .filter_map(|((address, storage_key), storage_value)| {
+                        (address == &contract_address)
+                            .then_some((storage_key.clone(), storage_value.clone()))
                     })
                     .collect();
 
@@ -170,6 +178,147 @@ fn invoke_tx(calldata: Vec<Felt>) -> InternalInvokeFunction {
         Some(Felt::zero()),
     )
     .unwrap()
+}
+
+fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
+    let in_memory_state_reader = InMemoryStateReader::new(
+        HashMap::from([
+            (
+                TEST_CONTRACT_ADDRESS.clone(),
+                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), Felt::zero(), HashMap::new()),
+            ),
+            (
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::new(),
+                ),
+            ),
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::from([
+                        (
+                            felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"),
+                            Felt::from(2),
+                        )
+                    ]),
+                ),
+            ),
+        ]),
+        HashMap::from([
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_CLASS_HASH),
+                get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+            ),
+        ]),
+    );
+
+    let state_cache = ContractClassCache::new();
+
+    CachedState::new(in_memory_state_reader, Some(state_cache))
+
+    //     CachedState {
+    //     state_reader: InMemoryStateReader {
+    //         contract_states: { // STORAGE_VIEW, ADDRESS_TO_NONCE, ADDRESS_TO_CLASS_HASH in blockifier are zipped here.
+    //             Address( // this is NOT in blockifier, maybe it is not needed (since it's empty)
+    //                 256,
+    //             ): ContractState {
+    //                 contract_hash: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16],
+    //                 nonce: 0,
+    //                 storage_keys: {},
+    //             },
+    //             Address(
+    //                 4097,
+    //             ): ContractState {
+    //                 contract_hash: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16],
+    //                 nonce: 0,
+    //                 storage_keys: {
+    //                     1192211877881866289306604115402199097887041303917861778777990838480655617515: 2, // this is in blockifier
+    //                     3229073099929281304021185011369329892856197542079132996799046100564060768274: 0, // this is NOT in blockifier
+    //                 },
+    //             },
+    //             Address( // this is NOT in blockifier, maybe it is not needed (since it's empty)
+    //                 257,
+    //             ): ContractState {
+    //                 contract_hash: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17],
+    //                 nonce: 0,
+    //                 storage_keys: {},
+    //             },
+    //         },
+    //         class_hash_to_contract_class: {}, // this is filled in blockifier, but not here. but the blockifier's data is in contract_classes field (see below).
+    //     },
+    //     cache: StateCache { // This is empty in both blockifier and here.
+    //         class_hash_initial_values: {},
+    //         nonce_initial_values: {},
+    //         storage_initial_values: {},
+    //         class_hash_writes: {},
+    //         nonce_writes: {},
+    //         storage_writes: {},
+    //     },
+    //     contract_classes: Some( // this is equal to: class_hash_to_class, but in blockifier is inside state reader
+    //         {
+    //             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]: ContractClass {},
+    //             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]: ContractClass {},
+    //             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]: ContractClass {},
+    //         },
+    //     ),
+    // }
+
+    //     let mut state_before = CachedState::new(
+    //         InMemoryStateReader::new(
+    //             HashMap::from([
+    //                 (
+    //                     Address(0x101.into()),
+    //                     ContractState::new(felt_to_hash(&0x111.into()), Default::default(), Default::default()),
+    //                 ),
+    //                 (
+    //                     Address(0x100.into()),
+    //                     ContractState::new(felt_to_hash(&0x110.into()), Default::default(), Default::default()),
+    //                 ),
+    //                 (
+    //                     Address(0x1001.into()),
+    //                     ContractState::new(
+    //                         felt_to_hash(&0x1010.into()),
+    //                         Default::default(),
+    //                         HashMap::from([
+    //                             (
+    //                                 felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"),
+    //                                 Felt::zero(),
+    //                             ),
+    //                         ]),
+    //                     ),
+    //                 )
+    //             ]),
+    //             HashMap::from([
+    //                 (felt_to_hash(&0x110.into()), ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap()),
+    //                 (felt_to_hash(&0x111.into()), ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap()),
+    //                 (felt_to_hash(&0x1010.into()), ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap()),
+    //             ]),
+    //         ),
+    //         Some(ContractClassCache::new()),
+    //     );
+    //     state_before.set_storage_at(
+    //         &(
+    //             Address(0x1001.into()),
+    //             felt_to_hash(&felt_str!(
+    //                 "2542253978940891427830343982984992363331567580652119103860970381451088310289"
+    //             )),
+    //         ),
+    //         0.into(),
+    //     );
+    //     state_before
 }
 
 fn expected_fee_transfer_info() -> CallInfo {
@@ -343,7 +492,6 @@ fn expected_transaction_execution_info() -> TransactionExecutionInfo {
 #[test]
 fn test_invoke_tx() {
     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
-    println!("INITIAL STATE: {:#?}", state);
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
         test_contract_address,                                       // CONTRACT_ADDRESS
@@ -352,35 +500,34 @@ fn test_invoke_tx() {
         Felt::from(2),                                               // CONTRACT_CALLDATA
     ];
     let invoke_tx = invoke_tx(calldata);
-    println!("SENDER ADDRESS: {:#?}", invoke_tx);
+
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
     let result = invoke_tx.execute(state, starknet_general_config).unwrap();
-    //println!("FINAL STATE: {:#?}", state);
-    assert!(false);
     let expected_execution_info = expected_transaction_execution_info();
 
     assert_eq!(result, expected_execution_info);
 }
 
-// #[test]
-// fn test_invoke_tx_state() {
-//     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+#[test]
+fn test_invoke_tx_state() {
+    let (_starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let expected_initial_state = expected_state_before_tx();
+    println!("state: {:?}", expected_initial_state);
+    assert!(false)
+    //assert_eq!(state, &expected_initial_state);
 
-//     let expected_initial_state = expected_initial_state();
-//     assert_eq!(state, &expected_initial_state);
+    // let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+    // let calldata = vec![
+    //     test_contract_address,                                       // CONTRACT_ADDRESS
+    //     Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+    //     Felt::from(1),                                               // CONTRACT_CALLDATA LEN
+    //     Felt::from(2),                                               // CONTRACT_CALLDATA
+    // ];
+    // let invoke_tx = invoke_tx(calldata);
 
-//     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
-//     let calldata = vec![
-//         test_contract_address,                                       // CONTRACT_ADDRESS
-//         Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
-//         Felt::from(1),                                               // CONTRACT_CALLDATA LEN
-//         Felt::from(2),                                               // CONTRACT_CALLDATA
-//     ];
-//     let invoke_tx = invoke_tx(calldata);
+    // invoke_tx.execute(state, starknet_general_config).unwrap();
 
-//     invoke_tx.execute(state, starknet_general_config).unwrap();
-
-//     // let expected_final_state = expected_final_state();
-//     // assert_eq!(state, &expected_final_state);
-// }
+    // let expected_final_state = expected_final_state();
+    // assert_eq!(state, &expected_final_state);
+}

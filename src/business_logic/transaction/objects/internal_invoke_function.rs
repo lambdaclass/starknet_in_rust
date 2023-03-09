@@ -277,7 +277,9 @@ impl InternalInvokeFunction {
 
         let contract_address = self.contract_address.clone();
         let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
-        if current_nonce != self.nonce.as_ref().ok_or(err).to_owned() {
+
+        // TODO remove this unwraps
+        if current_nonce != self.nonce.as_ref().unwrap().to_owned() {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
                 self.nonce.as_ref().unwrap().to_owned().to_string(),
