@@ -109,17 +109,10 @@ fn create_account_tx_test_state(
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
-    let test_erc20_sequencer_balance_key = TEST_ERC20_SEQUENCER_BALANCE_KEY.clone();
-    let storage_view = HashMap::from([
-        (
-            (test_erc20_address.clone(), test_erc20_sequencer_balance_key),
-            Felt::zero(),
-        ),
-        (
-            (test_erc20_address, test_erc20_account_balance_key),
-            ACTUAL_FEE.clone(),
-        ),
-    ]);
+    let storage_view = HashMap::from([(
+        (test_erc20_address, test_erc20_account_balance_key),
+        ACTUAL_FEE.clone(),
+    )]);
 
     let cached_state = CachedState::new(
         {
@@ -138,15 +131,15 @@ fn create_account_tx_test_state(
                     ContractState::new(felt_to_hash(&class_hash), Felt::zero(), storage_keys),
                 );
             }
+            for (class_hash, contract_class) in class_hash_to_class {
+                state_reader
+                    .class_hash_to_contract_class_mut()
+                    .insert(felt_to_hash(&class_hash), contract_class);
+            }
 
             state_reader
         },
-        Some(
-            class_hash_to_class
-                .into_iter()
-                .map(|(k, v)| (felt_to_hash(&k), v))
-                .collect(),
-        ),
+        Some(HashMap::new()),
     );
 
     Ok((general_config, cached_state))
@@ -297,10 +290,7 @@ fn test_declare_tx() {
 
     assert_eq!(fee_transfer_info.internal_calls, Vec::new());
 
-    assert_eq!(
-        fee_transfer_info.storage_read_values,
-        vec![2.into(), 0.into()]
-    );
+    assert_eq!(fee_transfer_info.storage_read_values, vec![2.into()]);
     assert_eq!(
         fee_transfer_info.accessed_storage_keys,
         HashSet::from([
