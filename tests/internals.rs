@@ -3,8 +3,8 @@ use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
-        fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
-        state::{cached_state::CachedState, state_api::StateReader},
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, state_api::StateReader, state_cache::StorageEntry},
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::ContractClass,
@@ -96,22 +96,25 @@ fn create_account_tx_test_state(
             let mut state_reader = InMemoryStateReader::default();
 
             for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys = storage_view
+                let storage_keys: HashMap<(Address, [u8; 32]), Felt> = dbg!(storage_view
                     .iter()
-                    .filter_map(|((k0, k1), v)| {
-                        (k0 == &contract_address).then_some((k1.clone(), v.clone()))
-                    })
-                    .collect();
+                    .filter_map(|((address, storage_key), storage_value)| {
+                        (address == &contract_address).then_some((
+                            (address.clone(), felt_to_hash(&storage_key)),
+                            storage_value.clone(),
+                        ))
+                    }))
+                .collect();
+
+                let h: HashMap<StorageEntry, Felt> = HashMap::from(storage_keys);
 
                 state_reader
                     .address_to_class_hash
-                    .insert(contract_address.clone(), class_hash.clone());
+                    .insert(contract_address.clone(), felt_to_hash(&class_hash.clone())); // or maybe insert address_to_class_hash
                 state_reader
                     .address_to_nonce
-                    .insert(address.clone(), nonce.clone());
-                state_reader
-                    .address_to_storage
-                    .insert(storage_entry.clone(), storage.clone());
+                    .insert(contract_address.clone(), Felt::zero());
+                state_reader.address_to_storage.extend(h);
             }
 
             state_reader

@@ -700,7 +700,7 @@ mod tests {
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
         let nonce = Felt::new(189028);
-        let storage_entry = (sender_address.clone(), Felt::new(10));
+        let storage_entry = (sender_address.clone(), [15; 32]);
         let storage_value = Felt::new(2190);
 
         let mut state_reader = InMemoryStateReader::new(
@@ -712,13 +712,13 @@ mod tests {
 
         state_reader
             .address_to_class_hash
-            .insert(sender_address.clone(), class_hash.clone());
+            .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce
-            .insert(sender_address.clone(), nonce.clone());
+            .insert(sender_address, nonce);
         state_reader
             .address_to_storage
-            .insert(storage_entry.clone(), storage_value.clone());
+            .insert(storage_entry, storage_value);
         contract_class_cache.insert(class_hash, contract_class.clone());
         //* ---------------------------------------
         //*    Create state with previous data

@@ -202,13 +202,13 @@ mod tests {
 
         state_reader
             .address_to_class_hash
-            .insert(contract_address.clone(), class_hash.clone());
+            .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce
             .insert(contract_address.clone(), nonce.clone());
         state_reader
             .address_to_storage
-            .insert(storage_entry.clone(), storage_value.clone());
+            .insert(storage_entry, storage_value);
 
         let mut cached_state = CachedState::new(state_reader, None);
 

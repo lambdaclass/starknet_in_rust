@@ -55,7 +55,7 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError>
     where
-        T: Default + State + StateReader,
+        T: Default + State + StateReader + std::fmt::Debug,
     {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
@@ -97,7 +97,7 @@ impl InternalInvokeFunction {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, ExecutionError>
     where
-        T: Default + State + StateReader,
+        T: Default + State + StateReader + std::fmt::Debug,
     {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -123,16 +123,15 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError>
     where
-        T: Default + State + StateReader,
+        T: Default + State + StateReader + std::fmt::Debug,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
+
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
-
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
-
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
@@ -201,34 +200,33 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
         );
-        let mut state = CachedState::new(state_reader.clone(), None);
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
-
         // Set contract_class
         let class_hash: [u8; 32] = [1; 32];
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
-        state
-            .set_contract_class(&class_hash, &contract_class)
-            .unwrap();
-
         // Set contact_state
-        let contract_address = Address(4.into());
+        let contract_address = Address(0.into());
         let nonce = Felt::new(189028);
         let storage_entry = (contract_address.clone(), [222; 32]);
         let storage_value = Felt::new(2190);
 
         state_reader
             .address_to_class_hash
-            .insert(contract_address.clone(), class_hash.clone());
+            .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce
-            .insert(contract_address.clone(), nonce.clone());
+            .insert(contract_address, nonce);
         state_reader
             .address_to_storage
-            .insert(storage_entry.clone(), storage_value.clone());
+            .insert(storage_entry, storage_value);
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
 
         let result = internal_invoke_function
             ._apply_specific_concurrent_changes(&mut state, &StarknetGeneralConfig::default())

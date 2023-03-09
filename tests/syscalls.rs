@@ -11,12 +11,12 @@ use starknet_rs::{
             },
         },
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::State,
+            state_cache::StorageEntry,
         },
     },
     definitions::{
@@ -26,7 +26,7 @@ use starknet_rs::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
-use std::{collections::HashMap, iter::empty, path::Path};
+use std::{iter::empty, path::Path};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -59,15 +59,23 @@ fn test_contract<'a>(
         )
     });
 
-    let contract_state = ContractState::new(
-        class_hash,
-        tx_execution_context.nonce().clone(),
-        Default::default(),
-    );
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let nonce = Felt::zero();
+    let storage_entry: StorageEntry = (contract_address.clone(), class_hash.clone()).into();
+    let storage = Felt::zero();
+
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .address_to_class_hash
+        .insert(contract_address.clone(), class_hash.clone());
+    state_reader
+        .address_to_nonce
+        .insert(contract_address.clone(), nonce.clone());
+    state_reader
+        .address_to_storage
+        .insert(storage_entry.clone(), storage.clone());
+    state_reader
+        .class_hash_to_contract_class
+        .insert(class_hash.clone(), contract_class.clone());
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
@@ -78,7 +86,7 @@ fn test_contract<'a>(
             let contract_class = ContractClass::try_from(contract_path.to_path_buf())
                 .expect("Could not load extra contract from JSON");
 
-            contract_class_cache.insert(class_hash, contract_class);
+            contract_class_cache.insert(class_hash, contract_class.clone());
 
             if let Some((contract_address, data)) = contract_address {
                 storage_entries.extend(data.into_iter().map(|(name, value)| {
@@ -89,10 +97,22 @@ fn test_contract<'a>(
                     )
                 }));
 
-                state_reader.contract_states_mut().insert(
-                    contract_address,
-                    ContractState::new(class_hash, Felt::zero(), Default::default()),
-                );
+                let nonce = Felt::new(70);
+                let storage_entry = (contract_address.clone(), [29; 32]);
+                let storage_value = Felt::new(574);
+
+                state_reader
+                    .address_to_class_hash
+                    .insert(contract_address.clone(), class_hash.clone());
+                state_reader
+                    .address_to_nonce
+                    .insert(contract_address.clone(), nonce.clone());
+                state_reader
+                    .address_to_storage
+                    .insert(storage_entry.clone(), storage_value.clone());
+                state_reader
+                    .class_hash_to_contract_class
+                    .insert(class_hash.clone(), contract_class.clone());
             }
         }
 

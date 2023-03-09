@@ -420,7 +420,10 @@ where
 
                 retdata
             })
-            .map_err(|_| todo!())
+            .map_err(|error| {
+                println!("Error: {:?}", error);
+                todo!()
+            })
     }
 
     fn get_block_info(&self) -> &BlockInfo {

@@ -35,7 +35,7 @@ fn test_internal_calls() {
     );
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [0; 32].into();
+    let class_hash: ClassHash = [0x01; 32].into();
     let nonce = Felt::zero();
     let storage_entry: StorageEntry = (address.clone(), [1; 32]).into();
     let storage = Felt::zero();

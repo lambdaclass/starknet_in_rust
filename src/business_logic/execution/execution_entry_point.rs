@@ -82,11 +82,9 @@ impl ExecutionEntryPoint {
             general_config,
             tx_execution_context,
         )?;
-
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
-
         let retdata = runner.get_return_values()?;
         self.build_call_info::<T>(
             previous_cairo_usage,
