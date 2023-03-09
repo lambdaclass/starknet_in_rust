@@ -5,15 +5,12 @@ use starknet_rs::{
     business_logic::{
         execution::objects::{CallType, OrderedEvent},
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
-        state::{cached_state::CachedState, state_api::StateReader},
+        state::{cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo},
         transaction::objects::internal_declare::InternalDeclare,
     },
     definitions::{
-        constants::{
-            TEST_ERC20_CONTRACT_ADDRESS, TEST_SEQUENCER_ADDRESS, TRANSFER_ENTRY_POINT_SELECTOR,
-            VALIDATE_DECLARE_ENTRY_POINT_NAME,
-        },
-        general_config::StarknetGeneralConfig,
+        constants::{TRANSFER_ENTRY_POINT_SELECTOR, VALIDATE_DECLARE_ENTRY_POINT_NAME},
+        general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -33,6 +30,11 @@ lazy_static! {
     // Addresses.
     static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
+    pub static ref TEST_SEQUENCER_ADDRESS: Felt =
+    felt_str!("4096");
+pub static ref TEST_ERC20_CONTRACT_ADDRESS: Felt =
+    felt_str!("4097");
+
 
     // Class hashes.
     static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt = felt_str!("273");
@@ -57,10 +59,24 @@ where
     Ok(ContractClass::try_from(path.into())?)
 }
 
+pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
+    StarknetGeneralConfig::new(
+        StarknetOsConfig::new(
+            StarknetChainId::TestNet,
+            Address(TEST_ERC20_CONTRACT_ADDRESS.clone()),
+            0,
+        ),
+        0,
+        0,
+        1_000_000,
+        BlockInfo::empty(Address(TEST_SEQUENCER_ADDRESS.clone())),
+    )
+}
+
 #[allow(dead_code)]
 fn create_account_tx_test_state(
 ) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
-    let general_config = StarknetGeneralConfig::new_for_testing();
+    let general_config = new_starknet_general_config_for_testing();
 
     let test_contract_class_hash = TEST_CLASS_HASH.clone();
     let test_account_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone();
