@@ -22,7 +22,6 @@ use sha3::{Digest, Keccak256};
 use starknet_crypto::FieldElement;
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug,
     hash::Hash,
 };
 

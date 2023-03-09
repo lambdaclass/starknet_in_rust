@@ -48,7 +48,7 @@ impl StarknetState {
     #![allow(unused)] // TODO: delete once used
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::default();
 
         let state = CachedState::new(state_reader, Some(HashMap::new()));
 

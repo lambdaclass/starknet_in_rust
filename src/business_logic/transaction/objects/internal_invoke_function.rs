@@ -114,7 +114,7 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError>
     where
-        T: Default + State + StateReader + std::fmt::Debug,
+        T: Default + State + StateReader,
     {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
@@ -158,7 +158,7 @@ impl InternalInvokeFunction {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, ExecutionError>
     where
-        T: Default + State + StateReader + std::fmt::Debug,
+        T: Default + State + StateReader,
     {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
