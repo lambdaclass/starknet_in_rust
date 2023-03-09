@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Debug, PartialEq, Copy, Clone, Eq, Hash)]
 pub enum TransactionType {
     Declare,
     Deploy,

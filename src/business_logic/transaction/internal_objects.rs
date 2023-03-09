@@ -713,9 +713,7 @@ mod tests {
         state_reader
             .address_to_class_hash
             .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce
-            .insert(sender_address, nonce);
+        state_reader.address_to_nonce.insert(sender_address, nonce);
         state_reader
             .address_to_storage
             .insert(storage_entry, storage_value);
