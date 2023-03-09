@@ -13,7 +13,7 @@ use std::collections::HashMap;
 pub struct InMemoryStateReader {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
-    #[getset(get = "pub", get_mut = "pub")]
+    #[getset(get_mut = "pub")]
     pub class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
 
