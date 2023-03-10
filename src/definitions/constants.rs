@@ -31,4 +31,8 @@ lazy_static! {
     // Value generated from get_selector_from_name('__validate_declare__')
     pub static ref VALIDATE_DECLARE_ENTRY_POINT_NAME: Felt =
         felt_str!("1148189391774113786911959041662034419554430000171893651982484995704491697075");
+    // Value generated from get_selector_from_name('transfer')
+    pub static ref TRANSFER_ENTRY_POINT_SELECTOR: Felt =
+        felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
+
 }

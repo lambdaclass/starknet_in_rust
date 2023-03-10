@@ -5,19 +5,22 @@ use num_traits::{Num, Zero};
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-        fact_state::{
-            contract_state::ContractState,
-            in_memory_state_reader::{self, InMemoryStateReader},
-        },
+        fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
         state::{
             cached_state::{CachedState, ContractClassCache},
-            state_api::{State, StateReader},
+            state_api::StateReader,
+            state_api_objects::BlockInfo,
         },
-        transaction::objects::internal_invoke_function::InternalInvokeFunction,
+        transaction::objects::{
+            internal_declare::InternalDeclare, internal_invoke_function::InternalInvokeFunction,
+        },
     },
     definitions::{
-        constants::EXECUTE_ENTRY_POINT_SELECTOR,
-        general_config::{StarknetChainId, StarknetGeneralConfig},
+        constants::{
+            EXECUTE_ENTRY_POINT_SELECTOR, TRANSFER_ENTRY_POINT_SELECTOR,
+            VALIDATE_DECLARE_ENTRY_POINT_NAME,
+        },
+        general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -31,16 +34,20 @@ use std::{
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
 const TEST_CONTRACT_PATH: &str = "starknet_programs/test_contract.json";
+const TEST_EMPTY_CONTRACT_PATH: &str = "starknet_programs/empty_contract.json";
 
 lazy_static! {
     // Addresses.
     static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
     static ref TEST_ERC20_CONTRACT_ADDRESS: Address = Address(felt_str!("4097"));
+    pub static ref TEST_SEQUENCER_ADDRESS: Address =
+        Address(felt_str!("4096"));
 
     // Class hashes.
     static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt = felt_str!("273");
     static ref TEST_CLASS_HASH: Felt = felt_str!("272");
+    static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt = felt_str!("274");
     static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt = felt_str!("4112");
 
     // Storage keys.
@@ -60,10 +67,24 @@ where
     Ok(ContractClass::try_from(path.into())?)
 }
 
+pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
+    StarknetGeneralConfig::new(
+        StarknetOsConfig::new(
+            StarknetChainId::TestNet,
+            TEST_ERC20_CONTRACT_ADDRESS.clone(),
+            0,
+        ),
+        0,
+        0,
+        1_000_000,
+        BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
+    )
+}
+
 #[allow(dead_code)]
 fn create_account_tx_test_state(
 ) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
-    let general_config = StarknetGeneralConfig::new_for_testing();
+    let general_config = new_starknet_general_config_for_testing();
 
     let test_contract_class_hash = TEST_CLASS_HASH.clone();
     let test_account_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone();
@@ -228,97 +249,6 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
     let state_cache = ContractClassCache::new();
 
     CachedState::new(in_memory_state_reader, Some(state_cache))
-
-    //     CachedState {
-    //     state_reader: InMemoryStateReader {
-    //         contract_states: { // STORAGE_VIEW, ADDRESS_TO_NONCE, ADDRESS_TO_CLASS_HASH in blockifier are zipped here.
-    //             Address( // this is NOT in blockifier, maybe it is not needed (since it's empty)
-    //                 256,
-    //             ): ContractState {
-    //                 contract_hash: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16],
-    //                 nonce: 0,
-    //                 storage_keys: {},
-    //             },
-    //             Address(
-    //                 4097,
-    //             ): ContractState {
-    //                 contract_hash: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16],
-    //                 nonce: 0,
-    //                 storage_keys: {
-    //                     1192211877881866289306604115402199097887041303917861778777990838480655617515: 2, // this is in blockifier
-    //                     3229073099929281304021185011369329892856197542079132996799046100564060768274: 0, // this is NOT in blockifier
-    //                 },
-    //             },
-    //             Address( // this is NOT in blockifier, maybe it is not needed (since it's empty)
-    //                 257,
-    //             ): ContractState {
-    //                 contract_hash: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17],
-    //                 nonce: 0,
-    //                 storage_keys: {},
-    //             },
-    //         },
-    //         class_hash_to_contract_class: {}, // this is filled in blockifier, but not here. but the blockifier's data is in contract_classes field (see below).
-    //     },
-    //     cache: StateCache { // This is empty in both blockifier and here.
-    //         class_hash_initial_values: {},
-    //         nonce_initial_values: {},
-    //         storage_initial_values: {},
-    //         class_hash_writes: {},
-    //         nonce_writes: {},
-    //         storage_writes: {},
-    //     },
-    //     contract_classes: Some( // this is equal to: class_hash_to_class, but in blockifier is inside state reader
-    //         {
-    //             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]: ContractClass {},
-    //             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]: ContractClass {},
-    //             [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]: ContractClass {},
-    //         },
-    //     ),
-    // }
-
-    //     let mut state_before = CachedState::new(
-    //         InMemoryStateReader::new(
-    //             HashMap::from([
-    //                 (
-    //                     Address(0x101.into()),
-    //                     ContractState::new(felt_to_hash(&0x111.into()), Default::default(), Default::default()),
-    //                 ),
-    //                 (
-    //                     Address(0x100.into()),
-    //                     ContractState::new(felt_to_hash(&0x110.into()), Default::default(), Default::default()),
-    //                 ),
-    //                 (
-    //                     Address(0x1001.into()),
-    //                     ContractState::new(
-    //                         felt_to_hash(&0x1010.into()),
-    //                         Default::default(),
-    //                         HashMap::from([
-    //                             (
-    //                                 felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"),
-    //                                 Felt::zero(),
-    //                             ),
-    //                         ]),
-    //                     ),
-    //                 )
-    //             ]),
-    //             HashMap::from([
-    //                 (felt_to_hash(&0x110.into()), ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap()),
-    //                 (felt_to_hash(&0x111.into()), ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap()),
-    //                 (felt_to_hash(&0x1010.into()), ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap()),
-    //             ]),
-    //         ),
-    //         Some(ContractClassCache::new()),
-    //     );
-    //     state_before.set_storage_at(
-    //         &(
-    //             Address(0x1001.into()),
-    //             felt_to_hash(&felt_str!(
-    //                 "2542253978940891427830343982984992363331567580652119103860970381451088310289"
-    //             )),
-    //         ),
-    //         0.into(),
-    //     );
-    //     state_before
 }
 
 fn expected_fee_transfer_info() -> CallInfo {
@@ -358,12 +288,150 @@ fn expected_fee_transfer_info() -> CallInfo {
                 Felt::zero(),
             ],
         }],
-        storage_read_values: vec![Felt::from(2), Felt::zero()],
+        storage_read_values: vec![Felt::from(2)],
         accessed_storage_keys: HashSet::from([
+            [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+            ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
+            ],
+            [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+            ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
             ],
+        ]),
+    }
+}
+fn declare_tx() -> InternalDeclare {
+    InternalDeclare {
+        contract_class: get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap(),
+        class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
+        sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        tx_type: TransactionType::Declare,
+        validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_NAME.clone(),
+        version: 1,
+        max_fee: 2,
+        signature: vec![],
+        nonce: 0.into(),
+        hash_value: 0.into(),
+    }
+}
+#[test]
+fn test_declare_tx() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    let declare_tx = declare_tx();
+    // Check ContractClass is not set before the declare_tx
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
+    // Execute declare_tx
+    let result = declare_tx.execute(&mut state, &general_config).unwrap();
+    // Check ContractClass is set after the declare_tx
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
+
+    assert_eq!(result.tx_type, Some(TransactionType::Declare));
+
+    // Check result validate_info
+    let validate_info = result.validate_info.unwrap();
+
+    assert_eq!(
+        validate_info.class_hash,
+        Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH))
+    );
+
+    assert_eq!(
+        validate_info.entry_point_type,
+        Some(EntryPointType::External)
+    );
+    assert_eq!(
+        validate_info.entry_point_selector,
+        Some(VALIDATE_DECLARE_ENTRY_POINT_NAME.clone())
+    );
+
+    assert_eq!(validate_info.call_type, Some(CallType::Call));
+
+    assert_eq!(
+        validate_info.calldata,
+        vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()]
+    );
+    assert_eq!(
+        validate_info.contract_address,
+        TEST_ACCOUNT_CONTRACT_ADDRESS.clone()
+    );
+    assert_eq!(validate_info.caller_address, Address(0.into()));
+    assert_eq!(validate_info.internal_calls, Vec::new());
+    assert_eq!(validate_info.retdata, Vec::new());
+    assert_eq!(validate_info.events, Vec::new());
+    assert_eq!(validate_info.storage_read_values, Vec::new());
+    assert_eq!(validate_info.accessed_storage_keys, HashSet::new());
+    assert_eq!(validate_info.l2_to_l1_messages, Vec::new());
+
+    // Check result call_info
+    assert_eq!(result.call_info, None);
+
+    // Check result fee_transfer_info
+    let fee_transfer_info = result.fee_transfer_info.unwrap();
+
+    assert_eq!(
+        fee_transfer_info.class_hash,
+        Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
+    );
+
+    assert_eq!(fee_transfer_info.call_type, Some(CallType::Call));
+
+    assert_eq!(
+        fee_transfer_info.entry_point_type,
+        Some(EntryPointType::External)
+    );
+    assert_eq!(
+        fee_transfer_info.entry_point_selector,
+        Some(TRANSFER_ENTRY_POINT_SELECTOR.clone())
+    );
+
+    assert_eq!(
+        fee_transfer_info.calldata,
+        vec![TEST_SEQUENCER_ADDRESS.0.clone(), Felt::zero(), Felt::zero()]
+    );
+
+    assert_eq!(
+        fee_transfer_info.contract_address,
+        TEST_ERC20_CONTRACT_ADDRESS.clone()
+    );
+
+    assert_eq!(fee_transfer_info.retdata, vec![1.into()]);
+
+    assert_eq!(
+        fee_transfer_info.caller_address,
+        TEST_ACCOUNT_CONTRACT_ADDRESS.clone()
+    );
+    assert_eq!(
+        fee_transfer_info.events,
+        vec![OrderedEvent::new(
+            0,
+            vec![felt_str!(
+                "271746229759260285552388728919865295615886751538523744128730118297934206697"
+            )],
+            vec![
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,
+                TEST_SEQUENCER_ADDRESS.clone().0,
+                0.into(),
+                0.into()
+            ]
+        )]
+    );
+
+    assert_eq!(fee_transfer_info.internal_calls, Vec::new());
+
+    assert_eq!(fee_transfer_info.storage_read_values, vec![2.into()]);
+    assert_eq!(
+        fee_transfer_info.accessed_storage_keys,
+        HashSet::from([
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
@@ -376,8 +444,13 @@ fn expected_fee_transfer_info() -> CallInfo {
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
-        ]),
-    }
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ]
+        ])
+    );
+    assert_eq!(fee_transfer_info.l2_to_l1_messages, Vec::new());
 }
 
 fn expected_execute_call_info() -> CallInfo {
@@ -513,9 +586,7 @@ fn test_invoke_tx() {
 fn test_invoke_tx_state() {
     let (_starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
-    println!("state: {:?}", expected_initial_state);
-    assert!(false)
-    //assert_eq!(state, &expected_initial_state);
+    assert_eq!(state, &expected_initial_state);
 
     // let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     // let calldata = vec![

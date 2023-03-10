@@ -75,7 +75,7 @@ impl StarknetState {
         contract_class: ContractClass,
     ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
-            contract_class.clone(),
+            contract_class,
             self.chain_id(),
             Address(Felt::one()),
             0,
@@ -84,14 +84,8 @@ impl StarknetState {
             0.into(),
         )?;
 
-        self.state
-            .contract_classes
-            .as_mut()
-            .ok_or(TransactionError::MissingClassStorage)?
-            .insert(tx.class_hash, contract_class);
-
-        let mut state = self.state.apply_to_copy();
-        let tx_execution_info = tx.execute(&mut state, &self.general_config)?;
+        let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
+        self.state = self.state.apply_to_copy();
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -193,8 +187,8 @@ impl StarknetState {
         &mut self,
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut state_copy = self.state.apply_to_copy();
-        let tx = tx.execute(&mut state_copy, &self.general_config)?;
+        self.state = self.state.apply_to_copy();
+        let tx = tx.execute(&mut self.state, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info);
         Ok(tx)
@@ -286,6 +280,7 @@ mod tests {
     use std::path::PathBuf;
 
     use felt::felt_str;
+    use num_traits::Num;
 
     use crate::{
         business_logic::{execution::objects::CallType, fact_state::contract_state::ContractState},
@@ -316,6 +311,7 @@ mod tests {
 
         let mut actual_resources = HashMap::new();
         actual_resources.insert("l1_gas_usage".to_string(), 1224);
+
         let transaction_exec_info = TransactionExecutionInfo {
             validate_info: None,
             call_info: Some(CallInfo {
@@ -430,17 +426,83 @@ mod tests {
                 .to_owned(),
             class_hash
         );
-
         // check that state has store fib class hash
         assert_eq!(
             starknet_state
                 .state
-                .contract_classes
-                .unwrap()
-                .get(&fib_class_hash)
-                .unwrap()
-                .to_owned(),
+                .get_contract_class(&fib_class_hash)
+                .unwrap(),
             fib_contract_class
         );
+    }
+
+    #[test]
+    fn test_invoke() {
+        // 1) deploy fibonacci
+        // 2) invoke call over fibonacci
+
+        let mut starknet_state = StarknetState::new(None);
+        let path = PathBuf::from("starknet_programs/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let contract_address_salt = Address(1.into());
+
+        let (contract_address, _exec_info) = starknet_state
+            .deploy(
+                contract_class.clone(),
+                constructor_calldata.clone(),
+                contract_address_salt,
+            )
+            .unwrap();
+
+        // fibonacci selector
+        let selector = Felt::from_str_radix(
+            "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+            16,
+        )
+        .unwrap();
+
+        let tx_info = starknet_state
+            .invoke_raw(
+                contract_address,
+                selector.clone(),
+                constructor_calldata,
+                0,
+                Some(Vec::new()),
+                Some(Felt::zero()),
+            )
+            .unwrap();
+
+        // expected result
+        // ----- calculate fib class hash ---------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let fib_class_hash = felt_to_hash(&hash);
+
+        let address = felt_str!(
+            "3173424428166065804253636112972198402746524727884605069568266184332607747575"
+        );
+        let mut actual_resources = HashMap::new();
+        actual_resources.insert("l1_gas_usage".to_string(), 0);
+
+        let expected_info = TransactionExecutionInfo {
+            validate_info: None,
+            call_info: Some(CallInfo {
+                caller_address: Address(Felt::zero()),
+                call_type: Some(CallType::Call),
+                contract_address: Address(address),
+                code_address: None,
+                class_hash: Some(fib_class_hash),
+                entry_point_selector: Some(selector),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![1.into(), 1.into(), 10.into()],
+                retdata: vec![144.into()],
+                ..Default::default()
+            }),
+            actual_resources,
+            tx_type: Some(TransactionType::InvokeFunction),
+            ..Default::default()
+        };
+
+        assert_eq!(expected_info, tx_info);
     }
 }
