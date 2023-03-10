@@ -2,7 +2,8 @@ use felt::Felt;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
-use crate::utils::subtract_mappings;
+use crate::services::api::contract_class::ContractClass;
+use crate::utils::{felt_to_hash, subtract_mappings, ClassHash};
 use crate::{
     business_logic::state::{
         cached_state::CachedState, state_api::StateReader, state_cache::StorageEntry,
@@ -14,9 +15,14 @@ use crate::{
 
 #[derive(Default)]
 pub struct StateDiff {
-    pub(crate) address_to_class_hash: HashMap<Address, [u8; 32]>,
+    /// Contains the diff in deployed contracts.
+    pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
+    /// Contains the diffs in the nonces by contract address.
     pub(crate) address_to_nonce: HashMap<Address, Felt>,
-    pub(crate) storage_updates: HashMap<Address, HashMap<[u8; 32], Felt>>,
+    /// Contains the diffs in storage entries by contract address.
+    pub(crate) storage_updates: HashMap<Address, HashMap<Felt, Felt>>,
+    /// Contains the diff in the declared classes.
+    pub(crate) declared_classes: HashMap<ClassHash, ContractClass>,
 }
 
 impl StateDiff {
@@ -43,10 +49,13 @@ impl StateDiff {
             state_cache.class_hash_initial_values,
         );
 
+        let declared_classes = HashMap::new();
+
         Ok(StateDiff {
             address_to_class_hash,
             address_to_nonce,
             storage_updates,
+            declared_classes,
         })
     }
 
@@ -83,7 +92,7 @@ impl StateDiff {
             get_keys(self.storage_updates.clone(), other.storage_updates.clone());
 
         for address in addresses {
-            let default: HashMap<[u8; 32], Felt> = HashMap::new();
+            let default: HashMap<Felt, Felt> = HashMap::new();
             let mut map_a = self
                 .storage_updates
                 .get(&address)
@@ -98,10 +107,14 @@ impl StateDiff {
             storage_updates.insert(address, map_a.clone());
         }
 
+        let mut declared_classes = self.declared_classes.clone();
+        declared_classes.extend(other.declared_classes);
+
         Ok(StateDiff {
             address_to_class_hash,
             address_to_nonce,
             storage_updates,
+            declared_classes,
         })
     }
 }
@@ -109,12 +122,16 @@ impl StateDiff {
 /// Converts CachedState storage mapping to StateDiff storage mapping.
 fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt>,
-) -> HashMap<Address, HashMap<[u8; 32], Felt>> {
-    let mut storage_updates: HashMap<Address, HashMap<[u8; 32], Felt>> = HashMap::new();
-    for ((address, key), value) in storage_writes {
-        let mut map = storage_updates.get(&address).cloned().unwrap_or_default();
-        map.insert(key, value);
-        storage_updates.insert(address, map);
+) -> HashMap<Address, HashMap<Felt, Felt>> {
+    let mut storage_updates: HashMap<Address, HashMap<Felt, Felt>> = HashMap::new();
+    for ((address, key), value) in storage_writes.into_iter() {
+        storage_updates
+            .entry(address)
+            .and_modify(|updates_for_address: &mut HashMap<Felt, Felt>| {
+                let key_fe = Felt::from_bytes_be(&key);
+                updates_for_address.insert(key_fe, value.clone());
+            })
+            .or_insert_with(|| HashMap::from([(Felt::from_bytes_be(&key), value)]));
     }
     storage_updates
 }
@@ -122,12 +139,12 @@ fn to_state_diff_storage_mapping(
 /// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
 /// storage mapping (Tuple of address and key map to the associated value).
 fn to_cache_state_storage_mapping(
-    map: HashMap<Address, HashMap<[u8; 32], Felt>>,
+    map: HashMap<Address, HashMap<Felt, Felt>>,
 ) -> HashMap<StorageEntry, Felt> {
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
         for (key, value) in contract_storage {
-            storage_writes.insert((address.clone(), key), value);
+            storage_writes.insert((address.clone(), felt_to_hash(&key)), value);
         }
     }
     storage_writes
@@ -196,8 +213,10 @@ mod test {
 
         let map = to_state_diff_storage_mapping(storage);
 
-        assert_eq!(*map.get(&address1).unwrap().get(&key1).unwrap(), value1);
-        assert_eq!(*map.get(&address2).unwrap().get(&key2).unwrap(), value2);
+        let key1_fe = Felt::from_bytes_be(key1.as_slice());
+        let key2_fe = Felt::from_bytes_be(key2.as_slice());
+        assert_eq!(*map.get(&address1).unwrap().get(&key1_fe).unwrap(), value1);
+        assert_eq!(*map.get(&address2).unwrap().get(&key2_fe).unwrap(), value2);
     }
 
     #[test]
