@@ -1,12 +1,9 @@
 #[macro_use]
 extern crate honggfuzz;
-use std::{collections::HashMap, path::PathBuf};
 
 use felt::Felt;
-use std::io::{BufReader, Read, Write};
-use std::io;
 use num_traits::Zero;
-// use starknet_rs::services::api::{contract_class_errors::ContractClassError, contract_class::ContractClass};
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -23,107 +20,204 @@ use starknet_rs::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
+
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
+
 use tempfile::NamedTempFile;
-use std::fs::File;
+use std::fs;
+use std::process::Command;
 
 
 fn main() {
     println!("Starting fuzzer");
+    let mut iteration = 0;
+    fs::create_dir("cairo_programs");
     loop {
         fuzz!(|data: &[u8]| {
-        let init_contract_class = try_from_data(data);
 
-        if init_contract_class.is_ok() {
+        iteration += 1;
 
-            // ---------------------------------------------------------
-            //  Create program and entry point types for contract class
-            // ---------------------------------------------------------
-            let contract_class = init_contract_class.unwrap();
-            let entry_points_by_type = contract_class.entry_points_by_type().clone();
-
-            let fib_entrypoint_selector = entry_points_by_type
-                .get(&starknet_rs::services::api::contract_class::EntryPointType::External)
-                .unwrap()
-                .get(0)
-                .unwrap()
-                .selector()
-                .clone();
-
-
-            //* --------------------------------------------
-            //*    Create state reader with class hash data
-            //* --------------------------------------------
-
-            let mut contract_class_cache = HashMap::new();
-
-            //  ------------ contract data --------------------
-
-            let address = Address(1111.into());
-            let class_hash = [1; 32];
-            let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
-
-            contract_class_cache.insert(class_hash, contract_class);
-            let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-            state_reader
-                .contract_states_mut()
-                .insert(address.clone(), contract_state);
-
-            //* ---------------------------------------
-            //*    Create state with previous data
-            //* ---------------------------------------
-
-            let mut state = CachedState::new(state_reader, Some(contract_class_cache));
-
-            //* ------------------------------------
-            //*    Create execution entry point
-            //* ------------------------------------
-
-            let calldata = [1.into(), 1.into(), 10.into()].to_vec();
-            let caller_address = starknet_rs::utils::Address(0000.into());
-            let entry_point_type = starknet_rs::services::api::contract_class::EntryPointType::External;
-            let entrypoint = starknet_rs::business_logic::execution::execution_entry_point::ExecutionEntryPoint::new(
-                address,
-                calldata.clone(),
-                fib_entrypoint_selector.clone(),
-                caller_address,
-                entry_point_type,
-                Some(starknet_rs::business_logic::execution::objects::CallType::Delegate),
-                Some(class_hash),
-            );
-
-            //* --------------------
-            //*   Execute contract
-            //* ---------------------
-            let general_config = starknet_rs::definitions::general_config::StarknetGeneralConfig::default();
-            let tx_execution_context = starknet_rs::business_logic::execution::objects::TransactionExecutionContext::new(
-                Address(0.into()),
-                Felt::zero(),
-                Vec::new(),
-                0,
-                10.into(),
-                general_config.invoke_tx_max_n_steps(),
-                TRANSACTION_VERSION,
-            );
-            let mut resources_manager = starknet_rs::business_logic::fact_state::state::ExecutionResourcesManager::default();
-
-            entrypoint.execute(
-                &mut state,
-                &general_config,
-                &mut resources_manager,
-                &tx_execution_context
-            )
-            .unwrap();
+        // ---------------------------------------------------------
+        //  Create the content of the .cairo file with a function that writes the random data in the counter
+        // ---------------------------------------------------------
+        let file_content1 = "
+        %lang starknet
+        from starkware.cairo.common.cairo_builtins import HashBuiltin
+        
+        @storage_var
+        func _counter() -> (res: felt) {
         }
         
+        @external
+        func write_and_read{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (res:felt) {
+             _counter.write('";
+
+        let input = data_to_ascii(data);
+        
+        let file_content2 = "');
+            return _counter.read();
+        }
+        ";
+        let file_name = format!("cairo_programs/output-{}.cairo", iteration);
+
+        let file_content  = file_content1.to_owned() + &input + file_content2 ;
+
+        // ---------------------------------------------------------
+        //  Create the .cairo file 
+        // ---------------------------------------------------------
+        fs::write(file_name, file_content.as_bytes());
+
+        // ---------------------------------------------------------
+        //  Compile the .cairo file to create the .json file
+        // ---------------------------------------------------------
+
+        let cairo_file_name = format!("cairo_programs/output-{}.cairo", iteration);
+        let json_file_name = format!("cairo_programs/output-{}.json", iteration);
+
+        let _output = Command::new("starknet-compile")
+                    .arg(cairo_file_name.clone())
+                    .arg("--output")
+                    .arg(json_file_name.clone())
+                    .output()
+                    .expect("failed to execute process");
+
+        // ---------------------------------------------------------
+        //  Create program and entry point types for contract class
+        // ---------------------------------------------------------
+
+        let path = PathBuf::from(json_file_name.clone());
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let entry_points_by_type = contract_class.entry_points_by_type().clone();
+
+        let storage_entrypoint_selector = entry_points_by_type
+            .get(&EntryPointType::External)
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .selector()
+            .clone();
+        
+        // fs::remove_file(cairo_file_name);
+        // fs::remove_file(json_file_name);
+
+        //* --------------------------------------------
+        //*    Create state reader with class hash data
+        //* --------------------------------------------
+
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+
+        let address = Address(1111.into());
+        let class_hash = [1; 32];
+        let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
+
+        contract_class_cache.insert(class_hash, contract_class);
+        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        state_reader
+            .contract_states_mut()
+            .insert(address.clone(), contract_state);
+
+        //* ---------------------------------------
+        //*    Create state with previous data
+        //* ---------------------------------------
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ------------------------------------
+        //*    Create execution entry point
+        //* ------------------------------------
+
+        let calldata = [].to_vec();
+        let caller_address = Address(0000.into());
+        let entry_point_type = EntryPointType::External;
+
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address.clone(),
+            calldata.clone(),
+            storage_entrypoint_selector.clone(),
+            caller_address,
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+        );
+
+        //* --------------------
+        //*   Execute contract
+        //* ---------------------
+        let general_config = StarknetGeneralConfig::default();
+        let tx_execution_context = TransactionExecutionContext::new(
+            Address(0.into()),
+            Felt::zero(),
+            Vec::new(),
+            0,
+            10.into(),
+            general_config.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION,
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+
+        let expected_key = calculate_sn_keccak("_counter".as_bytes());
+
+        let mut expected_accessed_storage_keys = HashSet::new();
+        expected_accessed_storage_keys.insert(expected_key);
+
+        let expected_call_info = CallInfo {
+            caller_address: Address(0.into()),
+            call_type: Some(CallType::Delegate),
+            contract_address: Address(1111.into()),
+            entry_point_selector: Some(storage_entrypoint_selector),
+            entry_point_type: Some(EntryPointType::External),
+            calldata,
+            retdata: [Felt::from_bytes_be(data)].to_vec(),
+            execution_resources: ExecutionResources::default(),
+            class_hash: Some(class_hash),
+            storage_read_values: vec![Felt::from_bytes_be(data)],
+            accessed_storage_keys: expected_accessed_storage_keys,
+            ..Default::default()
+        };
+        
+        assert_eq!(
+            exec_entry_point
+                .execute(
+                    &mut state,
+                    &general_config,
+                    &mut resources_manager,
+                    &tx_execution_context
+                )
+                .unwrap(),
+            expected_call_info
+        );
+        
+        assert!(!state.cache().storage_writes().is_empty());
+        assert_eq!(
+            state
+                .cache()
+                .storage_writes()
+                .get(&(address, expected_key))
+                .cloned(),
+            Some(Felt::from_bytes_be(data))
+        );
+
         });
     }
 }
 
-fn try_from_data(data: &[u8]) -> io::Result<ContractClass> {
-    let raw_contract_class: starknet_api::state::ContractClass =
-        serde_json::from_slice(data)?;
-    println!("raw_contract_class: {:?}", raw_contract_class);
+fn data_to_ascii(data: &[u8]) -> String {
+    let data_string = String::from_utf8_lossy(data);
+    let mut chars = Vec::new();
+    for i in data_string.chars() {
+        let c = if i.is_ascii() {
+            i
+        } else {
+            'X'
+        };
+        chars.push(c);
+    }
 
-    let contract_class = ContractClass::from(raw_contract_class);
-    Ok(contract_class)
+    chars.iter().collect()
+
 }
