@@ -6,7 +6,9 @@ use starknet_rs::{
         execution::objects::{CallType, OrderedEvent},
         fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
         state::{
-            cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo,
+            cached_state::{CachedState, ContractClassCache},
+            state_api::StateReader,
+            state_api_objects::BlockInfo,
             state_cache::StateCache,
         },
         transaction::objects::internal_declare::InternalDeclare,
@@ -35,8 +37,8 @@ lazy_static! {
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
     pub static ref TEST_SEQUENCER_ADDRESS: Address =
     Address(felt_str!("4096"));
-pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
-Address(felt_str!("4097"));
+    pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
+    Address(felt_str!("4097"));
 
 
     // Class hashes.
@@ -134,7 +136,6 @@ fn create_account_tx_test_state(
                     ContractState::new(felt_to_hash(&class_hash), Felt::zero(), storage_keys),
                 );
             }
-
             for (class_hash, contract_class) in class_hash_to_class {
                 state_reader
                     .class_hash_to_contract_class_mut()
@@ -149,9 +150,55 @@ fn create_account_tx_test_state(
     Ok((general_config, cached_state))
 }
 
+fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
+    let in_memory_state_reader = InMemoryStateReader::new(
+        HashMap::from([
+            (
+                TEST_CONTRACT_ADDRESS.clone(),
+                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), Felt::zero(), HashMap::new()),
+            ),
+            (
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::new(),
+                ),
+            ),
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), Felt::from(2))]),
+                ),
+            ),
+        ]),
+        HashMap::from([
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_CLASS_HASH),
+                get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+            ),
+        ]),
+    );
+
+    let state_cache = ContractClassCache::new();
+
+    CachedState::new(in_memory_state_reader, Some(state_cache))
+}
+
 #[test]
 fn test_create_account_tx_test_state() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
+    assert_eq!(&state, &expected_state_before_tx());
 
     let value = state
         .get_storage_at(&(
@@ -189,11 +236,10 @@ fn declare_tx() -> InternalDeclare {
         hash_value: 0.into(),
     }
 }
-
 #[test]
 fn test_declare_tx() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
-
+    assert_eq!(state, expected_state_before_tx());
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
@@ -263,7 +309,7 @@ fn test_declare_tx() {
 
     assert_eq!(
         fee_transfer_info.calldata,
-        vec![TEST_SEQUENCER_ADDRESS.0.clone(), 0.into(), 0.into()]
+        vec![TEST_SEQUENCER_ADDRESS.0.clone(), Felt::zero(), Felt::zero()]
     );
 
     assert_eq!(
@@ -286,7 +332,7 @@ fn test_declare_tx() {
             )],
             vec![
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,
-                TEST_SEQUENCER_ADDRESS.0.clone(),
+                TEST_SEQUENCER_ADDRESS.clone().0,
                 0.into(),
                 0.into()
             ]
@@ -367,8 +413,8 @@ fn test_state_for_declare_tx() {
     );
 
     assert_eq!(
-        state_reader.class_hash_to_contract_class,
-        HashMap::from([
+        state_reader.class_hash_to_contract_class(),
+        &HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
                 get_contract_class(ERC20_CONTRACT_PATH).unwrap()

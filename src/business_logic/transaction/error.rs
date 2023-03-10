@@ -30,6 +30,8 @@ pub enum TransactionError {
     MissingClassStorage,
     #[error("Unimplemented state updates")]
     NotImplemented,
+    #[error("{0}")]
+    InvokeExecutionError(String),
     #[error(transparent)]
     ContractAddressError(#[from] ContractAddressError),
     #[error(transparent)]

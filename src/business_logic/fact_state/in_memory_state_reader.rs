@@ -9,12 +9,12 @@ use felt::Felt;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, Default, MutGetters, Getters)]
+#[derive(Clone, Debug, Default, MutGetters, Getters, PartialEq)]
 pub struct InMemoryStateReader {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
-    #[getset(get_mut = "pub")]
-    pub class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
+    #[getset(get = "pub", get_mut = "pub")]
+    pub(crate) class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
 
 impl InMemoryStateReader {
