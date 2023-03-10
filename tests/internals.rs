@@ -169,12 +169,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
                 ContractState::new(
                     felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
                     Felt::zero(),
-                    HashMap::from([
-                        (
-                            felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"),
-                            Felt::from(2),
-                        )
-                    ]),
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), Felt::from(2))]),
                 ),
             ),
         ]),
@@ -243,7 +238,7 @@ fn declare_tx() -> InternalDeclare {
 #[test]
 fn test_declare_tx() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
-    assert_eq!(&state, &expected_state_before_tx());
+    assert_eq!(state, expected_state_before_tx());
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
@@ -313,7 +308,7 @@ fn test_declare_tx() {
 
     assert_eq!(
         fee_transfer_info.calldata,
-        vec![TEST_SEQUENCER_ADDRESS.clone().0, 0.into(), 0.into()]
+        vec![TEST_SEQUENCER_ADDRESS.0.clone(), Felt::zero(), Felt::zero()]
     );
 
     assert_eq!(
