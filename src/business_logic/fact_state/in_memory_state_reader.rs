@@ -38,23 +38,35 @@ impl InMemoryStateReader {
 
     /// Applies the given StateDiff to the InMemoryStateReader.
     pub fn apply_diff(&mut self, state_diff: StateDiff) {
-        // update the class hashes:
+        // update the deployed contracts:
         // Here we add a new contract state for each new deployed contract.
         for (addr, class_hash) in state_diff.address_to_class_hash.into_iter() {
             let new_contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
             self.contract_states.insert(addr, new_contract_state);
         }
 
-        // update the nonces
+        // update the nonces:
+        // for each contract we set the nonce to the one in the diff.
         for (addr, new_nonce) in state_diff.address_to_nonce.into_iter() {
-            let mut contract_state = self.contract_states.get_mut(&addr).unwrap();
+            let default = &mut ContractState::empty();
+            let mut contract_state = self.contract_states.get_mut(&addr).unwrap_or(default);
             contract_state.nonce = new_nonce;
         }
 
-        // update the storage
-        // for (felt, change) in state_diff.storage_updates.into_iter() {
+        // update the storage:
+        // for each contract we update the storage entries.
+        for (address, change) in state_diff.storage_updates.into_iter() {
+            let default = &mut ContractState::empty();
+            let mut contract_state = self.contract_states.get_mut(&address).unwrap_or(default);
+            contract_state.storage_keys = change;
+        }
 
-        // }
+        // update the declared classes:
+        // we just add the new ones to the hashmap.
+        for (class_hash, contract_class) in state_diff.declared_classes {
+            self.class_hash_to_contract_class
+                .insert(class_hash, contract_class);
+        }
     }
 }
 
