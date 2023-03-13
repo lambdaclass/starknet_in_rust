@@ -21,8 +21,6 @@ use thiserror::Error;
 pub enum TransactionError {
     #[error("Invalid felt conversion to u64")]
     InvalidFeltConversionU64,
-    #[error("Invalid felt conversion to usize")]
-    InvalidFeltConversionUsize,
     #[error("{0}")]
     InvalidNonce(String),
     #[error("Invalid transaction nonce. Expected: {0} got {1}")]

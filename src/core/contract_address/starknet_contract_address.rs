@@ -225,7 +225,7 @@ mod tests {
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
                 selector: 1.into(),
-                offset: 2.into(),
+                offset: 2,
             }],
         );
         let contract_class = ContractClass {
@@ -238,7 +238,7 @@ mod tests {
             get_contract_entry_points(&contract_class, &EntryPointType::Constructor).unwrap(),
             vec![ContractEntryPoint {
                 selector: 1.into(),
-                offset: 2.into()
+                offset: 2
             }]
         );
         assert_matches!(
@@ -254,21 +254,21 @@ mod tests {
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
                 selector: 3.into(),
-                offset: 2.into(),
+                offset: 2,
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::L1Handler,
             vec![ContractEntryPoint {
                 selector: 4.into(),
-                offset: 2.into(),
+                offset: 2,
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::External,
             vec![ContractEntryPoint {
                 selector: 5.into(),
-                offset: 2.into(),
+                offset: 2,
             }],
         );
         let contract_class = ContractClass {
@@ -293,21 +293,21 @@ mod tests {
             EntryPointType::Constructor,
             vec![ContractEntryPoint {
                 selector: 1.into(),
-                offset: 12.into(),
+                offset: 12,
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::L1Handler,
             vec![ContractEntryPoint {
                 selector: 2.into(),
-                offset: 12.into(),
+                offset: 12,
             }],
         );
         entry_points_by_type.insert(
             EntryPointType::External,
             vec![ContractEntryPoint {
                 selector: 3.into(),
-                offset: 12.into(),
+                offset: 12,
             }],
         );
         let contract_class = ContractClass {

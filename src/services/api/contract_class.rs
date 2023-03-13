@@ -34,7 +34,7 @@ pub enum EntryPointType {
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
     pub(crate) selector: Felt,
-    pub(crate) offset: Felt,
+    pub(crate) offset: usize,
 }
 
 // -------------------------------

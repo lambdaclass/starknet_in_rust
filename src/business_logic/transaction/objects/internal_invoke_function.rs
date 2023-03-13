@@ -305,7 +305,9 @@ pub(crate) fn preprocess_invoke_function_fields(
     } else {
         match nonce {
             Some(n) => {
-                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
+                let val = n
+                    .to_u64()
+                    .ok_or(TransactionError::InvalidFeltConversionU64)?;
                 let additional_data = [val].to_vec();
                 let entry_point_selector_field = Felt::zero();
                 Ok((entry_point_selector_field, additional_data))
