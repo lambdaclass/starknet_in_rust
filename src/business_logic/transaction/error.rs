@@ -33,14 +33,6 @@ pub enum TransactionError {
     ResourcesError,
     #[error("Could not calculate resources")]
     ResourcesCalculation,
-    #[error("{0}")]
-    RunValidation(String),
-    #[error("Missing contract class storage")]
-    MissingClassStorage,
-    #[error("Unimplemented state updates")]
-    NotImplemented,
-    #[error("{0}")]
-    InvokeExecution(String),
     #[error(transparent)]
     ContractAddress(#[from] ContractAddressError),
     #[error(transparent)]
@@ -53,10 +45,6 @@ pub enum TransactionError {
     ClassAlreadyDeclared([u8; 32]),
     #[error(transparent)]
     Starkware(#[from] StarkwareError),
-    #[error("Missing field for TxStruct")]
-    MissingTxStructField,
-    #[error("Expected an int value but get wrong data type")]
-    NotAFeltValue,
     #[error("Expected a relocatable value but get wrong data type")]
     NotARelocatableValue,
     #[error("Error converting from {0} to {1}")]
@@ -65,16 +53,12 @@ pub enum TransactionError {
     UnexpectedHolesInEventOrder,
     #[error("Unexpected holes in the L2-to-L1 message order.")]
     UnexpectedHolesL2toL1Messages,
-    #[error("Call type {0} not implemented")]
-    CallTypeNotImplemented(String),
     #[error("Attemp to return class hash with incorrect call type")]
     CallTypeIsNotDelegate,
     #[error("Attemp to return code address when is None")]
     AttempToUseNoneCodeAddress,
     #[error("error recovering class hash from storage")]
     FailToReadClassHash,
-    #[error("error while fetching redata {0}")]
-    RetdataError(String),
     #[error("Missing contract class after fetching")]
     MissigContractClass,
     #[error("contract address {0:?} not deployed")]

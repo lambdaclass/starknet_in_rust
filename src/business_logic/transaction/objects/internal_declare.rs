@@ -140,9 +140,8 @@ impl InternalDeclare {
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info = self
-            .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .map_err(|e| TransactionError::RunValidation(e.to_string()))?;
+        let validate_info =
+            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
