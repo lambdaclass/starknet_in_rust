@@ -36,18 +36,16 @@ fn get_contract_entry_points(
         .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
-    let program_len = program_length.into();
+    let program_len = program_length;
     for entry_point in entry_points {
         if entry_point.offset > program_len {
-            return Err(ContractAddressError::InvalidOffset(
-                entry_point.offset.clone(),
-            ));
+            return Err(ContractAddressError::InvalidOffset(entry_point.offset));
         }
     }
     Ok(entry_points
         .iter()
         .map(|entry_point| ContractEntryPoint {
-            offset: entry_point.offset.clone(),
+            offset: entry_point.offset,
             selector: entry_point.selector.clone(),
         })
         .collect())

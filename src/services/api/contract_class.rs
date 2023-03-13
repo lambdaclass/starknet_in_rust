@@ -95,7 +95,7 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
     fn from(entry_point: &ContractEntryPoint) -> Self {
         vec![
             MaybeRelocatable::from(entry_point.selector.clone()),
-            MaybeRelocatable::from(entry_point.offset.clone()),
+            MaybeRelocatable::from(entry_point.offset),
         ]
     }
 }
@@ -154,7 +154,7 @@ fn convert_entry_points(
             .into_iter()
             .map(|e| {
                 let selector = Felt::from_bytes_be(e.selector.0.bytes());
-                let offset = e.offset.0.into();
+                let offset = e.offset.0;
                 ContractEntryPoint { selector, offset }
             })
             .collect::<Vec<ContractEntryPoint>>();
