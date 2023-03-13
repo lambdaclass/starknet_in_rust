@@ -496,7 +496,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
-                    SyscallHandlerError::HintError(e) => e,
+                    SyscallHandlerError::Hint(e) => e,
                     _ => HintError::UnknownHint(e.to_string()),
                 })?;
         }
@@ -529,11 +529,8 @@ fn get_syscall_ptr(
     ids_data: &HashMap<String, HintReference>,
     ap_tracking: &ApTracking,
 ) -> Result<Relocatable, SyscallHandlerError> {
-    let location = get_relocatable_from_var_name("syscall_ptr", vm, ids_data, ap_tracking)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?;
-    let syscall_ptr = vm
-        .get_relocatable(&location)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+    let location = get_relocatable_from_var_name("syscall_ptr", vm, ids_data, ap_tracking)?;
+    let syscall_ptr = vm.get_relocatable(&location)?;
     Ok(syscall_ptr)
 }
 

@@ -1,5 +1,7 @@
 use super::state_errors::StateError;
-use cairo_rs::vm::errors::{hint_errors::HintError, vm_errors::VirtualMachineError};
+use cairo_rs::vm::errors::{
+    hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
@@ -12,8 +14,6 @@ pub enum SyscallHandlerError {
     MissingSelector,
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
-    #[error("invalid pointer")]
-    SegmentationFault,
     #[error("Couldn't convert Felt to usize")]
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
@@ -59,7 +59,7 @@ pub enum SyscallHandlerError {
     #[error("tx_info_ptr is None")]
     TxInfoPtrIsNone,
     #[error("Virtual machine error: {0}")]
-    VirtualMachineError(#[from] VirtualMachineError),
+    VirtualMachine(#[from] VirtualMachineError),
     #[error("Expected GetContractAddressRequest")]
     ExpectedGetContractAddressRequest,
     #[error("Expected GetSequencerAddressRequest")]
@@ -71,7 +71,7 @@ pub enum SyscallHandlerError {
     #[error("Expected MaybeRelocatable::Int")]
     ExpectedMaybeRelocatableInt,
     #[error("Memory error: {0}")]
-    MemoryError(String),
+    Memory(#[from] MemoryError),
     #[error("Expected GetTxSignatureRequest")]
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
@@ -81,7 +81,7 @@ pub enum SyscallHandlerError {
     #[error("Could not compute hash")]
     ErrorComputingHash,
     #[error(transparent)]
-    StateError(#[from] StateError),
+    State(#[from] StateError),
     #[error(transparent)]
-    HintError(#[from] HintError),
+    Hint(#[from] HintError),
 }

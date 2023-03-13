@@ -907,7 +907,7 @@ mod tests {
         };
         assert_eq!(
             handler._call_contract_and_write_response("call_contract", &mut vm, syscall_ptr),
-            Err(SyscallHandlerError::VirtualMachineError(
+            Err(SyscallHandlerError::VirtualMachine(
                 VirtualMachineError::MemoryError(MemoryError::UnallocatedSegment(0, 0))
             ))
         )

@@ -279,12 +279,8 @@ where
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_memory_segment();
-        let segment_end = vm
-            .write_arg(&segment_start, &data)
-            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
-        let sub = segment_end
-            .sub(&segment_start.to_owned().into())
-            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let segment_end = vm.write_arg(&segment_start, &data)?;
+        let sub = segment_end.sub(&segment_start.to_owned().into())?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.push(segment);
 

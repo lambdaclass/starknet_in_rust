@@ -42,8 +42,7 @@ pub fn get_integer(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<usize, SyscallHandlerError> {
-    vm.get_integer(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+    vm.get_integer(syscall_ptr)?
         .as_ref()
         .to_usize()
         .ok_or(SyscallHandlerError::FeltToUsizeFail)
@@ -53,10 +52,7 @@ pub fn get_big_int(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<Felt, SyscallHandlerError> {
-    Ok(vm
-        .get_integer(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .into_owned())
+    Ok(vm.get_integer(syscall_ptr)?.into_owned())
 }
 
 pub fn get_relocatable(
@@ -64,7 +60,7 @@ pub fn get_relocatable(
     syscall_ptr: &Relocatable,
 ) -> Result<Relocatable, SyscallHandlerError> {
     vm.get_relocatable(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)
+        .map_err(SyscallHandlerError::VirtualMachine)
 }
 
 pub fn get_integer_range(
@@ -73,8 +69,7 @@ pub fn get_integer_range(
     size: usize,
 ) -> Result<Vec<Felt>, SyscallHandlerError> {
     Ok(vm
-        .get_integer_range(addr, size)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+        .get_integer_range(addr, size)?
         .into_iter()
         .map(|c| c.into_owned())
         .collect::<Vec<Felt>>())
