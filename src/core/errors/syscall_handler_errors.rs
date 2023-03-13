@@ -52,19 +52,13 @@ pub enum SyscallHandlerError {
     ExpectedGetContractAddressRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
-    #[error("Expected CallContractRequest")]
-    ExpectedCallContract,
-    #[error("Expected MaybeRelocatable")]
-    ExpectedMaybeRelocatable,
-    #[error("Expected MaybeRelocatable::Int")]
-    ExpectedMaybeRelocatableInt,
     #[error("Memory error: {0}")]
     Memory(#[from] MemoryError),
     #[error("Expected GetTxSignatureRequest")]
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
-    #[error("could not convert felt to u64")]
+    #[error("Could not convert felt to u64")]
     InvalidFeltConversion,
     #[error("Could not compute hash")]
     ErrorComputingHash,
