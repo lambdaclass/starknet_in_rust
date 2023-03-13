@@ -1,3 +1,4 @@
+use crate::types::contract_class::PyContractClass;
 use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
@@ -13,12 +14,12 @@ use starknet_rs::{
 };
 
 #[pyclass]
-pub struct CachedState {
+pub struct PyCachedState {
     state: InnerCachedState<InMemoryStateReader>,
 }
 
 #[pymethods]
-impl CachedState {
+impl PyCachedState {
     fn get_class_hash_at(&mut self, address: BigUint) -> PyResult<BigUint> {
         Ok(BigUint::from_bytes_be(
             self.state
@@ -43,8 +44,8 @@ impl CachedState {
             .to_biguint())
     }
 
-    fn set_contract_class(&mut self) {
-        todo!("StorageClass Python-Rust interaction")
+    fn set_contract_class(&mut self, _address: BigUint, _contract_class: &PyContractClass) {
+        // self.state.set_contract_class(class_hash, contract_class)
     }
 
     fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {

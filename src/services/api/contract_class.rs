@@ -44,9 +44,11 @@ pub struct ContractEntryPoint {
 
 #[derive(Clone, Debug, Deserialize, Getters, PartialEq, Serialize)]
 pub struct ContractClass {
+    #[getset(get = "pub")]
     pub(crate) program: Program,
     #[getset(get = "pub")]
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+    #[getset(get = "pub")]
     pub(crate) abi: Option<AbiType>,
 }
 
