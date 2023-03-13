@@ -7,8 +7,8 @@ pub enum StarknetRunnerError {
     NotAFelt,
     #[error("Maybe relocatable should be a Relocatable")]
     NotARelocatable,
-    #[error("could not convert Felt to usize")]
-    DataConvertionError,
+    #[error("Could not convert Felt to usize")]
+    DataConversionError,
     #[error(transparent)]
-    MemoryException(#[from] MemoryError),
+    Memory(#[from] MemoryError),
 }

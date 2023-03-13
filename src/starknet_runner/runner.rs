@@ -83,7 +83,7 @@ where
         let ret_data = self
             .vm
             .get_return_values(2)
-            .map_err(StarknetRunnerError::MemoryException)?;
+            .map_err(StarknetRunnerError::Memory)?;
 
         let n_rets = ret_data[0]
             .get_int_ref()
@@ -98,7 +98,7 @@ where
                 &ret_ptr,
                 n_rets
                     .to_usize()
-                    .ok_or(StarknetRunnerError::DataConvertionError)?,
+                    .ok_or(StarknetRunnerError::DataConversionError)?,
             )
             .map_err(|_| StarknetRunnerError::NotAFelt)?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
