@@ -76,7 +76,7 @@ impl StarknetState {
         contract_class: ContractClass,
     ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
-            contract_class.clone(),
+            contract_class,
             self.chain_id(),
             Address(Felt::one()),
             0,
@@ -85,14 +85,8 @@ impl StarknetState {
             0.into(),
         )?;
 
-        self.state
-            .contract_classes
-            .as_mut()
-            .ok_or(TransactionError::MissingClassStorage)?
-            .insert(tx.class_hash, contract_class);
-
-        let mut state = self.state.apply_to_copy();
-        let tx_execution_info = tx.execute(&mut state, &self.general_config)?;
+        let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
+        self.state = self.state.apply_to_copy();
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -438,16 +432,12 @@ mod tests {
                 .to_owned(),
             class_hash
         );
-
         // check that state has store fib class hash
         assert_eq!(
             starknet_state
                 .state
-                .contract_classes
-                .unwrap()
-                .get(&fib_class_hash)
-                .unwrap()
-                .to_owned(),
+                .get_contract_class(&fib_class_hash)
+                .unwrap(),
             fib_contract_class
         );
     }
