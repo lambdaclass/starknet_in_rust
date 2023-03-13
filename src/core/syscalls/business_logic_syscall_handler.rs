@@ -194,7 +194,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .ok_or(ContractClassError::NoneEntryPointType)?;
         if constructor_entry_points.is_empty() {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorEntryPointsError());
+                return Err(StateError::ConstructorCalldataEmpty());
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -224,7 +224,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &self.tx_execution_context,
             )
-            .map_err(|_| StateError::ExecutionEntryPointError())?;
+            .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
     }
 }
@@ -529,7 +529,7 @@ where
             match self.starknet_storage_state.read(&felt_to_hash(&address.0)) {
                 Ok(x) => x.clone(),
                 Err(
-                    StateError::StorageError(StorageError::ErrorFetchingData)
+                    StateError::Storage(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
                     | StateError::NoneStorage(_)

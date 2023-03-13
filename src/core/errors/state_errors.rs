@@ -3,7 +3,6 @@ use crate::{
     services::api::contract_class_errors::ContractClassError,
     starknet_storage::errors::storage_errors::StorageError, utils::Address,
 };
-use felt::Felt;
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]
@@ -32,16 +31,14 @@ pub enum StateError {
     ContractAddressOutOfRangeAddress(Address),
     #[error("Requested contract address {0:?} is unavailable for deployment")]
     ContractAddressUnavailable(Address),
-    #[error("error converting {0} to u64")]
-    ConversionError(Felt),
     #[error(transparent)]
-    StorageError(#[from] StorageError),
+    Storage(#[from] StorageError),
     #[error(transparent)]
-    ContractClassError(#[from] ContractClassError),
-    #[error("constructor entry points must be empty")]
-    ConstructorEntryPointsError(),
+    ContractClass(#[from] ContractClassError),
+    #[error("Constructor calldata is empty")]
+    ConstructorCalldataEmpty(),
     #[error("Error in ExecutionEntryPoint")]
-    ExecutionEntryPointError(),
+    ExecutionEntryPoint(),
     #[error("No class hash declared in class_hash_to_contract_class")]
     MissingClassHash(),
 }
