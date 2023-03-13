@@ -9,3 +9,6 @@ crate-type = ["cdylib"]
 [dependencies.pyo3]
 features = ["extension-module"]
 version = "0.18.1"
+
+[dependencies.starknet-rs]
+path = "../.."
