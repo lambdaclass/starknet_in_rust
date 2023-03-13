@@ -97,8 +97,6 @@ pub enum TransactionError {
     MissingInitialFp,
     #[error("Transaction context is invalid")]
     InvalidTxContext,
-    #[error("{0}")]
-    FeeCalculation(String),
     #[error(transparent)]
     Vm(#[from] VirtualMachineError),
     #[error(transparent)]

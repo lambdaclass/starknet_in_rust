@@ -248,13 +248,11 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
-        let (fee_transfer_info, actual_fee) = self
-            .charge_fee(
-                state,
-                &concurrent_exec_info.actual_resources,
-                general_config,
-            )
-            .map_err(|e| TransactionError::FeeCalculation(e.to_string()))?;
+        let (fee_transfer_info, actual_fee) = self.charge_fee(
+            state,
+            &concurrent_exec_info.actual_resources,
+            general_config,
+        )?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
