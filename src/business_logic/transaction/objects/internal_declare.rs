@@ -359,7 +359,7 @@ mod tests {
             .insert(sender_address.clone(), Felt::new(1));
         state_reader
             .address_to_storage_mut()
-            .insert((sender_address.clone(), [0; 32]).into(), Felt::new(1));
+            .insert((sender_address, [0; 32]), Felt::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 

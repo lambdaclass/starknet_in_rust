@@ -53,20 +53,20 @@ fn hello_starknet_increase_balance() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let nonce = Felt::zero();
-    let storage_entry: StorageEntry = (address.clone(), [1; 32]).into();
+    let storage_entry: StorageEntry = (address.clone(), [1; 32]);
     let storage = Felt::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash.clone());
+        .insert(address.clone(), class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
     state_reader
         .address_to_storage_mut()
-        .insert(storage_entry.clone(), storage.clone());
+        .insert(storage_entry, storage);
 
     //* ---------------------------------------
     //*    Create state with previous data

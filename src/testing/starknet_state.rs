@@ -368,7 +368,7 @@ mod tests {
         // hack store account contract
         let hash = compute_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
-        contract_class_cache.insert(class_hash.clone(), contract_class.clone());
+        contract_class_cache.insert(class_hash, contract_class.clone());
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -382,7 +382,7 @@ mod tests {
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash.clone());
+            .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
             .insert(sender_address.clone(), nonce.clone());
@@ -406,13 +406,13 @@ mod tests {
             .state
             .state_reader
             .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash.clone());
+            .insert(sender_address.clone(), class_hash);
 
         starknet_state
             .state
             .state_reader
             .address_to_nonce_mut()
-            .insert(sender_address.clone(), nonce.clone());
+            .insert(sender_address.clone(), nonce);
         starknet_state
             .state
             .state_reader

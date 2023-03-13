@@ -60,22 +60,22 @@ fn test_contract<'a>(
     });
 
     let nonce = Felt::zero();
-    let storage_entry: StorageEntry = (contract_address.clone(), class_hash.clone()).into();
+    let storage_entry: StorageEntry = (contract_address.clone(), class_hash);
     let storage = Felt::zero();
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
-        .insert(contract_address.clone(), class_hash.clone());
+        .insert(contract_address.clone(), class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(contract_address.clone(), nonce.clone());
+        .insert(contract_address.clone(), nonce);
     state_reader
         .address_to_storage_mut()
-        .insert(storage_entry.clone(), storage.clone());
+        .insert(storage_entry, storage);
     state_reader
         .class_hash_to_contract_class_mut()
-        .insert(class_hash.clone(), contract_class.clone());
+        .insert(class_hash, contract_class.clone());
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
@@ -103,7 +103,7 @@ fn test_contract<'a>(
 
                 state_reader
                     .address_to_class_hash_mut()
-                    .insert(contract_address.clone(), class_hash.clone());
+                    .insert(contract_address.clone(), class_hash);
                 state_reader
                     .address_to_nonce_mut()
                     .insert(contract_address.clone(), nonce.clone());
@@ -112,7 +112,7 @@ fn test_contract<'a>(
                     .insert(storage_entry.clone(), storage_value.clone());
                 state_reader
                     .class_hash_to_contract_class_mut()
-                    .insert(class_hash.clone(), contract_class.clone());
+                    .insert(class_hash, contract_class.clone());
             }
         }
 

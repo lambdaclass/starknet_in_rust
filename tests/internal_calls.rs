@@ -35,21 +35,19 @@ fn test_internal_calls() {
     );
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [0x01; 32].into();
+    let class_hash: ClassHash = [0x01; 32];
     let nonce = Felt::zero();
-    let storage_entry: StorageEntry = (address.clone(), [1; 32]).into();
+    let storage_entry: StorageEntry = (address.clone(), [1; 32]);
     let storage = Felt::zero();
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash.clone());
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), class_hash);
+    state_reader.address_to_nonce_mut().insert(address, nonce);
     state_reader
         .address_to_storage_mut()
-        .insert(storage_entry.clone(), storage.clone());
+        .insert(storage_entry, storage);
 
     let mut state = CachedState::new(
         state_reader,

@@ -57,13 +57,13 @@ fn integration_storage_test() {
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash.clone());
+        .insert(address.clone(), class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
     state_reader
         .address_to_storage_mut()
-        .insert(storage_entry.clone(), storage_value.clone());
+        .insert(storage_entry, storage_value);
 
     //* ---------------------------------------
     //*    Create state with previous data

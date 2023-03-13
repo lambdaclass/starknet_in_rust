@@ -133,13 +133,13 @@ fn create_account_tx_test_state(
                     .iter()
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address).then_some((
-                            (address.clone(), felt_to_hash(&storage_key)),
+                            (address.clone(), felt_to_hash(storage_key)),
                             storage_value.clone(),
                         ))
                     }))
                 .collect();
 
-                let h: HashMap<StorageEntry, Felt> = HashMap::from(storage_keys);
+                let h: HashMap<StorageEntry, Felt> = storage_keys;
 
                 state_reader
                     .address_to_class_hash_mut()
