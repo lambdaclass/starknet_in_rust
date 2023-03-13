@@ -21,7 +21,6 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
-use num_traits::ToPrimitive;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
@@ -166,10 +165,7 @@ impl ExecutionEntryPoint {
             &CairoArg::Single(alloc_pointer),
         ];
 
-        let entrypoint = entry_point
-            .offset
-            .to_usize()
-            .ok_or(TransactionError::InvalidFeltConversionUsize)?;
+        let entrypoint = entry_point.offset;
 
         // cairo runner entry point
         runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
