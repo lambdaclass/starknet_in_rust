@@ -5,15 +5,14 @@ use super::{
 };
 use crate::{
     business_logic::{
-        execution::{
-            error::ExecutionError, execution_entry_point::ExecutionEntryPoint, objects::*,
-        },
+        execution::{execution_entry_point::ExecutionEntryPoint, objects::*},
         fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
             state_api_objects::BlockInfo,
         },
+        transaction::error::TransactionError,
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::general_config::StarknetGeneralConfig,
@@ -160,19 +159,19 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub(crate) fn validate_read_only_segments(
         &self,
         runner: &mut VirtualMachine,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), TransactionError> {
         for (segment_ptr, segment_size) in self.read_only_segments.clone() {
             let used_size = runner
                 .get_segment_used_size(segment_ptr.segment_index as usize)
-                .ok_or(ExecutionError::InvalidSegmentSize)?;
+                .ok_or(TransactionError::InvalidSegmentSize)?;
 
             let seg_size = match segment_size {
                 MaybeRelocatable::Int(size) => size,
-                _ => return Err(ExecutionError::NotAnInt),
+                _ => return Err(TransactionError::NotAnInt),
             };
 
             if seg_size != used_size.into() {
-                return Err(ExecutionError::OutOfBound);
+                return Err(TransactionError::OutOfBound);
             }
             runner.mark_address_range_as_accessed(segment_ptr, used_size)?;
         }
@@ -574,10 +573,10 @@ where
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), TransactionError> {
         let expected_stop_ptr = self.expected_syscall_ptr;
         if syscall_stop_ptr != expected_stop_ptr {
-            return Err(ExecutionError::InvalidStopPointer(
+            return Err(TransactionError::InvalidStopPointer(
                 expected_stop_ptr,
                 syscall_stop_ptr,
             ));

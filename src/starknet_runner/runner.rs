@@ -1,6 +1,6 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
-    business_logic::execution::error::ExecutionError,
+    business_logic::transaction::error::TransactionError,
     core::syscalls::syscall_handler::{
         SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
@@ -62,7 +62,7 @@ where
         &mut self,
         entrypoint: usize,
         args: &[&CairoArg],
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), TransactionError> {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
 
@@ -75,7 +75,7 @@ where
         )?)
     }
 
-    pub fn get_execution_resources(&self) -> Result<ExecutionResources, ExecutionError> {
+    pub fn get_execution_resources(&self) -> Result<ExecutionResources, TransactionError> {
         Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
@@ -131,23 +131,23 @@ where
         &self,
         ptr_offset: usize,
         os_context: Vec<MaybeRelocatable>,
-    ) -> Result<(MaybeRelocatable, MaybeRelocatable), ExecutionError> {
+    ) -> Result<(MaybeRelocatable, MaybeRelocatable), TransactionError> {
         if ptr_offset != 0 {
-            return Err(ExecutionError::IllegalOsPtrOffset);
+            return Err(TransactionError::IllegalOsPtrOffset);
         }
 
         let os_context_end = self.vm.get_ap().sub_usize(2)?;
         let final_os_context_ptr = os_context_end.sub_usize(os_context.len())?;
         let os_context_ptr = os_context
             .get(ptr_offset)
-            .ok_or(ExecutionError::InvalidPtrFetch)?
+            .ok_or(TransactionError::InvalidPtrFetch)?
             .to_owned();
 
         let addr = final_os_context_ptr + ptr_offset;
         let ptr_fetch_from_memory = self
             .vm
             .get_maybe(&addr)?
-            .ok_or(ExecutionError::InvalidPtrFetch)?;
+            .ok_or(TransactionError::InvalidPtrFetch)?;
 
         Ok((os_context_ptr, ptr_fetch_from_memory))
     }
@@ -156,30 +156,30 @@ where
         &self,
         segment_base_ptr: MaybeRelocatable,
         segment_stop_ptr: MaybeRelocatable,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), TransactionError> {
         let seg_base_ptr = match segment_base_ptr {
             MaybeRelocatable::RelocatableValue(val) => {
                 if val.offset != 0 {
-                    return Err(ExecutionError::InvalidSegBasePtrOffset(val.offset));
+                    return Err(TransactionError::InvalidSegBasePtrOffset(val.offset));
                 }
                 val
             }
-            _ => return Err(ExecutionError::NotARelocatableValue),
+            _ => return Err(TransactionError::NotARelocatableValue),
         };
 
         let expected_stop_ptr = seg_base_ptr
             + self
                 .vm
                 .get_segment_used_size(seg_base_ptr.segment_index as usize)
-                .ok_or(ExecutionError::InvalidSegmentSize)?;
+                .ok_or(TransactionError::InvalidSegmentSize)?;
 
         let seg_stop_ptr: Relocatable = match segment_stop_ptr {
             MaybeRelocatable::RelocatableValue(val) => val,
-            _ => return Err(ExecutionError::NotARelocatableValue),
+            _ => return Err(TransactionError::NotARelocatableValue),
         };
 
         if expected_stop_ptr != seg_stop_ptr {
-            return Err(ExecutionError::InvalidStopPointer(
+            return Err(TransactionError::InvalidStopPointer(
                 expected_stop_ptr,
                 seg_stop_ptr,
             ));
@@ -192,7 +192,7 @@ where
     pub(crate) fn validate_and_process_os_context(
         &mut self,
         initial_os_context: Vec<MaybeRelocatable>,
-    ) -> Result<(), ExecutionError>
+    ) -> Result<(), TransactionError>
     where
         H: SyscallHandlerPostRun,
     {
@@ -207,7 +207,7 @@ where
         let final_os_context_ptr = stack_ptr.sub_usize(1)?;
 
         if final_os_context_ptr + initial_os_context.len() != os_context_end {
-            return Err(ExecutionError::OsContextPtrNotEqual);
+            return Err(TransactionError::OsContextPtrNotEqual);
         }
 
         // Validate system calls

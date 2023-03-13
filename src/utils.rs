@@ -1,7 +1,7 @@
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
         fact_state::state::ExecutionResourcesManager,
@@ -138,7 +138,7 @@ pub fn calculate_tx_resources(
     tx_type: TransactionType,
     storage_changes: (usize, usize),
     l1_handler_payload_size: Option<usize>,
-) -> Result<HashMap<String, usize>, ExecutionError> {
+) -> Result<HashMap<String, usize>, TransactionError> {
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
@@ -239,14 +239,14 @@ where
 pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     state: &mut S,
     contract_address: Address,
-) -> Result<[u8; 32], ExecutionError> {
+) -> Result<[u8; 32], TransactionError> {
     let class_hash: [u8; 32] = state
         .get_class_hash_at(&contract_address)
-        .map_err(|_| ExecutionError::FailToReadClassHash)?
+        .map_err(|_| TransactionError::FailToReadClassHash)?
         .to_owned();
 
     if class_hash == *UNINITIALIZED_CLASS_HASH {
-        return Err(ExecutionError::NotDeployedContract(class_hash));
+        return Err(TransactionError::NotDeployedContract(class_hash));
     }
     Ok(class_hash)
 }
@@ -254,7 +254,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
 pub fn validate_contract_deployed<S: StateReader>(
     state: &mut S,
     contract_address: Address,
-) -> Result<[u8; 32], ExecutionError> {
+) -> Result<[u8; 32], TransactionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
 

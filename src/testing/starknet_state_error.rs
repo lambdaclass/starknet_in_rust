@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::{
-    business_logic::{execution::error::ExecutionError, transaction::error::TransactionError},
+    business_logic::transaction::error::TransactionError,
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
 };
 
@@ -13,8 +13,6 @@ pub enum StarknetStateError {
     SyscallException(#[from] SyscallHandlerError),
     #[error(transparent)]
     StateException(#[from] StateError),
-    #[error(transparent)]
-    ExecuteException(#[from] ExecutionError),
     #[error(transparent)]
     TransactionException(#[from] TransactionError),
 }

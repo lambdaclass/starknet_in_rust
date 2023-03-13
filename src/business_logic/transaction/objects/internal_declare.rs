@@ -6,7 +6,6 @@ use num_traits::Zero;
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -143,7 +142,7 @@ impl InternalDeclare {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = self
             .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .map_err(|e| TransactionError::RunValidationError(e.to_string()))?;
+            .map_err(|e| TransactionError::RunValidation(e.to_string()))?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -153,7 +152,7 @@ impl InternalDeclare {
             changes,
             None,
         )
-        .map_err(|_| TransactionError::ResourcesCalculationError)?;
+        .map_err(|_| TransactionError::ResourcesCalculation)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -185,7 +184,7 @@ impl InternalDeclare {
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError> {
+    ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version > 0x8000_0000_0000_0000 {
             return Ok(None);
         }
@@ -210,7 +209,7 @@ impl InternalDeclare {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::UnauthorizedActionOnValidate)?;
+            .map_err(|_| TransactionError::UnauthorizedActionOnValidate)?;
 
         Ok(Some(call_info))
     }

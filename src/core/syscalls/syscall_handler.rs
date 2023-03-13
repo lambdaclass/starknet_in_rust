@@ -11,8 +11,8 @@ use super::{
 };
 use crate::{
     business_logic::{
-        execution::{error::ExecutionError, objects::TxInfoStruct},
-        state::state_api_objects::BlockInfo,
+        execution::objects::TxInfoStruct, state::state_api_objects::BlockInfo,
+        transaction::error::TransactionError,
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::Address,
@@ -354,7 +354,7 @@ pub(crate) trait SyscallHandlerPostRun {
         &self,
         _runner: &mut VirtualMachine,
         _syscall_stop_ptr: Relocatable,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), TransactionError> {
         Ok(())
     }
 }

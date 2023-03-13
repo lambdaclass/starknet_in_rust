@@ -1,11 +1,8 @@
-use super::{
-    error::ExecutionError,
-    objects::{CallInfo, CallType, TransactionExecutionContext},
-};
+use super::objects::{CallInfo, CallType, TransactionExecutionContext};
 use crate::{
     business_logic::{
         fact_state::state::ExecutionResourcesManager, state::state_api::State,
-        state::state_api::StateReader,
+        state::state_api::StateReader, transaction::error::TransactionError,
     },
     core::syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -71,7 +68,7 @@ impl ExecutionEntryPoint {
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -108,7 +105,7 @@ impl ExecutionEntryPoint {
         resources_manager: &ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
         tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<StarknetRunner<BusinessLogicSyscallHandler<'a, T>>, ExecutionError>
+    ) -> Result<StarknetRunner<BusinessLogicSyscallHandler<'a, T>>, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -116,7 +113,7 @@ impl ExecutionEntryPoint {
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
             .get_contract_class(&class_hash)
-            .map_err(|_| ExecutionError::MissigContractClass)?;
+            .map_err(|_| TransactionError::MissigContractClass)?;
 
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
@@ -139,7 +136,7 @@ impl ExecutionEntryPoint {
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
             Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
-            _ => return Err(ExecutionError::NotARelocatableValue),
+            _ => return Err(TransactionError::NotARelocatableValue),
         };
 
         let syscall_handler = BusinessLogicSyscallHandler::new(
@@ -170,7 +167,7 @@ impl ExecutionEntryPoint {
         ];
 
         let entrypoint = entry_point.offset.to_usize().ok_or_else(|| {
-            ExecutionError::ErrorInDataConversion("felt".to_string(), "usize".to_string())
+            TransactionError::ErrorInDataConversion("felt".to_string(), "usize".to_string())
         })?;
 
         // cairo runner entry point
@@ -181,7 +178,7 @@ impl ExecutionEntryPoint {
         let args_ptr = runner
             .cairo_runner
             .get_initial_fp()
-            .ok_or(ExecutionError::InvalidInitialFp)?
+            .ok_or(TransactionError::InvalidInitialFp)?
             .sub_usize(entry_point_args.len() + 2)?;
 
         runner
@@ -197,11 +194,11 @@ impl ExecutionEntryPoint {
         &self,
         contract_class: ContractClass,
         _class_hash: [u8; 32],
-    ) -> Result<ContractEntryPoint, ExecutionError> {
+    ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class
             .entry_points_by_type
             .get(&self.entry_point_type)
-            .ok_or(ExecutionError::InvalidEntryPoints)?;
+            .ok_or(TransactionError::InvalidEntryPoints)?;
 
         let mut default_entry_point = None;
         let entry_point = entry_points
@@ -215,13 +212,13 @@ impl ExecutionEntryPoint {
             })
             .fold(Ok(None), |acc, x| match acc {
                 Ok(None) => Ok(Some(x)),
-                _ => Err(ExecutionError::NonUniqueEntryPoint),
+                _ => Err(TransactionError::NonUniqueEntryPoint),
             })?;
 
         entry_point
             .or(default_entry_point)
             .cloned()
-            .ok_or(ExecutionError::EntryPointNotFound)
+            .ok_or(TransactionError::EntryPointNotFound)
     }
 
     fn build_call_info<S>(
@@ -229,7 +226,7 @@ impl ExecutionEntryPoint {
         previous_cairo_usage: ExecutionResources,
         syscall_handler: BusinessLogicSyscallHandler<S>,
         retdata: Vec<Felt>,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         S: State + StateReader,
     {
@@ -261,11 +258,11 @@ impl ExecutionEntryPoint {
     fn get_code_class_hash<S: StateReader>(
         &self,
         state: &mut S,
-    ) -> Result<[u8; 32], ExecutionError> {
+    ) -> Result<[u8; 32], TransactionError> {
         if self.class_hash.is_some() {
             match self.call_type {
                 CallType::Delegate => return Ok(self.class_hash.unwrap()),
-                _ => return Err(ExecutionError::CallTypeIsNotDelegate),
+                _ => return Err(TransactionError::CallTypeIsNotDelegate),
             }
         }
         let code_address = match self.call_type {
@@ -274,7 +271,7 @@ impl ExecutionEntryPoint {
                 if self.code_address.is_some() {
                     self.code_address.clone()
                 } else {
-                    return Err(ExecutionError::AttempToUseNoneCodeAddress);
+                    return Err(TransactionError::AttempToUseNoneCodeAddress);
                 }
             }
         };

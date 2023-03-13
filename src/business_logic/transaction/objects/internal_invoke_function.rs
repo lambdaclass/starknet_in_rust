@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -112,7 +111,7 @@ impl InternalInvokeFunction {
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError>
+    ) -> Result<Option<CallInfo>, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -140,11 +139,11 @@ impl InternalInvokeFunction {
             resources_manager,
             &self
                 .get_execution_context(general_config.validate_max_n_steps)
-                .map_err(|_| ExecutionError::InvalidTxContext)?,
+                .map_err(|_| TransactionError::InvalidTxContext)?,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::InvalidContractCall)?;
+            .map_err(|_| TransactionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }
@@ -156,7 +155,7 @@ impl InternalInvokeFunction {
         state: &mut T,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -176,7 +175,7 @@ impl InternalInvokeFunction {
             resources_manager,
             &self
                 .get_execution_context(general_config.invoke_tx_max_n_steps)
-                .map_err(|_| ExecutionError::InvalidTxContext)?,
+                .map_err(|_| TransactionError::InvalidTxContext)?,
         )
     }
 
@@ -186,7 +185,7 @@ impl InternalInvokeFunction {
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError>
+    ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         T: Default + State + StateReader + Clone,
     {
@@ -249,7 +248,7 @@ impl InternalInvokeFunction {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
         let (fee_transfer_info, actual_fee) = self
             .charge_fee(
@@ -257,7 +256,7 @@ impl InternalInvokeFunction {
                 &concurrent_exec_info.actual_resources,
                 general_config,
             )
-            .map_err(|e| ExecutionError::FeeCalculationError(e.to_string()))?;
+            .map_err(|e| TransactionError::FeeCalculation(e.to_string()))?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(

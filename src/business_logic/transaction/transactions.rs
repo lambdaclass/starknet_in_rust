@@ -41,7 +41,7 @@ impl Transaction {
             Transaction::Deploy(tx) => tx.execute(state, general_config),
             Transaction::InvokeFunction(tx) => tx
                 .execute(state, general_config)
-                .map_err(|e| TransactionError::InvokeExecutionError(e.to_string())),
+                .map_err(|e| TransactionError::InvokeExecution(e.to_string())),
         }
     }
 }
