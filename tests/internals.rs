@@ -33,10 +33,10 @@ lazy_static! {
     // Addresses.
     static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
-    pub static ref TEST_SEQUENCER_ADDRESS: Felt =
-    felt_str!("4096");
-pub static ref TEST_ERC20_CONTRACT_ADDRESS: Felt =
-    felt_str!("4097");
+    pub static ref TEST_SEQUENCER_ADDRESS: Address =
+    Address(felt_str!("4096"));
+    pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
+    Address(felt_str!("4097"));
 
 
     // Class hashes.
@@ -66,13 +66,13 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
     StarknetGeneralConfig::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet,
-            Address(TEST_ERC20_CONTRACT_ADDRESS.clone()),
+            TEST_ERC20_CONTRACT_ADDRESS.clone(),
             0,
         ),
         0,
         0,
         1_000_000,
-        BlockInfo::empty(Address(TEST_SEQUENCER_ADDRESS.clone())),
+        BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
     )
 }
 
@@ -112,17 +112,10 @@ fn create_account_tx_test_state(
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
-    let test_erc20_sequencer_balance_key = TEST_ERC20_SEQUENCER_BALANCE_KEY.clone();
-    let storage_view = HashMap::from([
-        (
-            (test_erc20_address.clone(), test_erc20_sequencer_balance_key),
-            Felt::zero(),
-        ),
-        (
-            (test_erc20_address, test_erc20_account_balance_key),
-            ACTUAL_FEE.clone(),
-        ),
-    ]);
+    let storage_view = HashMap::from([(
+        (test_erc20_address, test_erc20_account_balance_key),
+        ACTUAL_FEE.clone(),
+    )]);
 
     let cached_state = CachedState::new(
         {
@@ -149,23 +142,69 @@ fn create_account_tx_test_state(
                     .insert(contract_address.clone(), Felt::zero());
                 state_reader.address_to_storage_mut().extend(h);
             }
+            for (class_hash, contract_class) in class_hash_to_class {
+                state_reader
+                    .class_hash_to_contract_class_mut()
+                    .insert(felt_to_hash(&class_hash), contract_class);
+            }
 
             state_reader
         },
-        Some(
-            class_hash_to_class
-                .into_iter()
-                .map(|(k, v)| (felt_to_hash(&k), v))
-                .collect(),
-        ),
+        Some(HashMap::new()),
     );
 
     Ok((general_config, cached_state))
 }
 
+fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
+    let in_memory_state_reader = InMemoryStateReader::new(
+        HashMap::from([
+            (
+                TEST_CONTRACT_ADDRESS.clone(),
+                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), Felt::zero(), HashMap::new()),
+            ),
+            (
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::new(),
+                ),
+            ),
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), Felt::from(2))]),
+                ),
+            ),
+        ]),
+        HashMap::from([
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_CLASS_HASH),
+                get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+            ),
+        ]),
+    );
+
+    let state_cache = ContractClassCache::new();
+
+    CachedState::new(in_memory_state_reader, Some(state_cache))
+}
+
 #[test]
 fn test_create_account_tx_test_state() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
+    assert_eq!(&state, &expected_state_before_tx());
 
     let value = state
         .get_storage_at(&(
@@ -206,7 +245,7 @@ fn declare_tx() -> InternalDeclare {
 #[test]
 fn test_declare_tx() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
-
+    assert_eq!(state, expected_state_before_tx());
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
@@ -276,12 +315,12 @@ fn test_declare_tx() {
 
     assert_eq!(
         fee_transfer_info.calldata,
-        vec![TEST_SEQUENCER_ADDRESS.clone(), 0.into(), 0.into()]
+        vec![TEST_SEQUENCER_ADDRESS.0.clone(), Felt::zero(), Felt::zero()]
     );
 
     assert_eq!(
         fee_transfer_info.contract_address,
-        Address(TEST_ERC20_CONTRACT_ADDRESS.clone())
+        TEST_ERC20_CONTRACT_ADDRESS.clone()
     );
 
     assert_eq!(fee_transfer_info.retdata, vec![1.into()]);
@@ -299,7 +338,7 @@ fn test_declare_tx() {
             )],
             vec![
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,
-                TEST_SEQUENCER_ADDRESS.clone(),
+                TEST_SEQUENCER_ADDRESS.clone().0,
                 0.into(),
                 0.into()
             ]
@@ -308,10 +347,7 @@ fn test_declare_tx() {
 
     assert_eq!(fee_transfer_info.internal_calls, Vec::new());
 
-    assert_eq!(
-        fee_transfer_info.storage_read_values,
-        vec![2.into(), 0.into()]
-    );
+    assert_eq!(fee_transfer_info.storage_read_values, vec![2.into()]);
     assert_eq!(
         fee_transfer_info.accessed_storage_keys,
         HashSet::from([

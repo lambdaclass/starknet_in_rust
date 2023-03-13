@@ -8,7 +8,7 @@ use felt::Felt;
 use getset::MutGetters;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, Default, MutGetters)]
+#[derive(Clone, Debug, Default, MutGetters, PartialEq)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>, // TODO: needs to be pub(crate)
