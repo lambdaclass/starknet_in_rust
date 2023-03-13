@@ -11,7 +11,7 @@ pub enum StateError {
     MissingContractClassCache,
     #[error("ContractClassCache must be None")]
     AssignedContractClassCache,
-    #[error("Missing key that in StorageUpdate Map")]
+    #[error("Missing key in StorageUpdate Map")]
     EmptyKeyInStorage,
     #[error("Try to create a CarriedState from a None parent")]
     ParentCarriedStateIsNone,
