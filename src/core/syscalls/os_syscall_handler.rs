@@ -198,8 +198,7 @@ impl SyscallHandler for OsSyscallHandler {
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_temporary_segment();
 
-        vm.write_arg(&segment_start, &data)
-            .map_err(|_| SyscallHandlerError::WriteArg)?;
+        vm.write_arg(&segment_start, &data)?;
         Ok(segment_start)
     }
 

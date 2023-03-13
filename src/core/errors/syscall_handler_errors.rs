@@ -6,12 +6,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum SyscallHandlerError {
-    #[error("Missing Member")]
-    MissingMember,
-    #[error("Missing Identifiers")]
-    MissingIdentifiers,
-    #[error("Missing selector value")]
-    MissingSelector,
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
     #[error("Couldn't convert Felt to usize")]
@@ -22,16 +16,12 @@ pub enum SyscallHandlerError {
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
     ExpectedDeployRequestStruct,
-    #[error("Expected EmitEventStruct")]
-    ExpectedEmitEventStruct,
     #[error("Expected GetCallerAddressRequest")]
     ExpectedGetCallerAddressRequest,
     #[error("Expected SendMessageToL1")]
     ExpectedSendMessageToL1,
     #[error("Expected GetBlockTimestampRequest")]
     ExpectedGetBlockTimestampRequest,
-    #[error("Expected StorageReadRequest")]
-    ExpectedStorageReadRequest,
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1, found: {0}")]
     DeployFromZero(usize),
     #[error("Hint not implemented")]
@@ -50,8 +40,6 @@ pub enum SyscallHandlerError {
     ShouldBeNone(String),
     #[error("Unexpected construct retdata")]
     UnexpectedConstructorRetdata,
-    #[error("Error writing arguments")]
-    WriteArg,
     #[error("Key not found")]
     KeyNotFound,
     #[error("The requested syscall read was not of the expected type")]
