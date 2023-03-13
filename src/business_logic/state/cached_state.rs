@@ -203,13 +203,13 @@ mod tests {
         let storage_value = Felt::new(1);
 
         state_reader
-            .address_to_class_hash
+            .address_to_class_hash_mut()
             .insert(contract_address.clone(), class_hash);
         state_reader
-            .address_to_nonce
+            .address_to_nonce_mut()
             .insert(contract_address.clone(), nonce.clone());
         state_reader
-            .address_to_storage
+            .address_to_storage_mut()
             .insert(storage_entry, storage_value);
 
         let mut cached_state = CachedState::new(state_reader, None);

@@ -351,12 +351,7 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let mut state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
+        let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash: [u8; 32] = [1; 32];
         let contract_class =
@@ -368,7 +363,7 @@ mod tests {
         let storage_value = Felt::new(2190);
 
         state_reader
-            .address_to_class_hash
+            .address_to_class_hash_mut()
             .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce

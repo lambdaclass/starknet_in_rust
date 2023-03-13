@@ -715,7 +715,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader.address_to_nonce.insert(sender_address, nonce);
         state_reader
-            .address_to_storage
+            .address_to_storage_mut()
             .insert(storage_entry, storage_value);
         contract_class_cache.insert(class_hash, contract_class.clone());
         //* ---------------------------------------

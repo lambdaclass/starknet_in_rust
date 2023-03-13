@@ -26,7 +26,7 @@ use starknet_rs::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
-use std::{collections::HashMap, collections::HashSet, iter::empty, path::Path};
+use std::{collections::HashSet, iter::empty, path::Path};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -65,16 +65,16 @@ fn test_contract<'a>(
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .address_to_class_hash
+        .address_to_class_hash_mut()
         .insert(contract_address.clone(), class_hash.clone());
     state_reader
-        .address_to_nonce
+        .address_to_nonce_mut()
         .insert(contract_address.clone(), nonce.clone());
     state_reader
-        .address_to_storage
+        .address_to_storage_mut()
         .insert(storage_entry.clone(), storage.clone());
     state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_contract_class_mut()
         .insert(class_hash.clone(), contract_class.clone());
 
     let mut storage_entries = Vec::new();
@@ -102,16 +102,16 @@ fn test_contract<'a>(
                 let storage_value = Felt::new(574);
 
                 state_reader
-                    .address_to_class_hash
+                    .address_to_class_hash_mut()
                     .insert(contract_address.clone(), class_hash.clone());
                 state_reader
-                    .address_to_nonce
+                    .address_to_nonce_mut()
                     .insert(contract_address.clone(), nonce.clone());
                 state_reader
-                    .address_to_storage
+                    .address_to_storage_mut()
                     .insert(storage_entry.clone(), storage_value.clone());
                 state_reader
-                    .class_hash_to_contract_class
+                    .class_hash_to_contract_class_mut()
                     .insert(class_hash.clone(), contract_class.clone());
             }
         }

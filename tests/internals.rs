@@ -4,8 +4,11 @@ use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallType, OrderedEvent},
-        fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
-        state::{cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo},
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo,
+            state_cache::StorageEntry,
+        },
         transaction::objects::internal_declare::InternalDeclare,
     },
     definitions::{
@@ -139,12 +142,12 @@ fn create_account_tx_test_state(
                 let h: HashMap<StorageEntry, Felt> = HashMap::from(storage_keys);
 
                 state_reader
-                    .address_to_class_hash
+                    .address_to_class_hash_mut()
                     .insert(contract_address.clone(), felt_to_hash(&class_hash.clone())); // or maybe insert address_to_class_hash
                 state_reader
-                    .address_to_nonce
+                    .address_to_nonce_mut()
                     .insert(contract_address.clone(), Felt::zero());
-                state_reader.address_to_storage.extend(h);
+                state_reader.address_to_storage_mut().extend(h);
             }
 
             state_reader

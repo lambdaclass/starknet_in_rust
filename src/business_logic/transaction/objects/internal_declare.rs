@@ -314,9 +314,7 @@ mod tests {
     use crate::{
         business_logic::{
             execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         core::contract_address::starknet_contract_address::compute_class_hash,
@@ -351,12 +349,17 @@ mod tests {
         // this is not conceptually correct as the sender address would be an
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
-        let contract_state = ContractState::new(class_hash, 1.into(), HashMap::new());
 
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::default();
         state_reader
-            .contract_states
-            .insert(sender_address, contract_state);
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address.clone(), Felt::new(1));
+        state_reader
+            .address_to_storage_mut()
+            .insert((sender_address.clone(), [0; 32]).into(), Felt::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
