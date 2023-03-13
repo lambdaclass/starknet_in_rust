@@ -32,7 +32,7 @@ use num_traits::{ToPrimitive, Zero};
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct InternalInvokeFunction {
-    pub(crate) contract_address: Address,
+    pub contract_address: Address,
     entry_point_selector: Felt,
     #[allow(dead_code)]
     entry_point_type: EntryPointType,
@@ -250,6 +250,10 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, ExecutionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
+
+        // TODO remove unwrap
+        self.handle_nonce(state).unwrap();
+
         let (fee_transfer_info, actual_fee) = self
             .charge_fee(
                 state,
@@ -276,6 +280,7 @@ impl InternalInvokeFunction {
         }
 
         let contract_address = self.contract_address.clone();
+        println!("contract_address: {:?}", contract_address);
         let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
 
         // TODO remove this unwraps

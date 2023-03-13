@@ -188,6 +188,7 @@ impl StarknetState {
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.state = self.state.apply_to_copy();
+        dbg!(&self.state);
         let tx = tx.execute(&mut self.state, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info);
@@ -447,6 +448,7 @@ mod tests {
         let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 
+        println!("state before deploy: {:?}", starknet_state.state);
         let (contract_address, _exec_info) = starknet_state
             .deploy(
                 contract_class.clone(),
@@ -454,6 +456,8 @@ mod tests {
                 contract_address_salt,
             )
             .unwrap();
+        println!("state after deploy: {:#?}", starknet_state.state);
+        //println!("contract_address: {:?}", contract_address.clone());
 
         // fibonacci selector
         let selector = Felt::from_str_radix(

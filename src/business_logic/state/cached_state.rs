@@ -18,10 +18,10 @@ pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x0
 
 #[derive(Debug, Clone, Default, Getters, PartialEq)]
 pub struct CachedState<T: StateReader + Clone> {
-    pub(crate) state_reader: T,
+    pub state_reader: T,
     #[get = "pub"]
-    pub(crate) cache: StateCache,
-    pub(crate) contract_classes: Option<ContractClassCache>,
+    pub cache: StateCache,
+    pub contract_classes: Option<ContractClassCache>,
 }
 
 impl<T: StateReader + Clone> CachedState<T> {
@@ -29,6 +29,18 @@ impl<T: StateReader + Clone> CachedState<T> {
         Self {
             cache: StateCache::default(),
             contract_classes: contract_class_cache,
+            state_reader,
+        }
+    }
+
+    pub fn new_for_testing(
+        state_reader: T,
+        contract_classes: Option<ContractClassCache>,
+        cache: StateCache,
+    ) -> Self {
+        Self {
+            cache,
+            contract_classes,
             state_reader,
         }
     }

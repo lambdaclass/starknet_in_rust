@@ -10,6 +10,7 @@ use starknet_rs::{
             cached_state::{CachedState, ContractClassCache},
             state_api::StateReader,
             state_api_objects::BlockInfo,
+            state_cache::StateCache,
         },
         transaction::objects::{
             internal_declare::InternalDeclare, internal_invoke_function::InternalInvokeFunction,
@@ -199,6 +200,140 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
     let state_cache = ContractClassCache::new();
 
     CachedState::new(in_memory_state_reader, Some(state_cache))
+}
+
+fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
+    let in_memory_state_reader = initial_in_memory_state_reader();
+
+    let contract_classes_cache = ContractClassCache::new();
+
+    CachedState::new_for_testing(
+        in_memory_state_reader,
+        Some(contract_classes_cache),
+        state_cache_after_invoke_tx(),
+    )
+}
+
+fn state_cache_after_invoke_tx() -> StateCache {
+    let class_hash_initial_values = HashMap::from([
+        (
+            TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
+        ),
+        (
+            TEST_CONTRACT_ADDRESS.clone(),
+            felt_to_hash(&TEST_CLASS_HASH.clone()),
+        ),
+        (
+            TEST_ERC20_CONTRACT_ADDRESS.clone(),
+            felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+        ),
+    ]);
+
+    let nonce_initial_values =
+        HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::zero())]);
+
+    let storage_initial_values = HashMap::from([
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
+            ),
+            Felt::from(2),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+            ),
+            Felt::from(2),
+        ),
+        // blockifier has two more storage initial values
+    ]);
+
+    let class_hash_writes = HashMap::new();
+
+    let nonce_writes = HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::from(1))]);
+    // storage_writes: {
+    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
+    //     StorageKey(PatriciaKey(StarkFelt("0x0723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658812")))):
+    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000002"),
+    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
+    //     StorageKey(PatriciaKey(StarkFelt("0x02a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080dec")))):
+    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000"),
+    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
+    //     StorageKey(PatriciaKey(StarkFelt("0x02a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080deb")))):
+    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000"),
+    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
+    //     StorageKey(PatriciaKey(StarkFelt("0x0723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658813")))):
+    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000")
+    // }
+    let storage_writes = HashMap::from([
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
+            ),
+            Felt::from(2),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+            ),
+            Felt::from(0),
+        ),
+    ]);
+
+    StateCache::new_for_testing(
+        class_hash_initial_values,
+        nonce_initial_values,
+        storage_initial_values,
+        class_hash_writes,
+        nonce_writes,
+        storage_writes,
+    )
+}
+
+fn initial_in_memory_state_reader() -> InMemoryStateReader {
+    InMemoryStateReader::new(
+        HashMap::from([
+            (
+                TEST_CONTRACT_ADDRESS.clone(),
+                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), Felt::zero(), HashMap::new()),
+            ),
+            (
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::new(),
+                ),
+            ),
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                    Felt::zero(),
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), Felt::from(2))]),
+                ),
+            ),
+        ]),
+        HashMap::from([
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&TEST_CLASS_HASH),
+                get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+            ),
+        ]),
+    )
 }
 
 #[test]
@@ -564,6 +699,10 @@ fn test_invoke_tx() {
         Felt::from(2),                                               // CONTRACT_CALLDATA
     ];
     let invoke_tx = invoke_tx(calldata);
+    println!(
+        "contract_Address invokefunction: {:#?}",
+        invoke_tx.contract_address
+    );
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
@@ -575,21 +714,27 @@ fn test_invoke_tx() {
 
 #[test]
 fn test_invoke_tx_state() {
-    let (_starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(state, &expected_initial_state);
 
-    // let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
-    // let calldata = vec![
-    //     test_contract_address,                                       // CONTRACT_ADDRESS
-    //     Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
-    //     Felt::from(1),                                               // CONTRACT_CALLDATA LEN
-    //     Felt::from(2),                                               // CONTRACT_CALLDATA
-    // ];
-    // let invoke_tx = invoke_tx(calldata);
+    let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+    let calldata = vec![
+        test_contract_address,                                       // CONTRACT_ADDRESS
+        Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+        Felt::from(1),                                               // CONTRACT_CALLDATA LEN
+        Felt::from(2),                                               // CONTRACT_CALLDATA
+    ];
+    let invoke_tx = invoke_tx(calldata);
 
-    // invoke_tx.execute(state, starknet_general_config).unwrap();
+    invoke_tx.execute(state, starknet_general_config).unwrap();
 
-    // let expected_final_state = expected_final_state();
-    // assert_eq!(state, &expected_final_state);
+    let expected_final_state = expected_state_after_tx();
+
+    assert_eq!(state.state_reader, expected_final_state.state_reader);
+    assert_eq!(state.cache, expected_final_state.cache);
+    assert_eq!(
+        state.contract_classes,
+        expected_final_state.contract_classes
+    );
 }

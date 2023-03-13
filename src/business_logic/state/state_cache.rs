@@ -24,7 +24,7 @@ pub struct StateCache {
 impl StateCache {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             class_hash_initial_values: HashMap::new(),
             nonce_initial_values: HashMap::new(),
@@ -32,6 +32,24 @@ impl StateCache {
             class_hash_writes: HashMap::new(),
             nonce_writes: HashMap::new(),
             storage_writes: HashMap::new(),
+        }
+    }
+
+    pub fn new_for_testing(
+        class_hash_initial_values: HashMap<Address, [u8; 32]>,
+        nonce_initial_values: HashMap<Address, Felt>,
+        storage_initial_values: HashMap<StorageEntry, Felt>,
+        class_hash_writes: HashMap<Address, [u8; 32]>,
+        nonce_writes: HashMap<Address, Felt>,
+        storage_writes: HashMap<(Address, [u8; 32]), Felt>,
+    ) -> Self {
+        Self {
+            class_hash_initial_values,
+            nonce_initial_values,
+            storage_initial_values,
+            class_hash_writes,
+            nonce_writes,
+            storage_writes,
         }
     }
 
@@ -74,7 +92,7 @@ impl StateCache {
         self.storage_writes.extend(storage_updates.clone());
     }
 
-    pub(crate) fn set_initial_values(
+    pub fn set_initial_values(
         &mut self,
         address_to_class_hash: &HashMap<Address, [u8; 32]>,
         address_to_nonce: &HashMap<Address, Felt>,
