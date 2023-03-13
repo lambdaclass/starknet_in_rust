@@ -178,7 +178,7 @@ impl ExecutionEntryPoint {
         let args_ptr = runner
             .cairo_runner
             .get_initial_fp()
-            .ok_or(TransactionError::InvalidInitialFp)?
+            .ok_or(TransactionError::MissingInitialFp)?
             .sub_usize(entry_point_args.len() + 2)?;
 
         runner
