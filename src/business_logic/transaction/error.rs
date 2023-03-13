@@ -19,8 +19,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum TransactionError {
-    #[error("Invalid felt convertion to u64")]
-    InvalidFeltConversion,
+    #[error("Invalid felt conversion to u64")]
+    InvalidFeltConversionU64,
+    #[error("Invalid felt conversion to usize")]
+    InvalidFeltConversionUsize,
     #[error("{0}")]
     InvalidNonce(String),
     #[error("Invalid transaction nonce. Expected: {0} got {1}")]
@@ -47,8 +49,6 @@ pub enum TransactionError {
     Starkware(#[from] StarkwareError),
     #[error("Expected a relocatable value but got an integer")]
     NotARelocatableValue,
-    #[error("Error converting from {0} to {1}")]
-    ErrorInDataConversion(String, String),
     #[error("Unexpected holes in the event order")]
     UnexpectedHolesInEventOrder,
     #[error("Unexpected holes in the L2-to-L1 message order.")]

@@ -166,9 +166,10 @@ impl ExecutionEntryPoint {
             &CairoArg::Single(alloc_pointer),
         ];
 
-        let entrypoint = entry_point.offset.to_usize().ok_or_else(|| {
-            TransactionError::ErrorInDataConversion("felt".to_string(), "usize".to_string())
-        })?;
+        let entrypoint = entry_point
+            .offset
+            .to_usize()
+            .ok_or(TransactionError::InvalidFeltConversionUsize)?;
 
         // cairo runner entry point
         runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
