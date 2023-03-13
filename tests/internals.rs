@@ -4,15 +4,11 @@ use lazy_static::lazy_static;
 use num_traits::{Num, Zero};
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-        fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
+        execution::objects::{CallType, OrderedEvent},
+        fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
-            cached_state::{CachedState, ContractClassCache},
-            state_api::StateReader,
-            state_api_objects::BlockInfo,
-        },
-        transaction::objects::{
-            internal_declare::InternalDeclare, internal_invoke_function::InternalInvokeFunction,
+            cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo,
+            state_cache::StorageEntry,
         },
     },
     definitions::{
