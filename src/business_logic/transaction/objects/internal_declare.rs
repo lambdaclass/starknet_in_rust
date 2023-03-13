@@ -98,8 +98,7 @@ impl InternalDeclare {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        // no need to check if its lesser than 0 because it is an usize
-        if self.version > 0x8000_0000_0000_0000 {
+        if self.version == 0 {
             return Err(TransactionError::StarknetError(
                 "The sender_address field in Declare transactions of version 0, sender should be 1"
                     .to_string(),
@@ -183,7 +182,7 @@ impl InternalDeclare {
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, ExecutionError> {
-        if self.version > 0x8000_0000_0000_0000 {
+        if self.version == 0 {
             return Ok(None);
         }
 
@@ -240,7 +239,7 @@ impl InternalDeclare {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
+        if self.version == 0 {
             return Err(TransactionError::StarknetError(
                 "Don't handle nonce for version 0".to_string(),
             ));

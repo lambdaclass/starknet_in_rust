@@ -193,7 +193,7 @@ impl InternalDeployAccount {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
+        if self.version == 0 {
             return Err(TransactionError::StarknetError(
                 "Don't handle nonce for version 0".to_string(),
             ));
