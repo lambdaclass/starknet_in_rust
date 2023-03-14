@@ -100,8 +100,8 @@ fn main() {
             .selector()
             .clone();
         
-        // fs::remove_file(cairo_file_name);
-        // fs::remove_file(json_file_name);
+        fs::remove_file(cairo_file_name);
+        fs::remove_file(json_file_name);
 
         //* --------------------------------------------
         //*    Create state reader with class hash data
