@@ -1,8 +1,3 @@
-use std::collections::HashMap;
-
-use felt::Felt;
-use num_traits::Zero;
-
 use crate::{
     business_logic::{
         execution::{
@@ -19,36 +14,40 @@ use crate::{
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
+        errors::state_errors::StateError,
         transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_NAME, general_config::StarknetGeneralConfig,
+        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
 };
+use felt::Felt;
+use num_traits::Zero;
+use std::collections::HashMap;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
-pub(crate) struct InternalDeclare {
-    pub(crate) class_hash: [u8; 32],
-    pub(crate) sender_address: Address,
-    pub(crate) tx_type: TransactionType,
-    pub(crate) validate_entry_point_selector: Felt,
-    pub(crate) version: u64,
-    pub(crate) max_fee: u64,
-    pub(crate) signature: Vec<Felt>,
-    pub(crate) nonce: Felt,
-    pub(crate) hash_value: Felt,
+pub struct InternalDeclare {
+    pub class_hash: [u8; 32],
+    pub sender_address: Address,
+    pub tx_type: TransactionType,
+    pub validate_entry_point_selector: Felt,
+    pub version: u64,
+    pub max_fee: u64,
+    pub signature: Vec<Felt>,
+    pub nonce: Felt,
+    pub hash_value: Felt,
+    pub contract_class: ContractClass,
 }
 
 // ------------------------------------------------------------
 //                        Functions
 // ------------------------------------------------------------
 impl InternalDeclare {
-    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt,
@@ -62,15 +61,15 @@ impl InternalDeclare {
         let class_hash = felt_to_hash(&hash);
 
         let hash_value = calculate_declare_transaction_hash(
-            contract_class,
+            &contract_class,
             chain_id,
-            sender_address.clone(),
+            &sender_address,
             max_fee,
             version,
             nonce.clone(),
         )?;
 
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_NAME.clone();
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
         let internal_declare = InternalDeclare {
             class_hash,
@@ -82,15 +81,12 @@ impl InternalDeclare {
             signature,
             nonce,
             hash_value,
+            contract_class,
         };
 
         internal_declare.verify_version()?;
 
         Ok(internal_declare)
-    }
-
-    pub fn account_contract_address(&self) -> Address {
-        self.sender_address.clone()
     }
 
     pub fn get_calldata(&self) -> Vec<Felt> {
@@ -106,17 +102,18 @@ impl InternalDeclare {
                     .to_string(),
             ));
         }
+        if self.version.is_zero() {
+            if !self.max_fee.is_zero() {
+                return Err(TransactionError::StarknetError(
+                    "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
+                ));
+            }
 
-        if !self.max_fee.is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
-            ));
-        }
-
-        if !self.nonce.is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
-            ));
+            if !self.nonce.is_zero() {
+                return Err(TransactionError::StarknetError(
+                    "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
+                ));
+            }
         }
 
         if !self.signature.len().is_zero() {
@@ -190,7 +187,7 @@ impl InternalDeclare {
         let calldata = self.get_calldata();
 
         let entry_point = ExecutionEntryPoint::new(
-            self.account_contract_address(),
+            self.sender_address.clone(),
             calldata,
             self.validate_entry_point_selector.clone(),
             Address(Felt::zero()),
@@ -240,14 +237,12 @@ impl InternalDeclare {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "Don't handle nonce for version 0".to_string(),
-            ));
+        if self.version == 0 {
+            return Ok(());
         }
 
-        let contract_address = self.account_contract_address();
-        let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
+        let contract_address = &self.sender_address;
+        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -255,10 +250,11 @@ impl InternalDeclare {
             ));
         }
 
-        state.increment_nonce(&contract_address)?;
+        state.increment_nonce(contract_address)?;
 
         Ok(())
     }
+
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: Default + State + StateReader + Clone>(
@@ -269,6 +265,19 @@ impl InternalDeclare {
         let concurrent_exec_info = self.apply(state, general_config)?;
 
         self.handle_nonce(state)?;
+        // Set contract class
+        match state.get_contract_class(&self.class_hash) {
+            Err(StateError::MissingClassHash()) => {
+                // Class is undeclared; declare it.
+                state.set_contract_class(&self.class_hash, &self.contract_class)?;
+            }
+            Err(error) => return Err(error.into()),
+            Ok(_) => {
+                // Class is already declared; cannot redeclare.
+                return Err(TransactionError::ClassAlreadyDeclared(self.class_hash));
+            }
+        }
+
         let (fee_transfer_info, actual_fee) = self.charge_fee(
             state,
             &concurrent_exec_info.actual_resources,
@@ -305,6 +314,7 @@ mod tests {
             state::cached_state::CachedState,
         },
         definitions::{
+            constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
@@ -349,17 +359,12 @@ mod tests {
 
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
-        dbg!("found the file");
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        // ----- calculate fib class hash ---------
-        let hash = compute_class_hash(&fib_contract_class).unwrap();
-        let fib_class_hash = felt_to_hash(&hash);
-
         // declare tx
         let internal_declare = InternalDeclare::new(
-            fib_contract_class.clone(),
+            fib_contract_class,
             chain_id,
             Address(1.into()),
             0,
@@ -369,20 +374,12 @@ mod tests {
         )
         .unwrap();
 
-        // this simulate the setting done while declaring with starknet state
-
-        state
-            .contract_classes
-            .as_mut()
-            .unwrap()
-            .insert(fib_class_hash, fib_contract_class);
-
         //* ---------------------------------------
         //              Expected result
         //* ---------------------------------------
 
         // Value generated from selector _validate_declare_
-        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_NAME.clone());
+        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone());
 
         let class_hash_felt = compute_class_hash(&contract_class).unwrap();
         let expected_class_hash = felt_to_hash(&class_hash_felt);

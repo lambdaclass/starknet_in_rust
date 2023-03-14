@@ -9,7 +9,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum TransactionError {
-    #[allow(dead_code)] // TODO: delete this once used
     #[error("Invalid felt convertion to u64")]
     InvalidFeltConversion,
     #[error("{0}")]
@@ -40,6 +39,8 @@ pub enum TransactionError {
     StateError(#[from] StateError),
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
+    #[error("Class hash {0:?} already declared")]
+    ClassAlreadyDeclared([u8; 32]),
     #[error(transparent)]
     StarkwareException(#[from] StarkwareError),
 }

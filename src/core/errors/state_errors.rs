@@ -30,7 +30,7 @@ pub enum StateError {
     NoneStoragLeaf([u8; 32]),
     #[error("Cannot deploy contract at address: {0:?}")]
     ContractAddressOutOfRangeAddress(Address),
-    #[error("Requested contract address {0:?} is unavailable for deployment")]
+    #[error("Requested contract address {} is unavailable for deployment", (.0).0)]
     ContractAddressUnavailable(Address),
     #[error("error converting {0} to u64")]
     ConversionError(Felt),

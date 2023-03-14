@@ -29,8 +29,6 @@ impl ContractState {
         }
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     fn initialized(&self) -> bool {
         &self.contract_hash != UNINITIALIZED_CLASS_HASH
     }

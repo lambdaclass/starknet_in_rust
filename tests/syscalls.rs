@@ -20,7 +20,7 @@ use starknet_rs::{
         },
     },
     definitions::{
-        constants::TRANSACTION_VERSION,
+        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
         general_config::{StarknetChainId, StarknetGeneralConfig},
     },
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -716,11 +716,8 @@ fn send_message_to_l1_syscall() {
 
 #[test]
 fn deploy_syscall() {
-    let deploy_address = Felt::from_str_radix(
-        "2771739216117269195266211756239816992170608283088994568066688164855938378843",
-        10,
-    )
-    .unwrap();
+    let deploy_address =
+        felt_str!("2771739216117269195266211756239816992170608283088994568066688164855938378843");
 
     let deploy_class_hash = [2u8; 32];
     test_contract(
@@ -746,6 +743,7 @@ fn deploy_syscall() {
             caller_address: Address(0.into()),
             contract_address: Address(deploy_address.clone()),
             entry_point_type: Some(EntryPointType::Constructor),
+            entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
             call_type: Some(CallType::Call),
             class_hash: Some(deploy_class_hash),
             ..Default::default()

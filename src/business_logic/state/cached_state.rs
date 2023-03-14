@@ -8,7 +8,7 @@ use crate::{
     utils::{subtract_mappings, Address},
 };
 use felt::Felt;
-use getset::Getters;
+use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
@@ -16,11 +16,11 @@ pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
-#[derive(Debug, Clone, Default, Getters)]
+#[derive(Debug, Clone, Default, Eq, Getters, MutGetters, PartialEq)]
 pub struct CachedState<T: StateReader + Clone> {
     #[get = "pub"]
     pub(crate) state_reader: T,
-    #[get = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) cache: StateCache,
     pub(crate) contract_classes: Option<ContractClassCache>,
 }
@@ -34,9 +34,7 @@ impl<T: StateReader + Clone> CachedState<T> {
         }
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) fn set_contract_classes(
+    pub fn set_contract_classes(
         &mut self,
         contract_classes: ContractClassCache,
     ) -> Result<(), StateError> {
@@ -54,13 +52,13 @@ impl<T: StateReader + Clone> CachedState<T> {
     }
 
     /// Apply updates to parent state.
-    pub(crate) fn apply(&mut self, parent: &mut CachedState<T>) {
+    pub(crate) fn apply(&self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
         parent.cache.update_writes_from_other(&self.cache);
     }
 
     pub(crate) fn apply_to_copy(&mut self) -> Self {
-        let mut copied_state = self.clone();
+        let copied_state = self.clone();
         copied_state.apply(self);
         copied_state
     }
@@ -68,7 +66,7 @@ impl<T: StateReader + Clone> CachedState<T> {
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
-        if !(self.get_contract_classes()?.contains_key(class_hash)) {
+        if !self.get_contract_classes()?.contains_key(class_hash) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
             self.set_contract_class(class_hash, &contract_class)?;
         }

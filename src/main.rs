@@ -115,9 +115,9 @@ fn declare_parser(
         .map_err(ParserError::StateError)?;
 
     let tx_hash = calculate_declare_transaction_hash(
-        contract_class,
+        &contract_class,
         Felt::zero(),
-        Address(0.into()),
+        &Address(0.into()),
         0,
         DECLARE_VERSION,
         Felt::zero(),
@@ -148,7 +148,7 @@ fn deploy_parser(
         .map_err(ParserError::StateError)?;
     let tx_hash = calculate_deploy_transaction_hash(
         0,
-        Address(address.clone()),
+        &Address(address.clone()),
         &constructor_calldata,
         Felt::zero(),
     )
@@ -202,7 +202,7 @@ fn invoke_parser(
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
         TRANSACTION_VERSION,
-        contract_address.clone(),
+        &contract_address,
         entrypoint_selector,
         &calldata,
         0,
