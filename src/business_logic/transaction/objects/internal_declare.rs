@@ -62,7 +62,7 @@ impl InternalDeclare {
         let hash_value = calculate_declare_transaction_hash(
             &contract_class,
             chain_id,
-            sender_address.clone(),
+            &sender_address,
             max_fee,
             version,
             nonce.clone(),
