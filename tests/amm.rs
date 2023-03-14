@@ -3,6 +3,7 @@
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
+use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -17,7 +18,7 @@ use starknet_rs::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::Address,
+    utils::{calculate_sn_keccak, Address},
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -99,15 +100,19 @@ fn integration_test() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
+    let pool_balance_hash = calculate_sn_keccak("pool_balance".as_bytes());
+    let pool_balance_hash = FieldElement::from_bytes_be(&pool_balance_hash).unwrap();
+
+    let variable_name_1: FieldElement = FieldElement::from(1u8);
+    let storage_hash_1 = pedersen_hash(&pool_balance_hash, &variable_name_1);
+
+    let variable_name_2: FieldElement = FieldElement::from(2u8);
+    let storage_hash_2 = pedersen_hash(&pool_balance_hash, &variable_name_2);
+
     let mut accessed_storage_keys: HashSet<[u8; 32], _> = HashSet::new();
-    accessed_storage_keys.insert([
-        5, 0, 170, 51, 155, 82, 95, 245, 118, 252, 222, 112, 81, 228, 140, 48, 25, 103, 222, 248,
-        31, 19, 54, 84, 119, 198, 127, 211, 39, 181, 180, 155,
-    ]);
-    accessed_storage_keys.insert([
-        5, 6, 76, 143, 137, 61, 213, 112, 52, 74, 172, 3, 24, 178, 4, 149, 141, 11, 121, 57, 104,
-        227, 51, 134, 137, 124, 174, 211, 65, 109, 42, 119,
-    ]);
+
+    accessed_storage_keys.insert(storage_hash_1.to_bytes_be());
+    accessed_storage_keys.insert(storage_hash_2.to_bytes_be());
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
