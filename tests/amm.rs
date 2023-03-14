@@ -25,6 +25,28 @@ use std::{
     path::PathBuf,
 };
 
+fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> HashSet<[u8; 32]> {
+    let variable_hash = calculate_sn_keccak(variable_name.as_bytes());
+    let variable_hash = FieldElement::from_bytes_be(&variable_hash).unwrap();
+
+    let keys = fields
+        .iter()
+        .map(|field| {
+            field
+                .iter()
+                .fold(variable_hash, |hash, f| pedersen_hash(&hash, &f))
+        })
+        .collect::<Vec<FieldElement>>();
+
+    let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
+
+    for key in keys {
+        accessed_storage_keys.insert(key.to_bytes_be());
+    }
+
+    accessed_storage_keys
+}
+
 fn get_entry_points(
     entry_points_by_type: &HashMap<
         EntryPointType,
@@ -129,19 +151,8 @@ fn amm_init_pool_test() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let pool_balance_hash = calculate_sn_keccak("pool_balance".as_bytes());
-    let pool_balance_hash = FieldElement::from_bytes_be(&pool_balance_hash).unwrap();
-
-    let variable_name_1: FieldElement = FieldElement::from(1u8);
-    let storage_hash_1 = pedersen_hash(&pool_balance_hash, &variable_name_1);
-
-    let variable_name_2: FieldElement = FieldElement::from(2u8);
-    let storage_hash_2 = pedersen_hash(&pool_balance_hash, &variable_name_2);
-
-    let mut accessed_storage_keys: HashSet<[u8; 32], _> = HashSet::new();
-
-    accessed_storage_keys.insert(storage_hash_1.to_bytes_be());
-    accessed_storage_keys.insert(storage_hash_2.to_bytes_be());
+    let accessed_storage_keys =
+        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
@@ -204,8 +215,8 @@ fn amm_init_pool_test() {
         )
         .unwrap();
 
-    let mut accesed_storage_keys_pool_balance = HashSet::new();
-    accesed_storage_keys_pool_balance.insert(storage_hash_1.to_bytes_be());
+    let accessed_storage_keys_pool_balance =
+        get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
 
     let expected_call_info_getter = CallInfo {
         caller_address: Address(0.into()),
@@ -217,7 +228,7 @@ fn amm_init_pool_test() {
         retdata: [10000.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accesed_storage_keys_pool_balance,
+        accessed_storage_keys: accessed_storage_keys_pool_balance,
         storage_read_values: [10000.into()].to_vec(),
         ..Default::default()
     };
@@ -261,20 +272,13 @@ fn amm_init_pool_test() {
         )
         .unwrap();
 
-    let account_balance_hash = calculate_sn_keccak("account_balance".as_bytes());
-    let account_balance_hash = FieldElement::from_bytes_be(&account_balance_hash).unwrap();
-
-    let account_balance_account_id_hash = pedersen_hash(&account_balance_hash, &0_u8.into());
-    let account_balance_account_id_token_a_hash =
-        pedersen_hash(&account_balance_account_id_hash, &variable_name_1);
-    let account_balance_account_id_token_b_hash =
-        pedersen_hash(&account_balance_account_id_hash, &variable_name_2);
-
-    let mut accessed_storage_keys_add_demo_token = HashSet::new();
-    accessed_storage_keys_add_demo_token
-        .insert(account_balance_account_id_token_a_hash.to_bytes_be());
-    accessed_storage_keys_add_demo_token
-        .insert(account_balance_account_id_token_b_hash.to_bytes_be());
+    let accessed_storage_keys_add_demo_token = get_accessed_keys(
+        "account_balance",
+        vec![
+            vec![0_u8.into(), 1_u8.into()],
+            vec![0_u8.into(), 2_u8.into()],
+        ],
+    );
 
     let expected_call_info_add_demo_token = CallInfo {
         caller_address: Address(0.into()),
