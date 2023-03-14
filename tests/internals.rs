@@ -25,7 +25,7 @@ use starknet_rs::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    path::PathBuf, sync::Arc,
 };
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
@@ -164,24 +164,36 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
         HashMap::from([
             (
                 TEST_CONTRACT_ADDRESS.clone(),
-                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), Felt::zero(), HashMap::new()),
+                felt_to_hash(&TEST_CLASS_HASH),
             ),
             (
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                ContractState::new(
-                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                    Felt::zero(),
-                    HashMap::new(),
-                ),
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
             ),
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                ContractState::new(
-                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                    Felt::zero(),
-                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), Felt::from(2))]),
-                ),
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
             ),
+        ]),
+        HashMap::from([
+            (TEST_CONTRACT_ADDRESS.clone(), Felt::zero(),),
+            (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::zero(),),
+            (TEST_ERC20_CONTRACT_ADDRESS.clone(), Felt::zero(),),
+        ]),
+        HashMap::from([
+            (
+                (TEST_CONTRACT_ADDRESS.clone(), [0; 32]),
+                Felt::zero(),
+            ),
+            (
+                (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), [0; 32]),
+                Felt::zero(),
+            ),
+            (
+                (TEST_ERC20_CONTRACT_ADDRESS.clone(), 
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone())),
+                Felt::from(2),
+            )
         ]),
         HashMap::from([
             (
