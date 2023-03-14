@@ -26,7 +26,7 @@ use std::{
 };
 
 #[test]
-fn integration_test() {
+fn amm_init_pool_test() {
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
@@ -76,10 +76,10 @@ fn integration_test() {
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address,
+        address.clone(),
         calldata.clone(),
         amm_entrypoint_selector.clone(),
-        caller_address,
+        caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
@@ -118,9 +118,9 @@ fn integration_test() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(amm_entrypoint_selector),
+        entry_point_selector: Some(amm_entrypoint_selector.clone()),
         entry_point_type: Some(EntryPointType::External),
-        calldata,
+        calldata: calldata.clone(),
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
@@ -138,5 +138,42 @@ fn integration_test() {
             )
             .unwrap(),
         expected_call_info
+    );
+    //GETTER ENTRY POINT SELECTOR
+    let getter_entrypoint_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(1)
+        .unwrap()
+        .selector()
+        .clone();
+    println!(
+        "getter_entrypoint_selector: {:?}",
+        getter_entrypoint_selector
+    );
+
+    //NEW ENTRY POINT TO GET POOL BALANCE
+    let calldata_getter: Vec<Felt> = [1.into()].to_vec();
+    let caller_getter_address = Address(1111.into());
+    let _getter_exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata_getter.clone(),
+        getter_entrypoint_selector.clone(),
+        caller_getter_address.clone(),
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+    );
+
+    //EXECUTE GETTER
+    let general_config = StarknetGeneralConfig::default();
+    let _tx_getter_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
     );
 }
