@@ -102,7 +102,7 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
+    ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         let tx = self.create_invoke_function(
             contract_address,
             selector,
@@ -187,12 +187,11 @@ impl StarknetState {
     pub fn execute_tx(
         &mut self,
         tx: &mut Transaction,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
+    ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
-        self.add_messages_and_events(&tx_execution_info)
-            .map_err::<TransactionError, _>(|_| todo!())?;
+        self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
     }
 

@@ -21,3 +21,8 @@ thiserror = { version = "1.0.32" }
 [dev-dependencies]
 assert_matches = "1.5.0"
 rusty-hook = "0.11"
+
+[workspace]
+members = [
+    "crates/starknet-rs-py",
+]

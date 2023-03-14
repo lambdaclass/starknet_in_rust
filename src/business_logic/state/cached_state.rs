@@ -18,7 +18,7 @@ pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
 
 pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
-#[derive(Debug, Clone, Default, Getters, MutGetters, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, Getters, MutGetters, PartialEq)]
 pub struct CachedState<T: StateReader + Clone> {
     pub(crate) state_reader: T,
     #[getset(get = "pub", get_mut = "pub")]
@@ -35,9 +35,7 @@ impl<T: StateReader + Clone> CachedState<T> {
         }
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) fn set_contract_classes(
+    pub fn set_contract_classes(
         &mut self,
         contract_classes: ContractClassCache,
     ) -> Result<(), StateError> {

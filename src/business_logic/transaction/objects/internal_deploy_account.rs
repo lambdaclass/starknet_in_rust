@@ -194,9 +194,7 @@ impl InternalDeployAccount {
         state: &mut S,
     ) -> Result<(), TransactionError> {
         if self.version == 0 {
-            return Err(TransactionError::StarknetError(
-                "Don't handle nonce for version 0".to_string(),
-            ));
+            return Ok(());
         }
 
         let current_nonce = state.get_nonce_at(&self.contract_address)?.to_owned();
@@ -248,7 +246,7 @@ impl InternalDeployAccount {
             self.contract_address.clone(),
             calculate_deploy_account_transaction_hash(
                 self.version,
-                self.contract_address.clone(),
+                &self.contract_address,
                 Felt::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
                 self.max_fee,
