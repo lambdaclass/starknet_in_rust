@@ -1,6 +1,6 @@
 use cairo_felt::Felt;
 use num_bigint::BigUint;
-use pyo3::{exceptions::PyRuntimeError, prelude::*};
+use pyo3::{exceptions::PyRuntimeError, prelude::*, types::PyType};
 use starknet_rs::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 
 #[pyclass]
@@ -32,15 +32,15 @@ impl PyBlockInfo {
     }
 
     /// Returns an empty BlockInfo object; i.e., the one before the first in the chain.
-    #[staticmethod]
-    fn empty(address: BigUint) -> PyBlockInfo {
+    #[classmethod]
+    fn empty(_cls: &PyType, address: BigUint) -> PyBlockInfo {
         let inner = BlockInfo::empty(Address(Felt::from(address)));
         Self { inner }
     }
 
     /// Returns a BlockInfo object with default gas_price.
-    #[staticmethod]
-    fn create_for_testing(block_number: u64, block_timestamp: u64) -> PyBlockInfo {
+    #[classmethod]
+    fn create_for_testing(_cls: &PyType, block_number: u64, block_timestamp: u64) -> PyBlockInfo {
         let inner = BlockInfo {
             block_number,
             block_timestamp,
@@ -59,15 +59,15 @@ impl PyBlockInfo {
 
 #[cfg(test)]
 mod tests {
-    use pyo3::{types::IntoPyDict, IntoPy, Python};
-
-    use super::PyBlockInfo;
+    use super::*;
+    use pyo3::{types::IntoPyDict, IntoPy, PyTypeInfo, Python};
 
     #[test]
     fn validate_legal_progress() {
         Python::with_gil(|py| {
-            let block_info = PyBlockInfo::create_for_testing(1, 5).into_py(py);
-            let next_block_info = PyBlockInfo::create_for_testing(2, 13).into_py(py);
+            let cls = <PyBlockInfo as PyTypeInfo>::type_object(py);
+            let block_info = PyBlockInfo::create_for_testing(cls, 1, 5).into_py(py);
+            let next_block_info = PyBlockInfo::create_for_testing(cls, 2, 13).into_py(py);
 
             let locals = [
                 ("block_info", block_info),
@@ -77,7 +77,7 @@ mod tests {
 
             let code = "block_info.validate_legal_progress(next_block_info)";
 
-            assert!(py.run(code, None, Some(locals)).is_ok())
+            assert!(py.run(code, None, Some(locals)).is_ok());
         });
     }
 }
