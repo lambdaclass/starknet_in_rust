@@ -9,10 +9,11 @@ use felt::Felt;
 use getset::MutGetters;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, Default, MutGetters)]
+#[derive(Clone, Debug, Default, MutGetters, PartialEq)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
+    #[getset(get_mut = "pub")]
     pub(crate) class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
 

@@ -27,7 +27,6 @@ deps-venv:
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
 
-
 cairo_programs/%.json: cairo_programs/%.cairo
 	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 

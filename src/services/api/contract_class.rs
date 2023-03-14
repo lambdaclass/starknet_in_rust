@@ -2,8 +2,7 @@ use super::contract_class_errors::ContractClassError;
 use crate::public::abi::AbiType;
 use cairo_rs::{
     serde::deserialize_program::{
-        deserialize_array_of_bigint_hex, deserialize_felt_hex, Attribute, HintParams, Identifier,
-        ReferenceManager,
+        deserialize_array_of_bigint_hex, Attribute, HintParams, Identifier, ReferenceManager,
     },
     types::{
         errors::program_errors::ProgramError, program::Program, relocatable::MaybeRelocatable,
@@ -31,7 +30,7 @@ pub enum EntryPointType {
     Constructor,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Getters, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, Serialize)]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
     pub(crate) selector: Felt,
@@ -42,7 +41,7 @@ pub struct ContractEntryPoint {
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Deserialize, Getters, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Getters, PartialEq, Serialize)]
 pub struct ContractClass {
     pub(crate) program: Program,
     #[getset(get = "pub")]
@@ -84,12 +83,6 @@ impl ContractClass {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
-        if self.program.prime != *PRIME_STR {
-            return Err(ContractClassError::InvalidPrime(
-                self.program.prime.clone(),
-                PRIME_STR.to_string(),
-            ));
-        };
         Ok(())
     }
 }
@@ -145,7 +138,6 @@ impl TryFrom<PathBuf> for ContractClass {
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::state::ContractClass =
             serde_json::from_reader(reader)?;
-
         let contract_class = ContractClass::from(raw_contract_class);
         Ok(contract_class)
     }
@@ -187,10 +179,13 @@ fn to_cairo_runner_program(
         Some(identifier) => identifier.pc,
         None => None,
     };
+    if program.prime != *PRIME_STR {
+        return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
+    };
 
     Ok(Program {
         builtins: serde_json::from_value::<Vec<String>>(program.builtins)?,
-        prime: deserialize_felt_hex(program.prime)?.to_string(),
+        prime: PRIME_STR.to_string(),
         data: deserialize_array_of_bigint_hex(program.data)?,
         constants: {
             let mut constants = HashMap::new();
