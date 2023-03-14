@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
-use felt::felt_str;
+use felt::{felt_str, Felt};
+use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
@@ -8,7 +9,10 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::State},
         transaction::objects::internal_deploy_account::InternalDeployAccount,
     },
-    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
+        transaction_type::TransactionType,
+    },
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{felt_to_hash, Address},
 };
@@ -37,7 +41,7 @@ fn internal_deploy_account() {
         class_hash,
         0,
         0,
-        0,
+        Felt::zero(),
         vec![],
         vec![
             felt_str!(
@@ -66,6 +70,7 @@ fn internal_deploy_account() {
                 call_type: Some(CallType::Call),
                 contract_address: Address(felt_str!("1351769743764599227746416364615306404319526869558988948822078481252102329345")),
                 class_hash: Some(*b"\x06\xf5\x00\xf5'5]\xfd\xb8\t<\x7f\xe4nos\xc9j\x86s\x92\xb4\x9f\xa4\x15zuu8\x92\x859"),
+                entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
             }),

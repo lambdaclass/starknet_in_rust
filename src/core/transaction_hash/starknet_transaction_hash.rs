@@ -9,7 +9,6 @@ use crate::{
     utils::Address,
 };
 use felt::{felt_str, Felt};
-use num_traits::ToPrimitive;
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
@@ -56,7 +55,7 @@ pub fn calculate_transaction_hash_common(
     calldata: &[Felt],
     max_fee: u64,
     chain_id: Felt,
-    additional_data: &[u64],
+    additional_data: &[Felt],
 ) -> Result<Felt, SyscallHandlerError> {
     let calldata_hash = compute_hash_on_elements(calldata)?;
 
@@ -70,7 +69,7 @@ pub fn calculate_transaction_hash_common(
         chain_id,
     ];
 
-    data_to_hash.extend(additional_data.iter().map(|n| (*n).into()));
+    data_to_hash.extend(additional_data.iter().cloned());
 
     compute_hash_on_elements(&data_to_hash)
 }
@@ -103,7 +102,7 @@ pub fn calculate_deploy_account_transaction_hash(
     class_hash: Felt,
     constructor_calldata: &[Felt],
     max_fee: u64,
-    nonce: u64,
+    nonce: Felt,
     salt: Felt,
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
@@ -134,15 +133,9 @@ pub(crate) fn calculate_declare_transaction_hash(
         compute_class_hash(contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
     let (calldata, additional_data) = if version > 0x8000_0000_0000_0000 {
-        let value = class_hash
-            .to_u64()
-            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        (Vec::new(), vec![value])
+        (Vec::new(), vec![class_hash])
     } else {
-        let value = nonce
-            .to_u64()
-            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        (vec![class_hash], vec![value])
+        (vec![class_hash], vec![nonce])
     };
 
     calculate_transaction_hash_common(
@@ -172,7 +165,7 @@ mod tests {
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
         let chain_id = 1.into();
-        let additional_data: Vec<u64> = Vec::new();
+        let additional_data: Vec<Felt> = Vec::new();
 
         // Expected value taken from Python implementation of calculate_transaction_hash_common function
         let expected = felt_str!(

@@ -70,6 +70,8 @@ impl InternalDeploy {
         })
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn class_hash(&self) -> [u8; 32] {
         self.contract_hash
     }
@@ -122,6 +124,8 @@ impl InternalDeploy {
         )
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn invoke_constructor<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,

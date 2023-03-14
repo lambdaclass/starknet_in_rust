@@ -91,7 +91,6 @@ impl StarknetState {
         Ok((tx.class_hash, tx_execution_info))
     }
 
-    // ----------------------------------------------------------
     /// Invokes a contract function. Returns the execution info.
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
@@ -103,7 +102,7 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
+    ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         let tx = self.create_invoke_function(
             contract_address,
             selector,
@@ -117,7 +116,6 @@ impl StarknetState {
         self.execute_tx(&mut tx)
     }
 
-    // -------------------------------------------------------------------------
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
     // TODO: Remove warning inhibitor when finally used.
@@ -156,7 +154,6 @@ impl StarknetState {
         Ok(call_info)
     }
 
-    // --------------------------------------------------------------------------------------
     /// Deploys a contract. Returns the contract address and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract
@@ -190,12 +187,11 @@ impl StarknetState {
     pub fn execute_tx(
         &mut self,
         tx: &mut Transaction,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
+    ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
-        self.add_messages_and_events(&tx_execution_info)
-            .map_err(|x| TransactionError::StarknetError(x.to_string()))?;
+        self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
     }
 
@@ -292,7 +288,9 @@ mod tests {
     use crate::{
         business_logic::{execution::objects::CallType, fact_state::contract_state::ContractState},
         core::contract_address::starknet_contract_address::compute_class_hash,
-        definitions::transaction_type::TransactionType,
+        definitions::{
+            constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
+        },
         utils::felt_to_hash,
     };
 
@@ -327,7 +325,7 @@ mod tests {
                 contract_address: address.clone(),
                 code_address: None,
                 class_hash: Some(class_hash),
-                entry_point_selector: None,
+                entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
             }),

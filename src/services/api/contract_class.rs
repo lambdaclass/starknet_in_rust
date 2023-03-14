@@ -30,7 +30,7 @@ pub enum EntryPointType {
     Constructor,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Getters, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, Serialize)]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
     pub(crate) selector: Felt,
@@ -41,7 +41,7 @@ pub struct ContractEntryPoint {
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Deserialize, Getters, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Getters, PartialEq, Serialize)]
 pub struct ContractClass {
     pub(crate) program: Program,
     #[getset(get = "pub")]

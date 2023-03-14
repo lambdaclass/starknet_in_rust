@@ -1,7 +1,7 @@
 use super::os_usage::OsResources;
-use crate::definitions::transaction_type::TransactionType;
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
+    definitions::transaction_type::TransactionType,
     starknet_runner::starknet_runner_error::StarknetRunnerError,
 };
 use cairo_rs::{
@@ -38,7 +38,7 @@ pub enum ExecutionError {
     #[error("error while fetching redata {0}")]
     RetdataError(String),
     #[error("Missing contract class after fetching")]
-    MissigContractClass,
+    MissingContractClass,
     #[error("contract address {0:?} not deployed")]
     NotDeployedContract([u8; 32]),
     #[error("error allocating memory segment")]
