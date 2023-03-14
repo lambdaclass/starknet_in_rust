@@ -6,8 +6,15 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 
+[dependencies]
+num-bigint = "0.4.3"
+
+[dependencies.cairo-felt]
+git = "https://github.com/lambdaclass/cairo-rs.git"
+rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22"
+
 [dependencies.pyo3]
-features = ["extension-module"]
+features = ["extension-module", "num-bigint"]
 version = "0.18.1"
 
 [dependencies.starknet-rs]

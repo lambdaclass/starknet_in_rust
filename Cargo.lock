@@ -1387,6 +1387,7 @@ dependencies = [
  "indoc",
  "libc",
  "memoffset",
+ "num-bigint",
  "parking_lot",
  "pyo3-build-config",
  "pyo3-ffi",
@@ -1949,6 +1950,8 @@ dependencies = [
 name = "starknet_rs"
 version = "0.1.0"
 dependencies = [
+ "cairo-felt",
+ "num-bigint",
  "pyo3",
  "starknet-rs",
 ]
