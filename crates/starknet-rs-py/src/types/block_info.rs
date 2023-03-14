@@ -55,6 +55,31 @@ impl PyBlockInfo {
             .validate_legal_progress(next_block_info.inner.clone())
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
+
+    #[getter]
+    fn block_number(&self) -> u64 {
+        self.inner.block_number
+    }
+
+    #[getter]
+    fn block_timestamp(&self) -> u64 {
+        self.inner.block_timestamp
+    }
+
+    #[getter]
+    fn gas_price(&self) -> u64 {
+        self.inner.gas_price
+    }
+
+    #[getter]
+    fn sequencer_address(&self) -> BigUint {
+        self.inner.sequencer_address.0.to_biguint()
+    }
+
+    #[getter]
+    fn starknet_version(&self) -> String {
+        self.inner.starknet_version.clone()
+    }
 }
 
 #[cfg(test)]
