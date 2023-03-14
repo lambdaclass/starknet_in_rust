@@ -11,7 +11,7 @@ use crate::{
 use felt::Felt;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
 pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
@@ -81,13 +81,13 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(x) => Cow::Borrowed(x),
-                Err(StateError::NoneContractState(_)) => Cow::Owned([0; 32]),
+                Ok(x) => *x,
+                Err(StateError::NoneContractState(_)) => [0; 32],
                 Err(e) => return Err(e),
             };
             self.cache
                 .class_hash_initial_values
-                .insert(contract_address.clone(), class_hash.into_owned());
+                .insert(contract_address.clone(), class_hash);
         }
 
         self.cache
@@ -110,19 +110,19 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             let value = match self.state_reader.get_storage_at(storage_entry) {
-                Ok(x) => Cow::Borrowed(x),
+                Ok(x) => x.clone(),
                 Err(
                     StateError::StorageError(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
                     | StateError::NoneStorage(_)
                     | StateError::NoneContractState(_),
-                ) => Cow::Owned(Felt::zero()),
+                ) => Felt::zero(),
                 Err(e) => return Err(e),
             };
             self.cache
                 .storage_initial_values
-                .insert(storage_entry.clone(), value.into_owned());
+                .insert(storage_entry.clone(), value);
         }
 
         self.cache
