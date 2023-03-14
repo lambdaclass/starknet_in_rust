@@ -57,3 +57,28 @@ impl PyBlockInfo {
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pyo3::{types::IntoPyDict, IntoPy, Python};
+
+    use super::PyBlockInfo;
+
+    #[test]
+    fn validate_legal_progress() {
+        Python::with_gil(|py| {
+            let block_info = PyBlockInfo::create_for_testing(1, 5).into_py(py);
+            let next_block_info = PyBlockInfo::create_for_testing(2, 13).into_py(py);
+
+            let locals = [
+                ("block_info", block_info),
+                ("next_block_info", next_block_info),
+            ]
+            .into_py_dict(py);
+
+            let code = "block_info.validate_legal_progress(next_block_info)";
+
+            assert!(py.run(code, None, Some(locals)).is_ok())
+        });
+    }
+}
