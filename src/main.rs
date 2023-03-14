@@ -5,7 +5,12 @@ use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
 use starknet_rs::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        execution::{
+            execution_entry_point::ExecutionEntryPoint, objects::TransactionExecutionContext,
+        },
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
@@ -42,6 +47,8 @@ enum Commands {
     Declare(DeclareArgs),
     Deploy(DeployArgs),
     Invoke(InvokeArgs),
+    // Calls a function on a StarkNet contract.
+    Call(CallArgs),
     #[command(name = "starknet_in_rust")]
     Devnet(DevnetArgs),
 }
@@ -64,6 +71,18 @@ struct DeployArgs {
 
 #[derive(Args, Serialize, Deserialize)]
 struct InvokeArgs {
+    #[arg(long)]
+    address: String,
+    #[arg(long)]
+    abi: PathBuf,
+    #[arg(long)]
+    function: String,
+    #[arg(long, num_args=1.., value_delimiter = ' ')]
+    inputs: Option<Vec<i32>>,
+}
+
+#[derive(Args, Serialize, Deserialize)]
+struct CallArgs {
     #[arg(long)]
     address: String,
     #[arg(long)]
@@ -196,6 +215,54 @@ fn invoke_parser(
     Ok((contract_address.0, tx_hash))
 }
 
+fn call_parser(
+    cached_state: &mut CachedState<InMemoryStateReader>,
+    args: &CallArgs,
+) -> Result<Vec<Felt>, ParserError> {
+    let contract_address = Address(
+        Felt::from_str_radix(&args.address[2..], 16)
+            .map_err(|_| ParserError::ParseFeltError(args.address.clone()))?,
+    );
+    let class_hash = *cached_state.get_class_hash_at(&contract_address).unwrap();
+    let contract_class = cached_state.get_contract_class(&class_hash).unwrap();
+    let function_entrypoint_indexes = read_abi(&args.abi);
+    let entry_points_by_type = contract_class.entry_points_by_type().clone();
+    let (entry_point_index, entry_point_type) = function_entrypoint_indexes
+        .get(&args.function)
+        .ok_or_else(|| ParserError::FunctionEntryPointError(args.function.clone()))?;
+
+    let entrypoint_selector = entry_points_by_type
+        .get(entry_point_type)
+        .ok_or(ParserError::EntryPointType(*entry_point_type))?
+        .get(*entry_point_index)
+        .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
+        .selector()
+        .clone();
+    let caller_address = Address(0.into());
+    let calldata = match &args.inputs {
+        Some(vec) => vec.iter().map(|&n| n.into()).collect(),
+        None => Vec::new(),
+    };
+    let execution_entry_point = ExecutionEntryPoint::new(
+        contract_address,
+        calldata,
+        entrypoint_selector,
+        caller_address,
+        *entry_point_type,
+        None,
+        None,
+    );
+    let call_info = execution_entry_point
+        .execute(
+            cached_state,
+            &StarknetGeneralConfig::default(),
+            &mut ExecutionResourcesManager::default(),
+            &TransactionExecutionContext::default(),
+        )
+        .unwrap();
+    Ok(call_info.retdata)
+}
+
 async fn devnet_parser(devnet_args: &DevnetArgs) -> Result<(), ParserError> {
     start_devnet(devnet_args.port)
         .await
@@ -230,6 +297,16 @@ async fn invoke_req(data: web::Data<AppState>, args: web::Json<InvokeArgs>) -> H
     }
 }
 
+#[post("/call")]
+async fn call_req(data: web::Data<AppState>, args: web::Json<CallArgs>) -> HttpResponse {
+    println!("call received");
+    let mut cached_state = data.cached_state.lock().unwrap();
+    match call_parser(&mut cached_state, &args) {
+        Ok(t) => HttpResponse::Ok().json(t),
+        Err(e) => HttpResponse::ExpectationFailed().body(e.to_string()),
+    }
+}
+
 pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
@@ -244,6 +321,7 @@ pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
             .service(declare_req)
             .service(deploy_req)
             .service(invoke_req)
+            .service(call_req)
     })
     .bind(("127.0.0.1", port))?
     .run()
@@ -297,6 +375,24 @@ async fn main() -> Result<(), ParserError> {
                         Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
                         Err(e) => println!("{e}")
                     }
+                },
+                Err(ref e) => println!("{e}"),
+            };
+            Ok(())
+        }
+        Commands::Call(call_args) => {
+            let response = awc::Client::new()
+                .post("http://127.0.0.1:7878/call")
+                .send_json(&call_args)
+                .await;
+            match response {
+                Ok(mut resp) => match resp.json::<Vec<Felt>>().await {
+                    Ok(body) => println!(
+                        "{}",
+                        body.iter()
+                            .fold(String::new(), |acc, arg| acc + &format!("{arg}"))
+                    ),
+                    Err(e) => println!("{e}"),
                 },
                 Err(ref e) => println!("{e}"),
             };
