@@ -247,7 +247,7 @@ fn state_cache_after_invoke_tx() -> StateCache {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
             ),
-            Felt::from(2),
+            Felt::from(0),
         ),
         (
             (
@@ -462,7 +462,7 @@ fn invoke_tx(calldata: Vec<Felt>) -> InternalInvokeFunction {
     InternalInvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        1,
+        2,
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
