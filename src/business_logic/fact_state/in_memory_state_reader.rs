@@ -1,9 +1,6 @@
 use super::contract_state::ContractState;
 use crate::{
-    business_logic::state::{
-        state_api::{State, StateReader},
-        state_cache::StorageEntry,
-    },
+    business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
     utils::{Address, ClassHash},
@@ -67,29 +64,6 @@ impl StateReader for InMemoryStateReader {
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
-        todo!()
-    }
-}
-
-impl State for InMemoryStateReader {
-    fn set_contract_class(
-        &mut self,
-        _class_hash: &[u8; 32],
-        _contract_class: &ContractClass,
-    ) -> Result<(), StateError> {
-        todo!()
-    }
-    fn deploy_contract(
-        &mut self,
-        _contract_address: Address,
-        _class_hash: [u8; 32],
-    ) -> Result<(), StateError> {
-        todo!()
-    }
-    fn increment_nonce(&mut self, _contract_address: &Address) -> Result<(), StateError> {
-        todo!()
-    }
-    fn set_storage_at(&mut self, _storage_entry: &StorageEntry, _value: Felt) {
         todo!()
     }
 }

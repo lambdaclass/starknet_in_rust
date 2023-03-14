@@ -47,7 +47,6 @@ enum Commands {
     Declare(DeclareArgs),
     Deploy(DeployArgs),
     Invoke(InvokeArgs),
-    // Calls a function on a StarkNet contract.
     Call(CallArgs),
     #[command(name = "starknet_in_rust")]
     Devnet(DevnetArgs),
