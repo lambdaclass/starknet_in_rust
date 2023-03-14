@@ -1,7 +1,10 @@
 use crate::{
     business_logic::{state::state_cache::StorageEntry, transaction::error::TransactionError},
     core::errors::syscall_handler_errors::SyscallHandlerError,
-    definitions::{general_config::StarknetChainId, transaction_type::TransactionType},
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
+        transaction_type::TransactionType,
+    },
     services::api::contract_class::EntryPointType,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
@@ -87,7 +90,7 @@ impl CallInfo {
             class_hash,
             Some(CallType::Call),
             Some(EntryPointType::Constructor),
-            None,
+            Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
             None,
         )
     }
@@ -377,7 +380,7 @@ impl TxInfoStruct {
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TransactionExecutionInfo {
     pub validate_info: Option<CallInfo>,
     pub call_info: Option<CallInfo>,

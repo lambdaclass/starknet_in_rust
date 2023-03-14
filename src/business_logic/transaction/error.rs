@@ -19,8 +19,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum TransactionError {
-    #[error("Invalid felt conversion to u64")]
-    InvalidFeltConversionU64,
     #[error("Nonce is None")]
     MissingNonce,
     #[error("An InvokeFunction transaction (version != 0) must have a nonce.")]

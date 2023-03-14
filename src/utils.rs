@@ -284,7 +284,7 @@ pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
-    #![allow(unused)]
+    #![allow(unused_imports)]
 
     #[macro_export]
     macro_rules! any_box {
