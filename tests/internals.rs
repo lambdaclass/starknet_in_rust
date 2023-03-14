@@ -937,7 +937,7 @@ fn test_state_for_declare_tx() {
                 ContractState::new(
                     felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
                     0.into(),
-                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), 2.into())])
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), 0.into())]) //Fee, 2 in blockifier
                 )
             ),
             (
@@ -998,6 +998,27 @@ fn test_state_for_declare_tx() {
                     felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
                     ),
                     0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                    ),
+                    0.into()
                 )
             ]),
             HashMap::new(),
@@ -1025,12 +1046,12 @@ fn test_state_for_declare_tx() {
                     TEST_ERC20_CONTRACT_ADDRESS.clone(),
                     felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
                     ),
-                    2.into() //Fee
+                    0.into() //Fee, 2 in blockifier
                 ),
                 (
                     (
                     TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
                     ),
                     0.into()
                 ),
