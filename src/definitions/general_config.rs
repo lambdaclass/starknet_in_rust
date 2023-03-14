@@ -30,7 +30,7 @@ impl StarknetChainId {
 
 #[derive(Debug, Clone, Getters, MutGetters)]
 pub struct StarknetOsConfig {
-    #[get_mut = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) chain_id: StarknetChainId,
     #[get = "pub"]
     pub(crate) fee_token_address: Address,
