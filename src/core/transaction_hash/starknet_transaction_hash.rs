@@ -51,7 +51,7 @@ impl TransactionHashPrefix {
 pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: u64,
-    contract_address: Address,
+    contract_address: &Address,
     entry_point_selector: Felt,
     calldata: &[Felt],
     max_fee: u64,
@@ -63,7 +63,7 @@ pub fn calculate_transaction_hash_common(
     let mut data_to_hash: Vec<Felt> = vec![
         tx_hash_prefix.get_prefix(),
         version.into(),
-        contract_address.0,
+        contract_address.0.clone(),
         entry_point_selector,
         calldata_hash,
         max_fee.into(),
@@ -77,7 +77,7 @@ pub fn calculate_transaction_hash_common(
 
 pub fn calculate_deploy_transaction_hash(
     version: u64,
-    contract_address: Address,
+    contract_address: &Address,
     constructor_calldata: &[Felt],
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
@@ -99,7 +99,7 @@ pub fn calculate_deploy_transaction_hash(
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
     version: u64,
-    contract_address: Address,
+    contract_address: &Address,
     class_hash: Felt,
     constructor_calldata: &[Felt],
     max_fee: u64,
@@ -125,7 +125,7 @@ pub fn calculate_deploy_account_transaction_hash(
 pub(crate) fn calculate_declare_transaction_hash(
     contract_class: &ContractClass,
     chain_id: Felt,
-    sender_address: Address,
+    sender_address: &Address,
     max_fee: u64,
     version: u64,
     nonce: Felt,
@@ -137,12 +137,12 @@ pub(crate) fn calculate_declare_transaction_hash(
         let value = class_hash
             .to_u64()
             .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        (Vec::new(), [value].to_vec())
+        (Vec::new(), vec![value])
     } else {
         let value = nonce
             .to_u64()
             .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        ([class_hash].to_vec(), [value].to_vec())
+        (vec![class_hash], vec![value])
     };
 
     calculate_transaction_hash_common(
@@ -182,7 +182,7 @@ mod tests {
         let result = calculate_transaction_hash_common(
             tx_hash_prefix,
             version,
-            contract_address,
+            &contract_address,
             entry_point_selector,
             &calldata,
             max_fee,

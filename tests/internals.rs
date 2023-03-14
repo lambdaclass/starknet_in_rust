@@ -84,7 +84,6 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
     )
 }
 
-#[allow(dead_code)]
 fn create_account_tx_test_state(
 ) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let general_config = new_starknet_general_config_for_testing();

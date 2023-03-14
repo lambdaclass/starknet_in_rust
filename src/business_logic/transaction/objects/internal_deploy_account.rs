@@ -44,7 +44,6 @@ pub struct InternalDeployAccount {
 }
 
 impl InternalDeployAccount {
-    #![allow(unused)] // TODO: delete once used
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: [u8; 32],
@@ -219,7 +218,7 @@ impl InternalDeployAccount {
             self.contract_address.clone(),
             calculate_deploy_account_transaction_hash(
                 self.version,
-                self.contract_address.clone(),
+                &self.contract_address,
                 Felt::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
                 self.max_fee,

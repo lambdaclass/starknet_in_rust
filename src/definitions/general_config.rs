@@ -6,12 +6,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy)]
 pub enum StarknetChainId {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     MainNet,
     TestNet,
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     TestNet2,
 }
 
