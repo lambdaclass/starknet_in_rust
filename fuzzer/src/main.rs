@@ -26,7 +26,6 @@ use std::{
     path::PathBuf,
 };
 
-use tempfile::NamedTempFile;
 use std::fs;
 use std::process::Command;
 
@@ -65,6 +64,7 @@ fn main() {
 
         let file_content  = file_content1.to_owned() + &input + file_content2 ;
 
+        println!("{:?}", file_content);
         // ---------------------------------------------------------
         //  Create the .cairo file 
         // ---------------------------------------------------------
@@ -172,10 +172,10 @@ fn main() {
             entry_point_selector: Some(storage_entrypoint_selector),
             entry_point_type: Some(EntryPointType::External),
             calldata,
-            retdata: [Felt::from_bytes_be(data)].to_vec(),
+            retdata: [Felt::from_bytes_be(data_to_ascii(data).as_bytes())].to_vec(),
             execution_resources: ExecutionResources::default(),
             class_hash: Some(class_hash),
-            storage_read_values: vec![Felt::from_bytes_be(data)],
+            storage_read_values: vec![Felt::from_bytes_be(data_to_ascii(data).as_bytes())],
             accessed_storage_keys: expected_accessed_storage_keys,
             ..Default::default()
         };
@@ -199,7 +199,7 @@ fn main() {
                 .storage_writes()
                 .get(&(address, expected_key))
                 .cloned(),
-            Some(Felt::from_bytes_be(data))
+            Some(Felt::from_bytes_be(data_to_ascii(data).as_bytes()))
         );
 
         });
