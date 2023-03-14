@@ -1030,7 +1030,7 @@ fn test_state_for_declare_tx() {
                 (
                     (
                     TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
                     ),
                     0.into()
                 ),
