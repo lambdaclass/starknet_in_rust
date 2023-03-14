@@ -120,7 +120,7 @@ fn amm_init_pool_test() {
         contract_address: Address(1111.into()),
         entry_point_selector: Some(amm_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
-        calldata: calldata,
+        calldata,
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
