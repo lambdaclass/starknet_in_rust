@@ -3,8 +3,9 @@ use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 
-#[derive(Debug)]
 #[pyclass]
+#[pyo3(name = "BlockInfo")]
+#[derive(Debug)]
 pub struct PyBlockInfo {
     inner: BlockInfo,
 }
