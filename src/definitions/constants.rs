@@ -35,4 +35,8 @@ lazy_static! {
     /// Value generated from `get_selector_from_name('__validate_deploy__')`.
     pub static ref VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR: Felt =
         felt_str!("1554466106298962091002569854891683800203193677547440645928814916929210362005");
+
+    /// Value generated from `get_selector_from_name('Transfer')`.
+    pub static ref TRANSFER_EVENT_SELECTOR: Felt =
+    felt_str!("271746229759260285552388728919865295615886751538523744128730118297934206697");
 }

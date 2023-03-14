@@ -29,7 +29,7 @@ use crate::{
 use felt::Felt;
 use num_traits::{ToPrimitive, Zero};
 
-pub(crate) struct InternalInvokeFunction {
+pub struct InternalInvokeFunction {
     pub(crate) contract_address: Address,
     entry_point_selector: Felt,
     #[allow(dead_code)]
@@ -60,7 +60,6 @@ impl InternalInvokeFunction {
             nonce.clone(),
             version,
         )?;
-
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
@@ -71,7 +70,6 @@ impl InternalInvokeFunction {
             chain_id,
             &additional_data,
         )?;
-
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InternalInvokeFunction {
@@ -118,7 +116,6 @@ impl InternalInvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-
         if self.version == 0 {
             return Ok(None);
         }
