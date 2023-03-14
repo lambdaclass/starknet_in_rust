@@ -53,7 +53,7 @@ It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust im
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 ```bash
 $ make deps
-$ source starknet-in-rs-venv/bin/activate
+$ source starknet-venv/bin/activate
 $ make compile-cairo
 $ deactivate
 $ make build

@@ -27,9 +27,8 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt;
-use num_traits::{ToPrimitive, Zero};
+use num_traits::Zero;
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct InternalInvokeFunction {
     pub contract_address: Address,
@@ -47,7 +46,6 @@ pub struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
-    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt,
@@ -66,7 +64,7 @@ impl InternalInvokeFunction {
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
-            contract_address.clone(),
+            &contract_address,
             entry_point_selector_field,
             &calldata,
             max_fee,
@@ -243,7 +241,7 @@ impl InternalInvokeFunction {
     }
 
     /// Calculates actual fee used by the transaction using the execution
-    /// info returned by apply(), then updates the transaction execution info with the data of the fee.  
+    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
@@ -319,7 +317,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt,
     nonce: Option<Felt>,
     version: u64,
-) -> Result<(Felt, Vec<u64>), TransactionError> {
+) -> Result<(Felt, Vec<Felt>), TransactionError> {
     if version == 0 || version == u64::MAX {
         match nonce {
             Some(_) => Err(TransactionError::InvalidNonce(
@@ -334,8 +332,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     } else {
         match nonce {
             Some(n) => {
-                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
-                let additional_data = [val].to_vec();
+                let additional_data = vec![n];
                 let entry_point_selector_field = Felt::zero();
                 Ok((entry_point_selector_field, additional_data))
             }
