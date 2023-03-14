@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack	
 
 
 OS := $(shell uname)
@@ -68,3 +68,6 @@ coverage:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo tarpaulin
 	-rm -f default.profraw
+
+heaptrack:
+	./scripts/heaptrack.sh
