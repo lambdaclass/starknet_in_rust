@@ -10,15 +10,19 @@ pub(crate) type StorageEntry = (Address, [u8; 32]);
 #[derive(Debug, Default, Clone, Eq, Getters, MutGetters, PartialEq)]
 pub struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
+    #[get_mut = "pub"]
     pub(crate) class_hash_initial_values: HashMap<Address, [u8; 32]>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) nonce_initial_values: HashMap<Address, Felt>,
+    #[get_mut = "pub"]
     pub(crate) storage_initial_values: HashMap<StorageEntry, Felt>,
 
     // Writer's cached information.
+    #[get_mut = "pub"]
     pub(crate) class_hash_writes: HashMap<Address, [u8; 32]>,
+    #[get_mut = "pub"]
     pub(crate) nonce_writes: HashMap<Address, Felt>,
-    #[get = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) storage_writes: HashMap<StorageEntry, Felt>,
 }
 

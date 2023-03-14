@@ -132,7 +132,7 @@ pub(crate) fn calculate_declare_transaction_hash(
     let class_hash =
         compute_class_hash(contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
-    let (calldata, additional_data) = if version > 0x8000_0000_0000_0000 {
+    let (calldata, additional_data) = if version > 0 {
         (Vec::new(), vec![class_hash])
     } else {
         (vec![class_hash], vec![nonce])
