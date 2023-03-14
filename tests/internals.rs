@@ -58,7 +58,10 @@ lazy_static! {
         felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
     static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt =
         felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
-
+    static ref TEST_ERC20_BALANCE_KEY_UNK_1: Felt =
+        felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516");
+    static ref TEST_ERC20_BALANCE_KEY_UNK_2: Felt =
+        felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275");
     // Others.
     static ref ACTUAL_FEE: Felt = 2.into();
 }
@@ -246,28 +249,28 @@ fn state_cache_after_invoke_tx() -> StateCache {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
             ),
-            Felt::from(2),
+            Felt::zero(),
         ),
-        // blockifier has two more storage initial values
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_1.clone()),
+            ),
+            Felt::zero(),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_2.clone()),
+            ),
+            Felt::zero(),
+        ),
     ]);
 
     let class_hash_writes = HashMap::new();
 
     let nonce_writes = HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::from(1))]);
-    // storage_writes: {
-    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
-    //     StorageKey(PatriciaKey(StarkFelt("0x0723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658812")))):
-    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000002"),
-    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
-    //     StorageKey(PatriciaKey(StarkFelt("0x02a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080dec")))):
-    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000"),
-    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
-    //     StorageKey(PatriciaKey(StarkFelt("0x02a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080deb")))):
-    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000"),
-    //     (ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000001001"))),
-    //     StorageKey(PatriciaKey(StarkFelt("0x0723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658813")))):
-    //     StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000")
-    // }
+
     let storage_writes = HashMap::from([
         (
             (
@@ -280,6 +283,20 @@ fn state_cache_after_invoke_tx() -> StateCache {
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+            ),
+            Felt::from(0),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_1.clone()),
+            ),
+            Felt::from(0),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_2.clone()),
             ),
             Felt::from(0),
         ),
