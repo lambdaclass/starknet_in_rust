@@ -25,6 +25,48 @@ use std::{
     path::PathBuf,
 };
 
+fn get_entry_points(
+    entry_points_by_type: &HashMap<
+        EntryPointType,
+        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
+    >,
+    index_selector: usize,
+    address: &Address,
+    class_hash: &[u8; 32],
+    calldata: &Vec<Felt>,
+    caller_address: &Address,
+) -> (ExecutionEntryPoint, Felt) {
+    //* ------------------------------------
+    //*    Create entry point selector
+    //* ------------------------------------
+    let entrypoint_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(index_selector)
+        .unwrap()
+        .selector()
+        .clone();
+
+    //* ------------------------------------
+    //*    Create execution entry point
+    //* ------------------------------------
+
+    let entry_point_type = EntryPointType::External;
+
+    (
+        ExecutionEntryPoint::new(
+            address.clone(),
+            calldata.clone(),
+            entrypoint_selector.clone(),
+            caller_address.clone(),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash.clone()),
+        ),
+        entrypoint_selector,
+    )
+}
+
 #[test]
 fn amm_init_pool_test() {
     // ---------------------------------------------------------
@@ -34,14 +76,6 @@ fn amm_init_pool_test() {
     let path = PathBuf::from("starknet_programs/amm.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
-
-    let amm_entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(4)
-        .unwrap()
-        .selector()
-        .clone();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
@@ -68,21 +102,16 @@ fn amm_init_pool_test() {
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
     //* ------------------------------------
-    //*    Create execution entry point
-    //* ------------------------------------
-
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
 
-    let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata.clone(),
-        amm_entrypoint_selector.clone(),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
+    let (exec_entry_point, amm_entrypoint_selector) = get_entry_points(
+        &entry_points_by_type,
+        4,
+        &address,
+        &class_hash,
+        &calldata,
+        &caller_address,
     );
 
     //* --------------------
@@ -140,31 +169,20 @@ fn amm_init_pool_test() {
         expected_call_info
     );
 
-    // External entry point, get_balance function amm.cairo:L61
-    let get_pool_balance_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(3)
-        .unwrap()
-        .selector()
-        .clone();
-
     //* ------------------------------------
-    //*    Create execution entry point
+    //*    Create entry points
     //* ------------------------------------
 
     let calldata_getter = [1.into()].to_vec();
     let caller_address_getter = Address(0000.into());
-    let entry_point_type_getter = EntryPointType::External;
 
-    let exec_entry_point_getter = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata_getter.clone(),
-        get_pool_balance_selector.clone(),
-        caller_address_getter,
-        entry_point_type_getter,
-        Some(CallType::Delegate),
-        Some(class_hash),
+    let (exec_entry_point_getter, get_pool_balance_selector) = get_entry_points(
+        &entry_points_by_type,
+        3,
+        &address,
+        &class_hash,
+        &calldata_getter,
+        &caller_address_getter,
     );
 
     let tx_execution_context_getter = TransactionExecutionContext::new(
@@ -206,33 +224,22 @@ fn amm_init_pool_test() {
 
     assert_eq!(result, expected_call_info_getter);
 
-    //Add demo_token
-
-    // External entry point
-    let add_demo_token_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(2)
-        .unwrap()
-        .selector()
-        .clone();
+    //ADD DEMO TOKEN
 
     //* ------------------------------------
-    //*    Create execution entry point
+    //*    Create entry points
     //* ------------------------------------
 
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
     let caller_address_add_demo_token = Address(0000.into());
-    let entry_point_type_add_demo_token = EntryPointType::External;
 
-    let exec_entry_point_add_demo_token = ExecutionEntryPoint::new(
-        address,
-        calldata_add_demo_token.clone(),
-        add_demo_token_selector.clone(),
-        caller_address_add_demo_token,
-        entry_point_type_add_demo_token,
-        Some(CallType::Delegate),
-        Some(class_hash),
+    let (exec_entry_point_add_demo_token, add_demo_token_selector) = get_entry_points(
+        &entry_points_by_type,
+        2,
+        &address,
+        &class_hash,
+        &calldata_add_demo_token,
+        &caller_address_add_demo_token,
     );
 
     let tx_execution_context_add_demo_token = TransactionExecutionContext::new(
