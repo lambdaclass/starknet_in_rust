@@ -1,5 +1,3 @@
-// TODO: remove
-#![allow(unused)]
 use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
