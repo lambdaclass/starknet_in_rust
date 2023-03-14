@@ -139,41 +139,70 @@ fn amm_init_pool_test() {
             .unwrap(),
         expected_call_info
     );
-    //GETTER ENTRY POINT SELECTOR
-    let getter_entrypoint_selector = entry_points_by_type
+
+    // External entry point, get_balance function amm.cairo:L61
+    let get_pool_balance_selector = entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(1)
+        .get(3)
         .unwrap()
         .selector()
         .clone();
-    println!(
-        "getter_entrypoint_selector: {:?}",
-        getter_entrypoint_selector
-    );
 
-    //NEW ENTRY POINT TO GET POOL BALANCE
-    let calldata_getter: Vec<Felt> = [1.into()].to_vec();
-    let caller_getter_address = Address(1111.into());
-    let _getter_exec_entry_point = ExecutionEntryPoint::new(
-        address,
+    //* ------------------------------------
+    //*    Create execution entry point
+    //* ------------------------------------
+
+    let calldata_getter = [1.into()].to_vec();
+    let caller_address_getter = Address(0000.into());
+    let entry_point_type_getter = EntryPointType::External;
+
+    let exec_entry_point_getter = ExecutionEntryPoint::new(
+        address.clone(),
         calldata_getter.clone(),
-        getter_entrypoint_selector.clone(),
-        caller_getter_address.clone(),
-        entry_point_type,
+        get_pool_balance_selector.clone(),
+        caller_address_getter.clone(),
+        entry_point_type_getter,
         Some(CallType::Delegate),
         Some(class_hash),
     );
 
-    //EXECUTE GETTER
-    let general_config = StarknetGeneralConfig::default();
-    let _tx_getter_execution_context = TransactionExecutionContext::new(
+    let tx_execution_context_getter = TransactionExecutionContext::new(
         Address(0.into()),
         Felt::zero(),
         Vec::new(),
         0,
-        10.into(),
+        11.into(),
         general_config.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
+
+    let result = exec_entry_point_getter
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context_getter,
+        )
+        .unwrap();
+
+    let mut accesed_storage_keys_pool_balance = HashSet::new();
+    accesed_storage_keys_pool_balance.insert(storage_hash_1.to_bytes_be());
+
+    let expected_call_info_getter = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(get_pool_balance_selector.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata_getter.clone(),
+        retdata: [10000.into()].to_vec(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: accesed_storage_keys_pool_balance,
+        storage_read_values: [10000.into()].to_vec(),
+        ..Default::default()
+    };
+
+    assert_eq!(result, expected_call_info_getter);
 }
