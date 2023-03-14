@@ -205,4 +205,82 @@ fn amm_init_pool_test() {
     };
 
     assert_eq!(result, expected_call_info_getter);
+
+    //Add demo_token
+
+    // External entry point
+    let add_demo_token_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(2)
+        .unwrap()
+        .selector()
+        .clone();
+
+    //* ------------------------------------
+    //*    Create execution entry point
+    //* ------------------------------------
+
+    let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
+    let caller_address_add_demo_token = Address(0000.into());
+    let entry_point_type_add_demo_token = EntryPointType::External;
+
+    let exec_entry_point_add_demo_token = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata_add_demo_token.clone(),
+        add_demo_token_selector.clone(),
+        caller_address_add_demo_token.clone(),
+        entry_point_type_add_demo_token,
+        Some(CallType::Delegate),
+        Some(class_hash),
+    );
+
+    let tx_execution_context_add_demo_token = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt::zero(),
+        Vec::new(),
+        0,
+        12.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+
+    let result_add_demo_token = exec_entry_point_add_demo_token
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context_add_demo_token,
+        )
+        .unwrap();
+
+    let account_balance_hash = calculate_sn_keccak("account_balance".as_bytes());
+    let account_balance_hash = FieldElement::from_bytes_be(&account_balance_hash).unwrap();
+
+    let account_balance_account_id_hash = pedersen_hash(&account_balance_hash, &0_u8.into());
+    let account_balance_account_id_token_a_hash =
+        pedersen_hash(&account_balance_account_id_hash, &variable_name_1);
+    let account_balance_account_id_token_b_hash =
+        pedersen_hash(&account_balance_account_id_hash, &variable_name_2);
+
+    let mut accessed_storage_keys_add_demo_token = HashSet::new();
+    accessed_storage_keys_add_demo_token
+        .insert(account_balance_account_id_token_a_hash.to_bytes_be());
+    accessed_storage_keys_add_demo_token
+        .insert(account_balance_account_id_token_b_hash.to_bytes_be());
+
+    let expected_call_info_add_demo_token = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(add_demo_token_selector.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata_add_demo_token.clone(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: accessed_storage_keys_add_demo_token,
+        ..Default::default()
+    };
+
+    assert_eq!(result_add_demo_token, expected_call_info_add_demo_token);
 }
