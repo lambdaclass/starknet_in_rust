@@ -221,6 +221,8 @@ fn data_to_ascii(data: &[u8]) -> String {
         chars.push(c);
     }
 
-    chars.iter().collect()
-
+    let mut data_ascii: String = chars.iter().collect();
+    data_ascii.truncate(30);
+    data_ascii
+    
 }
