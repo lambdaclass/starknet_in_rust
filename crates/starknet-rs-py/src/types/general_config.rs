@@ -209,3 +209,33 @@ impl PyStarknetChainId {
         self.inner.to_felt().to_biguint()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pyo3::{types::IntoPyDict, PyTypeInfo, Python};
+
+    #[test]
+    fn test_constructors() {
+        Python::with_gil(|py| {
+            let general_config_cls = <PyStarknetGeneralConfig as PyTypeInfo>::type_object(py);
+            let os_config_cls = <PyStarknetOsConfig as PyTypeInfo>::type_object(py);
+
+            let locals = [
+                ("StarknetGeneralConfig", general_config_cls),
+                ("StarknetOsConfig", os_config_cls),
+            ]
+            .into_py_dict(py);
+
+            let code = r#"
+StarknetGeneralConfig()
+StarknetGeneralConfig(StarknetOsConfig())
+StarknetGeneralConfig(validate_max_n_steps=5)
+StarknetOsConfig(fee_token_address=1337)
+"#;
+            let res = py.run(code, None, Some(locals));
+
+            assert!(res.is_ok(), "{res:?}");
+        });
+    }
+}
