@@ -14,10 +14,10 @@ use starknet_rs::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
             state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
+        state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+    services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -93,14 +93,10 @@ fn setup_contract(
     path: &str,
     address: &Address,
     class_hash: [u8; 32],
-) -> (
-    CachedState<InMemoryStateReader>,
-    HashMap<EntryPointType, Vec<ContractEntryPoint>>,
-) {
+) -> CachedState<InMemoryStateReader> {
     // Create program and entry point types for contract class
     let path = PathBuf::from(path);
     let contract_class = ContractClass::try_from(path).unwrap();
-    let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -112,10 +108,7 @@ fn setup_contract(
         .insert(address.clone(), contract_state);
 
     // Create state with previous data
-    (
-        CachedState::new(state_reader, Some(contract_class_cache)),
-        entry_points_by_type,
-    )
+    CachedState::new(state_reader, Some(contract_class_cache))
 }
 
 #[test]
@@ -124,12 +117,13 @@ fn amm_init_pool_test() {
 
     let address = Address(1111.into());
     let class_hash = [1; 32];
-    let mut state: CachedState<InMemoryStateReader>;
-    let entry_points_by_type;
-    (state, entry_points_by_type) =
-        setup_contract("starknet_programs/amm.json", &address, class_hash);
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash.clone());
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
-    //* ------------------------------------
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
 
