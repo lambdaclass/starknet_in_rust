@@ -63,6 +63,10 @@ test:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo test
 
+py-test:
+	. starknet-venv/bin/activate
+	cargo test -p starknet_rs --no-default-features --features embedded-python
+
 coverage:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo tarpaulin
