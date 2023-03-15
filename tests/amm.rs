@@ -15,6 +15,7 @@ use starknet_rs::{
             state::ExecutionResourcesManager,
         },
         state::{cached_state::CachedState, state_api::StateReader},
+        transaction::error::TransactionError,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -135,7 +136,7 @@ fn execute_entry_point(
     index_selector: AmmEntryPoints,
     calldata: &[Felt],
     call_config: &mut CallConfig,
-) -> CallInfo {
+) -> Result<CallInfo, TransactionError> {
     // Entry point for init pool
     let (exec_entry_point, _) = get_entry_points(
         call_config.entry_points_by_type,
@@ -159,30 +160,37 @@ fn execute_entry_point(
         TRANSACTION_VERSION,
     );
 
-    exec_entry_point
-        .execute(
-            call_config.state,
-            call_config.general_config,
-            call_config.resources_manager,
-            &tx_execution_context,
-        )
-        .unwrap()
+    exec_entry_point.execute(
+        call_config.state,
+        call_config.general_config,
+        call_config.resources_manager,
+        &tx_execution_context,
+    )
 }
 
-fn init_pool(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
+fn init_pool(
+    calldata: &[Felt],
+    call_config: &mut CallConfig,
+) -> Result<CallInfo, TransactionError> {
     execute_entry_point(AmmEntryPoints::InitPool, calldata, call_config)
 }
 
-fn get_pool_token_balance(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
+fn get_pool_token_balance(
+    calldata: &[Felt],
+    call_config: &mut CallConfig,
+) -> Result<CallInfo, TransactionError> {
     execute_entry_point(AmmEntryPoints::GetPoolTokenBalance, calldata, call_config)
 }
 
-fn add_demo_token(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
+fn add_demo_token(
+    calldata: &[Felt],
+    call_config: &mut CallConfig,
+) -> Result<CallInfo, TransactionError> {
     execute_entry_point(AmmEntryPoints::AddDemoToken, calldata, call_config)
 }
 
 // Swap function to execute swap between two tokens
-fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
+fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
     execute_entry_point(AmmEntryPoints::_Swap, calldata, call_config)
 }
 #[test]
@@ -236,7 +244,10 @@ fn amm_init_pool_test() {
         resources_manager: &mut resources_manager,
     };
 
-    assert_eq!(init_pool(&calldata, &mut call_config), expected_call_info);
+    assert_eq!(
+        init_pool(&calldata, &mut call_config).unwrap(),
+        expected_call_info
+    );
 }
 
 #[test]
@@ -273,7 +284,7 @@ fn amm_add_demo_tokens_test() {
         resources_manager: &mut resources_manager,
     };
 
-    init_pool(&calldata, &mut call_config);
+    init_pool(&calldata, &mut call_config).unwrap();
 
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
 
@@ -309,7 +320,7 @@ fn amm_add_demo_tokens_test() {
     };
 
     assert_eq!(
-        add_demo_token(&calldata_add_demo_token, &mut call_config),
+        add_demo_token(&calldata_add_demo_token, &mut call_config).unwrap(),
         expected_call_info_add_demo_token
     );
 }
@@ -340,7 +351,7 @@ fn amm_get_pool_token_balance() {
         resources_manager: &mut resources_manager,
     };
 
-    init_pool(&calldata, &mut call_config);
+    init_pool(&calldata, &mut call_config).unwrap();
 
     let calldata_getter = [1.into()].to_vec();
 
@@ -372,7 +383,7 @@ fn amm_get_pool_token_balance() {
         ..Default::default()
     };
 
-    assert_eq!(result, expected_call_info_getter);
+    assert_eq!(result.unwrap(), expected_call_info_getter);
 }
 
 //test swap functionality
@@ -408,7 +419,7 @@ fn amm_swap_test() {
         resources_manager: &mut resources_manager,
     };
 
-    init_pool(&calldata, &mut call_config);
+    init_pool(&calldata, &mut call_config).unwrap();
 
     //add tokens to user
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
@@ -424,7 +435,7 @@ fn amm_swap_test() {
         resources_manager: &mut resources_manager,
     };
 
-    add_demo_token(&calldata_add_demo_token, &mut call_config);
+    add_demo_token(&calldata_add_demo_token, &mut call_config).unwrap();
 
     //swap tokens. Token 1 with 10 in amount
     let calldata_swap = [1.into(), 10.into()].to_vec();
@@ -491,5 +502,33 @@ fn amm_swap_test() {
         ..Default::default()
     };
 
-    assert_eq!(result, expected_call_info_swap);
+    assert_eq!(result.unwrap(), expected_call_info_swap);
+}
+
+#[test]
+fn amm_init_pool_should_fail_with_amount_out_of_bound() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [Felt::new(2_u32.pow(30)), Felt::new(2_u32.pow(30))].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    assert!(init_pool(&calldata, &mut call_config).is_err());
 }
