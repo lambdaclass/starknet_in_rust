@@ -196,8 +196,7 @@ impl SyscallHandler for OsSyscallHandler {
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_temporary_segment();
 
-        vm.write_arg(&segment_start, &data)
-            .map_err(|_| SyscallHandlerError::WriteArg)?;
+        vm.write_arg(&segment_start, &data)?;
         Ok(segment_start)
     }
 
@@ -903,7 +902,7 @@ mod tests {
         };
         assert_eq!(
             handler._call_contract_and_write_response("call_contract", &mut vm, syscall_ptr),
-            Err(SyscallHandlerError::VirtualMachineError(
+            Err(SyscallHandlerError::VirtualMachine(
                 VirtualMachineError::MemoryError(MemoryError::UnallocatedSegment(0, 0))
             ))
         )

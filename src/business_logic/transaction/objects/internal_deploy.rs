@@ -1,7 +1,6 @@
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -130,7 +129,7 @@ impl InternalDeploy {
         &self,
         state: &mut S,
         general_config: StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let entry_point_selector = felt_str!(
             "1159040026212278395030414237414753050475174923702621880048416706425641521556"
         );
