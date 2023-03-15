@@ -462,7 +462,18 @@ mod tests {
             .unwrap();
 
         // fibonacci selector
-        let selector = felt_str!("112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9");
+        let selector = Felt::from_str_radix(
+            "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+            16,
+        )
+        .unwrap();
+
+        // Statement **not** in blockifier.
+        starknet_state
+            .state
+            .cache_mut()
+            .nonce_initial_values_mut()
+            .insert(contract_address.clone(), Felt::zero());
 
         let tx_info = starknet_state
             .invoke_raw(
