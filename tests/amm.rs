@@ -588,3 +588,72 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
 
     assert!(swap(&calldata, &mut call_config).is_err());
 }
+
+#[test]
+fn amm_proxy_init_pool_test() {
+    let contract_address = Address(0.into());
+    let contract_class_hash = [1; 32];
+    let mut _contract_state = setup_contract(
+        "starknet_programs/amm.json",
+        &contract_address,
+        contract_class_hash,
+    );
+
+    let address = Address(1000000.into());
+    let class_hash = [2; 32];
+    let mut state = setup_contract("starknet_programs/amm_proxy.json", &address, class_hash);
+
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [1111.into(), 1.into()].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    let result = execute_entry_point(
+        AmmEntryPoints::_GetAccountTokenBalance,
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
+
+    let amm_proxy_entrypoint_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(0)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let accessed_storage_keys = get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(amm_proxy_entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata.clone(),
+        retdata: [].to_vec(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys,
+        ..Default::default()
+    };
+
+    assert_eq!(result, expected_call_info);
+}
