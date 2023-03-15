@@ -93,6 +93,30 @@ impl From<StarknetChainId> for PyStarknetChainId {
 
 #[pymethods]
 impl PyStarknetChainId {
+    #[classattr]
+    #[pyo3(name = "MAINNET")]
+    fn mainnet() -> Self {
+        Self {
+            inner: StarknetChainId::MainNet,
+        }
+    }
+
+    #[classattr]
+    #[pyo3(name = "TESTNET")]
+    fn testnet() -> Self {
+        Self {
+            inner: StarknetChainId::TestNet,
+        }
+    }
+
+    #[classattr]
+    #[pyo3(name = "TESTNET2")]
+    fn testnet2() -> Self {
+        Self {
+            inner: StarknetChainId::TestNet2,
+        }
+    }
+
     #[getter]
     fn name(&self) -> String {
         self.inner.to_string()
