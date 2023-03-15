@@ -109,9 +109,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
-            println!("get_nonce_at: {:?}", contract_address);
             let nonce = self.state_reader.get_nonce_at(contract_address)?;
-            println!("get_nonce_at: {:?} -> {:?}", contract_address, nonce);
             self.cache
                 .nonce_initial_values
                 .insert(contract_address.clone(), nonce.clone());

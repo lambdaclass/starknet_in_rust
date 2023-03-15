@@ -452,7 +452,6 @@ mod tests {
         let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 
-        // println!("state before deploy: {:?}", starknet_state.state);
         let (contract_address, _exec_info) = starknet_state
             .deploy(
                 contract_class.clone(),
