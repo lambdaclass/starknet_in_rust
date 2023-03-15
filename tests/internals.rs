@@ -173,7 +173,20 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
 fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    let contract_classes_cache = ContractClassCache::new();
+    let contract_classes_cache = ContractClassCache::from([
+        (
+            felt_to_hash(&TEST_CLASS_HASH.clone()),
+            get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+        ),
+        (
+            felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
+            get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+        ),
+        (
+            felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+            get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+        ),
+    ]);
 
     CachedState::new_for_testing(
         in_memory_state_reader,
