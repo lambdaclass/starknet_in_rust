@@ -1,19 +1,13 @@
 use super::state_errors::StateError;
-use cairo_rs::vm::errors::{hint_errors::HintError, vm_errors::VirtualMachineError};
+use cairo_rs::vm::errors::{
+    hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum SyscallHandlerError {
-    #[error("Missing Member")]
-    MissingMember,
-    #[error("Missing Identifiers")]
-    MissingIdentifiers,
-    #[error("Missing selector value")]
-    MissingSelector,
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
-    #[error("invalid pointer")]
-    SegmentationFault,
     #[error("Couldn't convert Felt to usize")]
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
@@ -22,16 +16,12 @@ pub enum SyscallHandlerError {
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
     ExpectedDeployRequestStruct,
-    #[error("Expected EmitEventStruct")]
-    ExpectedEmitEventStruct,
     #[error("Expected GetCallerAddressRequest")]
     ExpectedGetCallerAddressRequest,
     #[error("Expected SendMessageToL1")]
     ExpectedSendMessageToL1,
     #[error("Expected GetBlockTimestampRequest")]
     ExpectedGetBlockTimestampRequest,
-    #[error("Expected StorageReadRequest")]
-    ExpectedStorageReadRequest,
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1, found: {0}")]
     DeployFromZero(usize),
     #[error("Hint not implemented")]
@@ -50,8 +40,6 @@ pub enum SyscallHandlerError {
     ShouldBeNone(String),
     #[error("Unexpected construct retdata")]
     UnexpectedConstructorRetdata,
-    #[error("Error writing arguments")]
-    WriteArg,
     #[error("Key not found")]
     KeyNotFound,
     #[error("The requested syscall read was not of the expected type")]
@@ -59,29 +47,23 @@ pub enum SyscallHandlerError {
     #[error("tx_info_ptr is None")]
     TxInfoPtrIsNone,
     #[error("Virtual machine error: {0}")]
-    VirtualMachineError(#[from] VirtualMachineError),
+    VirtualMachine(#[from] VirtualMachineError),
     #[error("Expected GetContractAddressRequest")]
     ExpectedGetContractAddressRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
-    #[error("Expected CallContractRequest")]
-    ExpectedCallContract,
-    #[error("Expected MaybeRelocatable")]
-    ExpectedMaybeRelocatable,
-    #[error("Expected MaybeRelocatable::Int")]
-    ExpectedMaybeRelocatableInt,
     #[error("Memory error: {0}")]
-    MemoryError(String),
+    Memory(#[from] MemoryError),
     #[error("Expected GetTxSignatureRequest")]
     ExpectedGetTxSignatureRequest,
     #[error("Expected a ptr but received invalid data")]
     InvalidTxInfoPtr,
-    #[error("could not convert felt to u64")]
+    #[error("Could not convert felt to u64")]
     InvalidFeltConversion,
     #[error("Could not compute hash")]
     ErrorComputingHash,
     #[error(transparent)]
-    StateError(#[from] StateError),
+    State(#[from] StateError),
     #[error(transparent)]
-    HintError(#[from] HintError),
+    Hint(#[from] HintError),
 }

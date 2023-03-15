@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::{
-    business_logic::{execution::error::ExecutionError, transaction::error::TransactionError},
+    business_logic::transaction::error::TransactionError,
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
 };
 
@@ -10,11 +10,9 @@ pub enum StarknetStateError {
     #[error("Invalid message hash key passed to l2 messages")]
     InvalidMessageHash,
     #[error(transparent)]
-    SyscallException(#[from] SyscallHandlerError),
+    Syscall(#[from] SyscallHandlerError),
     #[error(transparent)]
-    StateException(#[from] StateError),
+    State(#[from] StateError),
     #[error(transparent)]
-    ExecuteException(#[from] ExecutionError),
-    #[error(transparent)]
-    TransactionException(#[from] TransactionError),
+    Transaction(#[from] TransactionError),
 }

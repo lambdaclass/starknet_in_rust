@@ -1,5 +1,5 @@
 use crate::{
-    business_logic::{execution::error::ExecutionError, transaction::error::TransactionError},
+    business_logic::transaction::error::TransactionError,
     core::errors::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
@@ -26,8 +26,6 @@ pub enum ParserError {
     EntryPointType(EntryPointType),
     #[error("Failed to get entry point at array position `{0}`")]
     EntryPointIndex(usize),
-    #[error(transparent)]
-    ExecuteFromEntryPointError(ExecutionError),
     #[error(transparent)]
     ServerError(std::io::Error),
     #[error(transparent)]

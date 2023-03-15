@@ -2,7 +2,6 @@ use super::internal_invoke_function::verify_no_calls_to_other_contracts;
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -163,7 +162,7 @@ impl InternalDeployAccount {
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -197,8 +196,7 @@ impl InternalDeployAccount {
             return Ok(());
         }
 
-        let contract_address = &self.contract_address;
-        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
+        let current_nonce = state.get_nonce_at(&self.contract_address)?.to_owned();
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -206,7 +204,7 @@ impl InternalDeployAccount {
             ));
         }
 
-        state.increment_nonce(contract_address)?;
+        state.increment_nonce(&self.contract_address)?;
 
         Ok(())
     }
@@ -216,7 +214,7 @@ impl InternalDeployAccount {
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -238,7 +236,7 @@ impl InternalDeployAccount {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::InvalidContractCall)?;
+            .map_err(|_| TransactionError::InvalidContractCall)?;
         Ok(call_info)
     }
 
@@ -269,7 +267,7 @@ impl InternalDeployAccount {
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError>
+    ) -> Result<Option<CallInfo>, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -301,7 +299,7 @@ impl InternalDeployAccount {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::InvalidContractCall)?;
+            .map_err(|_| TransactionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }

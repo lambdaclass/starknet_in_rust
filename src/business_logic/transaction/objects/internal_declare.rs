@@ -1,7 +1,6 @@
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -95,13 +94,6 @@ impl InternalDeclare {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        // no need to check if its lesser than 0 because it is an usize
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "The sender_address field in Declare transactions of version 0, sender should be 1"
-                    .to_string(),
-            ));
-        }
         if self.version.is_zero() {
             if !self.max_fee.is_zero() {
                 return Err(TransactionError::StarknetError(
@@ -135,9 +127,8 @@ impl InternalDeclare {
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info = self
-            .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .map_err(|e| TransactionError::RunValidationError(e.to_string()))?;
+        let validate_info =
+            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -147,7 +138,7 @@ impl InternalDeclare {
             changes,
             None,
         )
-        .map_err(|_| TransactionError::ResourcesCalculationError)?;
+        .map_err(|_| TransactionError::ResourcesCalculation)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -179,8 +170,8 @@ impl InternalDeclare {
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError> {
-        if self.version > 0x8000_0000_0000_0000 {
+    ) -> Result<Option<CallInfo>, TransactionError> {
+        if self.version == 0 {
             return Ok(None);
         }
 
@@ -204,7 +195,7 @@ impl InternalDeclare {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::UnauthorizedActionOnValidate)?;
+            .map_err(|_| TransactionError::UnauthorizedActionOnValidate)?;
 
         Ok(Some(call_info))
     }
@@ -302,7 +293,7 @@ impl InternalDeclare {
 mod tests {
     use super::*;
     use felt::{felt_str, Felt};
-    use num_traits::One;
+    use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
@@ -366,11 +357,11 @@ mod tests {
         let internal_declare = InternalDeclare::new(
             fib_contract_class,
             chain_id,
-            Address(1.into()),
+            Address(Felt::one()),
             0,
-            0,
+            1,
             Vec::new(),
-            0.into(),
+            Felt::zero(),
         )
         .unwrap();
 

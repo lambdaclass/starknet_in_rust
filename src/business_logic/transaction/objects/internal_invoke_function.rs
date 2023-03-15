@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -96,9 +95,7 @@ impl InternalInvokeFunction {
             self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
-            self.nonce
-                .clone()
-                .ok_or_else(|| TransactionError::InvalidNonce("Nonce is None".to_string()))?,
+            self.nonce.clone().ok_or(TransactionError::MissingNonce)?,
             n_steps,
             self.version,
         ))
@@ -109,7 +106,7 @@ impl InternalInvokeFunction {
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError>
+    ) -> Result<Option<CallInfo>, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -136,11 +133,11 @@ impl InternalInvokeFunction {
             resources_manager,
             &self
                 .get_execution_context(general_config.validate_max_n_steps)
-                .map_err(|_| ExecutionError::InvalidTxContext)?,
+                .map_err(|_| TransactionError::InvalidTxContext)?,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::InvalidContractCall)?;
+            .map_err(|_| TransactionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }
@@ -152,7 +149,7 @@ impl InternalInvokeFunction {
         state: &mut T,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -172,7 +169,7 @@ impl InternalInvokeFunction {
             resources_manager,
             &self
                 .get_execution_context(general_config.invoke_tx_max_n_steps)
-                .map_err(|_| ExecutionError::InvalidTxContext)?,
+                .map_err(|_| TransactionError::InvalidTxContext)?,
         )
     }
 
@@ -182,7 +179,7 @@ impl InternalInvokeFunction {
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError>
+    ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         T: Default + State + StateReader + Clone,
     {
@@ -245,15 +242,13 @@ impl InternalInvokeFunction {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
-        let (fee_transfer_info, actual_fee) = self
-            .charge_fee(
-                state,
-                &concurrent_exec_info.actual_resources,
-                general_config,
-            )
-            .map_err(|e| ExecutionError::FeeCalculationError(e.to_string()))?;
+        let (fee_transfer_info, actual_fee) = self.charge_fee(
+            state,
+            &concurrent_exec_info.actual_resources,
+            general_config,
+        )?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -290,9 +285,7 @@ pub(crate) fn preprocess_invoke_function_fields(
 ) -> Result<(Felt, Vec<Felt>), TransactionError> {
     if version == 0 || version == u64::MAX {
         match nonce {
-            Some(_) => Err(TransactionError::InvalidNonce(
-                "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
-            )),
+            Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {
                 let additional_data = Vec::new();
                 let entry_point_selector_field = entry_point_selector;
@@ -306,9 +299,7 @@ pub(crate) fn preprocess_invoke_function_fields(
                 let entry_point_selector_field = Felt::zero();
                 Ok((entry_point_selector_field, additional_data))
             }
-            None => Err(TransactionError::InvalidNonce(
-                "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
-            )),
+            None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
         }
     }
 }

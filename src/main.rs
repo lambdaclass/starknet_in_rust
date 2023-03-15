@@ -197,7 +197,7 @@ fn invoke_parser(
     .map_err(ParserError::TransactionError)?;
     let _tx_info = internal_invoke
         .apply(cached_state, &StarknetGeneralConfig::default())
-        .map_err(ParserError::ExecuteFromEntryPointError)?;
+        .map_err(ParserError::TransactionError)?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,

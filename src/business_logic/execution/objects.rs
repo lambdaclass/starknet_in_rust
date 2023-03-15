@@ -1,6 +1,5 @@
-use super::error::ExecutionError;
 use crate::{
-    business_logic::state::state_cache::StorageEntry,
+    business_logic::{state::state_cache::StorageEntry, transaction::error::TransactionError},
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
@@ -112,7 +111,7 @@ impl CallInfo {
 
     /// Returns a list of StarkNet Event objects collected during the execution, sorted by the order
     /// in which they were emitted.
-    pub fn get_sorted_events(&self) -> Result<Vec<Event>, ExecutionError> {
+    pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
         let calls = self.gen_call_topology();
         let n_events = calls.iter().fold(0, |acc, c| acc + c.events.len());
 
@@ -129,14 +128,14 @@ impl CallInfo {
         let are_all_some = starknet_events.iter().all(|e| e.is_some());
 
         if !are_all_some {
-            return Err(ExecutionError::UnexpectedHolesInEventOrder);
+            return Err(TransactionError::UnexpectedHolesInEventOrder);
         }
         Ok(starknet_events.into_iter().flatten().collect())
     }
 
     /// Returns a list of StarkNet L2ToL1MessageInfo objects collected during the execution, sorted
     /// by the order in which they were sent.
-    pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, ExecutionError> {
+    pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, TransactionError> {
         let calls = self.gen_call_topology();
         let n_msgs = calls
             .iter()
@@ -157,7 +156,7 @@ impl CallInfo {
         let are_all_some = starknet_events.iter().all(|e| e.is_some());
 
         if !are_all_some {
-            return Err(ExecutionError::UnexpectedHolesL2toL1Messages);
+            return Err(TransactionError::UnexpectedHolesL2toL1Messages);
         }
         Ok(starknet_events.into_iter().flatten().collect())
     }
@@ -486,7 +485,7 @@ impl TransactionExecutionInfo {
         })
     }
 
-    pub fn get_sorted_events(&self) -> Result<Vec<Event>, ExecutionError> {
+    pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
         let calls = self.non_optional_calls();
         let mut sorted_events: Vec<Event> = Vec::new();
 
@@ -498,7 +497,7 @@ impl TransactionExecutionInfo {
         Ok(sorted_events)
     }
 
-    pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, ExecutionError> {
+    pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, TransactionError> {
         let calls = self.non_optional_calls();
         let mut sorted_messages: Vec<L2toL1MessageInfo> = Vec::new();
 
