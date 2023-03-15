@@ -1,3 +1,5 @@
+#![allow(clippy::redundant_closure)]
+
 use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{prelude::*, types::PyDict};
@@ -28,6 +30,7 @@ impl PyStarknetGeneralConfig {
         cairo_resource_fee_weights = Default::default(),
         **_kwds,
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         starknet_os_config: PyStarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
@@ -52,7 +55,7 @@ impl PyStarknetGeneralConfig {
 
     #[getter]
     fn chain_id(&self) -> PyStarknetChainId {
-        self.inner.starknet_os_config().chain_id().clone().into()
+        (*self.inner.starknet_os_config().chain_id()).into()
     }
 
     #[getter]
@@ -76,12 +79,12 @@ impl PyStarknetGeneralConfig {
 
     #[getter]
     fn invoke_tx_max_n_steps(&self) -> u64 {
-        self.inner.invoke_tx_max_n_steps().into()
+        self.inner.invoke_tx_max_n_steps()
     }
 
     #[getter]
     fn contract_storage_commitment_tree_height(&self) -> u64 {
-        self.inner._contract_storage_commitment_tree_height().into()
+        self.inner._contract_storage_commitment_tree_height()
     }
 
     #[getter]
@@ -96,7 +99,7 @@ impl PyStarknetGeneralConfig {
 
     #[getter]
     fn validate_max_n_steps(&self) -> u64 {
-        self.inner.validate_max_n_steps().into()
+        self.inner.validate_max_n_steps()
     }
 
     #[getter]
