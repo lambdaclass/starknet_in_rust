@@ -7,6 +7,7 @@ use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
     business_logic::{
         execution::{
+            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, CallType, TransactionExecutionContext},
         },
@@ -119,6 +120,7 @@ fn setup_contract(
 }
 
 fn init_pool(
+    state: &mut CachedState<InMemoryStateReader>,
     calldata: &[Felt],
     caller_address: &Address,
     address: &Address,
@@ -128,9 +130,10 @@ fn init_pool(
         Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
     >,
     general_config: &StarknetGeneralConfig,
-) -> ((ExecutionEntryPoint, Felt), TransactionExecutionContext) {
+    resources_manager: &mut ExecutionResourcesManager,
+) -> Result<CallInfo, ExecutionError> {
     // Entry point for init pool
-    let (exec_entry_point, amm_selector) = get_entry_points(
+    let (exec_entry_point, _) = get_entry_points(
         &entry_points_by_type,
         AmmEntryPoints::InitPool as usize,
         &address,
@@ -151,7 +154,13 @@ fn init_pool(
         general_config.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
-    ((exec_entry_point, amm_selector), tx_execution_context)
+
+    exec_entry_point.execute(
+        state,
+        general_config,
+        resources_manager,
+        &tx_execution_context,
+    )
 }
 
 #[test]
@@ -170,16 +179,15 @@ fn amm_init_pool_test() {
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
-
-    let ((exec_entry_point, amm_entrypoint_selector), tx_execution_context) = init_pool(
-        &calldata,
-        &caller_address,
-        &address,
-        &class_hash,
-        &entry_points_by_type,
-        &general_config,
-    );
     let mut resources_manager = ExecutionResourcesManager::default();
+
+    let amm_entrypoint_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(AmmEntryPoints::InitPool as usize)
+        .unwrap()
+        .selector()
+        .clone();
 
     let accessed_storage_keys =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
@@ -190,7 +198,7 @@ fn amm_init_pool_test() {
         contract_address: Address(1111.into()),
         entry_point_selector: Some(amm_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
-        calldata,
+        calldata: calldata.clone(),
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
@@ -199,14 +207,17 @@ fn amm_init_pool_test() {
     };
 
     assert_eq!(
-        exec_entry_point
-            .execute(
-                &mut state,
-                &general_config,
-                &mut resources_manager,
-                &tx_execution_context
-            )
-            .unwrap(),
+        init_pool(
+            &mut state,
+            &calldata,
+            &caller_address,
+            &address,
+            &class_hash,
+            &entry_points_by_type,
+            &general_config,
+            &mut resources_manager
+        )
+        .unwrap(),
         expected_call_info
     );
 
