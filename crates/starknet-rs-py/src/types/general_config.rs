@@ -123,9 +123,23 @@ impl From<PyStarknetOsConfig> for StarknetOsConfig {
     }
 }
 
+#[pymethods]
+impl PyStarknetOsConfig {
+    #[new]
+    #[pyo3(signature = (
+        chain_id = PyStarknetChainId::testnet(),
+        fee_token_address = Default::default(),
+    ))]
+    fn new(chain_id: PyStarknetChainId, fee_token_address: BigUint) -> Self {
+        let address = Address(Felt::from(fee_token_address));
+        let inner = StarknetOsConfig::new(chain_id.into(), address, 0);
+        Self { inner }
+    }
+}
+
 #[pyclass]
 #[pyo3(name = "StarknetChainId")]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct PyStarknetChainId {
     inner: StarknetChainId,
 }
@@ -133,6 +147,12 @@ pub struct PyStarknetChainId {
 impl From<StarknetChainId> for PyStarknetChainId {
     fn from(inner: StarknetChainId) -> Self {
         Self { inner }
+    }
+}
+
+impl From<PyStarknetChainId> for StarknetChainId {
+    fn from(chain_id: PyStarknetChainId) -> Self {
+        chain_id.inner
     }
 }
 
