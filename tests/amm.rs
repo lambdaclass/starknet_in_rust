@@ -490,7 +490,7 @@ fn amm_swap_test() {
         retdata: expected_return,
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys,
+        accessed_storage_keys,
         storage_read_values: [
             100.into(),
             10000.into(),
