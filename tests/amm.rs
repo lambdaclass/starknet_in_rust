@@ -24,6 +24,13 @@ use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
 };
+enum AmmEntryPoints {
+    _GetAccountTokenBalance,
+    _Swap,
+    AddDemoToken,
+    GetPoolTokenBalance,
+    InitPool,
+}
 
 fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> HashSet<[u8; 32]> {
     let variable_hash = calculate_sn_keccak(variable_name.as_bytes());
@@ -111,12 +118,40 @@ fn setup_contract(
     CachedState::new(state_reader, Some(contract_class_cache))
 }
 
-enum AmmEntryPoints {
-    _GetAccountTokenBalance,
-    _Swap,
-    AddDemoToken,
-    GetPoolTokenBalance,
-    InitPool,
+fn init_pool(
+    calldata: &[Felt],
+    caller_address: &Address,
+    address: &Address,
+    class_hash: &[u8; 32],
+    entry_points_by_type: &HashMap<
+        EntryPointType,
+        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
+    >,
+    general_config: &StarknetGeneralConfig,
+) -> ((ExecutionEntryPoint, Felt), TransactionExecutionContext) {
+    // Entry point for init pool
+    let (exec_entry_point, amm_selector) = get_entry_points(
+        &entry_points_by_type,
+        AmmEntryPoints::InitPool as usize,
+        &address,
+        &class_hash,
+        &calldata,
+        &caller_address,
+    );
+
+    //* --------------------
+    //*   Execute contract
+    //* ---------------------
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    ((exec_entry_point, amm_selector), tx_execution_context)
 }
 
 #[test]
@@ -134,29 +169,15 @@ fn amm_init_pool_test() {
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
 
-    // Entry point for init pool
-    let (exec_entry_point, amm_entrypoint_selector) = get_entry_points(
-        &entry_points_by_type,
-        AmmEntryPoints::InitPool as usize,
-        &address,
-        &class_hash,
+    let ((exec_entry_point, amm_entrypoint_selector), tx_execution_context) = init_pool(
         &calldata,
         &caller_address,
-    );
-
-    //* --------------------
-    //*   Execute contract
-    //* ---------------------
-    let general_config = StarknetGeneralConfig::default();
-    let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        &address,
+        &class_hash,
+        &entry_points_by_type,
+        &general_config,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
