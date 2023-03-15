@@ -6,6 +6,8 @@ use std::collections::HashMap;
 type PyEntryPointType = i32;
 
 #[pyclass]
+#[pyo3(name = "ContractClass")]
+#[derive(Debug)]
 pub struct PyContractClass {
     inner: ContractClass,
 }

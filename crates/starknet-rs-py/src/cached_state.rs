@@ -14,6 +14,8 @@ use starknet_rs::{
 };
 
 #[pyclass]
+#[pyo3(name = "CachedState")]
+#[derive(Debug)]
 pub struct PyCachedState {
     state: InnerCachedState<InMemoryStateReader>,
 }
@@ -46,6 +48,7 @@ impl PyCachedState {
 
     fn set_contract_class(&mut self, _address: BigUint, _contract_class: &PyContractClass) {
         // self.state.set_contract_class(class_hash, contract_class)
+        todo!()
     }
 
     fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {
