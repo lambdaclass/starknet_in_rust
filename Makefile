@@ -22,6 +22,7 @@ STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 deps-venv:
 	pip install \
 		fastecdsa \
+		typeguard==2.13.0 \
 		cairo-lang==0.10.3
 
 compile-cairo: $(CAIRO_TARGETS)
