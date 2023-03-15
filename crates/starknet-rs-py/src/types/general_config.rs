@@ -6,7 +6,14 @@ use num_bigint::BigUint;
 use pyo3::{prelude::*, types::PyDict};
 use starknet_rs::{
     business_logic::state::state_api_objects::BlockInfo,
-    definitions::general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
+    definitions::{
+        constants::{
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STARKNET_OS_CONFIG, DEFAULT_VALIDATE_MAX_N_STEPS,
+        },
+        general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
+    },
     utils::Address,
 };
 use std::collections::HashMap;
@@ -22,14 +29,14 @@ pub struct PyStarknetGeneralConfig {
 impl PyStarknetGeneralConfig {
     #[new]
     #[pyo3(signature = (
-        starknet_os_config = Default::default(),
-        contract_storage_commitment_tree_height = Default::default(),
-        global_state_commitment_tree_height = Default::default(),
-        invoke_tx_max_n_steps = Default::default(),
-        validate_max_n_steps = Default::default(),
-        sequencer_address = Default::default(),
-        cairo_resource_fee_weights = Default::default(),
-        **_kwds, // this ignores non-enabled parameters
+        starknet_os_config = DEFAULT_STARKNET_OS_CONFIG.clone().into(),
+        contract_storage_commitment_tree_height = DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+        global_state_commitment_tree_height = DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+        invoke_tx_max_n_steps = DEFAULT_INVOKE_TX_MAX_N_STEPS,
+        validate_max_n_steps = DEFAULT_VALIDATE_MAX_N_STEPS,
+        sequencer_address = DEFAULT_SEQUENCER_ADDRESS.0.to_biguint(),
+        cairo_resource_fee_weights = DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+        **_kwds, // this ignores unused parameters
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -127,12 +134,18 @@ impl From<PyStarknetOsConfig> for StarknetOsConfig {
     }
 }
 
+impl From<StarknetOsConfig> for PyStarknetOsConfig {
+    fn from(inner: StarknetOsConfig) -> Self {
+        Self { inner }
+    }
+}
+
 #[pymethods]
 impl PyStarknetOsConfig {
     #[new]
     #[pyo3(signature = (
         chain_id = PyStarknetChainId::testnet(),
-        fee_token_address = Default::default(),
+        fee_token_address = DEFAULT_STARKNET_OS_CONFIG.fee_token_address().0.to_biguint(),
     ))]
     fn new(chain_id: PyStarknetChainId, fee_token_address: BigUint) -> Self {
         let address = Address(Felt::from(fee_token_address));
