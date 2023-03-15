@@ -3,7 +3,7 @@
 use pyo3::prelude::*;
 use types::{
     block_info::PyBlockInfo,
-    general_config::{PyStarknetGeneralConfig, PyStarknetOsConfig},
+    general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig},
 };
 
 pub mod types;
@@ -12,5 +12,6 @@ pub mod types;
 pub fn starknet_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyStarknetGeneralConfig>()?;
     m.add_class::<PyStarknetOsConfig>()?;
+    m.add_class::<PyStarknetChainId>()?;
     m.add_class::<PyBlockInfo>()
 }

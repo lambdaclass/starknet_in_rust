@@ -1,8 +1,13 @@
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
 use felt::Felt;
 use getset::{CopyGetters, Getters, MutGetters};
-use num_traits::Zero;
 use std::collections::HashMap;
+
+use super::constants::{
+    DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+    DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
+    DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STARKNET_OS_CONFIG, DEFAULT_VALIDATE_MAX_N_STEPS,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum StarknetChainId {
@@ -49,11 +54,7 @@ impl StarknetOsConfig {
 
 impl Default for StarknetOsConfig {
     fn default() -> Self {
-        StarknetOsConfig {
-            chain_id: StarknetChainId::TestNet,
-            fee_token_address: Address(Felt::zero()),
-            gas_price: 0,
-        }
+        DEFAULT_STARKNET_OS_CONFIG.clone()
     }
 }
 
@@ -103,12 +104,13 @@ impl Default for StarknetGeneralConfig {
     fn default() -> Self {
         Self {
             starknet_os_config: Default::default(),
-            _contract_storage_commitment_tree_height: 0,
-            _global_state_commitment_tree_height: 0,
-            invoke_tx_max_n_steps: 0,
-            cairo_resource_fee_weights: HashMap::new(),
-            validate_max_n_steps: 0,
-            block_info: BlockInfo::empty(Address::default()),
+            _contract_storage_commitment_tree_height:
+                DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            _global_state_commitment_tree_height: DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            invoke_tx_max_n_steps: DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            cairo_resource_fee_weights: DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            validate_max_n_steps: DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info: BlockInfo::empty(DEFAULT_SEQUENCER_ADDRESS.clone()),
         }
     }
 }

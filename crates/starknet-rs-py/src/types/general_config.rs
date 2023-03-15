@@ -29,7 +29,7 @@ impl PyStarknetGeneralConfig {
         validate_max_n_steps = Default::default(),
         sequencer_address = Default::default(),
         cairo_resource_fee_weights = Default::default(),
-        **_kwds,
+        **_kwds, // this ignores non-enabled parameters
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -74,11 +74,6 @@ impl PyStarknetGeneralConfig {
     }
 
     #[getter]
-    fn min_gas_price(&self) -> u64 {
-        todo!()
-    }
-
-    #[getter]
     fn invoke_tx_max_n_steps(&self) -> u64 {
         self.inner.invoke_tx_max_n_steps()
     }
@@ -101,6 +96,11 @@ impl PyStarknetGeneralConfig {
     #[getter]
     fn validate_max_n_steps(&self) -> u64 {
         self.inner.validate_max_n_steps()
+    }
+
+    #[getter]
+    fn min_gas_price(&self) -> u64 {
+        todo!()
     }
 
     #[getter]
