@@ -7,7 +7,6 @@ use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, CallType, TransactionExecutionContext},
         },
@@ -136,7 +135,7 @@ fn execute_entry_point(
     index_selector: AmmEntryPoints,
     calldata: &[Felt],
     call_config: &mut CallConfig,
-) -> Result<CallInfo, ExecutionError> {
+) -> CallInfo {
     // Entry point for init pool
     let (exec_entry_point, _) = get_entry_points(
         call_config.entry_points_by_type,
@@ -160,29 +159,25 @@ fn execute_entry_point(
         TRANSACTION_VERSION,
     );
 
-    exec_entry_point.execute(
-        call_config.state,
-        call_config.general_config,
-        call_config.resources_manager,
-        &tx_execution_context,
-    )
+    exec_entry_point
+        .execute(
+            call_config.state,
+            call_config.general_config,
+            call_config.resources_manager,
+            &tx_execution_context,
+        )
+        .unwrap()
 }
 
-fn init_pool(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, ExecutionError> {
+fn init_pool(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
     execute_entry_point(AmmEntryPoints::InitPool, calldata, call_config)
 }
 
-fn get_pool_token_balance(
-    calldata: &[Felt],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, ExecutionError> {
+fn get_pool_token_balance(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
     execute_entry_point(AmmEntryPoints::GetPoolTokenBalance, calldata, call_config)
 }
 
-fn add_demo_token(
-    calldata: &[Felt],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, ExecutionError> {
+fn add_demo_token(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
     execute_entry_point(AmmEntryPoints::AddDemoToken, calldata, call_config)
 }
 
@@ -237,10 +232,7 @@ fn amm_init_pool_test() {
         resources_manager: &mut resources_manager,
     };
 
-    assert_eq!(
-        init_pool(&calldata, &mut call_config).unwrap(),
-        expected_call_info
-    );
+    assert_eq!(init_pool(&calldata, &mut call_config), expected_call_info);
 }
 
 #[test]
@@ -277,7 +269,7 @@ fn amm_add_demo_tokens_test() {
         resources_manager: &mut resources_manager,
     };
 
-    init_pool(&calldata, &mut call_config).unwrap();
+    init_pool(&calldata, &mut call_config);
 
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
 
@@ -313,7 +305,7 @@ fn amm_add_demo_tokens_test() {
     };
 
     assert_eq!(
-        add_demo_token(&calldata_add_demo_token, &mut call_config).unwrap(),
+        add_demo_token(&calldata_add_demo_token, &mut call_config),
         expected_call_info_add_demo_token
     );
 }
@@ -344,7 +336,7 @@ fn amm_get_pool_token_balance() {
         resources_manager: &mut resources_manager,
     };
 
-    init_pool(&calldata, &mut call_config).unwrap();
+    init_pool(&calldata, &mut call_config);
 
     let calldata_getter = [1.into()].to_vec();
 
@@ -356,7 +348,7 @@ fn amm_get_pool_token_balance() {
         .selector()
         .clone();
 
-    let result = get_pool_token_balance(&calldata_getter, &mut call_config).unwrap();
+    let result = get_pool_token_balance(&calldata_getter, &mut call_config);
 
     let accessed_storage_keys_pool_balance =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
