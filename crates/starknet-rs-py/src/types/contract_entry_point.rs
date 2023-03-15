@@ -11,10 +11,12 @@ pub struct PyContractEntryPoint {
 
 #[pymethods]
 impl PyContractEntryPoint {
+    #[getter]
     pub fn selector(&self) -> BigUint {
         self.inner.selector().to_biguint()
     }
 
+    #[getter]
     pub fn function_idx(&self) -> usize {
         self.inner.offset()
     }
