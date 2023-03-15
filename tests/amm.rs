@@ -408,3 +408,79 @@ fn amm_init_pool_test() {
 
     assert_eq!(result_add_demo_token, expected_call_info_add_demo_token);
 }
+
+#[test]
+fn amm_add_demo_tokens_test() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash.clone());
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [10000.into(), 10000.into()].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let accessed_storage_keys_add_demo_token = get_accessed_keys(
+        "account_balance",
+        vec![
+            vec![0_u8.into(), 1_u8.into()],
+            vec![0_u8.into(), 2_u8.into()],
+        ],
+    );
+
+    init_pool(
+        &mut state,
+        &calldata,
+        &caller_address,
+        &address,
+        &class_hash,
+        &entry_points_by_type,
+        &general_config,
+        &mut resources_manager,
+    )
+    .unwrap();
+
+    let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
+    let caller_address_add_demo_token = Address(0000.into());
+
+    let add_demo_token_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(AmmEntryPoints::AddDemoToken as usize)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let expected_call_info_add_demo_token = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(add_demo_token_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata_add_demo_token.clone(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: accessed_storage_keys_add_demo_token,
+        ..Default::default()
+    };
+
+    assert_eq!(
+        add_demo_token(
+            &mut state,
+            &calldata_add_demo_token,
+            &caller_address_add_demo_token,
+            &address,
+            &class_hash,
+            &entry_points_by_type,
+            &general_config,
+            &mut resources_manager
+        )
+        .unwrap(),
+        expected_call_info_add_demo_token
+    );
+}
