@@ -15,8 +15,8 @@ impl PyContractEntryPoint {
         self.inner.selector().to_biguint()
     }
 
-    pub fn function_idx(&self) -> i32 {
-        todo!()
+    pub fn function_idx(&self) -> usize {
+        self.inner.offset()
     }
 }
 
