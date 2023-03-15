@@ -22,6 +22,7 @@ STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 deps-venv:
 	pip install \
 		fastecdsa \
+		typeguard==2.13.0 \
 		cairo-lang==0.10.3
 
 compile-cairo: $(CAIRO_TARGETS)
@@ -62,6 +63,10 @@ clippy:
 test:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo test
+
+py-test:
+	. starknet-venv/bin/activate
+	cargo test -p starknet_rs --no-default-features --features embedded-python
 
 coverage:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
