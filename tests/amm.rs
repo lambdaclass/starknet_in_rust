@@ -119,7 +119,8 @@ fn setup_contract(
     CachedState::new(state_reader, Some(contract_class_cache))
 }
 
-fn init_pool(
+fn execute_entry_point(
+    index_selector: AmmEntryPoints,
     state: &mut CachedState<InMemoryStateReader>,
     calldata: &[Felt],
     caller_address: &Address,
@@ -135,7 +136,7 @@ fn init_pool(
     // Entry point for init pool
     let (exec_entry_point, _) = get_entry_points(
         &entry_points_by_type,
-        AmmEntryPoints::InitPool as usize,
+        index_selector as usize,
         &address,
         &class_hash,
         &calldata,
@@ -160,6 +161,32 @@ fn init_pool(
         general_config,
         resources_manager,
         &tx_execution_context,
+    )
+}
+
+fn init_pool(
+    state: &mut CachedState<InMemoryStateReader>,
+    calldata: &[Felt],
+    caller_address: &Address,
+    address: &Address,
+    class_hash: &[u8; 32],
+    entry_points_by_type: &HashMap<
+        EntryPointType,
+        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
+    >,
+    general_config: &StarknetGeneralConfig,
+    resources_manager: &mut ExecutionResourcesManager,
+) -> Result<CallInfo, ExecutionError> {
+    execute_entry_point(
+        AmmEntryPoints::InitPool,
+        state,
+        calldata,
+        caller_address,
+        address,
+        class_hash,
+        entry_points_by_type,
+        general_config,
+        resources_manager,
     )
 }
 
@@ -176,34 +203,16 @@ fn get_pool_token_balance(
     general_config: &StarknetGeneralConfig,
     resources_manager: &mut ExecutionResourcesManager,
 ) -> Result<CallInfo, ExecutionError> {
-    // Entry point for init pool
-    let (exec_entry_point, _) = get_entry_points(
-        &entry_points_by_type,
-        AmmEntryPoints::GetPoolTokenBalance as usize,
-        &address,
-        &class_hash,
-        &calldata,
-        &caller_address,
-    );
-
-    //* --------------------
-    //*   Execute contract
-    //* ---------------------
-    let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-
-    exec_entry_point.execute(
+    execute_entry_point(
+        AmmEntryPoints::GetPoolTokenBalance,
         state,
+        calldata,
+        caller_address,
+        address,
+        class_hash,
+        entry_points_by_type,
         general_config,
         resources_manager,
-        &tx_execution_context,
     )
 }
 
@@ -220,34 +229,16 @@ fn add_demo_token(
     general_config: &StarknetGeneralConfig,
     resources_manager: &mut ExecutionResourcesManager,
 ) -> Result<CallInfo, ExecutionError> {
-    // Entry point for init pool
-    let (exec_entry_point, _) = get_entry_points(
-        &entry_points_by_type,
-        AmmEntryPoints::AddDemoToken as usize,
-        &address,
-        &class_hash,
-        &calldata,
-        &caller_address,
-    );
-
-    //* --------------------
-    //*   Execute contract
-    //* ---------------------
-    let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-
-    exec_entry_point.execute(
+    execute_entry_point(
+        AmmEntryPoints::AddDemoToken,
         state,
+        calldata,
+        caller_address,
+        address,
+        class_hash,
+        entry_points_by_type,
         general_config,
         resources_manager,
-        &tx_execution_context,
     )
 }
 
