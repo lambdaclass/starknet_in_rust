@@ -27,7 +27,7 @@ use std::{
 };
 enum AmmEntryPoints {
     _GetAccountTokenBalance,
-    _Swap,
+    Swap,
     AddDemoToken,
     GetPoolTokenBalance,
     InitPool,
@@ -191,7 +191,7 @@ fn add_demo_token(
 
 // Swap function to execute swap between two tokens
 fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::_Swap, calldata, call_config)
+    execute_entry_point(AmmEntryPoints::Swap, calldata, call_config)
 }
 #[test]
 fn amm_init_pool_test() {
@@ -310,16 +310,6 @@ fn amm_add_demo_tokens_test() {
         ..Default::default()
     };
 
-    let mut call_config = CallConfig {
-        state: &mut state,
-        caller_address: &caller_address,
-        address: &address,
-        class_hash: &class_hash,
-        entry_points_by_type: &entry_points_by_type,
-        general_config: &general_config,
-        resources_manager: &mut resources_manager,
-    };
-
     assert_eq!(
         add_demo_token(&calldata_add_demo_token, &mut call_config).unwrap(),
         expected_call_info_add_demo_token
@@ -424,18 +414,6 @@ fn amm_swap_test() {
 
     //add tokens to user
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
-
-    //add tokens to user
-    let mut call_config = CallConfig {
-        state: &mut state,
-        caller_address: &caller_address,
-        address: &address,
-        class_hash: &class_hash,
-        entry_points_by_type: &entry_points_by_type,
-        general_config: &general_config,
-        resources_manager: &mut resources_manager,
-    };
-
     add_demo_token(&calldata_add_demo_token, &mut call_config).unwrap();
 
     //swap tokens. Token 1 with 10 in amount
@@ -443,16 +421,6 @@ fn amm_swap_test() {
 
     //expected return value 9
     let expected_return = [9.into()].to_vec();
-
-    let mut call_config = CallConfig {
-        state: &mut state,
-        caller_address: &caller_address,
-        address: &address,
-        class_hash: &class_hash,
-        entry_points_by_type: &entry_points_by_type,
-        general_config: &general_config,
-        resources_manager: &mut resources_manager,
-    };
 
     let result = swap(&calldata_swap, &mut call_config);
 
@@ -476,7 +444,7 @@ fn amm_swap_test() {
     let swap_selector = entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(AmmEntryPoints::_Swap as usize)
+        .get(AmmEntryPoints::Swap as usize)
         .unwrap()
         .selector()
         .clone();
@@ -586,6 +554,37 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
+
+    assert!(swap(&calldata, &mut call_config).is_err());
+}
+
+#[test]
+fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [Felt::new(1), Felt::new(100)].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    init_pool(&[Felt::new(1000), Felt::new(1000)], &mut call_config).unwrap();
+    add_demo_token(&[Felt::new(10), Felt::new(10)], &mut call_config).unwrap();
 
     assert!(swap(&calldata, &mut call_config).is_err());
 }
