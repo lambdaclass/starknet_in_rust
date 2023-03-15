@@ -47,6 +47,16 @@ impl StarknetOsConfig {
     }
 }
 
+impl Default for StarknetOsConfig {
+    fn default() -> Self {
+        StarknetOsConfig {
+            chain_id: StarknetChainId::TestNet,
+            fee_token_address: Address(Felt::zero()),
+            gas_price: 0,
+        }
+    }
+}
+
 #[derive(Clone, Debug, CopyGetters, Getters, MutGetters)]
 pub struct StarknetGeneralConfig {
     #[getset(get = "pub", get_mut = "pub")]
@@ -90,11 +100,7 @@ impl StarknetGeneralConfig {
 impl Default for StarknetGeneralConfig {
     fn default() -> Self {
         Self {
-            starknet_os_config: StarknetOsConfig {
-                chain_id: StarknetChainId::TestNet,
-                fee_token_address: Address(Felt::zero()),
-                gas_price: 0,
-            },
+            starknet_os_config: Default::default(),
             _contract_storage_commitment_tree_height: 0,
             _global_state_commitment_tree_height: 0,
             invoke_tx_max_n_steps: 0,

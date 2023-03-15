@@ -1,8 +1,12 @@
-use std::collections::HashMap;
-
+use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::prelude::*;
-use starknet_rs::definitions::general_config::{StarknetChainId, StarknetGeneralConfig};
+use starknet_rs::{
+    business_logic::state::state_api_objects::BlockInfo,
+    definitions::general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
+    utils::Address,
+};
+use std::collections::HashMap;
 
 #[pyclass]
 #[pyo3(name = "StarknetGeneralConfig")]
@@ -14,8 +18,40 @@ pub struct PyStarknetGeneralConfig {
 #[pymethods]
 impl PyStarknetGeneralConfig {
     #[new]
-    fn new() -> Self {
-        Default::default()
+    #[pyo3(signature = (
+        starknet_os_config = Default::default(),
+        contract_storage_commitment_tree_height = Default::default(),
+        global_state_commitment_tree_height = Default::default(),
+        invoke_tx_max_n_steps = Default::default(),
+        _validate_max_n_steps = Default::default(),
+        _min_gas_price = Default::default(),
+        sequencer_address = Default::default(),
+        _tx_commitment_tree_height = Default::default(),
+        _tx_version = Default::default(),
+        _event_commitment_tree_height = Default::default(),
+        _cairo_resource_fee_weights = Default::default()
+    ))]
+    fn new(
+        starknet_os_config: PyStarknetOsConfig,
+        contract_storage_commitment_tree_height: u64,
+        global_state_commitment_tree_height: u64,
+        invoke_tx_max_n_steps: u64,
+        _validate_max_n_steps: u64,
+        _min_gas_price: u64,
+        sequencer_address: BigUint,
+        _tx_commitment_tree_height: u64,
+        _tx_version: u64,
+        _event_commitment_tree_height: u64,
+        _cairo_resource_fee_weights: HashMap<String, f64>,
+    ) -> Self {
+        let inner = StarknetGeneralConfig::new(
+            starknet_os_config.into(),
+            contract_storage_commitment_tree_height,
+            global_state_commitment_tree_height,
+            invoke_tx_max_n_steps,
+            BlockInfo::empty(Address(Felt::from(sequencer_address))),
+        );
+        Self { inner }
     }
 
     #[getter]
@@ -75,6 +111,19 @@ impl PyStarknetGeneralConfig {
     #[getter]
     fn tx_commitment_tree_height(&self) -> u64 {
         todo!()
+    }
+}
+
+#[pyclass]
+#[pyo3(name = "StarknetOsConfig")]
+#[derive(Debug, Clone, Default)]
+pub struct PyStarknetOsConfig {
+    inner: StarknetOsConfig,
+}
+
+impl From<PyStarknetOsConfig> for StarknetOsConfig {
+    fn from(config: PyStarknetOsConfig) -> Self {
+        config.inner
     }
 }
 
