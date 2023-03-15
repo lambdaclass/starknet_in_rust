@@ -9,10 +9,11 @@ use felt::Felt;
 use getset::MutGetters;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, Default, MutGetters)]
+#[derive(Clone, Debug, Default, MutGetters, PartialEq)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
+    #[getset(get_mut = "pub")]
     pub(crate) class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
 
@@ -47,6 +48,7 @@ impl StateReader for InMemoryStateReader {
         contract_class.validate()?;
         Ok(contract_class)
     }
+
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
         Ok(&self.get_contract_state(contract_address)?.contract_hash)
     }

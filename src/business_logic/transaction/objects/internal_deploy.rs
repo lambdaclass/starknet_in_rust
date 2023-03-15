@@ -1,7 +1,6 @@
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -27,16 +26,13 @@ pub struct InternalDeploy {
     pub(crate) hash_value: Felt,
     pub(crate) version: u64,
     pub(crate) contract_address: Address,
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) contract_address_salt: Address,
+    pub(crate) _contract_address_salt: Address,
     pub(crate) contract_hash: [u8; 32],
     pub(crate) constructor_calldata: Vec<Felt>,
     pub(crate) tx_type: TransactionType,
 }
 
 impl InternalDeploy {
-    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_address_salt: Address,
         contract_class: ContractClass,
@@ -57,7 +53,7 @@ impl InternalDeploy {
 
         let hash_value = calculate_deploy_transaction_hash(
             version,
-            contract_address.clone(),
+            &contract_address,
             &constructor_calldata,
             chain_id,
         )?;
@@ -66,13 +62,15 @@ impl InternalDeploy {
             hash_value,
             version,
             contract_address,
-            contract_address_salt,
+            _contract_address_salt: contract_address_salt,
             contract_hash,
             constructor_calldata,
             tx_type: TransactionType::Deploy,
         })
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn class_hash(&self) -> [u8; 32] {
         self.contract_hash
     }
@@ -80,7 +78,7 @@ impl InternalDeploy {
     pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        _general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: [u8; 32] = self.contract_hash;
@@ -125,11 +123,13 @@ impl InternalDeploy {
         )
     }
 
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn invoke_constructor<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let entry_point_selector = felt_str!(
             "1159040026212278395030414237414753050475174923702621880048416706425641521556"
         );
@@ -181,7 +181,7 @@ impl InternalDeploy {
     }
 
     /// Calculates actual fee used by the transaction using the execution
-    /// info returned by apply(), then updates the transaction execution info with the data of the fee.  
+    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,

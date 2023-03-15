@@ -1,10 +1,16 @@
 [package]
-name = "starknet_rs"
+name = "starknet-rs-py"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
+required-features = ["extension-module"]
+
+[features]
+default = ["extension-module"]
+embedded-python = ["pyo3/auto-initialize"]
+extension-module = ["pyo3/extension-module"]
 
 [dependencies]
 num-bigint = "0.4.3"
@@ -14,7 +20,7 @@ git = "https://github.com/lambdaclass/cairo-rs.git"
 rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22"
 
 [dependencies.pyo3]
-features = ["extension-module", "num-bigint"]
+features = ["num-bigint"]
 version = "0.18.1"
 
 [dependencies.starknet-rs]

@@ -1931,6 +1931,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "starknet-rs-py"
+version = "0.1.0"
+dependencies = [
+ "cairo-felt",
+ "num-bigint",
+ "pyo3",
+ "starknet-rs",
+]
+
+[[package]]
 name = "starknet_api"
 version = "0.1.0"
 source = "git+https://github.com/lambdaclass/starknet-api?branch=main#99e02acf3dafc268b833d648f8bb51237eae61d2"
@@ -1944,16 +1954,6 @@ dependencies = [
  "starknet-crypto",
  "thiserror",
  "web3",
-]
-
-[[package]]
-name = "starknet_rs"
-version = "0.1.0"
-dependencies = [
- "cairo-felt",
- "num-bigint",
- "pyo3",
- "starknet-rs",
 ]
 
 [[package]]
