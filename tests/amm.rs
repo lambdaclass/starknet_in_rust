@@ -533,3 +533,31 @@ fn amm_init_pool_should_fail_with_amount_out_of_bound() {
 
     assert!(init_pool(&calldata, &mut call_config).is_err());
 }
+
+#[test]
+fn amm_swap_should_fail_with_unexistent_token() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [Felt::zero(), Felt::new(10)].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    assert!(swap(&calldata, &mut call_config).is_err());
+}
