@@ -484,3 +484,75 @@ fn amm_add_demo_tokens_test() {
         expected_call_info_add_demo_token
     );
 }
+
+#[test]
+fn amm_get_pool_token_balance() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash.clone());
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [10000.into(), 10000.into()].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    init_pool(
+        &mut state,
+        &calldata,
+        &caller_address,
+        &address,
+        &class_hash,
+        &entry_points_by_type,
+        &general_config,
+        &mut resources_manager,
+    )
+    .unwrap();
+
+    let calldata_getter = [1.into()].to_vec();
+    let caller_address_getter = Address(0000.into());
+
+    let get_pool_balance_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(AmmEntryPoints::GetPoolTokenBalance as usize)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let result = get_pool_token_balance(
+        &mut state,
+        &calldata_getter,
+        &caller_address_getter,
+        &address,
+        &class_hash,
+        &entry_points_by_type,
+        &general_config,
+        &mut resources_manager,
+    )
+    .unwrap();
+
+    let accessed_storage_keys_pool_balance =
+        get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
+
+    let expected_call_info_getter = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(get_pool_balance_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata_getter,
+        retdata: [10000.into()].to_vec(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: accessed_storage_keys_pool_balance,
+        storage_read_values: [10000.into()].to_vec(),
+        ..Default::default()
+    };
+
+    assert_eq!(result, expected_call_info_getter);
+}
