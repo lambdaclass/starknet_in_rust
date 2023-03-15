@@ -111,6 +111,14 @@ fn setup_contract(
     CachedState::new(state_reader, Some(contract_class_cache))
 }
 
+enum AmmEntryPoints {
+    _GetAccountTokenBalance,
+    _Swap,
+    AddDemoToken,
+    GetPoolTokenBalance,
+    InitPool,
+}
+
 #[test]
 fn amm_init_pool_test() {
     //  ------------ contract data --------------------
@@ -127,9 +135,10 @@ fn amm_init_pool_test() {
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
 
+    // Entry point for init pool
     let (exec_entry_point, amm_entrypoint_selector) = get_entry_points(
         &entry_points_by_type,
-        4,
+        AmmEntryPoints::InitPool as usize,
         &address,
         &class_hash,
         &calldata,
@@ -189,7 +198,7 @@ fn amm_init_pool_test() {
 
     let (exec_entry_point_getter, get_pool_balance_selector) = get_entry_points(
         &entry_points_by_type,
-        3,
+        AmmEntryPoints::GetPoolTokenBalance as usize,
         &address,
         &class_hash,
         &calldata_getter,
@@ -246,7 +255,7 @@ fn amm_init_pool_test() {
 
     let (exec_entry_point_add_demo_token, add_demo_token_selector) = get_entry_points(
         &entry_points_by_type,
-        2,
+        AmmEntryPoints::AddDemoToken as usize,
         &address,
         &class_hash,
         &calldata_add_demo_token,
