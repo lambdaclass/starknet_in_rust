@@ -19,7 +19,6 @@ use crate::{
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
-    starknet_storage::errors::storage_errors::StorageError,
     utils::*,
 };
 use cairo_rs::{
@@ -525,19 +524,10 @@ where
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
-        Ok(
-            match self.starknet_storage_state.read(&felt_to_hash(&address.0)) {
-                Ok(x) => x.clone(),
-                Err(
-                    StateError::Storage(StorageError::ErrorFetchingData)
-                    | StateError::EmptyKeyInStorage
-                    | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_)
-                    | StateError::NoneContractState(_),
-                ) => Felt::zero(),
-                Err(e) => return Err(e.into()),
-            },
-        )
+        Ok(self
+            .starknet_storage_state
+            .read(&felt_to_hash(&address.0))
+            .cloned()?)
     }
 
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {

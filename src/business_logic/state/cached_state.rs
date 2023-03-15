@@ -5,10 +5,12 @@ use super::{
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
+    starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address},
 };
 use felt::Felt;
 use getset::{Getters, MutGetters};
+use num_traits::Zero;
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
@@ -78,10 +80,14 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
-            let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
+            let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
+                Ok(x) => *x,
+                Err(StateError::NoneContractState(_)) => [0; 32],
+                Err(e) => return Err(e),
+            };
             self.cache
                 .class_hash_initial_values
-                .insert(contract_address.clone(), *class_hash);
+                .insert(contract_address.clone(), class_hash);
         }
 
         self.cache
@@ -103,10 +109,20 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
-            let value = self.state_reader.get_storage_at(storage_entry)?;
+            let value = match self.state_reader.get_storage_at(storage_entry) {
+                Ok(x) => x.clone(),
+                Err(
+                    StateError::Storage(StorageError::ErrorFetchingData)
+                    | StateError::EmptyKeyInStorage
+                    | StateError::NoneStoragLeaf(_)
+                    | StateError::NoneStorage(_)
+                    | StateError::NoneContractState(_),
+                ) => Felt::zero(),
+                Err(e) => return Err(e),
+            };
             self.cache
                 .storage_initial_values
-                .insert(storage_entry.clone(), value.clone());
+                .insert(storage_entry.clone(), value);
         }
 
         self.cache
@@ -149,10 +165,14 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             ));
         }
 
-        if self.get_class_hash_at(&deploy_contract_address).is_ok() {
-            return Err(StateError::ContractAddressUnavailable(
-                deploy_contract_address.clone(),
-            ));
+        match self.get_class_hash_at(&deploy_contract_address) {
+            Ok(x) if x == &[0; 32] => {}
+            Ok(_) => {
+                return Err(StateError::ContractAddressUnavailable(
+                    deploy_contract_address.clone(),
+                ))
+            }
+            _ => {}
         }
 
         self.cache
@@ -258,7 +278,10 @@ mod tests {
         assert_eq!(cached_state.get_storage_at(&storage_entry), Ok(&value));
 
         let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
-        assert!(cached_state.get_storage_at(&storage_entry_2).is_err());
+        assert_eq!(
+            cached_state.get_storage_at(&storage_entry_2).unwrap(),
+            &Felt::zero(),
+        );
     }
 
     #[test]

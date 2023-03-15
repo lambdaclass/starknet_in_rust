@@ -196,8 +196,7 @@ impl InternalDeployAccount {
             return Ok(());
         }
 
-        let contract_address = &self.contract_address;
-        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
+        let current_nonce = state.get_nonce_at(&self.contract_address)?.to_owned();
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -205,7 +204,7 @@ impl InternalDeployAccount {
             ));
         }
 
-        state.increment_nonce(contract_address)?;
+        state.increment_nonce(&self.contract_address)?;
 
         Ok(())
     }

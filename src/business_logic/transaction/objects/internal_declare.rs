@@ -93,13 +93,6 @@ impl InternalDeclare {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        // no need to check if its lesser than 0 because it is an usize
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "The sender_address field in Declare transactions of version 0, sender should be 1"
-                    .to_string(),
-            ));
-        }
         if self.version.is_zero() {
             if !self.max_fee.is_zero() {
                 return Err(TransactionError::StarknetError(
@@ -177,7 +170,7 @@ impl InternalDeclare {
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
+        if self.version == 0 {
             return Ok(None);
         }
 
@@ -298,7 +291,7 @@ impl InternalDeclare {
 #[cfg(test)]
 mod tests {
     use felt::{felt_str, Felt};
-    use num_traits::One;
+    use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
@@ -363,11 +356,11 @@ mod tests {
         let internal_declare = InternalDeclare::new(
             fib_contract_class,
             chain_id,
-            Address(1.into()),
+            Address(Felt::one()),
             0,
-            0,
+            1,
             Vec::new(),
-            0.into(),
+            Felt::zero(),
         )
         .unwrap();
 
