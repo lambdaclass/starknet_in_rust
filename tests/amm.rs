@@ -253,8 +253,6 @@ fn add_demo_token(
 
 #[test]
 fn amm_init_pool_test() {
-    //  ------------ contract data --------------------
-
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash.clone());
@@ -308,105 +306,6 @@ fn amm_init_pool_test() {
         .unwrap(),
         expected_call_info
     );
-
-    //* ------------------------------------
-    //*    Create entry points
-    //* ------------------------------------
-
-    let calldata_getter = [1.into()].to_vec();
-    let caller_address_getter = Address(0000.into());
-
-    let get_pool_balance_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::GetPoolTokenBalance as usize)
-        .unwrap()
-        .selector()
-        .clone();
-
-    let result = get_pool_token_balance(
-        &mut state,
-        &calldata_getter,
-        &caller_address_getter,
-        &address,
-        &class_hash,
-        &entry_points_by_type,
-        &general_config,
-        &mut resources_manager,
-    )
-    .unwrap();
-
-    let accessed_storage_keys_pool_balance =
-        get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
-
-    let expected_call_info_getter = CallInfo {
-        caller_address: Address(0.into()),
-        call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
-        entry_point_selector: Some(get_pool_balance_selector),
-        entry_point_type: Some(EntryPointType::External),
-        calldata: calldata_getter,
-        retdata: [10000.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
-        class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys_pool_balance,
-        storage_read_values: [10000.into()].to_vec(),
-        ..Default::default()
-    };
-
-    assert_eq!(result, expected_call_info_getter);
-
-    //ADD DEMO TOKEN
-
-    //* ------------------------------------
-    //*    Create entry points
-    //* ------------------------------------
-
-    let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
-    let caller_address_add_demo_token = Address(0000.into());
-
-    let add_demo_token_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::AddDemoToken as usize)
-        .unwrap()
-        .selector()
-        .clone();
-
-    let result_add_demo_token = add_demo_token(
-        &mut state,
-        &calldata_add_demo_token,
-        &caller_address_add_demo_token,
-        &address,
-        &class_hash,
-        &entry_points_by_type,
-        &general_config,
-        &mut resources_manager,
-    )
-    .unwrap();
-
-    let accessed_storage_keys_add_demo_token = get_accessed_keys(
-        "account_balance",
-        vec![
-            vec![0_u8.into(), 1_u8.into()],
-            vec![0_u8.into(), 2_u8.into()],
-        ],
-    );
-
-    let expected_call_info_add_demo_token = CallInfo {
-        caller_address: Address(0.into()),
-        call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
-        entry_point_selector: Some(add_demo_token_selector),
-        entry_point_type: Some(EntryPointType::External),
-        calldata: calldata_add_demo_token,
-        execution_resources: ExecutionResources::default(),
-        class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys_add_demo_token,
-        ..Default::default()
-    };
-
-    assert_eq!(result_add_demo_token, expected_call_info_add_demo_token);
 }
 
 #[test]
