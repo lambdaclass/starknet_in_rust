@@ -306,6 +306,7 @@ fn amm_add_demo_tokens_test() {
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_add_demo_token,
+        storage_read_values: vec![Felt::zero(), Felt::zero()],
         ..Default::default()
     };
 
