@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::definitions::general_config::{StarknetChainId, StarknetGeneralConfig};
@@ -19,6 +21,60 @@ impl PyStarknetGeneralConfig {
     #[getter]
     fn chain_id(&self) -> PyStarknetChainId {
         self.inner.starknet_os_config().chain_id().clone().into()
+    }
+
+    #[getter]
+    fn fee_token_address(&self) -> BigUint {
+        self.inner
+            .starknet_os_config()
+            .fee_token_address()
+            .0
+            .to_biguint()
+    }
+
+    #[getter]
+    fn sequencer_address(&self) -> BigUint {
+        self.inner.block_info().sequencer_address.0.to_biguint()
+    }
+
+    #[getter]
+    fn min_gas_price(&self) -> u64 {
+        todo!()
+    }
+
+    #[getter]
+    fn invoke_tx_max_n_steps(&self) -> u64 {
+        self.inner.invoke_tx_max_n_steps().into()
+    }
+
+    #[getter]
+    fn contract_storage_commitment_tree_height(&self) -> u64 {
+        self.inner._contract_storage_commitment_tree_height().into()
+    }
+
+    #[getter]
+    fn global_state_commitment_tree_height(&self) -> u64 {
+        self.inner._global_state_commitment_tree_height()
+    }
+
+    #[getter]
+    fn cairo_resource_fee_weights(&self) -> HashMap<String, f64> {
+        self.inner.cairo_resource_fee_weights().clone()
+    }
+
+    #[getter]
+    fn validate_max_n_steps(&self) -> u64 {
+        self.inner.validate_max_n_steps().into()
+    }
+
+    #[getter]
+    fn event_commitment_tree_height(&self) -> u64 {
+        todo!()
+    }
+
+    #[getter]
+    fn tx_commitment_tree_height(&self) -> u64 {
+        todo!()
     }
 }
 

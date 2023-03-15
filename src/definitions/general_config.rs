@@ -51,11 +51,15 @@ impl StarknetOsConfig {
 pub struct StarknetGeneralConfig {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) starknet_os_config: StarknetOsConfig,
+    #[get_copy = "pub"]
     pub(crate) _contract_storage_commitment_tree_height: u64,
+    #[get_copy = "pub"]
     _global_state_commitment_tree_height: u64,
+    #[get = "pub"]
     pub(crate) cairo_resource_fee_weights: HashMap<String, f64>,
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
+    #[get_copy = "pub"]
     pub(crate) validate_max_n_steps: u64,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) block_info: BlockInfo,

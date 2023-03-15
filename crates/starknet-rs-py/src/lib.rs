@@ -7,6 +7,6 @@ pub mod types;
 
 #[pymodule]
 pub fn starknet_rs(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<PyBlockInfo>()?;
-    m.add_class::<PyStarknetGeneralConfig>()
+    m.add_class::<PyStarknetGeneralConfig>()?;
+    m.add_class::<PyBlockInfo>()
 }
