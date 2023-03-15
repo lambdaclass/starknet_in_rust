@@ -17,7 +17,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -89,39 +89,45 @@ fn get_entry_points(
     )
 }
 
-#[test]
-fn amm_init_pool_test() {
-    // ---------------------------------------------------------
-    //  Create program and entry point types for contract class
-    // ---------------------------------------------------------
-
-    let path = PathBuf::from("starknet_programs/amm.json");
+fn setup_contract(
+    path: &str,
+    address: &Address,
+    class_hash: [u8; 32],
+) -> (
+    CachedState<InMemoryStateReader>,
+    HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+) {
+    // Create program and entry point types for contract class
+    let path = PathBuf::from(path);
     let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    //* --------------------------------------------
-    //*    Create state reader with class hash data
-    //* --------------------------------------------
-
+    // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-
-    //  ------------ contract data --------------------
-
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
-
+    let contract_state = ContractState::new(class_hash.clone(), 0.into(), HashMap::new());
     contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
     state_reader
         .contract_states_mut()
         .insert(address.clone(), contract_state);
 
-    //* ---------------------------------------
-    //*    Create state with previous data
-    //* ---------------------------------------
+    // Create state with previous data
+    (
+        CachedState::new(state_reader, Some(contract_class_cache)),
+        entry_points_by_type,
+    )
+}
 
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+#[test]
+fn amm_init_pool_test() {
+    //  ------------ contract data --------------------
+
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state: CachedState<InMemoryStateReader>;
+    let entry_points_by_type;
+    (state, entry_points_by_type) =
+        setup_contract("starknet_programs/amm.json", &address, class_hash);
 
     //* ------------------------------------
     let calldata = [10000.into(), 10000.into()].to_vec();
