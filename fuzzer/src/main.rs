@@ -28,6 +28,8 @@ use std::{
 
 use std::fs;
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 
 fn main() {
@@ -203,6 +205,7 @@ fn main() {
         );
 
         });
+        thread::sleep(Duration::from_secs(1));
     }
 }
 
