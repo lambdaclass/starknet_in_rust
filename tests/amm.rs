@@ -163,6 +163,49 @@ fn init_pool(
     )
 }
 
+fn get_pool_token_balance(
+    state: &mut CachedState<InMemoryStateReader>,
+    calldata: &[Felt],
+    caller_address: &Address,
+    address: &Address,
+    class_hash: &[u8; 32],
+    entry_points_by_type: &HashMap<
+        EntryPointType,
+        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
+    >,
+    general_config: &StarknetGeneralConfig,
+    resources_manager: &mut ExecutionResourcesManager,
+) -> Result<CallInfo, ExecutionError> {
+    // Entry point for init pool
+    let (exec_entry_point, _) = get_entry_points(
+        &entry_points_by_type,
+        AmmEntryPoints::GetPoolTokenBalance as usize,
+        &address,
+        &class_hash,
+        &calldata,
+        &caller_address,
+    );
+
+    //* --------------------
+    //*   Execute contract
+    //* ---------------------
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+
+    exec_entry_point.execute(
+        state,
+        general_config,
+        resources_manager,
+        &tx_execution_context,
+    )
+}
 #[test]
 fn amm_init_pool_test() {
     //  ------------ contract data --------------------
@@ -228,33 +271,25 @@ fn amm_init_pool_test() {
     let calldata_getter = [1.into()].to_vec();
     let caller_address_getter = Address(0000.into());
 
-    let (exec_entry_point_getter, get_pool_balance_selector) = get_entry_points(
-        &entry_points_by_type,
-        AmmEntryPoints::GetPoolTokenBalance as usize,
-        &address,
-        &class_hash,
+    let get_pool_balance_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(AmmEntryPoints::GetPoolTokenBalance as usize)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let result = get_pool_token_balance(
+        &mut state,
         &calldata_getter,
         &caller_address_getter,
-    );
-
-    let tx_execution_context_getter = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt::zero(),
-        Vec::new(),
-        0,
-        11.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-
-    let result = exec_entry_point_getter
-        .execute(
-            &mut state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context_getter,
-        )
-        .unwrap();
+        &address,
+        &class_hash,
+        &entry_points_by_type,
+        &general_config,
+        &mut resources_manager,
+    )
+    .unwrap();
 
     let accessed_storage_keys_pool_balance =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
