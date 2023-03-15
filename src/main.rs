@@ -106,13 +106,9 @@ fn declare_parser(
     cached_state: &mut CachedState<InMemoryStateReader>,
     args: &DeclareArgs,
 ) -> Result<(Felt, Felt), ParserError> {
-    let contract_class =
-        ContractClass::try_from(&args.contract).map_err(ParserError::OpenFileError)?;
-    let class_hash =
-        compute_class_hash(&contract_class).map_err(ParserError::ComputeClassHashError)?;
-    cached_state
-        .set_contract_class(&felt_to_hash(&class_hash), &contract_class)
-        .map_err(ParserError::StateError)?;
+    let contract_class = ContractClass::try_from(&args.contract)?;
+    let class_hash = compute_class_hash(&contract_class)?;
+    cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
 
     let tx_hash = calculate_declare_transaction_hash(
         &contract_class,
@@ -121,8 +117,7 @@ fn declare_parser(
         0,
         DECLARE_VERSION,
         Felt::zero(),
-    )
-    .map_err(ParserError::ComputeTransactionHashError)?;
+    )?;
     Ok((class_hash, tx_hash))
 }
 
@@ -137,22 +132,18 @@ fn deploy_parser(
     let address = calculate_contract_address(
         &Address(args.salt.into()),
         &Felt::from_str_radix(&args.class_hash[2..], 16)
-            .map_err(|_| ParserError::ParseFeltError(args.class_hash.clone()))?,
+            .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
         &constructor_calldata,
         Address(0.into()),
-    )
-    .map_err(ParserError::ComputeAddressError)?;
+    )?;
 
-    cached_state
-        .deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))
-        .map_err(ParserError::StateError)?;
+    cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
     let tx_hash = calculate_deploy_transaction_hash(
         0,
         &Address(address.clone()),
         &constructor_calldata,
         Felt::zero(),
-    )
-    .map_err(ParserError::ComputeTransactionHashError)?;
+    )?;
     Ok((address, tx_hash))
 }
 
@@ -162,16 +153,16 @@ fn invoke_parser(
 ) -> Result<(Felt, Felt), ParserError> {
     let contract_address = Address(
         Felt::from_str_radix(&args.address[2..], 16)
-            .map_err(|_| ParserError::ParseFeltError(args.address.clone()))?,
+            .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
-    let class_hash = *cached_state.get_class_hash_at(&contract_address).unwrap();
-    let contract_class = cached_state.get_contract_class(&class_hash).unwrap();
+    let class_hash = *cached_state.get_class_hash_at(&contract_address)?;
+    let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
 
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
-        .ok_or_else(|| ParserError::FunctionEntryPointError(args.function.clone()))?;
+        .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;
 
     let entrypoint_selector = entry_points_by_type
         .get(entry_point_type)
@@ -193,11 +184,8 @@ fn invoke_parser(
         vec![],
         Felt::zero(),
         Some(Felt::zero()),
-    )
-    .map_err(ParserError::TransactionError)?;
-    let _tx_info = internal_invoke
-        .apply(cached_state, &StarknetGeneralConfig::default())
-        .map_err(ParserError::TransactionError)?;
+    )?;
+    let _tx_info = internal_invoke.apply(cached_state, &StarknetGeneralConfig::default())?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
@@ -208,8 +196,7 @@ fn invoke_parser(
         0,
         Felt::zero(),
         &[],
-    )
-    .map_err(ParserError::ComputeTransactionHashError)?;
+    )?;
 
     Ok((contract_address.0, tx_hash))
 }
@@ -220,15 +207,15 @@ fn call_parser(
 ) -> Result<Vec<Felt>, ParserError> {
     let contract_address = Address(
         Felt::from_str_radix(&args.address[2..], 16)
-            .map_err(|_| ParserError::ParseFeltError(args.address.clone()))?,
+            .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
-    let class_hash = *cached_state.get_class_hash_at(&contract_address).unwrap();
-    let contract_class = cached_state.get_contract_class(&class_hash).unwrap();
+    let class_hash = *cached_state.get_class_hash_at(&contract_address)?;
+    let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
-        .ok_or_else(|| ParserError::FunctionEntryPointError(args.function.clone()))?;
+        .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;
 
     let entrypoint_selector = entry_points_by_type
         .get(entry_point_type)
@@ -251,21 +238,17 @@ fn call_parser(
         None,
         None,
     );
-    let call_info = execution_entry_point
-        .execute(
-            cached_state,
-            &StarknetGeneralConfig::default(),
-            &mut ExecutionResourcesManager::default(),
-            &TransactionExecutionContext::default(),
-        )
-        .unwrap();
+    let call_info = execution_entry_point.execute(
+        cached_state,
+        &StarknetGeneralConfig::default(),
+        &mut ExecutionResourcesManager::default(),
+        &TransactionExecutionContext::default(),
+    )?;
     Ok(call_info.retdata)
 }
 
 async fn devnet_parser(devnet_args: &DevnetArgs) -> Result<(), ParserError> {
-    start_devnet(devnet_args.port)
-        .await
-        .map_err(ParserError::ServerError)?;
+    start_devnet(devnet_args.port).await?;
     Ok(())
 }
 

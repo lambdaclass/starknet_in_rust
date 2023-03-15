@@ -11,25 +11,21 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum ParserError {
     #[error(transparent)]
-    OpenFileError(std::io::Error),
+    Io(#[from] std::io::Error),
     #[error(transparent)]
-    ComputeClassHashError(ContractAddressError),
+    ContractAddress(#[from] ContractAddressError),
     #[error(transparent)]
-    ComputeAddressError(SyscallHandlerError),
-    #[error(transparent)]
-    ComputeTransactionHashError(SyscallHandlerError),
+    Syscall(#[from] SyscallHandlerError),
     #[error("Failed to convert {0} to Felt")]
-    ParseFeltError(String),
+    ParseFelt(String),
     #[error("Failed to get entry point for function `{0}`")]
-    FunctionEntryPointError(String),
+    FunctionEntryPoint(String),
     #[error("Failed to get entry point selector by type`{0:?}`")]
     EntryPointType(EntryPointType),
     #[error("Failed to get entry point at array position `{0}`")]
     EntryPointIndex(usize),
     #[error(transparent)]
-    ServerError(std::io::Error),
+    State(#[from] StateError),
     #[error(transparent)]
-    StateError(StateError),
-    #[error(transparent)]
-    TransactionError(TransactionError),
+    Transaction(#[from] TransactionError),
 }
