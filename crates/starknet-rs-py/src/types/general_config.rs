@@ -221,12 +221,16 @@ mod tests {
             let general_config_cls = <PyStarknetGeneralConfig as PyTypeInfo>::type_object(py);
             let os_config_cls = <PyStarknetOsConfig as PyTypeInfo>::type_object(py);
 
+            // Declare classes in local scope
             let locals = [
                 ("StarknetGeneralConfig", general_config_cls),
                 ("StarknetOsConfig", os_config_cls),
             ]
             .into_py_dict(py);
 
+            // Example of how StarknetGeneralConfig::new and StarknetOsConfig::new would
+            // be initialized in python code. Their constructors accept as arguments any subset of
+            // all parameters.
             let code = r#"
 StarknetGeneralConfig()
 StarknetGeneralConfig(StarknetOsConfig())
