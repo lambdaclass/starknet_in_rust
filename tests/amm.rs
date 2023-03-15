@@ -181,6 +181,10 @@ fn add_demo_token(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
     execute_entry_point(AmmEntryPoints::AddDemoToken, calldata, call_config)
 }
 
+// Swap function to execute swap between two tokens
+fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> CallInfo {
+    execute_entry_point(AmmEntryPoints::_Swap, calldata, call_config)
+}
 #[test]
 fn amm_init_pool_test() {
     let address = Address(1111.into());
@@ -369,4 +373,123 @@ fn amm_get_pool_token_balance() {
     };
 
     assert_eq!(result, expected_call_info_getter);
+}
+
+//test swap functionality
+//first we set up the contract
+//second we init the pool
+//third we add tokens to the user
+//fourth we swap tokens
+//check if its what we expected
+#[test]
+fn amm_swap_test() {
+    //set up contract
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [10000.into(), 10000.into()].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    init_pool(&calldata, &mut call_config);
+
+    //add tokens to user
+    let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
+
+    //add tokens to user
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    add_demo_token(&calldata_add_demo_token, &mut call_config);
+
+    //swap tokens. Token 1 with 10 in amount
+    let calldata_swap = [1.into(), 10.into()].to_vec();
+
+    //expected return value 9
+    let expected_return = [9.into()].to_vec();
+
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    let result = swap(&calldata_swap, &mut call_config);
+
+    //access keys are all keys in pool balance and only this users balance but thats checked in account
+    let accessed_storage_keys_pool_balance =
+        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
+    //access keys balance of user. In account balance we ask for users address as key
+    let accessed_storage_keys_user_balance = get_accessed_keys(
+        "account_balance",
+        vec![
+            vec![0_u8.into(), 1_u8.into()],
+            vec![0_u8.into(), 2_u8.into()],
+        ],
+    );
+
+    //make the two hashsets as one
+    let mut accessed_storage_keys = HashSet::new();
+    accessed_storage_keys.extend(accessed_storage_keys_pool_balance);
+    accessed_storage_keys.extend(accessed_storage_keys_user_balance);
+
+    let swap_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(AmmEntryPoints::_Swap as usize)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let expected_call_info_swap = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(swap_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata_swap,
+        retdata: expected_return,
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: accessed_storage_keys,
+        storage_read_values: [
+            100.into(),
+            10000.into(),
+            10000.into(),
+            100.into(),
+            100.into(),
+        ]
+        .to_vec(),
+        ..Default::default()
+    };
+
+    assert_eq!(result, expected_call_info_swap);
 }
