@@ -34,7 +34,7 @@ fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> Has
         .map(|field| {
             field
                 .iter()
-                .fold(variable_hash, |hash, f| pedersen_hash(&hash, &f))
+                .fold(variable_hash, |hash, f| pedersen_hash(&hash, f))
         })
         .collect::<Vec<FieldElement>>();
 
@@ -55,7 +55,7 @@ fn get_entry_points(
     index_selector: usize,
     address: &Address,
     class_hash: &[u8; 32],
-    calldata: &Vec<Felt>,
+    calldata: &[Felt],
     caller_address: &Address,
 ) -> (ExecutionEntryPoint, Felt) {
     //* ------------------------------------
@@ -78,12 +78,12 @@ fn get_entry_points(
     (
         ExecutionEntryPoint::new(
             address.clone(),
-            calldata.clone(),
+            calldata.to_vec(),
             entrypoint_selector.clone(),
             caller_address.clone(),
             entry_point_type,
             Some(CallType::Delegate),
-            Some(class_hash.clone()),
+            Some(*class_hash),
         ),
         entrypoint_selector,
     )
