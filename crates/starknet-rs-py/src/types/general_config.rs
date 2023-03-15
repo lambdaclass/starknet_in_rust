@@ -1,3 +1,4 @@
+// TODO: remove when pyo3 v0.18.2 releases (https://github.com/PyO3/pyo3/pull/3028)
 #![allow(clippy::redundant_closure)]
 
 use cairo_felt::Felt;
