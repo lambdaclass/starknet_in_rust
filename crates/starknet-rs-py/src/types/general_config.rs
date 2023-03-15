@@ -1,6 +1,6 @@
 use cairo_felt::Felt;
 use num_bigint::BigUint;
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyDict};
 use starknet_rs::{
     business_logic::state::state_api_objects::BlockInfo,
     definitions::general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
@@ -23,32 +23,28 @@ impl PyStarknetGeneralConfig {
         contract_storage_commitment_tree_height = Default::default(),
         global_state_commitment_tree_height = Default::default(),
         invoke_tx_max_n_steps = Default::default(),
-        _validate_max_n_steps = Default::default(),
-        _min_gas_price = Default::default(),
+        validate_max_n_steps = Default::default(),
         sequencer_address = Default::default(),
-        _tx_commitment_tree_height = Default::default(),
-        _tx_version = Default::default(),
-        _event_commitment_tree_height = Default::default(),
-        _cairo_resource_fee_weights = Default::default()
+        cairo_resource_fee_weights = Default::default(),
+        **_kwds,
     ))]
     fn new(
         starknet_os_config: PyStarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
         global_state_commitment_tree_height: u64,
         invoke_tx_max_n_steps: u64,
-        _validate_max_n_steps: u64,
-        _min_gas_price: u64,
+        validate_max_n_steps: u64,
         sequencer_address: BigUint,
-        _tx_commitment_tree_height: u64,
-        _tx_version: u64,
-        _event_commitment_tree_height: u64,
-        _cairo_resource_fee_weights: HashMap<String, f64>,
+        cairo_resource_fee_weights: HashMap<String, f64>,
+        _kwds: Option<&PyDict>,
     ) -> Self {
         let inner = StarknetGeneralConfig::new(
             starknet_os_config.into(),
             contract_storage_commitment_tree_height,
             global_state_commitment_tree_height,
+            cairo_resource_fee_weights,
             invoke_tx_max_n_steps,
+            validate_max_n_steps,
             BlockInfo::empty(Address(Felt::from(sequencer_address))),
         );
         Self { inner }
