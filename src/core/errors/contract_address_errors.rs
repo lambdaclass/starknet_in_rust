@@ -5,7 +5,6 @@ use cairo_rs::{
         vm_errors::VirtualMachineError,
     },
 };
-use felt::Felt;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -17,7 +16,7 @@ pub enum ContractAddressError {
     #[error("None existing EntryPointType")]
     NoneExistingEntryPointType,
     #[error("Invalid offset: {0}")]
-    InvalidOffset(Felt),
+    InvalidOffset(usize),
     #[error("Api version can't be None")]
     NoneApiVersion,
     #[error(transparent)]

@@ -1,7 +1,11 @@
-use super::error::ExecutionError;
-use crate::definitions::transaction_type::TransactionType;
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use std::collections::HashMap;
+
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+
+use crate::{
+    business_logic::transaction::error::TransactionError,
+    definitions::transaction_type::TransactionType,
+};
 
 #[derive(Debug, Clone)]
 pub struct OsResources {
@@ -65,12 +69,12 @@ impl Default for OsResources {
 pub fn get_additional_os_resources(
     _syscall_counter: HashMap<String, u64>,
     tx_type: &TransactionType,
-) -> Result<ExecutionResources, ExecutionError> {
+) -> Result<ExecutionResources, TransactionError> {
     let os_resources = OsResources::default();
 
     Ok(os_resources
         .execute_txs_inner
         .get(tx_type)
-        .ok_or_else(|| ExecutionError::NoneTransactionType(*tx_type, os_resources.clone()))?
+        .ok_or_else(|| TransactionError::NoneTransactionType(*tx_type, os_resources.clone()))?
         .clone())
 }
