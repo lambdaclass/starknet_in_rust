@@ -126,7 +126,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             let value = match self.state_reader.get_storage_at(storage_entry) {
                 Ok(x) => x.clone(),
                 Err(
-                    StateError::StorageError(StorageError::ErrorFetchingData)
+                    StateError::Storage(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
                     | StateError::NoneStorage(_)
