@@ -86,6 +86,9 @@ export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/li
 
 You can find a tutorial on running contracts [here](/contract_execution_examples).
 
+### Using the Cli
+You can find an example on how to use the cli [here](/docs/CLI_USAGE_EXAMPLE.md)
+
 ### Testing
 Run the following command:
 ```bash

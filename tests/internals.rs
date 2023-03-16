@@ -10,6 +10,7 @@ use starknet_rs::{
             cached_state::{CachedState, ContractClassCache},
             state_api::{State, StateReader},
             state_api_objects::BlockInfo,
+            state_cache::StateCache,
         },
         transaction::objects::{
             internal_deploy_account::InternalDeployAccount,
@@ -906,4 +907,174 @@ fn expected_deploy_account_states() -> (
         .unwrap();
 
     (state_before, state_after)
+}
+
+#[test]
+fn test_state_for_declare_tx() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    let declare_tx = declare_tx();
+    // Check ContractClass is not set before the declare_tx
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
+    assert_eq!(
+        state.get_nonce_at(&declare_tx.sender_address),
+        Ok(&0.into())
+    );
+    // Execute declare_tx
+    assert!(declare_tx.execute(&mut state, &general_config).is_ok());
+    assert_eq!(
+        state.get_nonce_at(&declare_tx.sender_address),
+        Ok(&1.into())
+    );
+
+    // Check state.state_reader
+    let state_reader = state.state_reader();
+    assert_eq!(
+        state_reader.contract_states(),
+        &HashMap::from([
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                    0.into(),
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), 0.into())]) //Fee, 2 in blockifier
+                )
+            ),
+            (
+                TEST_CONTRACT_ADDRESS.clone(),
+                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), 0.into(), HashMap::new())
+            ),
+            (
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                    0.into(),
+                    HashMap::new(),
+                )
+            ),
+        ])
+    );
+
+    assert_eq!(
+        state_reader.class_hash_to_contract_class(),
+        &HashMap::from([
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_CLASS_HASH),
+                get_contract_class(TEST_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap()
+            ),
+        ])
+    );
+
+    // Check state.cache
+    assert_eq!(
+        state.cache(),
+        &StateCache::new(
+            HashMap::from([
+                (
+                    TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)
+                ),
+                (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
+                )
+            ]),
+            HashMap::from([(
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                0.into()
+            )]),
+            HashMap::from([
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                    ),
+                    0.into()
+                )
+            ]),
+            HashMap::new(),
+            HashMap::from([(
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                1.into()
+            )]),
+            HashMap::from([
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                    ),
+                    0.into() //Fee, 2 in blockifier
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                    ),
+                    0.into()
+                ),
+            ]),
+        )
+    );
+
+    // Check state.contract_classes
+    assert_eq!(
+        state.contract_classes(),
+        &Some(HashMap::from([
+            (
+                felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
+                get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap()
+            ),
+        ]))
+    );
 }

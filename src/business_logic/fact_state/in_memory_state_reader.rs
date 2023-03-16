@@ -6,14 +6,14 @@ use crate::{
     utils::{Address, ClassHash},
 };
 use felt::Felt;
-use getset::MutGetters;
+use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, Default, MutGetters, PartialEq)]
+#[derive(Clone, Debug, Default, MutGetters, Getters, PartialEq)]
 pub struct InMemoryStateReader {
-    #[getset(get_mut = "pub")]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) contract_states: HashMap<Address, ContractState>,
-    #[getset(get_mut = "pub")]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
 
