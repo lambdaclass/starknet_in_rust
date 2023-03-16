@@ -33,6 +33,18 @@ enum AmmEntryPoints {
     InitPool,
 }
 
+impl Into<usize> for AmmEntryPoints {
+    fn into(self) -> usize {
+        match self {
+            AmmEntryPoints::_GetAccountTokenBalance => 0,
+            AmmEntryPoints::Swap => 1,
+            AmmEntryPoints::AddDemoToken => 2,
+            AmmEntryPoints::GetPoolTokenBalance => 3,
+            AmmEntryPoints::InitPool => 4,
+        }
+    }
+}
+
 struct CallConfig<'a> {
     state: &'a mut CachedState<InMemoryStateReader>,
     caller_address: &'a Address,
@@ -133,7 +145,7 @@ fn setup_contract(
 }
 
 fn execute_entry_point(
-    index_selector: AmmEntryPoints,
+    index_selector: usize,
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
@@ -172,26 +184,30 @@ fn init_pool(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::InitPool, calldata, call_config)
+    execute_entry_point(AmmEntryPoints::InitPool.into(), calldata, call_config)
 }
 
 fn get_pool_token_balance(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::GetPoolTokenBalance, calldata, call_config)
+    execute_entry_point(
+        AmmEntryPoints::GetPoolTokenBalance.into(),
+        calldata,
+        call_config,
+    )
 }
 
 fn add_demo_token(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::AddDemoToken, calldata, call_config)
+    execute_entry_point(AmmEntryPoints::AddDemoToken.into(), calldata, call_config)
 }
 
 // Swap function to execute swap between two tokens
 fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::Swap, calldata, call_config)
+    execute_entry_point(AmmEntryPoints::Swap.into(), calldata, call_config)
 }
 #[test]
 fn amm_init_pool_test() {
@@ -648,7 +664,7 @@ fn amm_proxy_init_pool_test() {
         resources_manager: &mut resources_manager,
     };
 
-    let result = execute_entry_point(AmmEntryPoints::Swap, &calldata, &mut call_config).unwrap();
+    let result = execute_entry_point(1, &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
@@ -763,16 +779,15 @@ fn amm_proxy_get_pool_token_balance_test() {
     };
 
     // Add pool balance
-    execute_entry_point(AmmEntryPoints::Swap, &calldata, &mut call_config).unwrap();
+    execute_entry_point(1, &calldata, &mut call_config).unwrap();
 
     let calldata = [0.into(), 1.into()].to_vec();
-    let result =
-        execute_entry_point(AmmEntryPoints::AddDemoToken, &calldata, &mut call_config).unwrap();
+    let result = execute_entry_point(3, &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(2)
+        .get(3)
         .unwrap()
         .selector()
         .clone();
@@ -882,11 +897,11 @@ fn amm_proxy_add_demo_token_test() {
     };
 
     // Add pool balance
-    execute_entry_point(AmmEntryPoints::Swap, &calldata, &mut call_config).unwrap();
+    execute_entry_point(1, &calldata, &mut call_config).unwrap();
 
     let calldata = [0.into(), 55.into(), 66.into()].to_vec();
     let result = execute_entry_point(
-        AmmEntryPoints::_GetAccountTokenBalance,
+        AmmEntryPoints::_GetAccountTokenBalance.into(),
         &calldata,
         &mut call_config,
     )
