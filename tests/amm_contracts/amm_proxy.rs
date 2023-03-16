@@ -513,7 +513,7 @@ fn amm_proxy_get_account_token_balance() {
         .clone();
 
     let index_entry_point_get_account_balance: usize =
-        AmmEntryPoints::_GetAccountTokenBalance.into();
+        AmmEntryPoints::GetAccountTokenBalance.into();
 
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
