@@ -45,6 +45,26 @@ impl Into<usize> for AmmEntryPoints {
     }
 }
 
+enum ProxyAmmEntryPoints {
+    _AddDemoToken,
+    InitPool,
+    _Swap,
+    GetPoolTokenBalance,
+    _GetAccountTokenBalance,
+}
+
+impl Into<usize> for ProxyAmmEntryPoints {
+    fn into(self) -> usize {
+        match self {
+            ProxyAmmEntryPoints::_AddDemoToken => 0,
+            ProxyAmmEntryPoints::InitPool => 1,
+            ProxyAmmEntryPoints::_Swap => 2,
+            ProxyAmmEntryPoints::GetPoolTokenBalance => 3,
+            ProxyAmmEntryPoints::_GetAccountTokenBalance => 4,
+        }
+    }
+}
+
 struct CallConfig<'a> {
     state: &'a mut CachedState<InMemoryStateReader>,
     caller_address: &'a Address,
@@ -664,20 +684,27 @@ fn amm_proxy_init_pool_test() {
         resources_manager: &mut resources_manager,
     };
 
-    let result = execute_entry_point(1, &calldata, &mut call_config).unwrap();
-
+    let result = execute_entry_point(
+        ProxyAmmEntryPoints::InitPool.into(),
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
+    let index_entry_point_proxy_init_pool: usize = ProxyAmmEntryPoints::InitPool.into();
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(1)
+        .get(index_entry_point_proxy_init_pool)
         .unwrap()
         .selector()
         .clone();
 
+    let index_entry_point_init_pool: usize = AmmEntryPoints::InitPool.into();
+
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(4)
+        .get(index_entry_point_init_pool)
         .unwrap()
         .selector()
         .clone();
@@ -779,23 +806,37 @@ fn amm_proxy_get_pool_token_balance_test() {
     };
 
     // Add pool balance
-    execute_entry_point(1, &calldata, &mut call_config).unwrap();
+    execute_entry_point(
+        ProxyAmmEntryPoints::InitPool.into(),
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
 
     let calldata = [0.into(), 1.into()].to_vec();
-    let result = execute_entry_point(3, &calldata, &mut call_config).unwrap();
+    let index_entry_point_proxy_get_pool_token_balance: usize =
+        ProxyAmmEntryPoints::GetPoolTokenBalance.into();
+    let result = execute_entry_point(
+        index_entry_point_proxy_get_pool_token_balance,
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
 
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(3)
+        .get(index_entry_point_proxy_get_pool_token_balance)
         .unwrap()
         .selector()
         .clone();
 
+    let index_entry_point_get_pool_token_balance: usize =
+        AmmEntryPoints::GetPoolTokenBalance.into();
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(3)
+        .get(index_entry_point_get_pool_token_balance)
         .unwrap()
         .selector()
         .clone();
@@ -897,11 +938,17 @@ fn amm_proxy_add_demo_token_test() {
     };
 
     // Add pool balance
-    execute_entry_point(1, &calldata, &mut call_config).unwrap();
+    execute_entry_point(
+        ProxyAmmEntryPoints::InitPool.into(),
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
 
     let calldata = [0.into(), 55.into(), 66.into()].to_vec();
+    let index_entry_point_proxy_add_demo_token: usize = ProxyAmmEntryPoints::_AddDemoToken.into();
     let result = execute_entry_point(
-        AmmEntryPoints::_GetAccountTokenBalance.into(),
+        index_entry_point_proxy_add_demo_token,
         &calldata,
         &mut call_config,
     )
@@ -910,15 +957,16 @@ fn amm_proxy_add_demo_token_test() {
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(0)
+        .get(index_entry_point_proxy_add_demo_token)
         .unwrap()
         .selector()
         .clone();
 
+    let index_entry_point_add_demo_token: usize = AmmEntryPoints::AddDemoToken.into();
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(2)
+        .get(index_entry_point_add_demo_token)
         .unwrap()
         .selector()
         .clone();
@@ -1024,28 +1072,36 @@ fn amm_proxy_get_account_token_balance() {
     };
 
     // Add account balance for the proxy contract in the amm contract
-    execute_entry_point(0, &calldata, &mut call_config).unwrap();
+    execute_entry_point(
+        ProxyAmmEntryPoints::_AddDemoToken.into(),
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
 
     //First argument is the amm contract address
     //Second argument is the account address, in this case the proxy address
     //Third argument is the token id
     let calldata = [0.into(), 1000000.into(), 2.into()].to_vec();
+    let index_entry_point_get_account_balance: usize =
+        ProxyAmmEntryPoints::_GetAccountTokenBalance.into();
     let result = execute_entry_point(4, &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(4)
+        .get(index_entry_point_get_account_balance)
         .unwrap()
         .selector()
         .clone();
 
-    let amm_get_account_balance: usize = AmmEntryPoints::_GetAccountTokenBalance.into();
+    let index_entry_point_get_account_balance: usize =
+        AmmEntryPoints::_GetAccountTokenBalance.into();
 
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(amm_get_account_balance)
+        .get(index_entry_point_get_account_balance)
         .unwrap()
         .selector()
         .clone();
@@ -1150,34 +1206,45 @@ fn amm_proxy_swap() {
     };
 
     // Add account balance for the proxy contract in the amm contract
-    execute_entry_point(0, &calldata, &mut call_config).unwrap();
+    execute_entry_point(
+        ProxyAmmEntryPoints::_AddDemoToken.into(),
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
 
     //Init pool to have 1000 tokens of each type
     let calldata = [0.into(), 1000.into(), 1000.into()].to_vec();
-    execute_entry_point(1, &calldata, &mut call_config).unwrap();
+    execute_entry_point(
+        ProxyAmmEntryPoints::InitPool.into(),
+        &calldata,
+        &mut call_config,
+    )
+    .unwrap();
 
     //Swap 100 tokens of type 1 for type 2
     //First argument is the amm contract address
     //Second argunet is the token to swap (type 1)
     //Third argument is the amount of tokens to swap (100)
     let calldata = [0.into(), 1.into(), 100.into()].to_vec();
-    let result = execute_entry_point(2, &calldata, &mut call_config).unwrap();
+    let index_entry_point_proxy_swap = ProxyAmmEntryPoints::_Swap.into();
     let expected_result = [90.into()].to_vec();
+    let result =
+        execute_entry_point(index_entry_point_proxy_swap, &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(2)
+        .get(index_entry_point_proxy_swap)
         .unwrap()
         .selector()
         .clone();
 
-    let amm_swap: usize = AmmEntryPoints::Swap.into();
-
+    let index_entry_point_swap: usize = AmmEntryPoints::Swap.into();
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(amm_swap)
+        .get(index_entry_point_swap)
         .unwrap()
         .selector()
         .clone();
