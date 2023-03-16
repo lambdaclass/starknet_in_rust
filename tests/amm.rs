@@ -1089,3 +1089,148 @@ fn amm_proxy_get_account_token_balance() {
 
     assert_eq!(result, expected_call_info);
 }
+
+#[test]
+fn amm_proxy_swap() {
+    let contract_address = Address(0.into());
+    let contract_class_hash = [1; 32];
+    let proxy_address = Address(1000000.into());
+    let mut proxy_class_hash = [0; 32];
+    proxy_class_hash[31] = 1;
+
+    // Create program and entry point types for contract class
+    let contract_path = PathBuf::from("starknet_programs/amm.json");
+    let contract_class = ContractClass::try_from(contract_path).unwrap();
+
+    let proxy_path = PathBuf::from("starknet_programs/amm_proxy.json");
+    let proxy_class = ContractClass::try_from(proxy_path).unwrap();
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+    let contract_state = ContractState::new(contract_class_hash, 0.into(), HashMap::new());
+    let proxy_state = ContractState::new(proxy_class_hash, 0.into(), HashMap::new());
+    contract_class_cache.insert(contract_class_hash, contract_class);
+    contract_class_cache.insert(proxy_class_hash, proxy_class);
+    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    state_reader
+        .contract_states_mut()
+        .insert(contract_address.clone(), contract_state);
+    state_reader
+        .contract_states_mut()
+        .insert(proxy_address.clone(), proxy_state);
+
+    // Create state with previous data
+    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+    let proxy_entry_points_by_type = state
+        .get_contract_class(&proxy_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let contract_entry_points_by_type = state
+        .get_contract_class(&contract_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [0.into(), 100.into(), 200.into()].to_vec();
+    let caller_address = Address(1000000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &proxy_address,
+        class_hash: &proxy_class_hash,
+        entry_points_by_type: &proxy_entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    // Add account balance for the proxy contract in the amm contract
+    execute_entry_point(0, &calldata, &mut call_config).unwrap();
+
+    //Init pool to have 1000 tokens of each type
+    let calldata = [0.into(), 1000.into(), 1000.into()].to_vec();
+    execute_entry_point(1, &calldata, &mut call_config).unwrap();
+
+    //Swap 100 tokens of type 1 for type 2
+    //First argument is the amm contract address
+    //Second argunet is the token to swap (type 1)
+    //Third argument is the amount of tokens to swap (100)
+    let calldata = [0.into(), 1.into(), 100.into()].to_vec();
+    let result = execute_entry_point(2, &calldata, &mut call_config).unwrap();
+    let expected_result = [90.into()].to_vec();
+
+    let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(2)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let amm_swap: usize = AmmEntryPoints::Swap.into();
+
+    let amm_entrypoint_selector = contract_entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(amm_swap)
+        .unwrap()
+        .selector()
+        .clone();
+
+    //checked for amm contract both tokens balances
+    let accessed_storage_keys_pool_balance =
+        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
+
+    //checked for proxy account both tokens balances
+    let accessed_storage_keys_user_balance = get_accessed_keys(
+        "account_balance",
+        vec![
+            vec![1000000_u32.into(), 1_u8.into()],
+            vec![1000000_u32.into(), 2_u8.into()],
+        ],
+    );
+
+    let mut accessed_storage_keys = HashSet::new();
+    accessed_storage_keys.extend(accessed_storage_keys_pool_balance);
+    accessed_storage_keys.extend(accessed_storage_keys_user_balance);
+
+    let internal_calls = vec![CallInfo {
+        caller_address: proxy_address.clone(),
+        call_type: Some(CallType::Call),
+        contract_address,
+        entry_point_selector: Some(amm_entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata.clone()[1..].to_vec(),
+        retdata: [90.into()].to_vec(),
+        storage_read_values: [100.into(), 1000.into(), 1000.into(), 100.into(), 200.into()]
+            .to_vec(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(contract_class_hash),
+        accessed_storage_keys,
+        ..Default::default()
+    }];
+
+    let expected_call_info = CallInfo {
+        caller_address: caller_address.clone(),
+        call_type: Some(CallType::Delegate),
+        contract_address: proxy_address.clone(),
+        entry_point_selector: Some(amm_proxy_entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata.clone(),
+        retdata: expected_result,
+        execution_resources: ExecutionResources {
+            n_memory_holes: 92,
+            ..Default::default()
+        },
+        class_hash: Some(proxy_class_hash),
+        internal_calls,
+        ..Default::default()
+    };
+
+    assert_eq!(result, expected_call_info);
+}
