@@ -3,7 +3,7 @@ use felt::Felt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone)]
 pub struct ContractState {
     pub(crate) contract_hash: [u8; 32],
     pub(crate) nonce: Felt,
@@ -40,7 +40,7 @@ impl ContractState {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
     pub contract_addresses: Vec<Address>,
     pub class_hashes: Vec<[u8; 32]>,

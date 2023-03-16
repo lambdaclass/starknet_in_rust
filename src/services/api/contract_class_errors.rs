@@ -1,7 +1,7 @@
 use super::contract_class::ContractEntryPoint;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum ContractClassError {
     #[error("Given builtins are not in appropiate order")]
     DisorderedBuiltins,
