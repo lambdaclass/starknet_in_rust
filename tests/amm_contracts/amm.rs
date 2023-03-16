@@ -3,29 +3,22 @@
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
-use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
     business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
-        },
-        fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
-        },
-        state::{cached_state::CachedState, state_api::StateReader},
+        execution::objects::{CallInfo, CallType},
+        fact_state::state::ExecutionResourcesManager,
+        state::state_api::StateReader,
         transaction::error::TransactionError,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, Address},
+    definitions::general_config::StarknetGeneralConfig,
+    services::api::contract_class::EntryPointType,
+    utils::Address,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
-enum AmmEntryPoints {
+use std::collections::HashSet;
+
+use crate::amm_contracts::utils::*;
+
+pub enum AmmEntryPoints {
     GetAccountTokenBalance,
     Swap,
     AddDemoToken,
@@ -33,153 +26,34 @@ enum AmmEntryPoints {
     InitPool,
 }
 
-struct CallConfig<'a> {
-    state: &'a mut CachedState<InMemoryStateReader>,
-    caller_address: &'a Address,
-    address: &'a Address,
-    class_hash: &'a [u8; 32],
-    entry_points_by_type: &'a HashMap<
-        EntryPointType,
-        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
-    >,
-    general_config: &'a StarknetGeneralConfig,
-    resources_manager: &'a mut ExecutionResourcesManager,
-}
-
-fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> HashSet<[u8; 32]> {
-    let variable_hash = calculate_sn_keccak(variable_name.as_bytes());
-    let variable_hash = FieldElement::from_bytes_be(&variable_hash).unwrap();
-
-    let keys = fields
-        .iter()
-        .map(|field| {
-            field
-                .iter()
-                .fold(variable_hash, |hash, f| pedersen_hash(&hash, f))
-        })
-        .collect::<Vec<FieldElement>>();
-
-    let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
-
-    for key in keys {
-        accessed_storage_keys.insert(key.to_bytes_be());
+impl From<AmmEntryPoints> for usize {
+    fn from(val: AmmEntryPoints) -> Self {
+        match val {
+            AmmEntryPoints::GetAccountTokenBalance => 0,
+            AmmEntryPoints::Swap => 1,
+            AmmEntryPoints::AddDemoToken => 2,
+            AmmEntryPoints::GetPoolTokenBalance => 3,
+            AmmEntryPoints::InitPool => 4,
+        }
     }
-
-    accessed_storage_keys
-}
-
-fn get_entry_points(
-    entry_points_by_type: &HashMap<
-        EntryPointType,
-        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
-    >,
-    index_selector: usize,
-    address: &Address,
-    class_hash: &[u8; 32],
-    calldata: &[Felt],
-    caller_address: &Address,
-) -> (ExecutionEntryPoint, Felt) {
-    //* ------------------------------------
-    //*    Create entry point selector
-    //* ------------------------------------
-    let entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(index_selector)
-        .unwrap()
-        .selector()
-        .clone();
-
-    //* ------------------------------------
-    //*    Create execution entry point
-    //* ------------------------------------
-
-    let entry_point_type = EntryPointType::External;
-
-    (
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata.to_vec(),
-            entrypoint_selector.clone(),
-            caller_address.clone(),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(*class_hash),
-        ),
-        entrypoint_selector,
-    )
-}
-
-fn setup_contract(
-    path: &str,
-    address: &Address,
-    class_hash: [u8; 32],
-) -> CachedState<InMemoryStateReader> {
-    // Create program and entry point types for contract class
-    let path = PathBuf::from(path);
-    let contract_class = ContractClass::try_from(path).unwrap();
-
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    let contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
-    contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-    state_reader
-        .contract_states_mut()
-        .insert(address.clone(), contract_state);
-
-    // Create state with previous data
-    CachedState::new(state_reader, Some(contract_class_cache))
-}
-
-fn execute_entry_point(
-    index_selector: AmmEntryPoints,
-    calldata: &[Felt],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    // Entry point for init pool
-    let (exec_entry_point, _) = get_entry_points(
-        call_config.entry_points_by_type,
-        index_selector as usize,
-        call_config.address,
-        call_config.class_hash,
-        calldata,
-        call_config.caller_address,
-    );
-
-    //* --------------------
-    //*   Execute contract
-    //* ---------------------
-    let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        call_config.general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-
-    exec_entry_point.execute(
-        call_config.state,
-        call_config.general_config,
-        call_config.resources_manager,
-        &tx_execution_context,
-    )
 }
 
 fn init_pool(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::InitPool, calldata, call_config)
+    execute_entry_point(AmmEntryPoints::InitPool.into(), calldata, call_config)
 }
 
 fn get_pool_token_balance(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::GetPoolTokenBalance, calldata, call_config)
+    execute_entry_point(
+        AmmEntryPoints::GetPoolTokenBalance.into(),
+        calldata,
+        call_config,
+    )
 }
 
 fn get_account_token_balance(
@@ -187,7 +61,7 @@ fn get_account_token_balance(
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
     execute_entry_point(
-        AmmEntryPoints::GetAccountTokenBalance,
+        AmmEntryPoints::GetAccountTokenBalance.into(),
         calldata,
         call_config,
     )
@@ -197,14 +71,13 @@ fn add_demo_token(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::AddDemoToken, calldata, call_config)
+    execute_entry_point(AmmEntryPoints::AddDemoToken.into(), calldata, call_config)
 }
 
 // Swap function to execute swap between two tokens
 fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::Swap, calldata, call_config)
+    execute_entry_point(AmmEntryPoints::Swap.into(), calldata, call_config)
 }
-
 #[test]
 fn amm_init_pool_test() {
     let address = Address(1111.into());
@@ -389,8 +262,15 @@ fn amm_get_pool_token_balance() {
     assert_eq!(result.unwrap(), expected_call_info_getter);
 }
 
+//test swap functionality
+//first we set up the contract
+//second we init the pool
+//third we add tokens to the user
+//fourth we swap tokens
+//check if its what we expected
 #[test]
 fn amm_swap_test() {
+    //set up contract
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
@@ -417,16 +297,17 @@ fn amm_swap_test() {
 
     init_pool(&calldata, &mut call_config).unwrap();
 
+    //add tokens to user
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
     add_demo_token(&calldata_add_demo_token, &mut call_config).unwrap();
 
     //swap tokens. Token 1 with 10 in amount
-    let calldata_swap = [1.into(), 10.into()].to_vec();
+    let calldataswap = [1.into(), 10.into()].to_vec();
 
     //expected return value 9
     let expected_return = [9.into()].to_vec();
 
-    let result = swap(&calldata_swap, &mut call_config);
+    let result = swap(&calldataswap, &mut call_config);
 
     //access keys are all keys in pool balance and only this users balance but thats checked in account
     let accessed_storage_keys_pool_balance =
@@ -453,13 +334,13 @@ fn amm_swap_test() {
         .selector()
         .clone();
 
-    let expected_call_info_swap = CallInfo {
+    let expected_call_infoswap = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
         entry_point_selector: Some(swap_selector),
         entry_point_type: Some(EntryPointType::External),
-        calldata: calldata_swap,
+        calldata: calldataswap,
         retdata: expected_return,
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
@@ -475,74 +356,7 @@ fn amm_swap_test() {
         ..Default::default()
     };
 
-    assert_eq!(result.unwrap(), expected_call_info_swap);
-}
-
-#[test]
-fn amm_get_account_token_balance_test() {
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
-    let entry_points_by_type = state
-        .get_contract_class(&class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
-
-    //add 10 tokens of token type 1
-    let caller_address = Address(0000.into());
-    let calldata = [10.into(), 0.into()].to_vec();
-
-    let general_config = StarknetGeneralConfig::default();
-    let mut resources_manager = ExecutionResourcesManager::default();
-    let mut call_config = CallConfig {
-        state: &mut state,
-        caller_address: &caller_address,
-        address: &address,
-        class_hash: &class_hash,
-        entry_points_by_type: &entry_points_by_type,
-        general_config: &general_config,
-        resources_manager: &mut resources_manager,
-    };
-
-    add_demo_token(&calldata, &mut call_config).unwrap();
-
-    let calldata_get_balance = [0000.into(), 1.into()].to_vec();
-    let result = get_account_token_balance(&calldata_get_balance, &mut call_config);
-
-    //expected return value 10
-    let expected_return = [10.into()].to_vec();
-
-    let accessed_storage_keys =
-        get_accessed_keys("account_balance", vec![vec![0_u8.into(), 1_u8.into()]]);
-
-    let get_account_token_balance_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::GetAccountTokenBalance as usize)
-        .unwrap()
-        .selector()
-        .clone();
-
-    let expected_call_info_get_account_token_balance = CallInfo {
-        caller_address: Address(0.into()),
-        call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
-        entry_point_selector: Some(get_account_token_balance_selector),
-        entry_point_type: Some(EntryPointType::External),
-        calldata: calldata_get_balance,
-        retdata: expected_return,
-        execution_resources: ExecutionResources::default(),
-        class_hash: Some(class_hash),
-        accessed_storage_keys,
-        storage_read_values: [10.into()].to_vec(),
-        ..Default::default()
-    };
-
-    assert_eq!(
-        result.unwrap(),
-        expected_call_info_get_account_token_balance
-    );
+    assert_eq!(result.unwrap(), expected_call_infoswap);
 }
 
 #[test]
@@ -658,4 +472,71 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     add_demo_token(&[Felt::new(10), Felt::new(10)], &mut call_config).unwrap();
 
     assert!(swap(&calldata, &mut call_config).is_err());
+}
+
+#[test]
+fn amm_get_account_token_balance_test() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    //add 10 tokens of token type 1
+    let caller_address = Address(0000.into());
+    let calldata = [10.into(), 0.into()].to_vec();
+
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    add_demo_token(&calldata, &mut call_config).unwrap();
+
+    let calldata_get_balance = [0000.into(), 1.into()].to_vec();
+    let result = get_account_token_balance(&calldata_get_balance, &mut call_config);
+
+    //expected return value 10
+    let expected_return = [10.into()].to_vec();
+
+    let accessed_storage_keys =
+        get_accessed_keys("account_balance", vec![vec![0_u8.into(), 1_u8.into()]]);
+
+    let get_account_token_balance_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(AmmEntryPoints::GetAccountTokenBalance as usize)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let expected_call_info_get_account_token_balance = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(get_account_token_balance_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata_get_balance,
+        retdata: expected_return,
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys,
+        storage_read_values: [10.into()].to_vec(),
+        ..Default::default()
+    };
+
+    assert_eq!(
+        result.unwrap(),
+        expected_call_info_get_account_token_balance
+    );
 }
