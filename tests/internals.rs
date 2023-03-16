@@ -124,30 +124,15 @@ fn create_account_tx_test_state(
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
-    //let hash_value: [u8; 32] = [0; 32];
 
     let storage_view = HashMap::from([(
         (test_erc20_address.clone(), test_erc20_account_balance_key),
         ACTUAL_FEE.clone(),
     )]);
 
-    /* let address_to_nonce = HashMap::from([
-        (test_contract_address, Felt::zero()),
-        (test_account_contract_address, Felt::zero()),
-        (test_erc20_address, Felt::zero()),
-    ]); */
-
     let cached_state = CachedState::new(
         {
             let mut state_reader = InMemoryStateReader::default();
-
-            /*             let state_reader = InMemoryStateReader::new(
-                address_to_class_hash,
-                address_to_nonce,
-                storage_view,
-                class_hash_to_class,
-            ); */
-
             for (contract_address, class_hash) in address_to_class_hash {
                 let storage_keys: HashMap<(Address, [u8; 32]), Felt> = storage_view
                     .iter()
