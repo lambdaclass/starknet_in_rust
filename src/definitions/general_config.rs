@@ -77,12 +77,10 @@ pub struct StarknetGeneralConfig {
 }
 
 impl StarknetGeneralConfig {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn new(
         starknet_os_config: StarknetOsConfig,
-        _contract_storage_commitment_tree_height: u64,
-        _global_state_commitment_tree_height: u64,
+        contract_storage_commitment_tree_height: u64,
+        global_state_commitment_tree_height: u64,
         cairo_resource_fee_weights: HashMap<String, f64>,
         invoke_tx_max_n_steps: u64,
         validate_max_n_steps: u64,
@@ -90,8 +88,8 @@ impl StarknetGeneralConfig {
     ) -> Self {
         Self {
             starknet_os_config,
-            contract_storage_commitment_tree_height: _contract_storage_commitment_tree_height,
-            global_state_commitment_tree_height: _global_state_commitment_tree_height,
+            contract_storage_commitment_tree_height,
+            global_state_commitment_tree_height,
             invoke_tx_max_n_steps,
             cairo_resource_fee_weights,
             validate_max_n_steps,
