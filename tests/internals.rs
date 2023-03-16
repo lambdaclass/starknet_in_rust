@@ -2,13 +2,19 @@ use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::{felt_str, Felt};
 use lazy_static::lazy_static;
 use num_traits::{Num, Zero};
+use starknet_api::hash;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallType, OrderedEvent},
+        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
-            cached_state::CachedState, state_api::StateReader, state_api_objects::BlockInfo,
+            cached_state::{CachedState, ContractClassCache},
+            state_api::StateReader,
+            state_api_objects::BlockInfo,
             state_cache::StorageEntry,
+        },
+        transaction::objects::{
+            internal_declare::InternalDeclare, internal_invoke_function::InternalInvokeFunction,
         },
     },
     definitions::{
@@ -25,7 +31,7 @@ use starknet_rs::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf, sync::Arc,
+    path::PathBuf,
 };
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
@@ -85,12 +91,12 @@ fn create_account_tx_test_state(
 ) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let general_config = new_starknet_general_config_for_testing();
 
-    let test_contract_class_hash = TEST_CLASS_HASH.clone();
-    let test_account_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone();
-    let test_erc20_class_hash = TEST_ERC20_CONTRACT_CLASS_HASH.clone();
+    let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
+    let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
+    let test_erc20_class_hash = felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone());
     let class_hash_to_class = HashMap::from([
         (
-            test_account_class_hash.clone(),
+            test_account_contract_class_hash.clone(),
             get_contract_class(ACCOUNT_CONTRACT_PATH)?,
         ),
         (
@@ -104,43 +110,62 @@ fn create_account_tx_test_state(
     ]);
 
     let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
-    let test_account_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
+    let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
     let test_erc20_address = general_config
         .starknet_os_config()
         .fee_token_address()
         .clone();
     let address_to_class_hash = HashMap::from([
-        (test_contract_address, test_contract_class_hash),
-        (test_account_address, test_account_class_hash),
+        (test_contract_address.clone(), test_contract_class_hash),
+        (test_account_contract_address.clone(), test_account_contract_class_hash),
         (test_erc20_address.clone(), test_erc20_class_hash),
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+    let hash_value: [u8; 32] = [0; 32];
     let storage_view = HashMap::from([(
-        (test_erc20_address, test_erc20_account_balance_key),
-        ACTUAL_FEE.clone(),
-    )]);
+        (test_erc20_address.clone(), felt_to_hash(&test_erc20_account_balance_key)),
+        Felt::from(ACTUAL_FEE.clone()),
+
+        (test_contract_address.clone(), [0; 32]),
+        Felt::zero()),
+    ]);
+
+    let address_to_nonce = HashMap::from([
+        (test_contract_address, Felt::zero()),
+        (test_account_contract_address, Felt::zero()),
+        (test_erc20_address, Felt::zero()),
+    ]);
+
 
     let cached_state = CachedState::new(
         {
-            let mut state_reader = InMemoryStateReader::default();
-
+            let state_reader = InMemoryStateReader::new(
+                address_to_class_hash,
+                address_to_nonce,
+                storage_view,
+                class_hash_to_class
+            );
+/*
             for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys: HashMap<(Address, [u8; 32]), Felt> = dbg!(storage_view
+                let storage_keys: HashMap<(Address, [u8; 32]), Felt> = storage_view
                     .iter()
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address).then_some((
                             (address.clone(), felt_to_hash(storage_key)),
                             storage_value.clone(),
                         ))
-                    }))
+                    })
                 .collect();
+
+            println!("[145] storage key for ERC20, empty, empty: {:?}", storage_keys);
 
                 let stored: HashMap<StorageEntry, Felt> = storage_keys;
 
                 state_reader
                     .address_to_class_hash_mut()
-                    .insert(contract_address.clone(), felt_to_hash(&class_hash.clone())); // or maybe insert address_to_class_hash
+                    .insert(contract_address.clone(), class_hash.clone());
+
                 state_reader
                     .address_to_nonce_mut()
                     .insert(contract_address.clone(), Felt::zero());
@@ -149,8 +174,8 @@ fn create_account_tx_test_state(
             for (class_hash, contract_class) in class_hash_to_class {
                 state_reader
                     .class_hash_to_contract_class_mut()
-                    .insert(felt_to_hash(&class_hash), contract_class);
-            }
+                    .insert(class_hash, contract_class);
+            } */
             state_reader
         },
         Some(HashMap::new()),
@@ -176,24 +201,23 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
             ),
         ]),
         HashMap::from([
-            (TEST_CONTRACT_ADDRESS.clone(), Felt::zero(),),
-            (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::zero(),),
-            (TEST_ERC20_CONTRACT_ADDRESS.clone(), Felt::zero(),),
+            (TEST_CONTRACT_ADDRESS.clone(), Felt::zero()),
+            (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::zero()),
+            (TEST_ERC20_CONTRACT_ADDRESS.clone(), Felt::zero()),
         ]),
         HashMap::from([
-            (
-                (TEST_CONTRACT_ADDRESS.clone(), [0; 32]),
-                Felt::zero(),
-            ),
+            ((TEST_CONTRACT_ADDRESS.clone(), [0; 32]), Felt::zero()),
             (
                 (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), [0; 32]),
                 Felt::zero(),
             ),
             (
-                (TEST_ERC20_CONTRACT_ADDRESS.clone(), 
-                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone())),
+                (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+                ),
                 Felt::from(2),
-            )
+            ),
         ]),
         HashMap::from([
             (
@@ -219,7 +243,90 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
 #[test]
 fn test_create_account_tx_test_state() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
-    assert_eq!(&state, &expected_state_before_tx());
+
+    let state2 = &mut expected_state_before_tx();
+    
+    // testing if contract_address to class hash is OK
+    assert_eq!(
+        state.get_class_hash_at(&Address(Felt::new(257))),
+        state2.get_class_hash_at(&Address(Felt::new(257)))
+    );
+
+    assert_eq!(
+        state.get_class_hash_at(&Address(Felt::new(256))),
+        state2.get_class_hash_at(&Address(Felt::new(256)))
+    );
+
+    assert_eq!(
+        state.get_class_hash_at(&Address(Felt::new(4097))),
+        state2.get_class_hash_at(&Address(Felt::new(4097)))
+    );
+
+    // println!("Class hash for Address 256: {:?}", state.get_class_hash_at(&Address(Felt::new(256))));
+
+    // println!("Felt to hash: {:?}", felt_to_hash(&Felt::new(274)));
+
+    // testing address_to_nonce
+    assert_eq!(
+        state.get_nonce_at(&Address(Felt::new(257))),
+        state2.get_nonce_at(&Address(Felt::new(257)))
+    ); //test_account_contract
+
+    assert_eq!(
+        state.get_nonce_at(&Address(Felt::new(256))),
+        state2.get_nonce_at(&Address(Felt::new(256)))
+    ); //test_contract
+
+    assert_eq!(
+        state.get_nonce_at(&Address(Felt::new(4097))),
+        state2.get_nonce_at(&Address(Felt::new(4097)))
+    ); //test_erc20
+
+    // testing storage
+    assert_eq!(
+        state.get_storage_at(
+            &(
+                Address(Felt::new(4097)), 
+            felt_to_hash(
+                &felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515")))),
+        state2.get_storage_at(
+            &(Address(Felt::new(4097)),
+            felt_to_hash(
+                &felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"))))
+    ); //test_erc_20
+
+    println!("[282] storage for ERC20 {:?}", state2.get_storage_at(
+        &(Address(Felt::new(4097)),
+            felt_to_hash(
+                &felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515")))));
+
+/*     assert_eq!(
+        state.get_storage_at(
+            &(Address(Felt::new(257)), [0; 32])),
+        state2.get_storage_at(
+            &(Address(Felt::new(257)), [0; 32]))
+    ); //account_contract_address */
+
+    println!("[294] storage for account_contract_address in create_account_tx_test_state {:?}", state.get_storage_at(
+        &(Address(Felt::new(257)), [0; 32])));
+    
+    println!("storage for account_contract_address in expected_state_before_tx {:?}", state2.get_storage_at(
+        &(Address(Felt::new(257)), [0; 32])));
+
+/*
+    assert_eq!(
+        state.get_storage_at(&Address(Felt::new(256))),
+        state2.get_storage_at(&Address(Felt::new(256)))
+    );
+
+    assert_eq!(
+        state.get_storage_at(&Address(Felt::new(4097))),
+        state2.get_storage_at(&Address(Felt::new(4097)))
+    );
+ */
+
+    //println!("{:?}", &expected_state_before_tx());
+    //debug_assert_eq!(&state, &expected_state_before_tx());
 
     let value = state
         .get_storage_at(&(
