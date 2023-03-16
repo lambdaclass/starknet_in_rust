@@ -1,7 +1,14 @@
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+use assert_matches::assert_matches;
+use cairo_rs::vm::{
+    errors::{
+        cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError, vm_exception::VmException,
+    },
+    runners::cairo_runner::ExecutionResources,
+};
 use felt::{felt_str, Felt};
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
+use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
@@ -11,9 +18,15 @@ use starknet_rs::{
             state_api::{State, StateReader},
             state_api_objects::BlockInfo,
         },
-        transaction::objects::{
-            internal_deploy_account::InternalDeployAccount,
-            {internal_declare::InternalDeclare, internal_invoke_function::InternalInvokeFunction},
+        transaction::{
+            error::TransactionError,
+            objects::{
+                internal_deploy_account::InternalDeployAccount,
+                {
+                    internal_declare::InternalDeclare,
+                    internal_invoke_function::InternalInvokeFunction,
+                },
+            },
         },
     },
     definitions::{
@@ -646,6 +659,34 @@ fn test_invoke_tx() {
 }
 
 #[test]
+fn test_fee_charge() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let calldata = vec![
+        TEST_ERC20_CONTRACT_ADDRESS.clone().0, // CONTRACT_ADDRESS
+        Felt::from_bytes_be(&calculate_sn_keccak(b"permissionedMint")), // CONTRACT FUNCTION SELECTOR
+        Felt::new(3),                                                   //CONTRACT_CALLDATA LEN
+        TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,                        // CONTRACT_CALLDATA
+        Felt::from(7899),                                               // CONTRACT_CALLDATA
+        Felt::from(0),                                                  // CONTRACT_CALLDATA
+    ];
+    let invoke_tx1 = invoke_tx(calldata);
+
+    // Extract invoke transaction fields for testing, as it is consumed when creating an account
+    // transaction.
+    let result = invoke_tx1.execute(state, starknet_general_config).unwrap();
+
+    let calldata2 = vec![
+        TEST_ERC20_CONTRACT_ADDRESS.clone().0, // CONTRACT_ADDRESS
+        Felt::from_bytes_be(&calculate_sn_keccak(b"balanceOf")), // CONTRACT FUNCTION SELECTOR
+        Felt::new(1),                          //CONTRACT_CALLDATA LEN
+        TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0, // CONTRACT_CALLDATA                                           //
+    ];
+    let invoke_tx2 = invoke_tx(calldata2);
+    let result2 = invoke_tx2.execute(state, starknet_general_config).unwrap();
+    dbg!(result2);
+}
+
+#[test]
 fn test_deploy_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
@@ -906,4 +947,93 @@ fn expected_deploy_account_states() -> (
         .unwrap();
 
     (state_before, state_after)
+}
+
+#[test]
+fn test_invoke_tx_wrong_call_data() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+
+    // Calldata with missing inputs
+    let calldata = vec![
+        TEST_CONTRACT_ADDRESS.clone().0, // CONTRACT_ADDRESS
+        Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+        Felt::from(1),                   // CONTRACT_CALLDATA LEN
+                                         // CONTRACT_CALLDATA
+    ];
+    let invoke_tx = invoke_tx(calldata);
+
+    // Execute transaction
+    let result = invoke_tx.execute(state, starknet_general_config);
+
+    // Assert error
+    assert_matches!(
+        result,
+        Err(TransactionError::CairoRunner(CairoRunError::VmException(
+            VmException {
+                inner_exc: VirtualMachineError::DiffAssertValues(..),
+                ..
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_invoke_tx_wrong_entrypoint() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+
+    // Invoke transaccion with an entrypoint that doesn't exists
+    let invoke_tx = InternalInvokeFunction::new(
+        TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        // Entrypoiont that doesnt exits in the contract
+        Felt::from_bytes_be(&calculate_sn_keccak(b"none_function")),
+        1,
+        vec![
+            test_contract_address,                                       // CONTRACT_ADDRESS
+            Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+            Felt::from(1),                                               // CONTRACT_CALLDATA LEN
+            Felt::from(2),                                               // CONTRACT_CALLDATA
+        ],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(Felt::zero()),
+    )
+    .unwrap();
+
+    // Execute transaction
+    let result = invoke_tx.execute(state, starknet_general_config);
+
+    // Assert error
+    assert_matches!(result, Err(TransactionError::EntryPointNotFound));
+}
+
+#[test]
+fn test_deploy_undeclared_account() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    let not_deployed_class_hash = [1; 32];
+    // Deploy transaccion with a not_deployed_class_hash class_hash
+    let deploy_account_tx = InternalDeployAccount::new(
+        not_deployed_class_hash,
+        2,
+        TRANSACTION_VERSION,
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        StarknetChainId::TestNet,
+    )
+    .unwrap();
+
+    // Check not_deployed_class_hash
+    assert!(state.get_contract_class(&not_deployed_class_hash).is_err());
+
+    // Execute transaction
+    let result = deploy_account_tx.execute(&mut state, &general_config);
+
+    // Execute transaction
+    assert_matches!(
+        result,
+        Err(TransactionError::State(StateError::MissingClassHash()))
+    );
 }
