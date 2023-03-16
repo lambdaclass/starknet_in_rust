@@ -600,7 +600,7 @@ fn amm_proxy_init_pool_test() {
     );
 
     let address = Address(1000000.into());
-    let class_hash = [2; 32];
+    let class_hash = [0; 32];
     let mut state = setup_contract("starknet_programs/amm_proxy.json", &address, class_hash);
 
     let entry_points_by_type = state
