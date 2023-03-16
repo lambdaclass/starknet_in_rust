@@ -614,7 +614,6 @@ fn amm_proxy_init_pool_test() {
     state_reader
         .contract_states_mut()
         .insert(contract_address.clone(), contract_state);
-
     state_reader
         .contract_states_mut()
         .insert(proxy_address.clone(), proxy_state);
@@ -622,13 +621,19 @@ fn amm_proxy_init_pool_test() {
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
-    let entry_points_by_type = state
+    let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
         .unwrap()
         .entry_points_by_type()
         .clone();
 
-    let calldata = [0.into(), 1.into()].to_vec();
+    let contract_entry_points_by_type = state
+        .get_contract_class(&contract_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let calldata = [0.into(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -638,7 +643,7 @@ fn amm_proxy_init_pool_test() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
-        entry_points_by_type: &entry_points_by_type,
+        entry_points_by_type: &proxy_entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -650,7 +655,7 @@ fn amm_proxy_init_pool_test() {
     )
     .unwrap();
 
-    let amm_proxy_entrypoint_selector = entry_points_by_type
+    let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
@@ -658,19 +663,45 @@ fn amm_proxy_init_pool_test() {
         .selector()
         .clone();
 
-    let accessed_storage_keys = get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
+    let amm_entrypoint_selector = contract_entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(4)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let accessed_storage_keys =
+        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
+
+    let internal_calls = vec![CallInfo {
+        caller_address: proxy_address.clone(),
+        call_type: Some(CallType::Call),
+        contract_address: contract_address.clone(),
+        entry_point_selector: Some(amm_entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata.clone()[1..].to_vec(),
+        retdata: [].to_vec(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(contract_class_hash),
+        accessed_storage_keys,
+        ..Default::default()
+    }];
 
     let expected_call_info = CallInfo {
-        caller_address: Address(0.into()),
+        caller_address,
         call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
+        contract_address: proxy_address,
         entry_point_selector: Some(amm_proxy_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_memory_holes: 20,
+            ..Default::default()
+        },
         class_hash: Some(proxy_class_hash),
-        accessed_storage_keys,
+        internal_calls,
         ..Default::default()
     };
 
