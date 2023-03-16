@@ -31,3 +31,10 @@ func proxy_init_pool{syscall_ptr: felt*, range_check_ptr}(
 ) {
     return IAMMContract.init_pool(contract_address, token_a, token_b);
 }
+
+@external
+func proxy_add_demo_token{syscall_ptr: felt*, range_check_ptr}(
+    contract_address: felt, token_a_amount: felt, token_b_amount: felt
+) {
+    return IAMMContract.add_demo_token(contract_address, token_a_amount, token_b_amount);
+}
