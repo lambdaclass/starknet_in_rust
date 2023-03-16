@@ -117,19 +117,24 @@ fn create_account_tx_test_state(
         .clone();
     let address_to_class_hash = HashMap::from([
         (test_contract_address.clone(), test_contract_class_hash),
-        (test_account_contract_address.clone(), test_account_contract_class_hash),
+        (
+            test_account_contract_address.clone(),
+            test_account_contract_class_hash,
+        ),
         (test_erc20_address.clone(), test_erc20_class_hash),
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
     let hash_value: [u8; 32] = [0; 32];
     let storage_view = HashMap::from([(
-        (test_erc20_address.clone(), felt_to_hash(&test_erc20_account_balance_key)),
+        (
+            test_erc20_address.clone(),
+            felt_to_hash(&test_erc20_account_balance_key),
+        ),
         Felt::from(ACTUAL_FEE.clone()),
-
         (test_contract_address.clone(), [0; 32]),
-        Felt::zero()),
-    ]);
+        Felt::zero(),
+    )]);
 
     let address_to_nonce = HashMap::from([
         (test_contract_address, Felt::zero()),
@@ -137,16 +142,15 @@ fn create_account_tx_test_state(
         (test_erc20_address, Felt::zero()),
     ]);
 
-
     let cached_state = CachedState::new(
         {
             let state_reader = InMemoryStateReader::new(
                 address_to_class_hash,
                 address_to_nonce,
                 storage_view,
-                class_hash_to_class
+                class_hash_to_class,
             );
-/*
+            /*
             for (contract_address, class_hash) in address_to_class_hash {
                 let storage_keys: HashMap<(Address, [u8; 32]), Felt> = storage_view
                     .iter()
@@ -245,7 +249,7 @@ fn test_create_account_tx_test_state() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
     let state2 = &mut expected_state_before_tx();
-    
+
     // testing if contract_address to class hash is OK
     assert_eq!(
         state.get_class_hash_at(&Address(Felt::new(257))),
@@ -284,46 +288,58 @@ fn test_create_account_tx_test_state() {
 
     // testing storage
     assert_eq!(
-        state.get_storage_at(
-            &(
-                Address(Felt::new(4097)), 
-            felt_to_hash(
-                &felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515")))),
-        state2.get_storage_at(
-            &(Address(Felt::new(4097)),
-            felt_to_hash(
-                &felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"))))
+        state.get_storage_at(&(
+            Address(Felt::new(4097)),
+            felt_to_hash(&felt_str!(
+                "1192211877881866289306604115402199097887041303917861778777990838480655617515"
+            ))
+        )),
+        state2.get_storage_at(&(
+            Address(Felt::new(4097)),
+            felt_to_hash(&felt_str!(
+                "1192211877881866289306604115402199097887041303917861778777990838480655617515"
+            ))
+        ))
     ); //test_erc_20
 
-    println!("[282] storage for ERC20 {:?}", state2.get_storage_at(
-        &(Address(Felt::new(4097)),
-            felt_to_hash(
-                &felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515")))));
+    println!(
+        "[282] storage for ERC20 {:?}",
+        state2.get_storage_at(&(
+            Address(Felt::new(4097)),
+            felt_to_hash(&felt_str!(
+                "1192211877881866289306604115402199097887041303917861778777990838480655617515"
+            ))
+        ))
+    );
 
-/*     assert_eq!(
+    /*     assert_eq!(
         state.get_storage_at(
             &(Address(Felt::new(257)), [0; 32])),
         state2.get_storage_at(
             &(Address(Felt::new(257)), [0; 32]))
     ); //account_contract_address */
 
-    println!("[294] storage for account_contract_address in create_account_tx_test_state {:?}", state.get_storage_at(
-        &(Address(Felt::new(257)), [0; 32])));
-    
-    println!("storage for account_contract_address in expected_state_before_tx {:?}", state2.get_storage_at(
-        &(Address(Felt::new(257)), [0; 32])));
-
-/*
-    assert_eq!(
-        state.get_storage_at(&Address(Felt::new(256))),
-        state2.get_storage_at(&Address(Felt::new(256)))
+    println!(
+        "[294] storage for account_contract_address in create_account_tx_test_state {:?}",
+        state.get_storage_at(&(Address(Felt::new(257)), [0; 32]))
     );
 
-    assert_eq!(
-        state.get_storage_at(&Address(Felt::new(4097))),
-        state2.get_storage_at(&Address(Felt::new(4097)))
+    println!(
+        "storage for account_contract_address in expected_state_before_tx {:?}",
+        state2.get_storage_at(&(Address(Felt::new(257)), [0; 32]))
     );
- */
+
+    /*
+       assert_eq!(
+           state.get_storage_at(&Address(Felt::new(256))),
+           state2.get_storage_at(&Address(Felt::new(256)))
+       );
+
+       assert_eq!(
+           state.get_storage_at(&Address(Felt::new(4097))),
+           state2.get_storage_at(&Address(Felt::new(4097)))
+       );
+    */
 
     //println!("{:?}", &expected_state_before_tx());
     //debug_assert_eq!(&state, &expected_state_before_tx());
