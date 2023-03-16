@@ -30,9 +30,9 @@ enum ProxyAmmEntryPoints {
     GetAccountTokenBalance,
 }
 
-impl Into<usize> for ProxyAmmEntryPoints {
-    fn into(self) -> usize {
-        match self {
+impl From<ProxyAmmEntryPoints> for usize {
+    fn from(val: ProxyAmmEntryPoints) -> Self {
+        match val {
             ProxyAmmEntryPoints::AddDemoToken => 0,
             ProxyAmmEntryPoints::InitPool => 1,
             ProxyAmmEntryPoints::Swap => 2,

@@ -26,9 +26,9 @@ pub enum AmmEntryPoints {
     InitPool,
 }
 
-impl Into<usize> for AmmEntryPoints {
-    fn into(self) -> usize {
-        match self {
+impl From<AmmEntryPoints> for usize {
+    fn from(val: AmmEntryPoints) -> Self {
+        match val {
             AmmEntryPoints::GetAccountTokenBalance => 0,
             AmmEntryPoints::Swap => 1,
             AmmEntryPoints::AddDemoToken => 2,

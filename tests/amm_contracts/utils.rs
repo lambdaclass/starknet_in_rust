@@ -132,7 +132,7 @@ pub fn execute_entry_point(
     // Entry point for init pool
     let (exec_entry_point, _) = get_entry_points(
         call_config.entry_points_by_type,
-        index_selector as usize,
+        index_selector,
         call_config.address,
         call_config.class_hash,
         calldata,
