@@ -24,6 +24,7 @@ pub struct CachedState<T: StateReader + Clone> {
     pub(crate) state_reader: T,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) cache: StateCache,
+    #[get = "pub"]
     pub(crate) contract_classes: Option<ContractClassCache>,
 }
 
