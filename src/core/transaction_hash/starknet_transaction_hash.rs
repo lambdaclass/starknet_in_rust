@@ -45,7 +45,9 @@ impl TransactionHashPrefix {
 ///    7. The network's chain ID.
 /// Each hash chain computation begins with 0 as initialization and ends with its length appended.
 /// The length is appended in order to avoid collisions of the following kind:
-/// H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y).
+/// ```txt
+///     H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y)
+/// ```
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
