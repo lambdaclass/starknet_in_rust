@@ -709,7 +709,7 @@ fn amm_proxy_init_pool_test() {
 }
 
 #[test]
-fn amm_proxy_init_pool_test() {
+fn amm_proxy_get_pool_token_balance_test() {
     let contract_address = Address(0.into());
     let contract_class_hash = [1; 32];
     let proxy_address = Address(1000000.into());
@@ -767,17 +767,21 @@ fn amm_proxy_init_pool_test() {
         resources_manager: &mut resources_manager,
     };
 
-    let result = execute_entry_point(
+    // Add pool balance
+    execute_entry_point(
         AmmEntryPoints::_GetAccountTokenBalance,
         &calldata,
         &mut call_config,
     )
     .unwrap();
 
+    let calldata = [0.into(), 1.into()].to_vec();
+    let result = execute_entry_point(AmmEntryPoints::Swap, &calldata, &mut call_config).unwrap();
+
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(0)
+        .get(1)
         .unwrap()
         .selector()
         .clone();
@@ -785,13 +789,12 @@ fn amm_proxy_init_pool_test() {
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(4)
+        .get(3)
         .unwrap()
         .selector()
         .clone();
 
-    let accessed_storage_keys =
-        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
+    let accessed_storage_keys = get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
 
     let internal_calls = vec![CallInfo {
         caller_address: proxy_address.clone(),
@@ -800,7 +803,8 @@ fn amm_proxy_init_pool_test() {
         entry_point_selector: Some(amm_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
-        retdata: [].to_vec(),
+        retdata: [555.into()].to_vec(),
+        storage_read_values: [555.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
@@ -814,9 +818,9 @@ fn amm_proxy_init_pool_test() {
         entry_point_selector: Some(amm_proxy_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
-        retdata: [].to_vec(),
+        retdata: [555.into()].to_vec(),
         execution_resources: ExecutionResources {
-            n_memory_holes: 20,
+            n_memory_holes: 10,
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
