@@ -659,34 +659,6 @@ fn test_invoke_tx() {
 }
 
 #[test]
-fn test_fee_charge() {
-    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
-    let calldata = vec![
-        TEST_ERC20_CONTRACT_ADDRESS.clone().0, // CONTRACT_ADDRESS
-        Felt::from_bytes_be(&calculate_sn_keccak(b"permissionedMint")), // CONTRACT FUNCTION SELECTOR
-        Felt::new(3),                                                   //CONTRACT_CALLDATA LEN
-        TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,                        // CONTRACT_CALLDATA
-        Felt::from(7899),                                               // CONTRACT_CALLDATA
-        Felt::from(0),                                                  // CONTRACT_CALLDATA
-    ];
-    let invoke_tx1 = invoke_tx(calldata);
-
-    // Extract invoke transaction fields for testing, as it is consumed when creating an account
-    // transaction.
-    let result = invoke_tx1.execute(state, starknet_general_config).unwrap();
-
-    let calldata2 = vec![
-        TEST_ERC20_CONTRACT_ADDRESS.clone().0, // CONTRACT_ADDRESS
-        Felt::from_bytes_be(&calculate_sn_keccak(b"balanceOf")), // CONTRACT FUNCTION SELECTOR
-        Felt::new(1),                          //CONTRACT_CALLDATA LEN
-        TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0, // CONTRACT_CALLDATA                                           //
-    ];
-    let invoke_tx2 = invoke_tx(calldata2);
-    let result2 = invoke_tx2.execute(state, starknet_general_config).unwrap();
-    dbg!(result2);
-}
-
-#[test]
 fn test_deploy_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
