@@ -26,7 +26,7 @@ use std::{
     path::PathBuf,
 };
 enum AmmEntryPoints {
-    _GetAccountTokenBalance,
+    GetAccountTokenBalance,
     Swap,
     AddDemoToken,
     GetPoolTokenBalance,
@@ -36,7 +36,7 @@ enum AmmEntryPoints {
 impl Into<usize> for AmmEntryPoints {
     fn into(self) -> usize {
         match self {
-            AmmEntryPoints::_GetAccountTokenBalance => 0,
+            AmmEntryPoints::GetAccountTokenBalance => 0,
             AmmEntryPoints::Swap => 1,
             AmmEntryPoints::AddDemoToken => 2,
             AmmEntryPoints::GetPoolTokenBalance => 3,
@@ -46,21 +46,21 @@ impl Into<usize> for AmmEntryPoints {
 }
 
 enum ProxyAmmEntryPoints {
-    _AddDemoToken,
+    AddDemoToken,
     InitPool,
-    _Swap,
+    Swap,
     GetPoolTokenBalance,
-    _GetAccountTokenBalance,
+    GetAccountTokenBalance,
 }
 
 impl Into<usize> for ProxyAmmEntryPoints {
     fn into(self) -> usize {
         match self {
-            ProxyAmmEntryPoints::_AddDemoToken => 0,
+            ProxyAmmEntryPoints::AddDemoToken => 0,
             ProxyAmmEntryPoints::InitPool => 1,
-            ProxyAmmEntryPoints::_Swap => 2,
+            ProxyAmmEntryPoints::Swap => 2,
             ProxyAmmEntryPoints::GetPoolTokenBalance => 3,
-            ProxyAmmEntryPoints::_GetAccountTokenBalance => 4,
+            ProxyAmmEntryPoints::GetAccountTokenBalance => 4,
         }
     }
 }
@@ -420,7 +420,7 @@ fn amm_get_pool_token_balance() {
 //fourth we swap tokens
 //check if its what we expected
 #[test]
-fn amm_swap_test() {
+fn ammswap_test() {
     //set up contract
     let address = Address(1111.into());
     let class_hash = [1; 32];
@@ -453,12 +453,12 @@ fn amm_swap_test() {
     add_demo_token(&calldata_add_demo_token, &mut call_config).unwrap();
 
     //swap tokens. Token 1 with 10 in amount
-    let calldata_swap = [1.into(), 10.into()].to_vec();
+    let calldataswap = [1.into(), 10.into()].to_vec();
 
     //expected return value 9
     let expected_return = [9.into()].to_vec();
 
-    let result = swap(&calldata_swap, &mut call_config);
+    let result = swap(&calldataswap, &mut call_config);
 
     //access keys are all keys in pool balance and only this users balance but thats checked in account
     let accessed_storage_keys_pool_balance =
@@ -485,13 +485,13 @@ fn amm_swap_test() {
         .selector()
         .clone();
 
-    let expected_call_info_swap = CallInfo {
+    let expected_call_infoswap = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
         entry_point_selector: Some(swap_selector),
         entry_point_type: Some(EntryPointType::External),
-        calldata: calldata_swap,
+        calldata: calldataswap,
         retdata: expected_return,
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
@@ -507,7 +507,7 @@ fn amm_swap_test() {
         ..Default::default()
     };
 
-    assert_eq!(result.unwrap(), expected_call_info_swap);
+    assert_eq!(result.unwrap(), expected_call_infoswap);
 }
 
 #[test]
@@ -539,7 +539,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
 }
 
 #[test]
-fn amm_swap_should_fail_with_unexistent_token() {
+fn ammswap_should_fail_with_unexistent_token() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
@@ -567,7 +567,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
 }
 
 #[test]
-fn amm_swap_should_fail_with_amount_out_of_bounds() {
+fn ammswap_should_fail_with_amount_out_of_bounds() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
@@ -595,7 +595,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
 }
 
 #[test]
-fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
+fn ammswap_should_fail_when_user_does_not_have_enough_funds() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
@@ -946,7 +946,7 @@ fn amm_proxy_add_demo_token_test() {
     .unwrap();
 
     let calldata = [0.into(), 55.into(), 66.into()].to_vec();
-    let index_entry_point_proxy_add_demo_token: usize = ProxyAmmEntryPoints::_AddDemoToken.into();
+    let index_entry_point_proxy_add_demo_token: usize = ProxyAmmEntryPoints::AddDemoToken.into();
     let result = execute_entry_point(
         index_entry_point_proxy_add_demo_token,
         &calldata,
@@ -1073,7 +1073,7 @@ fn amm_proxy_get_account_token_balance() {
 
     // Add account balance for the proxy contract in the amm contract
     execute_entry_point(
-        ProxyAmmEntryPoints::_AddDemoToken.into(),
+        ProxyAmmEntryPoints::AddDemoToken.into(),
         &calldata,
         &mut call_config,
     )
@@ -1084,7 +1084,7 @@ fn amm_proxy_get_account_token_balance() {
     //Third argument is the token id
     let calldata = [0.into(), 1000000.into(), 2.into()].to_vec();
     let index_entry_point_get_account_balance: usize =
-        ProxyAmmEntryPoints::_GetAccountTokenBalance.into();
+        ProxyAmmEntryPoints::GetAccountTokenBalance.into();
     let result = execute_entry_point(4, &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
@@ -1096,7 +1096,7 @@ fn amm_proxy_get_account_token_balance() {
         .clone();
 
     let index_entry_point_get_account_balance: usize =
-        AmmEntryPoints::_GetAccountTokenBalance.into();
+        AmmEntryPoints::GetAccountTokenBalance.into();
 
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
@@ -1147,7 +1147,7 @@ fn amm_proxy_get_account_token_balance() {
 }
 
 #[test]
-fn amm_proxy_swap() {
+fn amm_proxyswap() {
     let contract_address = Address(0.into());
     let contract_class_hash = [1; 32];
     let proxy_address = Address(1000000.into());
@@ -1207,7 +1207,7 @@ fn amm_proxy_swap() {
 
     // Add account balance for the proxy contract in the amm contract
     execute_entry_point(
-        ProxyAmmEntryPoints::_AddDemoToken.into(),
+        ProxyAmmEntryPoints::AddDemoToken.into(),
         &calldata,
         &mut call_config,
     )
@@ -1227,24 +1227,24 @@ fn amm_proxy_swap() {
     //Second argunet is the token to swap (type 1)
     //Third argument is the amount of tokens to swap (100)
     let calldata = [0.into(), 1.into(), 100.into()].to_vec();
-    let index_entry_point_proxy_swap = ProxyAmmEntryPoints::_Swap.into();
+    let index_entry_point_proxyswap = ProxyAmmEntryPoints::Swap.into();
     let expected_result = [90.into()].to_vec();
     let result =
-        execute_entry_point(index_entry_point_proxy_swap, &calldata, &mut call_config).unwrap();
+        execute_entry_point(index_entry_point_proxyswap, &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector = proxy_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(index_entry_point_proxy_swap)
+        .get(index_entry_point_proxyswap)
         .unwrap()
         .selector()
         .clone();
 
-    let index_entry_point_swap: usize = AmmEntryPoints::Swap.into();
+    let index_entry_pointswap: usize = AmmEntryPoints::Swap.into();
     let amm_entrypoint_selector = contract_entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(index_entry_point_swap)
+        .get(index_entry_pointswap)
         .unwrap()
         .selector()
         .clone();
