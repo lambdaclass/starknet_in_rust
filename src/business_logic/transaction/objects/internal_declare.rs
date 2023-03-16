@@ -27,6 +27,7 @@ use felt::Felt;
 use num_traits::Zero;
 use std::collections::HashMap;
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 pub struct InternalDeclare {
@@ -290,6 +291,7 @@ impl InternalDeclare {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use felt::{felt_str, Felt};
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
@@ -302,7 +304,6 @@ mod tests {
             },
             state::cached_state::CachedState,
         },
-        core::contract_address::starknet_contract_address::compute_class_hash,
         definitions::{
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             general_config::{StarknetChainId, StarknetGeneralConfig},
