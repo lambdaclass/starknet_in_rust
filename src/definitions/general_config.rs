@@ -63,9 +63,9 @@ pub struct StarknetGeneralConfig {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) starknet_os_config: StarknetOsConfig,
     #[get_copy = "pub"]
-    pub(crate) _contract_storage_commitment_tree_height: u64,
+    pub(crate) contract_storage_commitment_tree_height: u64,
     #[get_copy = "pub"]
-    _global_state_commitment_tree_height: u64,
+    global_state_commitment_tree_height: u64,
     #[get = "pub"]
     pub(crate) cairo_resource_fee_weights: HashMap<String, f64>,
     #[get_copy = "pub"]
@@ -90,8 +90,8 @@ impl StarknetGeneralConfig {
     ) -> Self {
         Self {
             starknet_os_config,
-            _contract_storage_commitment_tree_height,
-            _global_state_commitment_tree_height,
+            contract_storage_commitment_tree_height: _contract_storage_commitment_tree_height,
+            global_state_commitment_tree_height: _global_state_commitment_tree_height,
             invoke_tx_max_n_steps,
             cairo_resource_fee_weights,
             validate_max_n_steps,
@@ -104,9 +104,9 @@ impl Default for StarknetGeneralConfig {
     fn default() -> Self {
         Self {
             starknet_os_config: Default::default(),
-            _contract_storage_commitment_tree_height:
+            contract_storage_commitment_tree_height:
                 DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
-            _global_state_commitment_tree_height: DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            global_state_commitment_tree_height: DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
             invoke_tx_max_n_steps: DEFAULT_INVOKE_TX_MAX_N_STEPS,
             cairo_resource_fee_weights: DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
             validate_max_n_steps: DEFAULT_VALIDATE_MAX_N_STEPS,

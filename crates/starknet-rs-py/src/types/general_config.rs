@@ -9,8 +9,9 @@ use starknet_rs::{
     definitions::{
         constants::{
             DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
-            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
-            DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STARKNET_OS_CONFIG, DEFAULT_VALIDATE_MAX_N_STEPS,
+            DEFAULT_GAS_PRICE, DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_INVOKE_TX_MAX_N_STEPS, DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STARKNET_OS_CONFIG,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
         },
         general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
     },
@@ -87,12 +88,12 @@ impl PyStarknetGeneralConfig {
 
     #[getter]
     fn contract_storage_commitment_tree_height(&self) -> u64 {
-        self.inner._contract_storage_commitment_tree_height()
+        self.inner.contract_storage_commitment_tree_height()
     }
 
     #[getter]
     fn global_state_commitment_tree_height(&self) -> u64 {
-        self.inner._global_state_commitment_tree_height()
+        self.inner.global_state_commitment_tree_height()
     }
 
     #[getter]
@@ -107,17 +108,17 @@ impl PyStarknetGeneralConfig {
 
     #[getter]
     fn min_gas_price(&self) -> u64 {
-        todo!()
+        DEFAULT_GAS_PRICE
     }
 
     #[getter]
     fn event_commitment_tree_height(&self) -> u64 {
-        todo!()
+        unimplemented!("this shouldn't be needed")
     }
 
     #[getter]
     fn tx_commitment_tree_height(&self) -> u64 {
-        todo!()
+        unimplemented!("this shouldn't be needed")
     }
 }
 
