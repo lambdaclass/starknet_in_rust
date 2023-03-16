@@ -3,8 +3,9 @@
 use self::{
     cached_state::PyCachedState,
     types::{
-        block_info::PyBlockInfo, contract_class::PyContractClass,
-        contract_entry_point::PyContractEntryPoint,
+        block_info::PyBlockInfo, call_info::PyCallInfo, contract_class::PyContractClass,
+        contract_entry_point::PyContractEntryPoint, execution_resources::PyExecutionResources,
+        ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
 use pyo3::prelude::*;
@@ -17,8 +18,12 @@ mod types;
 pub fn starknet_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
+    m.add_class::<PyCallInfo>()?;
     m.add_class::<PyContractClass>()?;
     m.add_class::<PyContractEntryPoint>()?;
+    m.add_class::<PyExecutionResources>()?;
+    m.add_class::<PyOrderedEvent>()?;
+    m.add_class::<PyOrderedL2ToL1Message>()?;
 
     Ok(())
 }

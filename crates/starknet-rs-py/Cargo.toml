@@ -19,6 +19,10 @@ num-bigint = "0.4.3"
 git = "https://github.com/lambdaclass/cairo-rs.git"
 rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22"
 
+[dependencies.cairo-vm]
+git = "https://github.com/lambdaclass/cairo-rs.git"
+rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22"
+
 [dependencies.pyo3]
 features = ["num-bigint"]
 version = "0.18.1"
