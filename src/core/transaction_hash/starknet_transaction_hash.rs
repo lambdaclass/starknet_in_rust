@@ -86,9 +86,8 @@ pub fn calculate_deploy_transaction_hash(
         version,
         contract_address,
         CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
-        // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
         constructor_calldata,
-        0,
+        0, // Considered 0 for Deploy transaction hash calculation purposes.
         chain_id,
         &[],
     )
