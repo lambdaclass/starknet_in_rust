@@ -3,13 +3,9 @@
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
-use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
     business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
-        },
+        execution::objects::{CallInfo, CallType},
         fact_state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
             state::ExecutionResourcesManager,
@@ -17,14 +13,18 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
         transaction::error::TransactionError,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, Address},
+    utils::Address,
 };
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
 };
+
+mod utils;
+use crate::utils::{execute_entry_point, get_accessed_keys, setup_contract, CallConfig};
+
 enum AmmEntryPoints {
     GetAccountTokenBalance,
     Swap,
@@ -63,141 +63,6 @@ impl Into<usize> for ProxyAmmEntryPoints {
             ProxyAmmEntryPoints::GetAccountTokenBalance => 4,
         }
     }
-}
-
-struct CallConfig<'a> {
-    state: &'a mut CachedState<InMemoryStateReader>,
-    caller_address: &'a Address,
-    address: &'a Address,
-    class_hash: &'a [u8; 32],
-    entry_points_by_type: &'a HashMap<
-        EntryPointType,
-        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
-    >,
-    general_config: &'a StarknetGeneralConfig,
-    resources_manager: &'a mut ExecutionResourcesManager,
-}
-
-fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> HashSet<[u8; 32]> {
-    let variable_hash = calculate_sn_keccak(variable_name.as_bytes());
-    let variable_hash = FieldElement::from_bytes_be(&variable_hash).unwrap();
-
-    let keys = fields
-        .iter()
-        .map(|field| {
-            field
-                .iter()
-                .fold(variable_hash, |hash, f| pedersen_hash(&hash, f))
-        })
-        .collect::<Vec<FieldElement>>();
-
-    let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
-
-    for key in keys {
-        accessed_storage_keys.insert(key.to_bytes_be());
-    }
-
-    accessed_storage_keys
-}
-
-fn get_entry_points(
-    entry_points_by_type: &HashMap<
-        EntryPointType,
-        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
-    >,
-    index_selector: usize,
-    address: &Address,
-    class_hash: &[u8; 32],
-    calldata: &[Felt],
-    caller_address: &Address,
-) -> (ExecutionEntryPoint, Felt) {
-    //* ------------------------------------
-    //*    Create entry point selector
-    //* ------------------------------------
-    let entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(index_selector)
-        .unwrap()
-        .selector()
-        .clone();
-
-    //* ------------------------------------
-    //*    Create execution entry point
-    //* ------------------------------------
-
-    let entry_point_type = EntryPointType::External;
-
-    (
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata.to_vec(),
-            entrypoint_selector.clone(),
-            caller_address.clone(),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(*class_hash),
-        ),
-        entrypoint_selector,
-    )
-}
-
-fn setup_contract(
-    path: &str,
-    address: &Address,
-    class_hash: [u8; 32],
-) -> CachedState<InMemoryStateReader> {
-    // Create program and entry point types for contract class
-    let path = PathBuf::from(path);
-    let contract_class = ContractClass::try_from(path).unwrap();
-
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    let contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
-    contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-    state_reader
-        .contract_states_mut()
-        .insert(address.clone(), contract_state);
-
-    // Create state with previous data
-    CachedState::new(state_reader, Some(contract_class_cache))
-}
-
-fn execute_entry_point(
-    index_selector: usize,
-    calldata: &[Felt],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    // Entry point for init pool
-    let (exec_entry_point, _) = get_entry_points(
-        call_config.entry_points_by_type,
-        index_selector as usize,
-        call_config.address,
-        call_config.class_hash,
-        calldata,
-        call_config.caller_address,
-    );
-
-    //* --------------------
-    //*   Execute contract
-    //* ---------------------
-    let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        call_config.general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-
-    exec_entry_point.execute(
-        call_config.state,
-        call_config.general_config,
-        call_config.resources_manager,
-        &tx_execution_context,
-    )
 }
 
 fn init_pool(
@@ -254,7 +119,7 @@ fn amm_init_pool_test() {
         .clone();
 
     let accessed_storage_keys =
-        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
+        utils::get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
@@ -1251,10 +1116,10 @@ fn amm_proxyswap() {
 
     //checked for amm contract both tokens balances
     let accessed_storage_keys_pool_balance =
-        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
+        utils::get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
 
     //checked for proxy account both tokens balances
-    let accessed_storage_keys_user_balance = get_accessed_keys(
+    let accessed_storage_keys_user_balance = utils::get_accessed_keys(
         "account_balance",
         vec![
             vec![1000000_u32.into(), 1_u8.into()],
