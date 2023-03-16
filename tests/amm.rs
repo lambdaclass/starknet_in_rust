@@ -593,32 +593,51 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
 fn amm_proxy_init_pool_test() {
     let contract_address = Address(0.into());
     let contract_class_hash = [1; 32];
-    let mut _contract_state = setup_contract(
-        "starknet_programs/amm.json",
-        &contract_address,
-        contract_class_hash,
-    );
+    let proxy_address = Address(1000000.into());
+    let mut proxy_class_hash = [0; 32];
+    proxy_class_hash[31] = 1;
 
-    let address = Address(1000000.into());
-    let class_hash = [0; 32];
-    let mut state = setup_contract("starknet_programs/amm_proxy.json", &address, class_hash);
+    // Create program and entry point types for contract class
+    let contract_path = PathBuf::from("starknet_programs/amm.json");
+    let contract_class = ContractClass::try_from(contract_path).unwrap();
+
+    let proxy_path = PathBuf::from("starknet_programs/amm_proxy.json");
+    let proxy_class = ContractClass::try_from(proxy_path).unwrap();
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+    let contract_state = ContractState::new(contract_class_hash, 0.into(), HashMap::new());
+    let proxy_state = ContractState::new(proxy_class_hash, 0.into(), HashMap::new());
+    contract_class_cache.insert(contract_class_hash, contract_class);
+    contract_class_cache.insert(proxy_class_hash, proxy_class);
+    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    state_reader
+        .contract_states_mut()
+        .insert(contract_address.clone(), contract_state);
+
+    state_reader
+        .contract_states_mut()
+        .insert(proxy_address.clone(), proxy_state);
+
+    // Create state with previous data
+    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
     let entry_points_by_type = state
-        .get_contract_class(&class_hash)
+        .get_contract_class(&proxy_class_hash)
         .unwrap()
         .entry_points_by_type()
         .clone();
 
-    let calldata = [1111.into(), 1.into()].to_vec();
-    let caller_address = Address(0000.into());
+    let calldata = [0.into(), 1.into()].to_vec();
+    let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
-        address: &address,
-        class_hash: &class_hash,
+        address: &proxy_address,
+        class_hash: &proxy_class_hash,
         entry_points_by_type: &entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
@@ -650,7 +669,7 @@ fn amm_proxy_init_pool_test() {
         calldata: calldata.clone(),
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
-        class_hash: Some(class_hash),
+        class_hash: Some(proxy_class_hash),
         accessed_storage_keys,
         ..Default::default()
     };
