@@ -19,11 +19,8 @@ use std::{
     path::PathBuf,
 };
 
-mod utils;
-use crate::utils::{execute_entry_point, get_accessed_keys, CallConfig};
-
-mod amm;
-use crate::amm::AmmEntryPoints;
+use crate::amm_contracts::amm::AmmEntryPoints;
+use crate::amm_contracts::utils::{execute_entry_point, get_accessed_keys, CallConfig};
 
 enum ProxyAmmEntryPoints {
     AddDemoToken,
@@ -671,10 +668,10 @@ fn amm_proxyswap() {
 
     //checked for amm contract both tokens balances
     let accessed_storage_keys_pool_balance =
-        utils::get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
+        get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
 
     //checked for proxy account both tokens balances
-    let accessed_storage_keys_user_balance = utils::get_accessed_keys(
+    let accessed_storage_keys_user_balance = get_accessed_keys(
         "account_balance",
         vec![
             vec![1000000_u32.into(), 1_u8.into()],

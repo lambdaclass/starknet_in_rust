@@ -16,8 +16,7 @@ use starknet_rs::{
 };
 use std::collections::HashSet;
 
-mod utils;
-use utils::{execute_entry_point, get_accessed_keys, setup_contract, CallConfig};
+use crate::amm_contracts::utils::*;
 
 pub enum AmmEntryPoints {
     _GetAccountTokenBalance,
