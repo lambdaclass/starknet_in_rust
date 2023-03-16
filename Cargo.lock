@@ -2449,6 +2449,7 @@ name = "starknet_rs"
 version = "0.1.0"
 dependencies = [
  "cairo-felt",
+ "cairo-vm",
  "num-bigint",
  "pyo3",
  "starknet-rs",
