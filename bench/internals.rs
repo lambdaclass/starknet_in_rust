@@ -9,9 +9,11 @@ use starknet_rs::{
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
         transaction::objects::{
-            internal_declare::InternalDeclare, internal_deploy_account::InternalDeployAccount,
+            internal_declare::InternalDeclare, internal_deploy::InternalDeploy,
+            internal_deploy_account::InternalDeployAccount,
         },
     },
+    core::contract_address::starknet_contract_address::compute_class_hash,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,
@@ -27,11 +29,11 @@ lazy_static! {
         "starknet_programs/account_without_validation.json",
     ))
     .unwrap();
-    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&felt_str!(
-        "3146761231686369291210245479075933162526514193311043598334639064078158562617"
-    ));
+    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(
+        &CONTRACT_CLASS.clone()
+    ).unwrap());
     static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
-        "1351769743764599227746416364615306404319526869558988948822078481252102329345"
+        "3577223136242220508961486249701638158054969090851914040041358274796489907314"
     ));
     static ref SIGNATURE: Vec<Felt> = vec![
         felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
@@ -109,10 +111,9 @@ fn deploy_account() {
                 StarknetChainId::TestNet,
             )
             .unwrap();
-            internal_deploy_account
-                .execute(&mut state_copy, config)
-                .unwrap()
-        });
+            internal_deploy_account.execute(&mut state_copy, config)
+        })
+        .unwrap();
         assert_eq!(got, expected);
     }
 }
@@ -149,4 +150,32 @@ fn declare() {
     }
 }
 
-fn deploy() {}
+#[inline(never)]
+fn deploy() {
+    const RUNS: usize = 1000;
+
+    let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
+    let mut state = CachedState::new(state_reader, Some(Default::default()));
+
+    state
+        .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
+        .unwrap();
+
+    let config = &Default::default();
+
+    for _ in 0..RUNS {
+        let mut state_copy = state.clone();
+        let salt = Address(felt_str!(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+        ));
+        let class = CONTRACT_CLASS.clone();
+        scope(|| {
+            // new consumes more execution time than raw struct instantiation
+            let internal_deploy_account =
+                InternalDeploy::new(salt, class, vec![], StarknetChainId::TestNet.to_felt(), 0)
+                    .unwrap();
+            internal_deploy_account.execute(&mut state_copy, config)
+        })
+        .unwrap();
+    }
+}
