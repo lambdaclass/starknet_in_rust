@@ -1,5 +1,5 @@
 use super::contract_entry_point::PyContractEntryPoint;
-use pyo3::prelude::*;
+use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::services::api::contract_class::{ContractClass, EntryPointType};
 use std::collections::HashMap;
 
@@ -14,11 +14,6 @@ pub struct PyContractClass {
 
 #[pymethods]
 impl PyContractClass {
-    #[getter]
-    pub fn contract_class_version(&self) -> &str {
-        todo!()
-    }
-
     #[getter]
     pub fn entry_points_by_type(&self) -> HashMap<PyEntryPointType, Vec<PyContractEntryPoint>> {
         self.inner
@@ -38,7 +33,7 @@ impl PyContractClass {
     }
 
     #[getter]
-    pub fn abi(&self) -> &str {
-        todo!()
+    pub fn abi(&self) -> PyResult<String> {
+        serde_json::to_string(&self.inner.abi()).map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 }
