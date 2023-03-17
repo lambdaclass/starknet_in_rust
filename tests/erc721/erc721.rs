@@ -82,16 +82,22 @@ fn erc721_constructor_test() {
     accessed_storage_keys.extend(&get_accessed_keys("ERC721_symbol", vec![]));
     accessed_storage_keys.extend(&get_accessed_keys(
         "ERC165_supported_interfaces",
-        interfaces,
+        interfaces.clone(),
     ));
     accessed_storage_keys.extend(&get_accessed_keys(
         "ERC721_balances",
         vec![vec![666_u32.into()]],
     ));
-    accessed_storage_keys.extend(&get_accessed_keys(
+    /*accessed_storage_keys.extend(&get_accessed_keys(
         "ERC721_owners",
         vec![vec![FieldElement::from(1_u8)]],
-    ));
+    ));*/
+
+    //let data = vec![Felt::zero(), Felt::from(666), Felt::from(1), Felt::zero()];
+    let keys = get_event_key(&["from_", "to", "token_id", "value"]);
+    let keys = Felt::from_bytes_be(&keys.to_bytes_be());
+    //let _events = vec![OrderedEvent::new(0, vec![keys], data)];
+    dbg!(keys);
 
     let _expected_call_info = CallInfo {
         caller_address: Address(666.into()),
@@ -119,14 +125,32 @@ fn erc721_constructor_test() {
         resources_manager: &mut resources_manager,
     };
 
-    dbg!();
+    let r = contructor(&calldata, &mut call_config).unwrap();
 
-    assert_eq!(
-        contructor(&calldata, &mut call_config)
-            .unwrap()
-            .accessed_storage_keys,
-        accessed_storage_keys
-    );
+    let result = r.accessed_storage_keys.clone();
+
+    dbg!("name");
+    dbg!(result.is_superset(&get_accessed_keys("ERC721_name", vec![])));
+    dbg!("symbol");
+    dbg!(result.is_superset(&get_accessed_keys("ERC721_symbol", vec![])));
+    dbg!("interfaces");
+    dbg!(result.is_superset(&get_accessed_keys(
+        "ERC165_supported_interfaces",
+        interfaces
+    )));
+    dbg!("balances");
+    dbg!(result.is_superset(&get_accessed_keys(
+        "ERC721_balances",
+        vec![vec![666_u32.into()]]
+    )));
+
+    dbg!(result.len());
+    dbg!(accessed_storage_keys.len());
+    for a in result.difference(&accessed_storage_keys) {
+        dbg!(a);
+    }
+
+    assert_eq!(r, CallInfo::default());
 }
 
 #[test]

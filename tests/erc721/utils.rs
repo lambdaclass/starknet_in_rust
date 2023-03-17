@@ -23,6 +23,7 @@ use starknet_rs::{
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
+    str::FromStr,
 };
 
 pub struct CallConfig<'a> {
@@ -62,6 +63,13 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
     }
 
     accessed_storage_keys
+}
+
+pub fn get_event_key(keys: &[&str]) -> FieldElement {
+    let zero = FieldElement::from(0_u8);
+    keys.iter().fold(zero, |hash, f| {
+        pedersen_hash(&hash, &FieldElement::from_bytes_be(&f.as_bytes()).unwrap())
+    })
 }
 
 pub fn get_entry_points(
