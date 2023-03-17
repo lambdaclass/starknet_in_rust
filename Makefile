@@ -29,10 +29,10 @@ compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
 
 cairo_programs/%.json: cairo_programs/%.cairo
-	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json: starknet_programs/%.cairo
-	cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 
 #
@@ -61,16 +61,14 @@ clean:
 clippy:
 	cargo clippy --all-targets -- -D warnings
 
-test:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
+test: compile-cairo compile-starknet
 	cargo test
 
-py-test:
+py-test: compile-cairo compile-starknet
 	. starknet-venv/bin/activate
 	cargo test -p starknet_rs --no-default-features --features embedded-python
 
-coverage:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
+coverage: compile-cairo compile-starknet
 	cargo tarpaulin
 	-rm -f default.profraw
 
