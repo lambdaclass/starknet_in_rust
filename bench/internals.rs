@@ -91,15 +91,17 @@ fn deploy_account() {
         let salt = Address(felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         ));
+        let class_hash = CLASS_HASH.clone();
+        let signature = SIGNATURE.clone();
         let got = scope(|| {
             // new consumes more execution time than raw struct instantiation
             let internal_deploy_account = InternalDeployAccount::new(
-                CLASS_HASH.clone(),
+                class_hash,
                 0,
                 0,
                 Felt::zero(),
                 vec![],
-                SIGNATURE.clone(),
+                signature,
                 salt,
                 StarknetChainId::TestNet,
             )
@@ -123,12 +125,14 @@ fn declare() {
 
     for _ in 0..RUNS {
         let mut cloned_state = state.clone();
+        let class = CONTRACT_CLASS.clone();
+        let address = CONTRACT_ADDRESS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
             let declare_tx = InternalDeclare::new(
-                CONTRACT_CLASS.clone(),
+                class,
                 StarknetChainId::TestNet.to_felt(),
-                CONTRACT_ADDRESS.clone(),
+                address,
                 0,
                 0,
                 vec![],
