@@ -159,9 +159,7 @@ impl From<StructContractClass> for CairoArg {
 }
 
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
-pub(crate) fn compute_class_hash(
-    contract_class: &ContractClass,
-) -> Result<Felt, ContractAddressError> {
+pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
     let contract_class_struct =
