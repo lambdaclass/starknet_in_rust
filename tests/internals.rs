@@ -1,7 +1,14 @@
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+use assert_matches::assert_matches;
+use cairo_rs::vm::{
+    errors::{
+        cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError, vm_exception::VmException,
+    },
+    runners::cairo_runner::ExecutionResources,
+};
 use felt::{felt_str, Felt};
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
+use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
@@ -12,9 +19,15 @@ use starknet_rs::{
             state_api_objects::BlockInfo,
             state_cache::StorageEntry,
         },
-        transaction::objects::{
-            internal_deploy_account::InternalDeployAccount,
-            {internal_declare::InternalDeclare, internal_invoke_function::InternalInvokeFunction},
+        transaction::{
+            error::TransactionError,
+            objects::{
+                internal_deploy_account::InternalDeployAccount,
+                {
+                    internal_declare::InternalDeclare,
+                    internal_invoke_function::InternalInvokeFunction,
+                },
+            },
         },
     },
     definitions::{
@@ -940,4 +953,263 @@ fn expected_deploy_account_states() -> (
         .unwrap();
 
     (state_before, state_after)
+}
+
+#[test]
+fn test_state_for_declare_tx() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    let declare_tx = declare_tx();
+    // Check ContractClass is not set before the declare_tx
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
+    assert_eq!(
+        state.get_nonce_at(&declare_tx.sender_address),
+        Ok(&0.into())
+    );
+    // Execute declare_tx
+    assert!(declare_tx.execute(&mut state, &general_config).is_ok());
+    assert_eq!(
+        state.get_nonce_at(&declare_tx.sender_address),
+        Ok(&1.into())
+    );
+
+    // Check state.state_reader
+    let state_reader = state.state_reader();
+    assert_eq!(
+        state_reader.contract_states(),
+        &HashMap::from([
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                    0.into(),
+                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), 0.into())]) //Fee, 2 in blockifier
+                )
+            ),
+            (
+                TEST_CONTRACT_ADDRESS.clone(),
+                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), 0.into(), HashMap::new())
+            ),
+            (
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                ContractState::new(
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                    0.into(),
+                    HashMap::new(),
+                )
+            ),
+        ])
+    );
+
+    assert_eq!(
+        state_reader.class_hash_to_contract_class(),
+        &HashMap::from([
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_CLASS_HASH),
+                get_contract_class(TEST_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap()
+            ),
+        ])
+    );
+
+    // Check state.cache
+    assert_eq!(
+        state.cache(),
+        &StateCache::new(
+            HashMap::from([
+                (
+                    TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)
+                ),
+                (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
+                )
+            ]),
+            HashMap::from([(
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                0.into()
+            )]),
+            HashMap::from([
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                    ),
+                    0.into()
+                )
+            ]),
+            HashMap::new(),
+            HashMap::from([(
+                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+                1.into()
+            )]),
+            HashMap::from([
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516"))
+                    ),
+                    0.into()
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                    ),
+                    0.into() //Fee, 2 in blockifier
+                ),
+                (
+                    (
+                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                    ),
+                    0.into()
+                ),
+            ]),
+        )
+    );
+
+    // Check state.contract_classes
+    assert_eq!(
+        state.contract_classes(),
+        &Some(HashMap::from([
+            (
+                felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
+                get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+            ),
+            (
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap()
+            ),
+        ]))
+    );
+}
+
+#[test]
+fn test_invoke_tx_wrong_call_data() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+
+    // Calldata with missing inputs
+    let calldata = vec![
+        TEST_CONTRACT_ADDRESS.clone().0, // CONTRACT_ADDRESS
+        Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+        Felt::from(1),                   // CONTRACT_CALLDATA LEN
+                                         // CONTRACT_CALLDATA
+    ];
+    let invoke_tx = invoke_tx(calldata);
+
+    // Execute transaction
+    let result = invoke_tx.execute(state, starknet_general_config);
+
+    // Assert error
+    assert_matches!(
+        result,
+        Err(TransactionError::CairoRunner(CairoRunError::VmException(
+            VmException {
+                inner_exc: VirtualMachineError::DiffAssertValues(..),
+                ..
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_invoke_tx_wrong_entrypoint() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+
+    // Invoke transaction with an entrypoint that doesn't exists
+    let invoke_tx = InternalInvokeFunction::new(
+        TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        // Entrypoiont that doesnt exits in the contract
+        Felt::from_bytes_be(&calculate_sn_keccak(b"none_function")),
+        1,
+        vec![
+            test_contract_address,                                       // CONTRACT_ADDRESS
+            Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+            Felt::from(1),                                               // CONTRACT_CALLDATA LEN
+            Felt::from(2),                                               // CONTRACT_CALLDATA
+        ],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(Felt::zero()),
+    )
+    .unwrap();
+
+    // Execute transaction
+    let result = invoke_tx.execute(state, starknet_general_config);
+
+    // Assert error
+    assert_matches!(result, Err(TransactionError::EntryPointNotFound));
+}
+
+#[test]
+fn test_deploy_undeclared_account() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+
+    let not_deployed_class_hash = [1; 32];
+    // Deploy transaction with a not_deployed_class_hash class_hash
+    let deploy_account_tx = InternalDeployAccount::new(
+        not_deployed_class_hash,
+        2,
+        TRANSACTION_VERSION,
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        StarknetChainId::TestNet,
+    )
+    .unwrap();
+
+    // Check not_deployed_class_hash
+    assert!(state.get_contract_class(&not_deployed_class_hash).is_err());
+
+    // Execute transaction
+    let result = deploy_account_tx.execute(&mut state, &general_config);
+
+    // Execute transaction
+    assert_matches!(
+        result,
+        Err(TransactionError::State(StateError::MissingClassHash()))
+    );
 }
