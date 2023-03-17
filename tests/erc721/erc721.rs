@@ -133,7 +133,7 @@ fn erc721_constructor_test() {
 fn erc721_name_test() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/ERC721/ERC721.json", &address, class_hash);
+    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
@@ -199,7 +199,7 @@ fn erc721_name_test() {
 fn erc721_symbol_test() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/ERC721/ERC721.json", &address, class_hash);
+    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
