@@ -90,7 +90,7 @@ impl InternalDeploy {
         &self,
         state: &mut T,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        if self.constructor_calldata.is_empty() {
+        if !self.constructor_calldata.is_empty() {
             return Err(StarkwareError::TransactionFailed);
         }
 

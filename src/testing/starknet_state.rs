@@ -301,7 +301,6 @@ mod tests {
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 
         // expected results
@@ -311,7 +310,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let address = Address(felt_str!(
-            "3173424428166065804253636112972198402746524727884605069568266184332607747575"
+            "2066790681318687707025847340457605657642478884993868155391041767964612021885"
         ));
 
         let mut actual_resources = HashMap::new();
@@ -339,11 +338,7 @@ mod tests {
         let exec = (address, transaction_exec_info);
         assert_eq!(
             starknet_state
-                .deploy(
-                    contract_class.clone(),
-                    constructor_calldata,
-                    contract_address_salt
-                )
+                .deploy(contract_class.clone(), vec![], contract_address_salt)
                 .unwrap(),
             exec
         );
@@ -449,15 +444,11 @@ mod tests {
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(
-                contract_class.clone(),
-                constructor_calldata.clone(),
-                contract_address_salt,
-            )
+            .deploy(contract_class.clone(), vec![], contract_address_salt)
             .unwrap();
 
         // fibonacci selector
@@ -471,7 +462,7 @@ mod tests {
             .invoke_raw(
                 contract_address,
                 selector.clone(),
-                constructor_calldata,
+                calldata,
                 0,
                 Some(Vec::new()),
                 Some(Felt::zero()),
@@ -484,7 +475,7 @@ mod tests {
         let fib_class_hash = felt_to_hash(&hash);
 
         let address = felt_str!(
-            "3173424428166065804253636112972198402746524727884605069568266184332607747575"
+            "2066790681318687707025847340457605657642478884993868155391041767964612021885"
         );
         let mut actual_resources = HashMap::new();
         actual_resources.insert("l1_gas_usage".to_string(), 0);
@@ -508,6 +499,6 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(expected_info, tx_info);
+        assert_eq!(tx_info, expected_info);
     }
 }
