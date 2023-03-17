@@ -11,9 +11,7 @@ use crate::{
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     starknet_runner::runner::StarknetRunner,
-    utils::{
-        get_deployed_address_class_hash_at_address, validate_contract_deployed, Address, ClassHash,
-    },
+    utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -30,7 +28,7 @@ pub struct ExecutionEntryPoint {
     call_type: CallType,
     contract_address: Address,
     code_address: Option<Address>,
-    class_hash: Option<ClassHash>,
+    class_hash: Option<[u8; 32]>,
     calldata: Vec<Felt>,
     caller_address: Address,
     entry_point_selector: Felt,
@@ -45,7 +43,7 @@ impl ExecutionEntryPoint {
         caller_address: Address,
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
-        class_hash: Option<ClassHash>,
+        class_hash: Option<[u8; 32]>,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
@@ -81,9 +79,11 @@ impl ExecutionEntryPoint {
             general_config,
             tx_execution_context,
         )?;
+
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             resources_manager.cairo_usage.clone() + runner.get_execution_resources()?;
+
         let retdata = runner.get_return_values()?;
         self.build_call_info::<T>(
             previous_cairo_usage,
@@ -190,7 +190,7 @@ impl ExecutionEntryPoint {
     fn get_selected_entry_point(
         &self,
         contract_class: ContractClass,
-        _class_hash: ClassHash,
+        _class_hash: [u8; 32],
     ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class
             .entry_points_by_type
@@ -255,7 +255,7 @@ impl ExecutionEntryPoint {
     fn get_code_class_hash<S: StateReader>(
         &self,
         state: &mut S,
-    ) -> Result<ClassHash, TransactionError> {
+    ) -> Result<[u8; 32], TransactionError> {
         if self.class_hash.is_some() {
             match self.call_type {
                 CallType::Delegate => return Ok(self.class_hash.unwrap()),
