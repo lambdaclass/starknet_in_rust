@@ -31,5 +31,5 @@ rusty-hook = "0.11"
 members = ["crates/starknet-rs-py"]
 
 [[bench]]
-path = "bench/benches.rs"
-name = "benches"
+path = "bench/internals.rs"
+name = "internals"

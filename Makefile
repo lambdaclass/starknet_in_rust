@@ -73,4 +73,4 @@ coverage: compile-cairo compile-starknet
 	-rm -f default.profraw
 
 flamegraph: compile-cairo compile-starknet
-	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench benches
+	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals

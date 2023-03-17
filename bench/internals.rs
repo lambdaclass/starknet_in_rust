@@ -1,5 +1,7 @@
 #![deny(warnings)]
 
+use std::path::PathBuf;
+
 use felt::{felt_str, Felt};
 use num_traits::Zero;
 use starknet_rs::{
@@ -17,6 +19,11 @@ use starknet_rs::{
     utils::{felt_to_hash, Address},
 };
 
+#[inline(never)]
+fn scope<T>(f: impl FnOnce() -> T) -> T {
+    f()
+}
+
 #[test]
 fn internal_deploy_account() {
     const RUNS: usize = 500;
@@ -29,8 +36,8 @@ fn internal_deploy_account() {
     let class_hash = felt_to_hash(&felt_str!(
         "3146761231686369291210245479075933162526514193311043598334639064078158562617"
     ));
-    let contract_class = ContractClass::try_from(include_str!(
-        "../starknet_programs/account_without_validation.json",
+    let contract_class = ContractClass::try_from(PathBuf::from(
+        "starknet_programs/account_without_validation.json",
     ))
     .unwrap();
 
@@ -89,9 +96,4 @@ fn internal_deploy_account() {
         });
         assert_eq!(got, expected);
     }
-}
-
-#[inline(never)]
-fn scope<T>(f: impl FnOnce() -> T) -> T {
-    f()
 }
