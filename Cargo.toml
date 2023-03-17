@@ -17,6 +17,9 @@ sha3 = "0.10.1"
 starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "main", features = ["testing"] }
 starknet-crypto = "0.2.0"
 thiserror = { version = "1.0.32" }
+clap = { version = "4.1.8", features = ["derive"] }
+actix-web = "4.3.1"
+awc = "3.1.1"
 
 [dev-dependencies]
 assert_matches = "1.5.0"

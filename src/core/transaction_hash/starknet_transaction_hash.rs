@@ -9,6 +9,7 @@ use crate::{
     utils::Address,
 };
 use felt::{felt_str, Felt};
+use num_traits::Zero;
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
@@ -82,16 +83,13 @@ pub fn calculate_deploy_transaction_hash(
     constructor_calldata: &[Felt],
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
-    let entry_point_selector = CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone();
-
     calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
-        entry_point_selector,
+        CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
         constructor_calldata,
-        // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
-        0,
+        0, // Considered 0 for Deploy transaction hash calculation purposes.
         chain_id,
         &[],
     )
@@ -115,7 +113,7 @@ pub fn calculate_deploy_account_transaction_hash(
         TransactionHashPrefix::DeployAccount,
         version,
         contract_address,
-        0.into(),
+        Felt::zero(),
         &calldata,
         max_fee,
         chain_id,
@@ -123,7 +121,7 @@ pub fn calculate_deploy_account_transaction_hash(
     )
 }
 
-pub(crate) fn calculate_declare_transaction_hash(
+pub fn calculate_declare_transaction_hash(
     contract_class: &ContractClass,
     chain_id: Felt,
     sender_address: &Address,
@@ -144,7 +142,7 @@ pub(crate) fn calculate_declare_transaction_hash(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
-        0.into(),
+        Felt::zero(),
         &calldata,
         max_fee,
         chain_id,

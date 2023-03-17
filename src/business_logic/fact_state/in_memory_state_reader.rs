@@ -5,10 +5,10 @@ use crate::{
     utils::{Address, ClassHash},
 };
 use felt::Felt;
-use getset::MutGetters;
+use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, Default, MutGetters, PartialEq)]
+#[derive(Clone, Debug, Default, MutGetters, Getters, PartialEq)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_class_hash: HashMap<Address, ClassHash>,
