@@ -339,7 +339,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash: [u8; 32] = [1; 32];
+        let class_hash = [1; 32];
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         // Set contact_state

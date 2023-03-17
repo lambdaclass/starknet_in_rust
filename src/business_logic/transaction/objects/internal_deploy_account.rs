@@ -23,7 +23,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, Address},
+    utils::{calculate_tx_resources, Address, ClassHash},
 };
 use felt::Felt;
 use getset::Getters;
@@ -37,7 +37,7 @@ pub struct InternalDeployAccount {
     #[getset(get = "pub")]
     contract_address_salt: Address,
     #[getset(get = "pub")]
-    class_hash: [u8; 32],
+    class_hash: ClassHash,
     #[getset(get = "pub")]
     constructor_calldata: Vec<Felt>,
     version: u64,
@@ -50,7 +50,7 @@ pub struct InternalDeployAccount {
 impl InternalDeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        class_hash: [u8; 32],
+        class_hash: ClassHash,
         max_fee: u64,
         version: u64,
         nonce: Felt,

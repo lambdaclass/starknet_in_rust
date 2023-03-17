@@ -43,7 +43,7 @@ use starknet_rs::{
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, felt_to_hash, Address},
+    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -154,7 +154,7 @@ fn create_account_tx_test_state(
         {
             let mut state_reader = InMemoryStateReader::default();
             for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys: HashMap<(Address, [u8; 32]), Felt> = storage_view
+                let storage_keys: HashMap<(Address, ClassHash), Felt> = storage_view
                     .iter()
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address).then_some((
@@ -317,7 +317,7 @@ fn validate_final_balances<S>(
     state: &mut S,
     general_config: &StarknetGeneralConfig,
     expected_sequencer_balance: &Felt,
-    erc20_account_balance_storage_key: &[u8; 32],
+    erc20_account_balance_storage_key: &ClassHash,
 ) where
     S: State + StateReader,
 {
@@ -775,12 +775,9 @@ fn test_deploy_account() {
         .unwrap();
     assert_eq!(nonce_from_state, &Felt::one());
 
-    validate_final_balances(
-        &mut state,
-        &general_config,
-        &Felt::zero(),
-        &felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
-    );
+    let hash = &felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY);
+
+    validate_final_balances(&mut state, &general_config, &Felt::zero(), hash);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())

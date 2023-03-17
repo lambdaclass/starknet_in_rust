@@ -21,7 +21,10 @@ use crate::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
+    utils::{
+        calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
+        ClassHash,
+    },
 };
 use felt::Felt;
 use num_traits::Zero;
@@ -31,7 +34,7 @@ use std::collections::HashMap;
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 pub struct InternalDeclare {
-    pub class_hash: [u8; 32],
+    pub class_hash: ClassHash,
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt,

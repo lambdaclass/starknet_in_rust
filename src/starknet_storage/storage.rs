@@ -1,7 +1,7 @@
 use super::errors::storage_errors::StorageError;
 use crate::{
     business_logic::fact_state::contract_state::ContractState,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::ContractClass, utils::ClassHash,
 };
 use std::str;
 
@@ -33,12 +33,12 @@ pub trait Storage {
         self.get_value(key).ok_or(StorageError::ErrorFetchingData)
     }
 
-    fn set_int(&mut self, key: &[u8; 32], value: i32) -> Result<(), StorageError> {
+    fn set_int(&mut self, key: &ClassHash, value: i32) -> Result<(), StorageError> {
         let val = value.to_ne_bytes().to_vec();
         self.set_value(&(Prefix::Int, *key), val)
     }
 
-    fn get_int(&self, key: &[u8; 32]) -> Result<i32, StorageError> {
+    fn get_int(&self, key: &ClassHash) -> Result<i32, StorageError> {
         let value = self
             .get_value(&(Prefix::Int, *key))
             .ok_or(StorageError::ErrorFetchingData)?;
@@ -48,7 +48,7 @@ pub trait Storage {
         Ok(i32::from_ne_bytes(slice))
     }
 
-    fn get_int_or_default(&self, key: &[u8; 32], default: i32) -> Result<i32, StorageError> {
+    fn get_int_or_default(&self, key: &ClassHash, default: i32) -> Result<i32, StorageError> {
         match self.get_value(&(Prefix::Int, *key)) {
             Some(val) => {
                 let slice: [u8; 4] = val
@@ -60,7 +60,7 @@ pub trait Storage {
         }
     }
 
-    fn get_int_or_fail(&self, key: &[u8; 32]) -> Result<i32, StorageError> {
+    fn get_int_or_fail(&self, key: &ClassHash) -> Result<i32, StorageError> {
         let val = self.get_value_or_fail(&(Prefix::Int, *key))?;
         let slice: [u8; 4] = val
             .try_into()
@@ -68,12 +68,12 @@ pub trait Storage {
         Ok(i32::from_ne_bytes(slice))
     }
 
-    fn set_float(&mut self, key: &[u8; 32], value: f64) -> Result<(), StorageError> {
+    fn set_float(&mut self, key: &ClassHash, value: f64) -> Result<(), StorageError> {
         let val = value.to_bits().to_be_bytes().to_vec();
         self.set_value(&(Prefix::Float, *key), val)
     }
 
-    fn get_float(&self, key: &[u8; 32]) -> Result<f64, StorageError> {
+    fn get_float(&self, key: &ClassHash) -> Result<f64, StorageError> {
         let val = self
             .get_value(&(Prefix::Float, *key))
             .ok_or(StorageError::ErrorFetchingData)?;
@@ -84,12 +84,12 @@ pub trait Storage {
         Ok(f64::from_bits(u64::from_be_bytes(float_bytes)))
     }
 
-    fn set_str(&mut self, key: &[u8; 32], value: &str) -> Result<(), StorageError> {
+    fn set_str(&mut self, key: &ClassHash, value: &str) -> Result<(), StorageError> {
         let val = value.as_bytes().to_vec();
         self.set_value(&(Prefix::Str, *key), val)
     }
 
-    fn get_str(&self, key: &[u8; 32]) -> Result<String, StorageError> {
+    fn get_str(&self, key: &ClassHash) -> Result<String, StorageError> {
         let val = self
             .get_value(&(Prefix::Str, *key))
             .ok_or(StorageError::ErrorFetchingData)?;
@@ -100,7 +100,7 @@ pub trait Storage {
     // TODO: Change key type to &Address.
     fn set_contract_state(
         &mut self,
-        key: &[u8; 32],
+        key: &ClassHash,
         value: &ContractState,
     ) -> Result<(), StorageError> {
         let contract_state = serde_json::to_string(value)?.as_bytes().to_vec();
@@ -109,7 +109,7 @@ pub trait Storage {
     }
 
     // TODO: Change key type to &Address.
-    fn get_contract_state(&self, key: &[u8; 32]) -> Result<ContractState, StorageError> {
+    fn get_contract_state(&self, key: &ClassHash) -> Result<ContractState, StorageError> {
         let set_contract_state = self
             .get_value(&(Prefix::ContractState, *key))
             .ok_or(StorageError::ErrorFetchingData)?;
@@ -119,7 +119,7 @@ pub trait Storage {
     }
 
     // TODO: Change key type to &Address.
-    fn get_contract_class(&self, key: &[u8; 32]) -> Result<ContractClass, StorageError> {
+    fn get_contract_class(&self, key: &ClassHash) -> Result<ContractClass, StorageError> {
         let set_contract_class = self
             .get_value(&(Prefix::ContractClass, *key))
             .ok_or(StorageError::ErrorFetchingData)?;
@@ -131,7 +131,7 @@ pub trait Storage {
     // TODO: Change key type to &Address.
     fn set_contract_class(
         &mut self,
-        key: &[u8; 32],
+        key: &ClassHash,
         value: &ContractClass,
     ) -> Result<(), StorageError> {
         let contract_class = serde_json::to_string(value)?.as_bytes().to_vec();
@@ -149,7 +149,7 @@ pub enum Prefix {
     ContractClass,
 }
 
-pub type StorageKey = (Prefix, [u8; 32]);
+pub type StorageKey = (Prefix, ClassHash);
 
 /* Tests are disabled because the DictStorage type has been eliminated and the Storage trait currently has no implementations
 #[cfg(test)]

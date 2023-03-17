@@ -26,7 +26,7 @@ use crate::{
         contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 use felt::Felt;
 use num_traits::{One, Zero};
@@ -74,7 +74,7 @@ impl StarknetState {
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
-    ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
+    ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
             contract_class,
             self.chain_id(),
