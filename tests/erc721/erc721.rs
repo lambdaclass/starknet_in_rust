@@ -37,6 +37,10 @@ fn contructor(
     execute_entry_point(ERC721EntryPoints::Constructor.into(), calldata, call_config)
 }
 
+fn name(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
+    execute_entry_point(9, calldata, call_config)
+}
+
 #[test]
 fn erc721_constructor_test() {
     let address = Address(1111.into());
@@ -119,4 +123,70 @@ fn erc721_constructor_test() {
             .accessed_storage_keys,
         accessed_storage_keys
     );
+}
+
+#[test]
+fn erc721_name_test() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/ERC721/ERC721.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let caller_address = Address(666.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let entry_point_type = EntryPointType::External;
+
+    // First we initialize the contract
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let calldata = [collection_name, symbol, to].to_vec();
+
+    let entry_point_type_constructor = EntryPointType::Constructor;
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &entry_point_type_constructor,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    contructor(&calldata, &mut call_config).unwrap();
+
+    call_config.entry_point_type = &entry_point_type;
+
+    let entrypoint_selector = entry_points_by_type
+        .get(&entry_point_type)
+        .unwrap()
+        .get(9)
+        .unwrap()
+        .selector()
+        .clone();
+
+    let expected_read_result = Felt::from_bytes_be("some-nft".as_bytes());
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(666.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: [].to_vec(),
+        retdata: vec![expected_read_result.clone()],
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: get_accessed_keys("ERC721_name", vec![]),
+        storage_read_values: vec![expected_read_result],
+        ..Default::default()
+    };
+
+    assert_eq!(name(&[], &mut call_config).unwrap(), expected_call_info);
 }
