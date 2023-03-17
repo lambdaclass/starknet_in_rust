@@ -9,8 +9,6 @@ pub struct DictStorage {
 }
 
 impl DictStorage {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn new() -> Self {
         DictStorage {
             storage: HashMap::new(),

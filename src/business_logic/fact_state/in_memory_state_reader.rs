@@ -46,6 +46,7 @@ impl StateReader for InMemoryStateReader {
         contract_class.validate()?;
         Ok(contract_class)
     }
+
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
         let class_hash = self
             .address_to_class_hash

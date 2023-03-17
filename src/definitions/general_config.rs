@@ -6,12 +6,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy)]
 pub enum StarknetChainId {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     MainNet,
     TestNet,
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     TestNet2,
 }
 
@@ -61,7 +57,7 @@ pub struct StarknetGeneralConfig {
     #[get_copy = "pub"]
     pub(crate) invoke_tx_max_n_steps: u64,
     pub(crate) validate_max_n_steps: u64,
-    #[get_mut = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) block_info: BlockInfo,
 }
 
