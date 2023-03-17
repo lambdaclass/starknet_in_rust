@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use crate::amm_contracts::utils::{execute_entry_point, get_accessed_keys, CallConfig};
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
@@ -170,15 +168,11 @@ fn amm_proxy_get_pool_token_balance_test() {
     };
 
     // Add pool balance
-    execute_entry_point("proxy_init_pool".into(), &calldata, &mut call_config).unwrap();
+    execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
     let calldata = [0.into(), 1.into()].to_vec();
-    let result = execute_entry_point(
-        "proxy_get_pool_token_balance".into(),
-        &calldata,
-        &mut call_config,
-    )
-    .unwrap();
+    let result =
+        execute_entry_point("proxy_get_pool_token_balance", &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector =
         Felt::from_bytes_be(&calculate_sn_keccak(b"proxy_get_pool_token_balance"));
@@ -276,7 +270,7 @@ fn amm_proxy_add_demo_token_test() {
     };
 
     // Add pool balance
-    execute_entry_point("proxy_init_pool".into(), &calldata, &mut call_config).unwrap();
+    execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
     let calldata = [0.into(), 55.into(), 66.into()].to_vec();
     let amm_proxy_entrypoint_selector =
