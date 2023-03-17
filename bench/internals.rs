@@ -152,7 +152,7 @@ fn declare() {
 
 #[inline(never)]
 fn deploy() {
-    const RUNS: usize = 1000;
+    const RUNS: usize = 8;
 
     let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
     let mut state = CachedState::new(state_reader, Some(Default::default()));
