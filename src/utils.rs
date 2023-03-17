@@ -85,7 +85,7 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
     Felt::from_bytes_be(&felt.to_bytes_be())
 }
 
-pub fn felt_to_hash(value: &Felt) -> [u8; 32] {
+pub fn felt_to_hash(value: &Felt) -> ClassHash {
     let mut output = [0; 32];
 
     let bytes = value.to_bytes_be();
@@ -94,7 +94,7 @@ pub fn felt_to_hash(value: &Felt) -> [u8; 32] {
     output
 }
 
-pub fn string_to_hash(class_string: &String) -> [u8; 32] {
+pub fn string_to_hash(class_string: &String) -> ClassHash {
     let parsed_felt = Felt::from_str_radix(
         if &class_string[..2] == "0x" {
             &class_string[2..]
@@ -115,8 +115,8 @@ pub fn string_to_hash(class_string: &String) -> [u8; 32] {
 
 pub fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt>,
-) -> HashMap<Felt, HashMap<[u8; 32], Address>> {
-    let mut storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>> = HashMap::new();
+) -> HashMap<Felt, HashMap<ClassHash, Address>> {
+    let mut storage_updates: HashMap<Felt, HashMap<ClassHash, Address>> = HashMap::new();
     for ((address, key), value) in storage_writes {
         let mut map = storage_updates.get(&address.0).cloned().unwrap_or_default();
         map.insert(key, Address(value));
@@ -215,7 +215,7 @@ where
 /// storage mapping (Tuple of address and key map to the associated value).
 
 pub fn to_cache_state_storage_mapping(
-    map: HashMap<Felt, HashMap<[u8; 32], Address>>,
+    map: HashMap<Felt, HashMap<ClassHash, Address>>,
 ) -> HashMap<StorageEntry, Felt> {
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
@@ -247,8 +247,8 @@ where
 pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     state: &mut S,
     contract_address: Address,
-) -> Result<[u8; 32], TransactionError> {
-    let class_hash: [u8; 32] = state
+) -> Result<ClassHash, TransactionError> {
+    let class_hash: ClassHash = state
         .get_class_hash_at(&contract_address)
         .map_err(|_| TransactionError::FailToReadClassHash)?
         .to_owned();
@@ -262,7 +262,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
 pub fn validate_contract_deployed<S: StateReader>(
     state: &mut S,
     contract_address: Address,
-) -> Result<[u8; 32], TransactionError> {
+) -> Result<ClassHash, TransactionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
 
@@ -281,10 +281,10 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     }
     Ok(())
 }
-pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
+pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
     let mut hasher = Keccak256::default();
     hasher.update(data);
-    let mut result: [u8; 32] = hasher.finalize().into();
+    let mut result: ClassHash = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result
@@ -484,7 +484,7 @@ pub mod test_utils {
     /*     macro_rules! storage_key {
         ( $key:literal ) => {{
             assert_eq!($key.len(), 64, "keys must be 64 nibbles in length.");
-            let key: [u8; 32] = $key
+            let key: ClassHash = $key
                 .as_bytes()
                 .chunks_exact(2)
                 .map(|x| {
@@ -510,7 +510,7 @@ mod test {
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
+        let mut storage: HashMap<(Address, ClassHash), Felt> = HashMap::new();
         let address1: Address = Address(1.into());
         let key1 = [0; 32];
         let value1: Felt = 2.into();
@@ -587,7 +587,7 @@ mod test {
     #[test]
 
     fn to_cache_state_storage_mapping_test() {
-        let mut storage: HashMap<(Address, [u8; 32]), Felt> = HashMap::new();
+        let mut storage: HashMap<(Address, ClassHash), Felt> = HashMap::new();
         let address1: Address = Address(1.into());
         let key1 = [0; 32];
         let value1: Felt = 2.into();

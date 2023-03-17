@@ -6,7 +6,7 @@ use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
     starknet_storage::errors::storage_errors::StorageError,
-    utils::{subtract_mappings, Address},
+    utils::{subtract_mappings, Address, ClassHash},
 };
 use felt::Felt;
 use getset::{Getters, MutGetters};
@@ -14,9 +14,9 @@ use num_traits::Zero;
 use std::collections::HashMap;
 
 // K: class_hash V: ContractClass
-pub type ContractClassCache = HashMap<[u8; 32], ContractClass>;
+pub type ContractClassCache = HashMap<ClassHash, ContractClass>;
 
-pub const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
 #[derive(Debug, Clone, Default, Eq, Getters, MutGetters, PartialEq)]
 pub struct CachedState<T: StateReader + Clone> {
@@ -68,7 +68,7 @@ impl<T: StateReader + Clone> CachedState<T> {
 }
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
-    fn get_contract_class(&mut self, class_hash: &[u8; 32]) -> Result<ContractClass, StateError> {
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
         if !self.get_contract_classes()?.contains_key(class_hash) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
             self.set_contract_class(class_hash, &contract_class)?;
@@ -80,7 +80,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .to_owned())
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&[u8; 32], StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
                 Ok(x) => *x,
@@ -145,7 +145,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
 impl<T: StateReader + Clone> State for CachedState<T> {
     fn set_contract_class(
         &mut self,
-        class_hash: &[u8; 32],
+        class_hash: &ClassHash,
         contract_class: &ContractClass,
     ) -> Result<(), StateError> {
         self.contract_classes
@@ -159,7 +159,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
     fn deploy_contract(
         &mut self,
         deploy_contract_address: Address,
-        class_hash: [u8; 32],
+        class_hash: ClassHash,
     ) -> Result<(), StateError> {
         if deploy_contract_address == Address(0.into()) {
             return Err(StateError::ContractAddressOutOfRangeAddress(

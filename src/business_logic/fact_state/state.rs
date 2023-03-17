@@ -4,7 +4,7 @@ use crate::{
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-        Address,
+        Address, ClassHash,
     },
 };
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
@@ -91,9 +91,9 @@ impl<T: StateReader + Clone> CarriedState<T> {
 
 #[derive(Default)]
 pub(crate) struct StateDiff {
-    pub(crate) address_to_class_hash: HashMap<Address, [u8; 32]>,
+    pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt>,
-    pub(crate) storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
+    pub(crate) storage_updates: HashMap<Felt, HashMap<ClassHash, Address>>,
 }
 
 impl StateDiff {
@@ -160,7 +160,7 @@ impl StateDiff {
             get_keys(self.storage_updates.clone(), other.storage_updates.clone());
 
         for address in addresses {
-            let default: HashMap<[u8; 32], Address> = HashMap::new();
+            let default: HashMap<ClassHash, Address> = HashMap::new();
             let mut map_a = self
                 .storage_updates
                 .get(&address)

@@ -24,7 +24,7 @@ use starknet_rs::{
         general_config::{StarknetChainId, StarknetGeneralConfig},
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::{collections::HashSet, iter::empty, path::Path};
 
@@ -32,7 +32,7 @@ use std::{collections::HashSet, iter::empty, path::Path};
 fn test_contract<'a>(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
-    class_hash: [u8; 32],
+    class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
     general_config: StarknetGeneralConfig,
@@ -40,8 +40,10 @@ fn test_contract<'a>(
     events: impl Into<Vec<OrderedEvent>>,
     l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
     storage_read_values: impl Into<Vec<Felt>>,
-    accessed_storage_keys: impl Iterator<Item = [u8; 32]>,
-    extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>)>,
+    accessed_storage_keys: impl Iterator<Item = ClassHash>,
+    extra_contracts: impl Iterator<
+        Item = (ClassHash, &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>),
+    >,
     arguments: impl Into<Vec<Felt>>,
     internal_calls: impl Into<Vec<CallInfo>>,
     return_data: impl Into<Vec<Felt>>,
@@ -813,7 +815,7 @@ fn deploy_with_constructor_syscall() {
 fn test_deploy_and_call_contract_syscall() {
     let constructor_constant = Felt::new(550);
     let new_constant = Felt::new(3);
-    let constant_storage_key: [u8; 32] = [
+    let constant_storage_key: ClassHash = [
         2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27, 162, 147,
         169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
     ];

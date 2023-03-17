@@ -11,7 +11,9 @@ use crate::{
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     starknet_runner::runner::StarknetRunner,
-    utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
+    utils::{
+        get_deployed_address_class_hash_at_address, validate_contract_deployed, Address, ClassHash,
+    },
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -28,7 +30,7 @@ pub struct ExecutionEntryPoint {
     call_type: CallType,
     contract_address: Address,
     code_address: Option<Address>,
-    class_hash: Option<[u8; 32]>,
+    class_hash: Option<ClassHash>,
     calldata: Vec<Felt>,
     caller_address: Address,
     entry_point_selector: Felt,
@@ -43,7 +45,7 @@ impl ExecutionEntryPoint {
         caller_address: Address,
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
-        class_hash: Option<[u8; 32]>,
+        class_hash: Option<ClassHash>,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
@@ -188,7 +190,7 @@ impl ExecutionEntryPoint {
     fn get_selected_entry_point(
         &self,
         contract_class: ContractClass,
-        _class_hash: [u8; 32],
+        _class_hash: ClassHash,
     ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class
             .entry_points_by_type
@@ -253,7 +255,7 @@ impl ExecutionEntryPoint {
     fn get_code_class_hash<S: StateReader>(
         &self,
         state: &mut S,
-    ) -> Result<[u8; 32], TransactionError> {
+    ) -> Result<ClassHash, TransactionError> {
         if self.class_hash.is_some() {
             match self.call_type {
                 CallType::Delegate => return Ok(self.class_hash.unwrap()),
