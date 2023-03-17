@@ -20,6 +20,7 @@ use starknet_rs::{
 #[test]
 fn internal_deploy_account() {
     const RUNS: usize = 500;
+
     let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
     let mut state = CachedState::new(state_reader, None);
 

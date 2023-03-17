@@ -74,5 +74,5 @@ coverage:
 	cargo tarpaulin
 	-rm -f default.profraw
 
-flamegraph:
+flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench benches
