@@ -33,3 +33,4 @@ members = ["crates/starknet-rs-py"]
 [[bench]]
 path = "bench/internals.rs"
 name = "internals"
+harness = false

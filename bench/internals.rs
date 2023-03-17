@@ -1,15 +1,16 @@
 #![deny(warnings)]
 
-use std::path::PathBuf;
-
 use felt::{felt_str, Felt};
+use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
-        transaction::objects::internal_deploy_account::InternalDeployAccount,
+        transaction::objects::{
+            internal_declare::InternalDeclare, internal_deploy_account::InternalDeployAccount,
+        },
     },
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
@@ -18,39 +19,59 @@ use starknet_rs::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{felt_to_hash, Address},
 };
+use std::{hint::black_box, path::PathBuf};
 
+lazy_static! {
+    // include_str! doesn't seem to work in CI
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+        "starknet_programs/account_without_validation.json",
+    ))
+    .unwrap();
+    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&felt_str!(
+        "3146761231686369291210245479075933162526514193311043598334639064078158562617"
+    ));
+    static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
+        "1351769743764599227746416364615306404319526869558988948822078481252102329345"
+    ));
+    static ref SIGNATURE: Vec<Felt> = vec![
+        felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
+        felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
+    ];
+}
+
+// This function just executes the given function. This adds a stack level
+// to the flamegraph with the label "scope".
 #[inline(never)]
 fn scope<T>(f: impl FnOnce() -> T) -> T {
     f()
 }
 
-#[test]
-fn internal_deploy_account() {
+// We don't use the cargo test harness because it uses
+// FnOnce calls for each test, that are merged in the flamegraph.
+fn main() {
+    // The black_box ensures there's no tail-call optimization.
+    // If not, the flamegraph is less nice.
+    black_box(declare());
+    black_box(deploy_account());
+}
+
+#[inline(never)]
+fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
-    let mut state = CachedState::new(state_reader, None);
-
-    state.set_contract_classes(Default::default()).unwrap();
-
-    let class_hash = felt_to_hash(&felt_str!(
-        "3146761231686369291210245479075933162526514193311043598334639064078158562617"
-    ));
-    let contract_class = ContractClass::try_from(PathBuf::from(
-        "starknet_programs/account_without_validation.json",
-    ))
-    .unwrap();
+    let mut state = CachedState::new(state_reader, Some(Default::default()));
 
     state
-        .set_contract_class(&class_hash, &contract_class)
+        .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
         .unwrap();
 
     let expected = TransactionExecutionInfo::new(
         None,
         Some(CallInfo {
             call_type: Some(CallType::Call),
-            contract_address: Address(felt_str!("1351769743764599227746416364615306404319526869558988948822078481252102329345")),
-            class_hash: Some(*b"\x06\xf5\x00\xf5'5]\xfd\xb8\t<\x7f\xe4nos\xc9j\x86s\x92\xb4\x9f\xa4\x15zuu8\x92\x859"),
+            contract_address: CONTRACT_ADDRESS.clone(),
+            class_hash: Some(CLASS_HASH.clone()),
             entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::Constructor),
             ..Default::default()
@@ -67,25 +88,18 @@ fn internal_deploy_account() {
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
-        let signature = vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
-        ];
         let salt = Address(felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         ));
         let got = scope(|| {
+            // new consumes more execution time than raw struct instantiation
             let internal_deploy_account = InternalDeployAccount::new(
-                class_hash,
+                CLASS_HASH.clone(),
                 0,
                 0,
                 Felt::zero(),
                 vec![],
-                signature,
+                SIGNATURE.clone(),
                 salt,
                 StarknetChainId::TestNet,
             )
@@ -95,5 +109,35 @@ fn internal_deploy_account() {
                 .unwrap()
         });
         assert_eq!(got, expected);
+    }
+}
+
+#[inline(never)]
+fn declare() {
+    const RUNS: usize = 5;
+
+    let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
+    let state = CachedState::new(state_reader, Some(Default::default()));
+
+    let config = &Default::default();
+
+    for _ in 0..RUNS {
+        let mut cloned_state = state.clone();
+        scope(|| {
+            // new consumes more execution time than raw struct instantiation
+            let declare_tx = InternalDeclare::new(
+                CONTRACT_CLASS.clone(),
+                StarknetChainId::TestNet.to_felt(),
+                CONTRACT_ADDRESS.clone(),
+                0,
+                0,
+                vec![],
+                Felt::zero(),
+            )
+            .expect("couldn't create transaction");
+
+            declare_tx.execute(&mut cloned_state, &config)
+        })
+        .unwrap();
     }
 }

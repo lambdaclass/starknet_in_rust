@@ -410,96 +410,18 @@ fn declare_tx() -> InternalDeclare {
         hash_value: 0.into(),
     }
 }
-#[test]
-fn test_declare_tx() {
-    let (general_config, mut state) = create_account_tx_test_state().unwrap();
-    assert_eq!(state, expected_state_before_tx());
-    let declare_tx = declare_tx();
-    // Check ContractClass is not set before the declare_tx
-    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &general_config).unwrap();
-    // Check ContractClass is set after the declare_tx
-    assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
-    assert_eq!(result.tx_type, Some(TransactionType::Declare));
-
-    // Check result validate_info
-    let validate_info = result.validate_info.unwrap();
-
-    assert_eq!(
-        validate_info.class_hash,
-        Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH))
-    );
-
-    assert_eq!(
-        validate_info.entry_point_type,
-        Some(EntryPointType::External)
-    );
-    assert_eq!(
-        validate_info.entry_point_selector,
-        Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone())
-    );
-
-    assert_eq!(validate_info.call_type, Some(CallType::Call));
-
-    assert_eq!(
-        validate_info.calldata,
-        vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()]
-    );
-    assert_eq!(
-        validate_info.contract_address,
-        TEST_ACCOUNT_CONTRACT_ADDRESS.clone()
-    );
-    assert_eq!(validate_info.caller_address, Address(0.into()));
-    assert_eq!(validate_info.internal_calls, Vec::new());
-    assert_eq!(validate_info.retdata, Vec::new());
-    assert_eq!(validate_info.events, Vec::new());
-    assert_eq!(validate_info.storage_read_values, Vec::new());
-    assert_eq!(validate_info.accessed_storage_keys, HashSet::new());
-    assert_eq!(validate_info.l2_to_l1_messages, Vec::new());
-
-    // Check result call_info
-    assert_eq!(result.call_info, None);
-
-    // Check result fee_transfer_info
-    let fee_transfer_info = result.fee_transfer_info.unwrap();
-
-    assert_eq!(
-        fee_transfer_info.class_hash,
-        Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
-    );
-
-    assert_eq!(fee_transfer_info.call_type, Some(CallType::Call));
-
-    assert_eq!(
-        fee_transfer_info.entry_point_type,
-        Some(EntryPointType::External)
-    );
-    assert_eq!(
-        fee_transfer_info.entry_point_selector,
-        Some(TRANSFER_ENTRY_POINT_SELECTOR.clone())
-    );
-
-    assert_eq!(
-        fee_transfer_info.calldata,
-        vec![TEST_SEQUENCER_ADDRESS.0.clone(), Felt::zero(), Felt::zero()]
-    );
-
-    assert_eq!(
-        fee_transfer_info.contract_address,
-        TEST_ERC20_CONTRACT_ADDRESS.clone()
-    );
-
-    assert_eq!(fee_transfer_info.retdata, vec![1.into()]);
-
-    assert_eq!(
-        fee_transfer_info.caller_address,
-        TEST_ACCOUNT_CONTRACT_ADDRESS.clone()
-    );
-    assert_eq!(
-        fee_transfer_info.events,
-        vec![OrderedEvent::new(
+fn expected_declare_fee_transfer_info() -> CallInfo {
+    CallInfo {
+        caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        call_type: Some(CallType::Call),
+        contract_address: TEST_ERC20_CONTRACT_ADDRESS.clone(),
+        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: vec![TEST_SEQUENCER_ADDRESS.0.clone(), Felt::zero(), Felt::zero()],
+        retdata: vec![1.into()],
+        events: vec![OrderedEvent::new(
             0,
             vec![felt_str!(
                 "271746229759260285552388728919865295615886751538523744128730118297934206697"
@@ -508,20 +430,11 @@ fn test_declare_tx() {
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,
                 TEST_SEQUENCER_ADDRESS.clone().0,
                 0.into(),
-                0.into()
-            ]
-        )]
-    );
-
-    assert_eq!(fee_transfer_info.internal_calls, Vec::new());
-
-    assert_eq!(
-        fee_transfer_info.storage_read_values,
-        vec![Felt::zero(), Felt::zero(), Felt::zero(), Felt::zero()]
-    );
-    assert_eq!(
-        fee_transfer_info.accessed_storage_keys,
-        HashSet::from([
+                0.into(),
+            ],
+        )],
+        storage_read_values: vec![Felt::zero(), Felt::zero(), Felt::zero(), Felt::zero()],
+        accessed_storage_keys: HashSet::from([
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
@@ -537,10 +450,42 @@ fn test_declare_tx() {
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ]
-        ])
+            ],
+        ]),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn test_declare_tx() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+    assert_eq!(state, expected_state_before_tx());
+    let declare_tx = declare_tx();
+    // Check ContractClass is not set before the declare_tx
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
+    // Execute declare_tx
+    let result = declare_tx.execute(&mut state, &general_config).unwrap();
+    // Check ContractClass is set after the declare_tx
+    assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
+
+    let expected_execution_info = TransactionExecutionInfo::new(
+        Some(CallInfo {
+            call_type: Some(CallType::Call),
+            contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+            entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
+            ..Default::default()
+        }),
+        None,
+        Some(expected_declare_fee_transfer_info()),
+        0,
+        HashMap::from([("l1_gas_usage".to_string(), 0)]),
+        Some(TransactionType::Declare),
     );
-    assert_eq!(fee_transfer_info.l2_to_l1_messages, Vec::new());
+
+    assert_eq!(result, expected_execution_info);
 }
 
 fn expected_execute_call_info() -> CallInfo {
