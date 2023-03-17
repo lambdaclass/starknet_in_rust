@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
@@ -12,71 +10,43 @@ use starknet_rs::{
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
-    utils::Address,
+    utils::{calculate_sn_keccak, Address},
 };
 use std::collections::HashSet;
 
 use crate::amm_contracts::utils::*;
 
-pub enum AmmEntryPoints {
-    GetAccountTokenBalance,
-    Swap,
-    AddDemoToken,
-    GetPoolTokenBalance,
-    InitPool,
-}
-
-impl From<AmmEntryPoints> for usize {
-    fn from(val: AmmEntryPoints) -> Self {
-        match val {
-            AmmEntryPoints::GetAccountTokenBalance => 0,
-            AmmEntryPoints::Swap => 1,
-            AmmEntryPoints::AddDemoToken => 2,
-            AmmEntryPoints::GetPoolTokenBalance => 3,
-            AmmEntryPoints::InitPool => 4,
-        }
-    }
-}
-
 fn init_pool(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::InitPool.into(), calldata, call_config)
+    execute_entry_point("init_pool", calldata, call_config)
 }
 
 fn get_pool_token_balance(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(
-        AmmEntryPoints::GetPoolTokenBalance.into(),
-        calldata,
-        call_config,
-    )
+    execute_entry_point("get_pool_token_balance", calldata, call_config)
 }
 
 fn get_account_token_balance(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(
-        AmmEntryPoints::GetAccountTokenBalance.into(),
-        calldata,
-        call_config,
-    )
+    execute_entry_point("get_account_token_balance", calldata, call_config)
 }
 
 fn add_demo_token(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::AddDemoToken.into(), calldata, call_config)
+    execute_entry_point("add_demo_token", calldata, call_config)
 }
 
 // Swap function to execute swap between two tokens
 fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(AmmEntryPoints::Swap.into(), calldata, call_config)
+    execute_entry_point("swap", calldata, call_config)
 }
 #[test]
 fn amm_init_pool_test() {
@@ -94,13 +64,7 @@ fn amm_init_pool_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let amm_entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::InitPool as usize)
-        .unwrap()
-        .selector()
-        .clone();
+    let amm_entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"init_pool"));
 
     let accessed_storage_keys =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
@@ -173,13 +137,7 @@ fn amm_add_demo_tokens_test() {
 
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
 
-    let add_demo_token_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::AddDemoToken as usize)
-        .unwrap()
-        .selector()
-        .clone();
+    let add_demo_token_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"add_demo_token"));
 
     let expected_call_info_add_demo_token = CallInfo {
         caller_address: Address(0.into()),
@@ -231,13 +189,8 @@ fn amm_get_pool_token_balance() {
 
     let calldata_getter = [1.into()].to_vec();
 
-    let get_pool_balance_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::GetPoolTokenBalance as usize)
-        .unwrap()
-        .selector()
-        .clone();
+    let get_pool_balance_selector =
+        Felt::from_bytes_be(&calculate_sn_keccak(b"get_pool_token_balance"));
 
     let result = get_pool_token_balance(&calldata_getter, &mut call_config);
 
@@ -326,13 +279,7 @@ fn amm_swap_test() {
     accessed_storage_keys.extend(accessed_storage_keys_pool_balance);
     accessed_storage_keys.extend(accessed_storage_keys_user_balance);
 
-    let swap_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::Swap as usize)
-        .unwrap()
-        .selector()
-        .clone();
+    let swap_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"swap"));
 
     let expected_call_infoswap = CallInfo {
         caller_address: Address(0.into()),
@@ -512,13 +459,8 @@ fn amm_get_account_token_balance_test() {
     let accessed_storage_keys =
         get_accessed_keys("account_balance", vec![vec![0_u8.into(), 1_u8.into()]]);
 
-    let get_account_token_balance_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(AmmEntryPoints::GetAccountTokenBalance as usize)
-        .unwrap()
-        .selector()
-        .clone();
+    let get_account_token_balance_selector =
+        Felt::from_bytes_be(&calculate_sn_keccak(b"get_account_token_balance"));
 
     let expected_call_info_get_account_token_balance = CallInfo {
         caller_address: Address(0.into()),

@@ -61,11 +61,7 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
 }
 
 pub fn get_entry_points(
-    entry_points_by_type: &HashMap<
-        EntryPointType,
-        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
-    >,
-    index_selector: usize,
+    function_name: &str,
     address: &Address,
     class_hash: &[u8; 32],
     calldata: &[Felt],
@@ -74,13 +70,7 @@ pub fn get_entry_points(
     //* ------------------------------------
     //*    Create entry point selector
     //* ------------------------------------
-    let entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(index_selector)
-        .unwrap()
-        .selector()
-        .clone();
+    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(function_name.as_bytes()));
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -125,14 +115,13 @@ pub fn setup_contract(
 }
 
 pub fn execute_entry_point(
-    index_selector: usize,
+    function_name: &str,
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
     // Entry point for init pool
     let (exec_entry_point, _) = get_entry_points(
-        call_config.entry_points_by_type,
-        index_selector,
+        function_name,
         call_config.address,
         call_config.class_hash,
         calldata,
