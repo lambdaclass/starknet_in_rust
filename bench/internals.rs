@@ -49,10 +49,13 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
+    declare();
+    deploy_account();
+    deploy();
+
     // The black_box ensures there's no tail-call optimization.
-    // If not, the flamegraph is less nice.
-    black_box(declare());
-    black_box(deploy_account());
+    // If not, the flamegraph ends up less nice.
+    black_box(());
 }
 
 #[inline(never)]
@@ -71,7 +74,7 @@ fn deploy_account() {
         Some(CallInfo {
             call_type: Some(CallType::Call),
             contract_address: CONTRACT_ADDRESS.clone(),
-            class_hash: Some(CLASS_HASH.clone()),
+            class_hash: Some(*CLASS_HASH),
             entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::Constructor),
             ..Default::default()
@@ -91,7 +94,7 @@ fn deploy_account() {
         let salt = Address(felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         ));
-        let class_hash = CLASS_HASH.clone();
+        let class_hash = *CLASS_HASH;
         let signature = SIGNATURE.clone();
         let got = scope(|| {
             // new consumes more execution time than raw struct instantiation
@@ -140,8 +143,10 @@ fn declare() {
             )
             .expect("couldn't create transaction");
 
-            declare_tx.execute(&mut cloned_state, &config)
+            declare_tx.execute(&mut cloned_state, config)
         })
         .unwrap();
     }
 }
+
+fn deploy() {}
