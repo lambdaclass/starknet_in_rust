@@ -1,4 +1,4 @@
-use crate::utils::Address;
+use crate::utils::{Address, ClassHash};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {

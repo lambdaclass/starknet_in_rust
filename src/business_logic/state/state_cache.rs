@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 
 /// (contract_address, key)
 // TODO: Change ClassHash to Felt.
-pub type StorageEntry = (Address, ClassHash);
+pub type StorageEntry = (Address, [u8; 32]);
 
 #[derive(Debug, Default, Clone, Eq, Getters, MutGetters, PartialEq)]
 pub struct StateCache {
