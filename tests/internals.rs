@@ -1125,7 +1125,7 @@ fn test_invoke_tx_wrong_entrypoint() {
     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
 
-    // Invoke transaccion with an entrypoint that doesn't exists
+    // Invoke transaction with an entrypoint that doesn't exists
     let invoke_tx = InternalInvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         // Entrypoiont that doesnt exits in the contract
@@ -1155,7 +1155,7 @@ fn test_deploy_undeclared_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
     let not_deployed_class_hash = [1; 32];
-    // Deploy transaccion with a not_deployed_class_hash class_hash
+    // Deploy transaction with a not_deployed_class_hash class_hash
     let deploy_account_tx = InternalDeployAccount::new(
         not_deployed_class_hash,
         2,
