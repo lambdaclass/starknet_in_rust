@@ -213,12 +213,17 @@ fn data_to_ascii(data: &[u8]) -> String {
     let data_string = String::from_utf8_lossy(data);
     let mut chars = Vec::new();
     for i in data_string.chars() {
-        let c = if i.is_ascii() {
-            i
+        if !i.is_ascii(){
+            chars.push('X');     
+        } else if (i.clone() as u32) < 40 {
+            let num_string = (i.clone() as u32).to_string();
+            for j in num_string.chars(){
+                chars.push(j);
+            }
         } else {
-            'X'
+            chars.push(i);
         };
-        chars.push(c);
+        
     }
 
     let mut data_ascii: String = chars.iter().collect();
