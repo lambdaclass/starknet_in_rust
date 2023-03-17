@@ -34,6 +34,7 @@ pub struct CallConfig<'a> {
         EntryPointType,
         Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
     >,
+    pub entry_point_type: &'a EntryPointType,
     pub general_config: &'a StarknetGeneralConfig,
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }
@@ -53,6 +54,9 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
 
     let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
 
+    if keys.is_empty() {
+        accessed_storage_keys.insert(variable_hash.to_bytes_be());
+    }
     for key in keys {
         accessed_storage_keys.insert(key.to_bytes_be());
     }
@@ -66,6 +70,7 @@ pub fn get_entry_points(
         Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
     >,
     index_selector: usize,
+    entry_point_type: &EntryPointType,
     address: &Address,
     class_hash: &[u8; 32],
     calldata: &[Felt],
@@ -75,7 +80,7 @@ pub fn get_entry_points(
     //*    Create entry point selector
     //* ------------------------------------
     let entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::External)
+        .get(entry_point_type)
         .unwrap()
         .get(index_selector)
         .unwrap()
@@ -86,15 +91,13 @@ pub fn get_entry_points(
     //*    Create execution entry point
     //* ------------------------------------
 
-    let entry_point_type = EntryPointType::External;
-
     (
         ExecutionEntryPoint::new(
             address.clone(),
             calldata.to_vec(),
             entrypoint_selector.clone(),
             caller_address.clone(),
-            entry_point_type,
+            *entry_point_type,
             Some(CallType::Delegate),
             Some(*class_hash),
         ),
@@ -133,6 +136,7 @@ pub fn execute_entry_point(
     let (exec_entry_point, _) = get_entry_points(
         call_config.entry_points_by_type,
         index_selector,
+        call_config.entry_point_type,
         call_config.address,
         call_config.class_hash,
         calldata,

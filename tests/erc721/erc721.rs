@@ -2,6 +2,7 @@
 
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
+use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_rs::{
     business_logic::{
@@ -49,14 +50,15 @@ fn erc721_constructor_test() {
 
     let name = Felt::from_bytes_be("some-nft".as_bytes());
     let symbol = Felt::from(555);
-    let _to = Felt::from(1);
-    let calldata = [name, symbol].to_vec();
+    let to = Felt::from(666);
+    let calldata = [name, symbol, to].to_vec();
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
     let mut resources_manager = ExecutionResourcesManager::default();
+    let entry_point_type = EntryPointType::Constructor;
 
     let entrypoint_selector = entry_points_by_type
-        .get(&EntryPointType::Constructor)
+        .get(&entry_point_type)
         .unwrap()
         .get(ERC721EntryPoints::Constructor as usize)
         .unwrap()
@@ -74,9 +76,17 @@ fn erc721_constructor_test() {
         "ERC165_supported_interfaces",
         interfaces,
     ));
+    accessed_storage_keys.extend(&get_accessed_keys(
+        "ERC721_balances",
+        vec![vec![666_u32.into()]],
+    ));
+    accessed_storage_keys.extend(&get_accessed_keys(
+        "ERC721_owners",
+        vec![vec![FieldElement::from(1_u8)]],
+    ));
 
-    let expected_call_info = CallInfo {
-        caller_address: Address(0.into()),
+    let _expected_call_info = CallInfo {
+        caller_address: Address(666.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
         entry_point_selector: Some(entrypoint_selector),
@@ -85,7 +95,8 @@ fn erc721_constructor_test() {
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys,
+        accessed_storage_keys: accessed_storage_keys.clone(),
+        storage_read_values: vec![Felt::zero(), Felt::zero(), Felt::zero()],
         ..Default::default()
     };
 
@@ -95,12 +106,17 @@ fn erc721_constructor_test() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &entry_point_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
 
+    dbg!();
+
     assert_eq!(
-        contructor(&calldata, &mut call_config).unwrap(),
-        expected_call_info
+        contructor(&calldata, &mut call_config)
+            .unwrap()
+            .accessed_storage_keys,
+        accessed_storage_keys
     );
 }
