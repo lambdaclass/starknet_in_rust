@@ -47,6 +47,7 @@ check:
 
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
+	cargo install flamegraph
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
@@ -72,3 +73,6 @@ coverage:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
 	cargo tarpaulin
 	-rm -f default.profraw
+
+flamegraph:
+	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench benches

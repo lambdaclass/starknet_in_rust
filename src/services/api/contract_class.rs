@@ -130,6 +130,15 @@ impl From<starknet_api::state::ContractClass> for ContractClass {
 //  Helper Functions
 // -------------------
 
+impl TryFrom<&str> for ContractClass {
+    type Error = io::Error;
+
+    fn try_from(s: &str) -> io::Result<Self> {
+        let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
+        Ok(ContractClass::from(raw_contract_class))
+    }
+}
+
 impl TryFrom<PathBuf> for ContractClass {
     type Error = io::Error;
 
