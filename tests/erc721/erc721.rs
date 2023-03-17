@@ -94,7 +94,7 @@ fn erc721_constructor_test() {
     ));*/
 
     //let data = vec![Felt::zero(), Felt::from(666), Felt::from(1), Felt::zero()];
-    let keys = get_event_key(&["from_", "to", "token_id", "value"]);
+    let keys = get_event_key(&["from_", "to", "token_id"]);
     let keys = Felt::from_bytes_be(&keys.to_bytes_be());
     //let _events = vec![OrderedEvent::new(0, vec![keys], data)];
     dbg!(keys);

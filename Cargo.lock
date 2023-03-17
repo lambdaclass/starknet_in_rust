@@ -2415,6 +2415,7 @@ dependencies = [
  "cairo-vm",
  "clap 4.1.8",
  "getset",
+ "hex",
  "lazy_static",
  "num-bigint",
  "num-integer",
