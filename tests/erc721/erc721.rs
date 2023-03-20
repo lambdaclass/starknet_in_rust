@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
@@ -13,7 +11,7 @@ use starknet_rs::{
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
-    utils::Address,
+    utils::{calculate_sn_keccak, Address},
 };
 
 use crate::erc721::utils::*;
@@ -34,15 +32,15 @@ fn contructor(
     calldata: &[Felt],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(ERC721EntryPoints::Constructor.into(), calldata, call_config)
+    execute_entry_point("constructor", calldata, call_config)
 }
 
 fn name(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(9, calldata, call_config)
+    execute_entry_point("name", calldata, call_config)
 }
 
 fn symbol(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
-    execute_entry_point(4, calldata, call_config)
+    execute_entry_point("symbol", calldata, call_config)
 }
 
 #[test]
@@ -65,13 +63,7 @@ fn erc721_constructor_test() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::Constructor;
 
-    let entrypoint_selector = entry_points_by_type
-        .get(&entry_point_type)
-        .unwrap()
-        .get(ERC721EntryPoints::Constructor as usize)
-        .unwrap()
-        .selector()
-        .clone();
+    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"constructor"));
 
     let interfaces = vec![
         vec![FieldElement::from_hex_be("80ac58cd").unwrap()],
@@ -191,14 +183,7 @@ fn erc721_name_test() {
 
     call_config.entry_point_type = &entry_point_type;
 
-    let entrypoint_selector = entry_points_by_type
-        .get(&entry_point_type)
-        .unwrap()
-        .get(9)
-        .unwrap()
-        .selector()
-        .clone();
-
+    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"name"));
     let expected_read_result = Felt::from_bytes_be("some-nft".as_bytes());
 
     let expected_call_info = CallInfo {
@@ -256,13 +241,7 @@ fn erc721_symbol_test() {
 
     call_config.entry_point_type = &entry_point_type;
 
-    let entrypoint_selector = entry_points_by_type
-        .get(&entry_point_type)
-        .unwrap()
-        .get(4)
-        .unwrap()
-        .selector()
-        .clone();
+    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"symbol"));
 
     let expected_read_result = Felt::from(555);
 
