@@ -14,7 +14,7 @@ use starknet_rs::{
     utils::{calculate_sn_keccak, Address},
 };
 
-use crate::erc721::utils::*;
+use crate::nft::utils::*;
 
 pub enum ERC721EntryPoints {
     Constructor,
@@ -74,33 +74,34 @@ fn erc721_constructor_test() {
     accessed_storage_keys.extend(&get_accessed_keys("ERC721_symbol", vec![]));
     accessed_storage_keys.extend(&get_accessed_keys(
         "ERC165_supported_interfaces",
-        interfaces.clone(),
-    ));
-    accessed_storage_keys.extend(&get_accessed_keys(
-        "ERC721_balances",
-        vec![vec![666_u32.into()]],
+        interfaces,
     ));
     accessed_storage_keys.extend(&get_accessed_keys(
         "ERC721_owners",
         vec![vec![FieldElement::from(1_u8), FieldElement::from(0_u8)]],
     ));
 
-    let event_hash = Felt::from_bytes_be(&calculate_sn_keccak(&"Transfer".as_bytes()));
+    let mut balance = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
+        .drain()
+        .collect::<Vec<[u8; 32]>>()[0];
+    accessed_storage_keys.insert(balance);
+    balance[31] += 1;
+    accessed_storage_keys.insert(balance);
+
+    let event_hash = Felt::from_bytes_be(&calculate_sn_keccak("Transfer".as_bytes()));
     let expected_events = vec![OrderedEvent::new(
         0,
         vec![event_hash],
         vec![Felt::zero(), Felt::from(666), Felt::from(1), Felt::zero()],
     )];
 
-    let _expected_call_info = CallInfo {
+    let expected_call_info = CallInfo {
         caller_address: Address(666.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
         entry_point_selector: Some(entrypoint_selector),
         entry_point_type: Some(EntryPointType::Constructor),
         calldata: calldata.clone(),
-        retdata: [].to_vec(),
-        execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys.clone(),
         storage_read_values: vec![Felt::zero(), Felt::zero(), Felt::zero()],
@@ -119,37 +120,10 @@ fn erc721_constructor_test() {
         resources_manager: &mut resources_manager,
     };
 
-    let r = contructor(&calldata, &mut call_config).unwrap();
-
-    let result = r.accessed_storage_keys.clone();
-
-    dbg!("name");
-    dbg!(result.is_superset(&get_accessed_keys("ERC721_name", vec![])));
-    dbg!("symbol");
-    dbg!(result.is_superset(&get_accessed_keys("ERC721_symbol", vec![])));
-    dbg!("interfaces");
-    dbg!(result.is_superset(&get_accessed_keys(
-        "ERC165_supported_interfaces",
-        interfaces
-    )));
-    dbg!("balances");
-    dbg!(result.is_superset(&get_accessed_keys(
-        "ERC721_balances",
-        vec![vec![666_u32.into()]]
-    )));
-    dbg!("owners");
-    dbg!(result.is_superset(&get_accessed_keys(
-        "ERC721_owners",
-        vec![vec![FieldElement::from(1_u8), FieldElement::from(0_u8)]]
-    )));
-
-    dbg!(result.len());
-    dbg!(accessed_storage_keys.len());
-    for a in result.difference(&accessed_storage_keys) {
-        dbg!(a);
-    }
-
-    assert_eq!(r, CallInfo::default());
+    assert_eq!(
+        contructor(&calldata, &mut call_config).unwrap(),
+        expected_call_info
+    );
 }
 
 #[test]
