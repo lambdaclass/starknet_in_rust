@@ -5,20 +5,18 @@ use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
         transaction::objects::{
             internal_declare::InternalDeclare, internal_deploy::InternalDeploy,
             internal_deploy_account::InternalDeployAccount,
+            internal_invoke_function::InternalInvokeFunction,
         },
     },
     core::contract_address::starknet_contract_address::compute_class_hash,
-    definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
-        transaction_type::TransactionType,
-    },
-    services::api::contract_class::{ContractClass, EntryPointType},
+    definitions::general_config::StarknetChainId,
+    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
+    services::api::contract_class::ContractClass,
     utils::{felt_to_hash, Address},
 };
 use std::{hint::black_box, path::PathBuf};
@@ -51,9 +49,10 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
-    declare();
     deploy_account();
+    declare();
     deploy();
+    invoke();
 
     // The black_box ensures there's no tail-call optimization.
     // If not, the flamegraph ends up less nice.
@@ -71,24 +70,6 @@ fn deploy_account() {
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
         .unwrap();
 
-    let expected = TransactionExecutionInfo::new(
-        None,
-        Some(CallInfo {
-            call_type: Some(CallType::Call),
-            contract_address: CONTRACT_ADDRESS.clone(),
-            class_hash: Some(*CLASS_HASH),
-            entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
-            entry_point_type: Some(EntryPointType::Constructor),
-            ..Default::default()
-        }),
-        None,
-        0,
-        [("l1_gas_usage", 1224)]
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
-            .collect(),
-        Some(TransactionType::DeployAccount),
-    );
     let config = &Default::default();
 
     for _ in 0..RUNS {
@@ -98,7 +79,7 @@ fn deploy_account() {
         ));
         let class_hash = *CLASS_HASH;
         let signature = SIGNATURE.clone();
-        let got = scope(|| {
+        scope(|| {
             // new consumes more execution time than raw struct instantiation
             let internal_deploy_account = InternalDeployAccount::new(
                 class_hash,
@@ -114,7 +95,6 @@ fn deploy_account() {
             internal_deploy_account.execute(&mut state_copy, config)
         })
         .unwrap();
-        assert_eq!(got, expected);
     }
 }
 
@@ -171,10 +151,55 @@ fn deploy() {
         let class = CONTRACT_CLASS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let internal_deploy_account =
+            let internal_deploy =
                 InternalDeploy::new(salt, class, vec![], StarknetChainId::TestNet.to_felt(), 0)
                     .unwrap();
-            internal_deploy_account.execute(&mut state_copy, config)
+            internal_deploy.execute(&mut state_copy, config)
+        })
+        .unwrap();
+    }
+}
+
+#[inline(never)]
+fn invoke() {
+    const RUNS: usize = 100;
+
+    let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
+    let mut state = CachedState::new(state_reader, Some(Default::default()));
+
+    state
+        .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
+        .unwrap();
+
+    let config = &Default::default();
+
+    let salt = Address(felt_str!(
+        "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+    ));
+    let class = CONTRACT_CLASS.clone();
+    let internal_deploy =
+        InternalDeploy::new(salt, class, vec![], StarknetChainId::TestNet.to_felt(), 0).unwrap();
+    internal_deploy.execute(&mut state, config).unwrap();
+
+    for _ in 0..RUNS {
+        let mut state_copy = state.clone();
+        let address = CONTRACT_ADDRESS.clone();
+        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let signature = SIGNATURE.clone();
+        let calldata = vec![address.0.clone(), selector.clone(), Felt::zero()];
+        scope(|| {
+            // new consumes more execution time than raw struct instantiation
+            let internal_invoke = InternalInvokeFunction::new(
+                address,
+                selector,
+                0,
+                calldata,
+                signature,
+                StarknetChainId::TestNet.to_felt(),
+                Some(Felt::zero()),
+            )
+            .unwrap();
+            internal_invoke.execute(&mut state_copy, config)
         })
         .unwrap();
     }
