@@ -13,13 +13,16 @@ use crate::{
         errors::syscall_handler_errors::SyscallHandlerError,
         transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
     },
-    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        transaction_type::TransactionType,
+    },
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
-use felt::{felt_str, Felt};
+use felt::Felt;
 use num_traits::Zero;
 
 pub struct InternalDeploy {
@@ -137,13 +140,10 @@ impl InternalDeploy {
         state: &mut S,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        let entry_point_selector = felt_str!(
-            "1159040026212278395030414237414753050475174923702621880048416706425641521556"
-        );
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
-            entry_point_selector,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
             Address(Felt::zero()),
             EntryPointType::Constructor,
             None,
