@@ -47,7 +47,7 @@ check:
 
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
-	cargo install flamegraph
+	cargo install flamegraph --version 0.6.2
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
