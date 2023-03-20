@@ -49,8 +49,6 @@ fn integration_test() {
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt::zero();
-    let storage_entry: StorageEntry = (address.clone(), [1; 32]);
-    let storage = Felt::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::default();
@@ -60,9 +58,6 @@ fn integration_test() {
     state_reader
         .address_to_nonce_mut()
         .insert(address.clone(), nonce);
-    state_reader
-        .address_to_storage_mut()
-        .insert(storage_entry, storage);
 
     //* ---------------------------------------
     //*    Create state with previous data

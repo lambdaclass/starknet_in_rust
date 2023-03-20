@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn declare_fibonacci() {
-        // accounts contract class must be store before running declarartion of fibonacci
+        // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
 
@@ -344,9 +344,6 @@ mod tests {
         state_reader
             .address_to_nonce_mut()
             .insert(sender_address.clone(), Felt::new(1));
-        state_reader
-            .address_to_storage_mut()
-            .insert((sender_address, [0; 32]), Felt::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 

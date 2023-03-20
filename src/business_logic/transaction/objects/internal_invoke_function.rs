@@ -344,9 +344,7 @@ mod tests {
             ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
-        let nonce = Felt::new(189028);
-        let storage_entry = (contract_address.clone(), [222; 32]);
-        let storage_value = Felt::new(2190);
+        let nonce = Felt::zero();
 
         state_reader
             .address_to_class_hash_mut()
@@ -354,9 +352,7 @@ mod tests {
         state_reader
             .address_to_nonce
             .insert(contract_address, nonce);
-        state_reader
-            .address_to_storage
-            .insert(storage_entry, storage_value);
+
         let mut state = CachedState::new(state_reader.clone(), None);
 
         // Initialize state.contract_classes
