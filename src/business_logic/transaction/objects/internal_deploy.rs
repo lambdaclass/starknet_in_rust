@@ -164,11 +164,11 @@ impl InternalDeploy {
         let call_info = call
             .execute(
                 state,
-                &general_config,
+                general_config,
                 &mut resources_manager,
                 &tx_execution_context,
             )
-            .unwrap();
+            .map_err(|_| StarkwareError::TransactionFailed)?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -178,7 +178,7 @@ impl InternalDeploy {
             changes,
             None,
         )
-        .unwrap();
+        .map_err(|_| StarkwareError::TransactionFailed)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
