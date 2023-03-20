@@ -180,7 +180,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     fn execute_constructor_entry_point(
         &mut self,
         contract_address: &Address,
-        class_hash_bytes: [u8; 32],
+        class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt>,
     ) -> Result<(), StateError> {
         let contract_class = self
@@ -330,7 +330,7 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: [u8; 32] = felt_to_hash(&request.class_hash);
+        let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
         self.starknet_storage_state
             .state

@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use felt::Felt;
+use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -8,16 +9,15 @@ use starknet_rs::{
             objects::{CallType, TransactionExecutionContext},
         },
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
+        state::{cached_state::CachedState, state_cache::StorageEntry},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 #[test]
 fn test_internal_calls() {
@@ -34,15 +34,20 @@ fn test_internal_calls() {
         TRANSACTION_VERSION,
     );
 
-    let contract_state = ContractState::new(
-        [0x01; 32],
-        tx_execution_context.nonce().clone(),
-        Default::default(),
-    );
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [0x01; 32];
+    let nonce = Felt::zero();
+    let storage_entry: StorageEntry = (address.clone(), [1; 32]);
+    let storage = Felt::zero();
+
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(Address(1111.into()), contract_state);
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader.address_to_nonce_mut().insert(address, nonce);
+    state_reader
+        .address_to_storage_mut()
+        .insert(storage_entry, storage);
 
     let mut state = CachedState::new(
         state_reader,

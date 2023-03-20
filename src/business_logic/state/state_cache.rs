@@ -1,17 +1,20 @@
-use crate::{core::errors::state_errors::StateError, utils::Address};
+use crate::{
+    core::errors::state_errors::StateError,
+    utils::{Address, ClassHash},
+};
 use felt::Felt;
 use getset::{Getters, MutGetters};
 use std::collections::{HashMap, HashSet};
 
 /// (contract_address, key)
 // TODO: Change [u8; 32] to Felt.
-pub(crate) type StorageEntry = (Address, [u8; 32]);
+pub type StorageEntry = (Address, [u8; 32]);
 
 #[derive(Debug, Default, Clone, Eq, Getters, MutGetters, PartialEq)]
 pub struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
     #[get_mut = "pub"]
-    pub(crate) class_hash_initial_values: HashMap<Address, [u8; 32]>,
+    pub(crate) class_hash_initial_values: HashMap<Address, ClassHash>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) nonce_initial_values: HashMap<Address, Felt>,
     #[get_mut = "pub"]
@@ -19,7 +22,7 @@ pub struct StateCache {
 
     // Writer's cached information.
     #[get_mut = "pub"]
-    pub(crate) class_hash_writes: HashMap<Address, [u8; 32]>,
+    pub(crate) class_hash_writes: HashMap<Address, ClassHash>,
     #[get_mut = "pub"]
     pub(crate) nonce_writes: HashMap<Address, Felt>,
     #[getset(get = "pub", get_mut = "pub")]
@@ -28,10 +31,10 @@ pub struct StateCache {
 
 impl StateCache {
     pub fn new(
-        class_hash_initial_values: HashMap<Address, [u8; 32]>,
+        class_hash_initial_values: HashMap<Address, ClassHash>,
         nonce_initial_values: HashMap<Address, Felt>,
         storage_initial_values: HashMap<StorageEntry, Felt>,
-        class_hash_writes: HashMap<Address, [u8; 32]>,
+        class_hash_writes: HashMap<Address, ClassHash>,
         nonce_writes: HashMap<Address, Felt>,
         storage_writes: HashMap<StorageEntry, Felt>,
     ) -> Self {
@@ -56,7 +59,7 @@ impl StateCache {
         }
     }
 
-    pub(crate) fn get_class_hash(&self, contract_address: &Address) -> Option<&[u8; 32]> {
+    pub(crate) fn get_class_hash(&self, contract_address: &Address) -> Option<&ClassHash> {
         if self.class_hash_writes.contains_key(contract_address) {
             return self.class_hash_writes.get(contract_address);
         }
@@ -86,7 +89,7 @@ impl StateCache {
 
     pub(crate) fn update_writes(
         &mut self,
-        address_to_class_hash: &HashMap<Address, [u8; 32]>,
+        address_to_class_hash: &HashMap<Address, ClassHash>,
         address_to_nonce: &HashMap<Address, Felt>,
         storage_updates: &HashMap<StorageEntry, Felt>,
     ) {
@@ -97,7 +100,7 @@ impl StateCache {
 
     pub(crate) fn set_initial_values(
         &mut self,
-        address_to_class_hash: &HashMap<Address, [u8; 32]>,
+        address_to_class_hash: &HashMap<Address, ClassHash>,
         address_to_nonce: &HashMap<Address, Felt>,
         storage_updates: &HashMap<StorageEntry, Felt>,
     ) -> Result<(), StateError> {

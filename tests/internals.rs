@@ -1,3 +1,4 @@
+// This module tests our code against the blockifier to ensure they work in the same way.
 use assert_matches::assert_matches;
 use cairo_rs::vm::{
     errors::{
@@ -12,12 +13,13 @@ use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-        fact_state::{contract_state::ContractState, in_memory_state_reader::InMemoryStateReader},
+        fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::{State, StateReader},
             state_api_objects::BlockInfo,
             state_cache::StateCache,
+            state_cache::StorageEntry,
         },
         transaction::{
             error::TransactionError,
@@ -41,7 +43,7 @@ use starknet_rs::{
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, felt_to_hash, Address},
+    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -110,37 +112,41 @@ fn create_account_tx_test_state(
 ) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let general_config = new_starknet_general_config_for_testing();
 
-    let test_contract_class_hash = TEST_CLASS_HASH.clone();
-    let test_account_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone();
-    let test_erc20_class_hash = TEST_ERC20_CONTRACT_CLASS_HASH.clone();
+    let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
+    let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
+    let test_erc20_class_hash = felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone());
     let class_hash_to_class = HashMap::from([
         (
-            felt_to_hash(&test_account_class_hash),
+            test_account_contract_class_hash,
             get_contract_class(ACCOUNT_CONTRACT_PATH)?,
         ),
         (
-            felt_to_hash(&test_contract_class_hash),
+            test_contract_class_hash,
             get_contract_class(TEST_CONTRACT_PATH)?,
         ),
         (
-            felt_to_hash(&test_erc20_class_hash),
+            test_erc20_class_hash,
             get_contract_class(ERC20_CONTRACT_PATH)?,
         ),
     ]);
 
     let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
-    let test_account_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
+    let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
     let test_erc20_address = general_config
         .starknet_os_config()
         .fee_token_address()
         .clone();
     let address_to_class_hash = HashMap::from([
         (test_contract_address, test_contract_class_hash),
-        (test_account_address, test_account_class_hash),
+        (
+            test_account_contract_address,
+            test_account_contract_class_hash,
+        ),
         (test_erc20_address.clone(), test_erc20_class_hash),
     ]);
 
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+
     let storage_view = HashMap::from([(
         (test_erc20_address, test_erc20_account_balance_key),
         ACTUAL_FEE.clone(),
@@ -148,22 +154,34 @@ fn create_account_tx_test_state(
 
     let cached_state = CachedState::new(
         {
-            let mut state_reader = InMemoryStateReader::new(HashMap::new(), class_hash_to_class);
-
+            let mut state_reader = InMemoryStateReader::default();
             for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys = storage_view
+                let storage_keys: HashMap<(Address, ClassHash), Felt> = storage_view
                     .iter()
-                    .filter_map(|((k0, k1), v)| {
-                        (k0 == &contract_address).then_some((k1.clone(), v.clone()))
+                    .filter_map(|((address, storage_key), storage_value)| {
+                        (address == &contract_address).then_some((
+                            (address.clone(), felt_to_hash(storage_key)),
+                            storage_value.clone(),
+                        ))
                     })
                     .collect();
 
-                state_reader.contract_states_mut().insert(
-                    contract_address,
-                    ContractState::new(felt_to_hash(&class_hash), Felt::zero(), storage_keys),
-                );
-            }
+                let stored: HashMap<StorageEntry, Felt> = storage_keys;
 
+                state_reader
+                    .address_to_class_hash_mut()
+                    .insert(contract_address.clone(), class_hash);
+
+                state_reader
+                    .address_to_nonce_mut()
+                    .insert(contract_address.clone(), Felt::zero());
+                state_reader.address_to_storage_mut().extend(stored);
+            }
+            for (class_hash, contract_class) in class_hash_to_class {
+                state_reader
+                    .class_hash_to_contract_class_mut()
+                    .insert(class_hash, contract_class);
+            }
             state_reader
         },
         Some(HashMap::new()),
@@ -177,25 +195,29 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
         HashMap::from([
             (
                 TEST_CONTRACT_ADDRESS.clone(),
-                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), Felt::zero(), HashMap::new()),
+                felt_to_hash(&TEST_CLASS_HASH),
             ),
             (
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                ContractState::new(
-                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                    Felt::zero(),
-                    HashMap::new(),
-                ),
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
             ),
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                ContractState::new(
-                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                    Felt::zero(),
-                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), Felt::zero())]),
-                ),
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
             ),
         ]),
+        HashMap::from([
+            (TEST_CONTRACT_ADDRESS.clone(), Felt::zero()),
+            (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::zero()),
+            (TEST_ERC20_CONTRACT_ADDRESS.clone(), Felt::zero()),
+        ]),
+        HashMap::from([(
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+            ),
+            Felt::from(0),
+        )]),
         HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
@@ -297,7 +319,7 @@ fn validate_final_balances<S>(
     state: &mut S,
     general_config: &StarknetGeneralConfig,
     expected_sequencer_balance: &Felt,
-    erc20_account_balance_storage_key: &[u8; 32],
+    erc20_account_balance_storage_key: &ClassHash,
 ) where
     S: State + StateReader,
 {
@@ -327,7 +349,8 @@ fn validate_final_balances<S>(
 #[test]
 fn test_create_account_tx_test_state() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
-    assert_eq!(&state, &expected_state_before_tx());
+
+    assert_eq!(state, expected_state_before_tx());
 
     let value = state
         .get_storage_at(&(
@@ -689,6 +712,7 @@ fn test_deploy_account() {
     );
 
     let (state_before, state_after) = expected_deploy_account_states();
+
     assert_eq!(state, state_before);
 
     // Statement **not** in blockifier.
@@ -753,12 +777,9 @@ fn test_deploy_account() {
         .unwrap();
     assert_eq!(nonce_from_state, &Felt::one());
 
-    validate_final_balances(
-        &mut state,
-        &general_config,
-        &Felt::zero(),
-        &felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
-    );
+    let hash = &felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY);
+
+    validate_final_balances(&mut state, &general_config, &Felt::zero(), hash);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -775,26 +796,37 @@ fn expected_deploy_account_states() -> (
             HashMap::from([
                 (
                     Address(0x101.into()),
-                    ContractState::new(felt_to_hash(&0x111.into()), Default::default(), Default::default()),
+                    felt_to_hash(&0x111.into()),
                 ),
                 (
                     Address(0x100.into()),
-                    ContractState::new(felt_to_hash(&0x110.into()), Default::default(), Default::default()),
+                    felt_to_hash(&0x110.into()),
                 ),
                 (
                     Address(0x1001.into()),
-                    ContractState::new(
-                        felt_to_hash(&0x1010.into()),
+                    felt_to_hash(&0x1010.into()),
+                )]),
+
+                HashMap::from([
+                    (
+                        Address(0x101.into()),
                         Default::default(),
-                        HashMap::from([
-                            (
-                                felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"),
-                                Felt::zero(),
-                            ),
-                        ]),
                     ),
-                )
-            ]),
+                    (
+                        Address(0x100.into()),
+                        Default::default(),
+                    ),
+                    (
+                        Address(0x1001.into()),
+                        Default::default(),
+                    )]),
+                HashMap::from([
+                    (
+                        (Address(0x1001.into()),
+                        felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"))),
+                        Felt::zero(),
+                    ),
+                        ]),
             HashMap::from([
                 (felt_to_hash(&0x110.into()), ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap()),
                 (felt_to_hash(&0x111.into()), ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap()),
@@ -943,36 +975,49 @@ fn test_state_for_declare_tx() {
     );
 
     // Check state.state_reader
-    let state_reader = state.state_reader();
+    let mut state_reader = state.state_reader().clone();
+
     assert_eq!(
-        state_reader.contract_states(),
-        &HashMap::from([
+        state_reader.address_to_class_hash_mut(),
+        &mut HashMap::from([
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                ContractState::new(
-                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                    0.into(),
-                    HashMap::from([(TEST_ERC20_ACCOUNT_BALANCE_KEY.clone(), 0.into())]) //Fee, 2 in blockifier
-                )
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
             ),
             (
                 TEST_CONTRACT_ADDRESS.clone(),
-                ContractState::new(felt_to_hash(&TEST_CLASS_HASH), 0.into(), HashMap::new())
+                felt_to_hash(&TEST_CLASS_HASH)
             ),
             (
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                ContractState::new(
-                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                    0.into(),
-                    HashMap::new(),
-                )
+                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)
             ),
-        ])
+        ]),
     );
 
     assert_eq!(
-        state_reader.class_hash_to_contract_class(),
-        &HashMap::from([
+        state_reader.address_to_nonce_mut(),
+        &mut HashMap::from([
+            (TEST_ERC20_CONTRACT_ADDRESS.clone(), Felt::zero()),
+            (TEST_CONTRACT_ADDRESS.clone(), Felt::zero()),
+            (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::zero()),
+        ]),
+    );
+
+    assert_eq!(
+        state_reader.address_to_storage_mut(),
+        &mut HashMap::from([(
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+            ),
+            Felt::zero()
+        ),]),
+    );
+
+    assert_eq!(
+        state_reader.class_hash_to_contract_class_mut(),
+        &mut HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
                 get_contract_class(ERC20_CONTRACT_PATH).unwrap()

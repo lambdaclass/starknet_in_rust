@@ -21,7 +21,10 @@ use crate::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
+    utils::{
+        calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
+        ClassHash,
+    },
 };
 use felt::Felt;
 use num_traits::Zero;
@@ -31,7 +34,7 @@ use std::collections::HashMap;
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 pub struct InternalDeclare {
-    pub class_hash: [u8; 32],
+    pub class_hash: ClassHash,
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt,
@@ -299,9 +302,7 @@ mod tests {
     use crate::{
         business_logic::{
             execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         definitions::{
@@ -317,7 +318,7 @@ mod tests {
 
     #[test]
     fn declare_fibonacci() {
-        // accounts contract class must be store before running declarartion of fibonacci
+        // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
 
@@ -335,12 +336,14 @@ mod tests {
         // this is not conceptually correct as the sender address would be an
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
-        let contract_state = ContractState::new(class_hash, 1.into(), HashMap::new());
 
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::default();
         state_reader
-            .contract_states
-            .insert(sender_address, contract_state);
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
