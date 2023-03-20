@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use felt::{felt_str, Felt};
-use num_traits::{Num, Zero};
+use num_traits::Num;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -16,7 +16,6 @@ use starknet_rs::{
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::State,
-            state_cache::StorageEntry,
         },
     },
     definitions::{
@@ -61,9 +60,7 @@ fn test_contract<'a>(
         )
     });
 
-    let nonce = Felt::zero();
-    let storage_entry: StorageEntry = (contract_address.clone(), class_hash);
-    let storage = Felt::zero();
+    let nonce = tx_execution_context.nonce().clone();
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -72,9 +69,6 @@ fn test_contract<'a>(
     state_reader
         .address_to_nonce_mut()
         .insert(contract_address.clone(), nonce);
-    state_reader
-        .address_to_storage_mut()
-        .insert(storage_entry, storage);
     state_reader
         .class_hash_to_contract_class_mut()
         .insert(class_hash, contract_class.clone());
