@@ -61,9 +61,9 @@ lazy_static! {
         felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
     static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt =
         felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
-    static ref TEST_ERC20_BALANCE_KEY_UNK_1: Felt =
+    static ref TEST_ERC20_BALANCE_KEY_1: Felt =
         felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516");
-    static ref TEST_ERC20_BALANCE_KEY_UNK_2: Felt =
+    static ref TEST_ERC20_BALANCE_KEY_2: Felt =
         felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275");
 
     static ref TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY: Felt =
@@ -144,7 +144,7 @@ fn create_account_tx_test_state(
                     .iter()
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address)
-                            .then_some((storage_key.clone(), storage_value.clone()))
+                            .then(|| (storage_key.clone(), storage_value.clone()))
                     })
                     .collect();
 
@@ -232,14 +232,14 @@ fn state_cache_after_invoke_tx() -> StateCache {
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_1.clone()),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_1.clone()),
             ),
             Felt::zero(),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_2.clone()),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_2.clone()),
             ),
             Felt::zero(),
         ),
@@ -267,14 +267,14 @@ fn state_cache_after_invoke_tx() -> StateCache {
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_1.clone()),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_1.clone()),
             ),
             Felt::from(0),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_UNK_2.clone()),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_2.clone()),
             ),
             Felt::from(0),
         ),
@@ -980,9 +980,7 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "3229073099929281304021185011369329892856197542079132996799046100564060768275"
-            )),
+            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
         ),
         Felt::zero(),
     );
@@ -1028,9 +1026,7 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "3229073099929281304021185011369329892856197542079132996799046100564060768275"
-            )),
+            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
         ),
         Felt::zero(),
     );
