@@ -7,7 +7,7 @@ use getset::{Getters, MutGetters};
 use std::collections::{HashMap, HashSet};
 
 /// (contract_address, key)
-// TODO: Change ClassHash to Felt.
+// TODO: Change [u8; 32] to Felt.
 pub type StorageEntry = (Address, [u8; 32]);
 
 #[derive(Debug, Default, Clone, Eq, Getters, MutGetters, PartialEq)]

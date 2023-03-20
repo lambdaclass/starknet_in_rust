@@ -194,22 +194,14 @@ mod test {
         utils::Address,
     };
     use felt::Felt;
-    use std::collections::HashMap;
 
     #[test]
     fn test_from_cached_state_without_updates() {
-        let mut state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
+        let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
         let class_hash = [9; 32];
         let nonce = Felt::new(42);
-        let storage_entry = (contract_address.clone(), [17; 32]);
-        let storage_value = Felt::new(402);
 
         state_reader
             .address_to_class_hash
@@ -217,9 +209,6 @@ mod test {
         state_reader
             .address_to_nonce
             .insert(contract_address, nonce);
-        state_reader
-            .address_to_storage
-            .insert(storage_entry, storage_value);
 
         let cached_state = CachedState::new(state_reader, None);
 
