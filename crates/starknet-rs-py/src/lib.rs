@@ -9,6 +9,7 @@ use self::{
     },
 };
 use pyo3::prelude::*;
+use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 mod cached_state;
 mod starknet_state;
@@ -16,6 +17,9 @@ mod types;
 
 #[pymodule]
 pub fn starknet_rs(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<PyStarknetGeneralConfig>()?;
+    m.add_class::<PyStarknetOsConfig>()?;
+    m.add_class::<PyStarknetChainId>()?;
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyCallInfo>()?;
