@@ -67,7 +67,7 @@ test:
 
 py-test:
 	. starknet-venv/bin/activate
-	cargo test -p starknet_rs --no-default-features --features embedded-python
+	cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
 coverage:
 	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
