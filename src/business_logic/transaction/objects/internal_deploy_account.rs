@@ -5,7 +5,7 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::{contract_state::StateSelector, state::ExecutionResourcesManager},
+        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
         transaction::{
             error::TransactionError,
@@ -29,6 +29,12 @@ use felt::Felt;
 use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StateSelector {
+    pub contract_addresses: Vec<Address>,
+    pub class_hashes: Vec<ClassHash>,
+}
 
 #[derive(Clone, Debug, Getters)]
 pub struct InternalDeployAccount {
