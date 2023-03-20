@@ -71,12 +71,11 @@ fn test_contract<'a>(
         .insert(contract_address.clone(), nonce);
     state_reader
         .class_hash_to_contract_class_mut()
-        .insert(class_hash, contract_class.clone());
+        .insert(class_hash, contract_class);
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
         let mut contract_class_cache = ContractClassCache::new();
-        contract_class_cache.insert(class_hash, contract_class);
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
             let contract_class = ContractClass::try_from(contract_path.to_path_buf())
