@@ -91,7 +91,7 @@ impl InternalDeploy {
             .entry_points_by_type()
             .get(&EntryPointType::Constructor);
 
-        if constructors.map(|v| v.len() == 0).unwrap_or(false) {
+        if constructors.map(Vec::is_empty).unwrap_or(true) {
             self.handle_empty_constructor(state)
         } else {
             self.invoke_constructor(state, general_config)
