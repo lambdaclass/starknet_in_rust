@@ -110,16 +110,6 @@ impl PyStarknetGeneralConfig {
     fn min_gas_price(&self) -> u64 {
         DEFAULT_GAS_PRICE
     }
-
-    #[getter]
-    fn event_commitment_tree_height(&self) -> u64 {
-        unimplemented!("this shouldn't be needed")
-    }
-
-    #[getter]
-    fn tx_commitment_tree_height(&self) -> u64 {
-        unimplemented!("this shouldn't be needed")
-    }
 }
 
 #[pyclass]
