@@ -6,14 +6,14 @@ use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType},
+        execution::objects::{CallInfo, CallType, OrderedEvent},
         fact_state::state::ExecutionResourcesManager,
         state::state_api::StateReader,
         transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
-    utils::Address,
+    utils::{calculate_sn_keccak, Address},
 };
 
 use crate::erc721::utils::*;
@@ -88,16 +88,17 @@ fn erc721_constructor_test() {
         "ERC721_balances",
         vec![vec![666_u32.into()]],
     ));
-    /*accessed_storage_keys.extend(&get_accessed_keys(
+    accessed_storage_keys.extend(&get_accessed_keys(
         "ERC721_owners",
-        vec![vec![FieldElement::from(1_u8)]],
-    ));*/
+        vec![vec![FieldElement::from(1_u8), FieldElement::from(0_u8)]],
+    ));
 
-    //let data = vec![Felt::zero(), Felt::from(666), Felt::from(1), Felt::zero()];
-    let keys = get_event_key(&["from_", "to", "token_id"]);
-    let keys = Felt::from_bytes_be(&keys.to_bytes_be());
-    //let _events = vec![OrderedEvent::new(0, vec![keys], data)];
-    dbg!(keys);
+    let event_hash = Felt::from_bytes_be(&calculate_sn_keccak(&"Transfer".as_bytes()));
+    let expected_events = vec![OrderedEvent::new(
+        0,
+        vec![event_hash],
+        vec![Felt::zero(), Felt::from(666), Felt::from(1), Felt::zero()],
+    )];
 
     let _expected_call_info = CallInfo {
         caller_address: Address(666.into()),
@@ -111,6 +112,7 @@ fn erc721_constructor_test() {
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys.clone(),
         storage_read_values: vec![Felt::zero(), Felt::zero(), Felt::zero()],
+        events: expected_events,
         ..Default::default()
     };
 
@@ -142,6 +144,11 @@ fn erc721_constructor_test() {
     dbg!(result.is_superset(&get_accessed_keys(
         "ERC721_balances",
         vec![vec![666_u32.into()]]
+    )));
+    dbg!("owners");
+    dbg!(result.is_superset(&get_accessed_keys(
+        "ERC721_owners",
+        vec![vec![FieldElement::from(1_u8), FieldElement::from(0_u8)]]
     )));
 
     dbg!(result.len());
