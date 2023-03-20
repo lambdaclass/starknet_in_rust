@@ -465,7 +465,7 @@ fn erc721_test_get_approved() {
         entry_point_selector: Some(entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
-        retdata: expected_read_result.clone(),
+        retdata: expected_read_result,
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         accessed_storage_keys,
@@ -518,7 +518,7 @@ fn erc721_test_is_approved_for_all() {
     let owner = Felt::from(666);
     // The address in control for the approvals
     let operator = Felt::from(777);
-    let calldata = [owner.clone(), operator.clone()].to_vec();
+    let calldata = [owner, operator].to_vec();
 
     call_config.entry_point_type = &entry_point_type;
 
@@ -542,7 +542,7 @@ fn erc721_test_is_approved_for_all() {
         entry_point_selector: Some(entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
-        retdata: expected_read_result.clone(),
+        retdata: expected_read_result,
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         accessed_storage_keys,
