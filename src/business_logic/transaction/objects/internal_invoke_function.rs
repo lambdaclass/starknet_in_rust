@@ -187,13 +187,12 @@ impl InternalInvokeFunction {
         T: Default + State + StateReader + Clone,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
+
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
-
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
-
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -239,8 +238,8 @@ impl InternalInvokeFunction {
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
-    /// Calculates actual fee used by the transaction using the execution
-    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    /// Calculates actual fee used by the transaction using the execution info returned by apply(),
+    /// then updates the transaction execution info with the data of the fee.
     pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
@@ -344,9 +343,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::{
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         services::api::contract_class::ContractClass,
@@ -375,26 +372,30 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-        let mut state = CachedState::new(state_reader, None);
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
-        // Set contract_class
-        let class_hash: [u8; 32] = [1; 32];
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         state
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
-
-        // Set contact_state
-        let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
-        state.state_reader.contract_states.insert(
-            internal_invoke_function.contract_address.clone(),
-            contract_state,
-        );
 
         let result = internal_invoke_function
             .apply(&mut state, &StarknetGeneralConfig::default())

@@ -26,7 +26,7 @@ use crate::{
         contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 use felt::Felt;
 use num_traits::{One, Zero};
@@ -47,7 +47,7 @@ impl StarknetState {
     #[allow(dead_code)]
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::default();
 
         let state = CachedState::new(state_reader, Some(HashMap::new()));
 
@@ -74,7 +74,7 @@ impl StarknetState {
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
-    ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
+    ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
             contract_class,
             self.chain_id(),
@@ -286,7 +286,7 @@ mod tests {
     use num_traits::Num;
 
     use crate::{
-        business_logic::{execution::objects::CallType, fact_state::contract_state::ContractState},
+        business_logic::{execution::objects::CallType, state::state_cache::StorageEntry},
         core::contract_address::starknet_contract_address::compute_class_hash,
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
@@ -373,19 +373,30 @@ mod tests {
         // hack store account contract
         let hash = compute_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(class_hash, contract_class.clone());
 
         // store sender_address
         let sender_address = Address(1.into());
         // this is not conceptually correct as the sender address would be an
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
-        let contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
+        let nonce = Felt::zero();
+        let storage_entry: StorageEntry = (sender_address.clone(), [19; 32]);
+        let storage = Felt::zero();
 
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::default();
         state_reader
-            .contract_states
-            .insert(sender_address.clone(), contract_state.clone());
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address.clone(), nonce.clone());
+        state_reader
+            .address_to_storage_mut()
+            .insert(storage_entry.clone(), storage.clone());
+        state_reader
+            .class_hash_to_contract_class_mut()
+            .insert(class_hash, contract_class.clone());
 
         let state = CachedState::new(state_reader, Some(contract_class_cache));
 
@@ -399,8 +410,24 @@ mod tests {
         starknet_state
             .state
             .state_reader
-            .contract_states
-            .insert(Address(1.into()), contract_state);
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+
+        starknet_state
+            .state
+            .state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address.clone(), nonce);
+        starknet_state
+            .state
+            .state_reader
+            .address_to_storage_mut()
+            .insert(storage_entry, storage);
+        starknet_state
+            .state
+            .state_reader
+            .class_hash_to_contract_class_mut()
+            .insert(class_hash, contract_class);
 
         // --------------------------------------------
         //      Test declare with starknet state
