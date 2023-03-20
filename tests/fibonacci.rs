@@ -12,7 +12,7 @@ use starknet_rs::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::{cached_state::CachedState, state_cache::StorageEntry},
+        state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},

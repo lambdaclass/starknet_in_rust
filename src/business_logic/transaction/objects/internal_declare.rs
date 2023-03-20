@@ -343,7 +343,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address.clone(), Felt::new(1));
+            .insert(sender_address, Felt::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
