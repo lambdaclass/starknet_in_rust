@@ -26,11 +26,13 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt;
+use getset::Getters;
 use num_traits::Zero;
 
-#[derive(Debug)]
+#[derive(Debug, Getters)]
 pub struct InternalInvokeFunction {
-    pub contract_address: Address,
+    #[getset(get = "pub")]
+    contract_address: Address,
     entry_point_selector: Felt,
     #[allow(dead_code)]
     entry_point_type: EntryPointType,
@@ -270,11 +272,11 @@ impl InternalInvokeFunction {
             return Ok(());
         }
 
-        let contract_address = self.contract_address.clone();
+        let contract_address = self.contract_address();
 
-        let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
+        let current_nonce = state.get_nonce_at(contract_address)?;
 
-        match self.nonce.clone() {
+        match &self.nonce {
             None => {
                 // TODO: Remove this once we have a better way to handle the nonce.
                 Ok(())
@@ -286,7 +288,7 @@ impl InternalInvokeFunction {
                         nonce.to_string(),
                     ));
                 }
-                state.increment_nonce(&contract_address)?;
+                state.increment_nonce(contract_address)?;
                 Ok(())
             }
         }

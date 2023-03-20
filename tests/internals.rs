@@ -793,12 +793,7 @@ fn test_invoke_tx_state() {
 
     let expected_final_state = expected_state_after_tx();
 
-    assert_eq!(state.state_reader, expected_final_state.state_reader);
-    assert_eq!(state.cache, expected_final_state.cache);
-    assert_eq!(
-        state.contract_classes,
-        expected_final_state.contract_classes
-    );
+    assert_eq!(*state, expected_final_state);
 }
 
 #[test]
