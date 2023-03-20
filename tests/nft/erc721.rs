@@ -18,18 +18,6 @@ use starknet_rs::{
 
 use crate::nft::utils::*;
 
-pub enum ERC721EntryPoints {
-    Constructor,
-}
-
-impl From<ERC721EntryPoints> for usize {
-    fn from(val: ERC721EntryPoints) -> Self {
-        match val {
-            ERC721EntryPoints::Constructor => 0,
-        }
-    }
-}
-
 fn contructor(
     calldata: &[Felt],
     call_config: &mut CallConfig,
@@ -54,6 +42,13 @@ fn balance_of(
 
 fn owner_of(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
     execute_entry_point("ownerOf", calldata, call_config)
+}
+
+fn get_approved(
+    calldata: &[Felt],
+    call_config: &mut CallConfig,
+) -> Result<CallInfo, TransactionError> {
+    execute_entry_point("getApproved", calldata, call_config)
 }
 
 #[test]
@@ -258,7 +253,7 @@ fn erc721_symbol_test() {
 }
 
 #[test]
-fn erc721_balance_of() {
+fn erc721_balance_of_test() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
@@ -366,7 +361,7 @@ fn erc721_test_owner_of() {
 
     contructor(&calldata, &mut call_config).unwrap();
 
-    //owner to check balance
+    //tokenId to ask for owner
     let calldata = [Felt::from(1), Felt::from(0)].to_vec();
 
     call_config.entry_point_type = &entry_point_type;
@@ -395,6 +390,84 @@ fn erc721_test_owner_of() {
 
     assert_eq!(
         owner_of(&calldata, &mut call_config).unwrap(),
+        expected_call_info
+    );
+}
+
+#[test]
+fn erc721_test_get_approved() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let caller_address = Address(666.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let entry_point_type = EntryPointType::External;
+
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let collection_symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let calldata = [collection_name, collection_symbol, to].to_vec();
+
+    let entry_point_type_constructor = EntryPointType::Constructor;
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &entry_point_type_constructor,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    contructor(&calldata, &mut call_config).unwrap();
+
+    // tokenId (uint256) to check if it is approved
+    let calldata = [Felt::from(1), Felt::from(0)].to_vec();
+
+    call_config.entry_point_type = &entry_point_type;
+
+    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"getApproved"));
+
+    // expected result is 0 because it is not approved
+    let expected_read_result = vec![Felt::from(0)];
+
+    // First checks if the token is owned by anyone and then checks if it is approved
+    let storage_read_values = vec![Felt::from(666), Felt::from(0)];
+
+    let mut accessed_storage_keys = get_accessed_keys(
+        "ERC721_token_approvals",
+        vec![vec![1_u32.into(), 0_u32.into()]],
+    );
+    accessed_storage_keys.extend(get_accessed_keys(
+        "ERC721_owners",
+        vec![vec![1_u8.into(), 0_u8.into()]],
+    ));
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(666.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata.clone(),
+        retdata: expected_read_result.clone(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: accessed_storage_keys,
+        storage_read_values: storage_read_values,
+        ..Default::default()
+    };
+
+    assert_eq!(
+        get_approved(&calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
