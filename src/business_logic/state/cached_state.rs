@@ -22,7 +22,7 @@ pub(crate) const UNINITIALIZED_CLASS_HASH: &[u8; 32] = b"\x00\x00\x00\x00\x00\x0
 pub struct CachedState<T: StateReader + Clone> {
     pub state_reader: T,
     #[getset(get = "pub", get_mut = "pub")]
-    pub cache: StateCache,
+    cache: StateCache,
     pub contract_classes: Option<ContractClassCache>,
 }
 
