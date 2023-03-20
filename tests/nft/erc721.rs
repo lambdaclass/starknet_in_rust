@@ -322,7 +322,7 @@ fn erc721_balance_of_test() {
         retdata: expected_read_result.clone(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys,
+        accessed_storage_keys,
         storage_read_values: expected_read_result,
         ..Default::default()
     };
@@ -390,7 +390,7 @@ fn erc721_test_owner_of() {
         retdata: expected_read_result.clone(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys,
+        accessed_storage_keys,
         storage_read_values: expected_read_result,
         ..Default::default()
     };
@@ -468,8 +468,8 @@ fn erc721_test_get_approved() {
         retdata: expected_read_result.clone(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys,
-        storage_read_values: storage_read_values,
+        accessed_storage_keys,
+        storage_read_values,
         ..Default::default()
     };
 
@@ -545,8 +545,8 @@ fn erc721_test_is_approved_for_all() {
         retdata: expected_read_result.clone(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys,
-        storage_read_values: storage_read_values,
+        accessed_storage_keys,
+        storage_read_values,
         ..Default::default()
     };
 
