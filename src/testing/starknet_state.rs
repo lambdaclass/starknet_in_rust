@@ -34,7 +34,7 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-pub(crate) struct StarknetState {
+pub struct StarknetState {
     pub(crate) state: CachedState<InMemoryStateReader>,
     pub(crate) general_config: StarknetGeneralConfig,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
@@ -92,8 +92,6 @@ impl StarknetState {
     }
 
     /// Invokes a contract function. Returns the execution info.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
