@@ -78,19 +78,28 @@ impl InternalDeploy {
     pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
-        _general_config: &StarknetGeneralConfig,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
-        state.get_contract_class(&class_hash)?;
-        self.handle_empty_constructor(state)
+        let contract_class = state.get_contract_class(&class_hash)?;
+
+        let constructors = contract_class
+            .entry_points_by_type()
+            .get(&EntryPointType::Constructor);
+
+        if constructors.map(|v| v.len() == 0).unwrap_or(false) {
+            self.handle_empty_constructor(state)
+        } else {
+            self.invoke_constructor(state, general_config)
+        }
     }
 
     pub fn handle_empty_constructor<T: Default + State + StateReader + Clone>(
         &self,
         state: &mut T,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        if self.constructor_calldata.is_empty() {
+        if !self.constructor_calldata.is_empty() {
             return Err(StarkwareError::TransactionFailed);
         }
 
@@ -123,13 +132,11 @@ impl InternalDeploy {
         )
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn invoke_constructor<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
-        general_config: StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, StarkwareError> {
         let entry_point_selector = felt_str!(
             "1159040026212278395030414237414753050475174923702621880048416706425641521556"
         );
@@ -154,12 +161,14 @@ impl InternalDeploy {
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let call_info = call.execute(
-            state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context,
-        )?;
+        let call_info = call
+            .execute(
+                state,
+                &general_config,
+                &mut resources_manager,
+                &tx_execution_context,
+            )
+            .unwrap();
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -168,7 +177,8 @@ impl InternalDeploy {
             self.tx_type,
             changes,
             None,
-        )?;
+        )
+        .unwrap();
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
