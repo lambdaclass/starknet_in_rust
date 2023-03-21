@@ -130,10 +130,10 @@ pub fn to_state_diff_storage_mapping(
 /// Used for transaction fee; calculation is made as if the transaction is the first in batch, for
 /// consistency.
 
-pub fn get_call_n_deployments(call_info: CallInfo) -> usize {
+pub fn get_call_n_deployments(call_info: &CallInfo) -> usize {
     call_info
         .gen_call_topology()
-        .into_iter()
+        .iter()
         .fold(0, |acc, c| match c.entry_point_type {
             Some(EntryPointType::Constructor) => acc + 1,
             _ => acc,
@@ -150,11 +150,7 @@ pub fn calculate_tx_resources(
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
-    let n_deployments = non_optional_calls
-        .clone()
-        .into_iter()
-        .map(get_call_n_deployments)
-        .sum();
+    let n_deployments = non_optional_calls.iter().map(get_call_n_deployments).sum();
 
     let mut l2_to_l1_messages = Vec::new();
 
@@ -191,7 +187,7 @@ pub fn calculate_tx_resources(
 /// a key appears in b with a different value, it will be part of the output).
 /// Uses to take only updated cells from a mapping.
 
-fn contained_and_not_updated<K, V>(key: &K, value: &V, map: HashMap<K, V>) -> bool
+fn contained_and_not_updated<K, V>(key: &K, value: &V, map: &HashMap<K, V>) -> bool
 where
     K: Hash + Eq,
     V: PartialEq + Clone,
@@ -207,7 +203,7 @@ where
 {
     map_a
         .into_iter()
-        .filter(|(k, v)| contained_and_not_updated(k, v, map_b.clone()))
+        .filter(|(k, v)| contained_and_not_updated(k, v, &map_b))
         .collect()
 }
 
@@ -246,10 +242,10 @@ where
 
 pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     state: &mut S,
-    contract_address: Address,
+    contract_address: &Address,
 ) -> Result<ClassHash, TransactionError> {
     let class_hash: ClassHash = state
-        .get_class_hash_at(&contract_address)
+        .get_class_hash_at(contract_address)
         .map_err(|_| TransactionError::FailToReadClassHash)?
         .to_owned();
 
@@ -261,7 +257,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
 
 pub fn validate_contract_deployed<S: StateReader>(
     state: &mut S,
-    contract_address: Address,
+    contract_address: &Address,
 ) -> Result<ClassHash, TransactionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
 }

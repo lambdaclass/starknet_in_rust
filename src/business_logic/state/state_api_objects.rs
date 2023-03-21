@@ -27,7 +27,7 @@ impl BlockInfo {
 
     pub fn validate_legal_progress(
         &self,
-        next_block_info: BlockInfo,
+        next_block_info: &BlockInfo,
     ) -> Result<(), StarkwareError> {
         if self.block_number + 1 != next_block_info.block_number {
             return Err(StarkwareError::InvalidBlockNumber);
