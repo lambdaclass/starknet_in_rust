@@ -82,7 +82,7 @@ impl InternalDeploy {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, StarkwareError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
         let contract_class = state.get_contract_class(&class_hash)?;
@@ -92,7 +92,8 @@ impl InternalDeploy {
             .get(&EntryPointType::Constructor);
 
         if constructors.map(Vec::is_empty).unwrap_or(true) {
-            self.handle_empty_constructor(state)
+            // Contract has no constructors
+            Ok(self.handle_empty_constructor(state)?)
         } else {
             self.invoke_constructor(state, general_config)
         }
@@ -139,7 +140,7 @@ impl InternalDeploy {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, StarkwareError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
@@ -161,14 +162,12 @@ impl InternalDeploy {
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let call_info = call
-            .execute(
-                state,
-                general_config,
-                &mut resources_manager,
-                &tx_execution_context,
-            )
-            .map_err(|_| StarkwareError::TransactionFailed)?;
+        let call_info = call.execute(
+            state,
+            general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+        )?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -177,8 +176,7 @@ impl InternalDeploy {
             self.tx_type,
             changes,
             None,
-        )
-        .map_err(|_| StarkwareError::TransactionFailed)?;
+        )?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
