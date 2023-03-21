@@ -28,7 +28,7 @@ lazy_static! {
     ))
     .unwrap();
     static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(
-        &CONTRACT_CLASS.clone()
+        &CONTRACT_CLASS
     ).unwrap());
     static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
         "3577223136242220508961486249701638158054969090851914040041358274796489907314"
