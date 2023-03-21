@@ -115,7 +115,7 @@ impl ExecutionEntryPoint {
             .map_err(|_| TransactionError::MissigContractClass)?;
 
         // fetch selected entry point
-        let entry_point = self.get_selected_entry_point(contract_class.clone(), class_hash)?;
+        let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
         // create starknet runner
 
         let mut vm = VirtualMachine::new(false);
@@ -130,7 +130,7 @@ impl ExecutionEntryPoint {
         // prepare OS context
         let os_context = runner.prepare_os_context();
 
-        validate_contract_deployed(state, self.contract_address.clone())?;
+        validate_contract_deployed(state, &self.contract_address)?;
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -189,7 +189,7 @@ impl ExecutionEntryPoint {
     /// default if there is one and the requested one is not found.
     fn get_selected_entry_point(
         &self,
-        contract_class: ContractClass,
+        contract_class: &ContractClass,
         _class_hash: [u8; 32],
     ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class
@@ -273,6 +273,6 @@ impl ExecutionEntryPoint {
             }
         };
 
-        get_deployed_address_class_hash_at_address(state, code_address.unwrap())
+        get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
     }
 }
