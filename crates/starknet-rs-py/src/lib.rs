@@ -69,6 +69,9 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
         },
     )?;
 
+    m.add("LATEST_BLOCK_ID", "latest")?;
+    m.add("PENDING_BLOCK_ID", "pending")?;
+
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_class::<PyTransactionHashPrefix>()?;
     // m.add_function(calculate_declare_transaction_hash)?;
@@ -102,8 +105,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyStarknetErrorCode>()?;
 
     //  starkware.starknet.services.api.feeder_gateway.response_objects
-    // m.add("LATEST_BLOCK_ID", value)?;
-    // m.add("PENDING_BLOCK_ID", value)?;
     // m.add_class::<PyBlockIdentifier>()?; this one is a Python Union
     // m.add_class::<PyBlockStateUpdate>()?;
     // m.add_class::<PyBlockStatus>()?;
