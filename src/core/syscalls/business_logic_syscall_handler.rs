@@ -388,7 +388,7 @@ where
                 call_type = CallType::Call;
                 call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
             }
-            _ => todo!(),
+            _ => return Err(SyscallHandlerError::NotImplemented),
         }
 
         let entry_point = ExecutionEntryPoint::new(
