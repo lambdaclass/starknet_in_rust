@@ -445,7 +445,7 @@ fn erc721_test_get_approved() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name, collection_symbol, to].to_vec();
+    let calldata_constructor = [collection_name, collection_symbol, to].to_vec();
 
     let entry_point_type_constructor = EntryPointType::Constructor;
     let mut call_config = CallConfig {
@@ -459,20 +459,25 @@ fn erc721_test_get_approved() {
         resources_manager: &mut resources_manager,
     };
 
-    contructor(&calldata, &mut call_config).unwrap();
+    contructor(&calldata_constructor, &mut call_config).unwrap();
+
+    // The address given approval to transfer the token
+    let to = Felt::from(777);
+    let calldata_approve = [to, Felt::from(1), Felt::from(0)].to_vec();
+    call_config.entry_point_type = &entry_point_type;
+
+    approve(&calldata_approve, &mut call_config).unwrap();
 
     // tokenId (uint256) to check if it is approved
     let calldata = [Felt::from(1), Felt::from(0)].to_vec();
 
-    call_config.entry_point_type = &entry_point_type;
-
     let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"getApproved"));
 
     // expected result is 0 because it is not approved
-    let expected_read_result = vec![Felt::from(0)];
+    let expected_read_result = vec![Felt::from(777)];
 
     // First checks if the token is owned by anyone and then checks if it is approved
-    let storage_read_values = vec![Felt::from(666), Felt::from(0)];
+    let storage_read_values = vec![Felt::from(666), Felt::from(777)];
 
     let mut accessed_storage_keys = get_accessed_keys(
         "ERC721_token_approvals",
