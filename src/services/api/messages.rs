@@ -58,3 +58,24 @@ fn create_starknet_message_to_l1() {
         Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4),])
     )
 }
+
+#[test]
+fn encode_starknet_message_to_l1() {
+    let message = StarknetMessageToL1::new(
+        Address(42.into()),
+        Address(1729.into()),
+        Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4)]),
+    );
+
+    let expected_output = Vec::from([
+        Felt::new(42),
+        Felt::new(1729),
+        Felt::new(4),
+        Felt::new(1),
+        Felt::new(2),
+        Felt::new(3),
+        Felt::new(4),
+    ]);
+
+    assert_eq!(message.encode(), expected_output);
+}
