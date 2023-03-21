@@ -2,14 +2,13 @@ use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::{
-    business_logic::transaction::transactions::Transaction,
     services::api::contract_class::ContractClass,
     testing::{starknet_state::StarknetState as InnerStarknetState, type_utils::ExecutionInfo},
     utils::Address,
 };
 
 use crate::types::{
-    call_info::PyCallInfo, contract_class::PyContractClass,
+    call_info::PyCallInfo, contract_class::PyContractClass, transaction::PyTransaction,
     transaction_execution_info::PyTransactionExecutionInfo,
 };
 #[pyclass]
@@ -119,10 +118,10 @@ impl PyStarknetState {
         ))
     }
 
-    pub fn execute_tx(&mut self, tx: &mut Transaction) -> PyResult<PyTransactionExecutionInfo> {
+    pub fn execute_tx(&mut self, tx: &mut PyTransaction) -> PyResult<PyTransactionExecutionInfo> {
         let tx_info = self
             .inner
-            .execute_tx(tx)
+            .execute_tx(&mut tx.inner)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         Ok(PyTransactionExecutionInfo::from(tx_info))
     }
