@@ -76,6 +76,13 @@ fn transfer_from(
     execute_entry_point("transferFrom", calldata, call_config)
 }
 
+fn safe_transfer_from(
+    calldata: &[Felt],
+    call_config: &mut CallConfig,
+) -> Result<CallInfo, TransactionError> {
+    execute_entry_point("safeTransferFrom", calldata, call_config)
+}
+
 #[test]
 fn erc721_constructor_test() {
     let address = Address(1111.into());
@@ -944,4 +951,56 @@ fn erc721_transfer_from_and_get_owner_test() {
         owner_of(&calldata, &mut call_config).unwrap(),
         expected_call_info
     );
+}
+
+#[test]
+// test should panic at 'not yet implemented'
+#[should_panic]
+fn erc721_safe_transfer_from_should_panic() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let caller_address = Address(666.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let entry_point_type = EntryPointType::External;
+
+    // First we initialize the contract
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let constructor_calldata = [collection_name, symbol, to].to_vec();
+
+    let entry_point_type_constructor = EntryPointType::Constructor;
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &entry_point_type_constructor,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    contructor(&constructor_calldata, &mut call_config).unwrap();
+
+    call_config.entry_point_type = &entry_point_type;
+
+    let calldata = [
+        Felt::from(666),
+        Felt::from(777),
+        Felt::from(1),
+        Felt::zero(),
+        Felt::zero(),
+    ]
+    .to_vec();
+    // The contract will fail because the receiver address is not a IERC721Receiver contract
+    safe_transfer_from(&calldata, &mut call_config).unwrap();
 }
