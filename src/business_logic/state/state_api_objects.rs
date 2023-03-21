@@ -1,6 +1,6 @@
 use crate::{starkware_utils::starkware_errors::StarkwareError, utils::Address};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockInfo {
     /// The sequence number of the last block created.
     pub block_number: u64,
@@ -17,7 +17,7 @@ pub struct BlockInfo {
 impl BlockInfo {
     pub fn empty(sequencer_address: Address) -> Self {
         BlockInfo {
-            block_number: 0,
+            block_number: 0, // should be -1
             block_timestamp: 0,
             gas_price: 0,
             sequencer_address,

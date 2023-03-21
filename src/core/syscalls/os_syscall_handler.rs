@@ -22,8 +22,6 @@ impl OsSingleStarknetStorage {
     /// Writes the given value in the given key in ongoing_storage_changes and returns the
     /// previous value. This value is needed to create the DictAccess while executing the
     /// corresponding storage_write system call.
-    /// TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     fn write(&self, _key: u64, _value: u64) -> u64 {
         // TO BE IMPLEMENTED
         todo!()
@@ -198,8 +196,7 @@ impl SyscallHandler for OsSyscallHandler {
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_temporary_segment();
 
-        vm.write_arg(&segment_start, &data)
-            .map_err(|_| SyscallHandlerError::WriteArg)?;
+        vm.write_arg(&segment_start, &data)?;
         Ok(segment_start)
     }
 
@@ -282,8 +279,6 @@ impl OsSyscallHandler {
         self.tx_execution_info_iterator.pop_front()
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     fn assert_iterators_exhausted(&self) -> Result<(), SyscallHandlerError> {
         if self.deployed_contracts_iterator.front().is_some() {
             return Err(SyscallHandlerError::IteratorNotEmpty);
@@ -907,7 +902,7 @@ mod tests {
         };
         assert_eq!(
             handler._call_contract_and_write_response("call_contract", &mut vm, syscall_ptr),
-            Err(SyscallHandlerError::VirtualMachineError(
+            Err(SyscallHandlerError::VirtualMachine(
                 VirtualMachineError::MemoryError(MemoryError::UnallocatedSegment(0, 0))
             ))
         )

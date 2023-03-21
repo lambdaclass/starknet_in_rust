@@ -1,18 +1,18 @@
 use crate::{
     business_logic::state::state_cache::StorageEntry,
     services::api::contract_class_errors::ContractClassError,
-    starknet_storage::errors::storage_errors::StorageError, utils::Address,
+    starknet_storage::errors::storage_errors::StorageError,
+    utils::{Address, ClassHash},
 };
-use felt::Felt;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum StateError {
     #[error("Missing ContractClassCache")]
     MissingContractClassCache,
     #[error("ContractClassCache must be None")]
     AssignedContractClassCache,
-    #[error("Missing key that in StorageUpdate Map")]
+    #[error("Missing key in StorageUpdate Map")]
     EmptyKeyInStorage,
     #[error("Try to create a CarriedState from a None parent")]
     ParentCarriedStateIsNone,
@@ -27,21 +27,19 @@ pub enum StateError {
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
     #[error("No storage leaf assigned for key: {0:?}")]
-    NoneStoragLeaf([u8; 32]),
+    NoneStoragLeaf(ClassHash),
     #[error("Cannot deploy contract at address: {0:?}")]
     ContractAddressOutOfRangeAddress(Address),
-    #[error("Requested contract address {0:?} is unavailable for deployment")]
+    #[error("Requested contract address {} is unavailable for deployment", (.0).0)]
     ContractAddressUnavailable(Address),
-    #[error("error converting {0} to u64")]
-    ConversionError(Felt),
     #[error(transparent)]
-    StorageError(#[from] StorageError),
+    Storage(#[from] StorageError),
     #[error(transparent)]
-    ContractClassError(#[from] ContractClassError),
-    #[error("constructor entry points must be empty")]
-    ConstructorEntryPointsError(),
+    ContractClass(#[from] ContractClassError),
+    #[error("Constructor calldata is empty")]
+    ConstructorCalldataEmpty(),
     #[error("Error in ExecutionEntryPoint")]
-    ExecutionEntryPointError(),
+    ExecutionEntryPoint(),
     #[error("No class hash declared in class_hash_to_contract_class")]
     MissingClassHash(),
 }

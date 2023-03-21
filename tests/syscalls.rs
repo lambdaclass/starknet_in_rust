@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use felt::{felt_str, Felt};
-use num_traits::{Num, Zero};
+use num_traits::Num;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -11,8 +11,7 @@ use starknet_rs::{
             },
         },
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{
             cached_state::{CachedState, ContractClassCache},
@@ -20,19 +19,19 @@ use starknet_rs::{
         },
     },
     definitions::{
-        constants::TRANSACTION_VERSION,
+        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
         general_config::{StarknetChainId, StarknetGeneralConfig},
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
 };
-use std::{collections::HashMap, collections::HashSet, iter::empty, path::Path};
+use std::{collections::HashSet, iter::empty, path::Path};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
-    class_hash: [u8; 32],
+    class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
     general_config: StarknetGeneralConfig,
@@ -40,8 +39,10 @@ fn test_contract<'a>(
     events: impl Into<Vec<OrderedEvent>>,
     l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
     storage_read_values: impl Into<Vec<Felt>>,
-    accessed_storage_keys: impl Iterator<Item = [u8; 32]>,
-    extra_contracts: impl Iterator<Item = ([u8; 32], &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>)>,
+    accessed_storage_keys: impl Iterator<Item = ClassHash>,
+    extra_contracts: impl Iterator<
+        Item = (ClassHash, &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>),
+    >,
     arguments: impl Into<Vec<Felt>>,
     internal_calls: impl Into<Vec<CallInfo>>,
     return_data: impl Into<Vec<Felt>>,
@@ -59,26 +60,28 @@ fn test_contract<'a>(
         )
     });
 
-    let contract_state = ContractState::new(
-        class_hash,
-        tx_execution_context.nonce().clone(),
-        Default::default(),
-    );
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let nonce = tx_execution_context.nonce().clone();
+
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .address_to_class_hash_mut()
+        .insert(contract_address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(contract_address.clone(), nonce);
+    state_reader
+        .class_hash_to_contract_class_mut()
+        .insert(class_hash, contract_class);
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
         let mut contract_class_cache = ContractClassCache::new();
-        contract_class_cache.insert(class_hash, contract_class);
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
             let contract_class = ContractClass::try_from(contract_path.to_path_buf())
                 .expect("Could not load extra contract from JSON");
 
-            contract_class_cache.insert(class_hash, contract_class);
+            contract_class_cache.insert(class_hash, contract_class.clone());
 
             if let Some((contract_address, data)) = contract_address {
                 storage_entries.extend(data.into_iter().map(|(name, value)| {
@@ -89,10 +92,22 @@ fn test_contract<'a>(
                     )
                 }));
 
-                state_reader.contract_states_mut().insert(
-                    contract_address,
-                    ContractState::new(class_hash, Felt::zero(), Default::default()),
-                );
+                let nonce = Felt::new(70);
+                let storage_entry = (contract_address.clone(), [29; 32]);
+                let storage_value = Felt::new(574);
+
+                state_reader
+                    .address_to_class_hash_mut()
+                    .insert(contract_address.clone(), class_hash);
+                state_reader
+                    .address_to_nonce_mut()
+                    .insert(contract_address.clone(), nonce.clone());
+                state_reader
+                    .address_to_storage_mut()
+                    .insert(storage_entry.clone(), storage_value.clone());
+                state_reader
+                    .class_hash_to_contract_class_mut()
+                    .insert(class_hash, contract_class.clone());
             }
         }
 
@@ -716,11 +731,8 @@ fn send_message_to_l1_syscall() {
 
 #[test]
 fn deploy_syscall() {
-    let deploy_address = Felt::from_str_radix(
-        "2771739216117269195266211756239816992170608283088994568066688164855938378843",
-        10,
-    )
-    .unwrap();
+    let deploy_address =
+        felt_str!("2771739216117269195266211756239816992170608283088994568066688164855938378843");
 
     let deploy_class_hash = [2u8; 32];
     test_contract(
@@ -746,6 +758,7 @@ fn deploy_syscall() {
             caller_address: Address(0.into()),
             contract_address: Address(deploy_address.clone()),
             entry_point_type: Some(EntryPointType::Constructor),
+            entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
             call_type: Some(CallType::Call),
             class_hash: Some(deploy_class_hash),
             ..Default::default()
@@ -795,7 +808,7 @@ fn deploy_with_constructor_syscall() {
 fn test_deploy_and_call_contract_syscall() {
     let constructor_constant = Felt::new(550);
     let new_constant = Felt::new(3);
-    let constant_storage_key: [u8; 32] = [
+    let constant_storage_key: ClassHash = [
         2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27, 162, 147,
         169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
     ];

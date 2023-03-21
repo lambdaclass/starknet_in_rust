@@ -8,20 +8,20 @@ use crate::{
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::{
+        constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+    },
     services::api::contract_class::EntryPointType,
 };
-use felt::{felt_str, Felt};
+use felt::Felt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses
 pub type FeeInfo = (Option<CallInfo>, u64);
 
-// ----------------------------------------------------------------------------
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-
 pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
     state: &mut S,
     general_config: &StarknetGeneralConfig,
@@ -43,14 +43,10 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
     ]
     .to_vec();
 
-    // Value generated from transfer selector: 'TRANSFER_ENTRY_POINT_SELECTOR'.
-    let entry_point_selector =
-        felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
-
     let fee_transfer_call = ExecutionEntryPoint::new(
         fee_token_address,
         calldata,
-        entry_point_selector,
+        TRANSFER_ENTRY_POINT_SELECTOR.clone(),
         tx_context.account_contract_address.clone(),
         EntryPointType::External,
         None,
