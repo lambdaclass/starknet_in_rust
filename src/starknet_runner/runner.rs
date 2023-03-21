@@ -154,8 +154,8 @@ where
 
     pub(crate) fn validate_segment_pointers(
         &self,
-        segment_base_ptr: MaybeRelocatable,
-        segment_stop_ptr: MaybeRelocatable,
+        segment_base_ptr: &MaybeRelocatable,
+        segment_stop_ptr: &MaybeRelocatable,
     ) -> Result<(), TransactionError> {
         let seg_base_ptr = match segment_base_ptr {
             MaybeRelocatable::RelocatableValue(val) => {
@@ -174,7 +174,7 @@ where
                 .ok_or(TransactionError::InvalidSegmentSize)?;
 
         let seg_stop_ptr: Relocatable = match segment_stop_ptr {
-            MaybeRelocatable::RelocatableValue(val) => val,
+            MaybeRelocatable::RelocatableValue(val) => *val,
             _ => return Err(TransactionError::NotARelocatableValue),
         };
 
@@ -214,7 +214,7 @@ where
         let (syscall_base_ptr, syscall_stop_ptr) =
             self.get_os_segment_ptr_range(0, initial_os_context)?;
 
-        self.validate_segment_pointers(syscall_base_ptr, syscall_stop_ptr.clone())?;
+        self.validate_segment_pointers(&syscall_base_ptr, &syscall_stop_ptr)?;
 
         self.hint_processor
             .syscall_handler

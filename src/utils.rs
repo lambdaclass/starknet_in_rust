@@ -229,10 +229,10 @@ where
 
 pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     state: &mut S,
-    contract_address: Address,
+    contract_address: &Address,
 ) -> Result<[u8; 32], TransactionError> {
     let class_hash: [u8; 32] = state
-        .get_class_hash_at(&contract_address)
+        .get_class_hash_at(contract_address)
         .map_err(|_| TransactionError::FailToReadClassHash)?
         .to_owned();
 
@@ -244,7 +244,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
 
 pub fn validate_contract_deployed<S: StateReader>(
     state: &mut S,
-    contract_address: Address,
+    contract_address: &Address,
 ) -> Result<[u8; 32], TransactionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
