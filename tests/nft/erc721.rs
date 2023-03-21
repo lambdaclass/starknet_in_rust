@@ -69,6 +69,13 @@ fn set_approval_for_all(
     execute_entry_point("setApprovalForAll", calldata, call_config)
 }
 
+fn transfer_from(
+    calldata: &[Felt],
+    call_config: &mut CallConfig,
+) -> Result<CallInfo, TransactionError> {
+    execute_entry_point("transferFrom", calldata, call_config)
+}
+
 #[test]
 fn erc721_constructor_test() {
     let address = Address(1111.into());
@@ -738,6 +745,127 @@ fn erc721_set_approval_for_all() {
 
     assert_eq!(
         set_approval_for_all(&calldata, &mut call_config).unwrap(),
+        expected_call_info
+    );
+}
+
+#[test]
+fn erc721_transfer_from_test() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let caller_address = Address(666.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let entry_point_type = EntryPointType::External;
+
+    // First we initialize the contract
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let constructor_calldata = [collection_name, symbol, to].to_vec();
+
+    let entry_point_type_constructor = EntryPointType::Constructor;
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &entry_point_type_constructor,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    contructor(&constructor_calldata, &mut call_config).unwrap();
+
+    call_config.entry_point_type = &entry_point_type;
+
+    let calldata = [
+        Felt::from(666),
+        Felt::from(777),
+        Felt::from(1),
+        Felt::zero(),
+    ]
+    .to_vec();
+
+    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"transferFrom"));
+
+    let mut accessed_storage_keys = get_accessed_keys(
+        "ERC721_owners",
+        vec![vec![FieldElement::from(1_u8), FieldElement::from(0_u8)]],
+    );
+    accessed_storage_keys.extend(get_accessed_keys(
+        "ERC721_token_approvals",
+        vec![vec![FieldElement::from(1_u8), FieldElement::from(0_u8)]],
+    ));
+
+    let mut balance_from = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
+        .drain()
+        .collect::<Vec<[u8; 32]>>()[0];
+    accessed_storage_keys.insert(balance_from);
+    balance_from[31] += 1;
+    accessed_storage_keys.insert(balance_from);
+
+    let mut balance_to = get_accessed_keys("ERC721_balances", vec![vec![777_u32.into()]])
+        .drain()
+        .collect::<Vec<[u8; 32]>>()[0];
+    accessed_storage_keys.insert(balance_to);
+    balance_to[31] += 1;
+    accessed_storage_keys.insert(balance_to);
+
+    let expected_read_values = vec![
+        Felt::from(666),
+        Felt::from(666),
+        Felt::from(666),
+        Felt::from(666),
+        Felt::from(1),
+        Felt::zero(),
+        Felt::zero(),
+        Felt::zero(),
+    ];
+
+    let approval_event_hash = Felt::from_bytes_be(&calculate_sn_keccak("Approval".as_bytes()));
+    let approval_event = OrderedEvent::new(
+        0,
+        vec![approval_event_hash],
+        vec![Felt::from(666), Felt::zero(), Felt::from(1), Felt::zero()],
+    );
+    let transfer_event_hash = Felt::from_bytes_be(&calculate_sn_keccak("Transfer".as_bytes()));
+    let transfer_event = OrderedEvent::new(
+        1,
+        vec![transfer_event_hash],
+        vec![
+            Felt::from(666),
+            Felt::from(777),
+            Felt::from(1),
+            Felt::zero(),
+        ],
+    );
+    let expected_events = vec![approval_event, transfer_event];
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(666.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata.clone(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys: accessed_storage_keys,
+        storage_read_values: expected_read_values,
+        events: expected_events,
+        ..Default::default()
+    };
+
+    assert_eq!(
+        transfer_from(&calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
