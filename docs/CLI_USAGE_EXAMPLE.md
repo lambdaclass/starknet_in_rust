@@ -1,4 +1,4 @@
-# Cli Usage Example
+# CLI Usage Example
 
 For this example we will be using the contract [example_contract.cairo](../contract_execution_examples/example_contract.cairo)
 

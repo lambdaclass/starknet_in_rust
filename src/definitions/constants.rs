@@ -1,6 +1,9 @@
+use super::general_config::{StarknetChainId, StarknetOsConfig};
+use crate::utils::Address;
 use felt::{felt_str, Felt};
 use lazy_static::lazy_static;
 use num_traits::Zero;
+use std::collections::HashMap;
 
 pub(crate) const L2_TO_L1_MSG_HEADER_SIZE: usize = 3;
 pub(crate) const L1_TO_L2_MSG_HEADER_SIZE: usize = 5;
@@ -13,6 +16,30 @@ pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
 
 pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
     (L2_TO_L1_MSG_HEADER_SIZE + 1) - LOG_MSG_TO_L1_N_TOPICS;
+
+lazy_static! {
+    // TODO: should have an additional (builtin, 0.0) for each builtin (except for keccak)
+    pub static ref DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS: HashMap<String, f64> =
+        HashMap::from([("n_steps".to_string(), 1.0)]);
+    pub static ref DEFAULT_SEQUENCER_ADDRESS: Address = Address(felt_str!(
+        "3711666a3506c99c9d78c4d4013409a87a962b7a0880a1c24af9fe193dafc01",
+        16
+    ));
+    pub static ref DEFAULT_STARKNET_OS_CONFIG: StarknetOsConfig = StarknetOsConfig {
+        chain_id: StarknetChainId::TestNet,
+        fee_token_address: Address(felt_str!(
+            "4c07059285c2607d528a4c5220ef1f64d8f01273c23cfd9dec68759f61b544",
+            16
+        )),
+        gas_price: 0,
+    };
+}
+
+pub const DEFAULT_GAS_PRICE: u64 = 100_000_000_000; // 100 * 10**9
+pub const DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT: u64 = 251;
+pub const DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT: u64 = 251;
+pub const DEFAULT_INVOKE_TX_MAX_N_STEPS: u64 = 1000000;
+pub const DEFAULT_VALIDATE_MAX_N_STEPS: u64 = 1000000;
 
 pub const DECLARE_VERSION: u64 = 2;
 pub const TRANSACTION_VERSION: u64 = 1;

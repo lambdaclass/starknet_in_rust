@@ -8,8 +8,7 @@ use starknet_rs::{
             objects::{CallInfo, CallType, TransactionExecutionContext},
         },
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::cached_state::CachedState,
     },
@@ -50,13 +49,21 @@ fn integration_storage_test() {
 
     let address = Address(1111.into());
     let class_hash = [1; 32];
-    let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
+    let nonce = Felt::new(88);
+    let storage_entry = (address.clone(), [90; 32]);
+    let storage_value = Felt::new(10902);
 
     contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(address.clone(), contract_state);
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+    state_reader
+        .address_to_storage_mut()
+        .insert(storage_entry, storage_value);
 
     //* ---------------------------------------
     //*    Create state with previous data

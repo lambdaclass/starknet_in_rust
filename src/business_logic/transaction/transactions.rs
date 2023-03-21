@@ -4,7 +4,7 @@ use crate::{
         state::state_api::{State, StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 
 use super::{
@@ -18,7 +18,7 @@ pub enum Transaction {
 }
 
 impl Transaction {
-    pub fn contract_hash(&self) -> [u8; 32] {
+    pub fn contract_hash(&self) -> ClassHash {
         match self {
             Transaction::Deploy(tx) => tx.contract_hash,
             _ => [0; 32],
@@ -28,7 +28,7 @@ impl Transaction {
     pub fn contract_address(&self) -> Address {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
-            Transaction::InvokeFunction(tx) => tx.contract_address.clone(),
+            Transaction::InvokeFunction(tx) => tx.contract_address().clone(),
         }
     }
 
