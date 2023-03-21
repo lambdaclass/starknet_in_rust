@@ -79,3 +79,20 @@ fn encode_starknet_message_to_l1() {
 
     assert_eq!(message.encode(), expected_output);
 }
+
+#[test]
+fn get_hash_for_starknet_message_to_l1() {
+    let message = StarknetMessageToL1::new(
+        Address(42.into()),
+        Address(1729.into()),
+        Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4)]),
+    );
+
+    assert_eq!(
+        message.get_hash(),
+        Vec::from([
+            35, 146, 105, 229, 123, 197, 150, 164, 71, 161, 100, 157, 18, 54, 233, 219, 32, 150,
+            155, 238, 74, 8, 254, 114, 153, 144, 74, 32, 110, 104, 86, 42
+        ])
+    )
+}
