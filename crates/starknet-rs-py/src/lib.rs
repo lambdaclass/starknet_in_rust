@@ -12,7 +12,11 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
+use cairo_felt::Felt;
 use pyo3::prelude::*;
+use starknet_rs::definitions::constants::{
+    DEFAULT_GAS_PRICE, DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS,
+};
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
@@ -35,22 +39,35 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyOrderedL2ToL1Message>()?;
     m.add_class::<PyCallInfo>()?;
 
+    m.add("DEFAULT_GAS_PRICE", DEFAULT_GAS_PRICE)?;
+
+    // in cairo-lang they're equal
+    m.add("DEFAULT_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
+    m.add("DEFAULT_VALIDATE_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
+
+    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::testnet())?;
+    m.add(
+        "DEFAULT_SEQUENCER_ADDRESS",
+        DEFAULT_SEQUENCER_ADDRESS.0.to_biguint(),
+    )?;
+
+    // The sender address used by default in declare transactions of version 0.
+    m.add("DEFAULT_DECLARE_SENDER_ADDRESS", Felt::from(1).to_biguint())?;
+
+    // OS context offset.
+    m.add("SYSCALL_PTR_OFFSET", Felt::from(0).to_biguint())?;
+
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_class::<PyTransactionHashPrefix>()?;
     // m.add_function(calculate_declare_transaction_hash)?;
     // m.add_function(calculate_deploy_transaction_hash)?;
     // m.add_function(calculate_transaction_hash_common)?;
 
-    // m.add("DEFAULT_GAS_PRICE", value)?;
-    // m.add("DEFAULT_MAX_STEPS", value)?;
-    // m.add("DEFAULT_SEQUENCER_ADDRESS", value)?;
-    // m.add("DEFAULT_VALIDATE_MAX_STEPS", value)?;
-    // m.add("DEFAULT_CHAIN_ID", value)?;
     // m.add_function(build_general_config)?;
 
     //  starkware.starknet.public.abi
     // m.add_function(get_selector_from_name)?;
-    // m.add("SYSCALL_PTR_OFFSET", value)?;
+
     // m.add_class::<PyAbiEntryType>()?;
     // m.add_function(get_storage_var_address)?;
 
@@ -146,7 +163,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyInvokeFunction>()?;
     // m.add_class::<PyDeploy>()?;
     // m.add_class::<PyTransaction>()?;
-    // m.add("DEFAULT_DECLARE_SENDER_ADDRESS", value)?;
 
     //  starkware.starknet.definitions.constants
     // m.add("UNINITIALIZED_CLASS_HASH", value)?;
@@ -183,9 +199,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.services.api.messages
     // m.add_class::<PyStarknetMessageToL1>()?;
-
-    //  starkware.starknet.third_party.open_zeppelin.starknet_contracts
-    // m.add("account_contract", value)?;
 
     //  starkware.starknet.services.api.gateway.transaction_utils
     // m.add_function(compress_program)?;
