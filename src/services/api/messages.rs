@@ -43,3 +43,18 @@ impl StarknetMessageToL1 {
         finalized_hash.as_slice().to_vec()
     }
 }
+
+#[test]
+fn create_starknet_message_to_l1() {
+    let from_address: Address = Address(42.into());
+    let to_address: Address = Address(1729.into());
+    let payload: Vec<Felt> = Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4)]);
+    let message = StarknetMessageToL1::new(from_address, to_address, payload);
+
+    assert_eq!(message.from_address, Address(42.into()));
+    assert_eq!(message.to_address, Address(1729.into()));
+    assert_eq!(
+        message.payload,
+        Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4),])
+    )
+}
