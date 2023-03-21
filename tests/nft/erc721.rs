@@ -869,3 +869,79 @@ fn erc721_transfer_from_test() {
         expected_call_info
     );
 }
+
+#[test]
+fn erc721_transfer_from_and_get_owner_test() {
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
+
+    let caller_address = Address(666.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // First we initialize the contract
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let constructor_calldata = [collection_name, symbol, to].to_vec();
+
+    let entry_point_type_constructor = EntryPointType::Constructor;
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &address,
+        class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &entry_point_type_constructor,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+    // Call constructor from 666 and then transfer to 777
+    contructor(&constructor_calldata, &mut call_config).unwrap();
+    let entry_point_type = EntryPointType::External;
+    call_config.entry_point_type = &entry_point_type;
+    let calldata = [
+        Felt::from(666),
+        Felt::from(777),
+        Felt::from(1),
+        Felt::zero(),
+    ]
+    .to_vec();
+    transfer_from(&calldata, &mut call_config).unwrap();
+
+    // Now we call ownerOf
+    let calldata = [Felt::from(1), Felt::from(0)].to_vec();
+
+    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"ownerOf"));
+
+    let expected_read_result = vec![Felt::from(777)];
+
+    let accessed_storage_keys =
+        get_accessed_keys("ERC721_owners", vec![vec![1_u32.into(), 0_u32.into()]]);
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(666.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata.clone(),
+        retdata: expected_read_result.clone(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys,
+        storage_read_values: expected_read_result,
+        ..Default::default()
+    };
+
+    assert_eq!(
+        owner_of(&calldata, &mut call_config).unwrap(),
+        expected_call_info
+    );
+}
