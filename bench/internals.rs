@@ -19,14 +19,17 @@ use starknet_rs::{
     services::api::contract_class::ContractClass,
     utils::{felt_to_hash, Address},
 };
-use std::hint::black_box;
+use std::{hint::black_box, path::PathBuf};
 
 lazy_static! {
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(include_str!(
-        "../starknet_programs/account_without_validation.json",
+    // include_str! doesn't seem to work in CI
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+        "starknet_programs/account_without_validation.json",
     ))
     .unwrap();
-    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(&CONTRACT_CLASS).unwrap());
+    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(
+        &CONTRACT_CLASS
+    ).unwrap());
     static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
         "3577223136242220508961486249701638158054969090851914040041358274796489907314"
     ));
