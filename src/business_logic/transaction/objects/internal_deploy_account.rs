@@ -5,7 +5,7 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::{contract_state::StateSelector, state::ExecutionResourcesManager},
+        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
         transaction::{
             error::TransactionError,
@@ -23,12 +23,18 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, Address},
+    utils::{calculate_tx_resources, Address, ClassHash},
 };
 use felt::Felt;
 use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StateSelector {
+    pub contract_addresses: Vec<Address>,
+    pub class_hashes: Vec<ClassHash>,
+}
 
 #[derive(Clone, Debug, Getters)]
 pub struct InternalDeployAccount {
@@ -37,7 +43,7 @@ pub struct InternalDeployAccount {
     #[getset(get = "pub")]
     contract_address_salt: Address,
     #[getset(get = "pub")]
-    class_hash: [u8; 32],
+    class_hash: ClassHash,
     #[getset(get = "pub")]
     constructor_calldata: Vec<Felt>,
     version: u64,
@@ -50,7 +56,7 @@ pub struct InternalDeployAccount {
 impl InternalDeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        class_hash: [u8; 32],
+        class_hash: ClassHash,
         max_fee: u64,
         version: u64,
         nonce: Felt,

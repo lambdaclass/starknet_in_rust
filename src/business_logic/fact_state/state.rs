@@ -4,7 +4,7 @@ use crate::{
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-        Address,
+        Address, ClassHash,
     },
 };
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
@@ -91,9 +91,9 @@ impl<T: StateReader + Clone> CarriedState<T> {
 
 #[derive(Default)]
 pub(crate) struct StateDiff {
-    pub(crate) address_to_class_hash: HashMap<Address, [u8; 32]>,
+    pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt>,
-    pub(crate) storage_updates: HashMap<Felt, HashMap<[u8; 32], Address>>,
+    pub(crate) storage_updates: HashMap<Felt, HashMap<ClassHash, Address>>,
 }
 
 impl StateDiff {
@@ -103,7 +103,7 @@ impl StateDiff {
     where
         T: StateReader + Clone,
     {
-        let state_cache = cached_state.cache;
+        let state_cache = cached_state.cache().to_owned();
 
         let substracted_maps = subtract_mappings(
             state_cache.storage_writes,
@@ -136,7 +136,7 @@ impl StateDiff {
         let mut cache_state = CachedState::new(state_reader, None);
         let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
 
-        cache_state.cache.set_initial_values(
+        cache_state.cache_mut().set_initial_values(
             &self.address_to_class_hash,
             &self.address_to_nonce,
             &cache_storage_mapping,
@@ -160,7 +160,7 @@ impl StateDiff {
             get_keys(self.storage_updates.clone(), other.storage_updates.clone());
 
         for address in addresses {
-            let default: HashMap<[u8; 32], Address> = HashMap::new();
+            let default: HashMap<ClassHash, Address> = HashMap::new();
             let mut map_a = self
                 .storage_updates
                 .get(&address)
@@ -188,26 +188,27 @@ mod test {
     use super::StateDiff;
     use crate::{
         business_logic::{
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         utils::Address,
     };
     use felt::Felt;
-    use std::collections::HashMap;
 
     #[test]
     fn test_from_cached_state_without_updates() {
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
-        let contract_state = ContractState::new([8; 32], Felt::new(109), HashMap::new());
+        let class_hash = [9; 32];
+        let nonce = Felt::new(42);
 
         state_reader
-            .contract_states
-            .insert(contract_address, contract_state);
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
 
         let cached_state = CachedState::new(state_reader, None);
 

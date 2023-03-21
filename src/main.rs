@@ -292,7 +292,7 @@ async fn call_req(data: web::Data<AppState>, args: web::Json<CallArgs>) -> HttpR
 pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
-            InMemoryStateReader::new(HashMap::new(), HashMap::new()),
+            InMemoryStateReader::default(),
             Some(HashMap::new()),
         )),
     });

@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 #[test]
 fn internal_deploy_account() {
-    let state_reader = InMemoryStateReader::new(Default::default(), Default::default());
+    let state_reader = InMemoryStateReader::default();
     let mut state = CachedState::new(state_reader, None);
 
     state.set_contract_classes(Default::default()).unwrap();

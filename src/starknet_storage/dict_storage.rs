@@ -1,7 +1,7 @@
 use super::{errors::storage_errors::StorageError, storage::Storage};
 use std::collections::HashMap;
 
-pub type StorageKey = (Prefix, [u8; 32]);
+pub type StorageKey = (Prefix, ClassHash);
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct DictStorage {
