@@ -37,6 +37,18 @@ impl<T: StateReader + Clone> CachedState<T> {
         }
     }
 
+    pub fn new_for_testing(
+        state_reader: T,
+        contract_classes: Option<ContractClassCache>,
+        cache: StateCache,
+    ) -> Self {
+        Self {
+            cache,
+            contract_classes,
+            state_reader,
+        }
+    }
+
     pub fn set_contract_classes(
         &mut self,
         contract_classes: ContractClassCache,

@@ -26,10 +26,13 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt;
+use getset::Getters;
 use num_traits::Zero;
 
+#[derive(Debug, Getters)]
 pub struct InternalInvokeFunction {
-    pub(crate) contract_address: Address,
+    #[getset(get = "pub")]
+    contract_address: Address,
     entry_point_selector: Felt,
     #[allow(dead_code)]
     entry_point_type: EntryPointType,
@@ -243,6 +246,8 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
+        self.handle_nonce(state)?;
+
         let (fee_transfer_info, actual_fee) = self.charge_fee(
             state,
             &concurrent_exec_info.actual_resources,
@@ -256,6 +261,36 @@ impl InternalInvokeFunction {
                 fee_transfer_info,
             ),
         )
+    }
+
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        if self.version == 0 {
+            return Ok(());
+        }
+
+        let contract_address = self.contract_address();
+
+        let current_nonce = state.get_nonce_at(contract_address)?;
+
+        match &self.nonce {
+            None => {
+                // TODO: Remove this once we have a better way to handle the nonce.
+                Ok(())
+            }
+            Some(nonce) => {
+                if nonce != current_nonce {
+                    return Err(TransactionError::InvalidTransactionNonce(
+                        current_nonce.to_string(),
+                        nonce.to_string(),
+                    ));
+                }
+                state.increment_nonce(contract_address)?;
+                Ok(())
+            }
+        }
     }
 }
 

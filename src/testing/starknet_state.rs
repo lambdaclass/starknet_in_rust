@@ -494,6 +494,13 @@ mod tests {
         )
         .unwrap();
 
+        // Statement **not** in blockifier.
+        starknet_state
+            .state
+            .cache_mut()
+            .nonce_initial_values_mut()
+            .insert(contract_address.clone(), Felt::zero());
+
         let tx_info = starknet_state
             .invoke_raw(
                 contract_address,

@@ -76,6 +76,10 @@ lazy_static! {
         felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
     static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt =
         felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
+    static ref TEST_ERC20_BALANCE_KEY_1: Felt =
+        felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516");
+    static ref TEST_ERC20_BALANCE_KEY_2: Felt =
+        felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275");
 
     static ref TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY: Felt =
         felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
@@ -191,7 +195,135 @@ fn create_account_tx_test_state(
 }
 
 fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
-    let in_memory_state_reader = InMemoryStateReader::new(
+    let in_memory_state_reader = initial_in_memory_state_reader();
+
+    let state_cache = ContractClassCache::new();
+
+    CachedState::new(in_memory_state_reader, Some(state_cache))
+}
+
+fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
+    let in_memory_state_reader = initial_in_memory_state_reader();
+
+    let contract_classes_cache = ContractClassCache::from([
+        (
+            felt_to_hash(&TEST_CLASS_HASH.clone()),
+            get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+        ),
+        (
+            felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
+            get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+        ),
+        (
+            felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+            get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+        ),
+    ]);
+
+    CachedState::new_for_testing(
+        in_memory_state_reader,
+        Some(contract_classes_cache),
+        state_cache_after_invoke_tx(),
+    )
+}
+
+fn state_cache_after_invoke_tx() -> StateCache {
+    let class_hash_initial_values = HashMap::from([
+        (
+            TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
+        ),
+        (
+            TEST_CONTRACT_ADDRESS.clone(),
+            felt_to_hash(&TEST_CLASS_HASH.clone()),
+        ),
+        (
+            TEST_ERC20_CONTRACT_ADDRESS.clone(),
+            felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+        ),
+    ]);
+
+    let nonce_initial_values =
+        HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::zero())]);
+
+    let storage_initial_values = HashMap::from([
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
+            ),
+            Felt::zero(),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+            ),
+            Felt::zero(),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_1.clone()),
+            ),
+            Felt::zero(),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_2.clone()),
+            ),
+            Felt::zero(),
+        ),
+    ]);
+
+    let class_hash_writes = HashMap::new();
+
+    let nonce_writes = HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt::from(1))]);
+
+    let storage_writes = HashMap::from([
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
+            ),
+            Felt::from(0),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+            ),
+            Felt::from(0),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_1.clone()),
+            ),
+            Felt::from(0),
+        ),
+        (
+            (
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_BALANCE_KEY_2.clone()),
+            ),
+            Felt::from(0),
+        ),
+    ]);
+
+    StateCache::new_for_testing(
+        class_hash_initial_values,
+        nonce_initial_values,
+        storage_initial_values,
+        class_hash_writes,
+        nonce_writes,
+        storage_writes,
+    )
+}
+
+fn initial_in_memory_state_reader() -> InMemoryStateReader {
+    InMemoryStateReader::new(
         HashMap::from([
             (
                 TEST_CONTRACT_ADDRESS.clone(),
@@ -232,11 +364,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
                 get_contract_class(TEST_CONTRACT_PATH).unwrap(),
             ),
         ]),
-    );
-
-    let state_cache = ContractClassCache::new();
-
-    CachedState::new(in_memory_state_reader, Some(state_cache))
+    )
 }
 
 fn expected_validate_call_info(
@@ -379,7 +507,7 @@ fn invoke_tx(calldata: Vec<Felt>) -> InternalInvokeFunction {
     InternalInvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        1,
+        2,
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -630,7 +758,7 @@ fn expected_execute_call_info() -> CallInfo {
     }
 }
 
-fn expected_validate_call_info2() -> CallInfo {
+fn expected_validate_call_info_2() -> CallInfo {
     CallInfo {
         caller_address: Address(Felt::zero()),
         call_type: Some(CallType::Call),
@@ -654,7 +782,7 @@ fn expected_validate_call_info2() -> CallInfo {
 
 fn expected_transaction_execution_info() -> TransactionExecutionInfo {
     TransactionExecutionInfo::new(
-        Some(expected_validate_call_info2()),
+        Some(expected_validate_call_info_2()),
         Some(expected_execute_call_info()),
         Some(expected_fee_transfer_info()),
         0,
@@ -678,10 +806,31 @@ fn test_invoke_tx() {
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
     let result = invoke_tx.execute(state, starknet_general_config).unwrap();
-
     let expected_execution_info = expected_transaction_execution_info();
 
     assert_eq!(result, expected_execution_info);
+}
+
+#[test]
+fn test_invoke_tx_state() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let expected_initial_state = expected_state_before_tx();
+    assert_eq!(state, &expected_initial_state);
+
+    let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+    let calldata = vec![
+        test_contract_address,                                       // CONTRACT_ADDRESS
+        Felt::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+        Felt::from(1),                                               // CONTRACT_CALLDATA LEN
+        Felt::from(2),                                               // CONTRACT_CALLDATA
+    ];
+    let invoke_tx = invoke_tx(calldata);
+
+    invoke_tx.execute(state, starknet_general_config).unwrap();
+
+    let expected_final_state = expected_state_after_tx();
+
+    assert_eq!(*state, expected_final_state);
 }
 
 #[test]
@@ -877,9 +1026,7 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "3229073099929281304021185011369329892856197542079132996799046100564060768275"
-            )),
+            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
         ),
         Felt::zero(),
     );
@@ -925,9 +1072,7 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "3229073099929281304021185011369329892856197542079132996799046100564060768275"
-            )),
+            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
         ),
         Felt::zero(),
     );

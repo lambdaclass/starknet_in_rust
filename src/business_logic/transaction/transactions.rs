@@ -28,7 +28,7 @@ impl Transaction {
     pub fn contract_address(&self) -> Address {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
-            Transaction::InvokeFunction(tx) => tx.contract_address.clone(),
+            Transaction::InvokeFunction(tx) => tx.contract_address().clone(),
         }
     }
 

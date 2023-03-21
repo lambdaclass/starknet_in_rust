@@ -59,6 +59,24 @@ impl StateCache {
         }
     }
 
+    pub fn new_for_testing(
+        class_hash_initial_values: HashMap<Address, [u8; 32]>,
+        nonce_initial_values: HashMap<Address, Felt>,
+        storage_initial_values: HashMap<StorageEntry, Felt>,
+        class_hash_writes: HashMap<Address, [u8; 32]>,
+        nonce_writes: HashMap<Address, Felt>,
+        storage_writes: HashMap<(Address, [u8; 32]), Felt>,
+    ) -> Self {
+        Self {
+            class_hash_initial_values,
+            nonce_initial_values,
+            storage_initial_values,
+            class_hash_writes,
+            nonce_writes,
+            storage_writes,
+        }
+    }
+
     pub(crate) fn get_class_hash(&self, contract_address: &Address) -> Option<&ClassHash> {
         if self.class_hash_writes.contains_key(contract_address) {
             return self.class_hash_writes.get(contract_address);
@@ -98,7 +116,7 @@ impl StateCache {
         self.storage_writes.extend(storage_updates.clone());
     }
 
-    pub(crate) fn set_initial_values(
+    pub fn set_initial_values(
         &mut self,
         address_to_class_hash: &HashMap<Address, ClassHash>,
         address_to_nonce: &HashMap<Address, Felt>,
