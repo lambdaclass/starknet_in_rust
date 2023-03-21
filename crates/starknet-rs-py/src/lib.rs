@@ -15,7 +15,7 @@ mod starknet_state;
 mod types;
 
 #[pymodule]
-pub fn starknet_rs(_py: Python, m: &PyModule) -> PyResult<()> {
+pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyCallInfo>()?;
