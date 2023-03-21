@@ -1,11 +1,12 @@
 use crate::{
     business_logic::state::state_cache::StorageEntry,
     services::api::contract_class_errors::ContractClassError,
-    starknet_storage::errors::storage_errors::StorageError, utils::Address,
+    starknet_storage::errors::storage_errors::StorageError,
+    utils::{Address, ClassHash},
 };
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Error)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum StateError {
     #[error("Missing ContractClassCache")]
     MissingContractClassCache,
@@ -26,7 +27,7 @@ pub enum StateError {
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
     #[error("No storage leaf assigned for key: {0:?}")]
-    NoneStoragLeaf([u8; 32]),
+    NoneStoragLeaf(ClassHash),
     #[error("Cannot deploy contract at address: {0:?}")]
     ContractAddressOutOfRangeAddress(Address),
     #[error("Requested contract address {} is unavailable for deployment", (.0).0)]

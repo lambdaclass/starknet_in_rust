@@ -6,7 +6,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
-    utils::{get_big_int, get_integer, get_relocatable, Address},
+    utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -17,7 +17,7 @@ use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CallType {
     Call,
     Delegate,
@@ -33,7 +33,7 @@ pub struct CallInfo {
     pub call_type: Option<CallType>,
     pub contract_address: Address,
     pub code_address: Option<Address>,
-    pub class_hash: Option<[u8; 32]>,
+    pub class_hash: Option<ClassHash>,
     pub entry_point_selector: Option<Felt>,
     pub entry_point_type: Option<EntryPointType>,
     pub calldata: Vec<Felt>,
@@ -42,7 +42,7 @@ pub struct CallInfo {
     pub events: Vec<OrderedEvent>,
     pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub storage_read_values: Vec<Felt>,
-    pub accessed_storage_keys: HashSet<[u8; 32]>,
+    pub accessed_storage_keys: HashSet<ClassHash>,
     pub internal_calls: Vec<CallInfo>,
 }
 
@@ -50,7 +50,7 @@ impl CallInfo {
     pub fn empty(
         contract_address: Address,
         caller_address: Address,
-        class_hash: Option<[u8; 32]>,
+        class_hash: Option<ClassHash>,
         call_type: Option<CallType>,
         entry_point_type: Option<EntryPointType>,
         entry_point_selector: Option<Felt>,
@@ -82,7 +82,7 @@ impl CallInfo {
     pub fn empty_constructor_call(
         contract_address: Address,
         caller_address: Address,
-        class_hash: Option<[u8; 32]>,
+        class_hash: Option<ClassHash>,
     ) -> Self {
         CallInfo::empty(
             contract_address,
@@ -166,7 +166,7 @@ impl CallInfo {
             .accessed_storage_keys
             .into_iter()
             .map(|key| (self.contract_address.clone(), key))
-            .collect::<HashSet<(Address, [u8; 32])>>();
+            .collect::<HashSet<(Address, ClassHash)>>();
 
         let internal_visited_storage_entries =
             CallInfo::get_visited_storage_entries_of_many(self.internal_calls);
