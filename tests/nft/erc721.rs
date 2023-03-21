@@ -544,21 +544,27 @@ fn erc721_test_is_approved_for_all() {
 
     contructor(&calldata, &mut call_config).unwrap();
 
+    call_config.entry_point_type = &entry_point_type;
+
+    // The address given approval to transfer the token
+    let to = Felt::from(777);
+    let calldata_set_approve_all = [to, Felt::from(1)].to_vec();
+
+    set_approval_for_all(&calldata_set_approve_all, &mut call_config).unwrap();
+
     // Owner of tokens who is approving the operator to have control of all his tokens
     let owner = Felt::from(666);
     // The address in control for the approvals
     let operator = Felt::from(777);
     let calldata = [owner, operator].to_vec();
 
-    call_config.entry_point_type = &entry_point_type;
-
     let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"isApprovedForAll"));
 
     // expected result is 0 because it is not approved
-    let expected_read_result = vec![Felt::from(0)];
+    let expected_read_result = vec![Felt::from(1)];
 
     // Checks only the storage variable ERC721_operator_approvals
-    let storage_read_values = vec![Felt::from(0)];
+    let storage_read_values = vec![Felt::from(1)];
 
     let accessed_storage_keys = get_accessed_keys(
         "ERC721_operator_approvals",
