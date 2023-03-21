@@ -618,7 +618,7 @@ fn erc721_test_approve() {
 
     // The address given approval to transfer the token
     let to = Felt::from(777);
-    let calldata = [to.clone(), Felt::from(1), Felt::from(0)].to_vec();
+    let calldata = [to, Felt::from(1), Felt::from(0)].to_vec();
 
     call_config.entry_point_type = &entry_point_type;
 
@@ -865,7 +865,7 @@ fn erc721_transfer_from_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys,
+        accessed_storage_keys,
         storage_read_values: expected_read_values,
         events: expected_events,
         ..Default::default()
