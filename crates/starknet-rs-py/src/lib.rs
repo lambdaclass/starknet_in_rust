@@ -57,7 +57,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.testing.starknet
     // m.add_class::<PyStarknet>()?;
     // m.add_class::<PyStarknetCallInfo>()?;
-    // m.add_class::<PyTransactionExecutionInfo>()?;
 
     //  starkware.starknet.testing.state
     // m.add_class::<PyStarknetState>()?;
@@ -65,7 +64,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.core.os.contract_address.contract_address
     // m.add_function(calculate_contract_address_from_hash)?;
     // m.add_function(calculate_contract_address)?;
-    // m.add_function(compute_class_hash)?;
 
     //  starkware.starknet.core.os.block_hash.block_hash
     // m.add_function(calculate_block_hash)?;
@@ -84,7 +82,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyTransactionSimulationInfo>()?;
     // m.add_class::<PyStarknetBlock>()?;
     // m.add_class::<PyTransactionInfo>()?;
-    // m.add_class::<PyTransactionType>()?;
     // m.add_class::<PyTransactionReceipt>()?;
     // m.add_class::<PyTransactionStatus>()?;
     // m.add_class::<PyTransactionTrace>()?;
@@ -142,9 +139,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.services.api.feeder_gateway.feeder_gateway_client
     // m.add_class::<PyFeederGatewayClient>()?;
 
-    //  starkware.starknet.compiler.compile
-    // m.add_function(get_selector_from_name)?;
-
     //  starkware.starknet.services.api.gateway.transaction
     // m.add_class::<PyAccountTransaction>()?;
     // m.add_class::<PyDeclare>()?;
@@ -173,7 +167,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyInternalInvokeFunction>()?;
     // m.add_class::<PyInternalTransaction>()?;
     // m.add_class::<PyTransactionExecutionInfo>()?;
-    // m.add_class::<PyCallInfo>()?;
 
     //  starkware.starknet.testing.contract
     // m.add_class::<PyStarknetContract>()?;
@@ -190,9 +183,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.services.api.messages
     // m.add_class::<PyStarknetMessageToL1>()?;
-
-    //  starkware.starknet.testing.objects
-    // m.add_class::<PyFunctionInvocation>()?;
 
     //  starkware.starknet.third_party.open_zeppelin.starknet_contracts
     // m.add("account_contract", value)?;
