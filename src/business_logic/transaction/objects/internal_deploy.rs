@@ -207,3 +207,61 @@ impl InternalDeploy {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        utils::calculate_sn_keccak,
+    };
+
+    #[test]
+    fn invoke_constructor_test() {
+        // Instantiate CachedState
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()));
+
+        // Set contract_class
+        let class_hash: ClassHash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let internal_deploy = InternalDeploy {
+            hash_value: 0.into(),
+            version: 0,
+            contract_address: Address(1.into()),
+            _contract_address_salt: Address(0.into()),
+            contract_hash: class_hash,
+            constructor_calldata: vec![10.into()],
+            tx_type: TransactionType::Deploy,
+        };
+
+        let config = Default::default();
+
+        let _result = internal_deploy.apply(&mut state, &config).unwrap();
+
+        assert_eq!(
+            state.get_class_hash_at(&Address(1.into())).unwrap(),
+            &class_hash
+        );
+
+        let storage_key = calculate_sn_keccak("owner".as_bytes());
+
+        assert_eq!(
+            state
+                .get_storage_at(&(Address(1.into()), storage_key))
+                .unwrap(),
+            &Felt::from(10)
+        );
+    }
+}
