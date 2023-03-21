@@ -96,3 +96,18 @@ impl Starknet {
             .map_err(Into::into)
     }
 }
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn simulate_tx_doesnt_change_the_state() {}
+
+    #[test]
+    fn estimate_fee_doesnt_change_the_state() {}
+
+    #[test]
+    fn call_contract_doesnt_change_the_state() {}
+
+    #[test]
+    fn executing_a_declare_tx_changes_the_state_correctly() {}
+}
