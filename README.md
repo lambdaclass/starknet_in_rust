@@ -53,7 +53,7 @@ It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust im
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 ```bash
 $ make deps
-$ source starknet-in-rs-venv/bin/activate
+$ source starknet-venv/bin/activate
 $ make compile-cairo
 $ deactivate
 $ make build
@@ -86,11 +86,25 @@ export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/li
 
 You can find a tutorial on running contracts [here](/contract_execution_examples).
 
+### Using the Cli
+You can find an example on how to use the cli [here](/docs/CLI_USAGE_EXAMPLE.md)
+
 ### Testing
+
 Run the following command:
 ```bash
 $ make test
 ```
+
+### Profiling
+
+Run the following command:
+
+```bash
+$ make flamegraph
+```
+
+to generate a flamegraph with info of the execution of the main operations.
 
 ## 🛠 Contributing
 

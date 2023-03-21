@@ -1,5 +1,8 @@
 use super::state_api::{State, StateReader};
-use crate::{core::errors::state_errors::StateError, utils::Address};
+use crate::{
+    core::errors::state_errors::StateError,
+    utils::{Address, ClassHash},
+};
 use felt::Felt;
 use std::collections::HashSet;
 
@@ -9,7 +12,7 @@ pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
     pub(crate) contract_address: Address,
     /// Maintain all read request values in chronological order
     pub(crate) read_values: Vec<Felt>,
-    pub(crate) accessed_keys: HashSet<[u8; 32]>,
+    pub(crate) accessed_keys: HashSet<ClassHash>,
 }
 
 impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
@@ -22,7 +25,7 @@ impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
         }
     }
 
-    pub(crate) fn read(&mut self, address: &[u8; 32]) -> Result<&Felt, StateError> {
+    pub(crate) fn read(&mut self, address: &ClassHash) -> Result<&Felt, StateError> {
         self.accessed_keys.insert(*address);
         let value = self
             .state
@@ -32,7 +35,7 @@ impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
         Ok(value)
     }
 
-    pub(crate) fn write(&mut self, address: &[u8; 32], value: Felt) {
+    pub(crate) fn write(&mut self, address: &ClassHash, value: Felt) {
         self.accessed_keys.insert(*address);
         self.state
             .set_storage_at(&(self.contract_address.clone(), *address), value);

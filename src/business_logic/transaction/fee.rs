@@ -20,10 +20,8 @@ use std::collections::HashMap;
 // second element is the actual fee that the transaction uses
 pub type FeeInfo = (Option<CallInfo>, u64);
 
-// ----------------------------------------------------------------------------
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-
 pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
     state: &mut S,
     general_config: &StarknetGeneralConfig,
@@ -45,13 +43,10 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
     ]
     .to_vec();
 
-    // Value generated from transfer selector: 'TRANSFER_ENTRY_POINT_SELECTOR'.
-    let entry_point_selector = TRANSFER_ENTRY_POINT_SELECTOR.clone();
-
     let fee_transfer_call = ExecutionEntryPoint::new(
         fee_token_address,
         calldata,
-        entry_point_selector,
+        TRANSFER_ENTRY_POINT_SELECTOR.clone(),
         tx_context.account_contract_address.clone(),
         EntryPointType::External,
         None,

@@ -2,11 +2,10 @@ use super::internal_invoke_function::verify_no_calls_to_other_contracts;
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
-        fact_state::{contract_state::StateSelector, state::ExecutionResourcesManager},
+        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
         transaction::{
             error::TransactionError,
@@ -24,33 +23,43 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, Address},
+    utils::{calculate_tx_resources, Address, ClassHash},
 };
 use felt::Felt;
+use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StateSelector {
+    pub contract_addresses: Vec<Address>,
+    pub class_hashes: Vec<ClassHash>,
+}
+
+#[derive(Clone, Debug, Getters)]
 pub struct InternalDeployAccount {
+    #[getset(get = "pub")]
     contract_address: Address,
+    #[getset(get = "pub")]
     contract_address_salt: Address,
-    class_hash: [u8; 32],
+    #[getset(get = "pub")]
+    class_hash: ClassHash,
+    #[getset(get = "pub")]
     constructor_calldata: Vec<Felt>,
     version: u64,
-    nonce: u64,
+    nonce: Felt,
     max_fee: u64,
     signature: Vec<Felt>,
     chain_id: StarknetChainId,
 }
 
 impl InternalDeployAccount {
-    #![allow(unused)] // TODO: delete once used
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        class_hash: [u8; 32],
+        class_hash: ClassHash,
         max_fee: u64,
         version: u64,
-        nonce: u64,
+        nonce: Felt,
         constructor_calldata: Vec<Felt>,
         signature: Vec<Felt>,
         contract_address_salt: Address,
@@ -92,6 +101,8 @@ impl InternalDeployAccount {
         S: Clone + Default + State + StateReader,
     {
         let tx_info = self.apply(state, general_config)?;
+
+        self.handle_nonce(state)?;
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_info.actual_resources, general_config)?;
 
@@ -157,7 +168,7 @@ impl InternalDeployAccount {
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -183,12 +194,33 @@ impl InternalDeployAccount {
         }
     }
 
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        if self.version == 0 {
+            return Ok(());
+        }
+
+        let current_nonce = state.get_nonce_at(&self.contract_address)?.to_owned();
+        if current_nonce != self.nonce {
+            return Err(TransactionError::InvalidTransactionNonce(
+                current_nonce.to_string(),
+                self.nonce.to_string(),
+            ));
+        }
+
+        state.increment_nonce(&self.contract_address)?;
+
+        Ok(())
+    }
+
     pub fn run_constructor_entrypoint<S>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -210,7 +242,7 @@ impl InternalDeployAccount {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::InvalidContractCall)?;
+            .map_err(|_| TransactionError::InvalidContractCall)?;
         Ok(call_info)
     }
 
@@ -219,18 +251,18 @@ impl InternalDeployAccount {
             self.contract_address.clone(),
             calculate_deploy_account_transaction_hash(
                 self.version,
-                self.contract_address.clone(),
+                &self.contract_address,
                 Felt::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
                 self.max_fee,
-                self.nonce,
+                self.nonce.clone(),
                 self.contract_address_salt.0.clone(),
                 self.chain_id.to_felt(),
             )
             .unwrap(),
             self.signature.clone(),
             self.max_fee,
-            self.nonce.into(),
+            self.nonce.clone(),
             n_steps,
             self.version,
         )
@@ -241,7 +273,7 @@ impl InternalDeployAccount {
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError>
+    ) -> Result<Option<CallInfo>, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -273,7 +305,7 @@ impl InternalDeployAccount {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::InvalidContractCall)?;
+            .map_err(|_| TransactionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }

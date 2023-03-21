@@ -5,22 +5,20 @@ use super::{
 };
 use crate::{
     business_logic::{
-        execution::{
-            error::ExecutionError, execution_entry_point::ExecutionEntryPoint, objects::*,
-        },
+        execution::{execution_entry_point::ExecutionEntryPoint, objects::*},
         fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
             state_api_objects::BlockInfo,
         },
+        transaction::error::TransactionError,
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
-    starknet_storage::errors::storage_errors::StorageError,
     utils::*,
 };
 use cairo_rs::{
@@ -160,19 +158,19 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub(crate) fn validate_read_only_segments(
         &self,
         runner: &mut VirtualMachine,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), TransactionError> {
         for (segment_ptr, segment_size) in self.read_only_segments.clone() {
             let used_size = runner
                 .get_segment_used_size(segment_ptr.segment_index as usize)
-                .ok_or(ExecutionError::InvalidSegmentSize)?;
+                .ok_or(TransactionError::InvalidSegmentSize)?;
 
             let seg_size = match segment_size {
                 MaybeRelocatable::Int(size) => size,
-                _ => return Err(ExecutionError::NotAnInt),
+                _ => return Err(TransactionError::NotAnInt),
             };
 
             if seg_size != used_size.into() {
-                return Err(ExecutionError::OutOfBound);
+                return Err(TransactionError::OutOfBound);
             }
             runner.mark_address_range_as_accessed(segment_ptr, used_size)?;
         }
@@ -182,7 +180,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     fn execute_constructor_entry_point(
         &mut self,
         contract_address: &Address,
-        class_hash_bytes: [u8; 32],
+        class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt>,
     ) -> Result<(), StateError> {
         let contract_class = self
@@ -195,7 +193,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .ok_or(ContractClassError::NoneEntryPointType)?;
         if constructor_entry_points.is_empty() {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorEntryPointsError());
+                return Err(StateError::ConstructorCalldataEmpty());
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -225,7 +223,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &self.tx_execution_context,
             )
-            .map_err(|_| StateError::ExecutionEntryPointError())?;
+            .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
     }
 }
@@ -280,12 +278,8 @@ where
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_memory_segment();
-        let segment_end = vm
-            .write_arg(&segment_start, &data)
-            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
-        let sub = segment_end
-            .sub(&segment_start.to_owned().into())
-            .map_err(|_| SyscallHandlerError::SegmentationFault)?;
+        let segment_end = vm.write_arg(&segment_start, &data)?;
+        let sub = segment_end.sub(&segment_start.to_owned().into())?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.push(segment);
 
@@ -336,7 +330,7 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: [u8; 32] = felt_to_hash(&request.class_hash);
+        let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
         self.starknet_storage_state
             .state
@@ -530,19 +524,10 @@ where
     }
 
     fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
-        Ok(
-            match self.starknet_storage_state.read(&felt_to_hash(&address.0)) {
-                Ok(x) => x.clone(),
-                Err(
-                    StateError::StorageError(StorageError::ErrorFetchingData)
-                    | StateError::EmptyKeyInStorage
-                    | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_)
-                    | StateError::NoneContractState(_),
-                ) => Felt::zero(),
-                Err(e) => return Err(e.into()),
-            },
-        )
+        Ok(self
+            .starknet_storage_state
+            .read(&felt_to_hash(&address.0))
+            .cloned()?)
     }
 
     fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
@@ -574,10 +559,10 @@ where
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<(), TransactionError> {
         let expected_stop_ptr = self.expected_syscall_ptr;
         if syscall_stop_ptr != expected_stop_ptr {
-            return Err(ExecutionError::InvalidStopPointer(
+            return Err(TransactionError::InvalidStopPointer(
                 expected_stop_ptr,
                 syscall_stop_ptr,
             ));

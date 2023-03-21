@@ -9,7 +9,7 @@ use crate::{
     utils::Address,
 };
 use felt::{felt_str, Felt};
-use num_traits::ToPrimitive;
+use num_traits::Zero;
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
@@ -46,51 +46,50 @@ impl TransactionHashPrefix {
 ///    7. The network's chain ID.
 /// Each hash chain computation begins with 0 as initialization and ends with its length appended.
 /// The length is appended in order to avoid collisions of the following kind:
-/// H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y).
+/// ```txt
+///     H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y)
+/// ```
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: u64,
-    contract_address: Address,
+    contract_address: &Address,
     entry_point_selector: Felt,
     calldata: &[Felt],
     max_fee: u64,
     chain_id: Felt,
-    additional_data: &[u64],
+    additional_data: &[Felt],
 ) -> Result<Felt, SyscallHandlerError> {
     let calldata_hash = compute_hash_on_elements(calldata)?;
 
     let mut data_to_hash: Vec<Felt> = vec![
         tx_hash_prefix.get_prefix(),
         version.into(),
-        contract_address.0,
+        contract_address.0.clone(),
         entry_point_selector,
         calldata_hash,
         max_fee.into(),
         chain_id,
     ];
 
-    data_to_hash.extend(additional_data.iter().map(|n| (*n).into()));
+    data_to_hash.extend(additional_data.iter().cloned());
 
     compute_hash_on_elements(&data_to_hash)
 }
 
 pub fn calculate_deploy_transaction_hash(
     version: u64,
-    contract_address: Address,
+    contract_address: &Address,
     constructor_calldata: &[Felt],
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
-    let entry_point_selector = CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone();
-
     calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
-        entry_point_selector,
+        CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
         constructor_calldata,
-        // Field max_fee is considered 0 for Deploy transaction hash calculation purposes.
-        0,
+        0, // Considered 0 for Deploy transaction hash calculation purposes.
         chain_id,
         &[],
     )
@@ -99,11 +98,11 @@ pub fn calculate_deploy_transaction_hash(
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
     version: u64,
-    contract_address: Address,
+    contract_address: &Address,
     class_hash: Felt,
     constructor_calldata: &[Felt],
     max_fee: u64,
-    nonce: u64,
+    nonce: Felt,
     salt: Felt,
     chain_id: Felt,
 ) -> Result<Felt, SyscallHandlerError> {
@@ -114,7 +113,7 @@ pub fn calculate_deploy_account_transaction_hash(
         TransactionHashPrefix::DeployAccount,
         version,
         contract_address,
-        0.into(),
+        Felt::zero(),
         &calldata,
         max_fee,
         chain_id,
@@ -122,10 +121,10 @@ pub fn calculate_deploy_account_transaction_hash(
     )
 }
 
-pub(crate) fn calculate_declare_transaction_hash(
+pub fn calculate_declare_transaction_hash(
     contract_class: &ContractClass,
     chain_id: Felt,
-    sender_address: Address,
+    sender_address: &Address,
     max_fee: u64,
     version: u64,
     nonce: Felt,
@@ -133,23 +132,17 @@ pub(crate) fn calculate_declare_transaction_hash(
     let class_hash =
         compute_class_hash(contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
-    let (calldata, additional_data) = if version > 0x8000_0000_0000_0000 {
-        let value = class_hash
-            .to_u64()
-            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        (Vec::new(), [value].to_vec())
+    let (calldata, additional_data) = if version > 0 {
+        (Vec::new(), vec![class_hash])
     } else {
-        let value = nonce
-            .to_u64()
-            .ok_or(SyscallHandlerError::InvalidFeltConversion)?;
-        ([class_hash].to_vec(), [value].to_vec())
+        (vec![class_hash], vec![nonce])
     };
 
     calculate_transaction_hash_common(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
-        0.into(),
+        Felt::zero(),
         &calldata,
         max_fee,
         chain_id,
@@ -172,7 +165,7 @@ mod tests {
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
         let chain_id = 1.into();
-        let additional_data: Vec<u64> = Vec::new();
+        let additional_data: Vec<Felt> = Vec::new();
 
         // Expected value taken from Python implementation of calculate_transaction_hash_common function
         let expected = felt_str!(
@@ -182,7 +175,7 @@ mod tests {
         let result = calculate_transaction_hash_common(
             tx_hash_prefix,
             version,
-            contract_address,
+            &contract_address,
             entry_point_selector,
             &calldata,
             max_fee,

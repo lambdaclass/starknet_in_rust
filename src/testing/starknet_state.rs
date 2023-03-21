@@ -1,9 +1,4 @@
 use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
-use std::collections::HashMap;
-
-use felt::Felt;
-use num_traits::{One, Zero};
-
 use crate::{
     business_logic::{
         execution::{
@@ -31,8 +26,11 @@ use crate::{
         contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
-    utils::Address,
+    utils::{Address, ClassHash},
 };
+use felt::Felt;
+use num_traits::{One, Zero};
+use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
@@ -45,10 +43,11 @@ pub(crate) struct StarknetState {
 }
 
 impl StarknetState {
-    #![allow(unused)] // TODO: delete once used
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let state_reader = InMemoryStateReader::default();
 
         let state = CachedState::new(state_reader, Some(HashMap::new()));
 
@@ -70,10 +69,12 @@ impl StarknetState {
     /// Returns the class hash and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
-    ) -> Result<([u8; 32], TransactionExecutionInfo), TransactionError> {
+    ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
             contract_class,
             self.chain_id(),
@@ -90,9 +91,9 @@ impl StarknetState {
         Ok((tx.class_hash, tx_execution_info))
     }
 
-    // ----------------------------------------------------------
     /// Invokes a contract function. Returns the execution info.
-
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
@@ -101,8 +102,8 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt>>,
         nonce: Option<Felt>,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx = self.create_invoke_function(
+    ) -> Result<TransactionExecutionInfo, StarknetStateError> {
+        let tx = self.create_invoke_function(
             contract_address,
             selector,
             calldata,
@@ -115,10 +116,10 @@ impl StarknetState {
         self.execute_tx(&mut tx)
     }
 
-    // -------------------------------------------------------------------------
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn execute_entry_point_raw(
         &mut self,
         contract_address: Address,
@@ -148,19 +149,19 @@ impl StarknetState {
         )?;
 
         let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));
-        self.add_messages_and_events(&exec_info);
+        self.add_messages_and_events(&exec_info)?;
 
         Ok(call_info)
     }
 
-    // --------------------------------------------------------------------------------------
     /// Deploys a contract. Returns the contract address and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract
     /// contract_address_salt
     /// the salt to use for deploying. Otherwise, the salt is randomized.
-
     // TODO: ask for contract_address_salt
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn deploy(
         &mut self,
         contract_class: ContractClass,
@@ -186,11 +187,11 @@ impl StarknetState {
     pub fn execute_tx(
         &mut self,
         tx: &mut Transaction,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
+    ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
-        self.add_messages_and_events(&tx_execution_info);
+        self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
     }
 
@@ -219,6 +220,8 @@ impl StarknetState {
     }
 
     /// Consumes the given message hash.
+    // TODO: Remove warning inhibitor when finally used.
+    #[allow(dead_code)]
     pub fn consume_message_hash(
         &mut self,
         message_hash: Vec<u8>,
@@ -283,9 +286,11 @@ mod tests {
     use num_traits::Num;
 
     use crate::{
-        business_logic::{execution::objects::CallType, fact_state::contract_state::ContractState},
+        business_logic::{execution::objects::CallType, state::state_cache::StorageEntry},
         core::contract_address::starknet_contract_address::compute_class_hash,
-        definitions::transaction_type::TransactionType,
+        definitions::{
+            constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
+        },
         utils::felt_to_hash,
     };
 
@@ -296,7 +301,6 @@ mod tests {
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 
         // expected results
@@ -306,7 +310,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let address = Address(felt_str!(
-            "3173424428166065804253636112972198402746524727884605069568266184332607747575"
+            "2066790681318687707025847340457605657642478884993868155391041767964612021885"
         ));
 
         let mut actual_resources = HashMap::new();
@@ -320,7 +324,7 @@ mod tests {
                 contract_address: address.clone(),
                 code_address: None,
                 class_hash: Some(class_hash),
-                entry_point_selector: None,
+                entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
             }),
@@ -334,11 +338,7 @@ mod tests {
         let exec = (address, transaction_exec_info);
         assert_eq!(
             starknet_state
-                .deploy(
-                    contract_class.clone(),
-                    constructor_calldata,
-                    contract_address_salt
-                )
+                .deploy(contract_class.clone(), vec![], contract_address_salt)
                 .unwrap(),
             exec
         );
@@ -368,19 +368,30 @@ mod tests {
         // hack store account contract
         let hash = compute_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(class_hash, contract_class.clone());
 
         // store sender_address
         let sender_address = Address(1.into());
         // this is not conceptually correct as the sender address would be an
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
-        let contract_state = ContractState::new(class_hash, 0.into(), HashMap::new());
+        let nonce = Felt::zero();
+        let storage_entry: StorageEntry = (sender_address.clone(), [19; 32]);
+        let storage = Felt::zero();
 
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::default();
         state_reader
-            .contract_states
-            .insert(sender_address.clone(), contract_state.clone());
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address.clone(), nonce.clone());
+        state_reader
+            .address_to_storage_mut()
+            .insert(storage_entry.clone(), storage.clone());
+        state_reader
+            .class_hash_to_contract_class_mut()
+            .insert(class_hash, contract_class.clone());
 
         let state = CachedState::new(state_reader, Some(contract_class_cache));
 
@@ -394,8 +405,24 @@ mod tests {
         starknet_state
             .state
             .state_reader
-            .contract_states
-            .insert(Address(1.into()), contract_state);
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+
+        starknet_state
+            .state
+            .state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address.clone(), nonce);
+        starknet_state
+            .state
+            .state_reader
+            .address_to_storage_mut()
+            .insert(storage_entry, storage);
+        starknet_state
+            .state
+            .state_reader
+            .class_hash_to_contract_class_mut()
+            .insert(class_hash, contract_class);
 
         // --------------------------------------------
         //      Test declare with starknet state
@@ -444,15 +471,11 @@ mod tests {
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let constructor_calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(
-                contract_class.clone(),
-                constructor_calldata.clone(),
-                contract_address_salt,
-            )
+            .deploy(contract_class.clone(), vec![], contract_address_salt)
             .unwrap();
 
         // fibonacci selector
@@ -462,11 +485,18 @@ mod tests {
         )
         .unwrap();
 
+        // Statement **not** in blockifier.
+        starknet_state
+            .state
+            .cache_mut()
+            .nonce_initial_values_mut()
+            .insert(contract_address.clone(), Felt::zero());
+
         let tx_info = starknet_state
             .invoke_raw(
                 contract_address,
                 selector.clone(),
-                constructor_calldata,
+                calldata,
                 0,
                 Some(Vec::new()),
                 Some(Felt::zero()),
@@ -479,7 +509,7 @@ mod tests {
         let fib_class_hash = felt_to_hash(&hash);
 
         let address = felt_str!(
-            "3173424428166065804253636112972198402746524727884605069568266184332607747575"
+            "2066790681318687707025847340457605657642478884993868155391041767964612021885"
         );
         let mut actual_resources = HashMap::new();
         actual_resources.insert("l1_gas_usage".to_string(), 0);
@@ -503,6 +533,6 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(expected_info, tx_info);
+        assert_eq!(tx_info, expected_info);
     }
 }

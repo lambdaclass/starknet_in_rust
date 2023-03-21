@@ -1,7 +1,7 @@
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError, gas_usage::calculate_tx_gas_usage, objects::CallInfo,
+            gas_usage::calculate_tx_gas_usage, objects::CallInfo,
             os_usage::get_additional_os_resources,
         },
         fact_state::state::ExecutionResourcesManager,
@@ -14,7 +14,8 @@ use crate::{
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt;
-use num_traits::ToPrimitive;
+use num_traits::{Num, ToPrimitive};
+use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use starknet_crypto::FieldElement;
 use std::{collections::HashMap, hash::Hash};
@@ -25,7 +26,7 @@ pub type ClassHash = [u8; 32];
 //*      Address
 //* -------------------
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt);
 
 //* -------------------
@@ -36,8 +37,7 @@ pub fn get_integer(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<usize, SyscallHandlerError> {
-    vm.get_integer(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+    vm.get_integer(syscall_ptr)?
         .as_ref()
         .to_usize()
         .ok_or(SyscallHandlerError::FeltToUsizeFail)
@@ -47,10 +47,7 @@ pub fn get_big_int(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<Felt, SyscallHandlerError> {
-    Ok(vm
-        .get_integer(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
-        .into_owned())
+    Ok(vm.get_integer(syscall_ptr)?.into_owned())
 }
 
 pub fn get_relocatable(
@@ -58,7 +55,7 @@ pub fn get_relocatable(
     syscall_ptr: &Relocatable,
 ) -> Result<Relocatable, SyscallHandlerError> {
     vm.get_relocatable(syscall_ptr)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)
+        .map_err(SyscallHandlerError::VirtualMachine)
 }
 
 pub fn get_integer_range(
@@ -67,8 +64,7 @@ pub fn get_integer_range(
     size: usize,
 ) -> Result<Vec<Felt>, SyscallHandlerError> {
     Ok(vm
-        .get_integer_range(addr, size)
-        .map_err(|_| SyscallHandlerError::SegmentationFault)?
+        .get_integer_range(addr, size)?
         .into_iter()
         .map(|c| c.into_owned())
         .collect::<Vec<Felt>>())
@@ -83,13 +79,25 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
     Felt::from_bytes_be(&felt.to_bytes_be())
 }
 
-pub fn felt_to_hash(value: &Felt) -> [u8; 32] {
+pub fn felt_to_hash(value: &Felt) -> ClassHash {
     let mut output = [0; 32];
 
     let bytes = value.to_bytes_be();
     output[32 - bytes.len()..].copy_from_slice(&bytes);
 
     output
+}
+
+pub fn string_to_hash(class_string: &String) -> ClassHash {
+    let parsed_felt = Felt::from_str_radix(
+        if &class_string[..2] == "0x" {
+            &class_string[2..]
+        } else {
+            class_string
+        },
+        16,
+    );
+    felt_to_hash(&parsed_felt.unwrap())
 }
 
 // -------------------
@@ -116,7 +124,7 @@ pub fn calculate_tx_resources(
     tx_type: TransactionType,
     storage_changes: (usize, usize),
     l1_handler_payload_size: Option<usize>,
-) -> Result<HashMap<String, usize>, ExecutionError> {
+) -> Result<HashMap<String, usize>, TransactionError> {
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
@@ -187,14 +195,14 @@ where
 pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     state: &mut S,
     contract_address: Address,
-) -> Result<[u8; 32], ExecutionError> {
-    let class_hash: [u8; 32] = state
+) -> Result<ClassHash, TransactionError> {
+    let class_hash: ClassHash = state
         .get_class_hash_at(&contract_address)
-        .map_err(|_| ExecutionError::FailToReadClassHash)?
+        .map_err(|_| TransactionError::FailToReadClassHash)?
         .to_owned();
 
     if class_hash == *UNINITIALIZED_CLASS_HASH {
-        return Err(ExecutionError::NotDeployedContract(class_hash));
+        return Err(TransactionError::NotDeployedContract(class_hash));
     }
     Ok(class_hash)
 }
@@ -202,7 +210,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
 pub fn validate_contract_deployed<S: StateReader>(
     state: &mut S,
     contract_address: Address,
-) -> Result<[u8; 32], ExecutionError> {
+) -> Result<ClassHash, TransactionError> {
     get_deployed_address_class_hash_at_address(state, contract_address)
 }
 
@@ -221,10 +229,10 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     }
     Ok(())
 }
-pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
+pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
     let mut hasher = Keccak256::default();
     hasher.update(data);
-    let mut result: [u8; 32] = hasher.finalize().into();
+    let mut result: ClassHash = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result
@@ -237,7 +245,7 @@ pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
-    #![allow(unused)]
+    #![allow(unused_imports)]
 
     #[macro_export]
     macro_rules! any_box {
@@ -420,25 +428,6 @@ pub mod test_utils {
         }};
     }
     pub(crate) use run_syscall_hint;
-
-    macro_rules! storage_key {
-        ( $key:literal ) => {{
-            assert_eq!($key.len(), 64, "keys must be 64 nibbles in length.");
-            let key: [u8; 32] = $key
-                .as_bytes()
-                .chunks_exact(2)
-                .map(|x| {
-                    u8::from_str_radix(std::str::from_utf8(x).unwrap(), 16)
-                        .expect("Key contains non-hexadecimal characters.")
-                })
-                .collect::<Vec<u8>>()
-                .try_into()
-                .unwrap();
-
-            key
-        }};
-    }
-    pub(crate) use storage_key;
 }
 
 #[cfg(test)]

@@ -1,12 +1,6 @@
-use std::collections::HashMap;
-
-use felt::Felt;
-use num_traits::Zero;
-
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -23,17 +17,24 @@ use crate::{
         transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_NAME, general_config::StarknetGeneralConfig,
+        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address},
+    utils::{
+        calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
+        ClassHash,
+    },
 };
+use felt::Felt;
+use num_traits::Zero;
+use std::collections::HashMap;
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 pub struct InternalDeclare {
-    pub class_hash: [u8; 32],
+    pub class_hash: ClassHash,
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt,
@@ -49,7 +50,6 @@ pub struct InternalDeclare {
 //                        Functions
 // ------------------------------------------------------------
 impl InternalDeclare {
-    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt,
@@ -65,13 +65,13 @@ impl InternalDeclare {
         let hash_value = calculate_declare_transaction_hash(
             &contract_class,
             chain_id,
-            sender_address.clone(),
+            &sender_address,
             max_fee,
             version,
             nonce.clone(),
         )?;
 
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_NAME.clone();
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
         let internal_declare = InternalDeclare {
             class_hash,
@@ -91,23 +91,12 @@ impl InternalDeclare {
         Ok(internal_declare)
     }
 
-    pub fn account_contract_address(&self) -> Address {
-        self.sender_address.clone()
-    }
-
     pub fn get_calldata(&self) -> Vec<Felt> {
         let bytes = Felt::from_bytes_be(&self.class_hash);
         Vec::from([bytes])
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        // no need to check if its lesser than 0 because it is an usize
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "The sender_address field in Declare transactions of version 0, sender should be 1"
-                    .to_string(),
-            ));
-        }
         if self.version.is_zero() {
             if !self.max_fee.is_zero() {
                 return Err(TransactionError::StarknetError(
@@ -141,9 +130,8 @@ impl InternalDeclare {
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info = self
-            .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .map_err(|e| TransactionError::RunValidationError(e.to_string()))?;
+        let validate_info =
+            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -153,7 +141,7 @@ impl InternalDeclare {
             changes,
             None,
         )
-        .map_err(|_| TransactionError::ResourcesCalculationError)?;
+        .map_err(|_| TransactionError::ResourcesCalculation)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -185,15 +173,15 @@ impl InternalDeclare {
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError> {
-        if self.version > 0x8000_0000_0000_0000 {
+    ) -> Result<Option<CallInfo>, TransactionError> {
+        if self.version == 0 {
             return Ok(None);
         }
 
         let calldata = self.get_calldata();
 
         let entry_point = ExecutionEntryPoint::new(
-            self.account_contract_address(),
+            self.sender_address.clone(),
             calldata,
             self.validate_entry_point_selector.clone(),
             Address(Felt::zero()),
@@ -210,7 +198,7 @@ impl InternalDeclare {
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::UnauthorizedActionOnValidate)?;
+            .map_err(|_| TransactionError::UnauthorizedActionOnValidate)?;
 
         Ok(Some(call_info))
     }
@@ -243,14 +231,12 @@ impl InternalDeclare {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        if self.version > 0x8000_0000_0000_0000 {
-            return Err(TransactionError::StarknetError(
-                "Don't handle nonce for version 0".to_string(),
-            ));
+        if self.version == 0 {
+            return Ok(());
         }
 
-        let contract_address = self.account_contract_address();
-        let current_nonce = state.get_nonce_at(&contract_address)?.to_owned();
+        let contract_address = &self.sender_address;
+        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -258,10 +244,11 @@ impl InternalDeclare {
             ));
         }
 
-        state.increment_nonce(&contract_address)?;
+        state.increment_nonce(contract_address)?;
 
         Ok(())
     }
+
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: Default + State + StateReader + Clone>(
@@ -307,21 +294,19 @@ impl InternalDeclare {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use felt::{felt_str, Felt};
-    use num_traits::One;
+    use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
         business_logic::{
             execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::contract_address::starknet_contract_address::compute_class_hash,
         definitions::{
-            constants::VALIDATE_DECLARE_ENTRY_POINT_NAME,
+            constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
@@ -333,7 +318,7 @@ mod tests {
 
     #[test]
     fn declare_fibonacci() {
-        // accounts contract class must be store before running declarartion of fibonacci
+        // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
 
@@ -351,12 +336,14 @@ mod tests {
         // this is not conceptually correct as the sender address would be an
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
-        let contract_state = ContractState::new(class_hash, 1.into(), HashMap::new());
 
-        let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+        let mut state_reader = InMemoryStateReader::default();
         state_reader
-            .contract_states
-            .insert(sender_address, contract_state);
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
@@ -373,11 +360,11 @@ mod tests {
         let internal_declare = InternalDeclare::new(
             fib_contract_class,
             chain_id,
-            Address(1.into()),
+            Address(Felt::one()),
             0,
-            0,
+            1,
             Vec::new(),
-            0.into(),
+            Felt::zero(),
         )
         .unwrap();
 
@@ -386,7 +373,7 @@ mod tests {
         //* ---------------------------------------
 
         // Value generated from selector _validate_declare_
-        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_NAME.clone());
+        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone());
 
         let class_hash_felt = compute_class_hash(&contract_class).unwrap();
         let expected_class_hash = felt_to_hash(&class_hash_felt);

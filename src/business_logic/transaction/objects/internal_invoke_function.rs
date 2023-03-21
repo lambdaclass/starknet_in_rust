@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::{
     business_logic::{
         execution::{
-            error::ExecutionError,
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
         },
@@ -27,10 +26,13 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt;
-use num_traits::{ToPrimitive, Zero};
+use getset::Getters;
+use num_traits::Zero;
 
+#[derive(Debug, Getters)]
 pub struct InternalInvokeFunction {
-    pub(crate) contract_address: Address,
+    #[getset(get = "pub")]
+    contract_address: Address,
     entry_point_selector: Felt,
     #[allow(dead_code)]
     entry_point_type: EntryPointType,
@@ -45,7 +47,6 @@ pub struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
-    #![allow(unused)] // TODO: delete once used
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt,
@@ -61,18 +62,16 @@ impl InternalInvokeFunction {
             nonce.clone(),
             version,
         )?;
-
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
-            contract_address.clone(),
+            &contract_address,
             entry_point_selector_field,
             &calldata,
             max_fee,
             chain_id,
             &additional_data,
         )?;
-
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InternalInvokeFunction {
@@ -99,9 +98,7 @@ impl InternalInvokeFunction {
             self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
-            self.nonce
-                .clone()
-                .ok_or(TransactionError::InvalidNonce("Nonce is None".to_string()))?,
+            self.nonce.clone().ok_or(TransactionError::MissingNonce)?,
             n_steps,
             self.version,
         ))
@@ -112,14 +109,13 @@ impl InternalInvokeFunction {
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, ExecutionError>
+    ) -> Result<Option<CallInfo>, TransactionError>
     where
         T: Default + State + StateReader,
     {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-
         if self.version == 0 {
             return Ok(None);
         }
@@ -140,11 +136,11 @@ impl InternalInvokeFunction {
             resources_manager,
             &self
                 .get_execution_context(general_config.validate_max_n_steps)
-                .map_err(|_| ExecutionError::InvalidTxContext)?,
+                .map_err(|_| TransactionError::InvalidTxContext)?,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| ExecutionError::InvalidContractCall)?;
+            .map_err(|_| TransactionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
     }
@@ -156,7 +152,7 @@ impl InternalInvokeFunction {
         state: &mut T,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, ExecutionError>
+    ) -> Result<CallInfo, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -176,7 +172,7 @@ impl InternalInvokeFunction {
             resources_manager,
             &self
                 .get_execution_context(general_config.invoke_tx_max_n_steps)
-                .map_err(|_| ExecutionError::InvalidTxContext)?,
+                .map_err(|_| TransactionError::InvalidTxContext)?,
         )
     }
 
@@ -186,18 +182,17 @@ impl InternalInvokeFunction {
         &self,
         state: &mut T,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError>
+    ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         T: Default + State + StateReader + Clone,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
+
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
-
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
-
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -243,21 +238,21 @@ impl InternalInvokeFunction {
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
-    /// Calculates actual fee used by the transaction using the execution
-    /// info returned by apply(), then updates the transaction execution info with the data of the fee.  
+    /// Calculates actual fee used by the transaction using the execution info returned by apply(),
+    /// then updates the transaction execution info with the data of the fee.
     pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, ExecutionError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
-        let (fee_transfer_info, actual_fee) = self
-            .charge_fee(
-                state,
-                &concurrent_exec_info.actual_resources,
-                general_config,
-            )
-            .map_err(|e| ExecutionError::FeeCalculationError(e.to_string()))?;
+        self.handle_nonce(state)?;
+
+        let (fee_transfer_info, actual_fee) = self.charge_fee(
+            state,
+            &concurrent_exec_info.actual_resources,
+            general_config,
+        )?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -266,6 +261,36 @@ impl InternalInvokeFunction {
                 fee_transfer_info,
             ),
         )
+    }
+
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        if self.version == 0 {
+            return Ok(());
+        }
+
+        let contract_address = self.contract_address();
+
+        let current_nonce = state.get_nonce_at(contract_address)?;
+
+        match &self.nonce {
+            None => {
+                // TODO: Remove this once we have a better way to handle the nonce.
+                Ok(())
+            }
+            Some(nonce) => {
+                if nonce != current_nonce {
+                    return Err(TransactionError::InvalidTransactionNonce(
+                        current_nonce.to_string(),
+                        nonce.to_string(),
+                    ));
+                }
+                state.increment_nonce(contract_address)?;
+                Ok(())
+            }
+        }
     }
 }
 
@@ -291,12 +316,10 @@ pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt,
     nonce: Option<Felt>,
     version: u64,
-) -> Result<(Felt, Vec<u64>), TransactionError> {
+) -> Result<(Felt, Vec<Felt>), TransactionError> {
     if version == 0 || version == u64::MAX {
         match nonce {
-            Some(_) => Err(TransactionError::InvalidNonce(
-                "An InvokeFunction transaction (version = 0) cannot have a nonce.".to_string(),
-            )),
+            Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {
                 let additional_data = Vec::new();
                 let entry_point_selector_field = entry_point_selector;
@@ -306,14 +329,11 @@ pub(crate) fn preprocess_invoke_function_fields(
     } else {
         match nonce {
             Some(n) => {
-                let val = n.to_u64().ok_or(TransactionError::InvalidFeltConversion)?;
-                let additional_data = [val].to_vec();
+                let additional_data = vec![n];
                 let entry_point_selector_field = Felt::zero();
                 Ok((entry_point_selector_field, additional_data))
             }
-            None => Err(TransactionError::InvalidNonce(
-                "An InvokeFunction transaction (version != 0) must have a nonce.".to_string(),
-            )),
+            None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
         }
     }
 }
@@ -323,9 +343,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::{
-            fact_state::{
-                contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            },
+            fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
         services::api::contract_class::ContractClass,
@@ -354,26 +372,30 @@ mod tests {
         };
 
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-        let mut state = CachedState::new(state_reader, None);
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
-        // Set contract_class
-        let class_hash: [u8; 32] = [1; 32];
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         state
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
-
-        // Set contact_state
-        let contract_state = ContractState::new([1; 32], Felt::new(0), HashMap::new());
-        state.state_reader.contract_states.insert(
-            internal_invoke_function.contract_address.clone(),
-            contract_state,
-        );
 
         let result = internal_invoke_function
             .apply(&mut state, &StarknetGeneralConfig::default())

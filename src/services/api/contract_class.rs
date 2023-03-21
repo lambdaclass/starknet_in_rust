@@ -2,8 +2,7 @@ use super::contract_class_errors::ContractClassError;
 use crate::public::abi::AbiType;
 use cairo_rs::{
     serde::deserialize_program::{
-        deserialize_array_of_bigint_hex, deserialize_felt_hex, Attribute, HintParams, Identifier,
-        ReferenceManager,
+        deserialize_array_of_bigint_hex, Attribute, HintParams, Identifier, ReferenceManager,
     },
     types::{
         errors::program_errors::ProgramError, program::Program, relocatable::MaybeRelocatable,
@@ -11,7 +10,7 @@ use cairo_rs::{
     utils::is_subsequence,
 };
 use felt::{Felt, PRIME_STR};
-use getset::Getters;
+use getset::{CopyGetters, Getters};
 use serde::{Deserialize, Serialize};
 use starknet_api::state::EntryPoint;
 use std::{
@@ -31,22 +30,27 @@ pub enum EntryPointType {
     Constructor,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Getters, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone, CopyGetters, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, Serialize,
+)]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
     pub(crate) selector: Felt,
-    pub(crate) offset: Felt,
+    #[getset(get_copy = "pub")]
+    pub(crate) offset: usize,
 }
 
 // -------------------------------
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Deserialize, Getters, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Getters, PartialEq, Serialize)]
 pub struct ContractClass {
+    #[getset(get = "pub")]
     pub(crate) program: Program,
     #[getset(get = "pub")]
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+    #[getset(get = "pub")]
     pub(crate) abi: Option<AbiType>,
 }
 
@@ -84,12 +88,6 @@ impl ContractClass {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
-        if self.program.prime != *PRIME_STR {
-            return Err(ContractClassError::InvalidPrime(
-                self.program.prime.clone(),
-                PRIME_STR.to_string(),
-            ));
-        };
         Ok(())
     }
 }
@@ -102,7 +100,7 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
     fn from(entry_point: &ContractEntryPoint) -> Self {
         vec![
             MaybeRelocatable::from(entry_point.selector.clone()),
-            MaybeRelocatable::from(entry_point.offset.clone()),
+            MaybeRelocatable::from(entry_point.offset),
         ]
     }
 }
@@ -137,15 +135,31 @@ impl From<starknet_api::state::ContractClass> for ContractClass {
 //  Helper Functions
 // -------------------
 
+impl TryFrom<&str> for ContractClass {
+    type Error = io::Error;
+
+    fn try_from(s: &str) -> io::Result<Self> {
+        let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
+        Ok(ContractClass::from(raw_contract_class))
+    }
+}
+
 impl TryFrom<PathBuf> for ContractClass {
     type Error = io::Error;
 
     fn try_from(path: PathBuf) -> io::Result<Self> {
+        ContractClass::try_from(&path)
+    }
+}
+
+impl TryFrom<&PathBuf> for ContractClass {
+    type Error = io::Error;
+
+    fn try_from(path: &PathBuf) -> io::Result<Self> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::state::ContractClass =
             serde_json::from_reader(reader)?;
-
         let contract_class = ContractClass::from(raw_contract_class);
         Ok(contract_class)
     }
@@ -162,7 +176,7 @@ fn convert_entry_points(
             .into_iter()
             .map(|e| {
                 let selector = Felt::from_bytes_be(e.selector.0.bytes());
-                let offset = e.offset.0.into();
+                let offset = e.offset.0;
                 ContractEntryPoint { selector, offset }
             })
             .collect::<Vec<ContractEntryPoint>>();
@@ -187,10 +201,13 @@ fn to_cairo_runner_program(
         Some(identifier) => identifier.pc,
         None => None,
     };
+    if program.prime != *PRIME_STR {
+        return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
+    };
 
     Ok(Program {
         builtins: serde_json::from_value::<Vec<String>>(program.builtins)?,
-        prime: deserialize_felt_hex(program.prime)?.to_string(),
+        prime: PRIME_STR.to_string(),
         data: deserialize_array_of_bigint_hex(program.data)?,
         constants: {
             let mut constants = HashMap::new();
