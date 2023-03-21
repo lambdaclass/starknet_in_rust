@@ -1,5 +1,6 @@
 [project]
-name = "starknet_rs"
+name = "starknet_rs_py"
+version = "0.1.0"
 requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Rust",
