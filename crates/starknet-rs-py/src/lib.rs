@@ -14,8 +14,11 @@ use self::{
 };
 use cairo_felt::Felt;
 use pyo3::prelude::*;
-use starknet_rs::definitions::constants::{
-    DEFAULT_GAS_PRICE, DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS,
+use starknet_rs::{
+    definitions::constants::{
+        DEFAULT_GAS_PRICE, DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS,
+    },
+    services::api::contract_class::ContractClass,
 };
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
@@ -56,6 +59,15 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 
     // OS context offset.
     m.add("SYSCALL_PTR_OFFSET", Felt::from(0).to_biguint())?;
+
+    // open_zeppelin's account contract
+    m.add(
+        "account_contract",
+        PyContractClass {
+            inner: ContractClass::try_from(include_str!("../../../starknet_programs/Account.json"))
+                .expect("program couldn't be parsed"),
+        },
+    )?;
 
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_class::<PyTransactionHashPrefix>()?;
