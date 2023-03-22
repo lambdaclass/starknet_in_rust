@@ -8,6 +8,8 @@ use thiserror::Error;
 pub enum SyscallHandlerError {
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
+    #[error("Couldn't execute syscall: {0}")]
+    ExecutionError(String),
     #[error("Couldn't convert Felt to usize")]
     FeltToUsizeFail,
     #[error("Couldn't convert Felt to u64")]
