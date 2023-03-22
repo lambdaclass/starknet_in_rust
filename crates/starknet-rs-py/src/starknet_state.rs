@@ -6,10 +6,7 @@ use crate::types::{
 use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
-use starknet_rs::testing::starknet_state::StarknetState;
-use starknet_rs::testing::{
-    starknet_state::StarknetState as InnerStarknetState, type_utils::ExecutionInfo,
-};
+use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
 use starknet_rs::utils::Address;
 
 #[pyclass]
@@ -18,24 +15,27 @@ pub struct PyStarknetState {
     inner: InnerStarknetState,
 }
 
+#[pymethods]
 impl PyStarknetState {
+    #[pyo3(name = "empty")]
+    #[staticmethod]
     pub fn new(config: Option<PyStarknetGeneralConfig>) -> Self {
         let config = match config {
             Some(c) => Some(c.inner),
             None => None,
         };
         PyStarknetState {
-            inner: StarknetState::new(config),
+            inner: InnerStarknetState::new(config),
         }
     }
 
     pub fn declare(
         &mut self,
-        contract_class: PyContractClass,
+        contract_class: &PyContractClass,
     ) -> PyResult<([u8; 32], PyTransactionExecutionInfo)> {
         let (hash, exec_info) = self
             .inner
-            .declare(contract_class.inner)
+            .declare(contract_class.inner.clone())
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
         Ok((hash, PyTransactionExecutionInfo::from(exec_info)))
@@ -108,11 +108,11 @@ impl PyStarknetState {
 
     pub fn deploy(
         &mut self,
-        contract_class: PyContractClass,
+        contract_class: &PyContractClass,
         constructor_calldata: Vec<BigUint>,
         contract_address_salt: BigUint,
     ) -> PyResult<(BigUint, PyTransactionExecutionInfo)> {
-        let contract_class = contract_class.inner;
+        let contract_class = contract_class.inner.clone();
         let constructor_calldata = constructor_calldata
             .into_iter()
             .map(|v| Felt::from(v))
@@ -136,12 +136,6 @@ impl PyStarknetState {
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         Ok(PyTransactionExecutionInfo::from(tx_info))
     }
-    pub fn add_messages_and_events(&mut self, exec_info: &ExecutionInfo) -> PyResult<()> {
-        self.inner
-            .add_messages_and_events(exec_info)
-            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-        Ok(())
-    }
 
     pub fn consume_message_hash(&mut self, message_hash: Vec<u8>) -> PyResult<()> {
         self.inner
@@ -160,8 +154,13 @@ mod tests {
     fn starknet_state_constructor_test() {
         Python::with_gil(|py| {
             let general_config_cls = <PyStarknetGeneralConfig as PyTypeInfo>::type_object(py);
+            let state_cls = <PyStarknetState as PyTypeInfo>::type_object(py);
 
-            let locals = [("StarknetGeneralConfig", general_config_cls)].into_py_dict(py);
+            let locals = [
+                ("StarknetGeneralConfig", general_config_cls),
+                ("StarknetState", state_cls),
+            ]
+            .into_py_dict(py);
 
             let code = r#"
 StarknetState.empty()
