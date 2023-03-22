@@ -192,8 +192,8 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(decompress_program)?;
 
     //  starkware.starknet.wallets.open_zeppelin
-    // m.add_function(sign_deploy_account_tx)?;
-    // m.add_function(sign_invoke_tx)?;
+    // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
+    // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
     let starknet = PyModule::import(py, "starkware.starknet.cli.starknet_cli")?;
 
