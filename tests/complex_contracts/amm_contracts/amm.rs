@@ -14,7 +14,7 @@ use starknet_rs::{
 };
 use std::collections::HashSet;
 
-use crate::amm_contracts::utils::*;
+use crate::complex_contracts::utils::*;
 
 fn init_pool(
     calldata: &[Felt],
@@ -89,6 +89,7 @@ fn amm_init_pool_test() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -129,6 +130,7 @@ fn amm_add_demo_tokens_test() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -181,6 +183,7 @@ fn amm_get_pool_token_balance() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -244,6 +247,7 @@ fn amm_swap_test() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -327,6 +331,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -355,6 +360,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -383,6 +389,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -411,6 +418,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -444,6 +452,7 @@ fn amm_get_account_token_balance_test() {
         address: &address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };

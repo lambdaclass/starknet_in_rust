@@ -16,7 +16,7 @@ use starknet_rs::{
     utils::{calculate_sn_keccak, Address},
 };
 
-use crate::nft::utils::*;
+use crate::complex_contracts::utils::*;
 
 fn contructor(
     calldata: &[Felt],

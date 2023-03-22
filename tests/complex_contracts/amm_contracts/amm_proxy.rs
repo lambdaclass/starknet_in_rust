@@ -1,4 +1,4 @@
-use crate::amm_contracts::utils::{execute_entry_point, get_accessed_keys, CallConfig};
+use crate::complex_contracts::utils::*;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use starknet_rs::{
@@ -65,6 +65,7 @@ fn amm_proxy_init_pool_test() {
         address: &proxy_address,
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -158,6 +159,7 @@ fn amm_proxy_get_pool_token_balance_test() {
         address: &proxy_address,
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -258,6 +260,7 @@ fn amm_proxy_add_demo_token_test() {
         address: &proxy_address,
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -360,6 +363,7 @@ fn amm_proxy_get_account_token_balance() {
         address: &proxy_address,
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -470,6 +474,7 @@ fn amm_proxyswap() {
         address: &proxy_address,
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
