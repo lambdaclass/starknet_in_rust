@@ -12,7 +12,7 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use cairo_felt::Felt;
+use cairo_felt::{felt_str, Felt};
 use pyo3::prelude::*;
 use starknet_rs::{
     definitions::constants::{
@@ -21,6 +21,9 @@ use starknet_rs::{
     services::api::contract_class::ContractClass,
 };
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
+
+// TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
+use cairo_felt as felt;
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
@@ -71,6 +74,11 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add("LATEST_BLOCK_ID", "latest")?;
     m.add("PENDING_BLOCK_ID", "pending")?;
+
+    m.add(
+        "FAULTY_CLASS_HASH",
+        felt_str!("0x1A7820094FEAF82D53F53F214B81292D717E7BB9A92BB2488092CD306F3993F").to_biguint(),
+    )?;
 
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_class::<PyTransactionHashPrefix>()?;
@@ -132,7 +140,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.business_logic.execution.execute_entry_point
     // m.add_class::<PyExecuteEntryPoint>()?;
-    // m.add("FAULTY_CLASS_HASH", value)?;
 
     //  starkware.starknet.business_logic.execution.objects
     // m.add_class::<PyTransactionExecutionContext>()?;
