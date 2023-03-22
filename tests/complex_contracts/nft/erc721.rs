@@ -965,9 +965,7 @@ fn erc721_transfer_from_and_get_owner_test() {
 }
 
 #[test]
-// test should panic at 'not yet implemented'
-#[should_panic]
-fn erc721_safe_transfer_from_should_panic() {
+fn erc721_safe_transfer_from_should_fail_test() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
     let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
@@ -1004,6 +1002,7 @@ fn erc721_safe_transfer_from_should_panic() {
 
     call_config.entry_point_type = &entry_point_type;
 
+    // data_len = 0 then there is no need to sent *felt for data
     let calldata = [
         Felt::from(666),
         Felt::from(777),
@@ -1012,8 +1011,8 @@ fn erc721_safe_transfer_from_should_panic() {
         Felt::zero(),
     ]
     .to_vec();
-    // The contract will fail because the receiver address is not a IERC721Receiver contract
-    safe_transfer_from(&calldata, &mut call_config).unwrap();
+    // The contract will fail because the receiver address is not a IERC721Receiver contract.
+    assert!(safe_transfer_from(&calldata, &mut call_config).is_err());
 }
 
 #[test]
