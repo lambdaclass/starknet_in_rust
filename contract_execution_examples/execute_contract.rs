@@ -64,17 +64,17 @@ fn test_contract(
 
     let contract_state = ContractState::new(
         class_hash,
-        tx_execution_context.nonce().clone(),
+        tx_execution_context.nonce(),
         Default::default(),
     );
     let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
     state_reader
         .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .insert(contract_address, contract_state);
 
     let mut state = CachedState::new(
         state_reader,
-        Some([(class_hash, contract_class)].into_iter().collect()),
+        Some([(class_hash, contract_class)].iter().collect()),
     );
 
     //* ------------------------------------
@@ -85,10 +85,10 @@ fn test_contract(
 
     let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
-        contract_address.clone(),
-        call_data.clone(),
-        entry_point_selector.clone(),
-        caller_address.clone(),
+        contract_address,
+        call_data,
+        entry_point_selector,
+        caller_address,
         EntryPointType::External,
         CallType::Delegate.into(),
         class_hash.into(),

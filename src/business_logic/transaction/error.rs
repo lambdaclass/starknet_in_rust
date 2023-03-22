@@ -7,6 +7,7 @@ use crate::{
     definitions::transaction_type::TransactionType,
     starknet_runner::starknet_runner_error::StarknetRunnerError,
     starkware_utils::starkware_errors::StarkwareError,
+    utils::ClassHash,
 };
 use cairo_rs::{
     types::relocatable::Relocatable,
@@ -44,7 +45,7 @@ pub enum TransactionError {
     #[error("Calling other contracts during validate execution is forbidden")]
     UnauthorizedActionOnValidate,
     #[error("Class hash {0:?} already declared")]
-    ClassAlreadyDeclared([u8; 32]),
+    ClassAlreadyDeclared(ClassHash),
     #[error(transparent)]
     Starkware(#[from] StarkwareError),
     #[error("Expected a relocatable value but got an integer")]
@@ -62,7 +63,7 @@ pub enum TransactionError {
     #[error("Missing contract class after fetching")]
     MissigContractClass,
     #[error("Contract address {0:?} is not deployed")]
-    NotDeployedContract([u8; 32]),
+    NotDeployedContract(ClassHash),
     #[error("Non-unique entry points are not possible in a ContractClass object")]
     NonUniqueEntryPoint,
     #[error("Requested entry point was not found")]

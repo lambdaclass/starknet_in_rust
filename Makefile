@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack	
 
 
 OS := $(shell uname)
@@ -30,10 +30,10 @@ compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
 
 cairo_programs/%.json: cairo_programs/%.cairo
-	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json: starknet_programs/%.cairo
-	cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 
 #
@@ -48,6 +48,7 @@ check:
 
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
+	cargo install flamegraph --version 0.6.2
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
@@ -61,15 +62,19 @@ clean:
 clippy:
 	cargo clippy --all-targets -- -D warnings
 
-test:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
+test: compile-cairo compile-starknet
 	cargo test
 
-py-test:
+py-test: compile-cairo compile-starknet
 	. starknet-venv/bin/activate
 	cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
-coverage:
-	. starknet-venv/bin/activate && $(MAKE) compile-cairo compile-starknet
+coverage: compile-cairo compile-starknet
 	cargo tarpaulin
 	-rm -f default.profraw
+
+heaptrack:
+	./scripts/heaptrack.sh
+
+flamegraph: compile-cairo compile-starknet
+	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals

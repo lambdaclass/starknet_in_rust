@@ -13,13 +13,16 @@ use crate::{
         errors::syscall_handler_errors::SyscallHandlerError,
         transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
     },
-    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        transaction_type::TransactionType,
+    },
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
-    utils::{calculate_tx_resources, felt_to_hash, Address},
+    utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
-use felt::{felt_str, Felt};
+use felt::Felt;
 use num_traits::Zero;
 
 pub struct InternalDeploy {
@@ -27,7 +30,7 @@ pub struct InternalDeploy {
     pub(crate) version: u64,
     pub(crate) contract_address: Address,
     pub(crate) _contract_address_salt: Address,
-    pub(crate) contract_hash: [u8; 32],
+    pub(crate) contract_hash: ClassHash,
     pub(crate) constructor_calldata: Vec<Felt>,
     pub(crate) tx_type: TransactionType,
 }
@@ -43,7 +46,7 @@ impl InternalDeploy {
         let class_hash = compute_class_hash(&contract_class)
             .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
 
-        let contract_hash: [u8; 32] = felt_to_hash(&class_hash);
+        let contract_hash: ClassHash = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &class_hash,
@@ -71,30 +74,40 @@ impl InternalDeploy {
 
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
-    pub fn class_hash(&self) -> [u8; 32] {
+    pub fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }
 
     pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
-        _general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, StarkwareError> {
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
-        let class_hash: [u8; 32] = self.contract_hash;
-        state.get_contract_class(&class_hash)?;
-        self.handle_empty_constructor(state)
+        let class_hash: ClassHash = self.contract_hash;
+        let contract_class = state.get_contract_class(&class_hash)?;
+
+        let constructors = contract_class
+            .entry_points_by_type()
+            .get(&EntryPointType::Constructor);
+
+        if constructors.map(Vec::is_empty).unwrap_or(true) {
+            // Contract has no constructors
+            Ok(self.handle_empty_constructor(state)?)
+        } else {
+            self.invoke_constructor(state, general_config)
+        }
     }
 
     pub fn handle_empty_constructor<T: Default + State + StateReader + Clone>(
         &self,
         state: &mut T,
     ) -> Result<TransactionExecutionInfo, StarkwareError> {
-        if self.constructor_calldata.is_empty() {
+        if !self.constructor_calldata.is_empty() {
             return Err(StarkwareError::TransactionFailed);
         }
 
-        let class_hash: [u8; 32] = self.contract_hash;
+        let class_hash: ClassHash = self.contract_hash;
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
             Address(Felt::zero()),
@@ -123,20 +136,15 @@ impl InternalDeploy {
         )
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn invoke_constructor<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
-        general_config: StarknetGeneralConfig,
+        general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let entry_point_selector = felt_str!(
-            "1159040026212278395030414237414753050475174923702621880048416706425641521556"
-        );
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
-            entry_point_selector,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
             Address(Felt::zero()),
             EntryPointType::Constructor,
             None,
@@ -156,7 +164,7 @@ impl InternalDeploy {
         let mut resources_manager = ExecutionResourcesManager::default();
         let call_info = call.execute(
             state,
-            &general_config,
+            general_config,
             &mut resources_manager,
             &tx_execution_context,
         )?;
@@ -197,5 +205,63 @@ impl InternalDeploy {
                 fee_transfer_info,
             ),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        utils::calculate_sn_keccak,
+    };
+
+    #[test]
+    fn invoke_constructor_test() {
+        // Instantiate CachedState
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()));
+
+        // Set contract_class
+        let class_hash: ClassHash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let internal_deploy = InternalDeploy {
+            hash_value: 0.into(),
+            version: 0,
+            contract_address: Address(1.into()),
+            _contract_address_salt: Address(0.into()),
+            contract_hash: class_hash,
+            constructor_calldata: vec![10.into()],
+            tx_type: TransactionType::Deploy,
+        };
+
+        let config = Default::default();
+
+        let _result = internal_deploy.apply(&mut state, &config).unwrap();
+
+        assert_eq!(
+            state.get_class_hash_at(&Address(1.into())).unwrap(),
+            &class_hash
+        );
+
+        let storage_key = calculate_sn_keccak("owner".as_bytes());
+
+        assert_eq!(
+            state
+                .get_storage_at(&(Address(1.into()), storage_key))
+                .unwrap(),
+            &Felt::from(10)
+        );
     }
 }

@@ -52,7 +52,7 @@ impl PyBlockInfo {
     /// Validates that next_block_info is a legal progress of self.
     fn validate_legal_progress(&self, next_block_info: &PyBlockInfo) -> PyResult<()> {
         self.inner
-            .validate_legal_progress(next_block_info.inner.clone())
+            .validate_legal_progress(&next_block_info.inner)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 
