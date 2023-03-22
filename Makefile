@@ -23,8 +23,9 @@ deps-venv:
 	pip install \
 		fastecdsa \
 		typeguard==2.13.0 \
-		cairo-lang==0.10.3 \
 		openzeppelin-cairo-contracts
+		maturin \
+		cairo-lang==0.10.3
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
