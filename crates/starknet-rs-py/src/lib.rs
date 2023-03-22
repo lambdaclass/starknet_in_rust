@@ -187,17 +187,24 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.third_party.open_zeppelin.starknet_contracts
     // m.add("account_contract", value)?;
 
-    //  starkware.starknet.services.api.gateway.transaction_utils
-    // m.add_function(compress_program)?;
-    // m.add_function(decompress_program)?;
+    let tx_utils = PyModule::import(
+        py,
+        "starkware.starknet.services.api.gateway.transaction_utils",
+    )?;
+
+    m.add("compress_program", tx_utils.getattr("compress_program")?)?;
+    m.add(
+        "decompress_program",
+        tx_utils.getattr("decompress_program")?,
+    )?;
 
     //  starkware.starknet.wallets.open_zeppelin
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
     // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
-    let starknet = PyModule::import(py, "starkware.starknet.cli.starknet_cli")?;
+    let starknet_cli = PyModule::import(py, "starkware.starknet.cli.starknet_cli")?;
 
-    m.add("get_salt", starknet.getattr("get_salt")?)?;
+    m.add("get_salt", starknet_cli.getattr("get_salt")?)?;
 
     Ok(())
 }
