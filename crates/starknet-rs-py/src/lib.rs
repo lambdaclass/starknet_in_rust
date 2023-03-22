@@ -15,8 +15,11 @@ use self::{
 use cairo_felt::{felt_str, Felt};
 use pyo3::prelude::*;
 use starknet_rs::{
+    business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,
     definitions::constants::{
-        DEFAULT_GAS_PRICE, DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS,
+        DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT, DEFAULT_GAS_PRICE,
+        DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS, N_STEPS_FEE_WEIGHT,
+        TRANSACTION_VERSION,
     },
     services::api::contract_class::ContractClass,
 };
@@ -185,14 +188,29 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyTransaction>()?;
 
     //  starkware.starknet.definitions.constants
-    // m.add("UNINITIALIZED_CLASS_HASH", value)?;
-    // m.add("QUERY_VERSION", value)?;
-    // m.add("TRANSACTION_VERSION", value)?;
-    // m.add("N_STEPS_FEE_WEIGHT", value)?;
-    // m.add("CONTRACT_STATES_COMMITMENT_TREE_HEIGHT", value)?;
-    // m.add("EVENT_COMMITMENT_TREE_HEIGHT", value)?;
-    // m.add("CONTRACT_ADDRESS_BITS", value)?;
-    // m.add("TRANSACTION_COMMITMENT_TREE_HEIGHT", value)?;
+    m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
+
+    // Indentation for transactions meant to query and not addressed to the OS.
+    let query_version_base: Felt = Felt::from(1 << 128);
+    let query_version = query_version_base + Felt::from(TRANSACTION_VERSION);
+    m.add("QUERY_VERSION", query_version.to_biguint())?;
+
+    m.add("TRANSACTION_VERSION", TRANSACTION_VERSION)?;
+
+    // The (empirical) L1 gas cost of each Cairo step.
+    pub const N_STEPS_FEE_WEIGHT: f64 = 0.05;
+    m.add("N_STEPS_FEE_WEIGHT", N_STEPS_FEE_WEIGHT)?;
+
+    m.add(
+        "CONTRACT_STATES_COMMITMENT_TREE_HEIGHT",
+        DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+    )?;
+
+    m.add("EVENT_COMMITMENT_TREE_HEIGHT", 64)?;
+    m.add("TRANSACTION_COMMITMENT_TREE_HEIGHT", 64)?;
+
+    // Felt number of bits
+    m.add("CONTRACT_ADDRESS_BITS", 251)?;
 
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;
