@@ -19,7 +19,7 @@ use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarkn
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
 
 #[pymodule]
-pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
+pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
     // starkware.starknet.business_logic.state.state
     m.add_class::<PyBlockInfo>()?;
@@ -195,8 +195,9 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(sign_deploy_account_tx)?;
     // m.add_function(sign_invoke_tx)?;
 
-    //  starkware.starknet.cli.starknet_cli
-    // m.add_function(get_salt)?;
+    let starknet = PyModule::import(py, "starkware.starknet.cli.starknet_cli")?;
+
+    m.add("get_salt", starknet.getattr("get_salt")?)?;
 
     Ok(())
 }
