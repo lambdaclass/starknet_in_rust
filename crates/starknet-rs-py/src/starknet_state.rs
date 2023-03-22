@@ -53,24 +53,11 @@ impl PyStarknetState {
         let address = Address(contract_address.into());
         let selector = selector.into();
 
-        let calldata = calldata
-            .into_iter()
-            .map(|v| Felt::from(v))
-            .collect::<Vec<Felt>>();
-        let signature = match signature {
-            Some(signs) => Some(
-                signs
-                    .into_iter()
-                    .map(|v| Felt::from(v))
-                    .collect::<Vec<Felt>>(),
-            ),
-            None => None,
-        };
+        let calldata = calldata.into_iter().map(Felt::from).collect::<Vec<Felt>>();
+        let signature =
+            signature.map(|signs| signs.into_iter().map(Felt::from).collect::<Vec<Felt>>());
 
-        let nonce = match nonce {
-            Some(n) => Some(Felt::from(n)),
-            None => None,
-        };
+        let nonce = nonce.map(Felt::from);
 
         let exec_info = self
             .inner
@@ -87,10 +74,7 @@ impl PyStarknetState {
         calldata: Vec<BigUint>,
         caller_address: BigUint,
     ) -> PyResult<PyCallInfo> {
-        let calldata = calldata
-            .into_iter()
-            .map(|v| Felt::from(v))
-            .collect::<Vec<Felt>>();
+        let calldata = calldata.into_iter().map(Felt::from).collect::<Vec<Felt>>();
         let entry_point_selector = Felt::from(entry_point_selector);
 
         let call_info = self
@@ -115,7 +99,7 @@ impl PyStarknetState {
         let contract_class = contract_class.inner.clone();
         let constructor_calldata = constructor_calldata
             .into_iter()
-            .map(|v| Felt::from(v))
+            .map(Felt::from)
             .collect::<Vec<Felt>>();
         let contract_address_salt = Address(Felt::from(contract_address_salt));
 
