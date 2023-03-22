@@ -103,10 +103,6 @@ pub fn setup_contract(
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
     contract_class_cache.insert(class_hash, contract_class);
-    // let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
-    // state_reader
-    //     .contract_states_mut()
-    //     .insert(address.clone(), contract_state);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
