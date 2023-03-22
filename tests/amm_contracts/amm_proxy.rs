@@ -5,8 +5,7 @@ use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{cached_state::CachedState, state_api::StateReader},
     },
