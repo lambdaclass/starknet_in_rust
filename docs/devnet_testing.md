@@ -15,7 +15,7 @@ pip install starknet-devnet
 
 #### Install dev dependencies
 ```
-git clone git@github.com:Shard-Labs/starknet-devnet.git
+git clone --depth 1 --branch v0.4.6 git@github.com:Shard-Labs/starknet-devnet.git
 cd starknet-devnet
 ./scripts/install_dev_tools.sh
 ```
