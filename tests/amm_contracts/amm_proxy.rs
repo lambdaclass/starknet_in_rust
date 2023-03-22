@@ -5,8 +5,7 @@ use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{cached_state::CachedState, state_api::StateReader},
     },
@@ -36,17 +35,15 @@ fn amm_proxy_init_pool_test() {
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-    let contract_state = ContractState::new(contract_class_hash, 0.into(), HashMap::new());
-    let proxy_state = ContractState::new(proxy_class_hash, 0.into(), HashMap::new());
     contract_class_cache.insert(contract_class_hash, contract_class);
     contract_class_cache.insert(proxy_class_hash, proxy_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .address_to_class_hash_mut()
+        .insert(contract_address.clone(), contract_class_hash);
     state_reader
-        .contract_states_mut()
-        .insert(proxy_address.clone(), proxy_state);
+        .address_to_class_hash_mut()
+        .insert(proxy_address.clone(), proxy_class_hash);
 
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
@@ -131,17 +128,15 @@ fn amm_proxy_get_pool_token_balance_test() {
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-    let contract_state = ContractState::new(contract_class_hash, 0.into(), HashMap::new());
-    let proxy_state = ContractState::new(proxy_class_hash, 0.into(), HashMap::new());
     contract_class_cache.insert(contract_class_hash, contract_class);
     contract_class_cache.insert(proxy_class_hash, proxy_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .address_to_class_hash_mut()
+        .insert(contract_address.clone(), contract_class_hash);
     state_reader
-        .contract_states_mut()
-        .insert(proxy_address.clone(), proxy_state);
+        .address_to_class_hash_mut()
+        .insert(proxy_address.clone(), proxy_class_hash);
 
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
@@ -233,17 +228,15 @@ fn amm_proxy_add_demo_token_test() {
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-    let contract_state = ContractState::new(contract_class_hash, 0.into(), HashMap::new());
-    let proxy_state = ContractState::new(proxy_class_hash, 0.into(), HashMap::new());
     contract_class_cache.insert(contract_class_hash, contract_class);
     contract_class_cache.insert(proxy_class_hash, proxy_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .address_to_class_hash_mut()
+        .insert(contract_address.clone(), contract_class_hash);
     state_reader
-        .contract_states_mut()
-        .insert(proxy_address.clone(), proxy_state);
+        .address_to_class_hash_mut()
+        .insert(proxy_address.clone(), proxy_class_hash);
 
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
@@ -337,17 +330,15 @@ fn amm_proxy_get_account_token_balance() {
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-    let contract_state = ContractState::new(contract_class_hash, 0.into(), HashMap::new());
-    let proxy_state = ContractState::new(proxy_class_hash, 0.into(), HashMap::new());
     contract_class_cache.insert(contract_class_hash, contract_class);
     contract_class_cache.insert(proxy_class_hash, proxy_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .address_to_class_hash_mut()
+        .insert(contract_address.clone(), contract_class_hash);
     state_reader
-        .contract_states_mut()
-        .insert(proxy_address.clone(), proxy_state);
+        .address_to_class_hash_mut()
+        .insert(proxy_address.clone(), proxy_class_hash);
 
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
@@ -449,17 +440,15 @@ fn amm_proxyswap() {
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-    let contract_state = ContractState::new(contract_class_hash, 0.into(), HashMap::new());
-    let proxy_state = ContractState::new(proxy_class_hash, 0.into(), HashMap::new());
     contract_class_cache.insert(contract_class_hash, contract_class);
     contract_class_cache.insert(proxy_class_hash, proxy_class);
-    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .contract_states_mut()
-        .insert(contract_address.clone(), contract_state);
+        .address_to_class_hash_mut()
+        .insert(contract_address.clone(), contract_class_hash);
     state_reader
-        .contract_states_mut()
-        .insert(proxy_address.clone(), proxy_state);
+        .address_to_class_hash_mut()
+        .insert(proxy_address.clone(), proxy_class_hash);
 
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
