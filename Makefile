@@ -23,7 +23,7 @@ deps-venv:
 	pip install \
 		fastecdsa \
 		typeguard==2.13.0 \
-		openzeppelin-cairo-contracts
+		openzeppelin-cairo-contracts \
 		maturin \
 		cairo-lang==0.10.3
 
