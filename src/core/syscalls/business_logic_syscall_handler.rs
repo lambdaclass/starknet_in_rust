@@ -414,7 +414,7 @@ where
 
                 retdata
             })
-            .map_err(|_| SyscallHandlerError::NotImplemented)
+            .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))
     }
 
     fn get_block_info(&self) -> &BlockInfo {
