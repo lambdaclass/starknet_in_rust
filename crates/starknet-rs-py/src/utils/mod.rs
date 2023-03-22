@@ -5,6 +5,7 @@ use starknet_rs::business_logic::transaction::fee::calculate_tx_fee;
 use std::collections::HashMap;
 
 #[pyfunction]
+#[pyo3(name = "calculate_tx_fee")]
 pub(crate) fn py_calculate_tx_fee(
     resources: HashMap<String, usize>,
     gas_price: u64,
