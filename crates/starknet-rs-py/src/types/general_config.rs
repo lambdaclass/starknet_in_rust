@@ -116,7 +116,7 @@ impl PyStarknetGeneralConfig {
 #[pyo3(name = "StarknetOsConfig")]
 #[derive(Debug, Clone, Default)]
 pub struct PyStarknetOsConfig {
-    pub(crate) inner: StarknetOsConfig,
+    inner: StarknetOsConfig,
 }
 
 impl From<PyStarknetOsConfig> for StarknetOsConfig {

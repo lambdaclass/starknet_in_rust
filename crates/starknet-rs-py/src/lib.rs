@@ -60,7 +60,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyStarknetCallInfo>()?;
 
     //  starkware.starknet.testing.state
-    // m.add_class::<PyStarknetState>()?;
 
     //  starkware.starknet.core.os.contract_address.contract_address
     // m.add_function(calculate_contract_address_from_hash)?;

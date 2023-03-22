@@ -150,3 +150,25 @@ impl PyStarknetState {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pyo3::{types::IntoPyDict, PyTypeInfo, Python};
+
+    #[test]
+    fn starknet_state_constructor_test() {
+        Python::with_gil(|py| {
+            let general_config_cls = <PyStarknetGeneralConfig as PyTypeInfo>::type_object(py);
+
+            let locals = [("StarknetGeneralConfig", general_config_cls)].into_py_dict(py);
+
+            let code = r#"
+StarknetState.empty()
+"#;
+
+            let res = py.run(code, None, Some(locals));
+            assert!(res.is_ok(), "{res:?}");
+        })
+    }
+}
