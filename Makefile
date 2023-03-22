@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack	
 
 
 OS := $(shell uname)
@@ -71,6 +71,9 @@ py-test: compile-cairo compile-starknet
 coverage: compile-cairo compile-starknet
 	cargo tarpaulin
 	-rm -f default.profraw
+
+heaptrack:
+	./scripts/heaptrack.sh
 
 flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals
