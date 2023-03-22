@@ -56,7 +56,11 @@ impl Default for BlockInfo {
 #[test]
 fn test_validate_legal_progress() {
     let first_block = BlockInfo::default();
-    let mut next_block: BlockInfo = BlockInfo::default();
+    let mut next_block: BlockInfo = BlockInfo {
+        block_number: 1,
+        block_timestamp: 1,
+        ..Default::default()
+    };
     next_block.block_number = 1;
     next_block.block_timestamp = 1;
 
