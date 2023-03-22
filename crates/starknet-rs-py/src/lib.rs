@@ -34,10 +34,9 @@ compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as
 #[pymodule]
 pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
-    // starkware.starknet.business_logic.state.state
+
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
-
     m.add_class::<PyStarknetGeneralConfig>()?;
     m.add_class::<PyStarknetOsConfig>()?;
     m.add_class::<PyStarknetChainId>()?;
