@@ -3,6 +3,7 @@
 mod cached_state;
 mod starknet_state;
 mod types;
+mod utils;
 
 use self::{
     cached_state::PyCachedState,
@@ -12,6 +13,7 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
+use crate::utils::py_calculate_tx_fee;
 use pyo3::prelude::*;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
@@ -171,9 +173,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.testing.contract
     // m.add_class::<PyStarknetContract>()?;
 
-    //  starkware.starknet.business_logic.transaction.fee
-    // m.add_function(calculate_tx_fee)?;
-
     //  starkware.starknet.definitions.transaction_type
     // m.add_class::<PyTransactionType>()?;
 
@@ -187,16 +186,18 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.third_party.open_zeppelin.starknet_contracts
     // m.add("account_contract", value)?;
 
+    //  starkware.starknet.wallets.open_zeppelin
+    // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
+    // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
+
+    m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
+
     reexport(
         py,
         m,
         "starkware.starknet.services.api.gateway.transaction_utils",
         vec!["compress_program", "decompress_program"],
     )?;
-
-    //  starkware.starknet.wallets.open_zeppelin
-    // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
-    // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
     reexport(
         py,

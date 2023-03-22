@@ -64,7 +64,7 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
 /// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
 
-pub(crate) fn calculate_tx_fee(
+pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
     gas_price: u64,
     general_config: &StarknetGeneralConfig,
