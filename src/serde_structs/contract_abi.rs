@@ -48,11 +48,11 @@ fn test_read_abi() {
     let expected_result: HashMap<String, (usize, EntryPointType)> = HashMap::from([
         (
             String::from("increase_balance"),
-            (0 as usize, EntryPointType::External),
+            (0_usize, EntryPointType::External),
         ),
         (
             String::from("get_balance"),
-            (1 as usize, EntryPointType::External),
+            (1_usize, EntryPointType::External),
         ),
     ]);
 
