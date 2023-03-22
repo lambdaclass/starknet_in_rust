@@ -64,14 +64,6 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
     accessed_storage_keys
 }
 
-// pub fn get_event_key(keys: &[&str]) -> FieldElement {
-//     let zero = FieldElement::from(0_u8);
-//     keys.iter().fold(zero, |hash, f| {
-//         let f = FieldElement::from_hex_be(&hex::encode(f.as_bytes())).unwrap();
-//         pedersen_hash(&hash, &f)
-//     })
-// }
-
 pub fn get_entry_points(
     function_name: &str,
     entry_point_type: &EntryPointType,
