@@ -187,8 +187,8 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(compute_class_hash)?;
 
     //  starkware.starknet.core.os.os_utils
-    // m.add_function(prepare_os_context)?;
-    // m.add_function(validate_and_process_os_context)?;
+    // m.add_function(prepare_os_context)?;               need cairo-rs-py to implement CairoFunctionRunner
+    // m.add_function(validate_and_process_os_context)?;  need cairo-rs-py to implement CairoFunctionRunner
 
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
 
