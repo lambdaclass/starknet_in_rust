@@ -4,7 +4,6 @@ use starknet_rs::{business_logic::transaction::transactions::Transaction, utils:
 
 #[pyclass]
 #[pyo3(name = "TransactionExecutionInfo")]
-#[derive(Debug)]
 pub struct PyTransaction {
     pub(crate) inner: Transaction,
 }

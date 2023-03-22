@@ -1,0 +1,1129 @@
+diff --git a/starknet_devnet/__init__.py b/starknet_devnet/__init__.py
+index 51ffd51..2c09627 100644
+--- a/starknet_devnet/__init__.py
++++ b/starknet_devnet/__init__.py
+@@ -53,7 +53,7 @@ def _patch_copy():
+ 
+     from copy import copy
+ 
+-    from starkware.starknet.services.api.contract_class import ContractClass
++    from starknet_rs_py import ContractClass
+ 
+     def simpler_copy(self, memo):  # pylint: disable=unused-argument
+         """
+diff --git a/starknet_devnet/account.py b/starknet_devnet/account.py
+index 36c7cb5..bfc74c9 100644
+--- a/starknet_devnet/account.py
++++ b/starknet_devnet/account.py
+@@ -2,12 +2,12 @@
+ Account class and its predefined constants.
+ """
+ 
+-from starkware.starknet.core.os.contract_address.contract_address import (
++from starknet_rs_py import (
+     calculate_contract_address_from_hash,
+ )
+-from starkware.starknet.public.abi import get_selector_from_name
+-from starkware.starknet.testing.contract import StarknetContract
+-from starkware.starknet.testing.starknet import Starknet
++from starknet_rs_py import get_selector_from_name
++from starknet_rs_py import Starknet
++from starknet_rs_py import StarknetContract
+ 
+ from starknet_devnet.account_util import set_balance
+ from starknet_devnet.contract_class_wrapper import ContractClassWrapper
+diff --git a/starknet_devnet/account_util.py b/starknet_devnet/account_util.py
+index df809df..83ce915 100644
+--- a/starknet_devnet/account_util.py
++++ b/starknet_devnet/account_util.py
+@@ -7,13 +7,13 @@ from typing import List, NamedTuple, Sequence, Tuple
+ 
+ from starkware.cairo.lang.vm.crypto import pedersen_hash
+ from starkware.crypto.signature.signature import sign
+-from starkware.starknet.core.os.transaction_hash.transaction_hash import (
++from starknet_rs_py import (
+     TransactionHashPrefix,
+     calculate_transaction_hash_common,
+ )
+-from starkware.starknet.definitions.general_config import StarknetChainId
+-from starkware.starknet.public.abi import get_selector_from_name
+-from starkware.starknet.testing.starknet import StarknetState
++from starknet_rs_py import StarknetChainId
++from starknet_rs_py import get_selector_from_name
++from starknet_rs_py import StarknetState
+ 
+ from .util import Uint256
+ 
+diff --git a/starknet_devnet/block_info_generator.py b/starknet_devnet/block_info_generator.py
+index 3812ffa..def6a9f 100644
+--- a/starknet_devnet/block_info_generator.py
++++ b/starknet_devnet/block_info_generator.py
+@@ -4,8 +4,8 @@ Block info generator for the Starknet Devnet.
+ 
+ import time
+ 
+-from starkware.starknet.business_logic.state.state import BlockInfo
+-from starkware.starknet.definitions.general_config import StarknetGeneralConfig
++from starknet_rs_py import BlockInfo
++from starknet_rs_py import StarknetGeneralConfig
+ 
+ from starknet_devnet.constants import CAIRO_LANG_VERSION
+ 
+diff --git a/starknet_devnet/blocks.py b/starknet_devnet/blocks.py
+index 60f8dd6..26327be 100644
+--- a/starknet_devnet/blocks.py
++++ b/starknet_devnet/blocks.py
+@@ -4,12 +4,12 @@ Class for generating and handling blocks
+ 
+ from typing import Any, Dict, List, Optional, Sequence, Union
+ 
+-from starkware.starknet.core.os.block_hash.block_hash import (
++from starknet_rs_py import (
+     calculate_block_hash,
+     calculate_event_hash,
+ )
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import (
+     LATEST_BLOCK_ID,
+     PENDING_BLOCK_ID,
+     BlockIdentifier,
+@@ -17,7 +17,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
+     BlockStatus,
+     StarknetBlock,
+ )
+-from starkware.starknet.testing.state import StarknetState
++from starknet_rs_py import StarknetState
+ from starkware.starkware_utils.error_handling import StarkErrorCode
+ 
+ from .constants import CAIRO_LANG_VERSION, DUMMY_STATE_ROOT
+diff --git a/starknet_devnet/blueprints/feeder_gateway.py b/starknet_devnet/blueprints/feeder_gateway.py
+index 867ade6..09215e0 100644
+--- a/starknet_devnet/blueprints/feeder_gateway.py
++++ b/starknet_devnet/blueprints/feeder_gateway.py
+@@ -4,18 +4,18 @@ Feeder gateway routes.
+ 
+ from flask import Blueprint, Response, jsonify, request
+ from marshmallow import ValidationError
+-from starkware.starknet.services.api.feeder_gateway.request_objects import (
++from starknet_rs_py import (
+     CallFunction,
+     CallL1Handler,
+ )
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import (
+     LATEST_BLOCK_ID,
+     PENDING_BLOCK_ID,
+     BlockTransactionTraces,
+     StarknetBlock,
+     TransactionSimulationInfo,
+ )
+-from starkware.starknet.services.api.gateway.transaction import (
++from starknet_rs_py import (
+     AccountTransaction,
+     InvokeFunction,
+     Transaction,
+diff --git a/starknet_devnet/blueprints/gateway.py b/starknet_devnet/blueprints/gateway.py
+index 4714ce7..e5b94d4 100644
+--- a/starknet_devnet/blueprints/gateway.py
++++ b/starknet_devnet/blueprints/gateway.py
+@@ -3,7 +3,7 @@ Gateway routes
+ """
+ 
+ from flask import Blueprint, jsonify, request
+-from starkware.starknet.definitions.transaction_type import TransactionType
++from starknet_rs_py import TransactionType
+ from starkware.starkware_utils.error_handling import StarkErrorCode
+ 
+ from starknet_devnet.devnet_config import DumpOn
+diff --git a/starknet_devnet/blueprints/postman.py b/starknet_devnet/blueprints/postman.py
+index 99f3909..77a6866 100644
+--- a/starknet_devnet/blueprints/postman.py
++++ b/starknet_devnet/blueprints/postman.py
+@@ -5,8 +5,8 @@ Postman routes.
+ import json
+ 
+ from flask import Blueprint, jsonify, request
+-from starkware.starknet.business_logic.transaction.objects import InternalL1Handler
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
++from starknet_rs_py import InternalL1Handler
++from starknet_rs_py import StarknetErrorCode
+ from starkware.starkware_utils.error_handling import StarkErrorCode
+ 
+ from starknet_devnet.blueprints.base import hex_converter
+diff --git a/starknet_devnet/blueprints/rpc/misc.py b/starknet_devnet/blueprints/rpc/misc.py
+index 3d4e0d6..7eb82ed 100644
+--- a/starknet_devnet/blueprints/rpc/misc.py
++++ b/starknet_devnet/blueprints/rpc/misc.py
+@@ -6,7 +6,7 @@ from __future__ import annotations
+ 
+ from typing import List, Union
+ 
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import (
+     LATEST_BLOCK_ID,
+     PENDING_BLOCK_ID,
+     BlockStatus,
+diff --git a/starknet_devnet/blueprints/rpc/structures/payloads.py b/starknet_devnet/blueprints/rpc/structures/payloads.py
+index 28f24df..638360a 100644
+--- a/starknet_devnet/blueprints/rpc/structures/payloads.py
++++ b/starknet_devnet/blueprints/rpc/structures/payloads.py
+@@ -7,11 +7,11 @@ from __future__ import annotations
+ from typing import Callable, List, Optional, Union
+ 
+ from marshmallow.exceptions import MarshmallowError
+-from starkware.starknet.definitions.general_config import StarknetGeneralConfig
+-from starkware.starknet.public.abi import AbiEntryType
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.feeder_gateway.request_objects import CallFunction
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import StarknetGeneralConfig
++from starknet_rs_py import AbiEntryType
++from starknet_rs_py import ContractClass
++from starknet_rs_py import CallFunction
++from starknet_rs_py import (
+     BlockStateUpdate,
+     DeclareSpecificInfo,
+     DeployAccountSpecificInfo,
+@@ -23,13 +23,13 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
+     TransactionSpecificInfo,
+     TransactionType,
+ )
+-from starkware.starknet.services.api.gateway.transaction import (
++from starknet_rs_py import (
+     Declare,
+     Deploy,
+     DeployAccount,
+     InvokeFunction,
+ )
+-from starkware.starknet.services.api.gateway.transaction_utils import (
++from starknet_rs_py import (
+     compress_program,
+     decompress_program,
+ )
+diff --git a/starknet_devnet/blueprints/rpc/structures/responses.py b/starknet_devnet/blueprints/rpc/structures/responses.py
+index 4fb8b10..8b9aa56 100644
+--- a/starknet_devnet/blueprints/rpc/structures/responses.py
++++ b/starknet_devnet/blueprints/rpc/structures/responses.py
+@@ -3,8 +3,8 @@ RPC response structures
+ """
+ from typing import Dict, List, TypedDict
+ 
+-from starkware.starknet.definitions.transaction_type import TransactionType
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import TransactionType
++from starknet_rs_py import (
+     TransactionReceipt,
+     TransactionStatus,
+ )
+diff --git a/starknet_devnet/blueprints/rpc/structures/types.py b/starknet_devnet/blueprints/rpc/structures/types.py
+index 27dc2f5..4cef65f 100644
+--- a/starknet_devnet/blueprints/rpc/structures/types.py
++++ b/starknet_devnet/blueprints/rpc/structures/types.py
+@@ -6,9 +6,9 @@ import json
+ from enum import Enum
+ from typing import List, Union
+ 
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.definitions.transaction_type import TransactionType
+-from starkware.starknet.services.api.feeder_gateway.response_objects import BlockStatus
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import TransactionType
++from starknet_rs_py import BlockStatus
+ from typing_extensions import Literal, TypedDict
+ 
+ from ..rpc_spec import RPC_SPECIFICATION
+diff --git a/starknet_devnet/blueprints/rpc/transactions.py b/starknet_devnet/blueprints/rpc/transactions.py
+index 8d15bd0..c6167d5 100644
+--- a/starknet_devnet/blueprints/rpc/transactions.py
++++ b/starknet_devnet/blueprints/rpc/transactions.py
+@@ -4,10 +4,10 @@ RPC transaction endpoints
+ 
+ from typing import List
+ 
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import (
+     TransactionStatus,
+ )
+-from starkware.starknet.services.api.gateway.transaction import AccountTransaction
++from starknet_rs_py import AccountTransaction
+ from starkware.starkware_utils.error_handling import StarkException
+ 
+ from starknet_devnet.blueprints.rpc.schema import validate_schema
+diff --git a/starknet_devnet/blueprints/rpc/utils.py b/starknet_devnet/blueprints/rpc/utils.py
+index aaaa2ec..daf177c 100644
+--- a/starknet_devnet/blueprints/rpc/utils.py
++++ b/starknet_devnet/blueprints/rpc/utils.py
+@@ -3,7 +3,7 @@ RPC utilities
+ """
+ from typing import Union
+ 
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import (
+     StarknetBlock,
+ )
+ 
+diff --git a/starknet_devnet/blueprints/shared.py b/starknet_devnet/blueprints/shared.py
+index 7727eae..c4c87f1 100644
+--- a/starknet_devnet/blueprints/shared.py
++++ b/starknet_devnet/blueprints/shared.py
+@@ -3,7 +3,7 @@ Shared functions between blueprints
+ """
+ 
+ from marshmallow import ValidationError
+-from starkware.starknet.services.api.gateway.transaction import Transaction
++from starknet_rs_py import Transaction
+ from starkware.starkware_utils.error_handling import StarkErrorCode
+ 
+ from starknet_devnet.constants import CAIRO_LANG_VERSION
+diff --git a/starknet_devnet/cairo_rs_py_patch.py b/starknet_devnet/cairo_rs_py_patch.py
+index 8a00a5b..f598ce6 100644
+--- a/starknet_devnet/cairo_rs_py_patch.py
++++ b/starknet_devnet/cairo_rs_py_patch.py
+@@ -30,26 +30,25 @@ from starkware.cairo.lang.vm.vm_exceptions import (
+     VmExceptionBase,
+ )
+ from starkware.python.utils import safe_zip
+-from starkware.starknet.business_logic.execution.execute_entry_point import (
++from starknet_rs_py import (
+     FAULTY_CLASS_HASH,
+     ExecuteEntryPoint,
+ )
+-from starkware.starknet.business_logic.execution.objects import (
++from starknet_rs_py import (
+     TransactionExecutionContext,
+ )
+-from starkware.starknet.business_logic.fact_state.state import ExecutionResourcesManager
+-from starkware.starknet.business_logic.state.state_api import SyncState
+-from starkware.starknet.business_logic.utils import validate_contract_deployed
++from starknet_rs_py import ExecutionResourcesManager
++from starknet_rs_py import SyncState
++from starknet_rs_py import validate_contract_deployed
+ from starkware.starknet.core.os import os_utils, segment_utils, syscall_utils
+-from starkware.starknet.core.os.class_hash import (
++from starknet_rs_py import (
+     get_contract_class_struct,
+     load_program,
+ )
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.definitions.general_config import StarknetGeneralConfig
+-from starkware.starknet.public import abi as starknet_abi
+-from starkware.starknet.public.abi import SYSCALL_PTR_OFFSET
+-from starkware.starknet.services.api.contract_class import ContractClass
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import StarknetGeneralConfig
++from starknet_rs_py import SYSCALL_PTR_OFFSET
++from starknet_rs_py import ContractClass
+ from starkware.starkware_utils.error_handling import (
+     ErrorCode,
+     StarkException,
+@@ -105,7 +104,7 @@ def cairo_rs_py_run(
+     validate_contract_deployed(state=state, contract_address=self.contract_address)
+ 
+     initial_syscall_ptr = cast(
+-        RelocatableValue, os_context[starknet_abi.SYSCALL_PTR_OFFSET]
++        RelocatableValue, os_context[SYSCALL_PTR_OFFSET]
+     )
+     syscall_handler = syscall_utils.BusinessLogicSysCallHandler(
+         execute_entry_point_cls=ExecuteEntryPoint,
+diff --git a/starknet_devnet/contract_class_wrapper.py b/starknet_devnet/contract_class_wrapper.py
+index 7eb1fae..be5a72c 100644
+--- a/starknet_devnet/contract_class_wrapper.py
++++ b/starknet_devnet/contract_class_wrapper.py
+@@ -4,7 +4,7 @@ import os
+ from dataclasses import dataclass
+ 
+ from starkware.python.utils import to_bytes
+-from starkware.starknet.services.api.contract_class import ContractClass
++from starknet_rs_py import ContractClass
+ 
+ 
+ @dataclass
+diff --git a/starknet_devnet/devnet_config.py b/starknet_devnet/devnet_config.py
+index 08f7daa..24fc6b5 100644
+--- a/starknet_devnet/devnet_config.py
++++ b/starknet_devnet/devnet_config.py
+@@ -13,10 +13,10 @@ from aiohttp.client_exceptions import ClientConnectorError, InvalidURL
+ from marshmallow.exceptions import ValidationError
+ from services.external_api.client import BadRequest, RetryConfig
+ from starkware.python.utils import to_bytes
+-from starkware.starknet.core.os.class_hash import compute_class_hash
+-from starkware.starknet.definitions.general_config import StarknetChainId
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.feeder_gateway.feeder_gateway_client import (
++from starknet_rs_py import compute_class_hash
++from starknet_rs_py import StarknetChainId
++from starknet_rs_py import ContractClass
++from starknet_rs_py import (
+     FeederGatewayClient,
+ )
+ 
+diff --git a/starknet_devnet/fee_token.py b/starknet_devnet/fee_token.py
+index 0e646b4..b0d3222 100644
+--- a/starknet_devnet/fee_token.py
++++ b/starknet_devnet/fee_token.py
+@@ -4,11 +4,12 @@ Fee token and its predefined constants.
+ 
+ from starkware.python.utils import to_bytes
+ from starkware.solidity.utils import load_nearby_contract
+-from starkware.starknet.compiler.compile import get_selector_from_name
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.gateway.transaction import InvokeFunction
+-from starkware.starknet.testing.contract import StarknetContract
+-from starkware.starknet.testing.starknet import Starknet
++
++from starknet_rs_py import get_selector_from_name
++from starknet_rs_py import ContractClass
++from starknet_rs_py import InvokeFunction
++from starknet_rs_py import StarknetContract
++from starknet_rs_py import Starknet
+ 
+ from starknet_devnet.account_util import get_execute_args
+ from starknet_devnet.chargeable_account import ChargeableAccount
+diff --git a/starknet_devnet/forked_state.py b/starknet_devnet/forked_state.py
+index 419e4ab..69735fc 100644
+--- a/starknet_devnet/forked_state.py
++++ b/starknet_devnet/forked_state.py
+@@ -5,16 +5,16 @@ import json
+ 
+ from services.external_api.client import BadRequest
+ from starkware.python.utils import to_bytes
+-from starkware.starknet.business_logic.state.state import BlockInfo, CachedState
+-from starkware.starknet.business_logic.state.state_api import StateReader
+-from starkware.starknet.definitions.constants import UNINITIALIZED_CLASS_HASH
+-from starkware.starknet.definitions.general_config import StarknetChainId
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.feeder_gateway.feeder_gateway_client import (
++from starknet_rs_py import BlockInfo, CachedState
++from starknet_rs_py import StateReader
++from starknet_rs_py import UNINITIALIZED_CLASS_HASH
++from starknet_rs_py import StarknetChainId
++from starknet_rs_py import ContractClass
++from starknet_rs_py import (
+     FeederGatewayClient,
+ )
+-from starkware.starknet.testing.starknet import Starknet
+-from starkware.starknet.testing.state import StarknetState
++from starknet_rs_py import Starknet
++from starknet_rs_py import StarknetState
+ from starkware.starkware_utils.error_handling import StarkException
+ 
+ from .block_info_generator import now
+diff --git a/starknet_devnet/general_config.py b/starknet_devnet/general_config.py
+index 2a3d036..4ab9189 100644
+--- a/starknet_devnet/general_config.py
++++ b/starknet_devnet/general_config.py
+@@ -1,8 +1,14 @@
+ """
+ Contains general_config generation functionalities.
+ """
+-from starkware.starknet.definitions import constants
+-from starkware.starknet.definitions.general_config import (
++from starknet_rs_py import (
++    N_STEPS_FEE_WEIGHT,
++    CONTRACT_STATES_COMMITMENT_TREE_HEIGHT,
++    EVENT_COMMITMENT_TREE_HEIGHT,
++    CONTRACT_ADDRESS_BITS,
++    TRANSACTION_COMMITMENT_TREE_HEIGHT
++)
++from starknet_rs_py import (
+     DEFAULT_GAS_PRICE,
+     DEFAULT_MAX_STEPS,
+     DEFAULT_SEQUENCER_ADDRESS,
+@@ -20,11 +26,11 @@ def build_devnet_general_config(chain_id: StarknetChainId):
+     return build_general_config(
+         {
+             "cairo_resource_fee_weights": {
+-                "n_steps": constants.N_STEPS_FEE_WEIGHT,
++                "n_steps": N_STEPS_FEE_WEIGHT,
+             },
+-            "contract_storage_commitment_tree_height": constants.CONTRACT_STATES_COMMITMENT_TREE_HEIGHT,
+-            "event_commitment_tree_height": constants.EVENT_COMMITMENT_TREE_HEIGHT,
+-            "global_state_commitment_tree_height": constants.CONTRACT_ADDRESS_BITS,
++            "contract_storage_commitment_tree_height": CONTRACT_STATES_COMMITMENT_TREE_HEIGHT,
++            "event_commitment_tree_height": EVENT_COMMITMENT_TREE_HEIGHT,
++            "global_state_commitment_tree_height": CONTRACT_ADDRESS_BITS,
+             "invoke_tx_max_n_steps": DEFAULT_MAX_STEPS,
+             "min_gas_price": DEFAULT_GAS_PRICE,
+             "sequencer_address": hex(DEFAULT_SEQUENCER_ADDRESS),
+@@ -33,7 +39,7 @@ def build_devnet_general_config(chain_id: StarknetChainId):
+                 "fee_token_address": hex(FeeToken.ADDRESS),
+             },
+             "tx_version": SUPPORTED_TX_VERSION,
+-            "tx_commitment_tree_height": constants.TRANSACTION_COMMITMENT_TREE_HEIGHT,
++            "tx_commitment_tree_height": TRANSACTION_COMMITMENT_TREE_HEIGHT,
+             "validate_max_n_steps": DEFAULT_VALIDATE_MAX_STEPS,
+         }
+     )
+diff --git a/starknet_devnet/origin.py b/starknet_devnet/origin.py
+index 5069543..b161a9f 100644
+--- a/starknet_devnet/origin.py
++++ b/starknet_devnet/origin.py
+@@ -3,11 +3,11 @@ Contains classes that provide the abstraction of L2 blockchain.
+ """
+ 
+ from services.external_api.client import BadRequest
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.services.api.feeder_gateway.feeder_gateway_client import (
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import (
+     FeederGatewayClient,
+ )
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import (
+     StarknetBlock,
+     TransactionInfo,
+     TransactionReceipt,
+diff --git a/starknet_devnet/postman_wrapper.py b/starknet_devnet/postman_wrapper.py
+index 65a28df..a8e82e8 100644
+--- a/starknet_devnet/postman_wrapper.py
++++ b/starknet_devnet/postman_wrapper.py
+@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
+ 
+ from starkware.eth.eth_test_utils import EthAccount, EthContract
+ from starkware.solidity.utils import load_nearby_contract
+-from starkware.starknet.business_logic.transaction.objects import InternalL1Handler
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.testing.starknet import Starknet
++from starknet_rs_py import InternalL1Handler
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import Starknet
+ from web3 import HTTPProvider, Web3
+ from web3.middleware import geth_poa_middleware
+ 
+diff --git a/starknet_devnet/sequencer_api_utils.py b/starknet_devnet/sequencer_api_utils.py
+index 8ed2ee8..e2ccbab 100644
+--- a/starknet_devnet/sequencer_api_utils.py
++++ b/starknet_devnet/sequencer_api_utils.py
+@@ -7,25 +7,25 @@ Copied from https://github.com/starkware-libs/cairo-lang/blob/v0.10.0-pre/src/st
+ from typing import Optional, Tuple, Type
+ 
+ from services.everest.api.gateway.transaction import EverestTransaction
+-from starkware.starknet.business_logic.execution.objects import (
++from starknet_rs_py import (
+     CallInfo,
+     ResourcesMapping,
+ )
+-from starkware.starknet.business_logic.state.state_api import SyncState
+-from starkware.starknet.business_logic.transaction.fee import calculate_tx_fee
+-from starkware.starknet.business_logic.transaction.objects import (
++from starknet_rs_py import SyncState
++from starknet_rs_py import calculate_tx_fee
++from starknet_rs_py import (
+     InternalAccountTransaction,
+     InternalDeclare,
+     InternalDeployAccount,
+     InternalInvokeFunction,
+     InternalTransaction,
+ )
+-from starkware.starknet.business_logic.utils import verify_version
+-from starkware.starknet.definitions.general_config import StarknetGeneralConfig
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import verify_version
++from starknet_rs_py import StarknetGeneralConfig
++from starknet_rs_py import (
+     FeeEstimationInfo,
+ )
+-from starkware.starknet.services.api.gateway.transaction import (
++from starknet_rs_py import (
+     AccountTransaction,
+     Declare,
+     DeployAccount,
+diff --git a/starknet_devnet/starknet_wrapper.py b/starknet_devnet/starknet_wrapper.py
+index ff38d1c..0ed0f71 100644
+--- a/starknet_devnet/starknet_wrapper.py
++++ b/starknet_devnet/starknet_wrapper.py
+@@ -7,9 +7,9 @@ from types import TracebackType
+ from typing import Dict, List, Optional, Set, Tuple, Type, Union
+ 
+ import cloudpickle as pickle
+-from starkware.starknet.business_logic.state.state import BlockInfo, CachedState
+-from starkware.starknet.business_logic.transaction.fee import calculate_tx_fee
+-from starkware.starknet.business_logic.transaction.objects import (
++from starknet_rs_py import BlockInfo, CachedState
++from starknet_rs_py import calculate_tx_fee
++from starknet_rs_py import (
+     CallInfo,
+     InternalDeclare,
+     InternalDeploy,
+@@ -19,20 +19,20 @@ from starkware.starknet.business_logic.transaction.objects import (
+     InternalTransaction,
+     TransactionExecutionInfo,
+ )
+-from starkware.starknet.core.os.contract_address.contract_address import (
++from starknet_rs_py import (
+     calculate_contract_address_from_hash,
+ )
+-from starkware.starknet.core.os.transaction_hash.transaction_hash import (
++from starknet_rs_py import (
+     calculate_deploy_transaction_hash,
+ )
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.definitions.transaction_type import TransactionType
+-from starkware.starknet.services.api.contract_class import ContractClass, EntryPointType
+-from starkware.starknet.services.api.feeder_gateway.request_objects import (
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import TransactionType
++from starknet_rs_py import ContractClass, EntryPointType
++from starknet_rs_py import (
+     CallFunction,
+     CallL1Handler,
+ )
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import (
+     LATEST_BLOCK_ID,
+     PENDING_BLOCK_ID,
+     BlockStateUpdate,
+@@ -43,16 +43,16 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
+     TransactionStatus,
+     TransactionTrace,
+ )
+-from starkware.starknet.services.api.gateway.transaction import (
++from starknet_rs_py import (
+     Declare,
+     Deploy,
+     DeployAccount,
+     InvokeFunction,
+ )
+-from starkware.starknet.services.api.messages import StarknetMessageToL1
+-from starkware.starknet.testing.objects import FunctionInvocation
+-from starkware.starknet.testing.starknet import Starknet
+-from starkware.starknet.third_party.open_zeppelin.starknet_contracts import (
++from starknet_rs_py import StarknetMessageToL1
++from starknet_rs_py import FunctionInvocation
++from starknet_rs_py import Starknet
++from starknet_rs_py import (
+     account_contract as oz_account_class,
+ )
+ from starkware.starkware_utils.error_handling import StarkErrorCode, StarkException
+diff --git a/starknet_devnet/state_archive.py b/starknet_devnet/state_archive.py
+index 95e3ab2..57df788 100644
+--- a/starknet_devnet/state_archive.py
++++ b/starknet_devnet/state_archive.py
+@@ -4,8 +4,8 @@ Stores StarkNet states
+ 
+ import shelve
+ 
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.testing.state import StarknetState
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import StarknetState
+ 
+ from .util import StarknetDevnetException
+ 
+diff --git a/starknet_devnet/transactions.py b/starknet_devnet/transactions.py
+index d7aa7b7..03fea29 100644
+--- a/starknet_devnet/transactions.py
++++ b/starknet_devnet/transactions.py
+@@ -7,13 +7,13 @@ from typing import Dict, List
+ from services.everest.business_logic.transaction_execution_objects import (
+     TransactionFailureReason,
+ )
+-from starkware.starknet.business_logic.transaction.objects import (
++from starknet_rs_py import (
+     InternalDeclare,
+     InternalDeploy,
+     InternalTransaction,
+ )
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import (
+     Event,
+     FunctionInvocation,
+     L2ToL1Message,
+@@ -24,7 +24,7 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
+     TransactionStatus,
+     TransactionTrace,
+ )
+-from starkware.starknet.testing.starknet import (
++from starknet_rs_py import (
+     StarknetCallInfo,
+     TransactionExecutionInfo,
+ )
+diff --git a/starknet_devnet/udc.py b/starknet_devnet/udc.py
+index 5799dba..cae8255 100644
+--- a/starknet_devnet/udc.py
++++ b/starknet_devnet/udc.py
+@@ -2,8 +2,9 @@
+ 
+ from starkware.python.utils import to_bytes
+ from starkware.solidity.utils import load_nearby_contract
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.testing.starknet import Starknet
++
++from starknet_rs_py import ContractClass
++from starknet_rs_py import Starknet
+ 
+ 
+ class UDC:
+diff --git a/starknet_devnet/util.py b/starknet_devnet/util.py
+index ea98aa9..4b1f92c 100644
+--- a/starknet_devnet/util.py
++++ b/starknet_devnet/util.py
+@@ -7,15 +7,17 @@ import sys
+ from dataclasses import dataclass
+ from typing import Dict, List, Set, Union
+ 
+-from starkware.starknet.business_logic.state.state import CachedState
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import CachedState
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import (
+     DeployedContract,
+     FeeEstimationInfo,
+     StorageEntry,
+ )
+-from starkware.starknet.testing.contract import StarknetContract
+-from starkware.starkware_utils.error_handling import StarkException
++
++from starknet_rs_py import StarknetContract
++from starknet_rs_py import StarkErrorCode, StarkException
++
+ 
+ 
+ def custom_int(arg: str) -> int:
+diff --git a/test/account.py b/test/account.py
+index 181d822..49c2fb2 100644
+--- a/test/account.py
++++ b/test/account.py
+@@ -7,11 +7,11 @@ from typing import List, Tuple
+ 
+ import requests
+ from starkware.crypto.signature.signature import private_to_stark_key, sign
+-from starkware.starknet.core.os.transaction_hash.transaction_hash import (
++from starknet_rs_py import (
+     calculate_declare_transaction_hash,
+ )
+-from starkware.starknet.definitions.constants import QUERY_VERSION
+-from starkware.starknet.definitions.general_config import StarknetChainId
++from starknet_rs_py import QUERY_VERSION
++from starknet_rs_py import StarknetChainId
+ 
+ from starknet_devnet.account_util import AccountCall, get_execute_args
+ 
+diff --git a/test/rpc/conftest.py b/test/rpc/conftest.py
+index 345be48..44d004f 100644
+--- a/test/rpc/conftest.py
++++ b/test/rpc/conftest.py
+@@ -17,22 +17,22 @@ from test.util import load_file_content, mint
+ from typing import Tuple, cast
+ 
+ import pytest
+-from starkware.starknet.business_logic.transaction.objects import InternalDeployAccount
+-from starkware.starknet.core.os.class_hash import compute_class_hash
+-from starkware.starknet.definitions.general_config import DEFAULT_CHAIN_ID
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import InternalDeployAccount
++from starknet_rs_py import compute_class_hash
++from starknet_rs_py import DEFAULT_CHAIN_ID
++from starknet_rs_py import ContractClass
++from starknet_rs_py import (
+     DeployAccountSpecificInfo,
+ )
+-from starkware.starknet.services.api.gateway.transaction import (
++from starknet_rs_py import (
+     Deploy,
+     DeployAccount,
+     Transaction,
+ )
+-from starkware.starknet.third_party.open_zeppelin.starknet_contracts import (
++from starknet_rs_py import (
+     account_contract as oz_account_class,
+ )
+-from starkware.starknet.wallets.open_zeppelin import sign_deploy_account_tx
++from starknet_rs_py import sign_deploy_account_tx
+ 
+ from starknet_devnet.blueprints.rpc.structures.payloads import (
+     RpcDeployAccountTransaction,
+diff --git a/test/rpc/test_rpc_call.py b/test/rpc/test_rpc_call.py
+index 35d23ec..bacd200 100644
+--- a/test/rpc/test_rpc_call.py
++++ b/test/rpc/test_rpc_call.py
+@@ -6,7 +6,7 @@ from test.rpc.rpc_utils import get_block_with_transaction, rpc_call
+ from test.shared import PREDEPLOYED_ACCOUNT_ADDRESS, PREDEPLOYED_ACCOUNT_PRIVATE_KEY
+ 
+ import pytest
+-from starkware.starknet.public.abi import get_selector_from_name
++from starknet_rs_py import get_selector_from_name
+ 
+ from starknet_devnet.blueprints.rpc.structures.types import PredefinedRpcErrorCode
+ from starknet_devnet.blueprints.rpc.utils import rpc_felt
+diff --git a/test/rpc/test_rpc_class.py b/test/rpc/test_rpc_class.py
+index 69ed65b..207abbe 100644
+--- a/test/rpc/test_rpc_class.py
++++ b/test/rpc/test_rpc_class.py
+@@ -4,7 +4,7 @@ Tests RPC contract class
+ from test.rpc.rpc_utils import rpc_call
+ 
+ import pytest
+-from starkware.starknet.services.api.gateway.transaction_utils import decompress_program
++from starknet_rs_py import decompress_program
+ 
+ from starknet_devnet.blueprints.rpc.utils import BlockId, rpc_felt
+ 
+diff --git a/test/rpc/test_rpc_estimate_fee.py b/test/rpc/test_rpc_estimate_fee.py
+index 040ad71..165db6f 100644
+--- a/test/rpc/test_rpc_estimate_fee.py
++++ b/test/rpc/test_rpc_estimate_fee.py
+@@ -16,16 +16,16 @@ from test.shared import (
+ from test.test_account import deploy_empty_contract
+ 
+ import pytest
+-from starkware.starknet.core.os.transaction_hash.transaction_hash import (
++from starknet_rs_py import (
+     calculate_declare_transaction_hash,
+ )
+-from starkware.starknet.definitions.general_config import StarknetChainId
+-from starkware.starknet.public.abi import get_selector_from_name
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.gateway.transaction import (
++from starknet_rs_py import StarknetChainId
++from starknet_rs_py import get_selector_from_name
++from starknet_rs_py import ContractClass
++from starknet_rs_py import (
+     DEFAULT_DECLARE_SENDER_ADDRESS,
+ )
+-from starkware.starknet.services.api.gateway.transaction_utils import decompress_program
++from starknet_rs_py import decompress_program
+ 
+ from starknet_devnet.account_util import get_execute_args
+ from starknet_devnet.blueprints.rpc.structures.payloads import (
+diff --git a/test/rpc/test_rpc_misc.py b/test/rpc/test_rpc_misc.py
+index f4011ca..8906359 100644
+--- a/test/rpc/test_rpc_misc.py
++++ b/test/rpc/test_rpc_misc.py
+@@ -27,7 +27,7 @@ from test.test_state_update import get_class_hash_at_path
+ from test.util import assert_hex_equal, assert_transaction, deploy
+ 
+ import pytest
+-from starkware.starknet.public.abi import get_storage_var_address
++from starknet_rs_py import get_storage_var_address
+ 
+ from starknet_devnet.blueprints.rpc.structures.types import PredefinedRpcErrorCode
+ from starknet_devnet.blueprints.rpc.utils import rpc_felt
+diff --git a/test/rpc/test_rpc_schema.py b/test/rpc/test_rpc_schema.py
+index c5393de..d760682 100644
+--- a/test/rpc/test_rpc_schema.py
++++ b/test/rpc/test_rpc_schema.py
+@@ -6,7 +6,7 @@ from test.util import devnet_in_background
+ from unittest.mock import MagicMock, patch
+ 
+ import pytest
+-from starkware.starknet.public.abi import get_selector_from_name
++from starknet_rs_py import get_selector_from_name
+ 
+ from starknet_devnet.blueprints.rpc.schema import _assert_valid_rpc_request
+ from starknet_devnet.blueprints.rpc.structures.types import PredefinedRpcErrorCode
+diff --git a/test/rpc/test_rpc_storage.py b/test/rpc/test_rpc_storage.py
+index 7c6206d..bf82751 100644
+--- a/test/rpc/test_rpc_storage.py
++++ b/test/rpc/test_rpc_storage.py
+@@ -4,7 +4,7 @@ Tests RPC storage
+ from test.rpc.rpc_utils import rpc_call
+ 
+ import pytest
+-from starkware.starknet.public.abi import get_storage_var_address
++from starknet_rs_py import get_storage_var_address
+ 
+ from starknet_devnet.blueprints.rpc.utils import rpc_felt
+ 
+diff --git a/test/rpc/test_rpc_transactions.py b/test/rpc/test_rpc_transactions.py
+index 1b2bc6f..3fa6879 100644
+--- a/test/rpc/test_rpc_transactions.py
++++ b/test/rpc/test_rpc_transactions.py
+@@ -26,19 +26,19 @@ from test.util import assert_tx_status, call, deploy, load_contract_class, mint,
+ from typing import List
+ 
+ import pytest
+-from starkware.starknet.core.os.transaction_hash.transaction_hash import (
++from starknet_rs_py import (
+     calculate_declare_transaction_hash,
+ )
+-from starkware.starknet.definitions.general_config import (
++from starknet_rs_py import (
+     DEFAULT_CHAIN_ID,
+     StarknetChainId,
+ )
+-from starkware.starknet.definitions.transaction_type import TransactionType
+-from starkware.starknet.public.abi import (
++from starknet_rs_py import TransactionType
++from starknet_rs_py import (
+     get_selector_from_name,
+     get_storage_var_address,
+ )
+-from starkware.starknet.wallets.open_zeppelin import sign_invoke_tx
++from starknet_rs_py import sign_invoke_tx
+ 
+ from starknet_devnet.account_util import get_execute_args
+ from starknet_devnet.blueprints.rpc.structures.payloads import (
+diff --git a/test/shared.py b/test/shared.py
+index 20127a6..0d51f65 100644
+--- a/test/shared.py
++++ b/test/shared.py
+@@ -2,7 +2,7 @@
+ 
+ import json
+ 
+-from starkware.starknet.third_party.open_zeppelin.starknet_contracts import (
++from starknet_rs_py import (
+     account_contract as oz_account_class,
+ )
+ 
+diff --git a/test/test_account_custom.py b/test/test_account_custom.py
+index 8cc6292..a84e536 100644
+--- a/test/test_account_custom.py
++++ b/test/test_account_custom.py
+@@ -4,8 +4,8 @@ import os
+ import subprocess
+ 
+ import pytest
+-from starkware.starknet.core.os.class_hash import compute_class_hash
+-from starkware.starknet.services.api.contract_class import ContractClass
++from starknet_rs_py import compute_class_hash
++from starknet_rs_py import ContractClass
+ 
+ from .account import invoke
+ from .shared import (
+diff --git a/test/test_account_predeployed.py b/test/test_account_predeployed.py
+index a85fd78..3e6dff6 100644
+--- a/test/test_account_predeployed.py
++++ b/test/test_account_predeployed.py
+@@ -2,7 +2,7 @@
+ 
+ import pytest
+ import requests
+-from starkware.starknet.core.os.class_hash import compute_class_hash
++from starknet_rs_py import compute_class_hash
+ 
+ from starknet_devnet.chargeable_account import ChargeableAccount
+ from starknet_devnet.contract_class_wrapper import (
+diff --git a/test/test_blocks_on_demand.py b/test/test_blocks_on_demand.py
+index 7e89577..3f0ea2f 100644
+--- a/test/test_blocks_on_demand.py
++++ b/test/test_blocks_on_demand.py
+@@ -3,7 +3,7 @@ Test blocks on demand mode.
+ """
+ 
+ import requests
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
++from starknet_rs_py import StarknetErrorCode
+ 
+ from starknet_devnet.blueprints.rpc.utils import rpc_felt
+ 
+diff --git a/test/test_calls_by_block_id.py b/test/test_calls_by_block_id.py
+index e573242..3048de0 100644
+--- a/test/test_calls_by_block_id.py
++++ b/test/test_calls_by_block_id.py
+@@ -1,6 +1,6 @@
+ """Test old block support"""
+ 
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
++from starknet_rs_py import StarknetErrorCode
+ 
+ from .account import invoke
+ from .shared import (
+diff --git a/test/test_chain_id_cli_params.py b/test/test_chain_id_cli_params.py
+index afa7940..3734d07 100644
+--- a/test/test_chain_id_cli_params.py
++++ b/test/test_chain_id_cli_params.py
+@@ -3,7 +3,7 @@
+ import subprocess
+ 
+ import pytest
+-from starkware.starknet.definitions.general_config import StarknetChainId
++from starknet_rs_py import StarknetChainId
+ 
+ from starknet_devnet.devnet_config import CHAIN_IDS
+ 
+diff --git a/test/test_declare.py b/test/test_declare.py
+index f32162c..7401e79 100644
+--- a/test/test_declare.py
++++ b/test/test_declare.py
+@@ -4,7 +4,7 @@ Tests of contract class declaration and deploy syscall.
+ 
+ import pytest
+ import requests
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
++from starknet_rs_py import StarknetErrorCode
+ 
+ from .account import declare
+ from .settings import APP_URL
+diff --git a/test/test_deploy.py b/test/test_deploy.py
+index 0b621a9..a6dc10e 100644
+--- a/test/test_deploy.py
++++ b/test/test_deploy.py
+@@ -3,22 +3,22 @@
+ from typing import List
+ 
+ import pytest
+-from starkware.starknet.core.os.contract_address.contract_address import (
++from starknet_rs_py import (
+     calculate_contract_address,
+     compute_class_hash,
+ )
+-from starkware.starknet.definitions.general_config import DEFAULT_CHAIN_ID
+-from starkware.starknet.definitions.transaction_type import TransactionType
+-from starkware.starknet.public.abi import get_selector_from_name
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import DEFAULT_CHAIN_ID
++from starknet_rs_py import TransactionType
++from starknet_rs_py import get_selector_from_name
++from starknet_rs_py import ContractClass
++from starknet_rs_py import (
+     TransactionStatus,
+ )
+-from starkware.starknet.services.api.gateway.transaction import Deploy
+-from starkware.starknet.third_party.open_zeppelin.starknet_contracts import (
++from starknet_rs_py import Deploy
++from starknet_rs_py import (
+     account_contract as oz_account_class,
+ )
+-from starkware.starknet.wallets.open_zeppelin import (
++from starknet_rs_py import (
+     sign_deploy_account_tx,
+     sign_invoke_tx,
+ )
+diff --git a/test/test_endpoints.py b/test/test_endpoints.py
+index e863c13..81240e7 100644
+--- a/test/test_endpoints.py
++++ b/test/test_endpoints.py
+@@ -6,7 +6,7 @@ import json
+ 
+ import pytest
+ import requests
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
++from starknet_rs_py import StarknetErrorCode
+ 
+ from starknet_devnet.constants import DEFAULT_GAS_PRICE
+ from starknet_devnet.server import app
+diff --git a/test/test_estimate_fee.py b/test/test_estimate_fee.py
+index 4ae15bf..e9a80e1 100644
+--- a/test/test_estimate_fee.py
++++ b/test/test_estimate_fee.py
+@@ -5,12 +5,12 @@ import typing
+ 
+ import pytest
+ import requests
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.public.abi import get_selector_from_name
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import get_selector_from_name
++from starknet_rs_py import (
+     FeeEstimationInfo,
+ )
+-from starkware.starknet.services.api.gateway.transaction import AccountTransaction
++from starknet_rs_py import AccountTransaction
+ 
+ from starknet_devnet.constants import DEFAULT_GAS_PRICE
+ 
+diff --git a/test/test_fee_token.py b/test/test_fee_token.py
+index 1cf47f2..c56585a 100644
+--- a/test/test_fee_token.py
++++ b/test/test_fee_token.py
+@@ -4,7 +4,7 @@ import json
+ 
+ import pytest
+ import requests
+-from starkware.starknet.public.abi import get_selector_from_name
++from starknet_rs_py import get_selector_from_name
+ 
+ from starknet_devnet.chargeable_account import ChargeableAccount
+ from starknet_devnet.fee_token import FeeToken
+diff --git a/test/test_fork_feeder_gateway.py b/test/test_fork_feeder_gateway.py
+index 4137bea..5ed2de2 100644
+--- a/test/test_fork_feeder_gateway.py
++++ b/test/test_fork_feeder_gateway.py
+@@ -3,8 +3,8 @@
+ import json
+ 
+ import requests
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import (
+     BlockIdentifier,
+ )
+ 
+diff --git a/test/test_l1_l2_mock_messaging.py b/test/test_l1_l2_mock_messaging.py
+index dc560e2..48e53de 100644
+--- a/test/test_l1_l2_mock_messaging.py
++++ b/test/test_l1_l2_mock_messaging.py
+@@ -3,8 +3,8 @@ Test l1 l2 mock messaging.
+ """
+ 
+ import requests
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.public.abi import get_selector_from_name
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import get_selector_from_name
+ from starkware.starkware_utils.error_handling import StarkErrorCode
+ 
+ from .account import invoke
+diff --git a/test/test_state_update.py b/test/test_state_update.py
+index f821613..11df98a 100644
+--- a/test/test_state_update.py
++++ b/test/test_state_update.py
+@@ -6,8 +6,8 @@ import re
+ 
+ import pytest
+ import requests
+-from starkware.starknet.core.os.class_hash import compute_class_hash
+-from starkware.starknet.public.abi import get_selector_from_name
++from starknet_rs_py import compute_class_hash
++from starknet_rs_py import get_selector_from_name
+ 
+ from .account import declare, invoke
+ from .settings import APP_URL
+diff --git a/test/test_transaction_trace.py b/test/test_transaction_trace.py
+index 1edc6d0..d978619 100644
+--- a/test/test_transaction_trace.py
++++ b/test/test_transaction_trace.py
+@@ -4,7 +4,7 @@ Test get_transaction endpoint
+ 
+ import pytest
+ import requests
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
++from starknet_rs_py import (
+     BlockTransactionTraces,
+ )
+ 
+diff --git a/test/test_tx_version.py b/test/test_tx_version.py
+index 00f084b..713946f 100644
+--- a/test/test_tx_version.py
++++ b/test/test_tx_version.py
+@@ -3,7 +3,7 @@ Test transaction version
+ """
+ 
+ import pytest
+-from starkware.starknet.definitions.constants import TRANSACTION_VERSION
++from starknet_rs_py import TRANSACTION_VERSION
+ 
+ from .account import invoke
+ from .shared import (
+diff --git a/test/util.py b/test/util.py
+index 5873dc2..14eae04 100644
+--- a/test/util.py
++++ b/test/util.py
+@@ -12,11 +12,11 @@ from typing import IO, List
+ 
+ import pytest
+ import requests
+-from starkware.starknet.cli.starknet_cli import get_salt
+-from starkware.starknet.definitions.error_codes import StarknetErrorCode
+-from starkware.starknet.definitions.transaction_type import TransactionType
+-from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.gateway.transaction import Deploy
++from starknet_rs_py import get_salt
++from starknet_rs_py import StarknetErrorCode
++from starknet_rs_py import TransactionType
++from starknet_rs_py import ContractClass
++from starknet_rs_py import Deploy
+ 
+ from starknet_devnet.general_config import DEFAULT_GENERAL_CONFIG
+ 
