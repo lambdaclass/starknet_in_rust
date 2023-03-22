@@ -48,14 +48,14 @@ impl StarknetMessageToL1 {
 fn create_starknet_message_to_l1() {
     let from_address: Address = Address(42.into());
     let to_address: Address = Address(1729.into());
-    let payload: Vec<Felt> = Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4)]);
+    let payload: Vec<Felt> = vec![1.into(), 2.into(), 3.into(), 4.into()];
     let message = StarknetMessageToL1::new(from_address, to_address, payload);
 
     assert_eq!(message.from_address, Address(42.into()));
     assert_eq!(message.to_address, Address(1729.into()));
     assert_eq!(
         message.payload,
-        Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4),])
+        vec![1.into(), 2.into(), 3.into(), 4.into()]
     )
 }
 
@@ -64,18 +64,18 @@ fn encode_starknet_message_to_l1() {
     let message = StarknetMessageToL1::new(
         Address(42.into()),
         Address(1729.into()),
-        Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4)]),
+        vec![1.into(), 2.into(), 3.into(), 4.into()],
     );
 
-    let expected_output = Vec::from([
-        Felt::new(42),
-        Felt::new(1729),
-        Felt::new(4),
-        Felt::new(1),
-        Felt::new(2),
-        Felt::new(3),
-        Felt::new(4),
-    ]);
+    let expected_output = vec![
+        42.into(),
+        1729.into(),
+        4.into(),
+        1.into(),
+        2.into(),
+        3.into(),
+        4.into(),
+    ];
 
     assert_eq!(message.encode(), expected_output);
 }
@@ -85,7 +85,7 @@ fn get_hash_for_starknet_message_to_l1() {
     let message = StarknetMessageToL1::new(
         Address(42.into()),
         Address(1729.into()),
-        Vec::from([Felt::new(1), Felt::new(2), Felt::new(3), Felt::new(4)]),
+        vec![1.into(), 2.into(), 3.into(), 4.into()],
     );
 
     assert_eq!(
