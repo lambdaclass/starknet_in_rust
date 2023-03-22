@@ -1,15 +1,17 @@
+use crate::types::{
+    call_info::PyCallInfo, contract_class::PyContractClass,
+    general_config::PyStarknetGeneralConfig, transaction::PyTransaction,
+    transaction_execution_info::PyTransactionExecutionInfo,
+};
 use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
-use starknet_rs::{
-    testing::{starknet_state::StarknetState as InnerStarknetState, type_utils::ExecutionInfo},
-    utils::Address,
+use starknet_rs::testing::starknet_state::StarknetState;
+use starknet_rs::testing::{
+    starknet_state::StarknetState as InnerStarknetState, type_utils::ExecutionInfo,
 };
+use starknet_rs::utils::Address;
 
-use crate::types::{
-    call_info::PyCallInfo, contract_class::PyContractClass, transaction::PyTransaction,
-    transaction_execution_info::PyTransactionExecutionInfo,
-};
 #[pyclass]
 #[pyo3(name = "StarknetState")]
 pub struct PyStarknetState {
@@ -17,6 +19,16 @@ pub struct PyStarknetState {
 }
 
 impl PyStarknetState {
+    pub fn new(config: Option<PyStarknetGeneralConfig>) -> Self {
+        let config = match config {
+            Some(c) => Some(c.inner),
+            None => None,
+        };
+        PyStarknetState {
+            inner: StarknetState::new(config),
+        }
+    }
+
     pub fn declare(
         &mut self,
         contract_class: PyContractClass,

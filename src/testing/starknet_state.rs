@@ -43,8 +43,6 @@ pub struct StarknetState {
 }
 
 impl StarknetState {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
@@ -69,8 +67,6 @@ impl StarknetState {
     /// Returns the class hash and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
@@ -116,8 +112,6 @@ impl StarknetState {
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn execute_entry_point_raw(
         &mut self,
         contract_address: Address,
@@ -157,9 +151,6 @@ impl StarknetState {
     /// contract_class - a compiled StarkNet contract
     /// contract_address_salt
     /// the salt to use for deploying. Otherwise, the salt is randomized.
-    // TODO: ask for contract_address_salt
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn deploy(
         &mut self,
         contract_class: ContractClass,
@@ -218,8 +209,6 @@ impl StarknetState {
     }
 
     /// Consumes the given message hash.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn consume_message_hash(
         &mut self,
         message_hash: Vec<u8>,
