@@ -26,8 +26,7 @@ fn init_pool(
 #[test]
 fn amm_init_pool_test() {
     let general_config = StarknetGeneralConfig::default();
-    let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
     let (contract_address, class_hash) =
         deploy(&mut state, "starknet_programs/amm.json", &general_config);
