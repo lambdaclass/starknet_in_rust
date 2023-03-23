@@ -29,10 +29,6 @@ pub struct CallConfig<'a> {
     pub caller_address: &'a Address,
     pub address: &'a Address,
     pub class_hash: &'a [u8; 32],
-    pub entry_points_by_type: &'a HashMap<
-        EntryPointType,
-        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
-    >,
     pub general_config: &'a StarknetGeneralConfig,
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }

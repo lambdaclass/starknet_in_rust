@@ -72,8 +72,6 @@ impl InternalDeploy {
         })
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }

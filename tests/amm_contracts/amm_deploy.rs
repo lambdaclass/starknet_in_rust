@@ -1,15 +1,19 @@
+use std::path::PathBuf;
+
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::StateReader,
-        transaction::error::TransactionError,
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
+        state::{cached_state::CachedState, state_api::State},
+        transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
-    definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_class::EntryPointType,
-    utils::{calculate_sn_keccak, Address},
+    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+    services::api::contract_class::{ContractClass, EntryPointType},
+    utils::{calculate_sn_keccak, Address, ClassHash},
 };
 
 use crate::amm_contracts::utils::*;
@@ -23,14 +27,30 @@ fn init_pool(
 
 #[test]
 fn amm_init_pool_test() {
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/amm.json", &address, class_hash);
-    let entry_points_by_type = state
-        .get_contract_class(&class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
+    let contract_address = Address(1111.into());
+    // Instantiate CachedState
+    let state_reader = InMemoryStateReader::default();
+    let mut state = CachedState::new(state_reader, Some(Default::default()));
+
+    // Set contract_class
+    let contract_class =
+        ContractClass::try_from(PathBuf::from("starknet_programs/amm.json")).unwrap();
+
+    let internal_deploy = InternalDeploy::new(
+        Address(0.into()),
+        contract_class.clone(),
+        vec![],
+        0.into(),
+        0,
+    )
+    .unwrap();
+    let class_hash = internal_deploy.class_hash();
+    state
+        .set_contract_class(&class_hash, &contract_class)
+        .unwrap();
+
+    let config = Default::default();
+    let _result = internal_deploy.apply(&mut state, &config).unwrap();
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
@@ -59,9 +79,8 @@ fn amm_init_pool_test() {
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
-        address: &address,
+        address: &contract_address,
         class_hash: &class_hash,
-        entry_points_by_type: &entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };

@@ -48,12 +48,6 @@ fn amm_proxy_init_pool_test() {
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
-
     let calldata = [0.into(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -64,7 +58,6 @@ fn amm_proxy_init_pool_test() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
-        entry_points_by_type: &proxy_entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -141,12 +134,6 @@ fn amm_proxy_get_pool_token_balance_test() {
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
-
     let calldata = [0.into(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -157,7 +144,6 @@ fn amm_proxy_get_pool_token_balance_test() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
-        entry_points_by_type: &proxy_entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -241,12 +227,6 @@ fn amm_proxy_add_demo_token_test() {
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
-
     let calldata = [0.into(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -257,7 +237,6 @@ fn amm_proxy_add_demo_token_test() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
-        entry_points_by_type: &proxy_entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -343,12 +322,6 @@ fn amm_proxy_get_account_token_balance() {
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
-
     let calldata = [0.into(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -359,7 +332,6 @@ fn amm_proxy_get_account_token_balance() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
-        entry_points_by_type: &proxy_entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -453,12 +425,6 @@ fn amm_proxyswap() {
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
-
     let calldata = [0.into(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -469,7 +435,6 @@ fn amm_proxyswap() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
-        entry_points_by_type: &proxy_entry_points_by_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
