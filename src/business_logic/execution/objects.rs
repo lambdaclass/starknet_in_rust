@@ -355,17 +355,17 @@ impl TxInfoStruct {
         vm: &VirtualMachine,
         tx_info_ptr: Relocatable,
     ) -> Result<TxInfoStruct, SyscallHandlerError> {
-        let version = get_integer(vm, &tx_info_ptr)?;
+        let version = get_integer(vm, tx_info_ptr)?;
 
-        let account_contract_address = Address(get_big_int(vm, &(&tx_info_ptr + 1))?);
-        let max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
+        let account_contract_address = Address(get_big_int(vm, &tx_info_ptr + 1)?);
+        let max_fee = get_big_int(vm, &tx_info_ptr + 2)?
             .to_u64()
             .ok_or(SyscallHandlerError::FeltToU64Fail)?;
-        let signature_len = get_integer(vm, &(&tx_info_ptr + 3))?;
-        let signature = get_relocatable(vm, &(&tx_info_ptr + 4))?;
-        let transaction_hash = get_big_int(vm, &(&tx_info_ptr + 5))?;
-        let chain_id = get_big_int(vm, &(&tx_info_ptr + 6))?;
-        let nonce = get_big_int(vm, &(&tx_info_ptr + 7))?;
+        let signature_len = get_integer(vm, &tx_info_ptr + 3)?;
+        let signature = get_relocatable(vm, &tx_info_ptr + 4)?;
+        let transaction_hash = get_big_int(vm, &tx_info_ptr + 5)?;
+        let chain_id = get_big_int(vm, &tx_info_ptr + 6)?;
+        let nonce = get_big_int(vm, &tx_info_ptr + 7)?;
 
         Ok(TxInfoStruct {
             version,

@@ -211,11 +211,11 @@ impl FromPtr for EmitEventStruct {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &(syscall_ptr))?;
-        let keys_len = get_integer(vm, &(&syscall_ptr + 1))?;
-        let keys = get_relocatable(vm, &(&syscall_ptr + 2))?;
-        let data_len = get_integer(vm, &(&syscall_ptr + 3))?;
-        let data = get_relocatable(vm, &(&syscall_ptr + 4))?;
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let keys_len = get_integer(vm, &syscall_ptr + 1)?;
+        let keys = get_relocatable(vm, &syscall_ptr + 2)?;
+        let data_len = get_integer(vm, &syscall_ptr + 3)?;
+        let data = get_relocatable(vm, &syscall_ptr + 4)?;
 
         Ok(EmitEventStruct {
             selector,
@@ -233,7 +233,7 @@ impl FromPtr for GetTxInfoRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &(syscall_ptr))?;
+        let selector = get_big_int(vm, syscall_ptr)?;
 
         Ok(GetTxInfoRequest { selector }.into())
     }
@@ -244,11 +244,11 @@ impl FromPtr for LibraryCallStruct {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &(syscall_ptr))?;
-        let class_hash = get_big_int(vm, &(&syscall_ptr + 1))?;
-        let function_selector = get_big_int(vm, &(&syscall_ptr + 2))?;
-        let calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
-        let calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let class_hash = get_big_int(vm, &syscall_ptr + 1)?;
+        let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
+        let calldata_size = get_integer(vm, &syscall_ptr + 3)?;
+        let calldata = get_relocatable(vm, &syscall_ptr + 4)?;
         Ok(LibraryCallStruct {
             selector,
             class_hash,
@@ -265,11 +265,11 @@ impl FromPtr for CallContractRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &(syscall_ptr))?;
-        let contract_address = Address(get_big_int(vm, &(&syscall_ptr + 1))?);
-        let function_selector = get_big_int(vm, &(&syscall_ptr + 2))?;
-        let calldata_size = get_integer(vm, &(&syscall_ptr + 3))?;
-        let calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let contract_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
+        let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
+        let calldata_size = get_integer(vm, &syscall_ptr + 3)?;
+        let calldata = get_relocatable(vm, &syscall_ptr + 4)?;
         Ok(CallContractRequest {
             selector,
             contract_address,
@@ -286,12 +286,12 @@ impl FromPtr for DeployRequestStruct {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
-        let class_hash = get_big_int(vm, &(&syscall_ptr + 1))?;
-        let contract_address_salt = get_big_int(vm, &(&syscall_ptr + 2))?;
-        let constructor_calldata_size = get_big_int(vm, &(&syscall_ptr + 3))?;
-        let constructor_calldata = get_relocatable(vm, &(&syscall_ptr + 4))?;
-        let deploy_from_zero = get_integer(vm, &(&syscall_ptr + 5))?;
+        let _selector = get_big_int(vm, syscall_ptr)?;
+        let class_hash = get_big_int(vm, &syscall_ptr + 1)?;
+        let contract_address_salt = get_big_int(vm, &syscall_ptr + 2)?;
+        let constructor_calldata_size = get_big_int(vm, &syscall_ptr + 3)?;
+        let constructor_calldata = get_relocatable(vm, &syscall_ptr + 4)?;
+        let deploy_from_zero = get_integer(vm, &syscall_ptr + 5)?;
 
         Ok(SyscallRequest::Deploy(DeployRequestStruct {
             _selector,
@@ -309,10 +309,10 @@ impl FromPtr for SendMessageToL1SysCall {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
-        let to_address = Address(get_big_int(vm, &(&syscall_ptr + 1))?);
-        let payload_size = get_integer(vm, &(&syscall_ptr + 2))?;
-        let payload_ptr = get_relocatable(vm, &(&syscall_ptr + 3))?;
+        let _selector = get_big_int(vm, syscall_ptr)?;
+        let to_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
+        let payload_size = get_integer(vm, &syscall_ptr + 2)?;
+        let payload_ptr = get_relocatable(vm, &syscall_ptr + 3)?;
 
         Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
             _selector,
@@ -328,7 +328,7 @@ impl FromPtr for GetCallerAddressRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
+        let _selector = get_big_int(vm, syscall_ptr)?;
 
         Ok(SyscallRequest::GetCallerAddress(GetCallerAddressRequest {
             _selector,
@@ -341,7 +341,7 @@ impl FromPtr for GetBlockTimestampRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &syscall_ptr)?;
+        let selector = get_big_int(vm, syscall_ptr)?;
         Ok(SyscallRequest::GetBlockTimestamp(
             GetBlockTimestampRequest { selector },
         ))
@@ -353,7 +353,7 @@ impl FromPtr for GetSequencerAddressRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
+        let _selector = get_big_int(vm, syscall_ptr)?;
         Ok(SyscallRequest::GetSequencerAddress(
             GetSequencerAddressRequest { _selector },
         ))
@@ -365,7 +365,7 @@ impl FromPtr for GetTxSignatureRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
+        let _selector = get_big_int(vm, syscall_ptr)?;
         Ok(SyscallRequest::GetTxSignature(GetTxSignatureRequest {
             _selector,
         }))
@@ -377,7 +377,7 @@ impl FromPtr for GetBlockNumberRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
+        let _selector = get_big_int(vm, syscall_ptr)?;
 
         Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
             _selector,
@@ -390,7 +390,7 @@ impl FromPtr for GetContractAddressRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, &syscall_ptr)?;
+        let _selector = get_big_int(vm, syscall_ptr)?;
 
         Ok(SyscallRequest::GetContractAddress(
             GetContractAddressRequest { _selector },
@@ -403,8 +403,8 @@ impl FromPtr for StorageReadRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &syscall_ptr)?;
-        let address = Address(get_big_int(vm, &(syscall_ptr + 1)?)?);
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let address = Address(get_big_int(vm, (syscall_ptr + 1)?)?);
 
         Ok(SyscallRequest::StorageRead(StorageReadRequest {
             selector,
@@ -418,9 +418,9 @@ impl FromPtr for StorageWriteRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, &syscall_ptr)?;
-        let address = Address(get_big_int(vm, &(syscall_ptr + 1)?)?);
-        let value = get_big_int(vm, &(syscall_ptr + 2)?)?;
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let address = Address(get_big_int(vm, (syscall_ptr + 1)?)?);
+        let value = get_big_int(vm, (syscall_ptr + 2)?)?;
 
         Ok(SyscallRequest::StorageWrite(StorageWriteRequest {
             selector,

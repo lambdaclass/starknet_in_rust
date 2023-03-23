@@ -263,8 +263,8 @@ where
         let keys_len = request.keys_len;
         let data_len = request.data_len;
         let order = self.tx_execution_context.n_emitted_events;
-        let keys: Vec<Felt252> = get_integer_range(vm, &request.keys, keys_len)?;
-        let data: Vec<Felt252> = get_integer_range(vm, &request.data, data_len)?;
+        let keys: Vec<Felt252> = get_integer_range(vm, request.keys, keys_len)?;
+        let data: Vec<Felt252> = get_integer_range(vm, request.data, data_len)?;
         self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.
@@ -307,7 +307,7 @@ where
 
         let constructor_calldata = get_integer_range(
             vm,
-            &request.constructor_calldata,
+            request.constructor_calldata,
             request
                 .constructor_calldata_size
                 .to_usize()
@@ -374,7 +374,7 @@ where
                 contract_address = self.contract_address.clone();
                 caller_address = self.caller_address.clone();
                 call_type = CallType::Delegate;
-                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
+                call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             SyscallRequest::CallContract(request) => {
                 entry_point_type = match syscall_name {
@@ -386,7 +386,7 @@ where
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
                 call_type = CallType::Call;
-                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
+                call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             _ => return Err(SyscallHandlerError::NotImplemented),
         }
@@ -460,7 +460,7 @@ where
             return Err(SyscallHandlerError::ExpectedSendMessageToL1);
         };
 
-        let payload = get_integer_range(vm, &request.payload_ptr, request.payload_size)?;
+        let payload = get_integer_range(vm, request.payload_ptr, request.payload_size)?;
 
         self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
             self.tx_execution_context.n_sent_messages,

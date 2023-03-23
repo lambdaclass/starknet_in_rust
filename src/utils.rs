@@ -41,9 +41,9 @@ pub struct Address(pub Felt252);
 
 pub fn get_integer(
     vm: &VirtualMachine,
-    syscall_ptr: &Relocatable,
+    syscall_ptr: Relocatable,
 ) -> Result<usize, SyscallHandlerError> {
-    vm.get_integer(*syscall_ptr)?
+    vm.get_integer(syscall_ptr)?
         .as_ref()
         .to_usize()
         .ok_or(SyscallHandlerError::FeltToUsizeFail)
@@ -51,25 +51,25 @@ pub fn get_integer(
 
 pub fn get_big_int(
     vm: &VirtualMachine,
-    syscall_ptr: &Relocatable,
+    syscall_ptr: Relocatable,
 ) -> Result<Felt252, SyscallHandlerError> {
-    Ok(vm.get_integer(*syscall_ptr)?.into_owned())
+    Ok(vm.get_integer(syscall_ptr)?.into_owned())
 }
 
 pub fn get_relocatable(
     vm: &VirtualMachine,
-    syscall_ptr: &Relocatable,
+    syscall_ptr: Relocatable,
 ) -> Result<Relocatable, SyscallHandlerError> {
-    Ok(vm.get_relocatable(*syscall_ptr)?)
+    Ok(vm.get_relocatable(syscall_ptr)?)
 }
 
 pub fn get_integer_range(
     vm: &VirtualMachine,
-    addr: &Relocatable,
+    addr: Relocatable,
     size: usize,
 ) -> Result<Vec<Felt252>, SyscallHandlerError> {
     Ok(vm
-        .get_integer_range(*addr, size)?
+        .get_integer_range(addr, size)?
         .into_iter()
         .map(|c| c.into_owned())
         .collect::<Vec<Felt252>>())
