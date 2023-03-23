@@ -58,17 +58,9 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_class::<PyTransactionHashPrefix>()?;
-    // m.add_function(calculate_declare_transaction_hash)?;
-    // m.add_function(calculate_deploy_transaction_hash)?;
-    // m.add_function(calculate_transaction_hash_common)?;
-
-    // m.add_function(build_general_config)?;
 
     //  starkware.starknet.public.abi
-    // m.add_function(get_selector_from_name)?;
-
     // m.add_class::<PyAbiEntryType>()?;
-    // m.add_function(get_storage_var_address)?;
 
     //  starkware.starknet.testing.starknet
     // m.add_class::<PyStarknet>()?;
@@ -158,13 +150,24 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.services.api.messages
     // m.add_class::<PyStarknetMessageToL1>()?;
 
-    //  starkware.starknet.wallets.open_zeppelin
-    // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
-    // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
-
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Functions
     // ~~~~~~~~~~~~~~~~~~~~
+
+    //  starkware.starknet.core.os.transaction_hash.transaction_hash
+    // m.add_function(calculate_declare_transaction_hash)?;
+    // m.add_function(calculate_deploy_transaction_hash)?;
+    // m.add_function(calculate_transaction_hash_common)?;
+
+    // m.add_function(build_general_config)?;
+
+    //  starkware.starknet.public.abi
+    // m.add_function(get_selector_from_name)?;
+    // m.add_function(get_storage_var_address)?;
+
+    //  starkware.starknet.wallets.open_zeppelin
+    // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
+    // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
     m.add_function(wrap_pyfunction!(
         py_calculate_contract_address_from_hash,
