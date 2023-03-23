@@ -165,5 +165,5 @@ pub fn deploy(
     state
         .set_contract_class(&class_hash, &contract_class)
         .unwrap();
-    internal_deploy.apply(state, &config)
+    internal_deploy.apply(state, config)
 }
