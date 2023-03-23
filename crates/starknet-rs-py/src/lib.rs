@@ -173,14 +173,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
     // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
-    //  starkware.starknet.core.os.segment_utils
-    // m.add_function(get_os_segment_ptr_range)?;   need cairo-rs-py to implement CairoFunctionRunner
-    // m.add_function(validate_segment_pointers)?;  needs cairo-rs-py to export PySegmentManager
-
-    //  starkware.starknet.core.os.os_utils
-    // m.add_function(prepare_os_context)?;               need cairo-rs-py to implement CairoFunctionRunner
-    // m.add_function(validate_and_process_os_context)?;  need cairo-rs-py to implement CairoFunctionRunner
-
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
