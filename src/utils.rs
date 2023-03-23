@@ -16,7 +16,7 @@ use crate::{
     services::api::contract_class::EntryPointType,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt;
+use felt::Felt252;
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
@@ -33,7 +33,7 @@ pub type ClassHash = [u8; 32];
 //* -------------------
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
-pub struct Address(pub Felt);
+pub struct Address(pub Felt252);
 
 //* -------------------
 //*  Helper Functions
@@ -43,7 +43,7 @@ pub fn get_integer(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<usize, SyscallHandlerError> {
-    vm.get_integer(syscall_ptr)?
+    vm.get_integer(*syscall_ptr)?
         .as_ref()
         .to_usize()
         .ok_or(SyscallHandlerError::FeltToUsizeFail)
@@ -52,15 +52,15 @@ pub fn get_integer(
 pub fn get_big_int(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
-) -> Result<Felt, SyscallHandlerError> {
-    Ok(vm.get_integer(syscall_ptr)?.into_owned())
+) -> Result<Felt252, SyscallHandlerError> {
+    Ok(vm.get_integer(*syscall_ptr)?.into_owned())
 }
 
 pub fn get_relocatable(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<Relocatable, SyscallHandlerError> {
-    vm.get_relocatable(syscall_ptr)
+    vm.get_relocatable(*syscall_ptr)
         .map_err(SyscallHandlerError::VirtualMachine)
 }
 
@@ -68,24 +68,24 @@ pub fn get_integer_range(
     vm: &VirtualMachine,
     addr: &Relocatable,
     size: usize,
-) -> Result<Vec<Felt>, SyscallHandlerError> {
+) -> Result<Vec<Felt252>, SyscallHandlerError> {
     Ok(vm
-        .get_integer_range(addr, size)?
+        .get_integer_range(*addr, size)?
         .into_iter()
         .map(|c| c.into_owned())
-        .collect::<Vec<Felt>>())
+        .collect::<Vec<Felt252>>())
 }
 
-pub fn felt_to_field_element(value: &Felt) -> Result<FieldElement, SyscallHandlerError> {
+pub fn felt_to_field_element(value: &Felt252) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
         .map_err(|_| SyscallHandlerError::FailToComputeHash)
 }
 
-pub fn field_element_to_felt(felt: &FieldElement) -> Felt {
-    Felt::from_bytes_be(&felt.to_bytes_be())
+pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
+    Felt252::from_bytes_be(&felt.to_bytes_be())
 }
 
-pub fn felt_to_hash(value: &Felt) -> ClassHash {
+pub fn felt_to_hash(value: &Felt252) -> ClassHash {
     let mut output = [0; 32];
 
     let bytes = value.to_bytes_be();
@@ -95,7 +95,7 @@ pub fn felt_to_hash(value: &Felt) -> ClassHash {
 }
 
 pub fn string_to_hash(class_string: &String) -> ClassHash {
-    let parsed_felt = Felt::from_str_radix(
+    let parsed_felt = Felt252::from_str_radix(
         if &class_string[..2] == "0x" {
             &class_string[2..]
         } else {
@@ -114,9 +114,9 @@ pub fn string_to_hash(class_string: &String) -> ClassHash {
 /// See to_cached_state_storage_mapping documentation.
 
 pub fn to_state_diff_storage_mapping(
-    storage_writes: HashMap<StorageEntry, Felt>,
-) -> HashMap<Felt, HashMap<ClassHash, Address>> {
-    let mut storage_updates: HashMap<Felt, HashMap<ClassHash, Address>> = HashMap::new();
+    storage_writes: HashMap<StorageEntry, Felt252>,
+) -> HashMap<Felt252, HashMap<ClassHash, Address>> {
+    let mut storage_updates: HashMap<Felt252, HashMap<ClassHash, Address>> = HashMap::new();
     for ((address, key), value) in storage_writes {
         let mut map = storage_updates.get(&address.0).cloned().unwrap_or_default();
         map.insert(key, Address(value));
@@ -171,7 +171,7 @@ pub fn calculate_tx_resources(
 
     // Add additional Cairo resources needed for the OS to run the transaction.
     let additional_resources = get_additional_os_resources(tx_syscall_counter, &tx_type)?;
-    let new_resources = cairo_usage + additional_resources;
+    let new_resources = &cairo_usage + &additional_resources;
     let filtered_builtins = new_resources.filter_unused_builtins();
 
     let mut resources: HashMap<String, usize> = HashMap::new();
@@ -211,8 +211,8 @@ where
 /// storage mapping (Tuple of address and key map to the associated value).
 
 pub fn to_cache_state_storage_mapping(
-    map: HashMap<Felt, HashMap<ClassHash, Address>>,
-) -> HashMap<StorageEntry, Felt> {
+    map: HashMap<Felt252, HashMap<ClassHash, Address>>,
+) -> HashMap<StorageEntry, Felt252> {
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
         for (key, value) in contract_storage {
@@ -371,12 +371,12 @@ pub mod test_utils {
         ($vm: expr, $si:expr, $off:expr, ($sival:expr, $offval:expr)) => {
             let k = $crate::relocatable_value!($si, $off);
             let v = $crate::relocatable_value!($sival, $offval);
-            $vm.insert_value(&k, &v).unwrap();
+            $vm.insert_value(k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
-            let v: felt::Felt = $val.into();
+            let v: felt::Felt252 = $val.into();
             let k = $crate::relocatable_value!($si, $off);
-            $vm.insert_value(&k, v).unwrap();
+            $vm.insert_value(k, v).unwrap();
         };
     }
     pub(crate) use allocate_values;
@@ -384,9 +384,9 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            let v = felt::Felt::from_bytes_be($val);
+            let v = felt::Felt252::from_bytes_be($val);
             let k = $crate::relocatable_value!($si, $off);
-            $vm.insert_value(&k, v).unwrap();
+            $vm.insert_value(k, v).unwrap();
         };
     }
     pub(crate) use allocate_selector;
@@ -481,21 +481,21 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use super::*;
-    use felt::{felt_str, Felt};
+    use felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use std::collections::HashMap;
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(Address, ClassHash), Felt> = HashMap::new();
+        let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
         let key1 = [0; 32];
-        let value1: Felt = 2.into();
+        let value1: Felt252 = 2.into();
 
         let address2: Address = Address(3.into());
         let key2 = [1; 32];
 
-        let value2: Felt = 4.into();
+        let value2: Felt252 = 4.into();
 
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
@@ -564,15 +564,15 @@ mod test {
     #[test]
 
     fn to_cache_state_storage_mapping_test() {
-        let mut storage: HashMap<(Address, ClassHash), Felt> = HashMap::new();
+        let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
         let key1 = [0; 32];
-        let value1: Felt = 2.into();
+        let value1: Felt252 = 2.into();
 
         let address2: Address = Address(3.into());
         let key2 = [1; 32];
 
-        let value2: Felt = 4.into();
+        let value2: Felt252 = 4.into();
 
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
@@ -590,9 +590,9 @@ mod test {
 
     #[test]
     fn test_felt_to_hash() {
-        assert_eq!(felt_to_hash(&Felt::zero()), [0; 32]);
+        assert_eq!(felt_to_hash(&Felt252::zero()), [0; 32]);
         assert_eq!(
-            felt_to_hash(&Felt::one()),
+            felt_to_hash(&Felt252::one()),
             [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1

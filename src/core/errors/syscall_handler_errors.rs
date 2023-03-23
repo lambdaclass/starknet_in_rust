@@ -1,6 +1,9 @@
 use super::state_errors::StateError;
-use cairo_rs::vm::errors::{
-    hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
+use cairo_rs::{
+    types::errors::math_errors::MathError,
+    vm::errors::{
+        hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
+    },
 };
 use thiserror::Error;
 
@@ -66,6 +69,8 @@ pub enum SyscallHandlerError {
     ErrorComputingHash,
     #[error(transparent)]
     State(#[from] StateError),
+    #[error(transparent)]
+    MathError(#[from] MathError),
     #[error(transparent)]
     Hint(#[from] HintError),
 }

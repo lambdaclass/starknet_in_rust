@@ -1,5 +1,5 @@
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use felt::Felt;
+use felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};
@@ -7,13 +7,13 @@ use std::vec;
 
 pub fn calculate_contract_address(
     salt: &Address,
-    class_hash: &Felt,
-    constructor_calldata: &[Felt],
+    class_hash: &Felt252,
+    constructor_calldata: &[Felt252],
     deployer_address: Address,
-) -> Result<Felt, SyscallHandlerError> {
+) -> Result<Felt252, SyscallHandlerError> {
     // Define constants
-    let l2_address_upper_bound = Felt::new(2).pow(251) - Felt::new(256);
-    let contract_address_prefix = Felt::from_bytes_be("STARKNET_CONTRACT_ADDRESS".as_bytes());
+    let l2_address_upper_bound = Felt252::new(2).pow(251) - Felt252::new(256);
+    let contract_address_prefix = Felt252::from_bytes_be("STARKNET_CONTRACT_ADDRESS".as_bytes());
 
     let constructor_calldata_hash = compute_hash_on_elements(constructor_calldata)?;
     let raw_address_vec = vec![
@@ -28,7 +28,7 @@ pub fn calculate_contract_address(
     Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-pub(crate) fn compute_hash_on_elements(vec: &[Felt]) -> Result<Felt, SyscallHandlerError> {
+pub(crate) fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandlerError> {
     let mut felt_vec = vec
         .iter()
         .map(|num| {
@@ -45,7 +45,7 @@ pub(crate) fn compute_hash_on_elements(vec: &[Felt]) -> Result<Felt, SyscallHand
         .reduce(|x, y| pedersen_hash(&x, &y))
         .ok_or(SyscallHandlerError::FailToComputeHash)?;
 
-    let result = Felt::from_bytes_be(&felt_result.to_bytes_be());
+    let result = Felt252::from_bytes_be(&felt_result.to_bytes_be());
     Ok(result)
 }
 
@@ -66,7 +66,7 @@ mod tests {
             ))
         );
 
-        let v2: Vec<Felt> = vec![1.into(), 2.into(), 3.into(), 4.into()];
+        let v2: Vec<Felt252> = vec![1.into(), 2.into(), 3.into(), 4.into()];
         let result2 = compute_hash_on_elements(&v2);
 
         assert_eq!(

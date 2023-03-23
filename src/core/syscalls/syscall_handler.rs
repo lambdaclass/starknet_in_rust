@@ -32,7 +32,7 @@ use cairo_rs::{
     },
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::Felt;
+use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
 //* ---------------------
@@ -157,7 +157,7 @@ pub(crate) trait SyscallHandler {
         let retdata_maybe_reloc = retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt::new(item)))
+            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
             .collect::<Vec<MaybeRelocatable>>();
 
         let response = CallContractResponse::new(
@@ -173,7 +173,7 @@ pub(crate) trait SyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<Felt>, SyscallHandlerError>;
+    ) -> Result<Vec<Felt252>, SyscallHandlerError>;
 
     fn _get_caller_address(
         &mut self,
@@ -187,9 +187,13 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError>;
 
-    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError>;
+    fn _storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError>;
 
-    fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError>;
+    fn _storage_write(
+        &mut self,
+        address: Address,
+        value: Felt252,
+    ) -> Result<(), SyscallHandlerError>;
 
     fn allocate_segment(
         &mut self,
@@ -393,7 +397,7 @@ where
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt252>,
     ) -> Result<bool, HintError> {
         match self
             .builtin_hint_processor
@@ -410,7 +414,7 @@ where
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt252>,
     ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
@@ -491,7 +495,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
@@ -530,7 +534,7 @@ fn get_syscall_ptr(
     ap_tracking: &ApTracking,
 ) -> Result<Relocatable, SyscallHandlerError> {
     let location = get_relocatable_from_var_name("syscall_ptr", vm, ids_data, ap_tracking)?;
-    let syscall_ptr = vm.get_relocatable(&location)?;
+    let syscall_ptr = vm.get_relocatable(location)?;
     Ok(syscall_ptr)
 }
 
@@ -862,7 +866,7 @@ mod tests {
 
         // GetTxInfoResponse
         assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 1)),
+            vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(4, 0))
         );
     }
@@ -905,7 +909,7 @@ mod tests {
 
         // GetTxInfoResponse
         assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 1)),
+            vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(7, 0))
         );
     }
@@ -945,7 +949,7 @@ mod tests {
         // Check VM inserts
         // GetTxInfoResponse
         assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 1)),
+            vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(18, 12))
         );
     }
@@ -1160,7 +1164,7 @@ mod tests {
             tx_execution_context.signature.len()
         );
         assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 2)).unwrap(),
+            vm.get_relocatable(relocatable!(2, 2)).unwrap(),
             relocatable!(3, 0)
         );
     }
@@ -1170,7 +1174,7 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        let address = Felt::from_str_radix(
+        let address = Felt252::from_str_radix(
             "2151680050850558576753658069693146429350618838199373217695410689374331200218",
             10,
         )
@@ -1185,7 +1189,7 @@ mod tests {
         );
 
         // StorageReadRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone())
+        vm.insert_value(relocatable!(2, 1), address.clone())
             .unwrap();
 
         // syscall_ptr
@@ -1197,7 +1201,7 @@ mod tests {
         let mut syscall_handler_hint_processor =
             SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
-        let storage_value = Felt::new(3);
+        let storage_value = Felt252::new(3);
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
@@ -1231,7 +1235,7 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        let address = Felt::from_str_radix(
+        let address = Felt252::from_str_radix(
             "2151680050850558576753658069693146429350618838199373217695410689374331200218",
             10,
         )
@@ -1272,7 +1276,7 @@ mod tests {
                         .clone(),
                     address.to_bytes_be().try_into().unwrap(),
                 ),
-                Felt::new(3),
+                Felt252::new(3),
             );
         assert!(syscall_handler_hint_processor
             .execute_hint(
@@ -1288,7 +1292,7 @@ mod tests {
             .starknet_storage_state
             .read(&felt_to_hash(&address));
 
-        assert_eq!(write, Ok(&Felt::new(45)));
+        assert_eq!(write, Ok(&Felt252::new(45)));
     }
 
     #[test]
@@ -1313,7 +1317,7 @@ mod tests {
         // invoke syscall
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
 
-        let execute_code_read_operation: VecDeque<Felt> =
+        let execute_code_read_operation: VecDeque<Felt252> =
             VecDeque::from([5.into(), 4.into(), 3.into(), 2.into(), 1.into()]);
         syscall_handler_hint_processor.syscall_handler = OsSyscallHandler::new(
             VecDeque::new(),
@@ -1367,7 +1371,7 @@ mod tests {
             ]
         );
 
-        let class_hash_felt = Felt::from_str_radix(
+        let class_hash_felt = Felt252::from_str_radix(
             "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
             16,
         )
@@ -1459,7 +1463,7 @@ mod tests {
             ]
         );
 
-        let class_hash_felt = Felt::from_str_radix(
+        let class_hash_felt = Felt252::from_str_radix(
             "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
             16,
         )
@@ -1537,7 +1541,7 @@ mod tests {
         */
         let internal_invoke_function = InternalInvokeFunction::new(
             Address(deployed_address.clone()),
-            Felt::from_str_radix(
+            Felt252::from_str_radix(
                 "283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c",
                 16,
             )

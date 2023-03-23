@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt;
+use felt::Felt252;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default)]
@@ -45,8 +45,8 @@ impl ExecutionResourcesManager {
 #[derive(Default)]
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
-    pub(crate) address_to_nonce: HashMap<Address, Felt>,
-    pub(crate) storage_updates: HashMap<Felt, HashMap<ClassHash, Address>>,
+    pub(crate) address_to_nonce: HashMap<Address, Felt252>,
+    pub(crate) storage_updates: HashMap<Felt252, HashMap<ClassHash, Address>>,
 }
 
 impl StateDiff {
@@ -103,7 +103,7 @@ impl StateDiff {
 
         let mut storage_updates = HashMap::new();
 
-        let addresses: Vec<Felt> =
+        let addresses: Vec<Felt252> =
             get_keys(self.storage_updates.clone(), other.storage_updates.clone());
 
         for address in addresses {
@@ -140,7 +140,7 @@ mod test {
         },
         utils::Address,
     };
-    use felt::Felt;
+    use felt::Felt252;
 
     #[test]
     fn test_from_cached_state_without_updates() {
@@ -148,7 +148,7 @@ mod test {
 
         let contract_address = Address(32123.into());
         let class_hash = [9; 32];
-        let nonce = Felt::new(42);
+        let nonce = Felt252::new(42);
 
         state_reader
             .address_to_class_hash

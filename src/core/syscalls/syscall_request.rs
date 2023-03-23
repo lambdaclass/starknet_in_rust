@@ -3,7 +3,7 @@ use crate::{
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt;
+use felt::Felt252;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
@@ -25,21 +25,21 @@ pub(crate) enum SyscallRequest {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallContractRequest {
-    pub(crate) selector: Felt,
+    pub(crate) selector: Felt252,
     pub(crate) contract_address: Address,
-    pub(crate) function_selector: Felt,
+    pub(crate) function_selector: Felt252,
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetSequencerAddressRequest {
-    _selector: Felt,
+    _selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventStruct {
-    pub(crate) selector: Felt,
+    pub(crate) selector: Felt252,
     pub(crate) keys_len: usize,
     pub(crate) keys: Relocatable,
     pub(crate) data_len: usize,
@@ -49,13 +49,13 @@ pub(crate) struct EmitEventStruct {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeployRequestStruct {
     // The system call selector (= DEPLOY_SELECTOR).
-    pub(crate) _selector: Felt,
+    pub(crate) _selector: Felt252,
     // The hash of the class to deploy.
-    pub(crate) class_hash: Felt,
+    pub(crate) class_hash: Felt252,
     // A salt for the new contract address calculation.
-    pub(crate) contract_address_salt: Felt,
+    pub(crate) contract_address_salt: Felt252,
     // The size of the calldata for the constructor.
-    pub(crate) constructor_calldata_size: Felt,
+    pub(crate) constructor_calldata_size: Felt252,
     // The calldata for the constructor.
     pub(crate) constructor_calldata: Relocatable,
     // Used for deterministic contract address deployment.
@@ -64,7 +64,7 @@ pub(crate) struct DeployRequestStruct {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SendMessageToL1SysCall {
-    pub(crate) _selector: Felt,
+    pub(crate) _selector: Felt252,
     pub(crate) to_address: Address,
     pub(crate) payload_size: usize,
     pub(crate) payload_ptr: Relocatable,
@@ -72,55 +72,55 @@ pub(crate) struct SendMessageToL1SysCall {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LibraryCallStruct {
-    pub(crate) selector: Felt,
-    pub(crate) class_hash: Felt,
-    pub(crate) function_selector: Felt,
+    pub(crate) selector: Felt252,
+    pub(crate) class_hash: Felt252,
+    pub(crate) function_selector: Felt252,
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampRequest {
-    pub(crate) selector: Felt,
+    pub(crate) selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressRequest {
-    pub(crate) _selector: Felt,
+    pub(crate) _selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetTxSignatureRequest {
-    pub(crate) _selector: Felt,
+    pub(crate) _selector: Felt252,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct GetTxInfoRequest {
-    pub(crate) selector: Felt,
+    pub(crate) selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetContractAddressRequest {
-    pub(crate) _selector: Felt,
+    pub(crate) _selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockNumberRequest {
-    pub(crate) _selector: Felt,
+    pub(crate) _selector: Felt252,
 }
 
 /// Describes the StorageRead system call format.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageReadRequest {
-    pub(crate) selector: Felt,
+    pub(crate) selector: Felt252,
     pub(crate) address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageWriteRequest {
-    pub(crate) selector: Felt,
+    pub(crate) selector: Felt252,
     pub(crate) address: Address,
-    pub(crate) value: Felt,
+    pub(crate) value: Felt252,
 }
 
 impl From<EmitEventStruct> for SyscallRequest {
@@ -404,7 +404,7 @@ impl FromPtr for StorageReadRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &syscall_ptr)?;
-        let address = Address(get_big_int(vm, &(syscall_ptr + 1))?);
+        let address = Address(get_big_int(vm, &(syscall_ptr + 1)?)?);
 
         Ok(SyscallRequest::StorageRead(StorageReadRequest {
             selector,
@@ -419,8 +419,8 @@ impl FromPtr for StorageWriteRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, &syscall_ptr)?;
-        let address = Address(get_big_int(vm, &(syscall_ptr + 1))?);
-        let value = get_big_int(vm, &(syscall_ptr + 2))?;
+        let address = Address(get_big_int(vm, &(syscall_ptr + 1)?)?);
+        let value = get_big_int(vm, &(syscall_ptr + 2)?)?;
 
         Ok(SyscallRequest::StorageWrite(StorageWriteRequest {
             selector,

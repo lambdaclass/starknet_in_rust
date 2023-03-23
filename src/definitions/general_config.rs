@@ -1,5 +1,5 @@
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
-use felt::Felt;
+use felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -28,8 +28,8 @@ impl ToString for StarknetChainId {
 }
 
 impl StarknetChainId {
-    pub fn to_felt(self) -> Felt {
-        Felt::from_bytes_be(self.to_string().as_bytes())
+    pub fn to_felt(self) -> Felt252 {
+        Felt252::from_bytes_be(self.to_string().as_bytes())
     }
 }
 
