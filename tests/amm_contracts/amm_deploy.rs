@@ -3,7 +3,10 @@ use felt::Felt;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
-        fact_state::state::ExecutionResourcesManager,
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
+        state::cached_state::CachedState,
         transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
@@ -23,10 +26,11 @@ fn init_pool(
 #[test]
 fn amm_init_pool_test() {
     let general_config = StarknetGeneralConfig::default();
-
+    let state_reader = InMemoryStateReader::default();
+    let mut state = CachedState::new(state_reader, Some(Default::default()));
     // Deploy contract
-    let (mut state, (contract_address, class_hash)) =
-        deploy("starknet_programs/amm.json", &general_config);
+    let (contract_address, class_hash) =
+        deploy(&mut state, "starknet_programs/amm.json", &general_config);
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());

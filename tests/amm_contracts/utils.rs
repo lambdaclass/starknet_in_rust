@@ -146,14 +146,12 @@ pub fn execute_entry_point(
 }
 
 pub fn deploy(
+    state: &mut CachedState<InMemoryStateReader>,
     path: &str,
     config: &StarknetGeneralConfig,
-) -> (CachedState<InMemoryStateReader>, (Address, [u8; 32])) {
+) -> (Address, [u8; 32]) {
     let path = PathBuf::from(path);
     let contract_class = ContractClass::try_from(path).unwrap();
-
-    let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
 
     let internal_deploy = InternalDeploy::new(
         Address(0.into()),
@@ -168,11 +166,11 @@ pub fn deploy(
         .set_contract_class(&class_hash, &contract_class)
         .unwrap();
 
-    let tx_execution_info = internal_deploy.apply(&mut state, config).unwrap();
+    let tx_execution_info = internal_deploy.apply(state, config).unwrap();
 
     let call_info = tx_execution_info.call_info.unwrap();
     let contract_address = call_info.contract_address;
     let class_hash = call_info.class_hash.unwrap();
 
-    (state, (contract_address, class_hash))
+    (contract_address, class_hash)
 }
