@@ -13,7 +13,7 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use crate::utils::{py_calculate_tx_fee, py_compute_class_hash};
+use crate::utils::{py_calculate_tx_fee, py_compute_class_hash, py_load_program};
 use pyo3::prelude::*;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
@@ -185,11 +185,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(prepare_os_context)?;               need cairo-rs-py to implement CairoFunctionRunner
     // m.add_function(validate_and_process_os_context)?;  need cairo-rs-py to implement CairoFunctionRunner
 
-    //  starkware.starknet.core.os.class_hash
-    // m.add_function(get_contract_class_struct)?;
-    // m.add_function(load_program)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
-
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
 
     reexport(
