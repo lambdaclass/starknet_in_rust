@@ -13,7 +13,7 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use crate::utils::{py_calculate_tx_fee, py_compute_class_hash, py_load_program};
+use crate::utils::{py_calculate_tx_fee, py_compute_class_hash};
 use pyo3::prelude::*;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
