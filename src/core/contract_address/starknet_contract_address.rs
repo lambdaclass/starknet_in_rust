@@ -102,7 +102,9 @@ fn get_contract_class_struct(
         n_builtins: Felt252::from(builtin_list.len()).into(),
         builtin_list: builtin_list
             .iter()
-            .map(|builtin| Felt252::from_bytes_be(builtin.to_ascii_lowercase().as_bytes()).into())
+            .map(|builtin| {
+                Felt252::from_bytes_be(builtin.name().to_ascii_lowercase().as_bytes()).into()
+            })
             .collect::<Vec<MaybeRelocatable>>(),
         hinted_class_hash: compute_hinted_class_hash(contract_class).into(),
         bytecode_length: Felt252::from(contract_class.program.data.len()).into(),
@@ -184,12 +186,10 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         &mut hint_processor,
     )?;
 
-    Ok(vm
-        .get_return_values(2)?
-        .get(1)
-        .ok_or(ContractAddressError::IndexOutOfRange)?
-        .get_int_ref()?
-        .clone())
+    match vm.get_return_values(2)?.get(1) {
+        Some(MaybeRelocatable::Int(felt)) => Ok(felt.clone()),
+        _ => Err(ContractAddressError::IndexOutOfRange),
+    }
 }
 
 #[cfg(test)]

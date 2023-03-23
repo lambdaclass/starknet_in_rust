@@ -80,17 +80,14 @@ where
     }
 
     pub fn get_return_values(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
-        let ret_data = self
-            .vm
-            .get_return_values(2)
-            .map_err(StarknetRunnerError::Memory)?;
+        let ret_data = self.vm.get_return_values(2)?;
 
         let n_rets = ret_data[0]
             .get_int_ref()
-            .ok_or(|_| StarknetRunnerError::NotAFelt)?;
+            .ok_or(StarknetRunnerError::NotAFelt)?;
         let ret_ptr = ret_data[1]
             .get_relocatable()
-            .ok_or(|_| StarknetRunnerError::NotARelocatable)?;
+            .ok_or(StarknetRunnerError::NotARelocatable)?;
 
         let ret_data = self
             .vm
@@ -112,13 +109,13 @@ where
             .get_builtin_runners()
             .clone()
             .into_iter()
-            .collect::<HashMap<String, BuiltinRunner>>();
+            .collect::<HashMap<&str, BuiltinRunner>>();
         self.cairo_runner
             .get_program_builtins()
             .iter()
             .for_each(|builtin| {
-                if builtin_runners.contains_key(builtin) {
-                    let b_runner = builtin_runners.get(builtin).unwrap();
+                if builtin_runners.contains_key(builtin.name()) {
+                    let b_runner = builtin_runners.get(builtin.name()).unwrap();
                     let stack = b_runner.initial_stack();
                     os_context.extend(stack);
                 }

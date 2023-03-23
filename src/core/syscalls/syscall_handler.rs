@@ -516,12 +516,12 @@ fn get_ids_data(
 ) -> Result<HashMap<String, HintReference>, HintError> {
     let mut ids_data = HashMap::<String, HintReference>::new();
     for (path, ref_id) in reference_ids {
-        let name = path.rsplit('.').next().ok_or(HintError::FailedToGetIds)?;
+        let name = path.rsplit('.').next().ok_or(HintError::WrongHintData)?;
         ids_data.insert(
             name.to_string(),
             references
                 .get(ref_id)
-                .ok_or(HintError::FailedToGetIds)?
+                .ok_or(HintError::WrongHintData)?
                 .clone(),
         );
     }

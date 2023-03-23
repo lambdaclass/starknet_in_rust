@@ -7,7 +7,7 @@ use cairo_rs::{
 };
 use thiserror::Error;
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum SyscallHandlerError {
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),

@@ -60,8 +60,7 @@ pub fn get_relocatable(
     vm: &VirtualMachine,
     syscall_ptr: &Relocatable,
 ) -> Result<Relocatable, SyscallHandlerError> {
-    vm.get_relocatable(*syscall_ptr)
-        .map_err(SyscallHandlerError::VirtualMachine)
+    Ok(vm.get_relocatable(*syscall_ptr)?)
 }
 
 pub fn get_integer_range(
