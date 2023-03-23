@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::{felt_str, Felt};
+use felt::{felt_str, Felt252};
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
@@ -41,7 +41,7 @@ fn internal_deploy_account() {
         class_hash,
         0,
         0,
-        Felt::zero(),
+        Felt252::zero(),
         vec![],
         vec![
             felt_str!(

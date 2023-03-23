@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt;
+use felt::Felt252;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
@@ -48,7 +48,7 @@ fn integration_test() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
-    let nonce = Felt::zero();
+    let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::default();
@@ -89,7 +89,7 @@ fn integration_test() {
     let general_config = StarknetGeneralConfig::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt::zero(),
+        Felt252::zero(),
         Vec::new(),
         0,
         10.into(),

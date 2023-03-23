@@ -1,5 +1,5 @@
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt;
+use felt::Felt252;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
@@ -49,9 +49,9 @@ fn integration_storage_test() {
 
     let address = Address(1111.into());
     let class_hash = [1; 32];
-    let nonce = Felt::new(88);
+    let nonce = Felt252::new(88);
     let storage_entry = (address.clone(), [90; 32]);
-    let storage_value = Felt::new(10902);
+    let storage_value = Felt252::new(10902);
 
     contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::default();
@@ -95,7 +95,7 @@ fn integration_storage_test() {
     let general_config = StarknetGeneralConfig::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt::zero(),
+        Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
@@ -143,6 +143,6 @@ fn integration_storage_test() {
             .storage_writes()
             .get(&(address, expected_key))
             .cloned(),
-        Some(Felt::new(42))
+        Some(Felt252::new(42))
     );
 }
