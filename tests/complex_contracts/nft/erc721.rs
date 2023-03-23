@@ -996,7 +996,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
         .insert(contract_address.clone(), contract_class_hash);
     state_reader
         .address_to_class_hash_mut()
-        .insert(erc165_address.clone(), erc165_class_hash);
+        .insert(erc165_address, erc165_class_hash);
 
     // Create state with previous data
     let mut state = CachedState::new(state_reader, Some(contract_class_cache));
