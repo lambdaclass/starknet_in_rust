@@ -13,7 +13,7 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use crate::utils::{py_calculate_tx_fee, py_compute_class_hash};
+use crate::utils::{py_calculate_tx_fee, py_compute_class_hash, py_validate_contract_deployed};
 use pyo3::prelude::*;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
@@ -117,10 +117,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PySyncState>()?;
     // m.add_class::<PyStateReader>()?;
 
-    //  starkware.starknet.business_logic.utils
-    // m.add_function(validate_contract_deployed)?;
-    // m.add_function(verify_version)?;
-
     //  starkware.starknet.core.os.syscall_utils
     // m.add_class::<PyBusinessLogicSysCallHandler>()?;
     // m.add_class::<PyHandlerException>()?;
@@ -185,8 +181,16 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(prepare_os_context)?;               need cairo-rs-py to implement CairoFunctionRunner
     // m.add_function(validate_and_process_os_context)?;  need cairo-rs-py to implement CairoFunctionRunner
 
+    m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.utils",
+        vec!["verify_version"],
+    )?;
 
     reexport(
         py,
