@@ -46,8 +46,8 @@ impl StarknetMessageToL1 {
 
 #[test]
 fn create_starknet_message_to_l1() {
-    let from_address: Address = Address(42.into());
-    let to_address: Address = Address(1729.into());
+    let from_address = Address(42.into());
+    let to_address = Address(1729.into());
     let payload: Vec<Felt> = vec![1.into(), 2.into(), 3.into(), 4.into()];
     let message = StarknetMessageToL1::new(from_address, to_address, payload);
 
