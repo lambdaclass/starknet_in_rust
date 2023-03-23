@@ -43,10 +43,10 @@ starknet_programs/%.json: starknet_programs/%.cairo
 # Normal rules.
 #
 
-build:
+build: compile-cairo compile-starknet
 	cargo build --release --all
 
-check:
+check: compile-cairo compile-starknet
 	cargo check --all
 
 deps:
