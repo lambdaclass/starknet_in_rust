@@ -64,5 +64,5 @@ fn test_validate_legal_progress() {
     next_block.block_number = 1;
     next_block.block_timestamp = 1;
 
-    first_block.validate_legal_progress(&next_block).unwrap()
+    assert!(first_block.validate_legal_progress(&next_block).is_ok())
 }
