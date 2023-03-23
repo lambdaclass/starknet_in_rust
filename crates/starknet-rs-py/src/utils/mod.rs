@@ -70,6 +70,24 @@ pub(crate) fn py_calculate_event_hash(
 #[pyo3(name = "calculate_contract_address")]
 pub(crate) fn py_calculate_contract_address(
     salt: BigUint,
+    contract_class: &PyContractClass,
+    constructor_calldata: Vec<BigUint>,
+    deployer_address: BigUint,
+) -> PyResult<BigUint> {
+    let salt = Address(Felt::from(salt));
+    let class_hash = Felt::from(py_compute_class_hash(contract_class)?);
+    let constructor_calldata: Vec<_> = constructor_calldata.into_iter().map(Into::into).collect();
+    let deployer_address = Address(Felt::from(deployer_address));
+    match calculate_contract_address(&salt, &class_hash, &constructor_calldata, deployer_address) {
+        Ok(res) => Ok(res.to_biguint()),
+        Err(err) => Err(PyValueError::new_err(err.to_string())),
+    }
+}
+
+#[pyfunction]
+#[pyo3(name = "calculate_contract_address_from_hash")]
+pub(crate) fn py_calculate_contract_address_from_hash(
+    salt: BigUint,
     class_hash: BigUint,
     constructor_calldata: Vec<BigUint>,
     deployer_address: BigUint,
