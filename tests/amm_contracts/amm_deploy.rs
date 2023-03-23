@@ -67,7 +67,7 @@ fn amm_init_pool_test() {
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
+        contract_address: contract_address.clone(),
         entry_point_selector: Some(amm_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
