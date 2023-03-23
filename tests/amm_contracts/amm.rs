@@ -5,7 +5,6 @@ use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
         fact_state::state::ExecutionResourcesManager,
-        state::state_api::StateReader,
         transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
