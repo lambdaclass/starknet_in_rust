@@ -7,7 +7,7 @@ type PyEntryPointType = i32;
 
 #[pyclass]
 #[pyo3(name = "ContractClass")]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PyContractClass {
     inner: ContractClass,
 }
@@ -35,5 +35,11 @@ impl PyContractClass {
     #[getter]
     pub fn abi(&self) -> PyResult<String> {
         serde_json::to_string(&self.inner.abi()).map_err(|e| PyRuntimeError::new_err(e.to_string()))
+    }
+}
+
+impl<'a> From<&'a PyContractClass> for &'a ContractClass {
+    fn from(class: &'a PyContractClass) -> Self {
+        &class.inner
     }
 }
