@@ -1,13 +1,20 @@
-use std::collections::HashSet;
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
 use starknet_crypto::FieldElement;
+use starknet_rs::business_logic::state::cached_state::CachedState;
+use starknet_rs::services::api::contract_class::ContractClass;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent},
-        fact_state::state::ExecutionResourcesManager,
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
         state::state_api::StateReader,
         transaction::error::TransactionError,
     },
@@ -966,11 +973,36 @@ fn erc721_transfer_from_and_get_owner_test() {
 
 #[test]
 fn erc721_safe_transfer_from_should_fail_test() {
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
+    let contract_address = Address(0.into());
+    let contract_class_hash = [1; 32];
+    let erc165_address = Address(1000000.into());
+    let mut erc165_class_hash = [0; 32];
+    erc165_class_hash[31] = 1;
+
+    // Create program and entry point types for contract class
+    let contract_path = PathBuf::from("starknet_programs/ERC721.json");
+    let contract_class = ContractClass::try_from(contract_path).unwrap();
+
+    let erc165_path = PathBuf::from("starknet_programs/ERC165.json");
+    let erc165_class = ContractClass::try_from(erc165_path).unwrap();
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+    contract_class_cache.insert(contract_class_hash, contract_class);
+    contract_class_cache.insert(erc165_class_hash, erc165_class);
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(contract_address.clone(), contract_class_hash);
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(erc165_address.clone(), erc165_class_hash);
+
+    // Create state with previous data
+    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
     let entry_points_by_type = state
-        .get_contract_class(&class_hash)
+        .get_contract_class(&contract_class_hash)
         .unwrap()
         .entry_points_by_type()
         .clone();
@@ -990,8 +1022,8 @@ fn erc721_safe_transfer_from_should_fail_test() {
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
-        address: &address,
-        class_hash: &class_hash,
+        address: &contract_address,
+        class_hash: &contract_class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type_constructor,
         general_config: &general_config,
@@ -1005,14 +1037,16 @@ fn erc721_safe_transfer_from_should_fail_test() {
     // data_len = 0 then there is no need to sent *felt for data
     let calldata = [
         Felt::from(666),
-        Felt::from(777),
+        Felt::from(1000000),
         Felt::from(1),
         Felt::zero(),
         Felt::zero(),
     ]
     .to_vec();
+
     // The contract will fail because the receiver address is not a IERC721Receiver contract.
-    assert!(safe_transfer_from(&calldata, &mut call_config).is_err());
+    dbg!(safe_transfer_from(&calldata, &mut call_config).unwrap_err());
+    assert!(false);
 }
 
 #[test]
