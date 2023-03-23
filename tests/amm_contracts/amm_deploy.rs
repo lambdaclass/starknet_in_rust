@@ -34,8 +34,9 @@ fn amm_init_pool_test() {
 
     // Deploy contract
     let result = deploy(&mut state, &general_config, "starknet_programs/amm.json").unwrap();
-    let contract_address = result.clone().call_info.unwrap().contract_address;
-    let class_hash = result.call_info.unwrap().class_hash.unwrap();
+    let result_call_info = result.call_info.unwrap();
+    let contract_address = result_call_info.contract_address;
+    let class_hash = result_call_info.class_hash;
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -54,7 +55,7 @@ fn amm_init_pool_test() {
         calldata: calldata.clone(),
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
-        class_hash: Some(class_hash),
+        class_hash,
         accessed_storage_keys,
         ..Default::default()
     };
@@ -63,7 +64,7 @@ fn amm_init_pool_test() {
         state: &mut state,
         caller_address: &caller_address,
         address: &contract_address,
-        class_hash: &class_hash,
+        class_hash: &class_hash.unwrap(),
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
