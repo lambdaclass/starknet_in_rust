@@ -62,7 +62,7 @@ clean:
 	-rm -f starknet_programs/*.json
 	-rm -f tests/*.json
 
-clippy:
+clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet
