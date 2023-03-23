@@ -9,7 +9,7 @@ type PyEntryPointType = i32;
 #[pyo3(name = "ContractClass")]
 #[derive(Debug)]
 pub struct PyContractClass {
-    inner: ContractClass,
+    pub(crate) inner: ContractClass,
 }
 
 #[pymethods]

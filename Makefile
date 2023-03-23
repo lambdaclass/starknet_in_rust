@@ -14,6 +14,9 @@ CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
 STARKNET_SOURCES=$(wildcard starknet_programs/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 
+BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
+BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
+
 
 #
 # VENV rules.
