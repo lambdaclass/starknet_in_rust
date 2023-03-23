@@ -1,18 +1,13 @@
-use std::path::PathBuf;
-
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{cached_state::CachedState, state_api::State},
-        transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
+        fact_state::state::ExecutionResourcesManager,
+        transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
 
@@ -27,16 +22,12 @@ fn init_pool(
 
 #[test]
 fn amm_init_pool_test() {
-    // Instantiate CachedState
-    let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
     let general_config = StarknetGeneralConfig::default();
 
     // Deploy contract
-    let result = deploy(&mut state, &general_config, "starknet_programs/amm.json").unwrap();
-    let result_call_info = result.call_info.unwrap();
-    let contract_address = result_call_info.contract_address;
-    let class_hash = result_call_info.class_hash;
+    let (mut state, (contract_address, class_hash)) =
+        deploy("starknet_programs/amm.json", &general_config);
+
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -55,7 +46,7 @@ fn amm_init_pool_test() {
         calldata: calldata.clone(),
         retdata: [].to_vec(),
         execution_resources: ExecutionResources::default(),
-        class_hash,
+        class_hash: Some(class_hash),
         accessed_storage_keys,
         ..Default::default()
     };
@@ -64,7 +55,7 @@ fn amm_init_pool_test() {
         state: &mut state,
         caller_address: &caller_address,
         address: &contract_address,
-        class_hash: &class_hash.unwrap(),
+        class_hash: &class_hash,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
