@@ -486,7 +486,9 @@ mod tests {
 
         assert_matches!(
             handler.end_tx(),
-            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_info_ptr"
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == String::from(
+                "tx_info_ptr"
+            )
         )
     }
 
@@ -500,7 +502,9 @@ mod tests {
         };
         assert_matches!(
             handler.end_tx(),
-            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_execution_info"
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == String::from(
+                "tx_execution_info",
+            )
         )
     }
 
@@ -530,7 +534,9 @@ mod tests {
 
         assert_matches!(
             handler.start_tx(reloc),
-            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_info_ptr"
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == String::from(
+                "tx_info_ptr"
+            )
         )
     }
 
@@ -552,7 +558,9 @@ mod tests {
 
         assert_matches!(
             handler.start_tx(reloc),
-            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_execution_info"
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == String::from(
+                "tx_execution_info",
+            )
         )
     }
 
@@ -920,9 +928,9 @@ mod tests {
             Ok(())
         );
 
-        let addr_0 = (syscall_ptr + 5_i32).unwrap();
+        let addr_0 = Relocatable::from((syscall_ptr + 5_i32).unwrap());
         assert_matches!(get_integer(&vm, addr_0), Ok(1));
-        let addr_1 = (syscall_ptr + 6_i32).unwrap();
+        let addr_1 = Relocatable::from((syscall_ptr + 6_i32).unwrap());
         assert_matches!(
             get_relocatable(&vm, addr_1),
             Ok(Relocatable {
