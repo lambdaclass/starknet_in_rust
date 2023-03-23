@@ -40,6 +40,10 @@ compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as
 pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
 
+    // ~~~~~~~~~~~~~~~~~~~~
+    //  Exported Classes
+    // ~~~~~~~~~~~~~~~~~~~~
+
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyStarknetGeneralConfig>()?;
@@ -158,9 +162,9 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
     // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
-    //  starkware.starknet.core.os.block_hash.block_hash
-    //  blocked by calculate_block_hash but could be reexported from cairo-lang
-    // m.add_function(calculate_block_hash)?;
+    // ~~~~~~~~~~~~~~~~~~~~
+    //  Exported Functions
+    // ~~~~~~~~~~~~~~~~~~~~
 
     m.add_function(wrap_pyfunction!(
         py_calculate_contract_address_from_hash,
@@ -171,6 +175,14 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
+
+    // TODO: export from starknet-rs when implemented
+    reexport(
+        py,
+        m,
+        "starkware.starknet.core.os.block_hash.block_hash",
+        vec!["calculate_block_hash"],
+    )?;
 
     reexport(
         py,
