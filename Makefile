@@ -55,7 +55,6 @@ deps:
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
-
 clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
@@ -69,8 +68,7 @@ test: compile-cairo compile-starknet
 	cargo test
 
 py-test: compile-cairo compile-starknet
-	. starknet-venv/bin/activate
-	cargo test -p starknet-rs-py --no-default-features --features embedded-python
+	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
 coverage: compile-cairo compile-starknet
 	cargo tarpaulin

@@ -65,10 +65,17 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.testing.starknet
     // m.add_class::<PyStarknet>()?;
-    // m.add_class::<PyStarknetCallInfo>()?;
+    // m.add_class::<PyStarknetCallInfo>()?; // doesn't seem necessary
 
     //  starkware.starknet.testing.state
     // m.add_class::<PyStarknetState>()?;
+    //  needed methods:
+    //   - state.state.set_storage_at
+    //   - state.state.block_info.block_timestamp
+    //   - state.state.block_info.gas_price
+    //   - state.state.general_config.sequencer_address
+    //   - state.general_config
+    //   - state.general_config
 
     //  starkware.starknet.definitions.error_codes
     // m.add_class::<PyStarknetErrorCode>()?;
@@ -99,23 +106,12 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyInvokeSpecificInfo>()?;
     // m.add_class::<PyL1HandlerSpecificInfo>()?;
 
-    //  starkware.starknet.business_logic.execution.execute_entry_point
-    // m.add_class::<PyExecuteEntryPoint>()?;
-
     //  starkware.starknet.business_logic.execution.objects
-    // m.add_class::<PyTransactionExecutionContext>()?;
     // m.add_class::<PyResourcesMapping>()?;
-
-    //  starkware.starknet.business_logic.fact_state.state
-    // m.add_class::<PyExecutionResourcesManager>()?;
 
     //  starkware.starknet.business_logic.state.state_api
     // m.add_class::<PySyncState>()?;
     // m.add_class::<PyStateReader>()?;
-
-    //  starkware.starknet.core.os.syscall_utils
-    // m.add_class::<PyBusinessLogicSysCallHandler>()?;
-    // m.add_class::<PyHandlerException>()?;
 
     //  starkware.starknet.services.api.feeder_gateway.feeder_gateway_client
     // m.add_class::<PyFeederGatewayClient>()?;
@@ -295,8 +291,10 @@ mod test {
     #[test]
     fn starknet_rs_py_test() {
         Python::with_gil(|py| {
+            // try loading our module
             let module = PyModule::new(py, "My Module");
-            assert!(crate::starknet_rs_py(py, module.unwrap()).is_ok());
+            let res = crate::starknet_rs_py(py, module.unwrap());
+            assert!(res.is_ok(), "{res:?}");
         });
     }
 }
