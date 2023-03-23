@@ -52,7 +52,7 @@ check: compile-cairo compile-starknet
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
 	cargo install flamegraph --version 0.6.2
-	python3.9 -m venv starknet-venv
+	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
 
