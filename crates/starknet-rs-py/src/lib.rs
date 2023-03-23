@@ -4,6 +4,8 @@ mod cached_state;
 mod starknet_state;
 mod types;
 
+use std::ops::Shl;
+
 use self::{
     cached_state::PyCachedState,
     types::{
@@ -18,8 +20,7 @@ use starknet_rs::{
     business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,
     definitions::constants::{
         DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT, DEFAULT_GAS_PRICE,
-        DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS, N_STEPS_FEE_WEIGHT,
-        TRANSACTION_VERSION,
+        DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS, TRANSACTION_VERSION,
     },
     services::api::contract_class::ContractClass,
 };
@@ -231,7 +232,7 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
 
     // Indentation for transactions meant to query and not addressed to the OS.
-    let query_version_base: Felt = Felt::from(1 << 128);
+    let query_version_base: Felt = Felt::from(1).shl(128_usize);
     let query_version = query_version_base + Felt::from(TRANSACTION_VERSION);
     m.add("QUERY_VERSION", query_version.to_biguint())?;
 
