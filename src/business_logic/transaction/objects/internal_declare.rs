@@ -395,8 +395,11 @@ mod tests {
             ..Default::default()
         });
 
-        let mut actual_resources = HashMap::new();
-        actual_resources.insert("l1_gas_usage".to_string(), 0);
+        let actual_resources = HashMap::from([
+            ("l1_gas_usage".to_string(), 0),
+            ("range_check_builtin".to_string(), 57),
+            ("pedersen_builtin".to_string(), 15),
+        ]);
         let transaction_exec_info = TransactionExecutionInfo {
             validate_info,
             call_info: None,

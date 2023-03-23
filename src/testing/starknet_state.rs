@@ -511,8 +511,11 @@ mod tests {
         let address = felt_str!(
             "2066790681318687707025847340457605657642478884993868155391041767964612021885"
         );
-        let mut actual_resources = HashMap::new();
-        actual_resources.insert("l1_gas_usage".to_string(), 0);
+        let actual_resources = HashMap::from([
+            ("l1_gas_usage".to_string(), 0),
+            ("range_check_builtin".to_string(), 70),
+            ("pedersen_builtin".to_string(), 16),
+        ]);
 
         let expected_info = TransactionExecutionInfo {
             validate_info: None,

@@ -628,12 +628,12 @@ mod tests {
         assert_matches!(
             run_hint!(vm, HashMap::new(), hint_code),
             Err(HintError::Internal(VirtualMachineError::Memory(
-               memory_error
-            ))) if memory_error == MemoryError::InconsistentMemory(
-                Relocatable::from((1, 6)),
-                MaybeRelocatable::from((1, 6)),
-                MaybeRelocatable::from((3, 0))
-            )
+                MemoryError::InconsistentMemory(x,y,z)
+            ))) if
+                x ==Relocatable::from((1, 6)) &&
+                y == MaybeRelocatable::from((1, 6)) &&
+                z ==MaybeRelocatable::from((3, 0))
+
         );
     }
 
