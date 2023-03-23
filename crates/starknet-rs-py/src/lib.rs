@@ -14,7 +14,6 @@ use self::{
 };
 use cairo_felt::{felt_str, Felt};
 use pyo3::prelude::*;
-use starknet_state::PyStarknetState;
 use starknet_rs::{
     business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,
     definitions::constants::{
@@ -24,6 +23,7 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
+use starknet_state::PyStarknetState;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 // TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
