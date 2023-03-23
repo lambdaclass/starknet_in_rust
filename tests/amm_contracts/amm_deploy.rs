@@ -11,11 +11,9 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::State},
         transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
-    core::contract_address::starknet_contract_address::compute_class_hash,
-    definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
-    hash_utils::calculate_contract_address,
+    definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_sn_keccak, Address, ClassHash},
+    utils::{calculate_sn_keccak, Address},
 };
 
 use crate::amm_contracts::utils::*;
