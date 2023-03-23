@@ -182,7 +182,7 @@ impl PyStarknetChainId {
 
     #[classattr]
     #[pyo3(name = "TESTNET")]
-    fn testnet() -> Self {
+    pub fn testnet() -> Self {
         Self {
             inner: StarknetChainId::TestNet,
         }

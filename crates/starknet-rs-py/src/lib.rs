@@ -18,8 +18,20 @@ use crate::utils::{
     py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
     py_validate_contract_deployed,
 };
+use cairo_felt::{felt_str, Felt};
 use pyo3::prelude::*;
+use starknet_rs::{
+    business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,
+    definitions::constants::{
+        DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT, DEFAULT_GAS_PRICE,
+        DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS, TRANSACTION_VERSION,
+    },
+    services::api::contract_class::ContractClass,
+};
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
+
+// TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
+use cairo_felt as felt;
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
@@ -27,10 +39,9 @@ compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as
 #[pymodule]
 pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
-    // starkware.starknet.business_logic.state.state
+
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
-
     m.add_class::<PyStarknetGeneralConfig>()?;
     m.add_class::<PyStarknetOsConfig>()?;
     m.add_class::<PyStarknetChainId>()?;
@@ -47,16 +58,11 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(calculate_deploy_transaction_hash)?;
     // m.add_function(calculate_transaction_hash_common)?;
 
-    // m.add("DEFAULT_GAS_PRICE", value)?;
-    // m.add("DEFAULT_MAX_STEPS", value)?;
-    // m.add("DEFAULT_SEQUENCER_ADDRESS", value)?;
-    // m.add("DEFAULT_VALIDATE_MAX_STEPS", value)?;
-    // m.add("DEFAULT_CHAIN_ID", value)?;
     // m.add_function(build_general_config)?;
 
     //  starkware.starknet.public.abi
     // m.add_function(get_selector_from_name)?;
-    // m.add("SYSCALL_PTR_OFFSET", value)?;
+
     // m.add_class::<PyAbiEntryType>()?;
     // m.add_function(get_storage_var_address)?;
 
@@ -71,8 +77,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyStarknetErrorCode>()?;
 
     //  starkware.starknet.services.api.feeder_gateway.response_objects
-    // m.add("LATEST_BLOCK_ID", value)?;
-    // m.add("PENDING_BLOCK_ID", value)?;
     // m.add_class::<PyBlockIdentifier>()?; this one is a Python Union
     // m.add_class::<PyBlockStateUpdate>()?;
     // m.add_class::<PyBlockStatus>()?;
@@ -100,7 +104,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.business_logic.execution.execute_entry_point
     // m.add_class::<PyExecuteEntryPoint>()?;
-    // m.add("FAULTY_CLASS_HASH", value)?;
 
     //  starkware.starknet.business_logic.execution.objects
     // m.add_class::<PyTransactionExecutionContext>()?;
@@ -127,17 +130,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyInvokeFunction>()?;
     // m.add_class::<PyDeploy>()?;
     // m.add_class::<PyTransaction>()?;
-    // m.add("DEFAULT_DECLARE_SENDER_ADDRESS", value)?;
-
-    //  starkware.starknet.definitions.constants
-    // m.add("UNINITIALIZED_CLASS_HASH", value)?;
-    // m.add("QUERY_VERSION", value)?;
-    // m.add("TRANSACTION_VERSION", value)?;
-    // m.add("N_STEPS_FEE_WEIGHT", value)?;
-    // m.add("CONTRACT_STATES_COMMITMENT_TREE_HEIGHT", value)?;
-    // m.add("EVENT_COMMITMENT_TREE_HEIGHT", value)?;
-    // m.add("CONTRACT_ADDRESS_BITS", value)?;
-    // m.add("TRANSACTION_COMMITMENT_TREE_HEIGHT", value)?;
 
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;
@@ -161,9 +153,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.services.api.messages
     // m.add_class::<PyStarknetMessageToL1>()?;
-
-    //  starkware.starknet.third_party.open_zeppelin.starknet_contracts
-    // m.add("account_contract", value)?;
 
     //  starkware.starknet.wallets.open_zeppelin
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
@@ -204,6 +193,69 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec!["get_salt"],
     )?;
 
+    // ~~~~~~~~~~~~~~~~~~~~
+    //  Exported Constants
+    // ~~~~~~~~~~~~~~~~~~~~
+
+    m.add("DEFAULT_GAS_PRICE", DEFAULT_GAS_PRICE)?;
+
+    // in cairo-lang they're equal
+    m.add("DEFAULT_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
+    m.add("DEFAULT_VALIDATE_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
+
+    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::testnet())?;
+    m.add(
+        "DEFAULT_SEQUENCER_ADDRESS",
+        DEFAULT_SEQUENCER_ADDRESS.0.to_biguint(),
+    )?;
+
+    // The sender address used by default in declare transactions of version 0.
+    m.add("DEFAULT_DECLARE_SENDER_ADDRESS", Felt::from(1).to_biguint())?;
+
+    // OS context offset.
+    m.add("SYSCALL_PTR_OFFSET", Felt::from(0).to_biguint())?;
+
+    // open_zeppelin's account contract
+    m.add(
+        "account_contract",
+        PyContractClass {
+            inner: ContractClass::try_from(include_str!("../../../starknet_programs/Account.json"))
+                .expect("program couldn't be parsed"),
+        },
+    )?;
+
+    m.add("LATEST_BLOCK_ID", "latest")?;
+    m.add("PENDING_BLOCK_ID", "pending")?;
+
+    m.add(
+        "FAULTY_CLASS_HASH",
+        felt_str!("0x1A7820094FEAF82D53F53F214B81292D717E7BB9A92BB2488092CD306F3993F").to_biguint(),
+    )?;
+
+    m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
+
+    // Indentation for transactions meant to query and not addressed to the OS.
+    let query_version_base: Felt = Felt::from(1 << 128);
+    let query_version = query_version_base + Felt::from(TRANSACTION_VERSION);
+    m.add("QUERY_VERSION", query_version.to_biguint())?;
+
+    m.add("TRANSACTION_VERSION", TRANSACTION_VERSION)?;
+
+    // The (empirical) L1 gas cost of each Cairo step.
+    pub const N_STEPS_FEE_WEIGHT: f64 = 0.05;
+    m.add("N_STEPS_FEE_WEIGHT", N_STEPS_FEE_WEIGHT)?;
+
+    m.add(
+        "CONTRACT_STATES_COMMITMENT_TREE_HEIGHT",
+        DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+    )?;
+
+    m.add("EVENT_COMMITMENT_TREE_HEIGHT", 64)?;
+    m.add("TRANSACTION_COMMITMENT_TREE_HEIGHT", 64)?;
+
+    // Felt number of bits
+    m.add("CONTRACT_ADDRESS_BITS", 251)?;
+
     Ok(())
 }
 
@@ -212,6 +264,7 @@ fn reexport(py: Python, dst: &PyModule, src_name: &str, names: Vec<&str>) -> PyR
     for name in names {
         dst.add(name, src.getattr(name)?)?;
     }
+
     Ok(())
 }
 

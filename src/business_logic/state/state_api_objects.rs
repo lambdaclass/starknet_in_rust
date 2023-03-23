@@ -17,7 +17,7 @@ pub struct BlockInfo {
 impl BlockInfo {
     pub fn empty(sequencer_address: Address) -> Self {
         BlockInfo {
-            block_number: 0, // should be -1
+            block_number: 0, // To do: In cairo-lang, this value is set to -1
             block_timestamp: 0,
             gas_price: 0,
             sequencer_address,
@@ -51,4 +51,16 @@ impl Default for BlockInfo {
             starknet_version: "0.0.0".to_string(),
         }
     }
+}
+
+#[test]
+fn test_validate_legal_progress() {
+    let first_block = BlockInfo::default();
+    let next_block: BlockInfo = BlockInfo {
+        block_number: 1,
+        block_timestamp: 1,
+        ..Default::default()
+    };
+
+    assert!(first_block.validate_legal_progress(&next_block).is_ok())
 }
