@@ -51,8 +51,8 @@ fn amm_init_pool_test() {
         .unwrap();
 
     let config = Default::default();
-    let _result = internal_deploy.apply(&mut state, &config).unwrap();
-    let contract_address = _result.call_info.unwrap().contract_address;
+    let result = internal_deploy.apply(&mut state, &config).unwrap();
+    let contract_address = result.call_info.unwrap().contract_address;
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
