@@ -15,8 +15,8 @@ use self::{
 };
 use crate::utils::{
     py_calculate_contract_address, py_calculate_contract_address_from_hash,
-    py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
-    py_validate_contract_deployed,
+    py_calculate_deploy_transaction_hash, py_calculate_event_hash, py_calculate_tx_fee,
+    py_compute_class_hash, py_validate_contract_deployed,
 };
 use cairo_felt::{felt_str, Felt};
 use pyo3::prelude::*;
@@ -156,8 +156,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_function(calculate_declare_transaction_hash)?;
-    // m.add_function(calculate_deploy_transaction_hash)?;
-    // m.add_function(calculate_transaction_hash_common)?;
+    // m.add_function(calculate_transaction_hash_common)?;   blocked by PyTransactionHashPrefix
 
     // m.add_function(build_general_config)?;    needs to be manually implemented
 
@@ -165,6 +164,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
     // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
+    m.add_function(wrap_pyfunction!(py_calculate_deploy_transaction_hash, m)?)?;
     m.add_function(wrap_pyfunction!(
         py_calculate_contract_address_from_hash,
         m
