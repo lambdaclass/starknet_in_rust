@@ -44,10 +44,10 @@ starknet_programs/%.json: starknet_programs/%.cairo
 #
 
 build:
-	cargo build --release
+	cargo build --release --all
 
 check:
-	cargo check
+	cargo check --all
 
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
@@ -63,7 +63,7 @@ clean:
 	-rm -f tests/*.json
 
 clippy:
-	cargo clippy --all-targets -- -D warnings
+	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet
 	cargo test
