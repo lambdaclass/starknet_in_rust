@@ -1045,8 +1045,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
     .to_vec();
 
     // The contract will fail because the receiver address is not a IERC721Receiver contract.
-    dbg!(safe_transfer_from(&calldata, &mut call_config).unwrap_err());
-    assert!(false);
+    assert!(safe_transfer_from(&calldata, &mut call_config).is_err());
 }
 
 #[test]
