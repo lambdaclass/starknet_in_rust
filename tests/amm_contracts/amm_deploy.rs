@@ -30,31 +30,14 @@ fn amm_init_pool_test() {
     // Instantiate CachedState
     let state_reader = InMemoryStateReader::default();
     let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let general_config = StarknetGeneralConfig::default();
 
-    // Set contract_class
-    let contract_class =
-        ContractClass::try_from(PathBuf::from("starknet_programs/amm.json")).unwrap();
-
-    let internal_deploy = InternalDeploy::new(
-        Address(0.into()),
-        contract_class.clone(),
-        vec![],
-        0.into(),
-        0,
-    )
-    .unwrap();
-    let class_hash = internal_deploy.class_hash();
-    state
-        .set_contract_class(&class_hash, &contract_class)
-        .unwrap();
-
-    let config = Default::default();
-    let result = internal_deploy.apply(&mut state, &config).unwrap();
-    let contract_address = result.call_info.unwrap().contract_address;
-
+    // Deploy contract
+    let result = deploy(&mut state, &general_config, "starknet_programs/amm.json").unwrap();
+    let contract_address = result.clone().call_info.unwrap().contract_address;
+    let class_hash = result.call_info.unwrap().class_hash.unwrap();
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
-    let general_config = StarknetGeneralConfig::default();
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let amm_entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"init_pool"));
