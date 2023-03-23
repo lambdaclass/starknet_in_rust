@@ -583,14 +583,14 @@ mod tests {
             vm,
             [((1, 0), 0), ((1, 1), 1), ((1, 2), 2), ((1, 3), (2, 0))]
         );
-        assert_eq!(
+        assert_matches!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
-            Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+            Ok(request) if request == SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
                 _selector: 0.into(),
                 to_address: Address(1.into()),
                 payload_size: 2,
                 payload_ptr: relocatable!(2, 0)
-            }))
+            })
         )
     }
 
@@ -613,16 +613,16 @@ mod tests {
             ]
         );
 
-        assert_eq!(
+        assert_matches!(
             syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
-            Ok(SyscallRequest::Deploy(DeployRequestStruct {
+            Ok(request) if request == SyscallRequest::Deploy(DeployRequestStruct {
                 _selector: 0.into(),
                 class_hash: 1.into(),
                 contract_address_salt: 2.into(),
                 constructor_calldata_size: 3.into(),
                 constructor_calldata: relocatable!(1, 20),
                 deploy_from_zero: 4,
-            }))
+            })
         )
     }
 
@@ -660,7 +660,7 @@ mod tests {
 
         // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,2) position
         assert_eq!(
-            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            get_big_int(&vm, relocatable!(1, 2)).unwrap(),
             syscall.get_block_info().block_timestamp.into()
         );
     }
@@ -690,7 +690,7 @@ mod tests {
             .unwrap();
 
         // Check that syscall.get_sequencer insert syscall.get_block_info().sequencer_address in the (1,1) position
-        assert_eq!(get_big_int(&vm, &relocatable!(1, 2)).unwrap(), 0.into())
+        assert_eq!(get_big_int(&vm, relocatable!(1, 2)).unwrap(), 0.into())
     }
 
     #[test]
@@ -810,58 +810,57 @@ mod tests {
             &HashMap::new(),
         );
 
-        assert_eq!(result, Ok(()));
+        assert_matches!(result, Ok(()));
 
         // Check VM inserts
 
         // TransactionExecutionContext.signature
         assert_eq!(
-            vm.get_integer(&relocatable!(3, 0)).unwrap().into_owned(),
+            vm.get_integer(relocatable!(3, 0)).unwrap().into_owned(),
             tx_execution_context.signature[0]
         );
         assert_eq!(
-            vm.get_integer(&relocatable!(3, 1)).unwrap().into_owned(),
+            vm.get_integer(relocatable!(3, 1)).unwrap().into_owned(),
             tx_execution_context.signature[1]
         );
 
         // TxInfoStruct
-        assert_eq!(
-            get_integer(&vm, &relocatable!(4, 0)),
-            Ok(tx_execution_context.version as usize)
+        assert_matches!(
+            get_integer(&vm, relocatable!(4, 0)),
+            Ok(field) if field == tx_execution_context.version as usize
         );
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 1)),
-            Ok(tx_execution_context.account_contract_address.0)
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 1)),
+            Ok(field) if field == tx_execution_context.account_contract_address.0
         );
-        assert_eq!(
-            get_integer(&vm, &relocatable!(4, 2)),
-            Ok(tx_execution_context.max_fee as usize)
+        assert_matches!(
+            get_integer(&vm, relocatable!(4, 2)),
+            Ok(field) if field == tx_execution_context.max_fee as usize
         );
-        assert_eq!(
-            get_integer(&vm, &relocatable!(4, 3)),
-            Ok(tx_execution_context.signature.len())
+        assert_matches!(
+            get_integer(&vm, relocatable!(4, 3)),
+            Ok(field) if field == tx_execution_context.signature.len()
         );
-        assert_eq!(
-            get_relocatable(&vm, &relocatable!(4, 4)),
-            Ok(relocatable!(3, 0))
+        assert_matches!(
+            get_relocatable(&vm, relocatable!(4, 4)),
+            Ok(field) if field == relocatable!(3, 0)
         );
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 5)),
-            Ok(tx_execution_context.transaction_hash)
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 5)),
+            Ok(field) if field == tx_execution_context.transaction_hash
         );
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 6)),
-            Ok(syscall_handler_hint_processor
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 6)),
+            Ok(field) if field == syscall_handler_hint_processor
                 .syscall_handler
                 .general_config
                 .starknet_os_config
                 .chain_id
-                .to_felt())
-        );
+                .to_felt());
 
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 7)),
-            Ok(tx_execution_context.nonce)
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 7)),
+            Ok(field) if field == tx_execution_context.nonce
         );
 
         // GetTxInfoResponse
@@ -905,10 +904,10 @@ mod tests {
             &HashMap::new(),
         );
 
-        assert_eq!(result, Ok(()));
+        assert_matches!(result, Ok(()));
 
         // GetTxInfoResponse
-        assert_eq!(
+        assert_matches!(
             vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(7, 0))
         );
@@ -944,11 +943,11 @@ mod tests {
             &HashMap::new(),
         );
 
-        assert_eq!(result, Ok(()));
+        assert_matches!(result, Ok(()));
 
         // Check VM inserts
         // GetTxInfoResponse
-        assert_eq!(
+        assert_matches!(
             vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(18, 12))
         );
@@ -983,7 +982,7 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            get_big_int(&vm, relocatable!(1, 2)).unwrap(),
             hint_processor.syscall_handler.caller_address.0
         )
     }
@@ -1066,16 +1065,16 @@ mod tests {
 
         let hint_data =
             HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
-        assert_eq!(
+        assert_matches!(
             hint_processor.execute_hint(
                 &mut vm,
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
             ),
-            Ok(()),
+            Ok(())
         );
-        assert_eq!(get_integer(&vm, &relocatable!(2, 1)), Ok(0));
+        assert_matches!(get_integer(&vm, relocatable!(2, 1)), Ok(0));
     }
 
     #[test]
@@ -1107,7 +1106,7 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            get_big_int(&vm, relocatable!(1, 2)).unwrap(),
             hint_processor.syscall_handler.contract_address.0
         )
     }
@@ -1160,7 +1159,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(
-            get_integer(&vm, &relocatable!(2, 1)).unwrap(),
+            get_integer(&vm, relocatable!(2, 1)).unwrap(),
             tx_execution_context.signature.len()
         );
         assert_eq!(
@@ -1227,7 +1226,7 @@ mod tests {
             .is_ok());
 
         // Check StorageReadResponse insert
-        assert_eq!(Ok(storage_value), get_big_int(&vm, &relocatable!(2, 2)));
+        assert_matches!(get_big_int(&vm, relocatable!(2, 2)), Ok(response) if response == storage_value );
     }
 
     #[test]
@@ -1251,7 +1250,7 @@ mod tests {
         );
 
         // StorageWriteRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone())
+        vm.insert_value(relocatable!(2, 1), address.clone())
             .unwrap();
 
         // syscall_ptr
@@ -1342,13 +1341,13 @@ mod tests {
             &HashMap::new(),
         );
 
-        assert_eq!(result, Ok(()));
+        assert_matches!(result, Ok(()));
 
         // Check VM inserts
         // StorageReadResponse
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(2, 2)),
-            Ok(execute_code_read_operation.get(0).unwrap().clone())
+        assert_matches!(
+            get_big_int(&vm, relocatable!(2, 2)),
+            Ok(response) if response == execute_code_read_operation.get(0).unwrap().clone()
         );
     }
 
@@ -1378,7 +1377,7 @@ mod tests {
         .unwrap();
         let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
 
-        vm.insert_value(&relocatable!(2, 1), class_hash_felt)
+        vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
 
         // Hinta data
@@ -1408,7 +1407,7 @@ mod tests {
             .unwrap();
 
         // Execute Deploy hint
-        assert_eq!(
+        assert_matches!(
             syscall_handler_hint_processor.execute_hint(
                 &mut vm,
                 &mut ExecutionScopes::new(),
@@ -1420,12 +1419,12 @@ mod tests {
 
         // Check VM inserts
         // DeployResponse.contract_address
-        let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+        let deployed_address = get_big_int(&vm, relocatable!(2, 6)).unwrap();
         // DeployResponse.constructor_retdata_size
-        assert_eq!(get_big_int(&vm, &relocatable!(2, 7)), Ok(0.into()));
+        assert_matches!(get_big_int(&vm, relocatable!(2, 7)), Ok(constructor_retdata_size) if constructor_retdata_size == 0.into());
         // DeployResponse.constructor_retdata
-        assert_eq!(
-            get_relocatable(&vm, &relocatable!(2, 8)),
+        assert_matches!(
+            get_relocatable(&vm, relocatable!(2, 8)),
             Ok(relocatable!(0, 0))
         );
 
@@ -1470,7 +1469,7 @@ mod tests {
         .unwrap();
         let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
 
-        vm.insert_value(&relocatable!(2, 1), class_hash_felt)
+        vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
 
         // Hinta data
@@ -1505,7 +1504,7 @@ mod tests {
             .unwrap();
 
         // Execute Deploy hint
-        assert_eq!(
+        assert_matches!(
             syscall_handler_hint_processor.execute_hint(
                 &mut vm,
                 &mut ExecutionScopes::new(),
@@ -1517,12 +1516,12 @@ mod tests {
 
         // Check VM inserts
         // DeployResponse.contract_address
-        let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+        let deployed_address = get_big_int(&vm, relocatable!(2, 6)).unwrap();
         // DeployResponse.constructor_retdata_size
-        assert_eq!(get_big_int(&vm, &relocatable!(2, 7)), Ok(0.into()));
+        assert_matches!(get_big_int(&vm, relocatable!(2, 7)), Ok(constructor_retdata_size) if constructor_retdata_size == 0.into());
         // DeployResponse.constructor_retdata
-        assert_eq!(
-            get_relocatable(&vm, &relocatable!(2, 8)),
+        assert_matches!(
+            get_relocatable(&vm, relocatable!(2, 8)),
             Ok(relocatable!(0, 0))
         );
 

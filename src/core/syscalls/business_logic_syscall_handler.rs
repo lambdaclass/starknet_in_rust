@@ -625,15 +625,15 @@ mod tests {
         let key = Relocatable::from((1, 6));
         vm.insert_value(key, (1, 6)).unwrap();
         //ids and references are not needed for this test
-        assert_eq!(
+        assert_matches!(
             run_hint!(vm, HashMap::new(), hint_code),
-            Err(HintError::Internal(VirtualMachineError::MemoryError(
-                MemoryError::InconsistentMemory(
-                    MaybeRelocatable::from((1, 6)),
-                    MaybeRelocatable::from((1, 6)),
-                    MaybeRelocatable::from((3, 0))
-                )
-            )))
+            Err(HintError::Internal(VirtualMachineError::Memory(
+               memory_error
+            ))) if memory_error == MemoryError::InconsistentMemory(
+                Relocatable::from((1, 6)),
+                MaybeRelocatable::from((1, 6)),
+                MaybeRelocatable::from((3, 0))
+            )
         );
     }
 
@@ -658,7 +658,7 @@ mod tests {
             ]
         );
 
-        assert_eq!(
+        assert_matches!(
             syscall._deploy(&vm, relocatable!(1, 0)),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
@@ -690,13 +690,13 @@ mod tests {
         vm.insert_value::<Felt252>(relocatable!(1, 0), 0.into())
             .unwrap();
 
-        assert_eq!(
+        assert_matches!(
             syscall.get_block_number(&mut vm, relocatable!(1, 0)),
-            Ok(()),
+            Ok(())
         );
-        assert_eq!(
+        assert_matches!(
             vm.get_integer(relocatable!(1, 1)).map(Cow::into_owned),
-            Ok(0.into()),
+            Ok(value) if value == 0.into()
         );
     }
 
@@ -711,9 +711,9 @@ mod tests {
         vm.insert_value::<Felt252>(relocatable!(1, 0), 0.into())
             .unwrap();
 
-        assert_eq!(
+        assert_matches!(
             syscall._get_contract_address(&vm, relocatable!(1, 0)),
-            Ok(syscall.contract_address)
+            Ok(contract_address) if contract_address == syscall.contract_address
         )
     }
 
@@ -722,9 +722,9 @@ mod tests {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
 
-        assert_eq!(
+        assert_matches!(
             syscall_handler._storage_read(Address(Felt252::zero())),
-            Ok(Felt252::zero()),
+            Ok(value) if value == Felt252::zero()
         );
     }
 }
