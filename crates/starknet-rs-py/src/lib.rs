@@ -13,7 +13,10 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use crate::utils::{py_calculate_tx_fee, py_compute_class_hash, py_validate_contract_deployed};
+use crate::utils::{
+    py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
+    py_validate_contract_deployed,
+};
 use pyo3::prelude::*;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
@@ -66,10 +69,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.core.os.contract_address.contract_address
     // m.add_function(calculate_contract_address_from_hash)?;
     // m.add_function(calculate_contract_address)?;
-
-    //  starkware.starknet.core.os.block_hash.block_hash
-    // m.add_function(calculate_block_hash)?;
-    // m.add_function(calculate_event_hash)?;
 
     //  starkware.starknet.definitions.error_codes
     // m.add_class::<PyStarknetErrorCode>()?;
@@ -173,6 +172,11 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
     // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
+    //  starkware.starknet.core.os.block_hash.block_hash
+    //  blocked by calculate_block_hash but could be reexported from cairo-lang
+    // m.add_function(calculate_block_hash)?;
+
+    m.add_function(wrap_pyfunction!(py_calculate_event_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;

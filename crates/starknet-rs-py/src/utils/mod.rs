@@ -5,6 +5,7 @@ use num_bigint::BigUint;
 use pyo3::{exceptions::PyValueError, pyfunction, PyResult};
 use starknet_rs::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
 use starknet_rs::business_logic::state::cached_state::CachedState;
+use starknet_rs::core::block_hash::starknet_block_hash::calculate_event_hash;
 use starknet_rs::utils::Address;
 use starknet_rs::{
     business_logic::transaction::fee::calculate_tx_fee,
@@ -45,6 +46,21 @@ pub(crate) fn py_validate_contract_deployed(
     let s: &mut CachedState<InMemoryStateReader> = state.into();
     match validate_contract_deployed(s, &Address(Felt::from(contract_address))) {
         Ok(res) => Ok(res),
+        Err(err) => Err(PyValueError::new_err(err.to_string())),
+    }
+}
+
+#[pyfunction]
+#[pyo3(name = "calculate_event_hash")]
+pub(crate) fn py_calculate_event_hash(
+    from_address: BigUint,
+    keys: Vec<BigUint>,
+    data: Vec<BigUint>,
+) -> PyResult<BigUint> {
+    let felt_keys = keys.into_iter().map(Into::into).collect();
+    let felt_data = data.into_iter().map(Into::into).collect();
+    match calculate_event_hash(Felt::from(from_address), felt_keys, felt_data) {
+        Ok(res) => Ok(res.to_biguint()),
         Err(err) => Err(PyValueError::new_err(err.to_string())),
     }
 }
