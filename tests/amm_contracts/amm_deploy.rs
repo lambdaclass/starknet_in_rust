@@ -11,7 +11,9 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::State},
         transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
+    core::contract_address::starknet_contract_address::compute_class_hash,
     definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+    hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
@@ -27,7 +29,6 @@ fn init_pool(
 
 #[test]
 fn amm_init_pool_test() {
-    let contract_address = Address(1111.into());
     // Instantiate CachedState
     let state_reader = InMemoryStateReader::default();
     let mut state = CachedState::new(state_reader, Some(Default::default()));
@@ -51,6 +52,7 @@ fn amm_init_pool_test() {
 
     let config = Default::default();
     let _result = internal_deploy.apply(&mut state, &config).unwrap();
+    let contract_address = _result.call_info.unwrap().contract_address;
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
