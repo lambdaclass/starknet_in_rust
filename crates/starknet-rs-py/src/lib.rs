@@ -14,8 +14,8 @@ use self::{
     },
 };
 use crate::utils::{
-    py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
-    py_validate_contract_deployed,
+    py_calculate_contract_address, py_calculate_event_hash, py_calculate_tx_fee,
+    py_compute_class_hash, py_validate_contract_deployed,
 };
 use pyo3::prelude::*;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
@@ -65,10 +65,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.testing.state
     // m.add_class::<PyStarknetState>()?;
-
-    //  starkware.starknet.core.os.contract_address.contract_address
-    // m.add_function(calculate_contract_address_from_hash)?;
-    // m.add_function(calculate_contract_address)?;
 
     //  starkware.starknet.definitions.error_codes
     // m.add_class::<PyStarknetErrorCode>()?;
@@ -176,6 +172,10 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  blocked by calculate_block_hash but could be reexported from cairo-lang
     // m.add_function(calculate_block_hash)?;
 
+    //  starkware.starknet.core.os.contract_address.contract_address
+    // m.add_function(calculate_contract_address_from_hash)?;
+
+    m.add_function(wrap_pyfunction!(py_calculate_contract_address, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_event_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
