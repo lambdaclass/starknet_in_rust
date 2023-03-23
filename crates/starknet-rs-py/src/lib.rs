@@ -159,11 +159,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(calculate_deploy_transaction_hash)?;
     // m.add_function(calculate_transaction_hash_common)?;
 
-    // m.add_function(build_general_config)?;
-
-    //  starkware.starknet.public.abi
-    // m.add_function(get_selector_from_name)?;
-    // m.add_function(get_storage_var_address)?;
+    // m.add_function(build_general_config)?;    needs to be manually implemented
 
     //  starkware.starknet.wallets.open_zeppelin
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
@@ -178,6 +174,14 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
+
+    // TODO: export from starknet-rs when implemented
+    reexport(
+        py,
+        m,
+        "starkware.starknet.public.abi",
+        vec!["get_selector_from_name", "get_storage_var_address"],
+    )?;
 
     // TODO: export from starknet-rs when implemented
     reexport(
