@@ -48,6 +48,7 @@ fn add_demo_token(
 fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
     execute_entry_point("swap", calldata, call_config)
 }
+
 #[test]
 fn amm_init_pool_test() {
     let address = Address(1111.into());
