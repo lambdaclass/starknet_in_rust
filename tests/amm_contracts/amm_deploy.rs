@@ -264,7 +264,7 @@ fn amm_swap_test() {
         retdata: expected_return,
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys,
+        accessed_storage_keys,
         storage_read_values: [
             100.into(),
             10000.into(),
@@ -421,7 +421,7 @@ fn amm_get_account_token_balance_test() {
     let expected_call_info_get_account_token_balance = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
-        contract_address: contract_address,
+        contract_address,
         entry_point_selector: Some(get_account_token_balance_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_get_balance,
