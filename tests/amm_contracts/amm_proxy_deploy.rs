@@ -1,6 +1,7 @@
 use crate::amm_contracts::utils::{deploy, execute_entry_point, get_accessed_keys, CallConfig};
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
+use starknet_crypto::FieldElement;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
@@ -165,37 +166,20 @@ fn amm_proxy_get_pool_token_balance_test() {
 
 #[test]
 fn amm_proxy_add_demo_token_test() {
-    let contract_address = Address(0.into());
-    let contract_class_hash = [1; 32];
-    let proxy_address = Address(1000000.into());
-    let mut proxy_class_hash = [0; 32];
-    proxy_class_hash[31] = 1;
-
-    // Create program and entry point types for contract class
-    let contract_path = PathBuf::from("starknet_programs/amm.json");
-    let contract_class = ContractClass::try_from(contract_path).unwrap();
-
-    let proxy_path = PathBuf::from("starknet_programs/amm_proxy.json");
-    let proxy_class = ContractClass::try_from(proxy_path).unwrap();
-
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    contract_class_cache.insert(contract_class_hash, contract_class);
-    contract_class_cache.insert(proxy_class_hash, proxy_class);
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(contract_address.clone(), contract_class_hash);
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(proxy_address.clone(), proxy_class_hash);
-
-    // Create state with previous data
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
-
-    let calldata = [0.into(), 555.into(), 666.into()].to_vec();
-    let caller_address = Address(1000000.into());
     let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    // Deploy contract
+    let (contract_address, contract_class_hash) =
+        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    // Deploy proxy
+    let (proxy_address, proxy_class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm_proxy.json",
+        &general_config,
+    );
+
+    let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
+    let caller_address = Address(1000000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let mut call_config = CallConfig {
@@ -210,18 +194,22 @@ fn amm_proxy_add_demo_token_test() {
     // Add pool balance
     execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
-    let calldata = [0.into(), 55.into(), 66.into()].to_vec();
+    let calldata = [contract_address.0.clone(), 55.into(), 66.into()].to_vec();
     let amm_proxy_entrypoint_selector =
         Felt::from_bytes_be(&calculate_sn_keccak(b"proxy_add_demo_token"));
     let result = execute_entry_point("proxy_add_demo_token", &calldata, &mut call_config).unwrap();
 
     let amm_entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"add_demo_token"));
 
+    let mut felt_slice: [u8; 32] = [0; 32];
+    felt_slice[0..32].copy_from_slice(proxy_address.0.clone().to_bytes_be().get(0..32).unwrap());
+    let proxy_addres_felt = FieldElement::from_bytes_be(&felt_slice).unwrap();
+
     let accessed_storage_keys = get_accessed_keys(
         "account_balance",
         vec![
-            vec![1000000_u32.into(), 1_u32.into()],
-            vec![1000000_u32.into(), 2_u32.into()],
+            vec![proxy_addres_felt, 1_u32.into()],
+            vec![proxy_addres_felt, 2_u32.into()],
         ],
     );
 
