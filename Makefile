@@ -43,11 +43,11 @@ starknet_programs/%.json: starknet_programs/%.cairo
 # Normal rules.
 #
 
-build:
-	cargo build --release
+build: compile-cairo compile-starknet
+	cargo build --release --all
 
-check:
-	cargo check
+check: compile-cairo compile-starknet
+	cargo check --all
 
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
@@ -61,8 +61,8 @@ clean:
 	-rm -f starknet_programs/*.json
 	-rm -f tests/*.json
 
-clippy:
-	cargo clippy --all-targets -- -D warnings
+clippy: compile-cairo compile-starknet
+	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet
 	cargo test
