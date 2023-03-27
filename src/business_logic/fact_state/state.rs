@@ -31,3 +31,24 @@ impl ExecutionResourcesManager {
             .map(ToOwned::to_owned)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+
+    use super::ExecutionResourcesManager;
+
+    #[test]
+    fn can_increase_the_syscall_counter() {
+        let syscalls = vec!["storage_read".to_string(), "storage_write".to_string()];
+        let mut erm = ExecutionResourcesManager::new(syscalls, ExecutionResources::default());
+
+        assert_eq!(Some(0), erm.get_syscall_counter("storage_read"));
+        assert_eq!(Some(0), erm.get_syscall_counter("storage_write"));
+
+        erm.increment_syscall_counter("storage_write", 1);
+
+        assert_eq!(Some(1), erm.get_syscall_counter("storage_write"));
+        assert_eq!(Some(0), erm.get_syscall_counter("storage_read"));
+    }
+}
