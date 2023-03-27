@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate honggfuzz;
 
-use felt::Felt;
+use felt::Felt252;
 use num_traits::Zero;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use starknet_rs::{
@@ -157,7 +157,7 @@ fn main() {
             let general_config = StarknetGeneralConfig::default();
             let tx_execution_context = TransactionExecutionContext::new(
                 Address(0.into()),
-                Felt::zero(),
+                Felt252::zero(),
                 Vec::new(),
                 0,
                 10.into(),
@@ -178,10 +178,10 @@ fn main() {
                 entry_point_selector: Some(storage_entrypoint_selector),
                 entry_point_type: Some(EntryPointType::External),
                 calldata,
-                retdata: [Felt::from_bytes_be(data_to_ascii(data).as_bytes())].to_vec(),
+                retdata: [Felt252::from_bytes_be(data_to_ascii(data).as_bytes())].to_vec(),
                 execution_resources: ExecutionResources::default(),
                 class_hash: Some(class_hash),
-                storage_read_values: vec![Felt::from_bytes_be(data_to_ascii(data).as_bytes())],
+                storage_read_values: vec![Felt252::from_bytes_be(data_to_ascii(data).as_bytes())],
                 accessed_storage_keys: expected_accessed_storage_keys,
                 ..Default::default()
             };
@@ -205,7 +205,7 @@ fn main() {
                     .storage_writes()
                     .get(&(address, expected_key))
                     .cloned(),
-                Some(Felt::from_bytes_be(data_to_ascii(data).as_bytes()))
+                Some(Felt252::from_bytes_be(data_to_ascii(data).as_bytes()))
             );
 
         });

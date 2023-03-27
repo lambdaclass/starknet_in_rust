@@ -1,4 +1,4 @@
-use felt::Felt;
+use felt::Felt252;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
 
@@ -9,11 +9,11 @@ use crate::utils::Address;
 pub(crate) struct StarknetMessageToL1 {
     from_address: Address,
     to_address: Address,
-    payload: Vec<Felt>,
+    payload: Vec<Felt252>,
 }
 
 impl StarknetMessageToL1 {
-    pub fn new(from_address: Address, to_address: Address, payload: Vec<Felt>) -> Self {
+    pub fn new(from_address: Address, to_address: Address, payload: Vec<Felt252>) -> Self {
         StarknetMessageToL1 {
             from_address,
             to_address,
@@ -21,7 +21,7 @@ impl StarknetMessageToL1 {
         }
     }
 
-    pub fn encode(&self) -> Vec<Felt> {
+    pub fn encode(&self) -> Vec<Felt252> {
         let mut encoding = Vec::with_capacity(self.payload.len() + 3);
         encoding.push(self.from_address.0.clone());
         encoding.push(self.to_address.0.clone());
@@ -48,7 +48,7 @@ impl StarknetMessageToL1 {
 fn create_starknet_message_to_l1() {
     let from_address = Address(42.into());
     let to_address = Address(1729.into());
-    let payload: Vec<Felt> = vec![1.into(), 2.into(), 3.into(), 4.into()];
+    let payload: Vec<Felt252> = vec![1.into(), 2.into(), 3.into(), 4.into()];
     let message = StarknetMessageToL1::new(from_address, to_address, payload);
 
     assert_eq!(message.from_address, Address(42.into()));

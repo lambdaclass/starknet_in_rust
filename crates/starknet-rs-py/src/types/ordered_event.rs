@@ -1,4 +1,4 @@
-use cairo_felt::Felt;
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::business_logic::execution::objects::OrderedEvent;
@@ -19,12 +19,12 @@ impl PyOrderedEvent {
 
     #[getter]
     fn keys(&self) -> Vec<BigUint> {
-        self.inner.keys.iter().map(Felt::to_biguint).collect()
+        self.inner.keys.iter().map(Felt252::to_biguint).collect()
     }
 
     #[getter]
     fn data(&self) -> Vec<BigUint> {
-        self.inner.data.iter().map(Felt::to_biguint).collect()
+        self.inner.data.iter().map(Felt252::to_biguint).collect()
     }
 }
 
