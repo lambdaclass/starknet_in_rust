@@ -24,7 +24,6 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
-use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 // TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
