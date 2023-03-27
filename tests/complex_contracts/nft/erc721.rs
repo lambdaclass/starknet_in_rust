@@ -1,14 +1,10 @@
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::HashSet;
 
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
 use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_rs::business_logic::state::cached_state::CachedState;
-use starknet_rs::services::api::contract_class::ContractClass;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent},
@@ -833,36 +829,30 @@ fn erc721_transfer_from_and_get_owner_test() {
 
 #[test]
 fn erc721_safe_transfer_from_should_fail_test() {
-    let contract_address = Address(0.into());
-    let contract_class_hash = [1; 32];
-    let erc165_address = Address(1000000.into());
-    let mut erc165_class_hash = [0; 32];
-    erc165_class_hash[31] = 1;
+    let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
 
-    // Create program and entry point types for contract class
-    let contract_path = PathBuf::from("starknet_programs/ERC721.json");
-    let contract_class = ContractClass::try_from(contract_path).unwrap();
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let collection_symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
 
-    let erc165_path = PathBuf::from("starknet_programs/ERC165.json");
-    let erc165_class = ContractClass::try_from(erc165_path).unwrap();
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/ERC721.json",
+        &calldata,
+        &general_config,
+    );
 
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    contract_class_cache.insert(contract_class_hash, contract_class);
-    contract_class_cache.insert(erc165_class_hash, erc165_class);
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(contract_address.clone(), contract_class_hash);
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(erc165_address, erc165_class_hash);
-
-    // Create state with previous data
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+    let (_, _) = deploy(
+        &mut state,
+        "starknet_programs/ERC165.json",
+        &[],
+        &general_config,
+    );
 
     let entry_points_by_type = state
-        .get_contract_class(&contract_class_hash)
+        .get_contract_class(&class_hash)
         .unwrap()
         .entry_points_by_type()
         .clone();
@@ -872,27 +862,16 @@ fn erc721_safe_transfer_from_should_fail_test() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    // First we initialize the contract
-    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
-    let symbol = Felt::from(555);
-    let to = Felt::from(666);
-    let constructor_calldata = [collection_name, symbol, to].to_vec();
-
-    let entry_point_type_constructor = EntryPointType::Constructor;
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
         address: &contract_address,
-        class_hash: &contract_class_hash,
+        class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
-        entry_point_type: &entry_point_type_constructor,
+        entry_point_type: &entry_point_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
-
-    contructor(&constructor_calldata, &mut call_config).unwrap();
-
-    call_config.entry_point_type = &entry_point_type;
 
     // data_len = 0 then there is no need to sent *felt for data
     let calldata = [
