@@ -10,7 +10,7 @@ use crate::{
     utils::ClassHash,
 };
 use cairo_rs::{
-    types::relocatable::Relocatable,
+    types::{errors::math_errors::MathError, relocatable::Relocatable},
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
         trace_errors::TraceError, vm_errors::VirtualMachineError,
@@ -106,4 +106,6 @@ pub enum TransactionError {
     StarknetRunner(#[from] StarknetRunnerError),
     #[error("Transaction type {0:?} not found in OsResources: {1:?}")]
     NoneTransactionType(TransactionType, OsResources),
+    #[error(transparent)]
+    MathError(#[from] MathError),
 }

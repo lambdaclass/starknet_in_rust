@@ -25,7 +25,7 @@ use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
-use felt::Felt;
+use felt::Felt252;
 use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
@@ -181,7 +181,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         &mut self,
         contract_address: &Address,
         class_hash_bytes: ClassHash,
-        constructor_calldata: Vec<Felt>,
+        constructor_calldata: Vec<Felt252>,
     ) -> Result<(), StateError> {
         let contract_class = self
             .starknet_storage_state
@@ -263,8 +263,8 @@ where
         let keys_len = request.keys_len;
         let data_len = request.data_len;
         let order = self.tx_execution_context.n_emitted_events;
-        let keys: Vec<Felt> = get_integer_range(vm, &request.keys, keys_len)?;
-        let data: Vec<Felt> = get_integer_range(vm, &request.data, data_len)?;
+        let keys: Vec<Felt252> = get_integer_range(vm, request.keys, keys_len)?;
+        let data: Vec<Felt252> = get_integer_range(vm, request.data, data_len)?;
         self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.
@@ -278,7 +278,7 @@ where
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_memory_segment();
-        let segment_end = vm.write_arg(&segment_start, &data)?;
+        let segment_end = vm.write_arg(segment_start, &data)?;
         let sub = segment_end.sub(&segment_start.to_owned().into())?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.push(segment);
@@ -307,7 +307,7 @@ where
 
         let constructor_calldata = get_integer_range(
             vm,
-            &request.constructor_calldata,
+            request.constructor_calldata,
             request
                 .constructor_calldata_size
                 .to_usize()
@@ -348,7 +348,7 @@ where
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<Vec<Felt>, SyscallHandlerError> {
+    ) -> Result<Vec<Felt252>, SyscallHandlerError> {
         let request = self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
         let entry_point_type;
@@ -374,7 +374,7 @@ where
                 contract_address = self.contract_address.clone();
                 caller_address = self.caller_address.clone();
                 call_type = CallType::Delegate;
-                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
+                call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             SyscallRequest::CallContract(request) => {
                 entry_point_type = match syscall_name {
@@ -386,7 +386,7 @@ where
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
                 call_type = CallType::Call;
-                call_data = get_integer_range(vm, &request.calldata, request.calldata_size)?;
+                call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             _ => return Err(SyscallHandlerError::NotImplemented),
         }
@@ -460,7 +460,7 @@ where
             return Err(SyscallHandlerError::ExpectedSendMessageToL1);
         };
 
-        let payload = get_integer_range(vm, &request.payload_ptr, request.payload_size)?;
+        let payload = get_integer_range(vm, request.payload_ptr, request.payload_size)?;
 
         self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
             self.tx_execution_context.n_sent_messages,
@@ -478,7 +478,7 @@ where
         vm: &mut VirtualMachine,
     ) -> Result<Relocatable, SyscallHandlerError> {
         if let Some(ptr) = &self.tx_info_ptr {
-            return Ok(ptr.get_relocatable()?);
+            return Ok(ptr.try_into()?);
         }
         let tx = self.tx_execution_context.clone();
 
@@ -523,14 +523,18 @@ where
         self._call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
-    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError> {
+    fn _storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
             .read(&felt_to_hash(&address.0))
             .cloned()?)
     }
 
-    fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError> {
+    fn _storage_write(
+        &mut self,
+        address: Address,
+        value: Felt252,
+    ) -> Result<(), SyscallHandlerError> {
         self.starknet_storage_state
             .write(&felt_to_hash(&address.0), value);
 
@@ -596,14 +600,9 @@ mod tests {
             exec_scope::ExecutionScopes,
             relocatable::{MaybeRelocatable, Relocatable},
         },
-        vm::{
-            errors::{
-                hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
-            },
-            vm_core::VirtualMachine,
-        },
+        vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
-    use felt::Felt;
+    use felt::Felt252;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 
@@ -619,17 +618,11 @@ mod tests {
         vm.set_ap(6);
         //Insert something into ap
         let key = Relocatable::from((1, 6));
-        vm.insert_value(&key, (1, 6)).unwrap();
+        vm.insert_value(key, (1, 6)).unwrap();
         //ids and references are not needed for this test
-        assert_eq!(
+        assert_matches!(
             run_hint!(vm, HashMap::new(), hint_code),
-            Err(HintError::Internal(VirtualMachineError::MemoryError(
-                MemoryError::InconsistentMemory(
-                    MaybeRelocatable::from((1, 6)),
-                    MaybeRelocatable::from((1, 6)),
-                    MaybeRelocatable::from((3, 0))
-                )
-            )))
+            Err(e) if e.to_string().contains(&MemoryError::InconsistentMemory(Relocatable::from((1, 6)),MaybeRelocatable::from((1, 6)),MaybeRelocatable::from((3, 0))).to_string())
         );
     }
 
@@ -654,7 +647,7 @@ mod tests {
             ]
         );
 
-        assert_eq!(
+        assert_matches!(
             syscall._deploy(&vm, relocatable!(1, 0)),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
@@ -669,7 +662,7 @@ mod tests {
 
         let segment_start = syscall_handler.allocate_segment(&mut vm, data).unwrap();
         let expected_value = vm
-            .get_integer(&Relocatable::from((0, 0)))
+            .get_integer(Relocatable::from((0, 0)))
             .unwrap()
             .into_owned();
         assert_eq!(Relocatable::from((0, 0)), segment_start);
@@ -683,16 +676,16 @@ mod tests {
         let mut vm = vm!();
 
         add_segments!(vm, 2);
-        vm.insert_value::<Felt>(&relocatable!(1, 0), 0.into())
+        vm.insert_value::<Felt252>(relocatable!(1, 0), 0.into())
             .unwrap();
 
-        assert_eq!(
+        assert_matches!(
             syscall.get_block_number(&mut vm, relocatable!(1, 0)),
-            Ok(()),
+            Ok(())
         );
-        assert_eq!(
-            vm.get_integer(&relocatable!(1, 1)).map(Cow::into_owned),
-            Ok(0.into()),
+        assert_matches!(
+            vm.get_integer(relocatable!(1, 1)).map(Cow::into_owned),
+            Ok(value) if value == 0.into()
         );
     }
 
@@ -704,12 +697,12 @@ mod tests {
 
         add_segments!(vm, 2);
 
-        vm.insert_value::<Felt>(&relocatable!(1, 0), 0.into())
+        vm.insert_value::<Felt252>(relocatable!(1, 0), 0.into())
             .unwrap();
 
-        assert_eq!(
+        assert_matches!(
             syscall._get_contract_address(&vm, relocatable!(1, 0)),
-            Ok(syscall.contract_address)
+            Ok(contract_address) if contract_address == syscall.contract_address
         )
     }
 
@@ -718,9 +711,9 @@ mod tests {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
 
-        assert_eq!(
-            syscall_handler._storage_read(Address(Felt::zero())),
-            Ok(Felt::zero()),
+        assert_matches!(
+            syscall_handler._storage_read(Address(Felt252::zero())),
+            Ok(value) if value == Felt252::zero()
         );
     }
 }

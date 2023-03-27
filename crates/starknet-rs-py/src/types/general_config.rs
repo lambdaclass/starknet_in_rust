@@ -1,7 +1,4 @@
-// TODO: remove when pyo3 v0.18.2 releases (https://github.com/PyO3/pyo3/pull/3028)
-#![allow(clippy::redundant_closure)]
-
-use cairo_felt::Felt;
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{prelude::*, types::PyDict};
 use starknet_rs::{
@@ -57,7 +54,7 @@ impl PyStarknetGeneralConfig {
             cairo_resource_fee_weights,
             invoke_tx_max_n_steps,
             validate_max_n_steps,
-            BlockInfo::empty(Address(Felt::from(sequencer_address))),
+            BlockInfo::empty(Address(Felt252::from(sequencer_address))),
         );
         Self { inner }
     }
@@ -139,7 +136,7 @@ impl PyStarknetOsConfig {
         fee_token_address = DEFAULT_STARKNET_OS_CONFIG.fee_token_address().0.to_biguint(),
     ))]
     fn new(chain_id: PyStarknetChainId, fee_token_address: BigUint) -> Self {
-        let address = Address(Felt::from(fee_token_address));
+        let address = Address(Felt252::from(fee_token_address));
         let inner = StarknetOsConfig::new(chain_id.into(), address, 0);
         Self { inner }
     }
