@@ -52,7 +52,7 @@ fn test_invoke() {
         .nonce_initial_values_mut()
         .insert(contract_address.clone(), Felt::zero());
 
-    for i in (0..201).step_by(2) {
+    for i in (0..1001).step_by(2) {
         starknet_state
             .invoke_raw(
                 contract_address.clone(),

@@ -25,7 +25,7 @@ async def contract(starknet: Starknet) -> StarknetContract:
 async def test_basic(contract: StarknetContract):
     # contract_address, selector: felt, calldata_len: felt, calldata: felt*
     # call_info = await account.__execute__(contract_address=contract.contract_address, selector=0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9, calldata=[1, 1, 10]).execute()
-    for i in range(1, 101):
+    for i in range(1, 1001):
         await contract.increase_balance(amount=10).execute()
         call_info = await contract.get_balance().execute()
         assert call_info.result == (10 * i,)
