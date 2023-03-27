@@ -389,8 +389,7 @@ mod tests {
     use cairo_rs::{
         types::relocatable::{MaybeRelocatable, Relocatable},
         vm::{
-            errors::{memory_errors::MemoryError, vm_errors::VirtualMachineError},
-            runners::cairo_runner::ExecutionResources,
+            errors::memory_errors::MemoryError, runners::cairo_runner::ExecutionResources,
             vm_core::VirtualMachine,
         },
     };
@@ -902,9 +901,7 @@ mod tests {
         };
         assert_matches!(
             handler._call_contract_and_write_response("call_contract", &mut vm, syscall_ptr),
-            Err(SyscallHandlerError::VirtualMachine(
-                VirtualMachineError::Memory(MemoryError::UnallocatedSegment(0, 0))
-            ))
+            Err(e) if e.to_string().contains(&MemoryError::UnallocatedSegment(0, 0).to_string())
         )
     }
 

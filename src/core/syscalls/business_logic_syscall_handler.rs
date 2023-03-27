@@ -600,12 +600,7 @@ mod tests {
             exec_scope::ExecutionScopes,
             relocatable::{MaybeRelocatable, Relocatable},
         },
-        vm::{
-            errors::{
-                hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
-            },
-            vm_core::VirtualMachine,
-        },
+        vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
     use felt::Felt252;
     use num_traits::Zero;
@@ -627,13 +622,7 @@ mod tests {
         //ids and references are not needed for this test
         assert_matches!(
             run_hint!(vm, HashMap::new(), hint_code),
-            Err(HintError::Internal(VirtualMachineError::Memory(
-                MemoryError::InconsistentMemory(x,y,z)
-            ))) if
-                x ==Relocatable::from((1, 6)) &&
-                y == MaybeRelocatable::from((1, 6)) &&
-                z ==MaybeRelocatable::from((3, 0))
-
+            Err(e) if e.to_string().contains(&MemoryError::InconsistentMemory(Relocatable::from((1, 6)),MaybeRelocatable::from((1, 6)),MaybeRelocatable::from((3, 0))).to_string())
         );
     }
 
