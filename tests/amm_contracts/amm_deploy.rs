@@ -322,3 +322,27 @@ fn amm_swap_should_fail_with_unexistent_token() {
 
     assert!(swap(&calldata, &mut call_config).is_err());
 }
+
+#[test]
+fn amm_swap_should_fail_with_amount_out_of_bounds() {
+    let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    // Deploy contract
+    let (contract_address, class_hash) =
+        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+
+    let calldata = [Felt::new(1), Felt::new(2_u32.pow(30))].to_vec();
+    let caller_address = Address(0000.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &contract_address,
+        class_hash: &class_hash,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    assert!(swap(&calldata, &mut call_config).is_err());
+}
