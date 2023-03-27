@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack	
 
 
 OS := $(shell uname)
@@ -14,6 +14,9 @@ CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
 STARKNET_SOURCES=$(wildcard starknet_programs/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 
+BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
+BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
+
 
 #
 # VENV rules.
@@ -23,6 +26,7 @@ deps-venv:
 	pip install \
 		fastecdsa \
 		typeguard==2.13.0 \
+		maturin \
 		cairo-lang==0.10.3
 
 compile-cairo: $(CAIRO_TARGETS)
@@ -71,6 +75,9 @@ py-test: compile-cairo compile-starknet
 coverage: compile-cairo compile-starknet
 	cargo tarpaulin
 	-rm -f default.profraw
+
+heaptrack:
+	./scripts/heaptrack.sh
 
 flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals
