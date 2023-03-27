@@ -395,8 +395,8 @@ fn amm_proxy_swap() {
     let accessed_storage_keys_user_balance = get_accessed_keys(
         "account_balance",
         vec![
-            vec![proxy_addres_felt.clone(), 1_u8.into()],
-            vec![proxy_addres_felt.clone(), 2_u8.into()],
+            vec![proxy_addres_felt, 1_u8.into()],
+            vec![proxy_addres_felt, 2_u8.into()],
         ],
     );
 
