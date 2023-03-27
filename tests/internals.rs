@@ -666,7 +666,11 @@ fn test_declare_tx() {
         None,
         Some(expected_declare_fee_transfer_info()),
         0,
-        HashMap::from([("l1_gas_usage".to_string(), 0)]),
+        HashMap::from([
+            ("range_check_builtin".to_string(), 57),
+            ("pedersen_builtin".to_string(), 15),
+            ("l1_gas_usage".to_string(), 0),
+        ]),
         Some(TransactionType::Declare),
     );
 
@@ -750,7 +754,12 @@ fn expected_transaction_execution_info() -> TransactionExecutionInfo {
         Some(expected_execute_call_info()),
         Some(expected_fee_transfer_info()),
         0,
-        HashMap::from([("l1_gas_usage".to_string(), 0)]),
+        HashMap::from([
+            ("pedersen_builtin".to_string(), 16),
+            ("range_check".to_string(), 2),
+            ("l1_gas_usage".to_string(), 0),
+            ("range_check_builtin".to_string(), 70),
+        ]),
         Some(TransactionType::InvokeFunction),
     )
 }
@@ -877,10 +886,14 @@ fn test_deploy_account() {
         ACTUAL_FEE.to_u64().unwrap(),
         // Entry **not** in blockifier.
         // Default::default(),
-        [("l1_gas_usage", 3672)]
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
-            .collect(),
+        [
+            ("l1_gas_usage", 3672),
+            ("range_check_builtin", 74),
+            ("pedersen_builtin", 23),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect(),
         TransactionType::DeployAccount.into(),
     );
     assert_eq!(tx_info, expected_execution_info);

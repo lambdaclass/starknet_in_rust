@@ -78,10 +78,14 @@ fn internal_deploy_account() {
             }),
             None,
             0,
-            [("l1_gas_usage", 1224)]
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
-                .collect(),
+            [
+                ("pedersen_builtin", 23),
+                ("range_check_builtin", 74),
+                ("l1_gas_usage", 1224)
+            ]
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect(),
             Some(TransactionType::DeployAccount),
         ),
     );
