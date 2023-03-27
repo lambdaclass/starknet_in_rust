@@ -3,7 +3,7 @@ use crate::types::{
     general_config::PyStarknetGeneralConfig, transaction::PyTransaction,
     transaction_execution_info::PyTransactionExecutionInfo,
 };
-use cairo_felt::Felt;
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::business_logic::state::state_api::State;
@@ -54,11 +54,18 @@ impl PyStarknetState {
         let address = Address(contract_address.into());
         let selector = selector.into();
 
-        let calldata = calldata.into_iter().map(Felt::from).collect::<Vec<Felt>>();
-        let signature =
-            signature.map(|signs| signs.into_iter().map(Felt::from).collect::<Vec<Felt>>());
+        let calldata = calldata
+            .into_iter()
+            .map(Felt252::from)
+            .collect::<Vec<Felt252>>();
+        let signature = signature.map(|signs| {
+            signs
+                .into_iter()
+                .map(Felt252::from)
+                .collect::<Vec<Felt252>>()
+        });
 
-        let nonce = nonce.map(Felt::from);
+        let nonce = nonce.map(Felt252::from);
 
         let exec_info = self
             .inner
@@ -75,16 +82,19 @@ impl PyStarknetState {
         calldata: Vec<BigUint>,
         caller_address: BigUint,
     ) -> PyResult<PyCallInfo> {
-        let calldata = calldata.into_iter().map(Felt::from).collect::<Vec<Felt>>();
-        let entry_point_selector = Felt::from(entry_point_selector);
+        let calldata = calldata
+            .into_iter()
+            .map(Felt252::from)
+            .collect::<Vec<Felt252>>();
+        let entry_point_selector = Felt252::from(entry_point_selector);
 
         let call_info = self
             .inner
             .execute_entry_point_raw(
-                Address(Felt::from(contract_address)),
+                Address(Felt252::from(contract_address)),
                 entry_point_selector,
                 calldata,
-                Address(Felt::from(caller_address)),
+                Address(Felt252::from(caller_address)),
             )
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
@@ -100,9 +110,9 @@ impl PyStarknetState {
         let contract_class = contract_class.inner.clone();
         let constructor_calldata = constructor_calldata
             .into_iter()
-            .map(Felt::from)
-            .collect::<Vec<Felt>>();
-        let contract_address_salt = Address(Felt::from(contract_address_salt));
+            .map(Felt252::from)
+            .collect::<Vec<Felt252>>();
+        let contract_address_salt = Address(Felt252::from(contract_address_salt));
 
         let (address, exec_info) = self
             .inner
@@ -134,7 +144,7 @@ impl PyStarknetState {
         address: BigUint,
         contract_class: &PyContractClass,
     ) -> PyResult<()> {
-        let hash = felt_to_hash(&Felt::from(address));
+        let hash = felt_to_hash(&Felt252::from(address));
         self.inner
             .state
             .set_contract_class(&hash, &contract_class.inner.clone())

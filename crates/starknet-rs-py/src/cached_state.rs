@@ -1,5 +1,3 @@
-use cairo_felt::Felt;
-use crate::types::contract_class::PyContractClass;
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
