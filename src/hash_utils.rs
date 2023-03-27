@@ -1,5 +1,5 @@
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use felt::Felt;
+use felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};
@@ -7,13 +7,13 @@ use std::vec;
 
 pub fn calculate_contract_address(
     salt: &Address,
-    class_hash: &Felt,
-    constructor_calldata: &[Felt],
+    class_hash: &Felt252,
+    constructor_calldata: &[Felt252],
     deployer_address: Address,
-) -> Result<Felt, SyscallHandlerError> {
+) -> Result<Felt252, SyscallHandlerError> {
     // Define constants
-    let l2_address_upper_bound = Felt::new(2).pow(251) - Felt::new(256);
-    let contract_address_prefix = Felt::from_bytes_be("STARKNET_CONTRACT_ADDRESS".as_bytes());
+    let l2_address_upper_bound = Felt252::new(2).pow(251) - Felt252::new(256);
+    let contract_address_prefix = Felt252::from_bytes_be("STARKNET_CONTRACT_ADDRESS".as_bytes());
 
     let constructor_calldata_hash = compute_hash_on_elements(constructor_calldata)?;
     let raw_address_vec = vec![
@@ -28,7 +28,7 @@ pub fn calculate_contract_address(
     Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-pub(crate) fn compute_hash_on_elements(vec: &[Felt]) -> Result<Felt, SyscallHandlerError> {
+pub(crate) fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandlerError> {
     let mut felt_vec = vec
         .iter()
         .map(|num| {
@@ -45,7 +45,7 @@ pub(crate) fn compute_hash_on_elements(vec: &[Felt]) -> Result<Felt, SyscallHand
         .reduce(|x, y| pedersen_hash(&x, &y))
         .ok_or(SyscallHandlerError::FailToComputeHash)?;
 
-    let result = Felt::from_bytes_be(&felt_result.to_bytes_be());
+    let result = Felt252::from_bytes_be(&felt_result.to_bytes_be());
     Ok(result)
 }
 
@@ -59,21 +59,21 @@ mod tests {
         let v1 = vec![1.into()];
         let result1 = compute_hash_on_elements(&v1);
 
-        assert_eq!(
-            result1,
-            Ok(felt_str!(
+        assert_matches!(
+        result1,
+            Ok(x) if x == felt_str!(
                 "3416122613774376552656914666405609308365843021349846777564025639164215424932"
-            ))
+            )
         );
 
-        let v2: Vec<Felt> = vec![1.into(), 2.into(), 3.into(), 4.into()];
+        let v2: Vec<Felt252> = vec![1.into(), 2.into(), 3.into(), 4.into()];
         let result2 = compute_hash_on_elements(&v2);
 
-        assert_eq!(
-            result2,
-            Ok(felt_str!(
+        assert_matches!(
+        result2,
+            Ok(x) if x == felt_str!(
                 "2904394281987469213428308031512088126582033652660815761074595741628288213124"
-            ))
+            )
         );
 
         let v3 = vec![
@@ -85,11 +85,11 @@ mod tests {
         ];
         let result3 = compute_hash_on_elements(&v3);
 
-        assert_eq!(
-            result3,
-            Ok(felt_str!(
+        assert_matches!(
+        result3,
+            Ok(x) if x == felt_str!(
                 "183592112522859067029852736072730560878910822643949684307130835577741550985"
-            ))
+            )
         );
     }
 
@@ -102,11 +102,11 @@ mod tests {
             Address(5.into()),
         );
 
-        assert_eq!(
-            result_1,
-            Ok(felt_str!(
+        assert_matches!(
+        result_1,
+            Ok(x) if x == felt_str!(
                 "1885555033409779003200115284723341705041371741573881252130189632266543809788"
-            ))
+            )
         );
 
         let result_2 = calculate_contract_address(
@@ -116,11 +116,11 @@ mod tests {
             Address(87123.into()),
         );
 
-        assert_eq!(
+        assert_matches!(
             result_2,
-            Ok(felt_str!(
+            Ok(x) if x ==felt_str!(
                 "2864535578326518086698404810362457605993575745991923092043914398137702365865"
-            ))
+            )
         );
     }
 }

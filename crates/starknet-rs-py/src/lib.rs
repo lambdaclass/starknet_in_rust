@@ -14,7 +14,7 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use cairo_felt::{felt_str, Felt};
+use cairo_felt::{felt_str, Felt252};
 use pyo3::prelude::*;
 use starknet_rs::{
     business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,
@@ -27,9 +27,6 @@ use starknet_rs::{
 
 use starknet_state::PyStarknetState;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
-
-// TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
-use cairo_felt as felt;
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
@@ -208,10 +205,13 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     )?;
 
     // The sender address used by default in declare transactions of version 0.
-    m.add("DEFAULT_DECLARE_SENDER_ADDRESS", Felt::from(1).to_biguint())?;
+    m.add(
+        "DEFAULT_DECLARE_SENDER_ADDRESS",
+        Felt252::from(1).to_biguint(),
+    )?;
 
     // OS context offset.
-    m.add("SYSCALL_PTR_OFFSET", Felt::from(0).to_biguint())?;
+    m.add("SYSCALL_PTR_OFFSET", Felt252::from(0).to_biguint())?;
 
     // open_zeppelin's account contract
     m.add(
@@ -234,8 +234,8 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
 
     // Indentation for transactions meant to query and not addressed to the OS.
-    let query_version_base = Felt::from(1).shl(128u32); // == 2 ** 128
-    let query_version = query_version_base + Felt::from(TRANSACTION_VERSION);
+    let query_version_base = Felt252::from(1).shl(128u32); // == 2 ** 128
+    let query_version = query_version_base + Felt252::from(TRANSACTION_VERSION);
     m.add("QUERY_VERSION", query_version.to_biguint())?;
 
     m.add("TRANSACTION_VERSION", TRANSACTION_VERSION)?;
@@ -252,7 +252,7 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add("EVENT_COMMITMENT_TREE_HEIGHT", 64)?;
     m.add("TRANSACTION_COMMITMENT_TREE_HEIGHT", 64)?;
 
-    // Felt number of bits
+    // Felt252 number of bits
     m.add("CONTRACT_ADDRESS_BITS", 251)?;
 
     Ok(())

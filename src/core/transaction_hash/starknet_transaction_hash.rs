@@ -8,7 +8,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::Address,
 };
-use felt::{felt_str, Felt};
+use felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub enum TransactionHashPrefix {
 }
 
 impl TransactionHashPrefix {
-    fn get_prefix(&self) -> Felt {
+    fn get_prefix(&self) -> Felt252 {
         match self {
             TransactionHashPrefix::Declare => felt_str!("28258975365558885"),
             TransactionHashPrefix::Deploy => felt_str!("110386840629113"),
@@ -54,15 +54,15 @@ pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: u64,
     contract_address: &Address,
-    entry_point_selector: Felt,
-    calldata: &[Felt],
+    entry_point_selector: Felt252,
+    calldata: &[Felt252],
     max_fee: u64,
-    chain_id: Felt,
-    additional_data: &[Felt],
-) -> Result<Felt, SyscallHandlerError> {
+    chain_id: Felt252,
+    additional_data: &[Felt252],
+) -> Result<Felt252, SyscallHandlerError> {
     let calldata_hash = compute_hash_on_elements(calldata)?;
 
-    let mut data_to_hash: Vec<Felt> = vec![
+    let mut data_to_hash: Vec<Felt252> = vec![
         tx_hash_prefix.get_prefix(),
         version.into(),
         contract_address.0.clone(),
@@ -80,9 +80,9 @@ pub fn calculate_transaction_hash_common(
 pub fn calculate_deploy_transaction_hash(
     version: u64,
     contract_address: &Address,
-    constructor_calldata: &[Felt],
-    chain_id: Felt,
-) -> Result<Felt, SyscallHandlerError> {
+    constructor_calldata: &[Felt252],
+    chain_id: Felt252,
+) -> Result<Felt252, SyscallHandlerError> {
     calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
         version,
@@ -99,21 +99,21 @@ pub fn calculate_deploy_transaction_hash(
 pub fn calculate_deploy_account_transaction_hash(
     version: u64,
     contract_address: &Address,
-    class_hash: Felt,
-    constructor_calldata: &[Felt],
+    class_hash: Felt252,
+    constructor_calldata: &[Felt252],
     max_fee: u64,
-    nonce: Felt,
-    salt: Felt,
-    chain_id: Felt,
-) -> Result<Felt, SyscallHandlerError> {
-    let mut calldata: Vec<Felt> = vec![class_hash, salt];
+    nonce: Felt252,
+    salt: Felt252,
+    chain_id: Felt252,
+) -> Result<Felt252, SyscallHandlerError> {
+    let mut calldata: Vec<Felt252> = vec![class_hash, salt];
     calldata.extend_from_slice(constructor_calldata);
 
     calculate_transaction_hash_common(
         TransactionHashPrefix::DeployAccount,
         version,
         contract_address,
-        Felt::zero(),
+        Felt252::zero(),
         &calldata,
         max_fee,
         chain_id,
@@ -123,12 +123,12 @@ pub fn calculate_deploy_account_transaction_hash(
 
 pub fn calculate_declare_transaction_hash(
     contract_class: &ContractClass,
-    chain_id: Felt,
+    chain_id: Felt252,
     sender_address: &Address,
     max_fee: u64,
     version: u64,
-    nonce: Felt,
-) -> Result<Felt, SyscallHandlerError> {
+    nonce: Felt252,
+) -> Result<Felt252, SyscallHandlerError> {
     let class_hash =
         compute_class_hash(contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
@@ -142,7 +142,7 @@ pub fn calculate_declare_transaction_hash(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
-        Felt::zero(),
+        Felt252::zero(),
         &calldata,
         max_fee,
         chain_id,
@@ -165,7 +165,7 @@ mod tests {
         let calldata = vec![540.into(), 338.into()];
         let max_fee = 10;
         let chain_id = 1.into();
-        let additional_data: Vec<Felt> = Vec::new();
+        let additional_data: Vec<Felt252> = Vec::new();
 
         // Expected value taken from Python implementation of calculate_transaction_hash_common function
         let expected = felt_str!(

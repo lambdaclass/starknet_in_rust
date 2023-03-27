@@ -25,7 +25,7 @@ use crate::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_tx_resources, Address, ClassHash},
 };
-use felt::Felt;
+use felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
@@ -45,11 +45,11 @@ pub struct InternalDeployAccount {
     #[getset(get = "pub")]
     class_hash: ClassHash,
     #[getset(get = "pub")]
-    constructor_calldata: Vec<Felt>,
+    constructor_calldata: Vec<Felt252>,
     version: u64,
-    nonce: Felt,
+    nonce: Felt252,
     max_fee: u64,
-    signature: Vec<Felt>,
+    signature: Vec<Felt252>,
     chain_id: StarknetChainId,
 }
 
@@ -59,17 +59,17 @@ impl InternalDeployAccount {
         class_hash: ClassHash,
         max_fee: u64,
         version: u64,
-        nonce: Felt,
-        constructor_calldata: Vec<Felt>,
-        signature: Vec<Felt>,
+        nonce: Felt252,
+        constructor_calldata: Vec<Felt252>,
+        signature: Vec<Felt252>,
         contract_address_salt: Address,
         chain_id: StarknetChainId,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = calculate_contract_address(
             &contract_address_salt,
-            &Felt::from_bytes_be(&class_hash),
+            &Felt252::from_bytes_be(&class_hash),
             &constructor_calldata,
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
         )?;
 
         Ok(Self {
@@ -186,7 +186,7 @@ impl InternalDeployAccount {
 
                 Ok(CallInfo::empty_constructor_call(
                     self.contract_address.clone(),
-                    Address(Felt::zero()),
+                    Address(Felt252::zero()),
                     Some(self.class_hash),
                 ))
             }
@@ -228,7 +228,7 @@ impl InternalDeployAccount {
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
             CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
             EntryPointType::Constructor,
             None,
             None,
@@ -252,7 +252,7 @@ impl InternalDeployAccount {
             calculate_deploy_account_transaction_hash(
                 self.version,
                 &self.contract_address,
-                Felt::from_bytes_be(&self.class_hash),
+                Felt252::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
                 self.max_fee,
                 self.nonce.clone(),
@@ -284,14 +284,14 @@ impl InternalDeployAccount {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             [
-                Felt::from_bytes_be(&self.class_hash),
+                Felt252::from_bytes_be(&self.class_hash),
                 self.contract_address_salt.0.clone(),
             ]
             .into_iter()
             .chain(self.constructor_calldata.iter().cloned())
             .collect(),
             VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
             EntryPointType::External,
             None,
             None,

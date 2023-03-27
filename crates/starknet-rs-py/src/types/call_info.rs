@@ -2,7 +2,7 @@ use super::{
     execution_resources::PyExecutionResources, ordered_event::PyOrderedEvent,
     ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
 };
-use cairo_felt::Felt;
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::{
@@ -39,7 +39,7 @@ impl PyCallInfo {
 
     #[getter]
     fn class_hash(&self) -> Option<BigUint> {
-        Some(Felt::from_bytes_be(&self.inner.class_hash?).to_biguint())
+        Some(Felt252::from_bytes_be(&self.inner.class_hash?).to_biguint())
     }
 
     #[getter]
@@ -58,12 +58,16 @@ impl PyCallInfo {
 
     #[getter]
     fn calldata(&self) -> Vec<BigUint> {
-        self.inner.calldata.iter().map(Felt::to_biguint).collect()
+        self.inner
+            .calldata
+            .iter()
+            .map(Felt252::to_biguint)
+            .collect()
     }
 
     #[getter]
     fn retdata(&self) -> Vec<BigUint> {
-        self.inner.retdata.iter().map(Felt::to_biguint).collect()
+        self.inner.retdata.iter().map(Felt252::to_biguint).collect()
     }
 
     #[getter]
@@ -91,7 +95,7 @@ impl PyCallInfo {
         self.inner
             .storage_read_values
             .iter()
-            .map(Felt::to_biguint)
+            .map(Felt252::to_biguint)
             .collect()
     }
 
@@ -100,7 +104,7 @@ impl PyCallInfo {
         self.inner
             .accessed_storage_keys
             .iter()
-            .map(|x| Felt::from_bytes_be(x).to_biguint())
+            .map(|x| Felt252::from_bytes_be(x).to_biguint())
             .collect()
     }
 

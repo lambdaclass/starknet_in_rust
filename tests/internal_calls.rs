@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::Felt;
+use felt::Felt252;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
@@ -36,9 +36,9 @@ fn test_internal_calls() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [0x01; 32];
-    let nonce = Felt::zero();
+    let nonce = Felt252::zero();
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
-    let storage = Felt::zero();
+    let storage = Felt252::zero();
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -54,7 +54,7 @@ fn test_internal_calls() {
         Some([([0x01; 32], contract_class)].into_iter().collect()),
     );
 
-    let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"a"));
+    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"a"));
     let entry_point = ExecutionEntryPoint::new(
         Address(1111.into()),
         vec![],

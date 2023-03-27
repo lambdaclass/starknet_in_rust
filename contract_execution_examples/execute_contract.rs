@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::Felt;
+use felt::Felt252;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -26,8 +26,8 @@ use std::path::Path;
 fn test_contract(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
-    call_data: Vec<Felt>,
-    return_data: impl Into<Vec<Felt>>,
+    call_data: Vec<Felt252>,
+    return_data: impl Into<Vec<Felt252>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
@@ -83,7 +83,7 @@ fn test_contract(
 
     let caller_address = Address(0.into());
 
-    let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
+    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
         contract_address,
         call_data,
