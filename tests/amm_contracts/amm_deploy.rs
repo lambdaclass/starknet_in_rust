@@ -40,6 +40,13 @@ fn get_pool_token_balance(
     execute_entry_point("get_pool_token_balance", calldata, call_config)
 }
 
+fn get_account_token_balance(
+    calldata: &[Felt],
+    call_config: &mut CallConfig,
+) -> Result<CallInfo, TransactionError> {
+    execute_entry_point("get_account_token_balance", calldata, call_config)
+}
+
 fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
     execute_entry_point("swap", calldata, call_config)
 }
@@ -372,4 +379,62 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     add_demo_token(&[Felt::new(10), Felt::new(10)], &mut call_config).unwrap();
 
     assert!(swap(&calldata, &mut call_config).is_err());
+}
+
+#[test]
+fn amm_get_account_token_balance_test() {
+    let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    // Deploy contract
+    let (contract_address, class_hash) =
+        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+
+    //add 10 tokens of token type 1
+    let caller_address = Address(0000.into());
+    let calldata = [10.into(), 0.into()].to_vec();
+
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let mut call_config = CallConfig {
+        state: &mut state,
+        caller_address: &caller_address,
+        address: &contract_address,
+        class_hash: &class_hash,
+        general_config: &general_config,
+        resources_manager: &mut resources_manager,
+    };
+
+    add_demo_token(&calldata, &mut call_config).unwrap();
+
+    let calldata_get_balance = [0000.into(), 1.into()].to_vec();
+    let result = get_account_token_balance(&calldata_get_balance, &mut call_config);
+
+    //expected return value 10
+    let expected_return = [10.into()].to_vec();
+
+    let accessed_storage_keys =
+        get_accessed_keys("account_balance", vec![vec![0_u8.into(), 1_u8.into()]]);
+
+    let get_account_token_balance_selector =
+        Felt::from_bytes_be(&calculate_sn_keccak(b"get_account_token_balance"));
+
+    let expected_call_info_get_account_token_balance = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: contract_address,
+        entry_point_selector: Some(get_account_token_balance_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: calldata_get_balance,
+        retdata: expected_return,
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        accessed_storage_keys,
+        storage_read_values: [10.into()].to_vec(),
+        ..Default::default()
+    };
+
+    assert_eq!(
+        result.unwrap(),
+        expected_call_info_get_account_token_balance
+    );
 }
