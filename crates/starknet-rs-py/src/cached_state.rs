@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::types::contract_class::PyContractClass;
 use cairo_felt::Felt;
 use num_bigint::BigUint;
@@ -22,6 +24,15 @@ pub struct PyCachedState {
 
 #[pymethods]
 impl PyCachedState {
+    #[new]
+    pub fn new() -> Self {
+        let cached_state =
+            InnerCachedState::new(InMemoryStateReader::default(), Some(HashMap::new()));
+        PyCachedState {
+            state: cached_state,
+        }
+    }
+
     fn get_class_hash_at(&mut self, address: BigUint) -> PyResult<BigUint> {
         Ok(BigUint::from_bytes_be(
             self.state
@@ -64,5 +75,36 @@ impl PyCachedState {
             &(Address(Felt::from(address)), felt_to_hash(&Felt::from(key))),
             Felt::from(value),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pyo3::{types::IntoPyDict, PyTypeInfo, Python};
+
+    #[test]
+    fn test_set_contract_class() {
+        Python::with_gil(|py| {
+            let py_contract_cls = <PyContractClass as PyTypeInfo>::type_object(py);
+            let py_state_cls = <PyCachedState as PyTypeInfo>::type_object(py);
+
+            let locals = [
+                ("ContractClass", py_contract_cls),
+                ("CachedState", py_state_cls),
+            ]
+            .into_py_dict(py);
+
+            let code = r#"
+file = open('../../starknet_programs/fibonacci.json')
+c = ContractClass(file.read())
+file.close()
+state = CachedState()
+state.set_contract_class(1, c)
+"#;
+
+            let res = py.run(code, None, Some(locals));
+            assert!(res.is_ok(), "{res:?}");
+        })
     }
 }
