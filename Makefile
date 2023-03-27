@@ -47,7 +47,6 @@ compile-abi:
 	starknet-compile starknet_programs/fibonacci.cairo \
 		--output starknet_programs/fibonacci_compiled.json \
 		--abi starknet_programs/fibonacci_abi.json
-
 # This abi file is used for the `test_read_abi` test in contract_abi.rs
 
 check-python-version:
