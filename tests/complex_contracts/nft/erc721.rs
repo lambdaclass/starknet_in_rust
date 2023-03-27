@@ -94,7 +94,7 @@ fn erc721_constructor_test() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -122,10 +122,10 @@ fn erc721_constructor_test() {
     };
 
     let result_get_name = name(&[], &mut call_config).unwrap();
-    assert_eq!(result_get_name.retdata, vec![collection_name]);
+    assert_eq!(result_get_name.retdata, vec![calldata[0].clone()]);
 
     let result_get_symbol = symbol(&[], &mut call_config).unwrap();
-    assert_eq!(result_get_symbol.retdata, vec![collection_symbol]);
+    assert_eq!(result_get_symbol.retdata, vec![calldata[1].clone()]);
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn erc721_balance_of_test() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -214,7 +214,7 @@ fn erc721_test_owner_of() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -284,7 +284,7 @@ fn erc721_test_get_approved() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -371,7 +371,7 @@ fn erc721_test_is_approved_for_all() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -456,7 +456,7 @@ fn erc721_test_approve() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -548,7 +548,7 @@ fn erc721_set_approval_for_all() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -634,7 +634,7 @@ fn erc721_transfer_from_test() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -756,7 +756,7 @@ fn erc721_transfer_from_and_get_owner_test() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -835,7 +835,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -895,7 +895,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -938,7 +938,7 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(0);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     deploy(
         &mut state,
@@ -956,7 +956,7 @@ fn erc721_transfer_fail_to_zero_address() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
@@ -999,7 +999,7 @@ fn erc721_transfer_fail_not_owner() {
     let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt::from(555);
     let to = Felt::from(666);
-    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+    let calldata = [collection_name, collection_symbol, to].to_vec();
 
     let (contract_address, class_hash) = deploy(
         &mut state,
