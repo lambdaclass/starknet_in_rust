@@ -92,74 +92,32 @@ fn safe_transfer_from(
 
 #[test]
 fn erc721_constructor_test() {
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
+    let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let collection_symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/ERC721.json",
+        &calldata,
+        &general_config,
+    );
+
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
         .entry_points_by_type()
         .clone();
-
-    let name = Felt::from_bytes_be("some-nft".as_bytes());
-    let symbol = Felt::from(555);
-    let to = Felt::from(666);
-    let calldata = [name, symbol, to].to_vec();
-    let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let entry_point_type = EntryPointType::External;
     let mut resources_manager = ExecutionResourcesManager::default();
-    let entry_point_type = EntryPointType::Constructor;
-
-    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"constructor"));
-
-    let interfaces = vec![
-        vec![FieldElement::from_hex_be("80ac58cd").unwrap()],
-        vec![FieldElement::from_hex_be("5b5e139f").unwrap()],
-    ];
-
-    let mut accessed_storage_keys = get_accessed_keys("ERC721_name", vec![]);
-    accessed_storage_keys.extend(&get_accessed_keys("ERC721_symbol", vec![]));
-    accessed_storage_keys.extend(&get_accessed_keys(
-        "ERC165_supported_interfaces",
-        interfaces,
-    ));
-    accessed_storage_keys.extend(&get_accessed_keys(
-        "ERC721_owners",
-        vec![vec![FieldElement::from(1_u8), FieldElement::from(0_u8)]],
-    ));
-
-    let mut balance = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
-        .drain()
-        .collect::<Vec<[u8; 32]>>()[0];
-    accessed_storage_keys.insert(balance);
-    balance[31] += 1;
-    accessed_storage_keys.insert(balance);
-
-    let event_hash = Felt::from_bytes_be(&calculate_sn_keccak("Transfer".as_bytes()));
-    let expected_events = vec![OrderedEvent::new(
-        0,
-        vec![event_hash],
-        vec![Felt::zero(), Felt::from(666), Felt::from(1), Felt::zero()],
-    )];
-
-    let expected_call_info = CallInfo {
-        caller_address: Address(666.into()),
-        call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
-        entry_point_selector: Some(entrypoint_selector),
-        entry_point_type: Some(EntryPointType::Constructor),
-        calldata: calldata.clone(),
-        class_hash: Some(class_hash),
-        accessed_storage_keys: accessed_storage_keys.clone(),
-        storage_read_values: vec![Felt::zero(), Felt::zero(), Felt::zero()],
-        events: expected_events,
-        ..Default::default()
-    };
-
     let mut call_config = CallConfig {
         state: &mut state,
-        caller_address: &caller_address,
-        address: &address,
+        caller_address: &Address(111.into()),
+        address: &contract_address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
@@ -167,10 +125,11 @@ fn erc721_constructor_test() {
         resources_manager: &mut resources_manager,
     };
 
-    assert_eq!(
-        contructor(&calldata, &mut call_config).unwrap(),
-        expected_call_info
-    );
+    let result_get_name = name(&[], &mut call_config).unwrap();
+    assert_eq!(result_get_name.retdata, vec![collection_name]);
+
+    let result_get_symbol = symbol(&[], &mut call_config).unwrap();
+    assert_eq!(result_get_symbol.retdata, vec![collection_symbol]);
 }
 
 #[test]

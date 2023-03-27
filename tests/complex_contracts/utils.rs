@@ -12,8 +12,8 @@ use starknet_rs::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
-        transaction::error::TransactionError,
+        state::{cached_state::CachedState, state_api::State},
+        transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, EntryPointType},
@@ -151,4 +151,35 @@ pub fn execute_entry_point(
         call_config.resources_manager,
         &tx_execution_context,
     )
+}
+
+pub fn deploy(
+    state: &mut CachedState<InMemoryStateReader>,
+    path: &str,
+    calldata: &[Felt],
+    config: &StarknetGeneralConfig,
+) -> (Address, [u8; 32]) {
+    let path = PathBuf::from(path);
+    let contract_class = ContractClass::try_from(path).unwrap();
+
+    let internal_deploy = InternalDeploy::new(
+        Address(0.into()),
+        contract_class.clone(),
+        calldata.to_vec(),
+        0.into(),
+        0,
+    )
+    .unwrap();
+    let class_hash = internal_deploy.class_hash();
+    state
+        .set_contract_class(&class_hash, &contract_class)
+        .unwrap();
+
+    let tx_execution_info = internal_deploy.apply(state, config).unwrap();
+
+    let call_info = tx_execution_info.call_info.unwrap();
+    let contract_address = call_info.contract_address;
+    let class_hash = call_info.class_hash.unwrap();
+
+    (contract_address, class_hash)
 }
