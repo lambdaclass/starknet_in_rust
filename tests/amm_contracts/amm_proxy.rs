@@ -101,6 +101,10 @@ fn amm_proxy_init_pool_test() {
         retdata: [].to_vec(),
         execution_resources: ExecutionResources {
             n_memory_holes: 20,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 2),
+                ("range_check".to_string(), 14),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -201,6 +205,10 @@ fn amm_proxy_get_pool_token_balance_test() {
         retdata: [555.into()].to_vec(),
         execution_resources: ExecutionResources {
             n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 1),
+                ("range_check".to_string(), 3),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -303,6 +311,10 @@ fn amm_proxy_add_demo_token_test() {
         calldata: calldata.clone(),
         execution_resources: ExecutionResources {
             n_memory_holes: 42,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 8),
+                ("range_check".to_string(), 20),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -413,6 +425,10 @@ fn amm_proxy_get_account_token_balance() {
         retdata: [200.into()].to_vec(),
         execution_resources: ExecutionResources {
             n_memory_holes: 11,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 2),
+                ("range_check".to_string(), 3),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -535,6 +551,10 @@ fn amm_proxyswap() {
         retdata: expected_result,
         execution_resources: ExecutionResources {
             n_memory_holes: 92,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 14),
+                ("range_check".to_string(), 41),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
