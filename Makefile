@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack	
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack	check-python-version
 
 
 OS := $(shell uname)
@@ -38,10 +38,18 @@ cairo_programs/%.json: cairo_programs/%.cairo
 starknet_programs/%.json: starknet_programs/%.cairo
 	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
-
 #
 # Normal rules.
 #
+
+check-python-version:
+	@python_version=`python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'`; \
+	if python -c "import sys; exit(0) if sys.version_info >= (3, 9) else exit(1)"; then \
+		echo "Installed Python version ($$python_version) is correct or higher"; \
+	else \
+		echo "Error: Installed Python version ($$python_version) is lower than required version (3.9)"; \
+		exit 1; \
+	fi
 
 build: compile-cairo compile-starknet
 	cargo build --release --all
@@ -52,9 +60,8 @@ check: compile-cairo compile-starknet
 deps:
 	cargo install cargo-tarpaulin --version 0.23.1
 	cargo install flamegraph --version 0.6.2
-	python3 -m venv starknet-venv
+	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-
 
 clean:
 	-rm -rf starknet-venv/
