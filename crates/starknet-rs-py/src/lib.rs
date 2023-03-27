@@ -14,7 +14,7 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use cairo_felt::Felt;
+use cairo_felt::{felt_str, Felt};
 use pyo3::prelude::*;
 use starknet_rs::{
     business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,
@@ -222,10 +222,10 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add("LATEST_BLOCK_ID", "latest")?;
     m.add("PENDING_BLOCK_ID", "pending")?;
 
-    // m.add(
-    //     "FAULTY_CLASS_HASH",
-    //     felt_str!("0x1A7820094FEAF82D53F53F214B81292D717E7BB9A92BB2488092CD306F3993F").to_biguint(),
-    // )?;
+    m.add(
+        "FAULTY_CLASS_HASH",
+        felt_str!("0x1A7820094FEAF82D53F53F214B81292D717E7BB9A92BB2488092CD306F3993F").to_biguint(),
+    )?;
 
     m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
 
