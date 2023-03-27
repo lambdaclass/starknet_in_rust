@@ -46,11 +46,6 @@ impl PyCachedState {
             .to_biguint())
     }
 
-    fn set_contract_class(&mut self, _address: BigUint, _contract_class: &PyContractClass) {
-        // self.state.set_contract_class(class_hash, contract_class)
-        todo!()
-    }
-
     fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {
         self.state.set_storage_at(
             &(Address(Felt::from(address)), felt_to_hash(&Felt::from(key))),

@@ -6,8 +6,9 @@ use crate::types::{
 use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
+use starknet_rs::business_logic::state::state_api::State;
 use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
-use starknet_rs::utils::Address;
+use starknet_rs::utils::{felt_to_hash, Address};
 
 #[pyclass]
 #[pyo3(name = "StarknetState")]
@@ -124,6 +125,19 @@ impl PyStarknetState {
     pub fn consume_message_hash(&mut self, message_hash: Vec<u8>) -> PyResult<()> {
         self.inner
             .consume_message_hash(message_hash)
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        Ok(())
+    }
+
+    fn set_contract_class(
+        &mut self,
+        address: BigUint,
+        contract_class: &PyContractClass,
+    ) -> PyResult<()> {
+        let hash = felt_to_hash(&Felt::from(address));
+        self.inner
+            .state
+            .set_contract_class(&hash, &contract_class.inner.clone())
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         Ok(())
     }
