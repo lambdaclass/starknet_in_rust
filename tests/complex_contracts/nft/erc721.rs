@@ -454,44 +454,45 @@ fn erc721_test_is_approved_for_all() {
 
 #[test]
 fn erc721_test_approve() {
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
-    let entry_points_by_type = state
-        .get_contract_class(&class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
+    let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let collection_symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/ERC721.json",
+        &calldata,
+        &general_config,
+    );
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
-    let collection_symbol = Felt::from(555);
-    let to = Felt::from(666);
-    let calldata = [collection_name, collection_symbol, to].to_vec();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
-    let entry_point_type_constructor = EntryPointType::Constructor;
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
-        address: &address,
+        address: &contract_address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
-        entry_point_type: &entry_point_type_constructor,
+        entry_point_type: &entry_point_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
-
-    contructor(&calldata, &mut call_config).unwrap();
-
     // The address given approval to transfer the token
     let to = Felt::from(777);
     let calldata = [to, Felt::from(1), Felt::from(0)].to_vec();
-
-    call_config.entry_point_type = &entry_point_type;
 
     let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"approve"));
 
@@ -522,9 +523,9 @@ fn erc721_test_approve() {
     )];
 
     let expected_call_info = CallInfo {
-        caller_address: Address(666.into()),
+        caller_address: caller_address.clone(),
         call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
+        contract_address: contract_address.clone(),
         entry_point_selector: Some(entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
