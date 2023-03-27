@@ -17,7 +17,7 @@ use starknet_rs::{
 
 #[pyclass]
 #[pyo3(name = "CachedState")]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PyCachedState {
     state: InnerCachedState<InMemoryStateReader>,
 }
