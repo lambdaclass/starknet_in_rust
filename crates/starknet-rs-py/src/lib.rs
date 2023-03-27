@@ -26,7 +26,6 @@ use starknet_rs::{
 };
 
 use starknet_state::PyStarknetState;
-use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 // TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
