@@ -43,7 +43,6 @@ fn add_demo_token(
     execute_entry_point("add_demo_token", calldata, call_config)
 }
 
-// Swap function to execute swap between two tokens
 fn swap(calldata: &[Felt], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
     execute_entry_point("swap", calldata, call_config)
 }
