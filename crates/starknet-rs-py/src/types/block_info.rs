@@ -1,4 +1,4 @@
-use cairo_felt::Felt;
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*, types::PyType};
 use starknet_rs::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
@@ -20,7 +20,7 @@ impl PyBlockInfo {
         sequencer_address: BigUint,
         starknet_version: String,
     ) -> Self {
-        let address = Address(Felt::from(sequencer_address));
+        let address = Address(Felt252::from(sequencer_address));
         let inner = BlockInfo {
             block_number,
             block_timestamp,
@@ -34,7 +34,7 @@ impl PyBlockInfo {
     /// Returns an empty BlockInfo object; i.e., the one before the first in the chain.
     #[classmethod]
     fn empty(_cls: &PyType, address: BigUint) -> PyBlockInfo {
-        let inner = BlockInfo::empty(Address(Felt::from(address)));
+        let inner = BlockInfo::empty(Address(Felt252::from(address)));
         Self { inner }
     }
 
