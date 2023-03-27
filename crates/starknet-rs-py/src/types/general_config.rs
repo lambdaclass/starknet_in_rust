@@ -1,6 +1,3 @@
-// TODO: remove when pyo3 v0.18.2 releases (https://github.com/PyO3/pyo3/pull/3028)
-#![allow(clippy::redundant_closure)]
-
 use cairo_felt::Felt;
 use num_bigint::BigUint;
 use pyo3::{prelude::*, types::PyDict};
@@ -176,7 +173,7 @@ impl PyStarknetChainId {
 
     #[classattr]
     #[pyo3(name = "TESTNET")]
-    fn testnet() -> Self {
+    pub fn testnet() -> Self {
         Self {
             inner: StarknetChainId::TestNet,
         }

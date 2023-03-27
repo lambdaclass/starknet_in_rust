@@ -9,7 +9,7 @@ use crate::{
 };
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default)]
 pub struct ExecutionResourcesManager {
@@ -42,63 +42,14 @@ impl ExecutionResourcesManager {
     }
 }
 
-// ----------------------
-//      SHARED STATE
-// ----------------------
-
-#[derive(Debug, Clone)]
-pub(crate) struct CarriedState<T>
-where
-    T: StateReader + Clone,
-{
-    parent_state: Option<Rc<RefCell<CarriedState<T>>>>,
-    state: CachedState<T>,
-}
-
-impl<T: StateReader + Clone> CarriedState<T> {
-    pub fn create_from_parent_state(parent_state: CarriedState<T>) -> Self {
-        let cached_state = parent_state.state.clone();
-        let new_state = Some(Rc::new(RefCell::new(parent_state)));
-        CarriedState {
-            parent_state: new_state,
-            state: cached_state,
-        }
-    }
-
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn create_child_state_for_querying(&self) -> Result<Self, StateError> {
-        match &self.parent_state {
-            Some(parent_state) => Ok(CarriedState::create_from_parent_state(
-                parent_state.as_ref().borrow().clone(),
-            )),
-            None => Err(StateError::ParentCarriedStateIsNone),
-        }
-    }
-
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    fn apply(&mut self) -> Result<(), StateError> {
-        match &self.parent_state {
-            Some(parent_state) => {
-                self.state.apply(&mut parent_state.borrow_mut().state);
-                Ok(())
-            }
-            None => Err(StateError::ParentCarriedStateIsNone),
-        }
-    }
-}
-
 #[derive(Default)]
-pub(crate) struct StateDiff {
+pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt>,
     pub(crate) storage_updates: HashMap<Felt, HashMap<ClassHash, Address>>,
 }
 
 impl StateDiff {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
     where
         T: StateReader + Clone,
@@ -127,8 +78,6 @@ impl StateDiff {
         })
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn to_cached_state<T>(&self, state_reader: T) -> Result<CachedState<T>, StateError>
     where
         T: StateReader + Clone,
@@ -144,8 +93,6 @@ impl StateDiff {
         Ok(cache_state)
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn squash(&mut self, other: StateDiff) -> Result<Self, StarkwareError> {
         self.address_to_class_hash
             .extend(other.address_to_class_hash);
