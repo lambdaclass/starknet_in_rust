@@ -11,13 +11,10 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::HashSet;
 
 #[test]
 fn amm_proxy_init_pool_test() {
@@ -342,38 +339,21 @@ fn amm_proxy_get_account_token_balance() {
 }
 
 #[test]
-fn amm_proxyswap() {
-    let contract_address = Address(0.into());
-    let contract_class_hash = [1; 32];
-    let proxy_address = Address(1000000.into());
-    let mut proxy_class_hash = [0; 32];
-    proxy_class_hash[31] = 1;
-
-    // Create program and entry point types for contract class
-    let contract_path = PathBuf::from("starknet_programs/amm.json");
-    let contract_class = ContractClass::try_from(contract_path).unwrap();
-
-    let proxy_path = PathBuf::from("starknet_programs/amm_proxy.json");
-    let proxy_class = ContractClass::try_from(proxy_path).unwrap();
-
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    contract_class_cache.insert(contract_class_hash, contract_class);
-    contract_class_cache.insert(proxy_class_hash, proxy_class);
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(contract_address.clone(), contract_class_hash);
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(proxy_address.clone(), proxy_class_hash);
-
-    // Create state with previous data
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
-
-    let calldata = [0.into(), 100.into(), 200.into()].to_vec();
-    let caller_address = Address(1000000.into());
+fn amm_proxy_swap() {
     let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    // Deploy contract
+    let (contract_address, contract_class_hash) =
+        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    // Deploy proxy
+    let (proxy_address, proxy_class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm_proxy.json",
+        &general_config,
+    );
+
+    let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
+    let caller_address = Address(1000000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let mut call_config = CallConfig {
@@ -389,14 +369,14 @@ fn amm_proxyswap() {
     execute_entry_point("proxy_add_demo_token", &calldata, &mut call_config).unwrap();
 
     //Init pool to have 1000 tokens of each type
-    let calldata = [0.into(), 1000.into(), 1000.into()].to_vec();
+    let calldata = [contract_address.0.clone(), 1000.into(), 1000.into()].to_vec();
     execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
     //Swap 100 tokens of type 1 for type 2
     //First argument is the amm contract address
     //Second argunet is the token to swap (type 1)
     //Third argument is the amount of tokens to swap (100)
-    let calldata = [0.into(), 1.into(), 100.into()].to_vec();
+    let calldata = [contract_address.0.clone(), 1.into(), 100.into()].to_vec();
     let expected_result = [90.into()].to_vec();
     let result = execute_entry_point("proxy_swap", &calldata, &mut call_config).unwrap();
 
@@ -407,12 +387,16 @@ fn amm_proxyswap() {
     let accessed_storage_keys_pool_balance =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
 
+    let mut felt_slice: [u8; 32] = [0; 32];
+    felt_slice[0..32].copy_from_slice(proxy_address.0.clone().to_bytes_be().get(0..32).unwrap());
+    let proxy_addres_felt = FieldElement::from_bytes_be(&felt_slice).unwrap();
+
     //checked for proxy account both tokens balances
     let accessed_storage_keys_user_balance = get_accessed_keys(
         "account_balance",
         vec![
-            vec![1000000_u32.into(), 1_u8.into()],
-            vec![1000000_u32.into(), 2_u8.into()],
+            vec![proxy_addres_felt.clone(), 1_u8.into()],
+            vec![proxy_addres_felt.clone(), 2_u8.into()],
         ],
     );
 
@@ -445,7 +429,7 @@ fn amm_proxyswap() {
         calldata: calldata.clone(),
         retdata: expected_result,
         execution_resources: ExecutionResources {
-            n_memory_holes: 92,
+            n_memory_holes: 93,
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
