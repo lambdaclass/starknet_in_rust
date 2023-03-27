@@ -24,6 +24,7 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
+use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 // TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
@@ -224,13 +225,14 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add(
         "FAULTY_CLASS_HASH",
-        felt_str!("0x1A7820094FEAF82D53F53F214B81292D717E7BB9A92BB2488092CD306F3993F").to_biguint(),
+        felt_str!("748273551117330086452242911863358006088276559700222288674638023319407008063")
+            .to_biguint(),
     )?;
 
     m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
 
     // Indentation for transactions meant to query and not addressed to the OS.
-    let query_version_base: Felt = Felt::from(1).shl(128_usize);
+    let query_version_base = Felt::from(1).shl(128u32); // == 2 ** 128
     let query_version = query_version_base + Felt::from(TRANSACTION_VERSION);
     m.add("QUERY_VERSION", query_version.to_biguint())?;
 
