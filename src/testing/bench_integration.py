@@ -6,7 +6,7 @@ import pytest_asyncio
 from starkware.starknet.testing.contract import StarknetContract
 from starkware.starknet.testing.starknet import Starknet
 
-ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), "../../starknet_programs/account_without_validations.cairo")
+ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), "../../starknet_programs/account_without_validation.cairo")
 CONTRACT_FILE = os.path.join(os.path.dirname(__file__), "../../starknet_programs/fibonacci.cairo")
 
 @pytest_asyncio.fixture
