@@ -27,7 +27,6 @@ use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarkn
 
 // TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
 use cairo_felt as felt;
-// TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
