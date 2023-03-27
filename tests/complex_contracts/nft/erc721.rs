@@ -910,72 +910,63 @@ fn erc721_safe_transfer_from_should_fail_test() {
 
 #[test]
 fn erc721_calling_constructor_twice_should_fail_test() {
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
+    let general_config = StarknetGeneralConfig::default();
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let collection_symbol = Felt::from(555);
+    let to = Felt::from(666);
+    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
+
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/ERC721.json",
+        &calldata,
+        &general_config,
+    );
+
+    let caller_address = Address(666.into());
+    let general_config = StarknetGeneralConfig::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let entry_point_type = EntryPointType::Constructor;
+
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
         .entry_points_by_type()
         .clone();
 
-    let name = Felt::from_bytes_be("some-nft".as_bytes());
-    let symbol = Felt::from(555);
-    let to = Felt::from(666);
-    let calldata = [name, symbol, to].to_vec();
-    let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
-    let mut resources_manager = ExecutionResourcesManager::default();
-    let entry_point_type = EntryPointType::Constructor;
-
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
-        address: &address,
+        address: &contract_address,
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
-
-    contructor(&calldata, &mut call_config).unwrap();
 
     assert!(contructor(&calldata, &mut call_config).is_err());
 }
 
 #[test]
+#[should_panic]
 fn erc721_constructor_should_fail_with_to_equal_zero() {
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
-    let mut state = setup_contract("starknet_programs/ERC721.json", &address, class_hash);
-    let entry_points_by_type = state
-        .get_contract_class(&class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
-
-    let name = Felt::from_bytes_be("some-nft".as_bytes());
-    let symbol = Felt::from(555);
-    let to = Felt::from(0);
-    let calldata = [name, symbol, to].to_vec();
-    let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
-    let mut resources_manager = ExecutionResourcesManager::default();
-    let entry_point_type = EntryPointType::Constructor;
+    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
 
-    let mut call_config = CallConfig {
-        state: &mut state,
-        caller_address: &caller_address,
-        address: &address,
-        class_hash: &class_hash,
-        entry_points_by_type: &entry_points_by_type,
-        entry_point_type: &entry_point_type,
-        general_config: &general_config,
-        resources_manager: &mut resources_manager,
-    };
+    let collection_name = Felt::from_bytes_be("some-nft".as_bytes());
+    let collection_symbol = Felt::from(555);
+    let to = Felt::from(0);
+    let calldata = [collection_name.clone(), collection_symbol.clone(), to].to_vec();
 
-    assert!(contructor(&calldata, &mut call_config).is_err());
+    deploy(
+        &mut state,
+        "starknet_programs/ERC721.json",
+        &calldata,
+        &general_config,
+    );
 }
 
 #[test]
