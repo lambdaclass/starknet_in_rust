@@ -4,8 +4,6 @@ mod cached_state;
 mod starknet_state;
 mod types;
 
-use std::ops::Shl;
-
 use self::{
     cached_state::PyCachedState,
     types::{
@@ -24,8 +22,11 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
+use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
+// TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
+use cairo_felt as felt;
 // TODO: remove once https://github.com/lambdaclass/cairo-rs/pull/917 is merged
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
