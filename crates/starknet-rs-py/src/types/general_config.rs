@@ -204,6 +204,12 @@ impl PyStarknetChainId {
     }
 }
 
+#[pyfunction]
+pub fn build_general_config(_raw_general_config: &PyDict) -> PyResult<PyStarknetGeneralConfig> {
+    // TODO: this function should parse the _raw_general_config
+    Ok(PyStarknetGeneralConfig::default())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

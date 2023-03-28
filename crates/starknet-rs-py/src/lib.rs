@@ -13,10 +13,13 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use crate::utils::{
-    py_calculate_contract_address, py_calculate_contract_address_from_hash,
-    py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
-    py_validate_contract_deployed,
+use crate::{
+    types::general_config::build_general_config,
+    utils::{
+        py_calculate_contract_address, py_calculate_contract_address_from_hash,
+        py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
+        py_validate_contract_deployed,
+    },
 };
 use crate::{
     types::transaction::{PyTransaction, PyTransactionType},
@@ -155,7 +158,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  Exported Functions
     // ~~~~~~~~~~~~~~~~~~~~
 
-    // m.add_function(build_general_config)?;    needs to be manually implemented
+    m.add_function(wrap_pyfunction!(build_general_config, m)?)?;
 
     //  starkware.starknet.wallets.open_zeppelin
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
