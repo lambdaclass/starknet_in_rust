@@ -157,7 +157,7 @@ pub fn execute_entry_point(
 pub fn deploy(
     state: &mut CachedState<InMemoryStateReader>,
     path: &str,
-    calldata: &[Felt],
+    calldata: &[Felt252],
     config: &StarknetGeneralConfig,
 ) -> (Address, [u8; 32]) {
     let path = PathBuf::from(path);
