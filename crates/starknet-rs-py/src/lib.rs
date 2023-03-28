@@ -91,6 +91,17 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         ],
     )?;
 
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.feeder_gateway.response_objects",
+        vec![
+            "DeployedContract",
+            "FeeEstimationInfo",
+            "StorageEntry", // alias Tuple[int, int]
+        ],
+    )?;
+
     //  starkware.starknet.public.abi
     // m.add_class::<PyAbiEntryType>()?;
 
@@ -111,10 +122,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyTransactionTrace>()?;
     // m.add_class::<PyTransactionExecution>()?;
     // m.add_class::<PyTransactionSpecificInfo>()?;
-    // m.add_class::<PyFeeEstimationInfo>()?;
-    // m.add_class::<PyDeployedContract>()?;
     // m.add_class::<PyStateDiff>()?;
-    // m.add_class::<PyStorageEntry>()?;
     // m.add_class::<PyEvent>()?;
     // m.add_class::<PyFunctionInvocation>()?;
     // m.add_class::<PyL2ToL1Message>()?;
