@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack check-python-version compile-abi
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps test heaptrack check-python-version compile-abi
 
 
 OS := $(shell uname)
@@ -44,19 +44,10 @@ starknet_programs/%.json: starknet_programs/%.cairo
 #
 
 compile-abi:
-	starknet-compile starknet_programs/fibonacci.cairo \
+	. starknet-venv/bin/activate && cd cairo_programs/ && starknet-compile starknet_programs/fibonacci.cairo \
 		--output starknet_programs/fibonacci_compiled.json \
 		--abi starknet_programs/fibonacci_abi.json
 # This abi file is used for the `test_read_abi` test in contract_abi.rs
-
-check-python-version:
-	@python_version=`python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'`; \
-	if python -c "import sys; exit(0) if (3, 8) <= sys.version_info < (3, 10) else exit(1)"; then \
-		echo "Installed Python version ($$python_version) is correct"; \
-	else \
-		echo "Error: Installed Python version ($$python_version) is not 3.8 or 3.9"; \
-		exit 1; \
-	fi
 
 build: compile-cairo compile-starknet
 	cargo build --release --all
@@ -79,7 +70,7 @@ clean:
 clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
-test: deps compile-cairo compile-starknet compile-abi
+test: compile-cairo compile-starknet compile-abi
 	cargo test
 
 test-py: compile-cairo compile-starknet
