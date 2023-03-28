@@ -13,9 +13,12 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
+use crate::utils::transaction_hash::{
+    py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
+    PyTransactionHashPrefix,
+};
 use crate::utils::{
     py_calculate_contract_address, py_calculate_contract_address_from_hash,
-    py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
     py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
     py_validate_contract_deployed,
 };
@@ -55,8 +58,9 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyOrderedL2ToL1Message>()?;
     m.add_class::<PyCallInfo>()?;
 
-    //  starkware.starknet.core.os.transaction_hash.transaction_hash
-    // m.add_class::<PyTransactionHashPrefix>()?;
+    m.add_class::<PyTransactionHashPrefix>()?;
+
+    // m.add_function(build_general_config)?;
 
     //  starkware.starknet.public.abi
     // m.add_class::<PyAbiEntryType>()?;

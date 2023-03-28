@@ -1,3 +1,5 @@
+pub mod transaction_hash;
+
 use crate::types::general_config::PyStarknetGeneralConfig;
 use crate::{cached_state::PyCachedState, types::contract_class::PyContractClass};
 use cairo_felt::Felt252;
@@ -6,9 +8,6 @@ use pyo3::{exceptions::PyValueError, pyfunction, PyResult};
 use starknet_rs::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
 use starknet_rs::business_logic::state::cached_state::CachedState;
 use starknet_rs::core::block_hash::starknet_block_hash::calculate_event_hash;
-use starknet_rs::core::transaction_hash::starknet_transaction_hash::{
-    calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
-};
 use starknet_rs::hash_utils::calculate_contract_address;
 use starknet_rs::utils::Address;
 use starknet_rs::{
@@ -100,54 +99,6 @@ pub(crate) fn py_calculate_contract_address_from_hash(
     let constructor_calldata: Vec<_> = constructor_calldata.into_iter().map(Into::into).collect();
     let deployer_address = Address(Felt252::from(deployer_address));
     match calculate_contract_address(&salt, &class_hash, &constructor_calldata, deployer_address) {
-        Ok(res) => Ok(res.to_biguint()),
-        Err(err) => Err(PyValueError::new_err(err.to_string())),
-    }
-}
-
-#[pyfunction]
-#[pyo3(name = "calculate_deploy_transaction_hash")]
-pub(crate) fn py_calculate_deploy_transaction_hash(
-    version: u64,
-    contract_address: BigUint,
-    constructor_calldata: Vec<BigUint>,
-    chain_id: BigUint,
-) -> PyResult<BigUint> {
-    let contract_address = Address(Felt252::from(contract_address));
-    let constructor_calldata: Vec<_> = constructor_calldata.into_iter().map(Into::into).collect();
-    let chain_id = Felt252::from(chain_id);
-    match calculate_deploy_transaction_hash(
-        version,
-        &contract_address,
-        &constructor_calldata,
-        chain_id,
-    ) {
-        Ok(res) => Ok(res.to_biguint()),
-        Err(err) => Err(PyValueError::new_err(err.to_string())),
-    }
-}
-
-#[pyfunction]
-#[pyo3(name = "calculate_declare_transaction_hash")]
-pub(crate) fn py_calculate_declare_transaction_hash(
-    contract_class: &PyContractClass,
-    chain_id: BigUint,
-    sender_address: BigUint,
-    max_fee: u64,
-    version: u64,
-    nonce: BigUint,
-) -> PyResult<BigUint> {
-    let chain_id = Felt252::from(chain_id);
-    let sender_address = Address(Felt252::from(sender_address));
-    let nonce = Felt252::from(nonce);
-    match calculate_declare_transaction_hash(
-        contract_class.into(),
-        chain_id,
-        &sender_address,
-        max_fee,
-        version,
-        nonce,
-    ) {
         Ok(res) => Ok(res.to_biguint()),
         Err(err) => Err(PyValueError::new_err(err.to_string())),
     }
