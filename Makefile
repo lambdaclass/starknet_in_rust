@@ -51,10 +51,10 @@ compile-abi:
 
 check-python-version:
 	@python_version=`python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'`; \
-	if python -c "import sys; exit(0) if sys.version_info >= (3, 9) else exit(1)"; then \
-		echo "Installed Python version ($$python_version) is correct or higher"; \
+	if python -c "import sys; exit(0) if (3, 8) <= sys.version_info < (3, 10) else exit(1)"; then \
+		echo "Installed Python version ($$python_version) is correct"; \
 	else \
-		echo "Error: Installed Python version ($$python_version) is lower than required version (3.9)"; \
+		echo "Error: Installed Python version ($$python_version) is not 3.8 or 3.9"; \
 		exit 1; \
 	fi
 
