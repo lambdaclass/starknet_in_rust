@@ -4,9 +4,12 @@ mod cached_state;
 mod starknet_state;
 mod types;
 
-use crate::types::transactions::{
-    declare::PyInternalDeclare, deploy::PyInternalDeploy, deploy_account::PyInternalDeployAccount,
-    invoke_function::PyInternalInvokeFunction,
+use crate::types::{
+    transaction_execution_info::PyTransactionExecutionInfo,
+    transactions::{
+        declare::PyInternalDeclare, deploy::PyInternalDeploy,
+        deploy_account::PyInternalDeployAccount, invoke_function::PyInternalInvokeFunction,
+    },
 };
 
 use self::{
@@ -49,6 +52,11 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyOrderedL2ToL1Message>()?;
     m.add_class::<PyCallInfo>()?;
 
+    //  starkware.starknet.business_logic.transaction.objects
+    // m.add_class::<PyInternalL1Handler>()?;
+    // m.add_class::<PyInternalAccountTransaction>()?;
+    // m.add_class::<PyInternalTransaction>()?;
+    m.add_class::<PyTransactionExecutionInfo>()?;
     m.add_class::<PyInternalDeclare>()?;
     m.add_class::<PyInternalDeploy>()?;
     m.add_class::<PyInternalDeployAccount>()?;
@@ -157,12 +165,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyInvokeFunction>()?;
     // m.add_class::<PyDeploy>()?;
     // m.add_class::<PyTransaction>()?;
-
-    //  starkware.starknet.business_logic.transaction.objects
-    // m.add_class::<PyInternalL1Handler>()?;
-    // m.add_class::<PyInternalAccountTransaction>()?;
-    // m.add_class::<PyInternalTransaction>()?;
-    // m.add_class::<PyTransactionExecutionInfo>()?;
 
     //  starkware.starknet.testing.contract
     // m.add_class::<PyStarknetContract>()?;
