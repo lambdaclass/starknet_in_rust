@@ -19,12 +19,12 @@ use crate::{
     utils::{felt_to_hash, Address},
 };
 
-use lazy_static::{__Deref, lazy_static};
+use lazy_static::lazy_static;
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
     static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
-        "src/testing/test.json",
+        "starknet_programs/first_contract.json",
     )).unwrap();
 }
 
@@ -38,9 +38,11 @@ fn test_invoke() {
         .deploy(CONTRACT_CLASS.to_owned(), vec![], contract_address_salt)
         .unwrap();
 
-    // main() selector
-    let main_selector =
-        felt_str!("485685360977693822178494178685050472186234432883326654755380582597179924681");
+    // increase_balance() selector
+    let increase_balance_selector =
+        felt_str!("1530486729947006463063166157847785599120665941190480211966374137237989315360");
+    let get_balance_selector =
+        felt_str!("1636223440827086009537493065587328807418413867743950350615962740049133672085");
 
     // Statement **not** in blockifier.
     starknet_state
@@ -49,16 +51,25 @@ fn test_invoke() {
         .nonce_initial_values_mut()
         .insert(contract_address.clone(), Felt::zero());
 
-    // for i in 0..1 {
     starknet_state
         .invoke_raw(
             contract_address.clone(),
-            main_selector,
-            [1.into(), 1.into(), 15000.into()].into(),
+            increase_balance_selector,
+            vec![1000.into()],
             0,
             Some(Vec::new()),
             Some(Felt::from(0)),
         )
         .unwrap();
-    // }
+
+    starknet_state
+        .invoke_raw(
+            contract_address.clone(),
+            get_balance_selector,
+            vec![],
+            0,
+            Some(Vec::new()),
+            Some(Felt::from(1)),
+        )
+        .unwrap();
 }
