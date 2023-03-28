@@ -659,10 +659,10 @@ index 5799dba..cae8255 100644
  
  class UDC:
 diff --git a/starknet_devnet/util.py b/starknet_devnet/util.py
-index ea98aa9..4b1f92c 100644
+index ea98aa9..f3749a5 100644
 --- a/starknet_devnet/util.py
 +++ b/starknet_devnet/util.py
-@@ -7,15 +7,17 @@ import sys
+@@ -7,14 +7,14 @@ import sys
  from dataclasses import dataclass
  from typing import Dict, List, Set, Union
  
@@ -677,14 +677,10 @@ index ea98aa9..4b1f92c 100644
      StorageEntry,
  )
 -from starkware.starknet.testing.contract import StarknetContract
--from starkware.starkware_utils.error_handling import StarkException
-+
 +from starknet_rs_py import StarknetContract
-+from starknet_rs_py import StarkErrorCode, StarkException
-+
+ from starkware.starkware_utils.error_handling import StarkException
  
  
- def custom_int(arg: str) -> int:
 diff --git a/test/account.py b/test/account.py
 index 181d822..49c2fb2 100644
 --- a/test/account.py
