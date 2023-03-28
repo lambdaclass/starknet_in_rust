@@ -1,7 +1,7 @@
 use crate::amm_contracts::utils::{deploy, execute_entry_point, get_accessed_keys, CallConfig};
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use starknet_crypto::FieldElement;
 use felt::Felt252;
+use starknet_crypto::FieldElement;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
@@ -14,7 +14,7 @@ use starknet_rs::{
     services::api::contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 #[test]
 fn amm_proxy_init_pool_test() {
