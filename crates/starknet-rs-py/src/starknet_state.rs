@@ -21,10 +21,7 @@ impl PyStarknetState {
     #[pyo3(name = "empty")]
     #[staticmethod]
     pub fn new(config: Option<PyStarknetGeneralConfig>) -> Self {
-        let config = match config {
-            Some(c) => Some(c.inner),
-            None => None,
-        };
+        let config = config.map(|c| c.inner);
         PyStarknetState {
             inner: InnerStarknetState::new(config),
         }
