@@ -31,7 +31,6 @@ lazy_static! {
 #[test]
 fn test_invoke() {
     let mut starknet_state = StarknetState::new(None);
-    //let calldata = [10.into()].to_vec();
     let contract_address_salt = Address(1.into());
 
     let (contract_address, _exec_info) = starknet_state
@@ -51,25 +50,27 @@ fn test_invoke() {
         .nonce_initial_values_mut()
         .insert(contract_address.clone(), Felt::zero());
 
-    starknet_state
-        .invoke_raw(
-            contract_address.clone(),
-            increase_balance_selector,
-            vec![1000.into()],
-            0,
-            Some(Vec::new()),
-            Some(Felt::from(0)),
-        )
-        .unwrap();
+    for i in (0..2000).step_by(2) {
+        starknet_state
+            .invoke_raw(
+                contract_address.clone(),
+                increase_balance_selector.clone(),
+                vec![1000.into()],
+                0,
+                Some(Vec::new()),
+                Some(Felt::from(i)),
+            )
+            .unwrap();
 
-    starknet_state
-        .invoke_raw(
-            contract_address.clone(),
-            get_balance_selector,
-            vec![],
-            0,
-            Some(Vec::new()),
-            Some(Felt::from(1)),
-        )
-        .unwrap();
+        starknet_state
+            .invoke_raw(
+                contract_address.clone(),
+                get_balance_selector.clone(),
+                vec![],
+                0,
+                Some(Vec::new()),
+                Some(Felt::from(i + 1)),
+            )
+            .unwrap();
+    }
 }

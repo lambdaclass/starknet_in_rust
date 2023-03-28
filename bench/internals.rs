@@ -171,7 +171,10 @@ fn main() {
 fn invoke() {
     const RUNS: usize = 1;
 
-    let state_reader = InMemoryStateReader::default();
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_nonce_mut()
+        .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
     let mut state = CachedState::new(state_reader, Some(Default::default()));
 
     state
@@ -185,7 +188,10 @@ fn invoke() {
     ));
     let class = CONTRACT_CLASS.clone();
 
-    InternalDeploy::new(salt, class, vec![], StarknetChainId::TestNet.to_felt(), 0).unwrap();
+    InternalDeploy::new(salt, class, vec![], StarknetChainId::TestNet.to_felt(), 0)
+        .unwrap()
+        .execute(&mut state, config)
+        .unwrap();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();

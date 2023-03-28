@@ -2416,6 +2416,7 @@ dependencies = [
  "clap 4.1.8",
  "getset",
  "lazy_static",
+ "mimalloc",
  "num-bigint",
  "num-integer",
  "num-traits",

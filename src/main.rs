@@ -36,6 +36,13 @@ use starknet_rs::{
 };
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 
+#[cfg(feature = "with_mimalloc")]
+use mimalloc::MiMalloc;
+
+#[cfg(feature = "with_mimalloc")]
+#[global_allocator]
+static ALLOC: MiMalloc = MiMalloc;
+
 #[derive(Parser)]
 struct Cli {
     #[command(subcommand)]
