@@ -19,24 +19,28 @@ use crate::{
     utils::{felt_to_hash, Address},
 };
 
+use lazy_static::{__Deref, lazy_static};
+
+lazy_static! {
+    // include_str! doesn't seem to work in CI
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+        "src/testing/test.json",
+    )).unwrap();
+}
+
 #[test]
 fn test_invoke() {
     let mut starknet_state = StarknetState::new(None);
-    let path = PathBuf::from("src/testing/test.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
     //let calldata = [10.into()].to_vec();
     let contract_address_salt = Address(1.into());
 
     let (contract_address, _exec_info) = starknet_state
-        .deploy(contract_class, vec![], contract_address_salt)
+        .deploy(CONTRACT_CLASS.to_owned(), vec![], contract_address_salt)
         .unwrap();
 
     // main() selector
-    let main_selector = Felt::from_str_radix(
-        "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-        16,
-    )
-    .unwrap();
+    let main_selector =
+        felt_str!("485685360977693822178494178685050472186234432883326654755380582597179924681");
 
     // Statement **not** in blockifier.
     starknet_state
@@ -45,16 +49,16 @@ fn test_invoke() {
         .nonce_initial_values_mut()
         .insert(contract_address.clone(), Felt::zero());
 
-    for i in 0..1 {
-        starknet_state
-            .invoke_raw(
-                contract_address.clone(),
-                main_selector.clone(),
-                [1.into(), 1.into(), 15000.into()].into(),
-                0,
-                Some(Vec::new()),
-                Some(Felt::from(i)),
-            )
-            .unwrap();
-    }
+    // for i in 0..1 {
+    starknet_state
+        .invoke_raw(
+            contract_address.clone(),
+            main_selector,
+            [1.into(), 1.into(), 15000.into()].into(),
+            0,
+            Some(Vec::new()),
+            Some(Felt::from(0)),
+        )
+        .unwrap();
+    // }
 }
