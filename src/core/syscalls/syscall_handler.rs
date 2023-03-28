@@ -1244,7 +1244,7 @@ mod tests {
             .starknet_storage_state
             .read(&address.to_be_bytes());
 
-        assert_eq!(write, Ok(&Felt252::new(45)));
+        assert_eq!(write, Ok(Felt252::new(45)));
     }
 
     #[test]
@@ -1331,7 +1331,7 @@ mod tests {
                 .starknet_storage_state
                 .state
                 .get_class_hash_at(&Address(deployed_address)),
-            Ok(&class_hash)
+            Ok(class_hash)
         );
     }
 
@@ -1428,7 +1428,7 @@ mod tests {
                 .starknet_storage_state
                 .state
                 .get_class_hash_at(&Address(deployed_address.clone())),
-            Ok(&class_hash)
+            Ok(class_hash)
         );
 
         /*

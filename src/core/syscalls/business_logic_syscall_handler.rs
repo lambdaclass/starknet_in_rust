@@ -529,10 +529,7 @@ where
     }
 
     fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
-        Ok(self
-            .starknet_storage_state
-            .read(&address.0.to_be_bytes())
-            .cloned()?)
+        Ok(self.starknet_storage_state.read(&address.0.to_be_bytes())?)
     }
 
     fn syscall_storage_write(

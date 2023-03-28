@@ -31,7 +31,8 @@ impl PyCachedState {
 
     fn get_class_hash_at(&mut self, address: BigUint) -> PyResult<BigUint> {
         Ok(BigUint::from_bytes_be(
-            self.state
+            &self
+                .state
                 .get_class_hash_at(&Address(Felt252::from(address)))
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?,
         ))
