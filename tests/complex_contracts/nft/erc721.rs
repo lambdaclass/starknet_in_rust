@@ -929,6 +929,8 @@ fn erc721_calling_constructor_twice_should_fail_test() {
     assert!(contructor(&calldata, &mut call_config).is_err());
 }
 
+//Should panic is necessary because the constructor will fail
+//deploy() will try to unwrap the result of the constructor
 #[test]
 #[should_panic]
 fn erc721_constructor_should_fail_with_to_equal_zero() {
