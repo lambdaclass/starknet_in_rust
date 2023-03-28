@@ -75,6 +75,18 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         "starkware.starknet.definitions.error_codes",
         vec!["StarknetErrorCode"],
     )?;
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.gateway.transaction",
+        vec![
+            "AccountTransaction",
+            "Declare",
+            "DeployAccount",
+            "InvokeFunction",
+            "Deploy",
+        ],
+    )?;
 
     //  starkware.starknet.public.abi
     // m.add_class::<PyAbiEntryType>()?;
@@ -118,13 +130,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.services.api.feeder_gateway.feeder_gateway_client
     // m.add_class::<PyFeederGatewayClient>()?;
-
-    //  starkware.starknet.services.api.gateway.transaction
-    // m.add_class::<PyAccountTransaction>()?;
-    // m.add_class::<PyDeclare>()?;
-    // m.add_class::<PyDeployAccount>()?;
-    // m.add_class::<PyInvokeFunction>()?;
-    // m.add_class::<PyDeploy>()?;
 
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;
