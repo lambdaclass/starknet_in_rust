@@ -7,8 +7,9 @@ use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::business_logic::state::state_api::State;
+use starknet_rs::services::api::contract_class::ContractClass;
 use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
-use starknet_rs::utils::{felt_to_hash, Address};
+use starknet_rs::utils::{felt_to_hash, Address, ClassHash};
 
 #[pyclass]
 #[pyo3(name = "StarknetState")]
@@ -138,10 +139,9 @@ impl PyStarknetState {
 
     fn set_contract_class(
         &mut self,
-        address: BigUint,
+        hash: ClassHash,
         contract_class: &PyContractClass,
     ) -> PyResult<()> {
-        let hash = felt_to_hash(&Felt252::from(address));
         self.inner
             .state
             .set_contract_class(&hash, &contract_class.inner.clone())
