@@ -44,6 +44,7 @@ starknet_programs/%.json: starknet_programs/%.cairo
 #
 
 compile-abi:
+	. starknet-venv/bin/activate
 	starknet-compile starknet_programs/fibonacci.cairo \
 		--output starknet_programs/fibonacci_compiled.json \
 		--abi starknet_programs/fibonacci_abi.json
