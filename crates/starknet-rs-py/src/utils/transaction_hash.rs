@@ -101,6 +101,7 @@ pub(crate) fn py_calculate_declare_transaction_hash(
 
 #[pyfunction]
 #[pyo3(name = "calculate_transaction_hash_common")]
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn py_calculate_transaction_hash_common(
     tx_hash_prefix: &PyTransactionHashPrefix,
     version: u64,
