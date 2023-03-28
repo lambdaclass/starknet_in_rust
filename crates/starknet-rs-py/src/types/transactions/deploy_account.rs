@@ -14,6 +14,7 @@ pub struct PyInternalDeployAccount {
 
 #[pymethods]
 impl PyInternalDeployAccount {
+    // TODO: maybe unused
     #[getter]
     fn class_hash(&self) -> ClassHash {
         *self.inner.class_hash()
@@ -26,6 +27,11 @@ impl PyInternalDeployAccount {
             .iter()
             .map(Felt252::to_biguint)
             .collect()
+    }
+
+    #[getter]
+    fn hash_value(&self) -> BigUint {
+        self.inner.hash_value().to_biguint()
     }
 
     // fn apply_state_updates(
