@@ -52,15 +52,16 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyOrderedL2ToL1Message>()?;
     m.add_class::<PyCallInfo>()?;
 
-    //  starkware.starknet.business_logic.transaction.objects
-    // m.add_class::<PyInternalL1Handler>()?;
-    // m.add_class::<PyInternalAccountTransaction>()?;
-    // m.add_class::<PyInternalTransaction>()?;
     m.add_class::<PyTransactionExecutionInfo>()?;
     m.add_class::<PyInternalDeclare>()?;
     m.add_class::<PyInternalDeploy>()?;
     m.add_class::<PyInternalDeployAccount>()?;
     m.add_class::<PyInternalInvokeFunction>()?;
+
+    //  starkware.starknet.business_logic.transaction.objects
+    // m.add_class::<PyInternalTransaction>()?; // Is just used for type checking
+    // m.add_class::<PyInternalAccountTransaction>()?;
+    // m.add_class::<PyInternalL1Handler>()?;  // isn't implemented
 
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_class::<PyTransactionHashPrefix>()?;
