@@ -26,7 +26,7 @@ use crate::{
         ClassHash,
     },
 };
-use felt::Felt;
+use felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
@@ -37,12 +37,12 @@ pub struct InternalDeclare {
     pub class_hash: ClassHash,
     pub sender_address: Address,
     pub tx_type: TransactionType,
-    pub validate_entry_point_selector: Felt,
+    pub validate_entry_point_selector: Felt252,
     pub version: u64,
     pub max_fee: u64,
-    pub signature: Vec<Felt>,
-    pub nonce: Felt,
-    pub hash_value: Felt,
+    pub signature: Vec<Felt252>,
+    pub nonce: Felt252,
+    pub hash_value: Felt252,
     pub contract_class: ContractClass,
 }
 
@@ -52,12 +52,12 @@ pub struct InternalDeclare {
 impl InternalDeclare {
     pub fn new(
         contract_class: ContractClass,
-        chain_id: Felt,
+        chain_id: Felt252,
         sender_address: Address,
         max_fee: u64,
         version: u64,
-        signature: Vec<Felt>,
-        nonce: Felt,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
     ) -> Result<Self, TransactionError> {
         let hash = compute_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
@@ -91,8 +91,8 @@ impl InternalDeclare {
         Ok(internal_declare)
     }
 
-    pub fn get_calldata(&self) -> Vec<Felt> {
-        let bytes = Felt::from_bytes_be(&self.class_hash);
+    pub fn get_calldata(&self) -> Vec<Felt252> {
+        let bytes = Felt252::from_bytes_be(&self.class_hash);
         Vec::from([bytes])
     }
 
@@ -184,7 +184,7 @@ impl InternalDeclare {
             self.sender_address.clone(),
             calldata,
             self.validate_entry_point_selector.clone(),
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
             EntryPointType::External,
             None,
             None,
@@ -295,7 +295,7 @@ impl InternalDeclare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use felt::{felt_str, Felt};
+    use felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 
@@ -343,7 +343,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address, Felt::new(1));
+            .insert(sender_address, Felt252::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
@@ -360,11 +360,11 @@ mod tests {
         let internal_declare = InternalDeclare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt::one()),
+            Address(Felt252::one()),
             0,
             1,
             Vec::new(),
-            Felt::zero(),
+            Felt252::zero(),
         )
         .unwrap();
 
@@ -378,7 +378,7 @@ mod tests {
         let class_hash_felt = compute_class_hash(&contract_class).unwrap();
         let expected_class_hash = felt_to_hash(&class_hash_felt);
 
-        // Calldata is the class hash represented as a Felt
+        // Calldata is the class hash represented as a Felt252
         let calldata = [felt_str!(
             "3263750508471340057496742110279857589794844827005189048727502686976772849721"
         )]
@@ -387,7 +387,7 @@ mod tests {
         let validate_info = Some(CallInfo {
             caller_address: Address(0.into()),
             call_type: Some(CallType::Call),
-            contract_address: Address(Felt::one()),
+            contract_address: Address(Felt252::one()),
             entry_point_selector,
             entry_point_type: Some(EntryPointType::External),
             calldata,
@@ -395,8 +395,11 @@ mod tests {
             ..Default::default()
         });
 
-        let mut actual_resources = HashMap::new();
-        actual_resources.insert("l1_gas_usage".to_string(), 0);
+        let actual_resources = HashMap::from([
+            ("l1_gas_usage".to_string(), 0),
+            ("range_check_builtin".to_string(), 57),
+            ("pedersen_builtin".to_string(), 15),
+        ]);
         let transaction_exec_info = TransactionExecutionInfo {
             validate_info,
             call_info: None,

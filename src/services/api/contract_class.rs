@@ -2,14 +2,15 @@ use super::contract_class_errors::ContractClassError;
 use crate::public::abi::AbiType;
 use cairo_rs::{
     serde::deserialize_program::{
-        deserialize_array_of_bigint_hex, Attribute, HintParams, Identifier, ReferenceManager,
+        deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
+        ReferenceManager,
     },
     types::{
         errors::program_errors::ProgramError, program::Program, relocatable::MaybeRelocatable,
     },
     utils::is_subsequence,
 };
-use felt::{Felt, PRIME_STR};
+use felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
 use serde::{Deserialize, Serialize};
 use starknet_api::state::EntryPoint;
@@ -20,8 +21,13 @@ use std::{
     path::PathBuf,
 };
 
-pub(crate) const SUPPORTED_BUILTINS: [&str; 5] =
-    ["pedersen", "range_check", "ecdsa", "bitwise", "ec_op"];
+pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
+    BuiltinName::pedersen,
+    BuiltinName::range_check,
+    BuiltinName::ecdsa,
+    BuiltinName::bitwise,
+    BuiltinName::ec_op,
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum EntryPointType {
@@ -35,7 +41,7 @@ pub enum EntryPointType {
 )]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
-    pub(crate) selector: Felt,
+    pub(crate) selector: Felt252,
     #[getset(get_copy = "pub")]
     pub(crate) offset: usize,
 }
@@ -80,11 +86,7 @@ impl ContractClass {
     }
 
     pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
-        let supported_builtins: Vec<String> = SUPPORTED_BUILTINS
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect();
-        if !is_subsequence(&self.program.builtins, &supported_builtins) {
+        if !is_subsequence(&self.program.builtins, &SUPPORTED_BUILTINS) {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
@@ -175,7 +177,7 @@ fn convert_entry_points(
         let contracts_entry_points = vec
             .into_iter()
             .map(|e| {
-                let selector = Felt::from_bytes_be(e.selector.0.bytes());
+                let selector = Felt252::from_bytes_be(e.selector.0.bytes());
                 let offset = e.offset.0;
                 ContractEntryPoint { selector, offset }
             })
@@ -206,7 +208,7 @@ fn to_cairo_runner_program(
     };
 
     Ok(Program {
-        builtins: serde_json::from_value::<Vec<String>>(program.builtins)?,
+        builtins: serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
         prime: PRIME_STR.to_string(),
         data: deserialize_array_of_bigint_hex(program.data)?,
         constants: {

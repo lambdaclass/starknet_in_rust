@@ -13,7 +13,7 @@ use crate::{
     },
     services::api::contract_class::EntryPointType,
 };
-use felt::Felt;
+use felt::Felt252;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
@@ -38,7 +38,7 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
 
     let calldata = [
         general_config.block_info.sequencer_address.0.clone(),
-        Felt::from(actual_fee),
+        Felt252::from(actual_fee),
         0.into(),
     ]
     .to_vec();

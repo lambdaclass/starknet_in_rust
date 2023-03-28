@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::Felt;
+use felt::Felt252;
 use num_traits::Zero;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
@@ -56,13 +56,14 @@ pub fn get_entry_points(
     function_name: &str,
     address: &Address,
     class_hash: &[u8; 32],
-    calldata: &[Felt],
+    calldata: &[Felt252],
     caller_address: &Address,
-) -> (ExecutionEntryPoint, Felt) {
+) -> (ExecutionEntryPoint, Felt252) {
     //* ------------------------------------
     //*    Create entry point selector
     //* ------------------------------------
-    let entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(function_name.as_bytes()));
+    let entrypoint_selector =
+        Felt252::from_bytes_be(&calculate_sn_keccak(function_name.as_bytes()));
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -86,7 +87,7 @@ pub fn get_entry_points(
 
 pub fn execute_entry_point(
     function_name: &str,
-    calldata: &[Felt],
+    calldata: &[Felt252],
     call_config: &mut CallConfig,
 ) -> Result<CallInfo, TransactionError> {
     // Entry point for init pool
@@ -103,7 +104,7 @@ pub fn execute_entry_point(
     //* ---------------------
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt::zero(),
+        Felt252::zero(),
         Vec::new(),
         0,
         10.into(),

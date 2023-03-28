@@ -11,7 +11,7 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt;
+use felt::Felt252;
 use sha3::{Digest, Keccak256};
 use std::{collections::HashMap, path::Path};
 
@@ -52,7 +52,7 @@ fn get_contract_entry_points(
 }
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
-fn starknet_keccak(data: &[u8]) -> Felt {
+fn starknet_keccak(data: &[u8]) -> Felt252 {
     let mut hasher = Keccak256::new();
     hasher.update(data);
     let mut finalized_hash = hasher.finalize();
@@ -62,12 +62,12 @@ fn starknet_keccak(data: &[u8]) -> Felt {
     // and then copying the other values.
     let res = hashed_slice[0] & MASK_3;
     finalized_hash[0] = res;
-    Felt::from_bytes_be(finalized_hash.as_slice())
+    Felt252::from_bytes_be(finalized_hash.as_slice())
 }
 
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
-fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt {
+fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt252 {
     let keccak_input =
         r#"{"abi": contract_class.abi, "program": contract_class.program}"#.as_bytes();
     starknet_keccak(keccak_input)
@@ -93,19 +93,21 @@ fn get_contract_class_struct(
             .ok_or(ContractAddressError::NoneApiVersion)?
             .to_owned()
             .into(),
-        n_external_functions: Felt::from(external_functions.len()).into(),
+        n_external_functions: Felt252::from(external_functions.len()).into(),
         external_functions,
-        n_l1_handlers: Felt::from(l1_handlers.len()).into(),
+        n_l1_handlers: Felt252::from(l1_handlers.len()).into(),
         l1_handlers,
-        n_constructors: Felt::from(constructors.len()).into(),
+        n_constructors: Felt252::from(constructors.len()).into(),
         constructors,
-        n_builtins: Felt::from(builtin_list.len()).into(),
+        n_builtins: Felt252::from(builtin_list.len()).into(),
         builtin_list: builtin_list
             .iter()
-            .map(|builtin| Felt::from_bytes_be(builtin.to_ascii_lowercase().as_bytes()).into())
+            .map(|builtin| {
+                Felt252::from_bytes_be(builtin.name().to_ascii_lowercase().as_bytes()).into()
+            })
             .collect::<Vec<MaybeRelocatable>>(),
         hinted_class_hash: compute_hinted_class_hash(contract_class).into(),
-        bytecode_length: Felt::from(contract_class.program.data.len()).into(),
+        bytecode_length: Felt252::from(contract_class.program.data.len()).into(),
         bytecode_ptr: contract_class.program.data.clone(),
     })
 }
@@ -159,7 +161,7 @@ impl From<StructContractClass> for CairoArg {
 }
 
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
-pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt, ContractAddressError> {
+pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
     let contract_class_struct =
@@ -171,7 +173,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt, Contra
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
     // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
-    // TODO: Looks like we can get this value from the identifier, but the value is a Felt.
+    // TODO: Looks like we can get this value from the identifier, but the value is a Felt252.
     // We need to cast that into a usize.
     // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
     let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
@@ -184,18 +186,16 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt, Contra
         &mut hint_processor,
     )?;
 
-    Ok(vm
-        .get_return_values(2)?
-        .get(1)
-        .ok_or(ContractAddressError::IndexOutOfRange)?
-        .get_int_ref()?
-        .clone())
+    match vm.get_return_values(2)?.get(1) {
+        Some(MaybeRelocatable::Int(felt)) => Ok(felt.clone()),
+        _ => Err(ContractAddressError::IndexOutOfRange),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use felt::Felt;
+    use felt::Felt252;
     use num_traits::Num;
 
     #[test]
@@ -204,7 +204,7 @@ mod tests {
 
         // This expected output is the result of calling the python version in cairo-lang of the function.
         // starknet_keccak("hello".encode())
-        let expected_result = Felt::from_str_radix(
+        let expected_result = Felt252::from_str_radix(
             "245588857976802048747271734601661359235654411526357843137188188665016085192",
             10,
         )
@@ -274,7 +274,7 @@ mod tests {
         };
         assert_eq!(
             compute_class_hash(&contract_class).unwrap(),
-            Felt::from_str_radix(
+            Felt252::from_str_radix(
                 "1809635095607326950459993008040437939724930328662161791121345395618950656878",
                 10
             )
@@ -314,7 +314,7 @@ mod tests {
 
         assert_eq!(
             compute_hinted_class_hash(&contract_class),
-            Felt::from_str_radix(
+            Felt252::from_str_radix(
                 "1703103364832599665802491695999915073351807236114175062140703903952998591438",
                 10
             )
