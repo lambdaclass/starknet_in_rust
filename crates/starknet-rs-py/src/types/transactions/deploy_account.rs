@@ -1,3 +1,4 @@
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::{
@@ -20,7 +21,11 @@ impl PyInternalDeployAccount {
 
     #[getter]
     fn signature(&self) -> Vec<BigUint> {
-        Default::default()
+        self.inner
+            .signature()
+            .iter()
+            .map(Felt252::to_biguint)
+            .collect()
     }
 
     // fn apply_state_updates(

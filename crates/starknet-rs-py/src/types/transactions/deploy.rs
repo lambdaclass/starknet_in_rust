@@ -60,11 +60,6 @@ impl PyInternalDeploy {
         self.inner.contract_address.0.to_biguint()
     }
 
-    #[getter]
-    fn signature(&self) -> Vec<BigUint> {
-        Default::default()
-    }
-
     // fn apply_state_updates(
     //     &self,
     //     state: PyStarknetState,

@@ -49,6 +49,7 @@ pub struct InternalDeployAccount {
     version: u64,
     nonce: Felt252,
     max_fee: u64,
+    #[getset(get = "pub")]
     signature: Vec<Felt252>,
     chain_id: StarknetChainId,
 }
