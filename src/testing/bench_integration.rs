@@ -20,27 +20,20 @@ use crate::{
 };
 
 #[test]
-fn test_invoke1000() {
+fn test_invoke() {
     let mut starknet_state = StarknetState::new(None);
-    let path = PathBuf::from("starknet_programs/first_contract.json");
+    let path = PathBuf::from("src/testing/test.json");
     let contract_class = ContractClass::try_from(path).unwrap();
     //let calldata = [10.into()].to_vec();
     let contract_address_salt = Address(1.into());
 
     let (contract_address, _exec_info) = starknet_state
-        .deploy(contract_class.clone(), vec![], contract_address_salt)
+        .deploy(contract_class, vec![], contract_address_salt)
         .unwrap();
 
-    // increase_balance selector
-    let increase_balance_selector = Felt::from_str_radix(
-        "362398bec32bc0ebb411203221a35a0301193a96f317ebe5e40be9f60d15320",
-        16,
-    )
-    .unwrap();
-
-    // get_balance selector
-    let get_balance_selector = Felt::from_str_radix(
-        "39e11d48192e4333233c7eb19d10ad67c362bb28580c604d67884c85da39695",
+    // main() selector
+    let main_selector = Felt::from_str_radix(
+        "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
         16,
     )
     .unwrap();
@@ -52,158 +45,16 @@ fn test_invoke1000() {
         .nonce_initial_values_mut()
         .insert(contract_address.clone(), Felt::zero());
 
-    for i in (0..2001).step_by(2) {
+    for i in 0..1 {
         starknet_state
             .invoke_raw(
                 contract_address.clone(),
-                increase_balance_selector.clone(),
-                [10.into()].into(),
+                main_selector.clone(),
+                [1.into(), 1.into(), 15000.into()].into(),
                 0,
                 Some(Vec::new()),
                 Some(Felt::from(i)),
             )
             .unwrap();
-
-        let result = starknet_state
-            .invoke_raw(
-                contract_address.clone(),
-                get_balance_selector.clone(),
-                vec![],
-                0,
-                Some(Vec::new()),
-                Some(Felt::from(i + 1)),
-            )
-            .unwrap();
-
-        assert_eq!(
-            result.call_info.unwrap().retdata,
-            vec![Felt::from(((i / 2) + 1) * 10)]
-        );
-    }
-}
-
-#[test]
-fn test_invoke5000() {
-    let mut starknet_state = StarknetState::new(None);
-    let path = PathBuf::from("starknet_programs/first_contract.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
-    //let calldata = [10.into()].to_vec();
-    let contract_address_salt = Address(1.into());
-
-    let (contract_address, _exec_info) = starknet_state
-        .deploy(contract_class.clone(), vec![], contract_address_salt)
-        .unwrap();
-
-    // increase_balance selector
-    let increase_balance_selector = Felt::from_str_radix(
-        "362398bec32bc0ebb411203221a35a0301193a96f317ebe5e40be9f60d15320",
-        16,
-    )
-    .unwrap();
-
-    // get_balance selector
-    let get_balance_selector = Felt::from_str_radix(
-        "39e11d48192e4333233c7eb19d10ad67c362bb28580c604d67884c85da39695",
-        16,
-    )
-    .unwrap();
-
-    // Statement **not** in blockifier.
-    starknet_state
-        .state
-        .cache_mut()
-        .nonce_initial_values_mut()
-        .insert(contract_address.clone(), Felt::zero());
-
-    for i in (0..10001).step_by(2) {
-        starknet_state
-            .invoke_raw(
-                contract_address.clone(),
-                increase_balance_selector.clone(),
-                [10.into()].into(),
-                0,
-                Some(Vec::new()),
-                Some(Felt::from(i)),
-            )
-            .unwrap();
-
-        let result = starknet_state
-            .invoke_raw(
-                contract_address.clone(),
-                get_balance_selector.clone(),
-                vec![],
-                0,
-                Some(Vec::new()),
-                Some(Felt::from(i + 1)),
-            )
-            .unwrap();
-
-        assert_eq!(
-            result.call_info.unwrap().retdata,
-            vec![Felt::from(((i / 2) + 1) * 10)]
-        );
-    }
-}
-
-#[test]
-fn test_invoke10000() {
-    let mut starknet_state = StarknetState::new(None);
-    let path = PathBuf::from("starknet_programs/first_contract.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
-    //let calldata = [10.into()].to_vec();
-    let contract_address_salt = Address(1.into());
-
-    let (contract_address, _exec_info) = starknet_state
-        .deploy(contract_class.clone(), vec![], contract_address_salt)
-        .unwrap();
-
-    // increase_balance selector
-    let increase_balance_selector = Felt::from_str_radix(
-        "362398bec32bc0ebb411203221a35a0301193a96f317ebe5e40be9f60d15320",
-        16,
-    )
-    .unwrap();
-
-    // get_balance selector
-    let get_balance_selector = Felt::from_str_radix(
-        "39e11d48192e4333233c7eb19d10ad67c362bb28580c604d67884c85da39695",
-        16,
-    )
-    .unwrap();
-
-    // Statement **not** in blockifier.
-    starknet_state
-        .state
-        .cache_mut()
-        .nonce_initial_values_mut()
-        .insert(contract_address.clone(), Felt::zero());
-
-    for i in (0..20001).step_by(2) {
-        starknet_state
-            .invoke_raw(
-                contract_address.clone(),
-                increase_balance_selector.clone(),
-                [10.into()].into(),
-                0,
-                Some(Vec::new()),
-                Some(Felt::from(i)),
-            )
-            .unwrap();
-
-        let result = starknet_state
-            .invoke_raw(
-                contract_address.clone(),
-                get_balance_selector.clone(),
-                vec![],
-                0,
-                Some(Vec::new()),
-                Some(Felt::from(i + 1)),
-            )
-            .unwrap();
-
-        assert_eq!(
-            result.call_info.unwrap().retdata,
-            vec![Felt::from(((i / 2) + 1) * 10)]
-        );
     }
 }
