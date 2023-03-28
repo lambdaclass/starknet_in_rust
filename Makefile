@@ -44,7 +44,6 @@ starknet_programs/%.json: starknet_programs/%.cairo
 #
 
 compile-abi:
-	. starknet-venv/bin/activate
 	starknet-compile starknet_programs/fibonacci.cairo \
 		--output starknet_programs/fibonacci_compiled.json \
 		--abi starknet_programs/fibonacci_abi.json
@@ -80,7 +79,7 @@ clean:
 clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet compile-abi
+test: deps compile-cairo compile-starknet compile-abi
 	cargo test
 
 test-py: compile-cairo compile-starknet
