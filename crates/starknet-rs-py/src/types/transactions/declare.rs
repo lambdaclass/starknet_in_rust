@@ -62,11 +62,6 @@ impl PyInternalDeclare {
     }
 
     #[getter]
-    fn contract_address(&self) -> BigUint {
-        self.inner.sender_address.0.to_biguint()
-    }
-
-    #[getter]
     fn signature(&self) -> Vec<BigUint> {
         self.inner
             .signature
