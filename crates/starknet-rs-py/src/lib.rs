@@ -4,7 +4,7 @@ mod cached_state;
 mod starknet_state;
 mod types;
 
-use crate::types::transactions::declare::PyInternalDeclare;
+use crate::types::transactions::{declare::PyInternalDeclare, deploy::PyInternalDeploy};
 
 use self::{
     cached_state::PyCachedState,
@@ -45,6 +45,8 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyOrderedEvent>()?;
     m.add_class::<PyOrderedL2ToL1Message>()?;
     m.add_class::<PyCallInfo>()?;
+    m.add_class::<PyInternalDeclare>()?;
+    m.add_class::<PyInternalDeploy>()?;
 
     //  starkware.starknet.core.os.transaction_hash.transaction_hash
     // m.add_class::<PyTransactionHashPrefix>()?;
@@ -153,8 +155,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;
     // m.add_class::<PyInternalAccountTransaction>()?;
-    m.add_class::<PyInternalDeclare>()?;
-    // m.add_class::<PyInternalDeploy>()?;
     // m.add_class::<PyInternalDeployAccount>()?;
     // m.add_class::<PyInternalInvokeFunction>()?;
     // m.add_class::<PyInternalTransaction>()?;
