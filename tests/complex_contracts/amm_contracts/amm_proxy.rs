@@ -1,6 +1,6 @@
 use crate::complex_contracts::utils::*;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt;
+use felt::Felt252;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
@@ -72,8 +72,8 @@ fn amm_proxy_init_pool_test() {
 
     let result = execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
     let amm_proxy_entrypoint_selector =
-        Felt::from_bytes_be(&calculate_sn_keccak(b"proxy_init_pool"));
-    let amm_entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"init_pool"));
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_init_pool"));
+    let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"init_pool"));
 
     let accessed_storage_keys =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
@@ -102,6 +102,10 @@ fn amm_proxy_init_pool_test() {
         retdata: [].to_vec(),
         execution_resources: ExecutionResources {
             n_memory_holes: 20,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 2),
+                ("range_check".to_string(), 14),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -172,9 +176,9 @@ fn amm_proxy_get_pool_token_balance_test() {
         execute_entry_point("proxy_get_pool_token_balance", &calldata, &mut call_config).unwrap();
 
     let amm_proxy_entrypoint_selector =
-        Felt::from_bytes_be(&calculate_sn_keccak(b"proxy_get_pool_token_balance"));
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_get_pool_token_balance"));
     let amm_entrypoint_selector =
-        Felt::from_bytes_be(&calculate_sn_keccak(b"get_pool_token_balance"));
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"get_pool_token_balance"));
 
     let accessed_storage_keys = get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
 
@@ -203,6 +207,10 @@ fn amm_proxy_get_pool_token_balance_test() {
         retdata: [555.into()].to_vec(),
         execution_resources: ExecutionResources {
             n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 1),
+                ("range_check".to_string(), 3),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -270,10 +278,10 @@ fn amm_proxy_add_demo_token_test() {
 
     let calldata = [0.into(), 55.into(), 66.into()].to_vec();
     let amm_proxy_entrypoint_selector =
-        Felt::from_bytes_be(&calculate_sn_keccak(b"proxy_add_demo_token"));
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_add_demo_token"));
     let result = execute_entry_point("proxy_add_demo_token", &calldata, &mut call_config).unwrap();
 
-    let amm_entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"add_demo_token"));
+    let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"add_demo_token"));
 
     let accessed_storage_keys = get_accessed_keys(
         "account_balance",
@@ -306,6 +314,10 @@ fn amm_proxy_add_demo_token_test() {
         calldata: calldata.clone(),
         execution_resources: ExecutionResources {
             n_memory_holes: 42,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 8),
+                ("range_check".to_string(), 20),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -376,7 +388,7 @@ fn amm_proxy_get_account_token_balance() {
     //Third argument is the token id
     let calldata = [0.into(), 1000000.into(), 2.into()].to_vec();
     let amm_proxy_entrypoint_selector =
-        Felt::from_bytes_be(&calculate_sn_keccak(b"proxy_get_account_token_balance"));
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_get_account_token_balance"));
     let result = execute_entry_point(
         "proxy_get_account_token_balance",
         &calldata,
@@ -385,7 +397,7 @@ fn amm_proxy_get_account_token_balance() {
     .unwrap();
 
     let amm_entrypoint_selector =
-        Felt::from_bytes_be(&calculate_sn_keccak(b"get_account_token_balance"));
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"get_account_token_balance"));
 
     let accessed_storage_keys = get_accessed_keys(
         "account_balance",
@@ -417,6 +429,10 @@ fn amm_proxy_get_account_token_balance() {
         retdata: [200.into()].to_vec(),
         execution_resources: ExecutionResources {
             n_memory_holes: 11,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 2),
+                ("range_check".to_string(), 3),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
@@ -494,9 +510,9 @@ fn amm_proxyswap() {
     let expected_result = [90.into()].to_vec();
     let result = execute_entry_point("proxy_swap", &calldata, &mut call_config).unwrap();
 
-    let amm_proxy_entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"proxy_swap"));
+    let amm_proxy_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_swap"));
 
-    let amm_entrypoint_selector = Felt::from_bytes_be(&calculate_sn_keccak(b"swap"));
+    let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"swap"));
     //checked for amm contract both tokens balances
     let accessed_storage_keys_pool_balance =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
@@ -540,6 +556,10 @@ fn amm_proxyswap() {
         retdata: expected_result,
         execution_resources: ExecutionResources {
             n_memory_holes: 92,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen".to_string(), 14),
+                ("range_check".to_string(), 41),
+            ]),
             ..Default::default()
         },
         class_hash: Some(proxy_class_hash),

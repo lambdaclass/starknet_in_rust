@@ -1,4 +1,4 @@
-use cairo_felt::Felt;
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::business_logic::execution::objects::OrderedL2ToL1Message;
@@ -24,7 +24,7 @@ impl PyOrderedL2ToL1Message {
 
     #[getter]
     fn payload(&self) -> Vec<BigUint> {
-        self.inner.payload.iter().map(Felt::to_biguint).collect()
+        self.inner.payload.iter().map(Felt252::to_biguint).collect()
     }
 }
 

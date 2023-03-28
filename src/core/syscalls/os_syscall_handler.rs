@@ -12,7 +12,7 @@ use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
-use felt::Felt;
+use felt::Felt252;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Debug)]
@@ -40,12 +40,12 @@ pub(crate) struct OsSyscallHandler {
     /// An iterator over contract addresses that were deployed during that call.
     deployed_contracts_iterator: VecDeque<Address>, // felt
     /// An iterator to the retdata of its internal calls.
-    retdata_iterator: VecDeque<VecDeque<Felt>>, //VEC<felt>
+    retdata_iterator: VecDeque<VecDeque<Felt252>>, //VEC<felt>
     /// An iterator to the read_values array which is consumed when the transaction
     /// code is executed.
-    execute_code_read_iterator: VecDeque<Felt>, //felt
+    execute_code_read_iterator: VecDeque<Felt252>, //felt
     /// StarkNet storage members.
-    starknet_storage_by_address: HashMap<Felt, OsSingleStarknetStorage>,
+    starknet_storage_by_address: HashMap<Felt252, OsSingleStarknetStorage>,
     /// A pointer to the Cairo TxInfo struct.
     /// This pointer needs to match the TxInfo pointer that is going to be used during the system
     /// call validation by the StarkNet OS.
@@ -141,7 +141,7 @@ impl SyscallHandler for OsSyscallHandler {
         _syscall_name: &str,
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
-    ) -> Result<Vec<Felt>, SyscallHandlerError> {
+    ) -> Result<Vec<Felt252>, SyscallHandlerError> {
         Ok(self
             .retdata_iterator
             .pop_front()
@@ -171,7 +171,7 @@ impl SyscallHandler for OsSyscallHandler {
         }
     }
 
-    fn _storage_read(&mut self, _address: Address) -> Result<Felt, SyscallHandlerError> {
+    fn _storage_read(&mut self, _address: Address) -> Result<Felt252, SyscallHandlerError> {
         self.execute_code_read_iterator
             .pop_front()
             .ok_or(SyscallHandlerError::IteratorEmpty)
@@ -182,7 +182,7 @@ impl SyscallHandler for OsSyscallHandler {
     fn _storage_write(
         &mut self,
         _address: Address,
-        _value: Felt,
+        _value: Felt252,
     ) -> Result<(), SyscallHandlerError> {
         self.execute_code_read_iterator.pop_front();
         Ok(())
@@ -196,7 +196,7 @@ impl SyscallHandler for OsSyscallHandler {
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_temporary_segment();
 
-        vm.write_arg(&segment_start, &data)?;
+        vm.write_arg(segment_start, &data)?;
         Ok(segment_start)
     }
 
@@ -212,9 +212,9 @@ impl OsSyscallHandler {
         call_iterator: VecDeque<CallInfo>,
         call_stack: VecDeque<CallInfo>,
         deployed_contracts_iterator: VecDeque<Address>,
-        retdata_iterator: VecDeque<VecDeque<Felt>>,
-        execute_code_read_iterator: VecDeque<Felt>,
-        starknet_storage_by_address: HashMap<Felt, OsSingleStarknetStorage>,
+        retdata_iterator: VecDeque<VecDeque<Felt252>>,
+        execute_code_read_iterator: VecDeque<Felt252>,
+        starknet_storage_by_address: HashMap<Felt252, OsSingleStarknetStorage>,
         tx_info_ptr: Option<Relocatable>,
         tx_execution_info: Option<TransactionExecutionInfo>,
         block_info: BlockInfo,
@@ -367,7 +367,7 @@ impl OsSyscallHandler {
             .internal_calls
             .into_iter()
             .map(|call_info_internal| call_info_internal.retdata.into())
-            .collect::<VecDeque<VecDeque<Felt>>>();
+            .collect::<VecDeque<VecDeque<Felt252>>>();
 
         self.execute_code_read_iterator = call_info.storage_read_values.into();
 
@@ -389,12 +389,11 @@ mod tests {
     use cairo_rs::{
         types::relocatable::{MaybeRelocatable, Relocatable},
         vm::{
-            errors::{memory_errors::MemoryError, vm_errors::VirtualMachineError},
-            runners::cairo_runner::ExecutionResources,
+            errors::memory_errors::MemoryError, runners::cairo_runner::ExecutionResources,
             vm_core::VirtualMachine,
         },
     };
-    use felt::Felt;
+    use felt::Felt252;
     use std::collections::{HashMap, HashSet, VecDeque};
 
     #[test]
@@ -438,7 +437,7 @@ mod tests {
             offset: 0,
         };
         let get_contract_address = handler._get_contract_address(&vm, reloc);
-        assert_eq!(get_contract_address, Ok(Address(5.into())))
+        assert_matches!(get_contract_address, Ok(contract_address) if contract_address == Address(5.into()))
     }
 
     #[test]
@@ -457,7 +456,7 @@ mod tests {
             offset: 0,
         };
         let get_contract_address = handler._get_contract_address(&vm, reloc).unwrap_err();
-        assert_eq!(get_contract_address, SyscallHandlerError::ListIsEmpty)
+        assert_matches!(get_contract_address, SyscallHandlerError::ListIsEmpty)
     }
 
     #[test]
@@ -469,7 +468,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(handler.end_tx(), Err(SyscallHandlerError::IteratorNotEmpty))
+        assert_matches!(handler.end_tx(), Err(SyscallHandlerError::IteratorNotEmpty))
     }
 
     #[test]
@@ -484,11 +483,9 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(
+        assert_matches!(
             handler.end_tx(),
-            Err(SyscallHandlerError::ShouldBeNone(String::from(
-                "tx_info_ptr"
-            )))
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_info_ptr"
         )
     }
 
@@ -500,11 +497,9 @@ mod tests {
             }),
             ..Default::default()
         };
-        assert_eq!(
+        assert_matches!(
             handler.end_tx(),
-            Err(SyscallHandlerError::ShouldBeNone(String::from(
-                "tx_execution_info",
-            )))
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_execution_info"
         )
     }
 
@@ -512,7 +507,7 @@ mod tests {
     fn end_tx() {
         let mut handler = OsSyscallHandler::default();
 
-        assert_eq!(handler.end_tx(), Ok(()))
+        assert_matches!(handler.end_tx(), Ok(()))
     }
 
     #[test]
@@ -532,11 +527,9 @@ mod tests {
             offset: 1,
         };
 
-        assert_eq!(
+        assert_matches!(
             handler.start_tx(reloc),
-            Err(SyscallHandlerError::ShouldBeNone(String::from(
-                "tx_info_ptr"
-            )))
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_info_ptr"
         )
     }
 
@@ -556,11 +549,9 @@ mod tests {
             offset: 1,
         };
 
-        assert_eq!(
+        assert_matches!(
             handler.start_tx(reloc),
-            Err(SyscallHandlerError::ShouldBeNone(String::from(
-                "tx_execution_info",
-            )))
+            Err(SyscallHandlerError::ShouldBeNone(err)) if err == *"tx_execution_info"
         )
     }
 
@@ -573,7 +564,7 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler.start_tx(reloc), Ok(()))
+        assert_matches!(handler.start_tx(reloc), Ok(()))
     }
 
     #[test]
@@ -607,7 +598,7 @@ mod tests {
         };
 
         let mut vm = vm!();
-        assert_eq!(
+        assert_matches!(
             handler._get_tx_info_ptr(&mut vm),
             Ok(Relocatable {
                 segment_index: 0,
@@ -622,7 +613,7 @@ mod tests {
 
         let mut vm = vm!();
 
-        assert_eq!(
+        assert_matches!(
             handler._get_tx_info_ptr(&mut vm),
             Err(SyscallHandlerError::TxInfoPtrIsNone)
         )
@@ -644,9 +635,9 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
-        assert_eq!(handler._call_contract("", &vm, ptr), Ok(Vec::new()));
-        assert_eq!(
+        assert_matches!(handler._call_contract("", &vm, ptr), Ok(ret_data) if ret_data == Vec::new());
+        assert_matches!(handler._call_contract("", &vm, ptr), Ok(ret_data) if ret_data == Vec::new());
+        assert_matches!(
             handler._call_contract("", &vm, ptr),
             Err(SyscallHandlerError::IteratorEmpty)
         )
@@ -670,7 +661,7 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(handler._deploy(&vm, ptr), Ok(Address(12.into())));
+        assert_matches!(handler._deploy(&vm, ptr), Ok(deploy_address) if deploy_address == Address(12.into()));
     }
 
     #[test]
@@ -690,7 +681,7 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(
+        assert_matches!(
             handler._deploy(&vm, ptr),
             Err(SyscallHandlerError::UnexpectedConstructorRetdata)
         );
@@ -705,7 +696,7 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(
+        assert_matches!(
             handler._deploy(&vm, ptr),
             Err(SyscallHandlerError::IteratorEmpty)
         );
@@ -722,9 +713,9 @@ mod tests {
         };
 
         let addr = Address(0.into());
-        assert_eq!(handler._storage_read(addr.clone()), Ok(12.into()));
-        assert_eq!(handler._storage_read(addr.clone()), Ok(1444.into()));
-        assert_eq!(
+        assert_matches!(handler._storage_read(addr.clone()), Ok(value) if value == 12.into());
+        assert_matches!(handler._storage_read(addr.clone()), Ok(value) if value == 1444.into());
+        assert_matches!(
             handler._storage_read(addr),
             Err(SyscallHandlerError::IteratorEmpty)
         );
@@ -740,7 +731,7 @@ mod tests {
         };
 
         let addr = Address(0.into());
-        let val: Felt = 0.into();
+        let val: Felt252 = 0.into();
 
         handler._storage_write(addr.clone(), val.clone()).unwrap();
         handler._storage_write(addr, val).unwrap();
@@ -755,7 +746,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(
+        assert_matches!(
             handler.assert_iterators_exhausted(),
             Err(SyscallHandlerError::IteratorNotEmpty)
         )
@@ -770,7 +761,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(
+        assert_matches!(
             handler.assert_iterators_exhausted(),
             Err(SyscallHandlerError::IteratorNotEmpty)
         )
@@ -785,7 +776,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(
+        assert_matches!(
             handler.assert_iterators_exhausted(),
             Err(SyscallHandlerError::IteratorNotEmpty)
         )
@@ -795,7 +786,7 @@ mod tests {
     fn assert_iterators_exhausted() {
         let handler = OsSyscallHandler::default();
 
-        assert_eq!(handler.assert_iterators_exhausted(), Ok(()))
+        assert_matches!(handler.assert_iterators_exhausted(), Ok(()))
     }
 
     #[test]
@@ -808,7 +799,7 @@ mod tests {
             offset: 0,
         };
 
-        assert_eq!(
+        assert_matches!(
             handler._get_caller_address(&vm, ptr),
             Err(SyscallHandlerError::ListIsEmpty)
         )
@@ -827,9 +818,9 @@ mod tests {
             segment_index: 0,
             offset: 0,
         };
-        assert_eq!(
+        assert_matches!(
             handler._get_caller_address(&vm, ptr),
-            Ok(CallInfo::default().caller_address)
+            Ok(caller_address) if caller_address == CallInfo::default().caller_address
         )
     }
 
@@ -842,14 +833,14 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(handler.exit_call(), Ok(Some(CallInfo::default())))
+        assert_matches!(handler.exit_call(), Ok(Some(call_info)) if call_info == CallInfo::default())
     }
 
     #[test]
     fn enter_call_err() {
         let mut handler = OsSyscallHandler::default();
 
-        assert_eq!(
+        assert_matches!(
             handler.enter_call(),
             Err(SyscallHandlerError::IteratorEmpty)
         )
@@ -865,7 +856,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(handler.enter_call(), Ok(()))
+        assert_matches!(handler.enter_call(), Ok(()))
     }
 
     #[test]
@@ -878,7 +869,7 @@ mod tests {
             MaybeRelocatable::from((0, 3)),
         ];
 
-        assert_eq!(
+        assert_matches!(
             handler.allocate_segment(&mut vm, data),
             Ok(Relocatable {
                 segment_index: -1,
@@ -900,11 +891,9 @@ mod tests {
             segment_index: 0,
             offset: 0,
         };
-        assert_eq!(
+        assert_matches!(
             handler._call_contract_and_write_response("call_contract", &mut vm, syscall_ptr),
-            Err(SyscallHandlerError::VirtualMachine(
-                VirtualMachineError::MemoryError(MemoryError::UnallocatedSegment(0, 0))
-            ))
+            Err(e) if e.to_string().contains(&MemoryError::UnallocatedSegment(0, 0).to_string())
         )
     }
 
@@ -923,16 +912,16 @@ mod tests {
         };
 
         vm.add_memory_segment();
-        assert_eq!(
+        assert_matches!(
             handler._call_contract_and_write_response("call_contract", &mut vm, syscall_ptr),
             Ok(())
         );
 
-        let addr_0 = Relocatable::from(&(syscall_ptr + 5));
-        assert_eq!(get_integer(&vm, &addr_0), Ok(1));
-        let addr_1 = Relocatable::from(&(syscall_ptr + 6));
-        assert_eq!(
-            get_relocatable(&vm, &addr_1),
+        let addr_0 = (syscall_ptr + 5_i32).unwrap();
+        assert_matches!(get_integer(&vm, addr_0), Ok(1));
+        let addr_1 = (syscall_ptr + 6_i32).unwrap();
+        assert_matches!(
+            get_relocatable(&vm, addr_1),
             Ok(Relocatable {
                 segment_index: -1,
                 offset: 0
