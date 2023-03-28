@@ -44,9 +44,9 @@ starknet_programs/%.json: starknet_programs/%.cairo
 #
 
 compile-abi:
-	. starknet-venv/bin/activate && cd cairo_programs/ && starknet-compile starknet_programs/fibonacci.cairo \
-		--output starknet_programs/fibonacci_compiled.json \
-		--abi starknet_programs/fibonacci_abi.json
+	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile fibonacci.cairo \
+		--output fibonacci_compiled.json \
+		--abi fibonacci_abi.json
 # This abi file is used for the `test_read_abi` test in contract_abi.rs
 
 build: compile-cairo compile-starknet
