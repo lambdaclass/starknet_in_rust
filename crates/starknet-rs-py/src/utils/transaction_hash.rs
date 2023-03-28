@@ -4,7 +4,7 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 use starknet_rs::{
     core::transaction_hash::starknet_transaction_hash::{
         calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
-        TransactionHashPrefix,
+        calculate_transaction_hash_common, TransactionHashPrefix,
     },
     utils::Address,
 };
@@ -13,6 +13,7 @@ use crate::types::contract_class::PyContractClass;
 
 #[pyclass]
 #[pyo3(name = "TransactionHashPrefix")]
+#[derive(Debug)]
 pub enum PyTransactionHashPrefix {
     #[pyo3(name = "DECLARE")]
     Declare,
@@ -38,8 +39,8 @@ impl From<TransactionHashPrefix> for PyTransactionHashPrefix {
     }
 }
 
-impl From<PyTransactionHashPrefix> for TransactionHashPrefix {
-    fn from(prefix: PyTransactionHashPrefix) -> Self {
+impl From<&PyTransactionHashPrefix> for TransactionHashPrefix {
+    fn from(prefix: &PyTransactionHashPrefix) -> Self {
         match prefix {
             PyTransactionHashPrefix::Declare => Self::Declare,
             PyTransactionHashPrefix::Deploy => Self::Deploy,
@@ -92,6 +93,40 @@ pub(crate) fn py_calculate_declare_transaction_hash(
         max_fee,
         version,
         nonce,
+    ) {
+        Ok(res) => Ok(res.to_biguint()),
+        Err(err) => Err(PyValueError::new_err(err.to_string())),
+    }
+}
+
+#[pyfunction]
+#[pyo3(name = "calculate_transaction_hash_common")]
+pub(crate) fn py_calculate_transaction_hash_common(
+    tx_hash_prefix: &PyTransactionHashPrefix,
+    version: u64,
+    contract_address: BigUint,
+    entry_point_selector: BigUint,
+    calldata: Vec<BigUint>,
+    max_fee: u64,
+    chain_id: BigUint,
+    additional_data: Vec<BigUint>,
+) -> PyResult<BigUint> {
+    let tx_hash_prefix = tx_hash_prefix.into();
+    let contract_address = Address(Felt252::from(contract_address));
+    let entry_point_selector = Felt252::from(entry_point_selector);
+    let chain_id = Felt252::from(chain_id);
+    let calldata: Vec<_> = calldata.into_iter().map(Felt252::from).collect();
+    let additional_data: Vec<_> = additional_data.into_iter().map(Felt252::from).collect();
+
+    match calculate_transaction_hash_common(
+        tx_hash_prefix,
+        version,
+        &contract_address,
+        entry_point_selector,
+        &calldata,
+        max_fee,
+        chain_id,
+        &additional_data,
     ) {
         Ok(res) => Ok(res.to_biguint()),
         Err(err) => Err(PyValueError::new_err(err.to_string())),

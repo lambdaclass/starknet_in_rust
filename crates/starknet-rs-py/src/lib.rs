@@ -15,7 +15,7 @@ use self::{
 };
 use crate::utils::transaction_hash::{
     py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
-    PyTransactionHashPrefix,
+    py_calculate_transaction_hash_common, PyTransactionHashPrefix,
 };
 use crate::utils::{
     py_calculate_contract_address, py_calculate_contract_address_from_hash,
@@ -153,15 +153,13 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  Exported Functions
     // ~~~~~~~~~~~~~~~~~~~~
 
-    //  starkware.starknet.core.os.transaction_hash.transaction_hash
-    // m.add_function(calculate_transaction_hash_common)?;   blocked by PyTransactionHashPrefix
-
     // m.add_function(build_general_config)?;    needs to be manually implemented
 
     //  starkware.starknet.wallets.open_zeppelin
     // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
     // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
 
+    m.add_function(wrap_pyfunction!(py_calculate_transaction_hash_common, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_declare_transaction_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_deploy_transaction_hash, m)?)?;
     m.add_function(wrap_pyfunction!(
