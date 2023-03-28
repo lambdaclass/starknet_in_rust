@@ -10,7 +10,8 @@ use starknet_rs::{
     utils::{Address, ClassHash},
 };
 
-#[pyclass]
+#[pyclass(subclass)]
+#[pyo3(name = "InternalDeclare")]
 pub struct PyInternalDeclare {
     inner: InternalDeclare,
 }
