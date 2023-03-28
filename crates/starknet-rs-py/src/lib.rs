@@ -5,8 +5,6 @@ mod starknet_state;
 mod types;
 mod utils;
 
-use std::ops::Shl;
-
 use self::{
     cached_state::PyCachedState,
     types::{
@@ -15,14 +13,17 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use crate::utils::transaction_hash::{
-    py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
-    py_calculate_transaction_hash_common, PyTransactionHashPrefix,
-};
 use crate::utils::{
     py_calculate_contract_address, py_calculate_contract_address_from_hash,
     py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
     py_validate_contract_deployed,
+};
+use crate::{
+    types::transaction::{PyTransaction, PyTransactionType},
+    utils::transaction_hash::{
+        py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
+        py_calculate_transaction_hash_common, PyTransactionHashPrefix,
+    },
 };
 use cairo_felt::{felt_str, Felt252};
 use pyo3::prelude::*;
@@ -34,6 +35,7 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
+use std::ops::Shl;
 
 use starknet_state::PyStarknetState;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
@@ -64,8 +66,15 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyCallInfo>()?;
 
     m.add_class::<PyTransactionHashPrefix>()?;
+    m.add_class::<PyTransaction>()?;
+    m.add_class::<PyTransactionType>()?;
 
-    // m.add_function(build_general_config)?;
+    reexport(
+        py,
+        m,
+        "starkware.starknet.definitions.error_codes",
+        vec!["StarknetErrorCode"],
+    )?;
 
     //  starkware.starknet.public.abi
     // m.add_class::<PyAbiEntryType>()?;
@@ -73,9 +82,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.testing.starknet
     // m.add_class::<PyStarknet>()?;
     // m.add_class::<PyStarknetCallInfo>()?; // doesn't seem necessary
-
-    //  starkware.starknet.definitions.error_codes
-    // m.add_class::<PyStarknetErrorCode>()?;
 
     //  starkware.starknet.services.api.feeder_gateway.response_objects
     // m.add_class::<PyBlockIdentifier>()?; this one is a Python Union
@@ -119,7 +125,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyDeployAccount>()?;
     // m.add_class::<PyInvokeFunction>()?;
     // m.add_class::<PyDeploy>()?;
-    // m.add_class::<PyTransaction>()?;
 
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;
@@ -133,9 +138,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     //  starkware.starknet.testing.contract
     // m.add_class::<PyStarknetContract>()?;
-
-    //  starkware.starknet.definitions.transaction_type
-    // m.add_class::<PyTransactionType>()?;
 
     //  starkware.starknet.services.api.feeder_gateway.request_objects
     // m.add_class::<PyCallFunction>()?;
