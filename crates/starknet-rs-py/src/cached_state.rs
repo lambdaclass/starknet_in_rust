@@ -1,4 +1,3 @@
-use crate::types::contract_class::PyContractClass;
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
@@ -49,11 +48,6 @@ impl PyCachedState {
             .to_biguint())
     }
 
-    fn set_contract_class(&mut self, _address: BigUint, _contract_class: &PyContractClass) {
-        // self.state.set_contract_class(class_hash, contract_class)
-        todo!()
-    }
-
     fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {
         self.state.set_storage_at(
             &(
@@ -62,5 +56,11 @@ impl PyCachedState {
             ),
             Felt252::from(value),
         );
+    }
+}
+
+impl<'a> From<&'a mut PyCachedState> for &'a mut InnerCachedState<InMemoryStateReader> {
+    fn from(state: &'a mut PyCachedState) -> Self {
+        &mut state.state
     }
 }

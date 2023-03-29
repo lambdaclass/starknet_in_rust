@@ -12,7 +12,7 @@ use super::{
     objects::{internal_deploy::InternalDeploy, internal_invoke_function::InternalInvokeFunction},
 };
 
-pub(crate) enum Transaction {
+pub enum Transaction {
     Deploy(InternalDeploy),
     InvokeFunction(InternalInvokeFunction),
 }

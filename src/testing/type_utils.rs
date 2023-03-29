@@ -3,7 +3,7 @@ use crate::business_logic::{
     transaction::error::TransactionError,
 };
 
-pub(crate) enum ExecutionInfo {
+pub enum ExecutionInfo {
     Transaction(Box<TransactionExecutionInfo>),
     Call(Box<CallInfo>),
 }

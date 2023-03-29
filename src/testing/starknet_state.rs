@@ -34,8 +34,8 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-pub(crate) struct StarknetState {
-    pub(crate) state: CachedState<InMemoryStateReader>,
+pub struct StarknetState {
+    pub state: CachedState<InMemoryStateReader>,
     pub(crate) general_config: StarknetGeneralConfig,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
@@ -43,8 +43,6 @@ pub(crate) struct StarknetState {
 }
 
 impl StarknetState {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
@@ -69,8 +67,6 @@ impl StarknetState {
     /// Returns the class hash and the execution info.
     /// Args:
     /// contract_class - a compiled StarkNet contract
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
@@ -92,8 +88,6 @@ impl StarknetState {
     }
 
     /// Invokes a contract function. Returns the execution info.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
@@ -118,8 +112,6 @@ impl StarknetState {
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn execute_entry_point_raw(
         &mut self,
         contract_address: Address,
@@ -159,9 +151,6 @@ impl StarknetState {
     /// contract_class - a compiled StarkNet contract
     /// contract_address_salt
     /// the salt to use for deploying. Otherwise, the salt is randomized.
-    // TODO: ask for contract_address_salt
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn deploy(
         &mut self,
         contract_class: ContractClass,
@@ -220,8 +209,6 @@ impl StarknetState {
     }
 
     /// Consumes the given message hash.
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn consume_message_hash(
         &mut self,
         message_hash: Vec<u8>,

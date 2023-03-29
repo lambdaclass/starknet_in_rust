@@ -95,29 +95,6 @@ pub fn get_entry_points(
     )
 }
 
-pub fn setup_contract(
-    path: &str,
-    address: &Address,
-    class_hash: [u8; 32],
-) -> CachedState<InMemoryStateReader> {
-    // Create program and entry point types for contract class
-    let path = PathBuf::from(path);
-    let contract_class = ContractClass::try_from(path).unwrap();
-
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address.clone(), 0.into());
-    // Create state with previous data
-    CachedState::new(state_reader, Some(contract_class_cache))
-}
-
 pub fn execute_entry_point(
     function_name: &str,
     calldata: &[Felt252],
