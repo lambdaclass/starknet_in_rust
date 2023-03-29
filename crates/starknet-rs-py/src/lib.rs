@@ -198,10 +198,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_function(wrap_pyfunction!(build_general_config, m)?)?;
 
-    //  starkware.starknet.wallets.open_zeppelin
-    // m.add_function(sign_deploy_account_tx)?;  blocked by PyDeployAccount
-    // m.add_function(sign_invoke_tx)?;          blocked by PyInvokeFunction
-
     m.add_function(wrap_pyfunction!(py_calculate_transaction_hash_common, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_declare_transaction_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_deploy_transaction_hash, m)?)?;
@@ -214,6 +210,13 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.wallets.open_zeppelin",
+        vec!["sign_deploy_account_tx", "sign_invoke_tx"],
+    )?;
 
     // TODO: export from starknet-rs when implemented
     reexport(
