@@ -611,4 +611,35 @@ mod test {
             ],
         );
     }
+/*
+   #[test]
+   fn test_felt_to_field_element() {
+    // test with a negative number
+    let w = Felt252::new(-10);
+    let w_bytes = w.to_bytes_be();
+    let v = FieldElement::from_bytes_be(w_bytes);
+
+    assert_eq!(felt_to_field_element(&w).unwrap(), v); // TODO waiting for this PR to be merged https://github.com/lambdaclass/cairo-rs/pull/927
+
+    // test with zero
+    let x = Felt252::zero();
+    assert_eq!(felt_to_field_element(&x).unwrap(), FieldElement::ZERO);
+
+    // test with 1
+    let y = Felt252::new(1);
+    assert_eq!(felt_to_field_element(&y).unwrap(), FieldElement::ONE);
+
+    // test with the largest possible number
+    let z = Felt252::max_value();
+    assert_eq!(felt_to_field_element(&z).unwrap(), FieldElement::MAX);
+   }
+    */
+
+    #[test]
+    fn test_get_keys() {
+        let hashmap_one = HashMap::from([("one", 1), ("two", 2)]);
+        let hashmap_two = HashMap::from([("three", 3), ("four", 4)]);
+
+        assert_eq!(get_keys(hashmap_one, hashmap_two).iter().collect::<HashSet<_>>(), Vec::from(["one", "two", "three", "four"]).iter().collect::<HashSet<_>>());
+    }
 }
