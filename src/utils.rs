@@ -94,14 +94,10 @@ pub fn felt_to_hash(value: &Felt252) -> ClassHash {
 }
 
 pub fn string_to_hash(class_string: &String) -> ClassHash {
-    let parsed_felt = Felt252::from_str_radix(
-        if &class_string[..2] == "0x" {
-            &class_string[2..]
-        } else {
-            class_string
-        },
-        16,
-    );
+    let parsed_felt =
+        Felt252::from_str_radix(class_string.strip_prefix("0x").unwrap_or(&class_string), 16);
+
+    println!("{:?}", parsed_felt);
     felt_to_hash(&parsed_felt.unwrap())
 }
 
