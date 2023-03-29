@@ -7,7 +7,10 @@ use cairo_rs::{
     serde::deserialize_program::Identifier,
     types::{program::Program, relocatable::MaybeRelocatable},
     vm::{
-        runners::cairo_runner::{CairoArg, CairoRunner},
+        runners::{
+            builtin_runner::BuiltinRunner,
+            cairo_runner::{CairoArg, CairoRunner},
+        },
         vm_core::VirtualMachine,
     },
 };
@@ -174,15 +177,29 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
     runner.initialize_function_runner(&mut vm)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
-    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
-    // TODO: Looks like we can get this value from the identifier, but the value is a Felt252.
-    // We need to cast that into a usize.
-    // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
-    let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
+    // Poseidon base needs to be passed on to the runner in order to enable it to compute it correctly
+    let poseidon_runner = vm
+        .get_builtin_runners()
+        .iter()
+        .find(|x| matches!(x, BuiltinRunner::Poseidon(_)))
+        .unwrap();
+    let poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
 
+    let range_check_runner = vm
+        .get_builtin_runners()
+        .iter()
+        .find(|x| matches!(x, BuiltinRunner::RangeCheck(_)))
+        .unwrap();
+    let range_check_base = MaybeRelocatable::from((range_check_runner.base() as isize, 0));
+
+    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
     runner.run_from_entrypoint(
         188,
-        &[&hash_base.into(), contract_class_struct],
+        &[
+            &poseidon_base.into(),
+            &range_check_base.into(),
+            contract_class_struct,
+        ],
         true,
         &mut vm,
         &mut hint_processor,
