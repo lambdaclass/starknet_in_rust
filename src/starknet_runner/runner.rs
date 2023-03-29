@@ -305,4 +305,21 @@ mod test {
             .validate_segment_pointers(&relocatable, &relocatable)
             .is_err());
     }
+
+    #[test]
+    fn validate_segment_pointers_should_fail_when_relocatable_is_not_a_value() {
+        let program = cairo_rs::types::program::Program::default();
+        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let vm = VirtualMachine::new(true);
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+
+        let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        let relocatable = MaybeRelocatable::Int((1).into());
+        assert!(runner
+            .validate_segment_pointers(&relocatable, &relocatable)
+            .is_err());
+    }
 }
