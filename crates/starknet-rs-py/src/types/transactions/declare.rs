@@ -1,8 +1,18 @@
+use crate::{
+    cached_state::PyCachedState,
+    types::{
+        general_config::PyStarknetGeneralConfig,
+        transaction_execution_info::PyTransactionExecutionInfo,
+    },
+};
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
-use pyo3::prelude::*;
+use pyo3::{exceptions::PyValueError, prelude::*};
 use starknet_rs::{
-    business_logic::transaction::objects::internal_declare::InternalDeclare,
+    business_logic::{
+        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        transaction::objects::internal_declare::InternalDeclare,
+    },
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
     },
@@ -70,14 +80,15 @@ impl PyInternalDeclare {
             .collect()
     }
 
-    // fn apply_state_updates(
-    //     &self,
-    //     state: PyStarknetState,
-    //     general_config: PyStarknetGeneralConfig,
-    // ) -> PyResult<PyTransactionExecutionInfo> {
-    //     // TODO: check if this is really equivalent
-    //     self.inner
-    //         .execute(state, general_config.into())
-    //         .map_err(|e| PyValueError::new_err(e.to_string()))
-    // }
+    fn apply_state_updates(
+        &self,
+        state: &mut PyCachedState,
+        general_config: &PyStarknetGeneralConfig,
+    ) -> PyResult<PyTransactionExecutionInfo> {
+        let state: &mut CachedState<InMemoryStateReader> = state.into();
+        match self.inner.execute(state, general_config.into()) {
+            Ok(res) => Ok(res.into()),
+            Err(err) => Err(PyValueError::new_err(err.to_string())),
+        }
+    }
 }

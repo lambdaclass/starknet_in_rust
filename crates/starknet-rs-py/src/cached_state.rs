@@ -58,3 +58,9 @@ impl PyCachedState {
         );
     }
 }
+
+impl<'a> From<&'a mut PyCachedState> for &'a mut InnerCachedState<InMemoryStateReader> {
+    fn from(py_state: &'a mut PyCachedState) -> Self {
+        &mut py_state.state
+    }
+}
