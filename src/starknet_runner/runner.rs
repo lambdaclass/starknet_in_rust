@@ -337,4 +337,22 @@ mod test {
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
         assert!(runner.validate_segment_pointers(&base, &base).is_err());
     }
+
+    #[test]
+    fn validate_segment_pointers_should_fail_when_stop_is_not_a_value() {
+        let program = cairo_rs::types::program::Program::default();
+        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let mut vm = VirtualMachine::new(true);
+        vm.add_memory_segment();
+        vm.compute_segments_effective_sizes();
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+
+        let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        let base = MaybeRelocatable::RelocatableValue((0, 0).into());
+        let stop = MaybeRelocatable::Int((1).into());
+        assert!(runner.validate_segment_pointers(&base, &stop).is_err());
+    }
 }
