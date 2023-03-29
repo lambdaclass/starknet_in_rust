@@ -4,6 +4,8 @@ mod cached_state;
 mod starknet_state;
 mod types;
 
+use std::ops::Shl;
+
 use self::{
     cached_state::PyCachedState,
     types::{
@@ -22,7 +24,8 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
-use std::ops::Shl;
+
+use starknet_state::PyStarknetState;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
@@ -31,7 +34,8 @@ compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as
 #[pymodule]
 pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
-
+    m.add_class::<PyStarknetState>()?;
+    // starkware.starknet.business_logic.state.state
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyStarknetGeneralConfig>()?;
@@ -63,7 +67,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyStarknetCallInfo>()?;
 
     //  starkware.starknet.testing.state
-    // m.add_class::<PyStarknetState>()?;
 
     //  starkware.starknet.core.os.contract_address.contract_address
     // m.add_function(calculate_contract_address_from_hash)?;

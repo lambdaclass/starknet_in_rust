@@ -1,4 +1,3 @@
-use crate::types::contract_class::PyContractClass;
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
@@ -47,11 +46,6 @@ impl PyCachedState {
             ))
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?
             .to_biguint())
-    }
-
-    fn set_contract_class(&mut self, _address: BigUint, _contract_class: &PyContractClass) {
-        // self.state.set_contract_class(class_hash, contract_class)
-        todo!()
     }
 
     fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {

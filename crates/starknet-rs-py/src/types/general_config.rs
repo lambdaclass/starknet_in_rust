@@ -18,9 +18,9 @@ use std::collections::HashMap;
 
 #[pyclass]
 #[pyo3(name = "StarknetGeneralConfig")]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PyStarknetGeneralConfig {
-    inner: StarknetGeneralConfig,
+    pub(crate) inner: StarknetGeneralConfig,
 }
 
 #[pymethods]
