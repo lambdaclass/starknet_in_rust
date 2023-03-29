@@ -66,13 +66,14 @@ where
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
 
-        Ok(self.cairo_runner.run_from_entrypoint(
+        self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
             verify_secure,
             &mut self.vm,
             &mut self.hint_processor,
-        )?)
+        )?;
+        Ok(())
     }
 
     pub fn get_execution_resources(&self) -> Result<ExecutionResources, TransactionError> {
@@ -258,5 +259,19 @@ mod test {
         let expected = Vec::from([MaybeRelocatable::from((0, 0))]);
 
         assert_eq!(os_context, expected);
+    }
+
+    #[test]
+    fn run_from_entrypoint_should_fail_with_no_exec_base() {
+        let program = cairo_rs::types::program::Program::default();
+        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let vm = VirtualMachine::new(true);
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        assert!(runner.run_from_entrypoint(1, &[]).is_err());
     }
 }
