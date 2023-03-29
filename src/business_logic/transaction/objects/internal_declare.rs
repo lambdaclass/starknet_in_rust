@@ -662,7 +662,7 @@ mod tests {
         .expect("REASON");
 
         let internal_declare_error = InternalDeclare::new(
-            fib_contract_class.clone(),
+            fib_contract_class,
             chain_id,
             Address(Felt252::one()),
             0,
@@ -747,7 +747,7 @@ mod tests {
         .expect("REASON");
 
         let internal_declare_error = InternalDeclare::new(
-            fib_contract_class.clone(),
+            fib_contract_class,
             chain_id,
             Address(Felt252::one()),
             0,
