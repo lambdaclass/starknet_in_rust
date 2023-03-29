@@ -307,7 +307,7 @@ mod test {
     }
 
     #[test]
-    fn validate_segment_pointers_should_fail_when_relocatable_is_not_a_value() {
+    fn validate_segment_pointers_should_fail_when_base_is_not_a_value() {
         let program = cairo_rs::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
         let vm = VirtualMachine::new(true);
@@ -321,5 +321,20 @@ mod test {
         assert!(runner
             .validate_segment_pointers(&relocatable, &relocatable)
             .is_err());
+    }
+
+    #[test]
+    fn validate_segment_pointers_should_fail_with_invalid_segment_size() {
+        let program = cairo_rs::types::program::Program::default();
+        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let vm = VirtualMachine::new(true);
+
+        let mut state = CachedState::<InMemoryStateReader>::default();
+        let hint_processor =
+            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+
+        let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        let base = MaybeRelocatable::RelocatableValue((0, 0).into());
+        assert!(runner.validate_segment_pointers(&base, &base).is_err());
     }
 }
