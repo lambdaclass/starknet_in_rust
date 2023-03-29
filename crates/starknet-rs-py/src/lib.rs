@@ -14,18 +14,18 @@ use self::{
     },
 };
 use crate::{
-    types::general_config::build_general_config,
-    utils::{
-        py_calculate_contract_address, py_calculate_contract_address_from_hash,
-        py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
-        py_validate_contract_deployed,
-    },
-};
-use crate::{
     types::transaction::{PyTransaction, PyTransactionType},
     utils::transaction_hash::{
         py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
         py_calculate_transaction_hash_common, PyTransactionHashPrefix,
+    },
+};
+use crate::{
+    types::{general_config::build_general_config, starknet_message_to_l1::PyStarknetMessageToL1},
+    utils::{
+        py_calculate_contract_address, py_calculate_contract_address_from_hash,
+        py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
+        py_validate_contract_deployed,
     },
 };
 use cairo_felt::{felt_str, Felt252};
@@ -71,6 +71,11 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyTransactionHashPrefix>()?;
     m.add_class::<PyTransaction>()?;
     m.add_class::<PyTransactionType>()?;
+
+    m.add_class::<PyStarknetMessageToL1>()?;
+
+    //  starkware.starknet.business_logic.transaction.objects
+    // m.add_class::<PyInternalL1Handler>()?;  // isn't implemented
 
     reexport(
         py,
@@ -171,20 +176,8 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         py,
         m,
         "starkware.starknet.business_logic.transaction.objects",
-        vec!["InternalAccountTransaction"],
+        vec!["InternalAccountTransaction", "InternalTransaction"],
     )?;
-
-    //  starkware.starknet.business_logic.transaction.objects
-    // m.add_class::<PyInternalL1Handler>()?;
-    // m.add_class::<PyInternalDeclare>()?;
-    // m.add_class::<PyInternalDeploy>()?;
-    // m.add_class::<PyInternalDeployAccount>()?;
-    // m.add_class::<PyInternalInvokeFunction>()?;
-    // m.add_class::<PyInternalTransaction>()?;
-    // m.add_class::<PyTransactionExecutionInfo>()?;
-
-    //  starkware.starknet.services.api.messages
-    // m.add_class::<PyStarknetMessageToL1>()?;
 
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Functions
