@@ -18,9 +18,9 @@ use std::collections::HashMap;
 
 #[pyclass]
 #[pyo3(name = "StarknetGeneralConfig")]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PyStarknetGeneralConfig {
-    inner: StarknetGeneralConfig,
+    pub(crate) inner: StarknetGeneralConfig,
 }
 
 #[pymethods]
@@ -139,6 +139,12 @@ impl PyStarknetOsConfig {
         let address = Address(Felt252::from(fee_token_address));
         let inner = StarknetOsConfig::new(chain_id.into(), address, 0);
         Self { inner }
+    }
+}
+
+impl From<PyStarknetGeneralConfig> for StarknetGeneralConfig {
+    fn from(pyconfig: PyStarknetGeneralConfig) -> Self {
+        pyconfig.inner
     }
 }
 
