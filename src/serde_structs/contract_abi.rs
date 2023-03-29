@@ -38,3 +38,17 @@ pub fn read_abi(abi_name: &PathBuf) -> HashMap<String, (usize, EntryPointType)> 
 
     result_hash_map
 }
+
+#[test]
+fn test_read_abi() {
+    let path_a = PathBuf::from(r"starknet_programs/fibonacci_abi.json");
+    // using the function to read an abi
+    let result = read_abi(&path_a);
+
+    // this is the expected result of the function above
+    let expected_result: HashMap<String, (usize, EntryPointType)> =
+        HashMap::from([(String::from("fib"), (0_usize, EntryPointType::External))]);
+
+    // final check
+    assert_eq!(result, expected_result)
+}

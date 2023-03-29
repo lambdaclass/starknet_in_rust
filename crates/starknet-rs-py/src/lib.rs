@@ -5,6 +5,8 @@ mod starknet_state;
 mod types;
 mod utils;
 
+use std::ops::Shl;
+
 use self::{
     cached_state::PyCachedState,
     types::{
@@ -32,7 +34,8 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
-use std::ops::Shl;
+
+use starknet_state::PyStarknetState;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
@@ -45,6 +48,8 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Classes
     // ~~~~~~~~~~~~~~~~~~~~
+
+    m.add_class::<PyStarknetState>()?;
 
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
@@ -68,16 +73,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     //  starkware.starknet.testing.starknet
     // m.add_class::<PyStarknet>()?;
     // m.add_class::<PyStarknetCallInfo>()?; // doesn't seem necessary
-
-    //  starkware.starknet.testing.state
-    // m.add_class::<PyStarknetState>()?;
-    //  needed methods:
-    //   - state.state.set_storage_at
-    //   - state.state.block_info.block_timestamp
-    //   - state.state.block_info.gas_price
-    //   - state.state.general_config.sequencer_address
-    //   - state.general_config
-    //   - state.general_config
 
     //  starkware.starknet.definitions.error_codes
     // m.add_class::<PyStarknetErrorCode>()?;
