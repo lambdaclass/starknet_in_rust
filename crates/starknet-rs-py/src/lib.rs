@@ -160,18 +160,30 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec!["FeederGatewayClient"],
     )?;
 
+    // TODO: check
+    reexport(
+        py,
+        m,
+        "starkware.starknet.testing.contract",
+        vec!["StarknetContract"],
+    )?;
+
+    // TODO: check
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.transaction.objects",
+        vec!["InternalAccountTransaction"],
+    )?;
+
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;
-    // m.add_class::<PyInternalAccountTransaction>()?;
     // m.add_class::<PyInternalDeclare>()?;
     // m.add_class::<PyInternalDeploy>()?;
     // m.add_class::<PyInternalDeployAccount>()?;
     // m.add_class::<PyInternalInvokeFunction>()?;
     // m.add_class::<PyInternalTransaction>()?;
     // m.add_class::<PyTransactionExecutionInfo>()?;
-
-    //  starkware.starknet.testing.contract
-    // m.add_class::<PyStarknetContract>()?;
 
     //  starkware.starknet.services.api.feeder_gateway.request_objects
     // m.add_class::<PyCallFunction>()?;
