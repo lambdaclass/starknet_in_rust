@@ -27,7 +27,7 @@ deps-venv:
 		fastecdsa \
 		typeguard==2.13.0 \
 		maturin \
-		cairo-lang==0.10.3
+		cairo-lang==0.11.0
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)

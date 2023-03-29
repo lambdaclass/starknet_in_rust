@@ -1,9 +1,33 @@
+use std::collections::HashMap;
+
 use felt::Felt252;
+use num_traits::Zero;
 
 use crate::{
-    definitions::transaction_type::TransactionType,
-    services::api::contract_class::ContractClass,
-    utils::{Address, ClassHash},
+    business_logic::{
+        execution::{
+            execution_entry_point::ExecutionEntryPoint,
+            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+        },
+        fact_state::state::ExecutionResourcesManager,
+        state::state_api::{State, StateReader},
+        transaction::{
+            error::TransactionError,
+            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+            objects::internal_invoke_function::verify_no_calls_to_other_contracts,
+        },
+    },
+    core::{
+        contract_address::starknet_contract_address::compute_class_hash,
+        errors::state_errors::StateError,
+        transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
+    },
+    definitions::{
+        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        transaction_type::TransactionType,
+    },
+    services::api::contract_class::{ContractClass, EntryPointType},
+    utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 
 pub struct InternalDeclareV2 {
@@ -42,7 +66,7 @@ impl InternalDeclareV2 {
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
-        let internal_declare = InternalDeclare {
+        let internal_declare = InternalDeclareV2 {
             class_hash,
             sender_address,
             tx_type: TransactionType::Declare,
