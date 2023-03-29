@@ -22,16 +22,16 @@ use crate::{
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
-use felt::Felt;
+use felt::Felt252;
 use num_traits::Zero;
 
 pub struct InternalDeploy {
-    pub(crate) hash_value: Felt,
+    pub(crate) hash_value: Felt252,
     pub(crate) version: u64,
     pub(crate) contract_address: Address,
     pub(crate) _contract_address_salt: Address,
     pub(crate) contract_hash: ClassHash,
-    pub(crate) constructor_calldata: Vec<Felt>,
+    pub(crate) constructor_calldata: Vec<Felt252>,
     pub(crate) tx_type: TransactionType,
 }
 
@@ -39,8 +39,8 @@ impl InternalDeploy {
     pub fn new(
         contract_address_salt: Address,
         contract_class: ContractClass,
-        constructor_calldata: Vec<Felt>,
-        chain_id: Felt,
+        constructor_calldata: Vec<Felt252>,
+        chain_id: Felt252,
         version: u64,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_class_hash(&contract_class)
@@ -51,7 +51,7 @@ impl InternalDeploy {
             &contract_address_salt,
             &class_hash,
             &constructor_calldata,
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
         )?);
 
         let hash_value = calculate_deploy_transaction_hash(
@@ -72,8 +72,6 @@ impl InternalDeploy {
         })
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
     pub fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }
@@ -110,7 +108,7 @@ impl InternalDeploy {
         let class_hash: ClassHash = self.contract_hash;
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
             Some(class_hash),
         );
 
@@ -145,18 +143,18 @@ impl InternalDeploy {
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
             CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
             EntryPointType::Constructor,
             None,
             None,
         );
 
         let tx_execution_context = TransactionExecutionContext::new(
-            Address(Felt::zero()),
+            Address(Felt252::zero()),
             self.hash_value.clone(),
             Vec::new(),
             0,
-            Felt::zero(),
+            Felt252::zero(),
             general_config.invoke_tx_max_n_steps,
             self.version,
         );
@@ -261,7 +259,7 @@ mod tests {
             state
                 .get_storage_at(&(Address(1.into()), storage_key))
                 .unwrap(),
-            &Felt::from(10)
+            &Felt252::from(10)
         );
     }
 }

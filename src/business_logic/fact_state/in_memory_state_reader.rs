@@ -4,7 +4,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
-use felt::Felt;
+use felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -13,9 +13,9 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_class_hash: HashMap<Address, ClassHash>,
     #[getset(get_mut = "pub")]
-    pub address_to_nonce: HashMap<Address, Felt>,
+    pub address_to_nonce: HashMap<Address, Felt252>,
     #[getset(get_mut = "pub")]
-    pub address_to_storage: HashMap<StorageEntry, Felt>,
+    pub address_to_storage: HashMap<StorageEntry, Felt252>,
     #[getset(get_mut = "pub")]
     pub class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
 }
@@ -23,8 +23,8 @@ pub struct InMemoryStateReader {
 impl InMemoryStateReader {
     pub fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
-        address_to_nonce: HashMap<Address, Felt>,
-        address_to_storage: HashMap<StorageEntry, Felt>,
+        address_to_nonce: HashMap<Address, Felt252>,
+        address_to_storage: HashMap<StorageEntry, Felt252>,
         class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
     ) -> Self {
         Self {
@@ -55,7 +55,7 @@ impl StateReader for InMemoryStateReader {
         class_hash
     }
 
-    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt252, StateError> {
         let nonce = self
             .address_to_nonce
             .get(contract_address)
@@ -63,7 +63,7 @@ impl StateReader for InMemoryStateReader {
         nonce
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt252, StateError> {
         let storage = self
             .address_to_storage
             .get(storage_entry)
@@ -93,9 +93,9 @@ mod tests {
 
         let contract_address = Address(37810.into());
         let class_hash = [1; 32];
-        let nonce = Felt::new(109);
+        let nonce = Felt252::new(109);
         let storage_entry = (contract_address.clone(), [8; 32]);
-        let storage_value = Felt::new(800);
+        let storage_value = Felt252::new(800);
 
         state_reader
             .address_to_class_hash

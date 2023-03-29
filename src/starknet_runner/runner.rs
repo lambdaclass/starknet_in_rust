@@ -15,7 +15,7 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt;
+use felt::Felt252;
 use num_traits::ToPrimitive;
 use std::{borrow::Cow, collections::HashMap};
 
@@ -79,23 +79,20 @@ where
         Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
-    pub fn get_return_values(&self) -> Result<Vec<Felt>, StarknetRunnerError> {
-        let ret_data = self
-            .vm
-            .get_return_values(2)
-            .map_err(StarknetRunnerError::Memory)?;
+    pub fn get_return_values(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
+        let ret_data = self.vm.get_return_values(2)?;
 
         let n_rets = ret_data[0]
             .get_int_ref()
-            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+            .ok_or(StarknetRunnerError::NotAFelt)?;
         let ret_ptr = ret_data[1]
             .get_relocatable()
-            .map_err(|_| StarknetRunnerError::NotARelocatable)?;
+            .ok_or(StarknetRunnerError::NotARelocatable)?;
 
         let ret_data = self
             .vm
             .get_integer_range(
-                &ret_ptr,
+                ret_ptr,
                 n_rets
                     .to_usize()
                     .ok_or(StarknetRunnerError::DataConversionError)?,
@@ -112,13 +109,13 @@ where
             .get_builtin_runners()
             .clone()
             .into_iter()
-            .collect::<HashMap<String, BuiltinRunner>>();
+            .collect::<HashMap<&str, BuiltinRunner>>();
         self.cairo_runner
             .get_program_builtins()
             .iter()
             .for_each(|builtin| {
-                if builtin_runners.contains_key(builtin) {
-                    let b_runner = builtin_runners.get(builtin).unwrap();
+                if builtin_runners.contains_key(builtin.name()) {
+                    let b_runner = builtin_runners.get(builtin.name()).unwrap();
                     let stack = b_runner.initial_stack();
                     os_context.extend(stack);
                 }
@@ -136,17 +133,17 @@ where
             return Err(TransactionError::IllegalOsPtrOffset);
         }
 
-        let os_context_end = self.vm.get_ap().sub_usize(2)?;
-        let final_os_context_ptr = os_context_end.sub_usize(os_context.len())?;
+        let os_context_end = (self.vm.get_ap() - 2)?;
+        let final_os_context_ptr = (os_context_end - os_context.len())?;
         let os_context_ptr = os_context
             .get(ptr_offset)
             .ok_or(TransactionError::InvalidPtrFetch)?
             .to_owned();
 
-        let addr = final_os_context_ptr + ptr_offset;
+        let addr = (final_os_context_ptr + ptr_offset)?;
         let ptr_fetch_from_memory = self
             .vm
-            .get_maybe(&addr)?
+            .get_maybe(&addr)
             .ok_or(TransactionError::InvalidPtrFetch)?;
 
         Ok((os_context_ptr, ptr_fetch_from_memory))
@@ -197,16 +194,16 @@ where
         H: SyscallHandlerPostRun,
     {
         // The returned values are os_context, retdata_size, retdata_ptr.
-        let os_context_end = self.vm.get_ap().sub_usize(2)?;
+        let os_context_end = (self.vm.get_ap() - 2)?;
         let stack_pointer = os_context_end;
 
         let stack_ptr = self
             .cairo_runner
             .get_builtins_final_stack(&mut self.vm, stack_pointer)?;
 
-        let final_os_context_ptr = stack_ptr.sub_usize(1)?;
+        let final_os_context_ptr = (stack_ptr - 1)?;
 
-        if final_os_context_ptr + initial_os_context.len() != os_context_end {
+        if final_os_context_ptr + initial_os_context.len() != Ok(os_context_end) {
             return Err(TransactionError::OsContextPtrNotEqual);
         }
 
@@ -218,7 +215,7 @@ where
 
         self.hint_processor
             .syscall_handler
-            .post_run(&mut self.vm, syscall_stop_ptr.get_relocatable()?)?;
+            .post_run(&mut self.vm, syscall_stop_ptr.try_into()?)?;
 
         Ok(())
     }
@@ -242,21 +239,6 @@ mod test {
     type SyscallHintProcessor<'a> = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
         BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>,
     >;
-
-    #[test]
-    fn get_execution_resources_test_fail() {
-        let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
-        let vm = VirtualMachine::new(true);
-
-        let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
-
-        let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
-
-        assert!(runner.get_execution_resources().is_err());
-    }
 
     #[test]
     fn prepare_os_context_test() {

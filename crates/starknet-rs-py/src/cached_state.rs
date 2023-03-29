@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-
 use crate::types::contract_class::PyContractClass;
-use cairo_felt::Felt;
+use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::{
@@ -36,7 +35,7 @@ impl PyCachedState {
     fn get_class_hash_at(&mut self, address: BigUint) -> PyResult<BigUint> {
         Ok(BigUint::from_bytes_be(
             self.state
-                .get_class_hash_at(&Address(Felt::from(address)))
+                .get_class_hash_at(&Address(Felt252::from(address)))
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?,
         ))
     }
@@ -44,7 +43,7 @@ impl PyCachedState {
     fn get_nonce_at(&mut self, address: BigUint) -> PyResult<BigUint> {
         Ok(self
             .state
-            .get_nonce_at(&Address(Felt::from(address)))
+            .get_nonce_at(&Address(Felt252::from(address)))
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?
             .to_biguint())
     }
@@ -52,7 +51,10 @@ impl PyCachedState {
     fn get_storage_at(&mut self, address: BigUint, key: BigUint) -> PyResult<BigUint> {
         Ok(self
             .state
-            .get_storage_at(&(Address(Felt::from(address)), felt_to_hash(&Felt::from(key))))
+            .get_storage_at(&(
+                Address(Felt252::from(address)),
+                felt_to_hash(&Felt252::from(key)),
+            ))
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?
             .to_biguint())
     }
@@ -72,8 +74,11 @@ impl PyCachedState {
 
     fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {
         self.state.set_storage_at(
-            &(Address(Felt::from(address)), felt_to_hash(&Felt::from(key))),
-            Felt::from(value),
+            &(
+                Address(Felt252::from(address)),
+                felt_to_hash(&Felt252::from(key)),
+            ),
+            Felt252::from(value),
         );
     }
 }

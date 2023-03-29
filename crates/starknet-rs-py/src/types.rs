@@ -6,4 +6,5 @@ pub mod execution_resources;
 pub mod general_config;
 pub mod ordered_event;
 pub mod ordered_l2_to_l1_message;
+pub mod transaction;
 pub mod transaction_execution_info;
