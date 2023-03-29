@@ -98,49 +98,67 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec![
             "DeployedContract",
             "FeeEstimationInfo",
-            "StorageEntry", // alias Tuple[int, int]
+            "StorageEntry",    // alias Tuple[int, int]
+            "BlockIdentifier", // Union[int, Literal["latest"], Literal["pending"]]
+            "StateDiff",
+            "BlockStateUpdate",
+            "BlockStatus",
+            "BlockTransactionTraces",
+            "TransactionSimulationInfo",
+            "StarknetBlock",
+            "TransactionInfo",
+            "TransactionReceipt",
+            "TransactionStatus",
+            "TransactionTrace",
+            "TransactionExecution",
+            "TransactionSpecificInfo",
+            "Event",
+            "FunctionInvocation",
+            "L2ToL1Message",
+            "DeclareSpecificInfo",
+            "DeployAccountSpecificInfo",
+            "DeploySpecificInfo",
+            "InvokeSpecificInfo",
+            "L1HandlerSpecificInfo",
         ],
     )?;
 
-    //  starkware.starknet.public.abi
-    // m.add_class::<PyAbiEntryType>()?;
+    reexport(
+        py,
+        m,
+        "starkware.starknet.public.abi",
+        vec![
+            "AbiEntryType", // alias Dict[str, Any]
+        ],
+    )?;
 
-    //  starkware.starknet.testing.starknet
-    // m.add_class::<PyStarknet>()?;
-    // m.add_class::<PyStarknetCallInfo>()?; // doesn't seem necessary
+    reexport(
+        py,
+        m,
+        "starkware.starknet.testing.starknet",
+        vec!["Starknet", "StarknetCallInfo"],
+    )?;
 
-    //  starkware.starknet.services.api.feeder_gateway.response_objects
-    // m.add_class::<PyBlockIdentifier>()?; this one is a Python Union
-    // m.add_class::<PyBlockStateUpdate>()?;
-    // m.add_class::<PyBlockStatus>()?;
-    // m.add_class::<PyBlockTransactionTraces>()?;
-    // m.add_class::<PyTransactionSimulationInfo>()?;
-    // m.add_class::<PyStarknetBlock>()?;
-    // m.add_class::<PyTransactionInfo>()?;
-    // m.add_class::<PyTransactionReceipt>()?;
-    // m.add_class::<PyTransactionStatus>()?;
-    // m.add_class::<PyTransactionTrace>()?;
-    // m.add_class::<PyTransactionExecution>()?;
-    // m.add_class::<PyTransactionSpecificInfo>()?;
-    // m.add_class::<PyStateDiff>()?;
-    // m.add_class::<PyEvent>()?;
-    // m.add_class::<PyFunctionInvocation>()?;
-    // m.add_class::<PyL2ToL1Message>()?;
-    // m.add_class::<PyDeclareSpecificInfo>()?;
-    // m.add_class::<PyDeployAccountSpecificInfo>()?;
-    // m.add_class::<PyDeploySpecificInfo>()?;
-    // m.add_class::<PyInvokeSpecificInfo>()?;
-    // m.add_class::<PyL1HandlerSpecificInfo>()?;
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.execution.objects",
+        vec!["ResourcesMapping"],
+    )?;
 
-    //  starkware.starknet.business_logic.execution.objects
-    // m.add_class::<PyResourcesMapping>()?;
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.state.state_api",
+        vec!["SyncState", "StateReader"],
+    )?;
 
-    //  starkware.starknet.business_logic.state.state_api
-    // m.add_class::<PySyncState>()?;
-    // m.add_class::<PyStateReader>()?;
-
-    //  starkware.starknet.services.api.feeder_gateway.feeder_gateway_client
-    // m.add_class::<PyFeederGatewayClient>()?;
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.feeder_gateway.feeder_gateway_client",
+        vec!["FeederGatewayClient"],
+    )?;
 
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;
