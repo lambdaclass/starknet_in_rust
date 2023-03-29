@@ -478,4 +478,63 @@ mod tests {
         // ---------------------
         assert!(internal_declare.is_err());
     }
+
+    #[test]
+    fn verify_version_zero_should_fail_nonce() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class.clone());
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::new(1));
+
+        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+        let nonce = Felt252::from(148);
+        let version = 0;
+
+        // Declare tx should fail because nonce > 0 and version == 0
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            version,
+            Vec::new(),
+            nonce,
+        );
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+        assert!(internal_declare.is_err());
+    }
 }
