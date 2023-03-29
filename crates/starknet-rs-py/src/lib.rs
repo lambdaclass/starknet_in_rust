@@ -140,15 +140,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     reexport(
         py,
         m,
-        "starkware.starknet.public.abi",
-        vec![
-            "AbiEntryType", // alias Dict[str, Any]
-        ],
-    )?;
-
-    reexport(
-        py,
-        m,
         "starkware.starknet.testing.starknet",
         vec!["Starknet", "StarknetCallInfo"],
     )?;
@@ -221,12 +212,16 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec!["sign_deploy_account_tx", "sign_invoke_tx"],
     )?;
 
-    // TODO: export from starknet-rs when implemented
     reexport(
         py,
         m,
         "starkware.starknet.public.abi",
-        vec!["get_selector_from_name", "get_storage_var_address"],
+        vec![
+            "AbiEntryType", // alias Dict[str, Any]
+            // TODO: export from starknet-rs when implemented
+            "get_selector_from_name",
+            "get_storage_var_address",
+        ],
     )?;
 
     // TODO: export from starknet-rs when implemented
