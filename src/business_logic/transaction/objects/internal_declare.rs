@@ -693,4 +693,89 @@ mod tests {
             expected_error_message
         );
     }
+
+    #[test]
+    fn execute_transaction_invalid_nonce_should_fail() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::zero());
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // Declare same class twice
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class.clone(),
+            chain_id.clone(),
+            Address(Felt252::one()),
+            0,
+            1,
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .expect("REASON");
+
+        let internal_declare_error = InternalDeclare::new(
+            fib_contract_class.clone(),
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            1,
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .expect("REASON");
+
+        internal_declare
+            .execute(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        let expected_error =
+            internal_declare_error.execute(&mut state, &StarknetGeneralConfig::default());
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+
+        // Check its an error
+        assert!(expected_error.is_err());
+
+        let expected_error_message = "Invalid transaction nonce. Expected: 1 got 0".to_string();
+        // Check error message
+        assert_eq!(
+            expected_error.unwrap_err().to_string(),
+            expected_error_message
+        );
+    }
 }
