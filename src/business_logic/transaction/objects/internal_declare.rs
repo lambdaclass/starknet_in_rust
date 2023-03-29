@@ -33,6 +33,7 @@ use std::collections::HashMap;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
+#[derive(Debug)]
 pub struct InternalDeclare {
     pub class_hash: ClassHash,
     pub sender_address: Address,
@@ -477,6 +478,10 @@ mod tests {
         //      Comparison
         // ---------------------
         assert!(internal_declare.is_err());
+        assert_eq!(
+            internal_declare.unwrap_err().to_string(),
+            "The max_fee field in Declare transactions of version 0 must be 0.".to_string()
+        );
     }
 
     #[test]
@@ -536,5 +541,9 @@ mod tests {
         //      Comparison
         // ---------------------
         assert!(internal_declare.is_err());
+        assert_eq!(
+            internal_declare.unwrap_err().to_string(),
+            "The nonce field in Declare transactions of version 0 must be 0.".to_string()
+        );
     }
 }
