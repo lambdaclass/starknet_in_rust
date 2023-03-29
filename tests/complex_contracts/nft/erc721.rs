@@ -12,7 +12,6 @@ use starknet_rs::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::state_api::StateReader,
-        transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
@@ -20,80 +19,6 @@ use starknet_rs::{
 };
 
 use crate::complex_contracts::utils::*;
-
-fn contructor(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("constructor", calldata, call_config)
-}
-
-fn name(calldata: &[Felt252], call_config: &mut CallConfig) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("name", calldata, call_config)
-}
-
-fn symbol(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("symbol", calldata, call_config)
-}
-
-fn balance_of(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("balanceOf", calldata, call_config)
-}
-
-fn owner_of(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("ownerOf", calldata, call_config)
-}
-
-fn get_approved(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("getApproved", calldata, call_config)
-}
-
-fn is_approved_for_all(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("isApprovedForAll", calldata, call_config)
-}
-
-fn approve(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("approve", calldata, call_config)
-}
-
-fn set_approval_for_all(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("setApprovalForAll", calldata, call_config)
-}
-
-fn transfer_from(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("transferFrom", calldata, call_config)
-}
-
-fn safe_transfer_from(
-    calldata: &[Felt252],
-    call_config: &mut CallConfig,
-) -> Result<CallInfo, TransactionError> {
-    execute_entry_point("safeTransferFrom", calldata, call_config)
-}
 
 #[test]
 fn erc721_constructor_test() {
@@ -130,10 +55,9 @@ fn erc721_constructor_test() {
         resources_manager: &mut resources_manager,
     };
 
-    let result_get_name = name(&[], &mut call_config).unwrap();
+    let result_get_name = execute_entry_point("name", &[], &mut call_config).unwrap();
     assert_eq!(result_get_name.retdata, vec![calldata[0].clone()]);
-
-    let result_get_symbol = symbol(&[], &mut call_config).unwrap();
+    let result_get_symbol = execute_entry_point("symbol", &[], &mut call_config).unwrap();
     assert_eq!(result_get_symbol.retdata, vec![calldata[1].clone()]);
 }
 
@@ -210,7 +134,7 @@ fn erc721_balance_of_test() {
     };
 
     assert_eq!(
-        balance_of(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("balanceOf", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -280,7 +204,7 @@ fn erc721_test_owner_of() {
     };
 
     assert_eq!(
-        owner_of(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("ownerOf", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -329,7 +253,7 @@ fn erc721_test_get_approved() {
     let calldata_approve = [to, Felt252::from(1), Felt252::from(0)].to_vec();
     call_config.entry_point_type = &entry_point_type;
 
-    approve(&calldata_approve, &mut call_config).unwrap();
+    execute_entry_point("approve", &calldata_approve, &mut call_config).unwrap();
 
     // tokenId (uint256) to check if it is approved
     let calldata = [Felt252::from(1), Felt252::from(0)].to_vec();
@@ -367,7 +291,7 @@ fn erc721_test_get_approved() {
     };
 
     assert_eq!(
-        get_approved(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("getApproved", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -415,7 +339,12 @@ fn erc721_test_is_approved_for_all() {
     let to = Felt252::from(777);
     let calldata_set_approve_all = [to, Felt252::from(1)].to_vec();
 
-    set_approval_for_all(&calldata_set_approve_all, &mut call_config).unwrap();
+    execute_entry_point(
+        "setApprovalForAll",
+        &calldata_set_approve_all,
+        &mut call_config,
+    )
+    .unwrap();
 
     // Owner of tokens who is approving the operator to have control of all his tokens
     let owner = Felt252::from(666);
@@ -452,7 +381,7 @@ fn erc721_test_is_approved_for_all() {
     };
 
     assert_eq!(
-        is_approved_for_all(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("isApprovedForAll", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -544,7 +473,7 @@ fn erc721_test_approve() {
     };
 
     assert_eq!(
-        approve(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("approve", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -630,7 +559,7 @@ fn erc721_set_approval_for_all() {
     };
 
     assert_eq!(
-        set_approval_for_all(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("setApprovalForAll", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -757,7 +686,7 @@ fn erc721_transfer_from_test() {
     };
 
     assert_eq!(
-        transfer_from(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("transferFrom", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -808,7 +737,7 @@ fn erc721_transfer_from_and_get_owner_test() {
         Felt252::zero(),
     ]
     .to_vec();
-    transfer_from(&calldata, &mut call_config).unwrap();
+    execute_entry_point("transferFrom", &calldata, &mut call_config).unwrap();
 
     // Now we call ownerOf
     let calldata = [Felt252::from(1), Felt252::from(0)].to_vec();
@@ -836,7 +765,7 @@ fn erc721_transfer_from_and_get_owner_test() {
     };
 
     assert_eq!(
-        owner_of(&calldata, &mut call_config).unwrap(),
+        execute_entry_point("ownerOf", &calldata, &mut call_config).unwrap(),
         expected_call_info
     );
 }
@@ -898,7 +827,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
     .to_vec();
 
     // The contract will fail because the receiver address is not a IERC721Receiver contract.
-    assert!(safe_transfer_from(&calldata, &mut call_config).is_err());
+    assert!(execute_entry_point("safeTransferFrom", &calldata, &mut call_config).is_err());
 }
 
 #[test]
@@ -940,7 +869,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
         resources_manager: &mut resources_manager,
     };
 
-    assert!(contructor(&calldata, &mut call_config).is_err());
+    assert!(execute_entry_point("constructor", &calldata, &mut call_config).is_err());
 }
 
 //Should panic is necessary because the constructor will fail
@@ -1010,7 +939,7 @@ fn erc721_transfer_fail_to_zero_address() {
         Felt252::zero(),
     ]
     .to_vec();
-    assert!(transfer_from(&calldata, &mut call_config).is_err());
+    assert!(execute_entry_point("transferFrom", &calldata, &mut call_config).is_err());
 }
 
 #[test]
@@ -1060,5 +989,5 @@ fn erc721_transfer_fail_not_owner() {
     ]
     .to_vec();
 
-    assert!(transfer_from(&calldata, &mut call_config).is_err());
+    assert!(execute_entry_point("transferFrom", &calldata, &mut call_config).is_err());
 }
