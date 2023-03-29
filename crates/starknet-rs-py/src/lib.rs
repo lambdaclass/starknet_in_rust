@@ -126,6 +126,20 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     reexport(
         py,
         m,
+        "starkware.starknet.services.api.feeder_gateway.request_objects",
+        vec!["CallL1Handler", "CallFunction"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.feeder_gateway.feeder_gateway_client",
+        vec!["FeederGatewayClient"],
+    )?;
+
+    reexport(
+        py,
+        m,
         "starkware.starknet.public.abi",
         vec![
             "AbiEntryType", // alias Dict[str, Any]
@@ -153,13 +167,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec!["SyncState", "StateReader"],
     )?;
 
-    reexport(
-        py,
-        m,
-        "starkware.starknet.services.api.feeder_gateway.feeder_gateway_client",
-        vec!["FeederGatewayClient"],
-    )?;
-
     // TODO: check
     reexport(
         py,
@@ -184,10 +191,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyInternalInvokeFunction>()?;
     // m.add_class::<PyInternalTransaction>()?;
     // m.add_class::<PyTransactionExecutionInfo>()?;
-
-    //  starkware.starknet.services.api.feeder_gateway.request_objects
-    // m.add_class::<PyCallFunction>()?;
-    // m.add_class::<PyCallL1Handler>()?;
 
     //  starkware.starknet.services.api.messages
     // m.add_class::<PyStarknetMessageToL1>()?;
