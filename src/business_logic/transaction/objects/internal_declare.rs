@@ -419,4 +419,9 @@ mod tests {
             transaction_exec_info
         );
     }
+
+    #[test]
+    fn verify_version_zero_should_fail_max_fee() {
+        // create tx with version 0 and a max_fee > 0 to test error
+    }
 }
