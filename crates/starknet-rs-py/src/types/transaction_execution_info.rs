@@ -52,3 +52,9 @@ impl PyTransactionExecutionInfo {
         })
     }
 }
+
+impl From<TransactionExecutionInfo> for PyTransactionExecutionInfo {
+    fn from(inner: TransactionExecutionInfo) -> Self {
+        Self { inner }
+    }
+}

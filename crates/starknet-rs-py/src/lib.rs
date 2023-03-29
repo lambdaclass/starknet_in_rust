@@ -4,20 +4,19 @@ mod cached_state;
 mod starknet_state;
 mod types;
 
-use crate::types::{
-    transaction_execution_info::PyTransactionExecutionInfo,
-    transactions::{
-        declare::PyInternalDeclare, deploy::PyInternalDeploy,
-        deploy_account::PyInternalDeployAccount, invoke_function::PyInternalInvokeFunction,
-    },
-};
-
 use self::{
     cached_state::PyCachedState,
     types::{
         block_info::PyBlockInfo, call_info::PyCallInfo, contract_class::PyContractClass,
         contract_entry_point::PyContractEntryPoint, execution_resources::PyExecutionResources,
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
+    },
+};
+use crate::types::{
+    transaction_execution_info::PyTransactionExecutionInfo,
+    transactions::{
+        declare::PyInternalDeclare, deploy::PyInternalDeploy,
+        deploy_account::PyInternalDeployAccount, invoke_function::PyInternalInvokeFunction,
     },
 };
 use cairo_felt::{felt_str, Felt252};
@@ -30,6 +29,7 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
+use starknet_state::PyStarknetState;
 use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
@@ -40,6 +40,7 @@ compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as
 pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
 
+    m.add_class::<PyStarknetState>()?;
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyStarknetGeneralConfig>()?;
@@ -82,7 +83,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyStarknetCallInfo>()?;
 
     //  starkware.starknet.testing.state
-    // m.add_class::<PyStarknetState>()?;
 
     //  starkware.starknet.core.os.contract_address.contract_address
     // m.add_function(calculate_contract_address_from_hash)?;
