@@ -107,9 +107,10 @@ where
         let builtin_runners = self
             .vm
             .get_builtin_runners()
-            .clone()
-            .into_iter()
+            .iter()
+            .map(|runner| (runner.name(), runner.clone()))
             .collect::<HashMap<&str, BuiltinRunner>>();
+
         self.cairo_runner
             .get_program_builtins()
             .iter()
@@ -243,7 +244,7 @@ mod test {
     #[test]
     fn prepare_os_context_test() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();

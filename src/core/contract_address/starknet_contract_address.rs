@@ -20,7 +20,7 @@ pub const MASK_3: u8 = 3;
 
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
-        Path::new("cairo_programs/contracts.json"),
+        Path::new("cairo_programs/contract_class.json"),
         None,
     )?)
 }
@@ -78,9 +78,11 @@ fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
-    let api_version = identifiers.get("__main__.API_VERSION").ok_or_else(|| {
-        ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
-    })?;
+    let api_version = identifiers
+        .get("__main__.CONTRACT_CLASS_VERSION")
+        .ok_or_else(|| {
+            ContractAddressError::MissingIdentifier("__main__.CONTRACT_CLASS_VERSION".to_string())
+        })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
@@ -168,7 +170,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         &get_contract_class_struct(&program.identifiers, contract_class)?.into();
 
     let mut vm = VirtualMachine::new(false);
-    let mut runner = CairoRunner::new(&program, "all", false)?;
+    let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
     runner.initialize_function_runner(&mut vm)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
