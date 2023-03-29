@@ -434,7 +434,7 @@ mod tests {
         let hash = compute_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        contract_class_cache.insert(class_hash, contract_class);
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -497,7 +497,7 @@ mod tests {
         let hash = compute_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        contract_class_cache.insert(class_hash, contract_class);
 
         // store sender_address
         let sender_address = Address(1.into());
