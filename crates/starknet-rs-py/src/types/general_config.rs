@@ -142,6 +142,12 @@ impl PyStarknetOsConfig {
     }
 }
 
+impl From<PyStarknetGeneralConfig> for StarknetGeneralConfig {
+    fn from(pyconfig: PyStarknetGeneralConfig) -> Self {
+        pyconfig.inner
+    }
+}
+
 #[pyclass]
 #[pyo3(name = "StarknetChainId")]
 #[derive(Debug, Clone, Copy)]
