@@ -62,7 +62,8 @@ fn amm_init_pool_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
@@ -119,7 +120,8 @@ fn amm_add_demo_tokens_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
@@ -185,7 +187,8 @@ fn amm_get_pool_token_balance() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
@@ -248,7 +251,8 @@ fn amm_swap_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
@@ -337,7 +341,8 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
@@ -371,7 +376,8 @@ fn amm_swap_should_fail_with_unexistent_token() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
@@ -405,7 +411,8 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
@@ -439,7 +446,8 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
@@ -476,7 +484,8 @@ fn amm_get_account_token_balance_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()

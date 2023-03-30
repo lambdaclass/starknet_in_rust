@@ -26,14 +26,16 @@ fn amm_proxy_init_pool_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
@@ -112,14 +114,16 @@ fn amm_proxy_get_pool_token_balance_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
@@ -205,14 +209,16 @@ fn amm_proxy_add_demo_token_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
@@ -304,14 +310,16 @@ fn amm_proxy_get_account_token_balance() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
@@ -416,14 +424,16 @@ fn amm_proxy_swap() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)

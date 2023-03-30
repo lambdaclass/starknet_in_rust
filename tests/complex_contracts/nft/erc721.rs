@@ -1,10 +1,12 @@
 use std::collections::HashSet;
 
+use assert_matches::assert_matches;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt252;
 use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_rs::business_logic::state::cached_state::CachedState;
+use starknet_rs::business_logic::transaction::error::TransactionError;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent},
@@ -35,7 +37,8 @@ fn erc721_constructor_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
@@ -76,7 +79,8 @@ fn erc721_balance_of_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -154,7 +158,8 @@ fn erc721_test_owner_of() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -224,7 +229,8 @@ fn erc721_test_get_approved() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -311,7 +317,8 @@ fn erc721_test_is_approved_for_all() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -401,7 +408,8 @@ fn erc721_test_approve() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -493,7 +501,8 @@ fn erc721_set_approval_for_all() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -579,7 +588,8 @@ fn erc721_transfer_from_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -706,7 +716,8 @@ fn erc721_transfer_from_and_get_owner_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -785,14 +796,16 @@ fn erc721_safe_transfer_from_should_fail_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
-    let (_, _) = deploy(
+    deploy(
         &mut state,
         "starknet_programs/ERC165.json",
         &[],
         &general_config,
-    );
+    )
+    .unwrap();
 
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
@@ -845,7 +858,8 @@ fn erc721_calling_constructor_twice_should_fail_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -875,7 +889,6 @@ fn erc721_calling_constructor_twice_should_fail_test() {
 //Should panic is necessary because the constructor will fail
 //deploy() will try to unwrap the result of the constructor
 #[test]
-#[should_panic]
 fn erc721_constructor_should_fail_with_to_equal_zero() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
@@ -885,11 +898,16 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
     let to = Felt252::from(0);
     let calldata = [collection_name, collection_symbol, to].to_vec();
 
-    deploy(
-        &mut state,
-        "starknet_programs/ERC721.json",
-        &calldata,
-        &general_config,
+    //call deploy but assert that its a transaction error of type cairo runner
+    assert_matches!(
+        deploy(
+            &mut state,
+            "starknet_programs/ERC721.json",
+            &calldata,
+            &general_config,
+        )
+        .unwrap_err(),
+        TransactionError::CairoRunner(..)
     );
 }
 
@@ -908,7 +926,8 @@ fn erc721_transfer_fail_to_zero_address() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -957,7 +976,8 @@ fn erc721_transfer_fail_not_owner() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
-    );
+    )
+    .unwrap();
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
