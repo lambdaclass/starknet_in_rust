@@ -195,13 +195,6 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         .pc
         .unwrap();
 
-    let range_check_runner = vm
-        .get_builtin_runners()
-        .iter()
-        .find(|x| matches!(x, BuiltinRunner::RangeCheck(_)))
-        .unwrap();
-    let _range_check_base = MaybeRelocatable::from((range_check_runner.base() as isize, 0));
-
     runner.run_from_entrypoint(
         entrypoint,
         &[&hash_base.into(), contract_class_struct],
