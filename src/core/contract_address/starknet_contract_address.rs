@@ -23,7 +23,7 @@ pub const MASK_3: u8 = 3;
 
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
-        Path::new("cairo_programs/contract_class.json"),
+        Path::new("cairo_programs/compiled_class.json"),
         None,
     )?)
 }
@@ -82,9 +82,9 @@ fn get_contract_class_struct(
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
     let api_version = identifiers
-        .get("__main__.CONTRACT_CLASS_VERSION")
+        .get("__main__.COMPILED_CLASS_VERSION")
         .ok_or_else(|| {
-            ContractAddressError::MissingIdentifier("__main__.CONTRACT_CLASS_VERSION".to_string())
+            ContractAddressError::MissingIdentifier("__main__.COMPILED_CLASS_VERSION".to_string())
         })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
@@ -183,7 +183,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         .iter()
         .find(|x| matches!(x, BuiltinRunner::Poseidon(_)))
         .unwrap();
-    let poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
+    let _poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
 
     let range_check_runner = vm
         .get_builtin_runners()
@@ -196,8 +196,8 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
     runner.run_from_entrypoint(
         188,
         &[
-            &poseidon_base.into(),
             &range_check_base.into(),
+            //     &poseidon_base.into(),
             contract_class_struct,
         ],
         true,
