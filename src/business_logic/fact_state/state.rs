@@ -132,11 +132,17 @@ impl StateDiff {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use super::StateDiff;
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::{cached_state::CachedState, state_api::StateReader},
+            state::{
+                cached_state::{CachedState, ContractClassCache},
+                state_api::StateReader,
+                state_cache::{StateCache, StorageEntry},
+            },
         },
         utils::Address,
     };
@@ -248,7 +254,19 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let cached_state = CachedState::new(state_reader, None);
+        let entry: StorageEntry = (Address(555.into()), [0; 32]);
+        let mut storage_writes = HashMap::new();
+        storage_writes.insert(entry, Felt252::new(666));
+        let cache = StateCache::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            storage_writes,
+        );
+        let cached_state =
+            CachedState::new_for_testing(state_reader, Some(ContractClassCache::new()), cache);
 
         let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
 
