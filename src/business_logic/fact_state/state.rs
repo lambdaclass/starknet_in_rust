@@ -136,7 +136,7 @@ mod test {
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::{cached_state::CachedState, state_api::StateReader},
         },
         utils::Address,
     };
@@ -215,19 +215,21 @@ mod test {
             .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce
-            .insert(contract_address, nonce);
+            .insert(contract_address.clone(), nonce);
 
-        let cached_state_original = CachedState::new(state_reader, None);
+        let mut cached_state_original = CachedState::new(state_reader.clone(), None);
 
         let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
 
-        let cached_state = diff
-            .to_cached_state(InMemoryStateReader::default())
-            .unwrap();
+        let mut cached_state = diff.to_cached_state(state_reader).unwrap();
 
         assert_eq!(
             cached_state_original.get_contract_classes(),
             cached_state.get_contract_classes()
+        );
+        assert_eq!(
+            cached_state_original.get_nonce_at(&contract_address),
+            cached_state.get_nonce_at(&contract_address)
         );
     }
 
