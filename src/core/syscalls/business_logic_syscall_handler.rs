@@ -549,6 +549,26 @@ where
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
+
+    fn replace_class(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)
+        {
+            Ok(SyscallRequest::ReplaceClass(replace_class_request)) => replace_class_request,
+            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
+        };
+
+        let address = self.contract_address.clone();
+        self.starknet_storage_state
+            .state
+            .deploy_contract(address, felt_to_hash(&request.class_hash))
+            .unwrap();
+
+        Ok(())
+    }
 }
 
 impl<'a, T> SyscallHandlerPostRun for DeprecatedBLSyscallHandler<'a, T>

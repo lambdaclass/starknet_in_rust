@@ -222,6 +222,12 @@ pub(crate) trait SyscallHandler {
             .write_syscall_response(vm, syscall_ptr)
     }
 
+    fn replace_class(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
+
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ***********************************
     //  Implementation of Default methods
@@ -345,6 +351,7 @@ pub(crate) trait SyscallHandler {
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
