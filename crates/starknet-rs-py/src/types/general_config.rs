@@ -198,6 +198,8 @@ impl PyStarknetChainId {
 
     // TODO: remove when pyo3 auto-implements this
     // https://github.com/PyO3/pyo3/issues/2887
+    // NOTE: doesn't work. __iter__ seems to be included in the instance impl
+    //  instead of the class impl
     #[classmethod]
     fn __iter__(_cls: &PyType) -> Vec<Self> {
         vec![Self::MainNet, Self::TestNet, Self::TestNet2]
