@@ -246,9 +246,9 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let cached_state_original = CachedState::new(state_reader, None);
+        let cached_state = CachedState::new(state_reader, None);
 
-        let mut diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+        let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
 
         let diff_squashed = diff.squash(diff.clone()).unwrap();
 
