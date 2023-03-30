@@ -82,7 +82,7 @@ fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt252 {
 fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &ContractClass,
-) -> Result<StructContractClass, ContractAddressError> {
+) -> Result<DeprecatedCompiledClass, ContractAddressError> {
     let api_version = identifiers
         .get("__main__.DEPRECATED_COMPILED_CLASS_VERSION")
         .ok_or_else(|| {
@@ -95,7 +95,7 @@ fn get_contract_class_struct(
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
     let builtin_list = &contract_class.program.builtins;
 
-    Ok(StructContractClass {
+    Ok(DeprecatedCompiledClass {
         compiled_class_version: api_version
             .value
             .as_ref()
@@ -121,9 +121,8 @@ fn get_contract_class_struct(
     })
 }
 
-// TODO: think about a new name for this struct (ContractClass already exists)
 #[derive(Debug)]
-struct StructContractClass {
+struct DeprecatedCompiledClass {
     compiled_class_version: MaybeRelocatable,
     n_external_functions: MaybeRelocatable,
     external_functions: Vec<ContractEntryPoint>,
@@ -145,8 +144,8 @@ fn flat_into_maybe_relocs(contract_entrypoints: Vec<ContractEntryPoint>) -> Vec<
         .collect::<Vec<MaybeRelocatable>>()
 }
 
-impl From<StructContractClass> for CairoArg {
-    fn from(contract_class: StructContractClass) -> Self {
+impl From<DeprecatedCompiledClass> for CairoArg {
+    fn from(contract_class: DeprecatedCompiledClass) -> Self {
         let external_functions_flatted = flat_into_maybe_relocs(contract_class.external_functions);
         let l1_handlers_flatted = flat_into_maybe_relocs(contract_class.l1_handlers);
         let constructors_flatted = flat_into_maybe_relocs(contract_class.constructors);
@@ -170,7 +169,9 @@ impl From<StructContractClass> for CairoArg {
 }
 
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
-pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
+pub fn compute_deprecated_class_hash(
+    contract_class: &ContractClass,
+) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
     let contract_class_struct =
@@ -290,7 +291,7 @@ mod tests {
             abi: None,
         };
         assert_eq!(
-            compute_class_hash(&contract_class).unwrap(),
+            compute_deprecated_class_hash(&contract_class).unwrap(),
             Felt252::from_str_radix(
                 "1809635095607326950459993008040437939724930328662161791121345395618950656878",
                 10

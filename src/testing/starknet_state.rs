@@ -274,7 +274,7 @@ mod tests {
 
     use crate::{
         business_logic::{execution::objects::CallType, state::state_cache::StorageEntry},
-        core::contract_address::starknet_contract_address::compute_class_hash,
+        core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
@@ -293,7 +293,7 @@ mod tests {
         // expected results
 
         // ----- calculate fib class hash ---------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
         let address = Address(felt_str!(
@@ -353,7 +353,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         // hack store account contract
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
         contract_class_cache.insert(class_hash, contract_class.clone());
 
@@ -425,7 +425,7 @@ mod tests {
         //* ---------------------------------------
 
         // ----- calculate fib class hash ---------
-        let hash = compute_class_hash(&fib_contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&fib_contract_class).unwrap();
         let fib_class_hash = felt_to_hash(&hash);
 
         // check that it return the correct clash hash
@@ -492,7 +492,7 @@ mod tests {
 
         // expected result
         // ----- calculate fib class hash ---------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let fib_class_hash = felt_to_hash(&hash);
 
         let address = felt_str!(
