@@ -180,4 +180,25 @@ mod test {
             Some(0)
         );
     }
+
+    #[test]
+    fn execution_resources_manager_should_increment_one_to_the_syscall_counter() {
+        let mut execution_resources_manager = super::ExecutionResourcesManager::new(
+            vec!["syscall1".to_string(), "syscall2".to_string()],
+            Default::default(),
+        );
+
+        execution_resources_manager
+            .increment_syscall_counter("syscall1", 1)
+            .unwrap();
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(1)
+        );
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall2"),
+            Some(0)
+        );
+    }
 }
