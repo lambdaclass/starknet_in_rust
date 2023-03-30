@@ -341,7 +341,7 @@ index 7eb1fae..be5a72c 100644
  
  @dataclass
 diff --git a/starknet_devnet/devnet_config.py b/starknet_devnet/devnet_config.py
-index 08f7daa..24fc6b5 100644
+index 08f7daa..fb32787 100644
 --- a/starknet_devnet/devnet_config.py
 +++ b/starknet_devnet/devnet_config.py
 @@ -13,10 +13,10 @@ from aiohttp.client_exceptions import ClientConnectorError, InvalidURL
@@ -359,6 +359,24 @@ index 08f7daa..24fc6b5 100644
      FeederGatewayClient,
  )
  
+@@ -41,7 +41,7 @@ NETWORK_TO_URL = {
+     "alpha-mainnet": "https://alpha-mainnet.starknet.io",
+ }
+ NETWORK_NAMES = ", ".join(NETWORK_TO_URL.keys())
+-CHAIN_IDS = ", ".join([member.name for member in StarknetChainId])
++CHAIN_IDS = ", ".join([member.name for member in StarknetChainId.variants()])
+ 
+ 
+ def _fork_network(network_id: str):
+@@ -71,7 +71,7 @@ def _fork_block(specifier: str):
+ def _chain_id(chain_id: str):
+     """Parse chain id.'"""
+     try:
+-        chain_id = StarknetChainId[chain_id]
++        chain_id = StarknetChainId.get(chain_id)
+     except KeyError:
+         sys.exit(
+             f"Error: The value of --chain-id must be in {{{CHAIN_IDS}}}, got: {chain_id}"
 diff --git a/starknet_devnet/fee_token.py b/starknet_devnet/fee_token.py
 index 0e646b4..b0d3222 100644
 --- a/starknet_devnet/fee_token.py
@@ -923,7 +941,7 @@ index e573242..3048de0 100644
  from .account import invoke
  from .shared import (
 diff --git a/test/test_chain_id_cli_params.py b/test/test_chain_id_cli_params.py
-index afa7940..3734d07 100644
+index afa7940..19d529b 100644
 --- a/test/test_chain_id_cli_params.py
 +++ b/test/test_chain_id_cli_params.py
 @@ -3,7 +3,7 @@
@@ -935,6 +953,24 @@ index afa7940..3734d07 100644
  
  from starknet_devnet.devnet_config import CHAIN_IDS
  
+@@ -31,7 +31,7 @@ ACTIVE_DEVNET = DevnetBackgroundProc()
+ 
+ @pytest.mark.parametrize(
+     "chain_id",
+-    [member.name for member in StarknetChainId],
++    [member.name for member in StarknetChainId.variants()],
+ )
+ def test_chain_id_valid(chain_id):
+     """Test if chain id works"""
+@@ -67,7 +67,7 @@ def test_chain_id_invalid(chain_id):
+     "run_devnet_in_background, chain_id",
+     [
+         ([*PREDEPLOY_ACCOUNT_CLI_ARGS, "--chain-id", chain_id.name], chain_id)
+-        for chain_id in StarknetChainId
++        for chain_id in StarknetChainId.variants()
+     ],
+     indirect=True,
+ )
 diff --git a/test/test_declare.py b/test/test_declare.py
 index f32162c..7401e79 100644
 --- a/test/test_declare.py
