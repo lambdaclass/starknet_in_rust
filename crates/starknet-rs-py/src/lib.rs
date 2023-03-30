@@ -81,8 +81,13 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyInternalDeployAccount>()?;
     m.add_class::<PyInternalInvokeFunction>()?;
 
-    //  starkware.starknet.business_logic.transaction.objects
-    // m.add_class::<PyInternalL1Handler>()?;  // isn't implemented
+    // TODO: export from starknet-rs when implemented
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.transaction.objects",
+        vec!["InternalL1Handler"],
+    )?;
 
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Functions
