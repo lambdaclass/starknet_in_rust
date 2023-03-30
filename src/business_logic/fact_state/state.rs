@@ -163,4 +163,21 @@ mod test {
 
         assert_eq!(0, diff.storage_updates.len());
     }
+
+    #[test]
+    fn execution_resources_manager_should_start_with_zero_syscall_counter() {
+        let execution_resources_manager = super::ExecutionResourcesManager::new(
+            vec!["syscall1".to_string(), "syscall2".to_string()],
+            Default::default(),
+        );
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(0)
+        );
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall2"),
+            Some(0)
+        );
+    }
 }
