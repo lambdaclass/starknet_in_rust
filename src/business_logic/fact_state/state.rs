@@ -201,4 +201,33 @@ mod test {
             Some(0)
         );
     }
+
+    #[test]
+    fn state_diff_to_cached_state_should_return_correct_cached_state() {
+        let mut state_reader = InMemoryStateReader::default();
+
+        let contract_address = Address(32123.into());
+        let class_hash = [9; 32];
+        let nonce = Felt252::new(42);
+
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let cached_state_original = CachedState::new(state_reader, None);
+
+        let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+
+        let cached_state = diff
+            .to_cached_state(InMemoryStateReader::default())
+            .unwrap();
+
+        assert_eq!(
+            cached_state_original.get_contract_classes(),
+            cached_state.get_contract_classes()
+        );
+    }
 }
