@@ -1,6 +1,7 @@
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{
+    exceptions::PyKeyError,
     prelude::*,
     types::{PyDict, PyType},
 };
@@ -182,12 +183,17 @@ impl From<PyStarknetChainId> for StarknetChainId {
     }
 }
 
+// TODO: remove impl when pyo3 adds Enum subclassing
+// https://github.com/PyO3/pyo3/issues/2887
 #[pymethods]
 impl PyStarknetChainId {
     #[getter]
-    fn name(&self) -> String {
-        let chain_id: StarknetChainId = (*self).into();
-        chain_id.to_string()
+    fn name(&self) -> &str {
+        match self {
+            PyStarknetChainId::MainNet => "MAINNET",
+            PyStarknetChainId::TestNet => "TESTNET",
+            PyStarknetChainId::TestNet2 => "TESTNET2",
+        }
     }
 
     #[getter]
@@ -196,13 +202,21 @@ impl PyStarknetChainId {
         chain_id.to_felt().to_biguint()
     }
 
-    // TODO: remove when pyo3 auto-implements this
-    // https://github.com/PyO3/pyo3/issues/2887
-    // NOTE: doesn't work. __iter__ seems to be included in the instance impl
-    //  instead of the class impl
+    // __iter__
     #[classmethod]
-    fn __iter__(_cls: &PyType) -> Vec<Self> {
+    fn variants(_cls: &PyType) -> Vec<Self> {
         vec![Self::MainNet, Self::TestNet, Self::TestNet2]
+    }
+
+    // __getitem__
+    #[classmethod]
+    fn get(_cls: &PyType, s: &str) -> PyResult<Self> {
+        match s {
+            "MAINNET" => Ok(PyStarknetChainId::MainNet),
+            "TESTNET" => Ok(PyStarknetChainId::TestNet),
+            "TESTNET2" => Ok(PyStarknetChainId::TestNet2),
+            _ => Err(PyKeyError::new_err(s.to_string())),
+        }
     }
 }
 
