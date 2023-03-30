@@ -146,4 +146,17 @@ mod tests {
             Ok(contract_class)
         )
     }
+
+    #[test]
+    #[should_panic]
+    fn count_actual_storage_changes_should_panic() {
+        let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        state_reader.count_actual_storage_changes();
+    }
 }
