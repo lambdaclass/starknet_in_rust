@@ -228,12 +228,12 @@ mod test {
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, transaction::error::TransactionError,
         },
         core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler,
     };
     use cairo_rs::{
-        types::relocatable::MaybeRelocatable,
+        types::relocatable::{MaybeRelocatable, Relocatable},
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
 
@@ -272,7 +272,7 @@ mod test {
             SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
-        assert!(runner.run_from_entrypoint(1, &[]).is_err());
+        assert!(runner.run_from_entrypoint(1, &[]).is_err())
     }
 
     #[test]
@@ -286,7 +286,10 @@ mod test {
             SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
-        assert!(runner.get_os_segment_ptr_range(1, vec![]).is_err());
+        assert_matches!(
+            runner.get_os_segment_ptr_range(1, vec![]).unwrap_err(),
+            TransactionError::IllegalOsPtrOffset
+        );
     }
 
     #[test]
@@ -301,9 +304,12 @@ mod test {
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::RelocatableValue((0, 1).into());
-        assert!(runner
-            .validate_segment_pointers(&relocatable, &relocatable)
-            .is_err());
+        assert_matches!(
+            runner
+                .validate_segment_pointers(&relocatable, &relocatable)
+                .unwrap_err(),
+            TransactionError::InvalidSegBasePtrOffset(1)
+        );
     }
 
     #[test]
@@ -318,9 +324,12 @@ mod test {
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::Int((1).into());
-        assert!(runner
-            .validate_segment_pointers(&relocatable, &relocatable)
-            .is_err());
+        assert_matches!(
+            runner
+                .validate_segment_pointers(&relocatable, &relocatable)
+                .unwrap_err(),
+            TransactionError::NotARelocatableValue
+        );
     }
 
     #[test]
@@ -335,7 +344,10 @@ mod test {
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
-        assert!(runner.validate_segment_pointers(&base, &base).is_err());
+        assert_matches!(
+            runner.validate_segment_pointers(&base, &base).unwrap_err(),
+            TransactionError::InvalidSegmentSize
+        );
     }
 
     #[test]
@@ -353,7 +365,10 @@ mod test {
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
         let stop = MaybeRelocatable::Int((1).into());
-        assert!(runner.validate_segment_pointers(&base, &stop).is_err());
+        assert_matches!(
+            runner.validate_segment_pointers(&base, &stop).unwrap_err(),
+            TransactionError::NotARelocatableValue
+        );
     }
 
     #[test]
@@ -371,6 +386,18 @@ mod test {
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
         let stop = MaybeRelocatable::RelocatableValue((0, 1).into());
-        assert!(runner.validate_segment_pointers(&base, &stop).is_err());
+        assert_matches!(
+            runner.validate_segment_pointers(&base, &stop).unwrap_err(),
+            TransactionError::InvalidStopPointer(
+                Relocatable {
+                    segment_index: 0,
+                    offset: 0,
+                },
+                Relocatable {
+                    segment_index: 0,
+                    offset: 1
+                },
+            )
+        );
     }
 }
