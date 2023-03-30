@@ -20,7 +20,7 @@ use crate::{
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
-    utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
+    utils::{calculate_tx_resources, Address, ClassHash},
 };
 use felt::Felt252;
 use num_traits::Zero;
@@ -46,7 +46,7 @@ impl InternalDeploy {
         let class_hash = compute_class_hash(&contract_class)
             .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
 
-        let contract_hash: ClassHash = felt_to_hash(&class_hash);
+        let contract_hash: ClassHash = class_hash.to_be_bytes();
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &class_hash,

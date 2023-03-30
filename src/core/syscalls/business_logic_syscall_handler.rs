@@ -330,7 +330,7 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
+        let class_hash_bytes: ClassHash = (request.class_hash).to_be_bytes();
 
         self.starknet_storage_state
             .state
@@ -370,7 +370,7 @@ where
                     _ => return Err(SyscallHandlerError::NotImplemented),
                 };
                 function_selector = request.function_selector;
-                class_hash = Some(felt_to_hash(&request.class_hash));
+                class_hash = Some(request.class_hash.to_be_bytes());
                 contract_address = self.contract_address.clone();
                 caller_address = self.caller_address.clone();
                 call_type = CallType::Delegate;
@@ -526,7 +526,7 @@ where
     fn _storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
-            .read(&felt_to_hash(&address.0))
+            .read(&(address.0).to_be_bytes())
             .cloned()?)
     }
 
@@ -536,7 +536,7 @@ where
         value: Felt252,
     ) -> Result<(), SyscallHandlerError> {
         self.starknet_storage_state
-            .write(&felt_to_hash(&address.0), value);
+            .write(&address.0.to_be_bytes(), value);
 
         Ok(())
     }

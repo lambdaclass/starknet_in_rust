@@ -84,20 +84,11 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
     Felt252::from_bytes_be(&felt.to_bytes_be())
 }
 
-pub fn felt_to_hash(value: &Felt252) -> ClassHash {
-    let mut output = [0; 32];
-
-    let bytes = value.to_bytes_be();
-    output[32 - bytes.len()..].copy_from_slice(&bytes);
-
-    output
-}
-
 pub fn string_to_hash(class_string: &String) -> ClassHash {
     let parsed_felt =
         Felt252::from_str_radix(class_string.strip_prefix("0x").unwrap_or(class_string), 16);
 
-    felt_to_hash(&parsed_felt.unwrap())
+    parsed_felt.unwrap().to_be_bytes()
 }
 
 // -------------------
@@ -584,16 +575,16 @@ mod test {
 
     #[test]
     fn test_felt_to_hash() {
-        assert_eq!(felt_to_hash(&Felt252::zero()), [0; 32]);
+        assert_eq!(&Felt252::zero().to_be_bytes(), &[0u8; 32]);
         assert_eq!(
-            felt_to_hash(&Felt252::one()),
+            Felt252::one().to_be_bytes(),
             [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1
             ],
         );
         assert_eq!(
-            felt_to_hash(&257.into()),
+            Felt252::new(257).to_be_bytes(),
             [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 1, 1
@@ -601,9 +592,10 @@ mod test {
         );
 
         assert_eq!(
-            felt_to_hash(&felt_str!(
+            felt_str!(
                 "2151680050850558576753658069693146429350618838199373217695410689374331200218"
-            )),
+            )
+            .to_be_bytes(),
             [
                 4, 193, 206, 200, 202, 13, 38, 110, 16, 37, 89, 67, 39, 3, 185, 128, 123, 117, 218,
                 224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218

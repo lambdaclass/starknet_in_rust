@@ -21,10 +21,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{
-        calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
-        ClassHash,
-    },
+    utils::{calculate_tx_resources, verify_no_calls_to_other_contracts, Address, ClassHash},
 };
 use felt::Felt252;
 use num_traits::Zero;
@@ -60,7 +57,7 @@ impl InternalDeclare {
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
         let hash = compute_class_hash(&contract_class)?;
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         let hash_value = calculate_declare_transaction_hash(
             &contract_class,
@@ -311,7 +308,7 @@ mod tests {
             transaction_type::TransactionType,
         },
         services::api::contract_class::{ContractClass, EntryPointType},
-        utils::{felt_to_hash, Address},
+        utils::Address,
     };
 
     use super::InternalDeclare;
@@ -327,7 +324,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class.clone());
 
@@ -376,7 +373,7 @@ mod tests {
         let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone());
 
         let class_hash_felt = compute_class_hash(&contract_class).unwrap();
-        let expected_class_hash = felt_to_hash(&class_hash_felt);
+        let expected_class_hash = class_hash_felt.to_be_bytes();
 
         // Calldata is the class hash represented as a Felt252
         let calldata = [felt_str!(

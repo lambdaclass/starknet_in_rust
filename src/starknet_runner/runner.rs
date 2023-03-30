@@ -109,6 +109,7 @@ where
             .get_builtin_runners()
             .clone()
             .into_iter()
+            .map(|runner| (runner.name(), runner))
             .collect::<HashMap<&str, BuiltinRunner>>();
         self.cairo_runner
             .get_program_builtins()

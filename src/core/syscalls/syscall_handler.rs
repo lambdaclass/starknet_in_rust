@@ -557,7 +557,7 @@ mod tests {
         memory_insert,
         services::api::contract_class::{ContractClass, EntryPointType},
         utils::{
-            felt_to_hash, get_big_int, get_integer, get_relocatable,
+            get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
         },
     };
@@ -1289,7 +1289,7 @@ mod tests {
         let write = syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
-            .read(&felt_to_hash(&address));
+            .read(&address.to_be_bytes());
 
         assert_eq!(write, Ok(&Felt252::new(45)));
     }
