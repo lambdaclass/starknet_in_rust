@@ -1,6 +1,9 @@
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
-use pyo3::{prelude::*, types::PyDict};
+use pyo3::{
+    prelude::*,
+    types::{PyDict, PyType},
+};
 use starknet_rs::{
     business_logic::state::state_api_objects::BlockInfo,
     definitions::{
@@ -191,6 +194,13 @@ impl PyStarknetChainId {
     fn value(&self) -> BigUint {
         let chain_id: StarknetChainId = (*self).into();
         chain_id.to_felt().to_biguint()
+    }
+
+    // TODO: remove when pyo3 auto-implements this
+    // https://github.com/PyO3/pyo3/issues/2887
+    #[classmethod]
+    fn __iter__(_cls: &PyType) -> Vec<Self> {
+        vec![Self::MainNet, Self::TestNet, Self::TestNet2]
     }
 }
 
