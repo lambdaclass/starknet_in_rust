@@ -25,10 +25,10 @@ fn erc721_constructor_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be(b"some-nft");
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
-    let calldata = [collection_name, collection_symbol, to].to_vec();
+    let calldata = vec![collection_name, collection_symbol, to];
 
     let (contract_address, class_hash) = deploy(
         &mut state,
