@@ -10,8 +10,9 @@ CONTRACT_FILE = os.path.join(os.path.dirname(__file__), "../../starknet_programs
 
 @pytest.mark.asyncio
 async def test_invoke():
+    runs = 10000
     starknet = await Starknet.empty()
     contract = await starknet.deploy(source=CONTRACT_FILE)
-    for _ in range(1000):
+    for _ in range(runs):
         await contract.increase_balance(amount=1000).execute()
         await contract.get_balance().execute()

@@ -30,6 +30,7 @@ lazy_static! {
 
 #[test]
 fn test_invoke() {
+    const RUNS: usize = 10000;
     let mut starknet_state = StarknetState::new(None);
     let contract_address_salt = Address(1.into());
 
@@ -50,7 +51,7 @@ fn test_invoke() {
         .nonce_initial_values_mut()
         .insert(contract_address.clone(), Felt::zero());
 
-    for i in (0..2000).step_by(2) {
+    for i in (0..RUNS * 2).step_by(2) {
         starknet_state
             .invoke_raw(
                 contract_address.clone(),

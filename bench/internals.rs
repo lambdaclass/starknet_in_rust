@@ -13,11 +13,11 @@ use starknet_rs::{
             internal_invoke_function::InternalInvokeFunction,
         },
     },
-    core::contract_address::starknet_contract_address::compute_class_hash,
+    // core::contract_address::starknet_contract_address::compute_class_hash,
     definitions::general_config::StarknetChainId,
     // public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::ContractClass,
-    utils::{felt_to_hash, Address},
+    utils::Address,
 };
 use std::{hint::black_box, path::PathBuf};
 
@@ -27,9 +27,10 @@ lazy_static! {
         "starknet_programs/first_contract.json",
     ))
     .unwrap();
-    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(
-        &CONTRACT_CLASS
-    ).unwrap());
+    // static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(
+    //     &CONTRACT_CLASS
+    // ).unwrap());
+    static ref CLASS_HASH: [u8; 32] = [5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122];
     static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
         "2738486479303299496454183918921854338184575157042818123638928295804546084002"
     ));
@@ -169,8 +170,7 @@ fn main() {
 
 #[inline(never)]
 fn invoke() {
-    const RUNS: usize = 1;
-
+    const RUNS: usize = 10000;
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_nonce_mut()
@@ -193,12 +193,19 @@ fn invoke() {
         .execute(&mut state, config)
         .unwrap();
 
-    for _ in 0..RUNS {
-        let mut state_copy = state.clone();
-        let address = CONTRACT_ADDRESS.clone();
+    //let state_copy = state.clone();
+    let address = CONTRACT_ADDRESS.clone();
+    // let selector = INCREASE_BALANCE_SELECTOR.clone();
+    let signature = SIGNATURE.clone();
+    let calldata = vec![Felt::from(2)];
+
+    let mut state_copy = state.clone();
+    for i in (0..(RUNS * 2)).step_by(2) {
+        // let mut state_copy = state_copy.clone();
+        let address = address.clone();
         let selector = INCREASE_BALANCE_SELECTOR.clone();
-        let signature = SIGNATURE.clone();
-        let calldata = vec![Felt::from(2)];
+        let calldata = calldata.clone();
+        let signature = signature.clone();
         scope(|| {
             // increase balance
             // new consumes more execution time than raw struct instantiation
@@ -209,7 +216,7 @@ fn invoke() {
                 calldata,
                 signature.clone(),
                 StarknetChainId::TestNet.to_felt(),
-                Some(Felt::zero()),
+                Some(Felt::from(i)),
             )
             .unwrap()
             .execute(&mut state_copy, config)
@@ -222,11 +229,11 @@ fn invoke() {
                 vec![],
                 signature,
                 StarknetChainId::TestNet.to_felt(),
-                Some(Felt::from(1)),
+                Some(Felt::from(i + 1)),
             )
             .unwrap()
             .execute(&mut state_copy, config)
-        })
-        .unwrap();
+            .unwrap();
+        });
     }
 }

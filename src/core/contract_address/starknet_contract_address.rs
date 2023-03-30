@@ -12,11 +12,17 @@ use cairo_rs::{
     },
 };
 use felt::Felt;
+use lazy_static::lazy_static;
 use sha3::{Digest, Keccak256};
 use std::{collections::HashMap, path::Path};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
+
+lazy_static! {
+    static ref HASH_CALCULATION_PROGRAM: Program =
+        Program::from_file(Path::new("cairo_programs/contracts.json"), None).unwrap();
+}
 
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
@@ -161,7 +167,7 @@ impl From<StructContractClass> for CairoArg {
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
 pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
-    let program = load_program()?;
+    let program = HASH_CALCULATION_PROGRAM.clone();
     let contract_class_struct =
         &get_contract_class_struct(&program.identifiers, contract_class)?.into();
 
