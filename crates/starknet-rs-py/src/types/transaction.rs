@@ -2,7 +2,7 @@ use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::{business_logic::transaction::transactions::Transaction, utils::ClassHash};
 
-#[pyclass(name = "TransactionExecutionInfo")]
+#[pyclass(name = "Transaction")]
 pub struct PyTransaction {
     pub(crate) inner: Transaction,
 }
