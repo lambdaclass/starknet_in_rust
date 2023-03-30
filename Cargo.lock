@@ -514,7 +514,7 @@ dependencies = [
 [[package]]
 name = "cairo-felt"
 version = "0.2.0"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=455a1e8d87b3f6cfda72255d93d57d1c49f239a3#455a1e8d87b3f6cfda72255d93d57d1c49f239a3"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=d180881ec875ddcba705b8f9e9e11fa8c4745c7a#d180881ec875ddcba705b8f9e9e11fa8c4745c7a"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -526,7 +526,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.2.0"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=455a1e8d87b3f6cfda72255d93d57d1c49f239a3#455a1e8d87b3f6cfda72255d93d57d1c49f239a3"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=d180881ec875ddcba705b8f9e9e11fa8c4745c7a#d180881ec875ddcba705b8f9e9e11fa8c4745c7a"
 dependencies = [
  "anyhow",
  "bincode",
@@ -1724,7 +1724,7 @@ dependencies = [
 [[package]]
 name = "parse-hyperlinks"
 version = "0.23.4"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=455a1e8d87b3f6cfda72255d93d57d1c49f239a3#455a1e8d87b3f6cfda72255d93d57d1c49f239a3"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=d180881ec875ddcba705b8f9e9e11fa8c4745c7a#d180881ec875ddcba705b8f9e9e11fa8c4745c7a"
 dependencies = [
  "nom",
 ]
