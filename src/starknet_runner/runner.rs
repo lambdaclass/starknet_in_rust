@@ -107,8 +107,8 @@ where
         let builtin_runners = self
             .vm
             .get_builtin_runners()
-            .clone()
-            .into_iter()
+            .iter()
+            .map(|runner| (runner.name(), runner.clone()))
             .collect::<HashMap<&str, BuiltinRunner>>();
 
         self.cairo_runner
