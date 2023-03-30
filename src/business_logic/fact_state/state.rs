@@ -42,7 +42,7 @@ impl ExecutionResourcesManager {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, PartialEq, Debug)]
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
@@ -229,5 +229,29 @@ mod test {
             cached_state_original.get_contract_classes(),
             cached_state.get_contract_classes()
         );
+    }
+
+    #[test]
+    fn state_diff_squash_with_itself_should_return_same_diff() {
+        let mut state_reader = InMemoryStateReader::default();
+
+        let contract_address = Address(32123.into());
+        let class_hash = [9; 32];
+        let nonce = Felt252::new(42);
+
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let cached_state_original = CachedState::new(state_reader, None);
+
+        let mut diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+
+        let diff_squashed = diff.squash(diff.clone()).unwrap();
+
+        assert_eq!(diff, diff_squashed);
     }
 }
