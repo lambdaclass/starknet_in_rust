@@ -256,7 +256,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("DEFAULT_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
     m.add("DEFAULT_VALIDATE_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
 
-    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::testnet())?;
+    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::TestNet)?;
     m.add(
         "DEFAULT_SEQUENCER_ADDRESS",
         DEFAULT_SEQUENCER_ADDRESS.0.to_biguint(),

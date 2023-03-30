@@ -132,7 +132,7 @@ impl From<StarknetOsConfig> for PyStarknetOsConfig {
 impl PyStarknetOsConfig {
     #[new]
     #[pyo3(signature = (
-        chain_id = PyStarknetChainId::testnet(),
+        chain_id = PyStarknetChainId::TestNet,
         fee_token_address = DEFAULT_STARKNET_OS_CONFIG.fee_token_address().0.to_biguint(),
     ))]
     fn new(chain_id: PyStarknetChainId, fee_token_address: BigUint) -> Self {
@@ -148,59 +148,49 @@ impl From<PyStarknetGeneralConfig> for StarknetGeneralConfig {
     }
 }
 
-#[pyclass]
-#[pyo3(name = "StarknetChainId")]
+#[pyclass(name = "StarknetChainId")]
 #[derive(Debug, Clone, Copy)]
-pub struct PyStarknetChainId {
-    inner: StarknetChainId,
+pub enum PyStarknetChainId {
+    #[pyo3(name = "MAINNET")]
+    MainNet,
+    #[pyo3(name = "TESTNET")]
+    TestNet,
+    #[pyo3(name = "TESTNET2")]
+    TestNet2,
 }
 
 impl From<StarknetChainId> for PyStarknetChainId {
-    fn from(inner: StarknetChainId) -> Self {
-        Self { inner }
+    fn from(chain_id: StarknetChainId) -> Self {
+        match chain_id {
+            StarknetChainId::MainNet => Self::MainNet,
+            StarknetChainId::TestNet => Self::TestNet,
+            StarknetChainId::TestNet2 => Self::TestNet2,
+        }
     }
 }
 
 impl From<PyStarknetChainId> for StarknetChainId {
     fn from(chain_id: PyStarknetChainId) -> Self {
-        chain_id.inner
+        match chain_id {
+            PyStarknetChainId::MainNet => Self::MainNet,
+            PyStarknetChainId::TestNet => Self::TestNet,
+            PyStarknetChainId::TestNet2 => Self::TestNet2,
+        }
     }
 }
 
 #[pymethods]
 impl PyStarknetChainId {
-    #[classattr]
-    #[pyo3(name = "MAINNET")]
-    fn mainnet() -> Self {
-        Self {
-            inner: StarknetChainId::MainNet,
-        }
-    }
-
-    #[classattr]
-    #[pyo3(name = "TESTNET")]
-    pub fn testnet() -> Self {
-        Self {
-            inner: StarknetChainId::TestNet,
-        }
-    }
-
-    #[classattr]
-    #[pyo3(name = "TESTNET2")]
-    fn testnet2() -> Self {
-        Self {
-            inner: StarknetChainId::TestNet2,
-        }
-    }
-
     #[getter]
     fn name(&self) -> String {
-        self.inner.to_string()
+        let chain_id: StarknetChainId = (*self).into();
+        chain_id.to_string()
     }
 
     #[getter]
     fn value(&self) -> BigUint {
-        self.inner.to_felt().to_biguint()
+        let chain_id: StarknetChainId = (*self).into();
+        chain_id.to_felt().to_biguint()
     }
 }
 
