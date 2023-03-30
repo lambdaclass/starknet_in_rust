@@ -1,3 +1,5 @@
+/// Contains functionality for computing class hashes for deprecated Declare transactions
+/// (ie, declarations that do not correspond to Cairo 1 contracts)
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
@@ -167,52 +169,6 @@ impl From<StructContractClass> for CairoArg {
     }
 }
 
-/// Computes compute class hash meant for Declare V2 exclusively (Cairo 1.0 classes)
-//pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
-//    // Since we are not using a cache, this function replace compute_class_hash_inner.
-//    let program = load_program()?;
-//    let contract_class_struct =
-//        &get_contract_class_struct(&program.identifiers, contract_class)?.into();
-//
-//    let mut vm = VirtualMachine::new(false);
-//    let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
-//    runner.initialize_function_runner(&mut vm)?;
-//    let mut hint_processor = BuiltinHintProcessor::new_empty();
-//
-//    // Poseidon base needs to be passed on to the runner in order to enable it to compute it correctly
-//    let poseidon_runner = vm
-//        .get_builtin_runners()
-//        .iter()
-//        .find(|x| matches!(x, BuiltinRunner::Poseidon(_)))
-//        .unwrap();
-//    let poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
-//
-//    let range_check_runner = vm
-//        .get_builtin_runners()
-//        .iter()
-//        .find(|x| matches!(x, BuiltinRunner::RangeCheck(_)))
-//        .unwrap();
-//    let range_check_base = MaybeRelocatable::from((range_check_runner.base() as isize, 0));
-//
-//    // 188 is the entrypoint since it is the __main__.class_hash function in our compiled program identifier.
-//    runner.run_from_entrypoint(
-//        188,
-//        &[
-//            &range_check_base.into(),
-//            &poseidon_base.into(),
-//            contract_class_struct,
-//        ],
-//        true,
-//        &mut vm,
-//        &mut hint_processor,
-//    )?;
-//
-//    match vm.get_return_values(2)?.get(1) {
-//        Some(MaybeRelocatable::Int(felt)) => Ok(felt.clone()),
-//        _ => Err(ContractAddressError::IndexOutOfRange),
-//    }
-//}
-
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
 pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
@@ -225,10 +181,12 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
     runner.initialize_function_runner(&mut vm)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
-    // 188 is the entrypoint since is the __main__.deprecated_compiled_class_hash function in our compiled program identifier.
-    // TODO: Looks like we can get this value from the identifier, but the value is a Felt252.
-    // We need to cast that into a usize.
-    //let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
+    let hash_runner = vm
+        .get_builtin_runners()
+        .iter()
+        .find(|x| matches!(x, BuiltinRunner::Hash(_)))
+        .unwrap();
+    let hash_base = MaybeRelocatable::from((hash_runner.base() as isize, 0));
 
     let entrypoint = program
         .identifiers
@@ -242,11 +200,11 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         .iter()
         .find(|x| matches!(x, BuiltinRunner::RangeCheck(_)))
         .unwrap();
-    let range_check_base = MaybeRelocatable::from((range_check_runner.base() as isize, 0));
+    let _range_check_base = MaybeRelocatable::from((range_check_runner.base() as isize, 0));
 
     runner.run_from_entrypoint(
         entrypoint,
-        &[&range_check_base.into(), contract_class_struct],
+        &[&hash_base.into(), contract_class_struct],
         true,
         &mut vm,
         &mut hint_processor,
