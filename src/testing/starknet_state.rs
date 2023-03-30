@@ -34,12 +34,13 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
+#[derive(Debug, Default)]
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
     pub general_config: StarknetGeneralConfig,
-    l2_to_l1_messages: HashMap<Vec<u8>, usize>,
-    l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
-    events: Vec<Event>,
+    pub l2_to_l1_messages: HashMap<Vec<u8>, usize>,
+    pub l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
+    pub events: Vec<Event>,
 }
 
 impl StarknetState {
