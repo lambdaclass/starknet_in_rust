@@ -795,8 +795,8 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         let internal_declare = InternalDeclare::new(
-            fib_contract_class.clone(),
-            chain_id.clone(),
+            fib_contract_class,
+            chain_id,
             Address(Felt252::one()),
             0,
             1,
