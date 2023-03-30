@@ -15,6 +15,7 @@ use self::{
 };
 use crate::{
     types::{
+        contract_entry_point::PyEntryPointType,
         general_config::build_general_config,
         starknet_message_to_l1::PyStarknetMessageToL1,
         transaction::{PyTransaction, PyTransactionType},
@@ -80,6 +81,8 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyInternalDeploy>()?;
     m.add_class::<PyInternalDeployAccount>()?;
     m.add_class::<PyInternalInvokeFunction>()?;
+
+    m.add_class::<PyEntryPointType>()?;
 
     // TODO: export from starknet-rs when implemented
     reexport(

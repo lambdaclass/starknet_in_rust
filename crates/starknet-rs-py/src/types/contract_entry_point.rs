@@ -27,3 +27,13 @@ impl From<ContractEntryPoint> for PyContractEntryPoint {
         Self { inner }
     }
 }
+
+#[pyclass(name = "EntryPointType")]
+pub enum PyEntryPointType {
+    #[pyo3(name = "EXTERNAL")]
+    External,
+    #[pyo3(name = "L1_HANDLER")]
+    L1Handler,
+    #[pyo3(name = "CONSTRUCTOR")]
+    Constructor,
+}
