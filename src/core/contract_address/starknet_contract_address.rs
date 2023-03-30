@@ -23,7 +23,7 @@ pub const MASK_3: u8 = 3;
 
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
-        Path::new("cairo_programs/compiled_class.json"),
+        Path::new("cairo_programs/deprecated_compiled_class.json"),
         None,
     )?)
 }
@@ -82,9 +82,11 @@ fn get_contract_class_struct(
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
     let api_version = identifiers
-        .get("__main__.COMPILED_CLASS_VERSION")
+        .get("__main__.DEPRECATED_COMPILED_CLASS_VERSION")
         .ok_or_else(|| {
-            ContractAddressError::MissingIdentifier("__main__.COMPILED_CLASS_VERSION".to_string())
+            ContractAddressError::MissingIdentifier(
+                "__main__.DEPRECATED_COMPILED_CLASS_VERSION".to_string(),
+            )
         })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
@@ -92,7 +94,7 @@ fn get_contract_class_struct(
     let builtin_list = &contract_class.program.builtins;
 
     Ok(StructContractClass {
-        api_version: api_version
+        compiled_class_version: api_version
             .value
             .as_ref()
             .ok_or(ContractAddressError::NoneApiVersion)?
@@ -120,7 +122,7 @@ fn get_contract_class_struct(
 // TODO: think about a new name for this struct (ContractClass already exists)
 #[derive(Debug)]
 struct StructContractClass {
-    api_version: MaybeRelocatable,
+    compiled_class_version: MaybeRelocatable,
     n_external_functions: MaybeRelocatable,
     external_functions: Vec<ContractEntryPoint>,
     n_l1_handlers: MaybeRelocatable,
@@ -148,7 +150,7 @@ impl From<StructContractClass> for CairoArg {
         let constructors_flatted = flat_into_maybe_relocs(contract_class.constructors);
 
         let result = vec![
-            CairoArg::Single(contract_class.api_version),
+            CairoArg::Single(contract_class.compiled_class_version),
             CairoArg::Single(contract_class.n_external_functions),
             CairoArg::Array(external_functions_flatted),
             CairoArg::Single(contract_class.n_l1_handlers),
@@ -165,6 +167,52 @@ impl From<StructContractClass> for CairoArg {
     }
 }
 
+/// Computes compute class hash meant for Declare V2 exclusively (Cairo 1.0 classes)
+//pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
+//    // Since we are not using a cache, this function replace compute_class_hash_inner.
+//    let program = load_program()?;
+//    let contract_class_struct =
+//        &get_contract_class_struct(&program.identifiers, contract_class)?.into();
+//
+//    let mut vm = VirtualMachine::new(false);
+//    let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
+//    runner.initialize_function_runner(&mut vm)?;
+//    let mut hint_processor = BuiltinHintProcessor::new_empty();
+//
+//    // Poseidon base needs to be passed on to the runner in order to enable it to compute it correctly
+//    let poseidon_runner = vm
+//        .get_builtin_runners()
+//        .iter()
+//        .find(|x| matches!(x, BuiltinRunner::Poseidon(_)))
+//        .unwrap();
+//    let poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
+//
+//    let range_check_runner = vm
+//        .get_builtin_runners()
+//        .iter()
+//        .find(|x| matches!(x, BuiltinRunner::RangeCheck(_)))
+//        .unwrap();
+//    let range_check_base = MaybeRelocatable::from((range_check_runner.base() as isize, 0));
+//
+//    // 188 is the entrypoint since it is the __main__.class_hash function in our compiled program identifier.
+//    runner.run_from_entrypoint(
+//        188,
+//        &[
+//            &range_check_base.into(),
+//            &poseidon_base.into(),
+//            contract_class_struct,
+//        ],
+//        true,
+//        &mut vm,
+//        &mut hint_processor,
+//    )?;
+//
+//    match vm.get_return_values(2)?.get(1) {
+//        Some(MaybeRelocatable::Int(felt)) => Ok(felt.clone()),
+//        _ => Err(ContractAddressError::IndexOutOfRange),
+//    }
+//}
+
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
 pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
@@ -177,13 +225,17 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
     runner.initialize_function_runner(&mut vm)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
-    // Poseidon base needs to be passed on to the runner in order to enable it to compute it correctly
-    let poseidon_runner = vm
-        .get_builtin_runners()
-        .iter()
-        .find(|x| matches!(x, BuiltinRunner::Poseidon(_)))
+    // 188 is the entrypoint since is the __main__.deprecated_compiled_class_hash function in our compiled program identifier.
+    // TODO: Looks like we can get this value from the identifier, but the value is a Felt252.
+    // We need to cast that into a usize.
+    //let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
+
+    let entrypoint = program
+        .identifiers
+        .get("__main__.deprecated_compiled_class_hash")
+        .unwrap()
+        .pc
         .unwrap();
-    let _poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
 
     let range_check_runner = vm
         .get_builtin_runners()
@@ -192,14 +244,9 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         .unwrap();
     let range_check_base = MaybeRelocatable::from((range_check_runner.base() as isize, 0));
 
-    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
     runner.run_from_entrypoint(
-        188,
-        &[
-            &range_check_base.into(),
-            //     &poseidon_base.into(),
-            contract_class_struct,
-        ],
+        entrypoint,
+        &[&range_check_base.into(), contract_class_struct],
         true,
         &mut vm,
         &mut hint_processor,
