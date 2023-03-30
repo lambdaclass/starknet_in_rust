@@ -258,7 +258,7 @@ impl InternalDeclare {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
-
+        println!("Applied...");
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
@@ -776,6 +776,43 @@ mod tests {
         assert_eq!(
             expected_error.unwrap_err().to_string(),
             expected_error_message
+        );
+    }
+
+    #[test]
+    fn validate_transaction_should_fail() {
+        // Instantiate CachedState
+        let contract_class_cache = HashMap::new();
+
+        let state_reader = InMemoryStateReader::default();
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        // There are no account contracts in the state, so the transaction should fail
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class.clone(),
+            chain_id.clone(),
+            Address(Felt252::one()),
+            0,
+            1,
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .expect("REASON");
+
+        let internal_declare_error =
+            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
+        assert!(internal_declare_error.is_err());
+
+        let expected_error = TransactionError::NotDeployedContract([0u8; 32]);
+        assert_eq!(
+            internal_declare_error.unwrap_err().to_string(),
+            expected_error.to_string()
         );
     }
 }
