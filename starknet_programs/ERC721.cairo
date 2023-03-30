@@ -1,3 +1,6 @@
+// Contract taken from Starknet-Edu:
+// https://github.com/starknet-edu/starknet-erc721/blob/b21972ca1c976afb7a401f8c4bedaa35606bd028/contracts/token/ERC721/ERC721.cairo
+
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin

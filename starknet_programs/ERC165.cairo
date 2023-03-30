@@ -1,3 +1,6 @@
+// This contract is a modification from:
+// https://github.com/OpenZeppelin/cairo-contracts/blob/main/src/openzeppelin/introspection/erc165/IERC165.cairo
+
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
