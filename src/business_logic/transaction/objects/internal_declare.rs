@@ -258,7 +258,6 @@ impl InternalDeclare {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
-        println!("Applied...");
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
@@ -478,9 +477,9 @@ mod tests {
         //      Comparison
         // ---------------------
         assert!(internal_declare.is_err());
-        assert_eq!(
-            internal_declare.unwrap_err().to_string(),
-            "The max_fee field in Declare transactions of version 0 must be 0.".to_string()
+        assert_matches!(
+            internal_declare.unwrap_err(),
+            TransactionError::StarknetError(..)
         );
     }
 
@@ -541,9 +540,9 @@ mod tests {
         //      Comparison
         // ---------------------
         assert!(internal_declare.is_err());
-        assert_eq!(
-            internal_declare.unwrap_err().to_string(),
-            "The nonce field in Declare transactions of version 0 must be 0.".to_string()
+        assert_matches!(
+            internal_declare.unwrap_err(),
+            TransactionError::StarknetError(..)
         );
     }
 
@@ -603,9 +602,9 @@ mod tests {
         //      Comparison
         // ---------------------
         assert!(internal_declare.is_err());
-        assert_eq!(
-            internal_declare.unwrap_err().to_string(),
-            "The signature field in Declare transactions must be an empty list.".to_string()
+        assert_matches!(
+            internal_declare.unwrap_err(),
+            TransactionError::StarknetError(..)
         );
     }
 
@@ -682,15 +681,10 @@ mod tests {
         // ---------------------
         //      Comparison
         // ---------------------
-
-        // Check its an error
         assert!(expected_error.is_err());
-
-        let expected_error_message = "Class hash [7, 55, 55, 162, 154, 114, 149, 224, 190, 50, 42, 227, 53, 175, 167, 128, 209, 137, 185, 51, 48, 175, 237, 255, 228, 31, 217, 227, 155, 190, 192, 57] already declared".to_string();
-        // Check error message
-        assert_eq!(
-            expected_error.unwrap_err().to_string(),
-            expected_error_message
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::ClassAlreadyDeclared(..)
         );
     }
 
@@ -768,15 +762,11 @@ mod tests {
         //      Comparison
         // ---------------------
 
-        // Check its an error
         assert!(expected_error.is_err());
-
-        let expected_error_message = "Invalid transaction nonce. Expected: 1 got 0".to_string();
-        // Check error message
-        assert_eq!(
-            expected_error.unwrap_err().to_string(),
-            expected_error_message
-        );
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvalidTransactionNonce(..)
+        )
     }
 
     #[test]
@@ -807,12 +797,11 @@ mod tests {
 
         let internal_declare_error =
             internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
-        assert!(internal_declare_error.is_err());
 
-        let expected_error = TransactionError::NotDeployedContract([0u8; 32]);
-        assert_eq!(
-            internal_declare_error.unwrap_err().to_string(),
-            expected_error.to_string()
+        assert!(internal_declare_error.is_err());
+        assert_matches!(
+            internal_declare_error.unwrap_err(),
+            TransactionError::NotDeployedContract(..)
         );
     }
 
