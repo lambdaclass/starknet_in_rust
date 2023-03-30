@@ -96,6 +96,8 @@ pub enum TransactionError {
     MissingInitialFp,
     #[error("Transaction context is invalid")]
     InvalidTxContext,
+    #[error("{0:?}")]
+    SierraCompileError(String),
     #[error(transparent)]
     Vm(#[from] VirtualMachineError),
     #[error(transparent)]
