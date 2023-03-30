@@ -858,8 +858,8 @@ mod tests {
 
         // Use max_fee with certain value to make sure that the transaction fails due to weight resources
         let internal_declare = InternalDeclare::new(
-            fib_contract_class.clone(),
-            chain_id.clone(),
+            fib_contract_class,
+            chain_id,
             Address(Felt252::one()),
             1000,
             1,
