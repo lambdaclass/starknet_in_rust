@@ -534,7 +534,7 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class.clone(), vec![], contract_address_salt)
+            .deploy(contract_class, vec![], contract_address_salt)
             .unwrap();
 
         // fibonacci selector
