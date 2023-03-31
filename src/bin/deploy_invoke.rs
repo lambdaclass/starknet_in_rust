@@ -1,17 +1,10 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 use felt::{felt_str, Felt};
 use num_traits::Zero;
 
 use starknet_rs::{
-    business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, state_api::State},
-        transaction::objects::internal_deploy::InternalDeploy,
-    },
-    definitions::general_config::StarknetChainId,
-    services::api::contract_class::ContractClass,
-    testing::starknet_state::StarknetState,
+    services::api::contract_class::ContractClass, testing::starknet_state::StarknetState,
     utils::Address,
 };
 

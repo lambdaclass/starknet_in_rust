@@ -16,3 +16,10 @@ async def test_invoke():
     for _ in range(runs):
         await contract.increase_balance(amount=1000).execute()
         await contract.get_balance().execute()
+
+@pytest.mark.asyncio
+async def test_deploy():
+    runs = 10
+    starknet = await Starknet.empty()
+    for _ in range(runs):
+        contract = await starknet.deploy(source=CONTRACT_FILE)
