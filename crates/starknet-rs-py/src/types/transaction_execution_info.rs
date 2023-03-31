@@ -1,9 +1,6 @@
 use super::call_info::PyCallInfo;
 use pyo3::prelude::*;
-use starknet_rs::{
-    business_logic::execution::objects::TransactionExecutionInfo,
-    definitions::transaction_type::TransactionType,
-};
+use starknet_rs::business_logic::execution::objects::TransactionExecutionInfo;
 use std::collections::HashMap;
 
 #[pyclass]
@@ -42,14 +39,7 @@ impl PyTransactionExecutionInfo {
 
     #[getter]
     fn transaction_type(&self) -> Option<u64> {
-        Some(match self.inner.tx_type? {
-            TransactionType::Declare => 0,
-            TransactionType::Deploy => 1,
-            TransactionType::DeployAccount => 2,
-            TransactionType::InitializeBlockInfo => 3,
-            TransactionType::InvokeFunction => 4,
-            TransactionType::L1Handler => 5,
-        })
+        Some(self.inner.tx_type?.into())
     }
 }
 
