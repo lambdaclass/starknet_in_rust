@@ -5,8 +5,6 @@ mod starknet_state;
 mod types;
 mod utils;
 
-use std::ops::Shl;
-
 use self::{
     cached_state::PyCachedState,
     types::{
@@ -15,14 +13,23 @@ use self::{
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
     },
 };
-use crate::utils::transaction_hash::{
-    py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
-    py_calculate_transaction_hash_common, PyTransactionHashPrefix,
-};
-use crate::utils::{
-    py_calculate_contract_address, py_calculate_contract_address_from_hash,
-    py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
-    py_validate_contract_deployed,
+use crate::{
+    types::{
+        transaction_execution_info::PyTransactionExecutionInfo,
+        transactions::{
+            declare::PyInternalDeclare, deploy::PyInternalDeploy,
+            deploy_account::PyInternalDeployAccount, invoke_function::PyInternalInvokeFunction,
+        },
+    },
+    utils::{
+        py_calculate_contract_address, py_calculate_contract_address_from_hash,
+        py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
+        py_validate_contract_deployed,
+        transaction_hash::{
+            py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
+            py_calculate_transaction_hash_common, PyTransactionHashPrefix,
+        },
+    },
 };
 use cairo_felt::{felt_str, Felt252};
 use pyo3::prelude::*;
@@ -34,8 +41,8 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
-
 use starknet_state::PyStarknetState;
+use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
@@ -50,7 +57,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // ~~~~~~~~~~~~~~~~~~~~
 
     m.add_class::<PyStarknetState>()?;
-
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyStarknetGeneralConfig>()?;
@@ -63,9 +69,18 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyOrderedL2ToL1Message>()?;
     m.add_class::<PyCallInfo>()?;
 
-    m.add_class::<PyTransactionHashPrefix>()?;
+    m.add_class::<PyTransactionExecutionInfo>()?;
+    m.add_class::<PyInternalDeclare>()?;
+    m.add_class::<PyInternalDeploy>()?;
+    m.add_class::<PyInternalDeployAccount>()?;
+    m.add_class::<PyInternalInvokeFunction>()?;
 
-    // m.add_function(build_general_config)?;
+    //  starkware.starknet.business_logic.transaction.objects
+    // m.add_class::<PyInternalTransaction>()?; // Is just used for type checking
+    // m.add_class::<PyInternalAccountTransaction>()?;
+    // m.add_class::<PyInternalL1Handler>()?;  // isn't implemented
+
+    m.add_class::<PyTransactionHashPrefix>()?;
 
     //  starkware.starknet.public.abi
     // m.add_class::<PyAbiEntryType>()?;
@@ -120,16 +135,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyInvokeFunction>()?;
     // m.add_class::<PyDeploy>()?;
     // m.add_class::<PyTransaction>()?;
-
-    //  starkware.starknet.business_logic.transaction.objects
-    // m.add_class::<PyInternalL1Handler>()?;
-    // m.add_class::<PyInternalAccountTransaction>()?;
-    // m.add_class::<PyInternalDeclare>()?;
-    // m.add_class::<PyInternalDeploy>()?;
-    // m.add_class::<PyInternalDeployAccount>()?;
-    // m.add_class::<PyInternalInvokeFunction>()?;
-    // m.add_class::<PyInternalTransaction>()?;
-    // m.add_class::<PyTransactionExecutionInfo>()?;
 
     //  starkware.starknet.testing.contract
     // m.add_class::<PyStarknetContract>()?;
