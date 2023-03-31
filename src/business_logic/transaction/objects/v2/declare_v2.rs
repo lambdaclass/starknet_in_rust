@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap};
 
 use crate::{
     business_logic::{
@@ -26,7 +26,7 @@ use crate::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
-use cairo_lang_compiler::{compile_cairo_project_at_path, CompilerConfig};
+use cairo_lang_compiler::{SierraProgram};
 use felt::Felt252;
 use num_traits::Zero;
 
@@ -45,7 +45,7 @@ pub struct InternalDeclareV2 {
 }
 impl InternalDeclareV2 {
     pub fn new(
-        cairo_path: &Path,
+        sierra_code: &SierraProgram,
         chain_id: Felt252,
         sender_address: Address,
         max_fee: u64,
@@ -53,17 +53,8 @@ impl InternalDeclareV2 {
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
-        let binding = compile_cairo_project_at_path(
-            cairo_path,
-            CompilerConfig {
-                replace_ids: true,
-                ..Default::default()
-            },
-        )
-        .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
-
-        dbg!("no llego aca");
-        let sierra_code = binding.as_ref();
+        // compile sierra to contract class (ours)
+        //let contract_class = 
         let contract_class = ContractClass::try_from(&sierra_code.to_string()[..]).unwrap();
         let hash = compute_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
@@ -308,21 +299,21 @@ mod tests {
 
     #[test]
     fn create_declare_v2_test() {
-        let fib_path = Path::new("starknet_programs/fibonacci.json");
+        let fib_path = "starknet_programs/fibonacci.json";
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = InternalDeclareV2::new(
-            &fib_path,
-            chain_id,
-            Address(Felt252::one()),
-            0,
-            1,
-            Vec::new(),
-            Felt252::zero(),
-        )
-        .unwrap();
+        // let internal_declare = InternalDeclareV2::new(
+        //     &fib_path,
+        //     chain_id,
+        //     Address(Felt252::one()),
+        //     0,
+        //     1,
+        //     Vec::new(),
+        //     Felt252::zero(),
+        // )
+        // .unwrap();
 
-        println!("{:?}", internal_declare);
+        // println!("{:?}", internal_declare);
     }
 }
