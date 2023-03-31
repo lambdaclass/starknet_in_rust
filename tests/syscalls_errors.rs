@@ -151,6 +151,7 @@ fn call_contract_with_extra_arguments() {
 
 #[test]
 fn call_contract_not_deployed() {
+    let contract_address = Address(2222.into());
     test_contract(
         "starknet_programs/syscalls.json",
         "test_call_contract",
@@ -162,10 +163,10 @@ fn call_contract_not_deployed() {
         [(
             [2u8; 32],
             Path::new("starknet_programs/syscalls-lib.json"),
-            Some((Address(2222.into()), vec![("lib_state", 10.into())])),
+            Some((contract_address.clone(), vec![("lib_state", 10.into())])),
         )]
         .into_iter(),
-        [2221.into()],
+        [contract_address.0 - Felt252::new(2)], // Wrong address
         "Contract address [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] is not deployed",
     );
 }
