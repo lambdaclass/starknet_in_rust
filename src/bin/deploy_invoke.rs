@@ -55,7 +55,7 @@ fn main() {
             )
             .unwrap();
 
-        starknet_state
+        let tx_exec_info = starknet_state
             .invoke_raw(
                 contract_address.clone(),
                 GET_BALANCE_SELECTOR.clone(),
@@ -65,5 +65,10 @@ fn main() {
                 Some(Felt::from((i * 2) + 1)),
             )
             .unwrap();
+
+        assert_eq!(
+            tx_exec_info.call_info.unwrap().retdata,
+            vec![((1000 * i) + 1000).into()]
+        );
     }
 }
