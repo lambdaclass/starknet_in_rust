@@ -262,4 +262,35 @@ mod tests {
             &Felt252::from(10)
         );
     }
+
+    #[test]
+    fn invoke_constructor_no_calldata_should_fail() {
+        // Instantiate CachedState
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()));
+
+        // Set contract_class
+        let class_hash: ClassHash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let internal_deploy = InternalDeploy {
+            hash_value: 0.into(),
+            version: 0,
+            contract_address: Address(1.into()),
+            _contract_address_salt: Address(0.into()),
+            contract_hash: class_hash,
+            constructor_calldata: Vec::new(),
+            tx_type: TransactionType::Deploy,
+        };
+
+        let config = Default::default();
+
+        let result = internal_deploy.execute(&mut state, &config);
+        assert_matches!(result.unwrap_err(), TransactionError::CairoRunner(..))
+    }
 }
