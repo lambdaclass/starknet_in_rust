@@ -43,7 +43,7 @@ fn main() {
         .nonce_initial_values_mut()
         .insert(contract_address.clone(), Felt::zero());
 
-    for i in (0..RUNS * 2).step_by(2) {
+    for i in 0..RUNS {
         starknet_state
             .invoke_raw(
                 contract_address.clone(),
@@ -51,7 +51,7 @@ fn main() {
                 vec![1000.into()],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from(i)),
+                Some(Felt::from(i * 2)),
             )
             .unwrap();
 
@@ -62,7 +62,7 @@ fn main() {
                 vec![],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from(i + 1)),
+                Some(Felt::from((i * 2) + 1)),
             )
             .unwrap();
     }
