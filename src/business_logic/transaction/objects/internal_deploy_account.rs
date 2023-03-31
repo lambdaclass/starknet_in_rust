@@ -382,4 +382,52 @@ mod tests {
         );
         assert_eq!(state_selector.class_hashes, vec![class_hash]);
     }
+
+    #[test]
+    fn deploy_account_twice_should_fail() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let internal_deploy_error = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let class_hash = internal_deploy.class_hash();
+        state.set_contract_class(class_hash, &contract).unwrap();
+        internal_deploy
+            .execute(&mut state, &general_config)
+            .unwrap();
+        assert_matches!(
+            internal_deploy_error
+                .execute(&mut state, &general_config)
+                .unwrap_err(),
+            TransactionError::State(StateError::ContractAddressUnavailable(..))
+        )
+    }
 }
