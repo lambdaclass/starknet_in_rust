@@ -1,10 +1,14 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use felt::{felt_str, Felt};
 use num_traits::Zero;
 
 use starknet_rs::{
-    services::api::contract_class::ContractClass, testing::starknet_state::StarknetState,
+    business_logic::{
+        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+    },
+    services::api::contract_class::ContractClass,
+    testing::starknet_state::StarknetState,
     utils::Address,
 };
 
@@ -29,24 +33,23 @@ lazy_static! {
 
 fn main() {
     const RUNS: usize = 10000;
-    let mut starknet_state = StarknetState::new(None);
-    let contract_address_salt = Address(1.into());
+    let cached_state = create_initial_state();
 
-    let (contract_address, _exec_info) = starknet_state
-        .deploy(CONTRACT_CLASS.to_owned(), vec![], contract_address_salt)
-        .unwrap();
+    let mut starknet_state = StarknetState {
+        state: cached_state,
+        ..Default::default()
+    };
 
-    // Statement **not** in blockifier.
     starknet_state
         .state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(contract_address.clone(), Felt::zero());
+        .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
 
     for i in (0..RUNS * 2).step_by(2) {
         starknet_state
             .invoke_raw(
-                contract_address.clone(),
+                CONTRACT_ADDRESS.clone(),
                 INCREASE_BALANCE_SELECTOR.clone(),
                 vec![1000.into()],
                 0,
@@ -57,7 +60,7 @@ fn main() {
 
         starknet_state
             .invoke_raw(
-                contract_address.clone(),
+                CONTRACT_ADDRESS.clone(),
                 GET_BALANCE_SELECTOR.clone(),
                 vec![],
                 0,
@@ -66,4 +69,30 @@ fn main() {
             )
             .unwrap();
     }
+}
+
+fn create_initial_state() -> CachedState<InMemoryStateReader> {
+    let cached_state = CachedState::new(
+        {
+            let mut state_reader = InMemoryStateReader::default();
+            state_reader
+                .address_to_class_hash_mut()
+                .insert(CONTRACT_ADDRESS.clone(), CONTRACT_CLASS_HASH.clone());
+
+            state_reader
+                .address_to_nonce_mut()
+                .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
+            state_reader
+                .class_hash_to_contract_class_mut()
+                .insert(CONTRACT_CLASS_HASH.clone(), CONTRACT_CLASS.clone());
+
+            state_reader
+                .address_to_storage_mut()
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt::zero());
+            state_reader
+        },
+        Some(HashMap::new()),
+    );
+
+    cached_state
 }
