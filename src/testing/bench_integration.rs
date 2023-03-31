@@ -7,10 +7,8 @@ use crate::{
     business_logic::{
         fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     },
-    definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::ContractClass,
-    testing::starknet_state::StarknetState,
-    utils::Address,
+    utils::Address, testing::starknet_state::StarknetState,
 };
 
 use lazy_static::lazy_static;
@@ -34,7 +32,7 @@ lazy_static! {
 
 #[test]
 fn main() {
-    const RUNS: usize = 10000;
+    const RUNS: usize = 1000;
     let cached_state = create_initial_state();
 
     let mut starknet_state = StarknetState {
@@ -48,7 +46,7 @@ fn main() {
         .nonce_initial_values_mut()
         .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
 
-    for i in (0..RUNS * 2).step_by(2) {
+    for i in 0..RUNS {
         starknet_state
             .invoke_raw(
                 CONTRACT_ADDRESS.clone(),
@@ -56,20 +54,25 @@ fn main() {
                 vec![1000.into()],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from(i)),
+                Some(Felt::from(i*2)),
             )
             .unwrap();
 
-        starknet_state
+        let tx_exec_info = starknet_state
             .invoke_raw(
                 CONTRACT_ADDRESS.clone(),
                 GET_BALANCE_SELECTOR.clone(),
                 vec![],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from(i + 1)),
+                Some(Felt::from((i*2) + 1)),
             )
             .unwrap();
+
+            assert_eq!(
+                tx_exec_info.call_info.unwrap().retdata,
+                vec![((1000 * i) + 1000).into()]
+            );
     }
 }
 

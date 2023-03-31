@@ -275,6 +275,7 @@ impl StarknetState {
             signature,
             self.chain_id(),
             Some(nonce),
+            Felt::zero(),
         )
     }
 }

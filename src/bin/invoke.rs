@@ -29,7 +29,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/first_contract.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122];
+    static ref CONTRACT_CLASS_HASH: [u8; 32] = [1; 32];
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 

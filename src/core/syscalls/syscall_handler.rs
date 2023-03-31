@@ -558,7 +558,7 @@ mod tests {
         },
     };
     use cairo_rs::relocatable;
-    use num_traits::Num;
+    use num_traits::{Num, Zero};
     use std::{collections::VecDeque, path::PathBuf};
 
     type BusinessLogicSyscallHandler<'a> =
@@ -1547,6 +1547,7 @@ mod tests {
             Vec::new(),
             0.into(),
             Some(0.into()),
+            Felt::zero(),
         )
         .unwrap();
 
