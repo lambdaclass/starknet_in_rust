@@ -272,19 +272,19 @@ mod tests {
     use felt::felt_str;
     use num_traits::Num;
 
+    use super::*;
     use crate::{
         business_logic::{
             execution::objects::{CallType, OrderedL2ToL1Message},
             state::state_cache::StorageEntry,
         },
         core::contract_address::starknet_contract_address::compute_class_hash,
+        core::errors::state_errors::StateError,
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
         utils::{calculate_sn_keccak, felt_to_hash},
     };
-
-    use super::*;
 
     #[test]
     fn test_deploy() {
@@ -641,5 +641,18 @@ mod tests {
             .unwrap();
         let err = starknet_state.consume_message_hash(msg_hash).unwrap_err();
         assert_matches!(err, StarknetStateError::InvalidMessageHash);
+    }
+
+    #[test]
+    fn test_create_invoke_function_should_fail_with_none_contract_state() {
+        let mut starknet_state = StarknetState::new(None);
+
+        let err = starknet_state
+            .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None)
+            .unwrap_err();
+        assert_matches!(
+            err,
+            TransactionError::State(StateError::NoneContractState(_))
+        );
     }
 }
