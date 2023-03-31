@@ -278,7 +278,7 @@ mod tests {
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
-        utils::felt_to_hash,
+        utils::{calculate_sn_keccak, felt_to_hash},
     };
 
     use super::*;
@@ -524,5 +524,30 @@ mod tests {
         };
 
         assert_eq!(tx_info, expected_info);
+    }
+
+    #[test]
+    fn test_execute_entry_point_raw() {
+        let mut starknet_state = StarknetState::new(None);
+        let path = PathBuf::from("starknet_programs/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_address_salt = Address(1.into());
+
+        let (contract_address, _exec_info) = starknet_state
+            .deploy(contract_class.clone(), vec![], contract_address_salt)
+            .unwrap();
+
+        // fibonacci selector
+        let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"fib"));
+        let result = starknet_state
+            .execute_entry_point_raw(
+                contract_address,
+                entrypoint_selector,
+                vec![1.into(), 1.into(), 10.into()],
+                Address(0.into()),
+            )
+            .unwrap()
+            .retdata;
+        assert_eq!(result, vec![144.into()]);
     }
 }
