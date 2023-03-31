@@ -5,10 +5,12 @@ use num_traits::Zero;
 
 use starknet_rs::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, state_api_objects::BlockInfo},
+        transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
+    definitions::general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
     services::api::contract_class::ContractClass,
-    testing::starknet_state::StarknetState,
     utils::Address,
 };
 
@@ -40,41 +42,41 @@ lazy_static! {
 
 fn main() {
     const RUNS: usize = 10000;
-    let cached_state = create_initial_state();
+    let mut cached_state = create_initial_state();
 
-    let mut starknet_state = StarknetState {
-        state: cached_state,
-        ..Default::default()
-    };
-
-    starknet_state
-        .state
+    cached_state
         .cache_mut()
         .nonce_initial_values_mut()
         .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
 
-    for i in 0..RUNS {
-        starknet_state
-            .invoke_raw(
-                CONTRACT_ADDRESS.clone(),
-                INCREASE_BALANCE_SELECTOR.clone(),
-                vec![1000.into()],
-                0,
-                Some(Vec::new()),
-                Some(Felt::from(i * 2)),
-            )
-            .unwrap();
+    let general_config = new_starknet_general_config_for_testing();
 
-        let tx_exec_info = starknet_state
-            .invoke_raw(
-                CONTRACT_ADDRESS.clone(),
-                GET_BALANCE_SELECTOR.clone(),
-                vec![],
-                0,
-                Some(Vec::new()),
-                Some(Felt::from((i * 2) + 1)),
-            )
-            .unwrap();
+    for i in 0..RUNS {
+        InternalInvokeFunction::new(
+            CONTRACT_ADDRESS.clone(),
+            INCREASE_BALANCE_SELECTOR.clone(),
+            2,
+            vec![1000.into()],
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            Some(Felt::from(i * 2)),
+        )
+        .unwrap()
+        .execute(&mut cached_state, &general_config)
+        .unwrap();
+
+        let tx_exec_info = InternalInvokeFunction::new(
+            CONTRACT_ADDRESS.clone(),
+            GET_BALANCE_SELECTOR.clone(),
+            2,
+            vec![],
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            Some(Felt::from((i * 2) + 1)),
+        )
+        .unwrap()
+        .execute(&mut cached_state, &general_config)
+        .unwrap();
 
         assert_eq!(
             tx_exec_info.call_info.unwrap().retdata,
@@ -107,4 +109,16 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
     );
 
     cached_state
+}
+
+pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
+    StarknetGeneralConfig::new(
+        StarknetOsConfig::new(StarknetChainId::TestNet, Address(Felt::zero()), 0),
+        0,
+        0,
+        Default::default(),
+        1_000_000,
+        0,
+        BlockInfo::default(),
+    )
 }

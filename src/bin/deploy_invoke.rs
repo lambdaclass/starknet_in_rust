@@ -10,6 +10,13 @@ use starknet_rs::{
 
 use lazy_static::lazy_static;
 
+#[cfg(feature = "with_mimalloc")]
+use mimalloc::MiMalloc;
+
+#[cfg(feature = "with_mimalloc")]
+#[global_allocator]
+static ALLOC: MiMalloc = MiMalloc;
+
 lazy_static! {
     // include_str! doesn't seem to work in CI
     static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
