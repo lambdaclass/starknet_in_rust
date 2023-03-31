@@ -32,7 +32,7 @@ lazy_static! {
 }
 
 fn main() {
-    const RUNS: usize = 1000;
+    const RUNS: usize = 10000;
     let cached_state = create_initial_state();
 
     let mut starknet_state = StarknetState {
