@@ -30,6 +30,7 @@ pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EntryPointType {
     External,
     L1Handler,
@@ -235,4 +236,25 @@ fn to_cairo_runner_program(
             .collect(),
         instruction_locations: None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deserialize_contract_class() {
+        // let serialized = include_str!("example_class.json");
+
+        // This fails:
+        // let _: ContractClass = serde_json::from_str(serialized).unwrap();
+
+        dbg!(serde_json::to_string(&EntryPointType::External).unwrap());
+        dbg!(serde_json::to_string(&EntryPointType::Constructor).unwrap());
+        dbg!(serde_json::to_string(&EntryPointType::L1Handler).unwrap());
+
+        assert!(false);
+
+        // assert!(res.is_ok());
+    }
 }
