@@ -616,4 +616,30 @@ mod tests {
         expected_messages.insert(msg_hash, 1);
         assert_eq!(messages, expected_messages);
     }
+
+    #[test]
+    fn test_consume_message_hash_twice_should_fail() {
+        let mut starknet_state = StarknetState::new(None);
+        let test_msg = OrderedL2ToL1Message {
+            order: 1,
+            to_address: Address(0.into()),
+            payload: vec![0.into()],
+        };
+
+        let exec_info = ExecutionInfo::Call(Box::new(CallInfo {
+            l2_to_l1_messages: vec![test_msg],
+            ..Default::default()
+        }));
+
+        starknet_state.add_messages_and_events(&exec_info).unwrap();
+        let msg_hash =
+            StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
+                .get_hash();
+
+        starknet_state
+            .consume_message_hash(msg_hash.clone())
+            .unwrap();
+        let err = starknet_state.consume_message_hash(msg_hash).unwrap_err();
+        assert_matches!(err, StarknetStateError::InvalidMessageHash);
+    }
 }
