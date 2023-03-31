@@ -208,7 +208,7 @@ impl InternalDeploy {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{collections::HashMap, path::PathBuf};
 
     use super::*;
     use crate::{
@@ -219,6 +219,20 @@ mod tests {
         utils::calculate_sn_keccak,
     };
 
+    //make Debug trait available for InternalDeploy
+    impl std::fmt::Debug for InternalDeploy {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("InternalDeploy")
+                .field("hash_value", &self.hash_value)
+                .field("version", &self.version)
+                .field("contract_address", &self.contract_address)
+                .field("_contract_address_salt", &self._contract_address_salt)
+                .field("contract_hash", &self.contract_hash)
+                .field("constructor_calldata", &self.constructor_calldata)
+                .field("tx_type", &self.tx_type)
+                .finish()
+        }
+    }
     #[test]
     fn invoke_constructor_test() {
         // Instantiate CachedState
@@ -325,6 +339,31 @@ mod tests {
         assert_matches!(
             result.unwrap_err(),
             TransactionError::Starkware(StarkwareError::TransactionFailed)
+        )
+    }
+
+    #[test]
+    fn internal_deploy_computing_classhash_should_fail() {
+        // Take a contrat class to copy the program
+        let contract_class = ContractClass::try_from(PathBuf::from("starknet_programs/amm.json"));
+        // Make a new contract class with the same program but with errors
+        let error_contract_class = ContractClass {
+            program: contract_class.unwrap().program,
+            entry_points_by_type: HashMap::new(),
+            abi: None,
+        };
+
+        // Should fail when compouting the hash due to a failed contract class
+        let internal_deploy_error = InternalDeploy::new(
+            Address(0.into()),
+            error_contract_class,
+            Vec::new(),
+            0.into(),
+            1,
+        );
+        assert_matches!(
+            internal_deploy_error.unwrap_err(),
+            SyscallHandlerError::ErrorComputingHash
         )
     }
 }
