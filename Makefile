@@ -83,13 +83,13 @@ flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals
 
 bench-all:
-	cd scripts/ && ./run_bench_deploy.sh && ./run_bench_invoke.sh && ./run_bench_deploy_invoke.sh
+	./scripts/bench-deploy.sh && ./scripts/bench-invoke.sh && ./scripts/bench-deploy-invoke.sh
 
 bench-deploy:
-	cd scripts/ && ./run_bench_deploy.sh
+	./scripts/bench-deploy.sh
 
 bench-invoke:
-	cd scripts/ && ./run_bench_invoke.sh
+	./scripts/bench-invoke.sh
 
 bench-deploy-invoke:
-	cd scripts/ && ./run_bench_deploy_invoke.sh
+	./scripts/bench-deploy-invoke.sh

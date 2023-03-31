@@ -27,6 +27,7 @@ lazy_static! {
         Program::from_reader(CONTRACT_STR.as_bytes(), None).unwrap();
 }
 
+#[allow(dead_code)]
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
         Path::new("cairo_programs/contracts.json"),

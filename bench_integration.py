@@ -19,7 +19,8 @@ async def test_invoke():
 
 @pytest.mark.asyncio
 async def test_deploy():
-    runs = 10
+    runs = 100
     starknet = await Starknet.empty()
     for _ in range(runs):
-        contract = await starknet.deploy(source=CONTRACT_FILE)
+        await starknet.deploy(source=CONTRACT_FILE)
+
