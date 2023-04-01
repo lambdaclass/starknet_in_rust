@@ -113,6 +113,12 @@ impl PyStarknetGeneralConfig {
     }
 }
 
+impl<'a> From<&'a PyStarknetGeneralConfig> for &'a StarknetGeneralConfig {
+    fn from(value: &'a PyStarknetGeneralConfig) -> Self {
+        &value.inner
+    }
+}
+
 #[pyclass]
 #[pyo3(name = "StarknetOsConfig")]
 #[derive(Debug, Clone, Default)]

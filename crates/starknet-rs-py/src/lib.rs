@@ -14,18 +14,24 @@ use self::{
     },
 };
 use crate::{
-    types::transaction::{PyTransaction, PyTransactionType},
-    utils::transaction_hash::{
-        py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
-        py_calculate_transaction_hash_common, PyTransactionHashPrefix,
+    types::{
+        general_config::build_general_config,
+        starknet_message_to_l1::PyStarknetMessageToL1,
+        transaction::{PyTransaction, PyTransactionType},
+        transaction_execution_info::PyTransactionExecutionInfo,
+        transactions::{
+            declare::PyInternalDeclare, deploy::PyInternalDeploy,
+            deploy_account::PyInternalDeployAccount, invoke_function::PyInternalInvokeFunction,
+        },
     },
-};
-use crate::{
-    types::{general_config::build_general_config, starknet_message_to_l1::PyStarknetMessageToL1},
     utils::{
         py_calculate_contract_address, py_calculate_contract_address_from_hash,
         py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
         py_validate_contract_deployed,
+        transaction_hash::{
+            py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
+            py_calculate_transaction_hash_common, PyTransactionHashPrefix,
+        },
     },
 };
 use cairo_felt::{felt_str, Felt252};
@@ -38,9 +44,8 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
-use std::ops::Shl;
-
 use starknet_state::PyStarknetState;
+use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
@@ -55,7 +60,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // ~~~~~~~~~~~~~~~~~~~~
 
     m.add_class::<PyStarknetState>()?;
-
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyStarknetGeneralConfig>()?;
@@ -67,15 +71,107 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyOrderedEvent>()?;
     m.add_class::<PyOrderedL2ToL1Message>()?;
     m.add_class::<PyCallInfo>()?;
-
     m.add_class::<PyTransactionHashPrefix>()?;
     m.add_class::<PyTransaction>()?;
     m.add_class::<PyTransactionType>()?;
-
     m.add_class::<PyStarknetMessageToL1>()?;
+    m.add_class::<PyTransactionExecutionInfo>()?;
+    m.add_class::<PyInternalDeclare>()?;
+    m.add_class::<PyInternalDeploy>()?;
+    m.add_class::<PyInternalDeployAccount>()?;
+    m.add_class::<PyInternalInvokeFunction>()?;
 
     //  starkware.starknet.business_logic.transaction.objects
     // m.add_class::<PyInternalL1Handler>()?;  // isn't implemented
+
+    // ~~~~~~~~~~~~~~~~~~~~
+    //  Exported Functions
+    // ~~~~~~~~~~~~~~~~~~~~
+
+    m.add_function(wrap_pyfunction!(build_general_config, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_transaction_hash_common, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_declare_transaction_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_deploy_transaction_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        py_calculate_contract_address_from_hash,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_contract_address, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_event_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
+    m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
+
+    // ~~~~~~~~~~~~~~~~~~~~
+    //  Exported Constants
+    // ~~~~~~~~~~~~~~~~~~~~
+
+    m.add("DEFAULT_GAS_PRICE", DEFAULT_GAS_PRICE)?;
+
+    // in cairo-lang they're equal
+    m.add("DEFAULT_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
+    m.add("DEFAULT_VALIDATE_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
+
+    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::TestNet)?;
+    m.add(
+        "DEFAULT_SEQUENCER_ADDRESS",
+        DEFAULT_SEQUENCER_ADDRESS.0.to_biguint(),
+    )?;
+
+    // The sender address used by default in declare transactions of version 0.
+    m.add(
+        "DEFAULT_DECLARE_SENDER_ADDRESS",
+        Felt252::from(1).to_biguint(),
+    )?;
+
+    // OS context offset.
+    m.add("SYSCALL_PTR_OFFSET", Felt252::from(0).to_biguint())?;
+
+    // open_zeppelin's account contract
+    m.add(
+        "account_contract",
+        PyContractClass {
+            inner: ContractClass::try_from(include_str!("../../../starknet_programs/Account.json"))
+                .expect("program couldn't be parsed"),
+        },
+    )?;
+
+    m.add("LATEST_BLOCK_ID", "latest")?;
+    m.add("PENDING_BLOCK_ID", "pending")?;
+
+    m.add(
+        "FAULTY_CLASS_HASH",
+        felt_str!("748273551117330086452242911863358006088276559700222288674638023319407008063")
+            .to_biguint(),
+    )?;
+
+    m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
+
+    // Indentation for transactions meant to query and not addressed to the OS.
+    let query_version_base = Felt252::from(1).shl(128u32); // == 2 ** 128
+    let query_version = query_version_base + Felt252::from(TRANSACTION_VERSION);
+    m.add("QUERY_VERSION", query_version.to_biguint())?;
+
+    m.add("TRANSACTION_VERSION", TRANSACTION_VERSION)?;
+
+    // The (empirical) L1 gas cost of each Cairo step.
+    pub const N_STEPS_FEE_WEIGHT: f64 = 0.05;
+    m.add("N_STEPS_FEE_WEIGHT", N_STEPS_FEE_WEIGHT)?;
+
+    m.add(
+        "CONTRACT_STATES_COMMITMENT_TREE_HEIGHT",
+        DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+    )?;
+
+    m.add("EVENT_COMMITMENT_TREE_HEIGHT", 64)?;
+    m.add("TRANSACTION_COMMITMENT_TREE_HEIGHT", 64)?;
+
+    // Felt252 number of bits
+    m.add("CONTRACT_ADDRESS_BITS", 251)?;
+
+    // ~~~~~~~~~~~~
+    //  Reexported
+    // ~~~~~~~~~~~~
 
     reexport(
         py,
@@ -83,6 +179,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         "starkware.starknet.definitions.error_codes",
         vec!["StarknetErrorCode"],
     )?;
+
     reexport(
         py,
         m,
@@ -179,25 +276,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec!["InternalAccountTransaction", "InternalTransaction"],
     )?;
 
-    // ~~~~~~~~~~~~~~~~~~~~
-    //  Exported Functions
-    // ~~~~~~~~~~~~~~~~~~~~
-
-    m.add_function(wrap_pyfunction!(build_general_config, m)?)?;
-
-    m.add_function(wrap_pyfunction!(py_calculate_transaction_hash_common, m)?)?;
-    m.add_function(wrap_pyfunction!(py_calculate_declare_transaction_hash, m)?)?;
-    m.add_function(wrap_pyfunction!(py_calculate_deploy_transaction_hash, m)?)?;
-    m.add_function(wrap_pyfunction!(
-        py_calculate_contract_address_from_hash,
-        m
-    )?)?;
-    m.add_function(wrap_pyfunction!(py_calculate_contract_address, m)?)?;
-    m.add_function(wrap_pyfunction!(py_calculate_event_hash, m)?)?;
-    m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
-    m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
-    m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
-
     reexport(
         py,
         m,
@@ -245,73 +323,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         "starkware.starknet.cli.starknet_cli",
         vec!["get_salt"],
     )?;
-
-    // ~~~~~~~~~~~~~~~~~~~~
-    //  Exported Constants
-    // ~~~~~~~~~~~~~~~~~~~~
-
-    m.add("DEFAULT_GAS_PRICE", DEFAULT_GAS_PRICE)?;
-
-    // in cairo-lang they're equal
-    m.add("DEFAULT_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
-    m.add("DEFAULT_VALIDATE_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
-
-    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::TestNet)?;
-    m.add(
-        "DEFAULT_SEQUENCER_ADDRESS",
-        DEFAULT_SEQUENCER_ADDRESS.0.to_biguint(),
-    )?;
-
-    // The sender address used by default in declare transactions of version 0.
-    m.add(
-        "DEFAULT_DECLARE_SENDER_ADDRESS",
-        Felt252::from(1).to_biguint(),
-    )?;
-
-    // OS context offset.
-    m.add("SYSCALL_PTR_OFFSET", Felt252::from(0).to_biguint())?;
-
-    // open_zeppelin's account contract
-    m.add(
-        "account_contract",
-        PyContractClass {
-            inner: ContractClass::try_from(include_str!("../../../starknet_programs/Account.json"))
-                .expect("program couldn't be parsed"),
-        },
-    )?;
-
-    m.add("LATEST_BLOCK_ID", "latest")?;
-    m.add("PENDING_BLOCK_ID", "pending")?;
-
-    m.add(
-        "FAULTY_CLASS_HASH",
-        felt_str!("748273551117330086452242911863358006088276559700222288674638023319407008063")
-            .to_biguint(),
-    )?;
-
-    m.add("UNINITIALIZED_CLASS_HASH", *UNINITIALIZED_CLASS_HASH)?;
-
-    // Indentation for transactions meant to query and not addressed to the OS.
-    let query_version_base = Felt252::from(1).shl(128u32); // == 2 ** 128
-    let query_version = query_version_base + Felt252::from(TRANSACTION_VERSION);
-    m.add("QUERY_VERSION", query_version.to_biguint())?;
-
-    m.add("TRANSACTION_VERSION", TRANSACTION_VERSION)?;
-
-    // The (empirical) L1 gas cost of each Cairo step.
-    pub const N_STEPS_FEE_WEIGHT: f64 = 0.05;
-    m.add("N_STEPS_FEE_WEIGHT", N_STEPS_FEE_WEIGHT)?;
-
-    m.add(
-        "CONTRACT_STATES_COMMITMENT_TREE_HEIGHT",
-        DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
-    )?;
-
-    m.add("EVENT_COMMITMENT_TREE_HEIGHT", 64)?;
-    m.add("TRANSACTION_COMMITMENT_TREE_HEIGHT", 64)?;
-
-    // Felt252 number of bits
-    m.add("CONTRACT_ADDRESS_BITS", 251)?;
 
     Ok(())
 }
