@@ -227,38 +227,42 @@ mod tests {
         let mut state = CachedState::new(state_reader, Some(Default::default()));
 
         // Set contract_class
-        let class_hash: ClassHash = [1; 32];
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
+        let class_hash: Felt252 = compute_class_hash(&contract_class).unwrap();
+        //transform class_hash to [u8; 32]
+        let mut class_hash_bytes = [0u8; 32];
+        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy = InternalDeploy {
-            hash_value: 0.into(),
-            version: 0,
-            contract_address: Address(1.into()),
-            _contract_address_salt: Address(0.into()),
-            contract_hash: class_hash,
-            constructor_calldata: vec![10.into()],
-            tx_type: TransactionType::Deploy,
-        };
+        let internal_deploy = InternalDeploy::new(
+            Address(0.into()),
+            contract_class,
+            vec![10.into()],
+            0.into(),
+            0,
+        )
+        .unwrap();
 
         let config = Default::default();
 
         let _result = internal_deploy.apply(&mut state, &config).unwrap();
 
         assert_eq!(
-            state.get_class_hash_at(&Address(1.into())).unwrap(),
-            &class_hash
+            state
+                .get_class_hash_at(&internal_deploy.contract_address)
+                .unwrap(),
+            &class_hash_bytes
         );
 
         let storage_key = calculate_sn_keccak("owner".as_bytes());
 
         assert_eq!(
             state
-                .get_storage_at(&(Address(1.into()), storage_key))
+                .get_storage_at(&(internal_deploy.contract_address, storage_key))
                 .unwrap(),
             &Felt252::from(10)
         );
@@ -271,23 +275,21 @@ mod tests {
         let mut state = CachedState::new(state_reader, Some(Default::default()));
 
         // Set contract_class
-        let class_hash: ClassHash = [1; 32];
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
 
+        let class_hash: Felt252 = compute_class_hash(&contract_class).unwrap();
+        //transform class_hash to [u8; 32]
+        let mut class_hash_bytes = [0u8; 32];
+        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
+
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy = InternalDeploy {
-            hash_value: 0.into(),
-            version: 0,
-            contract_address: Address(1.into()),
-            _contract_address_salt: Address(0.into()),
-            contract_hash: class_hash,
-            constructor_calldata: Vec::new(),
-            tx_type: TransactionType::Deploy,
-        };
+        let internal_deploy =
+            InternalDeploy::new(Address(0.into()), contract_class, Vec::new(), 0.into(), 0)
+                .unwrap();
 
         let config = Default::default();
 
@@ -302,23 +304,26 @@ mod tests {
         let mut state = CachedState::new(state_reader, Some(Default::default()));
 
         // Set contract_class
-        let class_hash: ClassHash = [1; 32];
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/amm.json")).unwrap();
 
+        let class_hash: Felt252 = compute_class_hash(&contract_class).unwrap();
+        //transform class_hash to [u8; 32]
+        let mut class_hash_bytes = [0u8; 32];
+        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
+
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy = InternalDeploy {
-            hash_value: 0.into(),
-            version: 0,
-            contract_address: Address(1.into()),
-            _contract_address_salt: Address(0.into()),
-            contract_hash: class_hash,
-            constructor_calldata: vec![10.into()],
-            tx_type: TransactionType::Deploy,
-        };
+        let internal_deploy = InternalDeploy::new(
+            Address(0.into()),
+            contract_class,
+            vec![10.into()],
+            0.into(),
+            0,
+        )
+        .unwrap();
 
         let config = Default::default();
 
