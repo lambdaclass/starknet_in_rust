@@ -1,6 +1,5 @@
 use super::{
     hint_code::*,
-    os_syscall_handler::OsSyscallHandler,
     other_syscalls,
     syscall_request::*,
     syscall_response::{
@@ -32,7 +31,7 @@ use cairo_rs::{
     },
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::Felt;
+use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
 //* ---------------------
@@ -70,24 +69,33 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
+    fn syscall_call_contract(
+        &mut self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<Vec<Felt252>, SyscallHandlerError>;
+
     fn storage_read(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = if let SyscallRequest::StorageRead(request) =
-            self._read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
         {
             request
         } else {
             return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
         };
 
-        let value = self._storage_read(request.address)?;
+        let value = self.syscall_storage_read(request.address)?;
         let response = StorageReadResponse::new(value);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError>;
 
     fn storage_write(
         &mut self,
@@ -95,24 +103,25 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = if let SyscallRequest::StorageWrite(request) =
-            self._read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
         {
             request
         } else {
             return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
         };
 
-        self._storage_write(request.address, request.value)?;
+        self.syscall_storage_write(request.address, request.value)?;
 
         Ok(())
     }
 
-    fn _get_tx_info_ptr(
+    fn syscall_storage_write(
         &mut self,
-        vm: &mut VirtualMachine,
-    ) -> Result<Relocatable, SyscallHandlerError>;
+        address: Address,
+        value: Felt252,
+    ) -> Result<(), SyscallHandlerError>;
 
-    fn _deploy(
+    fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -123,7 +132,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let contract_address = self._deploy(vm, syscall_ptr)?;
+        let contract_address = self.syscall_deploy(vm, syscall_ptr)?;
 
         let response = DeployResponse::new(
             contract_address.0,
@@ -138,7 +147,7 @@ pub(crate) trait SyscallHandler {
         Ok(())
     }
 
-    fn _read_and_validate_syscall_request(
+    fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
@@ -146,18 +155,18 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
     // Executes the contract call and fills the CallContractResponse struct.
-    fn _call_contract_and_write_response(
+    fn call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let retdata = self._call_contract(syscall_name, vm, syscall_ptr)?;
+        let retdata = self.syscall_call_contract(syscall_name, vm, syscall_ptr)?;
 
         let retdata_maybe_reloc = retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt::new(item)))
+            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
             .collect::<Vec<MaybeRelocatable>>();
 
         let response = CallContractResponse::new(
@@ -165,31 +174,8 @@ pub(crate) trait SyscallHandler {
             self.allocate_segment(vm, retdata_maybe_reloc)?,
         );
 
-        self._write_syscall_response(&response, vm, syscall_ptr)
+        self.write_syscall_response(&response, vm, syscall_ptr)
     }
-
-    fn _call_contract(
-        &mut self,
-        syscall_name: &str,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<Vec<Felt>, SyscallHandlerError>;
-
-    fn _get_caller_address(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<Address, SyscallHandlerError>;
-
-    fn _get_contract_address(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<Address, SyscallHandlerError>;
-
-    fn _storage_read(&mut self, address: Address) -> Result<Felt, SyscallHandlerError>;
-
-    fn _storage_write(&mut self, address: Address, value: Felt) -> Result<(), SyscallHandlerError>;
 
     fn allocate_segment(
         &mut self,
@@ -197,7 +183,7 @@ pub(crate) trait SyscallHandler {
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
 
-    fn _write_syscall_response<T: WriteSyscallResponse>(
+    fn write_syscall_response<T: WriteSyscallResponse>(
         &self,
         response: &T,
         vm: &mut VirtualMachine,
@@ -213,7 +199,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
+        self.read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
         GetBlockNumberResponse::new(self.get_block_info().block_number)
             .write_syscall_response(vm, syscall_ptr)
     }
@@ -230,28 +216,33 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request =
-            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+            match self.read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
                 SyscallRequest::GetTxInfo(request) => request,
                 _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
             };
 
-        let tx_info = self._get_tx_info_ptr(vm)?;
+        let tx_info = self.syscall_get_tx_info_ptr(vm)?;
 
         let response = GetTxInfoResponse::new(tx_info);
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_get_tx_info_ptr(
+        &mut self,
+        vm: &mut VirtualMachine,
+    ) -> Result<Relocatable, SyscallHandlerError>;
 
     fn get_tx_signature(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        match self._read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
+        match self.read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
             SyscallRequest::GetTxSignature(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
         }
 
-        let tx_info_pr = self._get_tx_info_ptr(vm)?;
+        let tx_info_pr = self.syscall_get_tx_info_ptr(vm)?;
         let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
         let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
 
@@ -264,7 +255,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request = if let SyscallRequest::GetBlockTimestamp(request) =
-            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
         {
             request
         } else {
@@ -283,20 +274,32 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let caller_address = self._get_caller_address(vm, syscall_ptr)?;
+        let caller_address = self.syscall_get_caller_address(vm, syscall_ptr)?;
         let response = GetCallerAddressResponse::new(caller_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_get_caller_address(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn get_contract_address(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let contract_address = self._get_contract_address(vm, syscall_ptr)?;
+        let contract_address = self.syscall_get_contract_address(vm, syscall_ptr)?;
         let response = GetContractAddressResponse::new(contract_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_get_contract_address(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn get_sequencer_address(
         &mut self,
@@ -304,7 +307,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request = if let SyscallRequest::GetSequencerAddress(request) =
-            self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
         {
             request
         } else {
@@ -379,21 +382,12 @@ where
         }
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
-        Ok(SyscallHintProcessor {
-            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: OsSyscallHandler::default(),
-        })
-    }
-
     pub fn should_run_syscall_hint(
         &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt252>,
     ) -> Result<bool, HintError> {
         match self
             .builtin_hint_processor
@@ -410,7 +404,7 @@ where
         vm: &mut VirtualMachine,
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt252>,
     ) -> Result<(), SyscallHandlerError> {
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
@@ -491,7 +485,7 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, Felt>,
+        constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
@@ -512,12 +506,12 @@ fn get_ids_data(
 ) -> Result<HashMap<String, HintReference>, HintError> {
     let mut ids_data = HashMap::<String, HintReference>::new();
     for (path, ref_id) in reference_ids {
-        let name = path.rsplit('.').next().ok_or(HintError::FailedToGetIds)?;
+        let name = path.rsplit('.').next().ok_or(HintError::WrongHintData)?;
         ids_data.insert(
             name.to_string(),
             references
                 .get(ref_id)
-                .ok_or(HintError::FailedToGetIds)?
+                .ok_or(HintError::WrongHintData)?
                 .clone(),
         );
     }
@@ -530,7 +524,7 @@ fn get_syscall_ptr(
     ap_tracking: &ApTracking,
 ) -> Result<Relocatable, SyscallHandlerError> {
     let location = get_relocatable_from_var_name("syscall_ptr", vm, ids_data, ap_tracking)?;
-    let syscall_ptr = vm.get_relocatable(&location)?;
+    let syscall_ptr = vm.get_relocatable(location)?;
     Ok(syscall_ptr)
 }
 
@@ -548,7 +542,6 @@ mod tests {
             },
             transaction::objects::internal_invoke_function::InternalInvokeFunction,
         },
-        core::syscalls::os_syscall_handler::OsSyscallHandler,
         definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         memory_insert,
         services::api::contract_class::{ContractClass, EntryPointType},
@@ -559,7 +552,7 @@ mod tests {
     };
     use cairo_rs::relocatable;
     use num_traits::Num;
-    use std::{collections::VecDeque, path::PathBuf};
+    use std::path::PathBuf;
 
     type BusinessLogicSyscallHandler<'a> =
         crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
@@ -579,14 +572,14 @@ mod tests {
             vm,
             [((1, 0), 0), ((1, 1), 1), ((1, 2), 2), ((1, 3), (2, 0))]
         );
-        assert_eq!(
+        assert_matches!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
-            Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+            Ok(request) if request == SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
                 _selector: 0.into(),
                 to_address: Address(1.into()),
                 payload_size: 2,
                 payload_ptr: relocatable!(2, 0)
-            }))
+            })
         )
     }
 
@@ -609,16 +602,16 @@ mod tests {
             ]
         );
 
-        assert_eq!(
+        assert_matches!(
             syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
-            Ok(SyscallRequest::Deploy(DeployRequestStruct {
+            Ok(request) if request == SyscallRequest::Deploy(DeployRequestStruct {
                 _selector: 0.into(),
                 class_hash: 1.into(),
                 contract_address_salt: 2.into(),
                 constructor_calldata_size: 3.into(),
                 constructor_calldata: relocatable!(1, 20),
                 deploy_from_zero: 4,
-            }))
+            })
         )
     }
 
@@ -656,7 +649,7 @@ mod tests {
 
         // Check that syscall.get_block_timestamp insert syscall.get_block_info().block_timestamp in the (1,2) position
         assert_eq!(
-            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            get_big_int(&vm, relocatable!(1, 2)).unwrap(),
             syscall.get_block_info().block_timestamp.into()
         );
     }
@@ -686,7 +679,7 @@ mod tests {
             .unwrap();
 
         // Check that syscall.get_sequencer insert syscall.get_block_info().sequencer_address in the (1,1) position
-        assert_eq!(get_big_int(&vm, &relocatable!(1, 2)).unwrap(), 0.into())
+        assert_eq!(get_big_int(&vm, relocatable!(1, 2)).unwrap(), 0.into())
     }
 
     #[test]
@@ -806,63 +799,62 @@ mod tests {
             &HashMap::new(),
         );
 
-        assert_eq!(result, Ok(()));
+        assert_matches!(result, Ok(()));
 
         // Check VM inserts
 
         // TransactionExecutionContext.signature
         assert_eq!(
-            vm.get_integer(&relocatable!(3, 0)).unwrap().into_owned(),
+            vm.get_integer(relocatable!(3, 0)).unwrap().into_owned(),
             tx_execution_context.signature[0]
         );
         assert_eq!(
-            vm.get_integer(&relocatable!(3, 1)).unwrap().into_owned(),
+            vm.get_integer(relocatable!(3, 1)).unwrap().into_owned(),
             tx_execution_context.signature[1]
         );
 
         // TxInfoStruct
-        assert_eq!(
-            get_integer(&vm, &relocatable!(4, 0)),
-            Ok(tx_execution_context.version as usize)
+        assert_matches!(
+            get_integer(&vm, relocatable!(4, 0)),
+            Ok(field) if field == tx_execution_context.version as usize
         );
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 1)),
-            Ok(tx_execution_context.account_contract_address.0)
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 1)),
+            Ok(field) if field == tx_execution_context.account_contract_address.0
         );
-        assert_eq!(
-            get_integer(&vm, &relocatable!(4, 2)),
-            Ok(tx_execution_context.max_fee as usize)
+        assert_matches!(
+            get_integer(&vm, relocatable!(4, 2)),
+            Ok(field) if field == tx_execution_context.max_fee as usize
         );
-        assert_eq!(
-            get_integer(&vm, &relocatable!(4, 3)),
-            Ok(tx_execution_context.signature.len())
+        assert_matches!(
+            get_integer(&vm, relocatable!(4, 3)),
+            Ok(field) if field == tx_execution_context.signature.len()
         );
-        assert_eq!(
-            get_relocatable(&vm, &relocatable!(4, 4)),
-            Ok(relocatable!(3, 0))
+        assert_matches!(
+            get_relocatable(&vm, relocatable!(4, 4)),
+            Ok(field) if field == relocatable!(3, 0)
         );
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 5)),
-            Ok(tx_execution_context.transaction_hash)
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 5)),
+            Ok(field) if field == tx_execution_context.transaction_hash
         );
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 6)),
-            Ok(syscall_handler_hint_processor
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 6)),
+            Ok(field) if field == syscall_handler_hint_processor
                 .syscall_handler
                 .general_config
                 .starknet_os_config
                 .chain_id
-                .to_felt())
-        );
+                .to_felt());
 
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(4, 7)),
-            Ok(tx_execution_context.nonce)
+        assert_matches!(
+            get_big_int(&vm, relocatable!(4, 7)),
+            Ok(field) if field == tx_execution_context.nonce
         );
 
         // GetTxInfoResponse
         assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 1)),
+            vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(4, 0))
         );
     }
@@ -901,52 +893,12 @@ mod tests {
             &HashMap::new(),
         );
 
-        assert_eq!(result, Ok(()));
+        assert_matches!(result, Ok(()));
 
         // GetTxInfoResponse
-        assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 1)),
+        assert_matches!(
+            vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(7, 0))
-        );
-    }
-
-    #[test]
-    fn get_tx_info_for_os_syscall_test() {
-        let mut vm = vm!();
-        add_segments!(vm, 3);
-
-        // insert data to form the request
-        memory_insert!(
-            vm,
-            [
-                ((1, 0), (2, 0)), //  syscall_ptr
-                ((2, 0), 8)       //  GetTxInfoRequest.selector
-            ]
-        );
-
-        // syscall_ptr
-        let ids_data = ids_data!["syscall_ptr"];
-
-        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
-        // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
-
-        syscall_handler_hint_processor.syscall_handler.tx_info_ptr = Some(relocatable!(18, 12));
-
-        let result = syscall_handler_hint_processor.execute_hint(
-            &mut vm,
-            &mut ExecutionScopes::new(),
-            &any_box!(hint_data),
-            &HashMap::new(),
-        );
-
-        assert_eq!(result, Ok(()));
-
-        // Check VM inserts
-        // GetTxInfoResponse
-        assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 1)),
-            Ok(relocatable!(18, 12))
         );
     }
 
@@ -979,7 +931,7 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            get_big_int(&vm, relocatable!(1, 2)).unwrap(),
             hint_processor.syscall_handler.caller_address.0
         )
     }
@@ -1062,16 +1014,16 @@ mod tests {
 
         let hint_data =
             HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
-        assert_eq!(
+        assert_matches!(
             hint_processor.execute_hint(
                 &mut vm,
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
             ),
-            Ok(()),
+            Ok(())
         );
-        assert_eq!(get_integer(&vm, &relocatable!(2, 1)), Ok(0));
+        assert_matches!(get_integer(&vm, relocatable!(2, 1)), Ok(0));
     }
 
     #[test]
@@ -1103,7 +1055,7 @@ mod tests {
 
         // response is written in direction (1,2)
         assert_eq!(
-            get_big_int(&vm, &relocatable!(1, 2)).unwrap(),
+            get_big_int(&vm, relocatable!(1, 2)).unwrap(),
             hint_processor.syscall_handler.contract_address.0
         )
     }
@@ -1156,11 +1108,11 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(
-            get_integer(&vm, &relocatable!(2, 1)).unwrap(),
+            get_integer(&vm, relocatable!(2, 1)).unwrap(),
             tx_execution_context.signature.len()
         );
         assert_eq!(
-            vm.get_relocatable(&relocatable!(2, 2)).unwrap(),
+            vm.get_relocatable(relocatable!(2, 2)).unwrap(),
             relocatable!(3, 0)
         );
     }
@@ -1170,7 +1122,7 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        let address = Felt::from_str_radix(
+        let address = Felt252::from_str_radix(
             "2151680050850558576753658069693146429350618838199373217695410689374331200218",
             10,
         )
@@ -1185,7 +1137,7 @@ mod tests {
         );
 
         // StorageReadRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone())
+        vm.insert_value(relocatable!(2, 1), address.clone())
             .unwrap();
 
         // syscall_ptr
@@ -1197,7 +1149,7 @@ mod tests {
         let mut syscall_handler_hint_processor =
             SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
 
-        let storage_value = Felt::new(3);
+        let storage_value = Felt252::new(3);
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
@@ -1223,7 +1175,7 @@ mod tests {
             .is_ok());
 
         // Check StorageReadResponse insert
-        assert_eq!(Ok(storage_value), get_big_int(&vm, &relocatable!(2, 2)));
+        assert_matches!(get_big_int(&vm, relocatable!(2, 2)), Ok(response) if response == storage_value );
     }
 
     #[test]
@@ -1231,7 +1183,7 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        let address = Felt::from_str_radix(
+        let address = Felt252::from_str_radix(
             "2151680050850558576753658069693146429350618838199373217695410689374331200218",
             10,
         )
@@ -1247,7 +1199,7 @@ mod tests {
         );
 
         // StorageWriteRequest.address
-        vm.insert_value(&relocatable!(2, 1), address.clone())
+        vm.insert_value(relocatable!(2, 1), address.clone())
             .unwrap();
 
         // syscall_ptr
@@ -1272,7 +1224,7 @@ mod tests {
                         .clone(),
                     address.to_bytes_be().try_into().unwrap(),
                 ),
-                Felt::new(3),
+                Felt252::new(3),
             );
         assert!(syscall_handler_hint_processor
             .execute_hint(
@@ -1288,64 +1240,7 @@ mod tests {
             .starknet_storage_state
             .read(&felt_to_hash(&address));
 
-        assert_eq!(write, Ok(&Felt::new(45)));
-    }
-
-    #[test]
-    fn test_os_storage_read_hint_ok() {
-        let mut vm = vm!();
-        add_segments!(vm, 3);
-
-        // insert data to form the request
-        memory_insert!(
-            vm,
-            [
-                ((1, 0), (2, 0)), //  syscall_ptr
-                ((2, 0), 10),     //  StorageReadRequest.selector
-                ((2, 1), 11)      //  StorageReadRequest.address
-            ]
-        );
-
-        // syscall_ptr
-        let ids_data = ids_data!["syscall_ptr"];
-
-        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
-        // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
-
-        let execute_code_read_operation: VecDeque<Felt> =
-            VecDeque::from([5.into(), 4.into(), 3.into(), 2.into(), 1.into()]);
-        syscall_handler_hint_processor.syscall_handler = OsSyscallHandler::new(
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            execute_code_read_operation.clone(),
-            HashMap::new(),
-            Some(Relocatable {
-                segment_index: 0,
-                offset: 0,
-            }),
-            None,
-            BlockInfo::default(),
-        );
-
-        let result = syscall_handler_hint_processor.execute_hint(
-            &mut vm,
-            &mut ExecutionScopes::new(),
-            &any_box!(hint_data),
-            &HashMap::new(),
-        );
-
-        assert_eq!(result, Ok(()));
-
-        // Check VM inserts
-        // StorageReadResponse
-        assert_eq!(
-            get_big_int(&vm, &relocatable!(2, 2)),
-            Ok(execute_code_read_operation.get(0).unwrap().clone())
-        );
+        assert_eq!(write, Ok(&Felt252::new(45)));
     }
 
     #[test]
@@ -1367,14 +1262,14 @@ mod tests {
             ]
         );
 
-        let class_hash_felt = Felt::from_str_radix(
+        let class_hash_felt = Felt252::from_str_radix(
             "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
             16,
         )
         .unwrap();
         let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
 
-        vm.insert_value(&relocatable!(2, 1), class_hash_felt)
+        vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
 
         // Hinta data
@@ -1404,7 +1299,7 @@ mod tests {
             .unwrap();
 
         // Execute Deploy hint
-        assert_eq!(
+        assert_matches!(
             syscall_handler_hint_processor.execute_hint(
                 &mut vm,
                 &mut ExecutionScopes::new(),
@@ -1416,12 +1311,12 @@ mod tests {
 
         // Check VM inserts
         // DeployResponse.contract_address
-        let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+        let deployed_address = get_big_int(&vm, relocatable!(2, 6)).unwrap();
         // DeployResponse.constructor_retdata_size
-        assert_eq!(get_big_int(&vm, &relocatable!(2, 7)), Ok(0.into()));
+        assert_matches!(get_big_int(&vm, relocatable!(2, 7)), Ok(constructor_retdata_size) if constructor_retdata_size == 0.into());
         // DeployResponse.constructor_retdata
-        assert_eq!(
-            get_relocatable(&vm, &relocatable!(2, 8)),
+        assert_matches!(
+            get_relocatable(&vm, relocatable!(2, 8)),
             Ok(relocatable!(0, 0))
         );
 
@@ -1459,14 +1354,14 @@ mod tests {
             ]
         );
 
-        let class_hash_felt = Felt::from_str_radix(
+        let class_hash_felt = Felt252::from_str_radix(
             "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
             16,
         )
         .unwrap();
         let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
 
-        vm.insert_value(&relocatable!(2, 1), class_hash_felt)
+        vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
 
         // Hinta data
@@ -1501,7 +1396,7 @@ mod tests {
             .unwrap();
 
         // Execute Deploy hint
-        assert_eq!(
+        assert_matches!(
             syscall_handler_hint_processor.execute_hint(
                 &mut vm,
                 &mut ExecutionScopes::new(),
@@ -1513,12 +1408,12 @@ mod tests {
 
         // Check VM inserts
         // DeployResponse.contract_address
-        let deployed_address = get_big_int(&vm, &relocatable!(2, 6)).unwrap();
+        let deployed_address = get_big_int(&vm, relocatable!(2, 6)).unwrap();
         // DeployResponse.constructor_retdata_size
-        assert_eq!(get_big_int(&vm, &relocatable!(2, 7)), Ok(0.into()));
+        assert_matches!(get_big_int(&vm, relocatable!(2, 7)), Ok(constructor_retdata_size) if constructor_retdata_size == 0.into());
         // DeployResponse.constructor_retdata
-        assert_eq!(
-            get_relocatable(&vm, &relocatable!(2, 8)),
+        assert_matches!(
+            get_relocatable(&vm, relocatable!(2, 8)),
             Ok(relocatable!(0, 0))
         );
 
@@ -1537,7 +1432,7 @@ mod tests {
         */
         let internal_invoke_function = InternalInvokeFunction::new(
             Address(deployed_address.clone()),
-            Felt::from_str_radix(
+            Felt252::from_str_radix(
                 "283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c",
                 16,
             )

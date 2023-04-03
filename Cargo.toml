@@ -8,8 +8,8 @@ default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
 
 [dependencies]
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22" }
-felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "8dba86dbec935fa04a255e2edf3d5d184950fa22" }
+cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "77fe09ebbf72710935b455b1c5ff56b0bad7a4b8" }
+felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "77fe09ebbf72710935b455b1c5ff56b0bad7a4b8" }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
@@ -27,6 +27,7 @@ clap = { version = "4.1.8", features = ["derive"] }
 actix-web = "4.3.1"
 awc = "3.1.1"
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
+hex = "0.4.3"
 
 [dev-dependencies]
 assert_matches = "1.5.0"

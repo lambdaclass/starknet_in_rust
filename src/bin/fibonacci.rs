@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use felt::{felt_str, Felt};
+use felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use lazy_static::lazy_static;
@@ -32,9 +32,9 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref FIB_SELECTOR: Felt = felt_str!("485685360977693822178494178685050472186234432883326654755380582597179924681");
+    static ref FIB_SELECTOR: Felt252 = felt_str!("485685360977693822178494178685050472186234432883326654755380582597179924681");
 
-    static ref EXPECTED_RES: Felt = felt_str!("222450955505511890955301767713383614666194461405743219770606958667979327682");
+    static ref EXPECTED_RES: Felt252 = felt_str!("222450955505511890955301767713383614666194461405743219770606958667979327682");
 }
 
 fn main() {
@@ -50,7 +50,7 @@ fn main() {
         .state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
+        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
 
     for i in 0..RUNS {
         let tx_exec_info = starknet_state
@@ -60,7 +60,7 @@ fn main() {
                 [1.into(), 1.into(), 1000.into()].into(),
                 0,
                 Some(Vec::new()),
-                Some(Felt::from(i)),
+                Some(Felt252::from(i)),
             )
             .unwrap();
 
@@ -81,14 +81,14 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
 
             state_reader
                 .address_to_nonce_mut()
-                .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
+                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
             state_reader
                 .class_hash_to_contract_class_mut()
                 .insert(CONTRACT_CLASS_HASH.clone(), CONTRACT_CLASS.clone());
 
             state_reader
                 .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt::zero());
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             state_reader
         },
         Some(HashMap::new()),

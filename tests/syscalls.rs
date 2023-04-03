@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::{felt_str, Felt};
+use felt::{felt_str, Felt252};
 use num_traits::Num;
 use starknet_rs::{
     business_logic::{
@@ -38,14 +38,18 @@ fn test_contract<'a>(
     tx_context: Option<TransactionExecutionContext>,
     events: impl Into<Vec<OrderedEvent>>,
     l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
-    storage_read_values: impl Into<Vec<Felt>>,
+    storage_read_values: impl Into<Vec<Felt252>>,
     accessed_storage_keys: impl Iterator<Item = ClassHash>,
     extra_contracts: impl Iterator<
-        Item = (ClassHash, &'a Path, Option<(Address, Vec<(&'a str, Felt)>)>),
+        Item = (
+            ClassHash,
+            &'a Path,
+            Option<(Address, Vec<(&'a str, Felt252)>)>,
+        ),
     >,
-    arguments: impl Into<Vec<Felt>>,
+    arguments: impl Into<Vec<Felt252>>,
     internal_calls: impl Into<Vec<CallInfo>>,
-    return_data: impl Into<Vec<Felt>>,
+    return_data: impl Into<Vec<Felt252>>,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
@@ -92,9 +96,9 @@ fn test_contract<'a>(
                     )
                 }));
 
-                let nonce = Felt::new(70);
+                let nonce = Felt252::new(70);
                 let storage_entry = (contract_address.clone(), [29; 32]);
-                let storage_value = Felt::new(574);
+                let storage_value = Felt252::new(574);
 
                 state_reader
                     .address_to_class_hash_mut()
@@ -120,7 +124,7 @@ fn test_contract<'a>(
 
     let calldata = arguments.into();
 
-    let entry_point_selector = Felt::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
+    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
     let entry_point = ExecutionEntryPoint::new(
         contract_address.clone(),
         calldata.clone(),
@@ -245,31 +249,31 @@ fn emit_event_syscall() {
         [
             OrderedEvent {
                 order: 0,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
-                data: [1, 2, 3].map(Felt::from).to_vec(),
+                data: [1, 2, 3].map(Felt252::from).to_vec(),
             },
             OrderedEvent {
                 order: 1,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
-                data: [2, 4, 6].map(Felt::from).to_vec(),
+                data: [2, 4, 6].map(Felt252::from).to_vec(),
             },
             OrderedEvent {
                 order: 2,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
-                data: [1234, 5678, 9012].map(Felt::from).to_vec(),
+                data: [1234, 5678, 9012].map(Felt252::from).to_vec(),
             },
             OrderedEvent {
                 order: 3,
-                keys: vec![Felt::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
-                data: [2468].map(Felt::from).to_vec(),
+                data: [2468].map(Felt252::from).to_vec(),
             },
         ],
         [],
@@ -344,7 +348,7 @@ fn get_block_timestamp_syscall() {
 
 #[test]
 fn get_caller_address_syscall() {
-    let run = |caller_address: Felt| {
+    let run = |caller_address: Felt252| {
         test_contract(
             "starknet_programs/syscalls.json",
             "test_get_caller_address",
@@ -371,7 +375,7 @@ fn get_caller_address_syscall() {
 
 #[test]
 fn get_contract_address_syscall() {
-    let run = |contract_address: Felt| {
+    let run = |contract_address: Felt252| {
         test_contract(
             "starknet_programs/syscalls.json",
             "test_get_contract_address",
@@ -398,7 +402,7 @@ fn get_contract_address_syscall() {
 
 #[test]
 fn get_sequencer_address_syscall() {
-    let run = |sequencer_address: Felt| {
+    let run = |sequencer_address: Felt252| {
         let mut general_config = StarknetGeneralConfig::default();
         general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
 
@@ -431,8 +435,8 @@ fn get_tx_info_syscall() {
     let run = |version,
                account_contract_address: Address,
                max_fee,
-               signature: Vec<Felt>,
-               transaction_hash: Felt,
+               signature: Vec<Felt252>,
+               transaction_hash: Felt252,
                chain_id| {
         let mut general_config = StarknetGeneralConfig::default();
         *general_config.starknet_os_config_mut().chain_id_mut() = chain_id;
@@ -512,7 +516,7 @@ fn get_tx_info_syscall() {
         10,
         Address(1111.into()),
         50,
-        [0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec(),
+        [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         0.into(),
         StarknetChainId::TestNet,
     );
@@ -520,7 +524,7 @@ fn get_tx_info_syscall() {
         10,
         Address(1111.into()),
         50,
-        [0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec(),
+        [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
         StarknetChainId::TestNet,
     );
@@ -528,7 +532,7 @@ fn get_tx_info_syscall() {
         10,
         Address(1111.into()),
         50,
-        [0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec(),
+        [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
         StarknetChainId::TestNet2,
     );
@@ -536,7 +540,7 @@ fn get_tx_info_syscall() {
 
 #[test]
 fn get_tx_signature_syscall() {
-    let run = |signature: Vec<Felt>| {
+    let run = |signature: Vec<Felt252>| {
         let general_config = StarknetGeneralConfig::default();
         let n_steps = general_config.invoke_tx_max_n_steps();
 
@@ -574,8 +578,8 @@ fn get_tx_signature_syscall() {
     };
 
     run(vec![]);
-    run([0x12, 0x34, 0x56, 0x78].map(Felt::from).to_vec());
-    run([0x9A, 0xBC, 0xDE, 0xF0].map(Felt::from).to_vec());
+    run([0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec());
+    run([0x9A, 0xBC, 0xDE, 0xF0].map(Felt252::from).to_vec());
 }
 
 #[test]
@@ -707,17 +711,17 @@ fn send_message_to_l1_syscall() {
             OrderedL2ToL1Message {
                 order: 0,
                 to_address: Address(1111.into()),
-                payload: [1, 2, 3].map(Felt::from).to_vec(),
+                payload: [1, 2, 3].map(Felt252::from).to_vec(),
             },
             OrderedL2ToL1Message {
                 order: 1,
                 to_address: Address(1111.into()),
-                payload: [2, 4].map(Felt::from).to_vec(),
+                payload: [2, 4].map(Felt252::from).to_vec(),
             },
             OrderedL2ToL1Message {
                 order: 2,
                 to_address: Address(1111.into()),
-                payload: [3].map(Felt::from).to_vec(),
+                payload: [3].map(Felt252::from).to_vec(),
             },
         ],
         [],
@@ -753,7 +757,7 @@ fn deploy_syscall() {
             None,
         )]
         .into_iter(),
-        [Felt::from_bytes_be(deploy_class_hash.as_ref()), 0.into()],
+        [Felt252::from_bytes_be(deploy_class_hash.as_ref()), 0.into()],
         vec![CallInfo {
             caller_address: Address(0.into()),
             contract_address: Address(deploy_address.clone()),
@@ -769,7 +773,7 @@ fn deploy_syscall() {
 
 #[test]
 fn deploy_with_constructor_syscall() {
-    let deploy_address = Felt::from_str_radix(
+    let deploy_address = Felt252::from_str_radix(
         "61956907203782517318335437536462535199340115817938156158070235163997828534",
         10,
     )
@@ -795,7 +799,7 @@ fn deploy_with_constructor_syscall() {
         )]
         .into_iter(),
         [
-            Felt::from_bytes_be(deploy_class_hash.as_ref()),
+            Felt252::from_bytes_be(deploy_class_hash.as_ref()),
             0.into(),
             550.into(),
         ],
@@ -806,15 +810,15 @@ fn deploy_with_constructor_syscall() {
 
 #[test]
 fn test_deploy_and_call_contract_syscall() {
-    let constructor_constant = Felt::new(550);
-    let new_constant = Felt::new(3);
+    let constructor_constant = Felt252::new(550);
+    let new_constant = Felt252::new(3);
     let constant_storage_key: ClassHash = [
         2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27, 162, 147,
         169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
     ];
     let deploy_class_hash = [2u8; 32];
     let deploy_address = Address(
-        Felt::from_str_radix(
+        Felt252::from_str_radix(
             "61956907203782517318335437536462535199340115817938156158070235163997828534",
             10,
         )
@@ -839,7 +843,7 @@ fn test_deploy_and_call_contract_syscall() {
         )]
         .into_iter(),
         [
-            Felt::from_bytes_be(deploy_class_hash.as_ref()),
+            Felt252::from_bytes_be(deploy_class_hash.as_ref()),
             0.into(),
             constructor_constant.clone(),
             new_constant.clone(),
@@ -853,7 +857,7 @@ fn test_deploy_and_call_contract_syscall() {
             code_address: None,
             class_hash: Some(deploy_class_hash),
             entry_point_selector: Some(
-                Felt::from_str_radix(
+                Felt252::from_str_radix(
                     "1576037374104670872807053137865113122553607263175471701007015754752102201893",
                     10,
                 )
@@ -861,7 +865,7 @@ fn test_deploy_and_call_contract_syscall() {
             ),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![4.into()],
-            retdata: vec![(constructor_constant.clone() * Felt::new(4))],
+            retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
             storage_read_values: vec![constructor_constant],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
             ..Default::default()
@@ -874,7 +878,7 @@ fn test_deploy_and_call_contract_syscall() {
             code_address: None,
             class_hash: Some(deploy_class_hash),
             entry_point_selector: Some(
-                Felt::from_str_radix(
+                Felt252::from_str_radix(
                     "1201037417712951658445715615949920673423990292207294106968654696818998525373",
                     10,
                 )
@@ -895,7 +899,7 @@ fn test_deploy_and_call_contract_syscall() {
             code_address: None,
             class_hash: Some(deploy_class_hash),
             entry_point_selector: Some(
-                Felt::from_str_radix(
+                Felt252::from_str_radix(
                     "915547745133109687566886827729966789818200062539892992518817034473866315209",
                     10,
                 )

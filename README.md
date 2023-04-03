@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://starknet.io/wp-content/uploads/2021/11/favicon.png" width="150"/>
+<img src="./starknet_logo.svg" width="150"/>
 
 ### 🦀 StarkNet in Rust 🦀
 

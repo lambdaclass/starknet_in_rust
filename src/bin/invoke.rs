@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use felt::{felt_str, Felt};
+use felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_rs::{
@@ -33,9 +33,9 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref INCREASE_BALANCE_SELECTOR: Felt = felt_str!("1530486729947006463063166157847785599120665941190480211966374137237989315360");
+    static ref INCREASE_BALANCE_SELECTOR: Felt252 = felt_str!("1530486729947006463063166157847785599120665941190480211966374137237989315360");
 
-    static ref GET_BALANCE_SELECTOR: Felt = felt_str!("1636223440827086009537493065587328807418413867743950350615962740049133672085");
+    static ref GET_BALANCE_SELECTOR: Felt252 = felt_str!("1636223440827086009537493065587328807418413867743950350615962740049133672085");
 }
 
 fn main() {
@@ -51,7 +51,7 @@ fn main() {
         .state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
+        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
 
     for i in 0..RUNS {
         starknet_state
@@ -61,7 +61,7 @@ fn main() {
                 vec![1000.into()],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from(i * 2)),
+                Some(Felt252::from(i * 2)),
             )
             .unwrap();
 
@@ -72,7 +72,7 @@ fn main() {
                 vec![],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from((i * 2) + 1)),
+                Some(Felt252::from((i * 2) + 1)),
             )
             .unwrap();
 
@@ -93,14 +93,14 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
 
             state_reader
                 .address_to_nonce_mut()
-                .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
+                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
             state_reader
                 .class_hash_to_contract_class_mut()
                 .insert(CONTRACT_CLASS_HASH.clone(), CONTRACT_CLASS.clone());
 
             state_reader
                 .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt::zero());
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             state_reader
         },
         Some(HashMap::new()),

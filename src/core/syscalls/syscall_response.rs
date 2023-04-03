@@ -5,7 +5,7 @@ use super::syscall_request::{
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt;
+use felt::Felt252;
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -23,7 +23,7 @@ pub(crate) struct CallContractResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetCallerAddressResponse {
-    caller_address: Felt,
+    caller_address: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -67,13 +67,13 @@ pub(crate) struct GetTxInfoResponse {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageReadResponse {
-    value: Felt,
+    value: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeployResponse {
-    contract_address: Felt,
-    constructor_retdata_size: Felt,
+    contract_address: Felt252,
+    constructor_retdata_size: Felt252,
     constructor_retdata: Relocatable,
 }
 
@@ -117,7 +117,7 @@ impl GetContractAddressResponse {
 }
 
 impl StorageReadResponse {
-    pub fn new(value: Felt) -> Self {
+    pub fn new(value: Felt252) -> Self {
         StorageReadResponse { value }
     }
 }
@@ -129,8 +129,8 @@ impl GetBlockNumberResponse {
 }
 impl DeployResponse {
     pub(crate) fn new(
-        contract_address: Felt,
-        constructor_retdata_size: Felt,
+        contract_address: Felt252,
+        constructor_retdata_size: Felt252,
         constructor_retdata: Relocatable,
     ) -> Self {
         Self {
@@ -147,12 +147,12 @@ impl WriteSyscallResponse for CallContractResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value::<Felt>(
-            &(syscall_ptr + CallContractRequest::count_fields()),
+        vm.insert_value::<Felt252>(
+            (syscall_ptr + CallContractRequest::count_fields())?,
             self.retdata_size.into(),
         )?;
         vm.insert_value(
-            &(syscall_ptr + CallContractRequest::count_fields() + 1),
+            (syscall_ptr + (CallContractRequest::count_fields() + 1))?,
             self.retdata,
         )?;
         Ok(())
@@ -166,7 +166,7 @@ impl WriteSyscallResponse for GetCallerAddressResponse {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            &(syscall_ptr + GetCallerAddressRequest::count_fields()),
+            (syscall_ptr + GetCallerAddressRequest::count_fields())?,
             &self.caller_address,
         )?;
         Ok(())
@@ -179,8 +179,8 @@ impl WriteSyscallResponse for GetBlockTimestampResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value::<Felt>(
-            &(syscall_ptr + GetBlockTimestampRequest::count_fields()),
+        vm.insert_value::<Felt252>(
+            (syscall_ptr + GetBlockTimestampRequest::count_fields())?,
             self.block_timestamp.into(),
         )?;
         Ok(())
@@ -193,8 +193,8 @@ impl WriteSyscallResponse for GetSequencerAddressResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value::<Felt>(
-            &(syscall_ptr + GetSequencerAddressRequest::count_fields()),
+        vm.insert_value::<Felt252>(
+            (syscall_ptr + GetSequencerAddressRequest::count_fields())?,
             self.sequencer_address.0.clone(),
         )?;
         Ok(())
@@ -207,8 +207,8 @@ impl WriteSyscallResponse for GetBlockNumberResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value::<Felt>(
-            &(syscall_ptr + GetBlockNumberRequest::count_fields()),
+        vm.insert_value::<Felt252>(
+            (syscall_ptr + GetBlockNumberRequest::count_fields())?,
             self.block_number.into(),
         )?;
         Ok(())
@@ -221,8 +221,8 @@ impl WriteSyscallResponse for GetContractAddressResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value::<Felt>(
-            &(syscall_ptr + GetContractAddressRequest::count_fields()),
+        vm.insert_value::<Felt252>(
+            (syscall_ptr + GetContractAddressRequest::count_fields())?,
             self.contract_address.0.clone(),
         )?;
         Ok(())
@@ -234,12 +234,12 @@ impl WriteSyscallResponse for GetTxSignatureResponse {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        vm.insert_value::<Felt>(
-            &(syscall_ptr + GetTxSignatureRequest::count_fields()),
+        vm.insert_value::<Felt252>(
+            (syscall_ptr + GetTxSignatureRequest::count_fields())?,
             self.signature_len.into(),
         )?;
         vm.insert_value(
-            &(syscall_ptr + GetTxSignatureRequest::count_fields() + 1),
+            (syscall_ptr + (GetTxSignatureRequest::count_fields() + 1))?,
             self.signature,
         )?;
         Ok(())
@@ -253,7 +253,7 @@ impl WriteSyscallResponse for GetTxInfoResponse {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            &(syscall_ptr + GetTxInfoRequest::count_fields()),
+            (syscall_ptr + GetTxInfoRequest::count_fields())?,
             self.tx_info,
         )?;
         Ok(())
@@ -267,15 +267,15 @@ impl WriteSyscallResponse for DeployResponse {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            &(syscall_ptr + DeployRequestStruct::count_fields()),
+            (syscall_ptr + DeployRequestStruct::count_fields())?,
             self.contract_address.clone(),
         )?;
         vm.insert_value(
-            &(syscall_ptr + DeployRequestStruct::count_fields() + 1),
+            (syscall_ptr + (DeployRequestStruct::count_fields() + 1))?,
             self.constructor_retdata_size.clone(),
         )?;
         vm.insert_value(
-            &(syscall_ptr + DeployRequestStruct::count_fields() + 2),
+            (syscall_ptr + (DeployRequestStruct::count_fields() + 2))?,
             self.constructor_retdata,
         )?;
         Ok(())
@@ -289,7 +289,7 @@ impl WriteSyscallResponse for StorageReadResponse {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            &(syscall_ptr + StorageReadRequest::count_fields()),
+            (syscall_ptr + StorageReadRequest::count_fields())?,
             self.value.clone(),
         )?;
         Ok(())
@@ -306,7 +306,7 @@ mod tests {
             state::cached_state::CachedState,
         },
         core::syscalls::syscall_handler::SyscallHandler,
-        utils::test_utils::vm,
+        utils::{get_integer, test_utils::vm},
     };
     use cairo_rs::relocatable;
 
@@ -324,24 +324,18 @@ mod tests {
 
         add_segments!(vm, 2);
 
+        let caller_address = 3;
         let response = GetCallerAddressResponse {
-            caller_address: 3.into(),
+            caller_address: caller_address.into(),
         };
 
         assert!(syscall
-            ._write_syscall_response(&response, &mut vm, relocatable!(1, 0))
+            .write_syscall_response(&response, &mut vm, relocatable!(1, 0))
             .is_ok());
 
         // Check Vm inserts
-        // Since we can't access the vm.memory, these inserts should check the ._write_syscall_response inserts
-        // The ._write_syscall_response should insert the response.caller_address in the position (1,1)
-        // Because the vm memory is write once, trying to insert an 8 in that position should return an error
-        assert!(vm
-            .insert_value::<Felt>(&relocatable!(1, 1), 8.into())
-            .is_err());
-        // Inserting a 3 should be OK because is the value inserted by ._write_syscall_response
-        assert!(vm
-            .insert_value::<Felt>(&relocatable!(1, 1), 3.into())
-            .is_ok())
+        // The .write_syscall_response should insert the response.caller_address in the position (1,1)
+
+        assert_matches!(get_integer(&vm, relocatable!(1, 1)), Ok(x) if x == caller_address);
     }
 }

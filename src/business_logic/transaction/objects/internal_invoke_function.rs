@@ -25,7 +25,7 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
-use felt::Felt;
+use felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
@@ -33,28 +33,30 @@ use num_traits::Zero;
 pub struct InternalInvokeFunction {
     #[getset(get = "pub")]
     contract_address: Address,
-    entry_point_selector: Felt,
+    entry_point_selector: Felt252,
     #[allow(dead_code)]
     entry_point_type: EntryPointType,
-    calldata: Vec<Felt>,
+    calldata: Vec<Felt252>,
     tx_type: TransactionType,
     version: u64,
-    validate_entry_point_selector: Felt,
-    hash_value: Felt,
-    signature: Vec<Felt>,
+    validate_entry_point_selector: Felt252,
+    #[getset(get = "pub")]
+    hash_value: Felt252,
+    #[getset(get = "pub")]
+    signature: Vec<Felt252>,
     max_fee: u64,
-    nonce: Option<Felt>,
+    nonce: Option<Felt252>,
 }
 
 impl InternalInvokeFunction {
     pub fn new(
         contract_address: Address,
-        entry_point_selector: Felt,
+        entry_point_selector: Felt252,
         max_fee: u64,
-        calldata: Vec<Felt>,
-        signature: Vec<Felt>,
-        chain_id: Felt,
-        nonce: Option<Felt>,
+        calldata: Vec<Felt252>,
+        signature: Vec<Felt252>,
+        chain_id: Felt252,
+        nonce: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let version = TRANSACTION_VERSION;
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
@@ -313,10 +315,10 @@ pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Tr
 // Deduces and returns fields required for hash calculation of
 
 pub(crate) fn preprocess_invoke_function_fields(
-    entry_point_selector: Felt,
-    nonce: Option<Felt>,
+    entry_point_selector: Felt252,
+    nonce: Option<Felt252>,
     version: u64,
-) -> Result<(Felt, Vec<Felt>), TransactionError> {
+) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
     if version == 0 || version == u64::MAX {
         match nonce {
             Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
@@ -330,7 +332,7 @@ pub(crate) fn preprocess_invoke_function_fields(
         match nonce {
             Some(n) => {
                 let additional_data = vec![n];
-                let entry_point_selector_field = Felt::zero();
+                let entry_point_selector_field = Felt252::zero();
                 Ok((entry_point_selector_field, additional_data))
             }
             None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
@@ -355,7 +357,7 @@ mod tests {
     fn test_apply_specific_concurrent_changes() {
         let internal_invoke_function = InternalInvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt::from_str_radix(
+            entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
                 16,
             )
@@ -379,7 +381,7 @@ mod tests {
             ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
-        let nonce = Felt::zero();
+        let nonce = Felt252::zero();
 
         state_reader
             .address_to_class_hash_mut()
@@ -414,6 +416,6 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
     }
 }

@@ -12,7 +12,7 @@ use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
-use felt::Felt;
+use felt::Felt252;
 use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::{HashMap, HashSet};
@@ -34,14 +34,14 @@ pub struct CallInfo {
     pub contract_address: Address,
     pub code_address: Option<Address>,
     pub class_hash: Option<ClassHash>,
-    pub entry_point_selector: Option<Felt>,
+    pub entry_point_selector: Option<Felt252>,
     pub entry_point_type: Option<EntryPointType>,
-    pub calldata: Vec<Felt>,
-    pub retdata: Vec<Felt>,
+    pub calldata: Vec<Felt252>,
+    pub retdata: Vec<Felt252>,
     pub execution_resources: ExecutionResources,
     pub events: Vec<OrderedEvent>,
     pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub storage_read_values: Vec<Felt>,
+    pub storage_read_values: Vec<Felt252>,
     pub accessed_storage_keys: HashSet<ClassHash>,
     pub internal_calls: Vec<CallInfo>,
 }
@@ -53,7 +53,7 @@ impl CallInfo {
         class_hash: Option<ClassHash>,
         call_type: Option<CallType>,
         entry_point_type: Option<EntryPointType>,
-        entry_point_selector: Option<Felt>,
+        entry_point_selector: Option<Felt252>,
         code_address: Option<Address>,
     ) -> Self {
         CallInfo {
@@ -219,12 +219,12 @@ impl Default for CallInfo {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OrderedEvent {
     pub order: u64,
-    pub keys: Vec<Felt>,
-    pub data: Vec<Felt>,
+    pub keys: Vec<Felt252>,
+    pub data: Vec<Felt252>,
 }
 
 impl OrderedEvent {
-    pub fn new(order: u64, keys: Vec<Felt>, data: Vec<Felt>) -> Self {
+    pub fn new(order: u64, keys: Vec<Felt252>, data: Vec<Felt252>) -> Self {
         OrderedEvent { order, keys, data }
     }
 }
@@ -232,8 +232,8 @@ impl OrderedEvent {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Event {
     pub from_address: Address,
-    pub keys: Vec<Felt>,
-    pub data: Vec<Felt>,
+    pub keys: Vec<Felt252>,
+    pub data: Vec<Felt252>,
 }
 
 impl Event {
@@ -256,10 +256,10 @@ pub struct TransactionExecutionContext {
     pub(crate) version: u64,
     pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u64,
-    pub(crate) transaction_hash: Felt,
-    pub(crate) signature: Vec<Felt>,
+    pub(crate) transaction_hash: Felt252,
+    pub(crate) signature: Vec<Felt252>,
     #[get = "pub"]
-    pub(crate) nonce: Felt,
+    pub(crate) nonce: Felt252,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
 }
@@ -267,10 +267,10 @@ pub struct TransactionExecutionContext {
 impl TransactionExecutionContext {
     pub fn new(
         account_contract_address: Address,
-        transaction_hash: Felt,
-        signature: Vec<Felt>,
+        transaction_hash: Felt252,
+        signature: Vec<Felt252>,
         max_fee: u64,
-        nonce: Felt,
+        nonce: Felt252,
         n_steps: u64,
         version: u64,
     ) -> Self {
@@ -290,7 +290,7 @@ impl TransactionExecutionContext {
     pub fn create_for_testing(
         account_contract_address: Address,
         _max_fee: u64,
-        nonce: Felt,
+        nonce: Felt252,
         n_steps: u64,
         version: u64,
     ) -> Self {
@@ -299,7 +299,7 @@ impl TransactionExecutionContext {
             version,
             account_contract_address,
             max_fee: 0,
-            transaction_hash: Felt::zero(),
+            transaction_hash: Felt252::zero(),
             signature: Vec::new(),
             nonce,
             n_sent_messages: 0,
@@ -315,9 +315,9 @@ pub(crate) struct TxInfoStruct {
     pub(crate) max_fee: u64,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
-    pub(crate) transaction_hash: Felt,
-    pub(crate) chain_id: Felt,
-    pub(crate) nonce: Felt,
+    pub(crate) transaction_hash: Felt252,
+    pub(crate) chain_id: Felt252,
+    pub(crate) nonce: Felt252,
 }
 
 impl TxInfoStruct {
@@ -340,10 +340,10 @@ impl TxInfoStruct {
 
     pub(crate) fn to_vec(&self) -> Vec<MaybeRelocatable> {
         vec![
-            MaybeRelocatable::from(Felt::new(self.version)),
+            MaybeRelocatable::from(Felt252::new(self.version)),
             MaybeRelocatable::from(&self.account_contract_address.0),
-            MaybeRelocatable::from(Felt::new(self.max_fee)),
-            MaybeRelocatable::from(Felt::new(self.signature_len)),
+            MaybeRelocatable::from(Felt252::new(self.max_fee)),
+            MaybeRelocatable::from(Felt252::new(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),
             MaybeRelocatable::from(&self.chain_id),
@@ -355,17 +355,17 @@ impl TxInfoStruct {
         vm: &VirtualMachine,
         tx_info_ptr: Relocatable,
     ) -> Result<TxInfoStruct, SyscallHandlerError> {
-        let version = get_integer(vm, &tx_info_ptr)?;
+        let version = get_integer(vm, tx_info_ptr)?;
 
-        let account_contract_address = Address(get_big_int(vm, &(&tx_info_ptr + 1))?);
-        let max_fee = get_big_int(vm, &(&tx_info_ptr + 2))?
+        let account_contract_address = Address(get_big_int(vm, &tx_info_ptr + 1)?);
+        let max_fee = get_big_int(vm, &tx_info_ptr + 2)?
             .to_u64()
             .ok_or(SyscallHandlerError::FeltToU64Fail)?;
-        let signature_len = get_integer(vm, &(&tx_info_ptr + 3))?;
-        let signature = get_relocatable(vm, &(&tx_info_ptr + 4))?;
-        let transaction_hash = get_big_int(vm, &(&tx_info_ptr + 5))?;
-        let chain_id = get_big_int(vm, &(&tx_info_ptr + 6))?;
-        let nonce = get_big_int(vm, &(&tx_info_ptr + 7))?;
+        let signature_len = get_integer(vm, &tx_info_ptr + 3)?;
+        let signature = get_relocatable(vm, &tx_info_ptr + 4)?;
+        let transaction_hash = get_big_int(vm, &tx_info_ptr + 5)?;
+        let chain_id = get_big_int(vm, &tx_info_ptr + 6)?;
+        let nonce = get_big_int(vm, &tx_info_ptr + 7)?;
 
         Ok(TxInfoStruct {
             version,
@@ -518,11 +518,11 @@ impl TransactionExecutionInfo {
 pub struct OrderedL2ToL1Message {
     pub order: usize,
     pub to_address: Address,
-    pub payload: Vec<Felt>,
+    pub payload: Vec<Felt252>,
 }
 
 impl OrderedL2ToL1Message {
-    pub fn new(order: usize, to_address: Address, payload: Vec<Felt>) -> Self {
+    pub fn new(order: usize, to_address: Address, payload: Vec<Felt252>) -> Self {
         OrderedL2ToL1Message {
             order,
             to_address,
@@ -545,7 +545,7 @@ impl Default for OrderedL2ToL1Message {
 pub struct L2toL1MessageInfo {
     pub(crate) from_address: Address,
     pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt>,
+    pub(crate) payload: Vec<Felt252>,
 }
 
 impl L2toL1MessageInfo {

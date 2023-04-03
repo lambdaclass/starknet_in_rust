@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps deps-macos remove-venv test heaptrack	
+.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps test heaptrack check-python-version compile-abi
 
 
 OS := $(shell uname)
@@ -26,6 +26,7 @@ deps-venv:
 	pip install \
 		fastecdsa \
 		typeguard==2.13.0 \
+		openzeppelin-cairo-contracts==0.6.1 \
 		maturin \
 		cairo-lang==0.10.3
 
@@ -33,15 +34,21 @@ compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
 
 cairo_programs/%.json: cairo_programs/%.cairo
-	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json: starknet_programs/%.cairo
-	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
-
+	cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+# Compiles .cairo files into .json files. if the command fails, then it removes all of the .json files
 
 #
 # Normal rules.
 #
+
+compile-abi:
+	cd starknet_programs/ && starknet-compile fibonacci.cairo \
+		--output fibonacci_compiled.json \
+		--abi fibonacci_abi.json
+# This abi file is used for the `test_read_abi` test in contract_abi.rs
 
 build: compile-cairo compile-starknet
 	cargo build --release --all
@@ -49,12 +56,11 @@ build: compile-cairo compile-starknet
 check: compile-cairo compile-starknet
 	cargo check --all
 
-deps:
+deps: check-python-version 
 	cargo install cargo-tarpaulin --version 0.23.1
 	cargo install flamegraph --version 0.6.2
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-
 
 clean:
 	-rm -rf starknet-venv/
@@ -65,14 +71,13 @@ clean:
 clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet
+test: compile-cairo compile-starknet compile-abi
 	cargo test
 
 test-py: compile-cairo compile-starknet
-	. starknet-venv/bin/activate
-	cargo test -p starknet-rs-py --no-default-features --features embedded-python
+	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
-coverage: compile-cairo compile-starknet
+coverage: compile-cairo compile-starknet compile-abi
 	cargo tarpaulin
 	-rm -f default.profraw
 

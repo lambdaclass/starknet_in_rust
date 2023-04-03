@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use felt::{felt_str, Felt};
+use felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_rs::{
@@ -35,9 +35,9 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref INCREASE_BALANCE_SELECTOR: Felt = felt_str!("1530486729947006463063166157847785599120665941190480211966374137237989315360");
+    static ref INCREASE_BALANCE_SELECTOR: Felt252 = felt_str!("1530486729947006463063166157847785599120665941190480211966374137237989315360");
 
-    static ref GET_BALANCE_SELECTOR: Felt = felt_str!("1636223440827086009537493065587328807418413867743950350615962740049133672085");
+    static ref GET_BALANCE_SELECTOR: Felt252 = felt_str!("1636223440827086009537493065587328807418413867743950350615962740049133672085");
 }
 
 fn main() {
@@ -47,7 +47,7 @@ fn main() {
     cached_state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
+        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
 
     let general_config = new_starknet_general_config_for_testing();
 
@@ -59,7 +59,7 @@ fn main() {
             vec![1000.into()],
             vec![],
             StarknetChainId::TestNet.to_felt(),
-            Some(Felt::from(i * 2)),
+            Some(Felt252::from(i * 2)),
         )
         .unwrap()
         .execute(&mut cached_state, &general_config)
@@ -72,7 +72,7 @@ fn main() {
             vec![],
             vec![],
             StarknetChainId::TestNet.to_felt(),
-            Some(Felt::from((i * 2) + 1)),
+            Some(Felt252::from((i * 2) + 1)),
         )
         .unwrap()
         .execute(&mut cached_state, &general_config)
@@ -95,14 +95,14 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
 
             state_reader
                 .address_to_nonce_mut()
-                .insert(CONTRACT_ADDRESS.clone(), Felt::zero());
+                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
             state_reader
                 .class_hash_to_contract_class_mut()
                 .insert(CONTRACT_CLASS_HASH.clone(), CONTRACT_CLASS.clone());
 
             state_reader
                 .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt::zero());
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             state_reader
         },
         Some(HashMap::new()),
@@ -113,7 +113,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
 
 pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
     StarknetGeneralConfig::new(
-        StarknetOsConfig::new(StarknetChainId::TestNet, Address(Felt::zero()), 0),
+        StarknetOsConfig::new(StarknetChainId::TestNet, Address(Felt252::zero()), 0),
         0,
         0,
         Default::default(),
