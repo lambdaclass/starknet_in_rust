@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn deserialize_contract_class() {
-        let serialized = include_str!("example_class.json");
+        let serialized = include_str!("../../../tests/test_data/example_class.json");
 
         let _: Result<ContractClass, _> = serde_json::from_str(serialized);
 

@@ -11,8 +11,7 @@ use starknet_rs::business_logic::state::state_api::State;
 use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
 use starknet_rs::utils::{felt_to_hash, Address, ClassHash};
 
-#[pyclass]
-#[pyo3(name = "StarknetState")]
+#[pyclass(name = "StarknetState")]
 pub struct PyStarknetState {
     inner: InnerStarknetState,
 }

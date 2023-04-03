@@ -69,3 +69,26 @@ impl<'a> From<&'a PyContractClass> for &'a ContractClass {
         &class.inner
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pyo3::PyTypeInfo;
+
+    use super::*;
+
+    #[test]
+    fn load_contract_smoke_test() {
+        Python::with_gil(|py| {
+            let cls = PyContractClass::type_object(py);
+            let dict = include_str!("../../../../tests/test_data/example_class.json");
+            let data = py
+                .eval(dict, None, None)
+                .and_then(PyAny::extract)
+                .expect("should eval to PyDict");
+
+            let contract_class = PyContractClass::load(cls, data, py);
+
+            assert!(contract_class.is_ok());
+        });
+    }
+}
