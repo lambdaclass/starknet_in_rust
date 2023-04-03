@@ -111,7 +111,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
     ) -> Result<Relocatable, SyscallHandlerError>;
 
-    fn _deploy(
+    fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -122,7 +122,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let contract_address = self._deploy(vm, syscall_ptr)?;
+        let contract_address = self.syscall_deploy(vm, syscall_ptr)?;
 
         let response = DeployResponse::new(
             contract_address.0,

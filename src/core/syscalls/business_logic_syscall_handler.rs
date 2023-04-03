@@ -286,7 +286,7 @@ where
         Ok(segment_start)
     }
 
-    fn _deploy(
+    fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -648,7 +648,7 @@ mod tests {
         );
 
         assert_matches!(
-            syscall._deploy(&vm, relocatable!(1, 0)),
+            syscall.syscall_deploy(&vm, relocatable!(1, 0)),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
     }
