@@ -2,14 +2,12 @@ use super::contract_entry_point::PyContractEntryPoint;
 use pyo3::{
     exceptions::PyRuntimeError,
     prelude::*,
-    types::{PyDict, PyType},
+    types::{IntoPyDict, PyDict, PyType},
 };
 use starknet_rs::services::api::contract_class::{ContractClass, EntryPointType};
 use std::collections::HashMap;
 
 type PyEntryPointType = i32;
-
-const _CODE: &str = "json.dumps(data)";
 
 #[pyclass(name = "ContractClass")]
 #[derive(Debug, Clone)]
@@ -43,18 +41,16 @@ impl PyContractClass {
     }
 
     #[classmethod]
-    fn load(_cls: &PyType, _data: &PyDict, _py: Python) -> PyResult<Self> {
+    fn load(cls: &PyType, data: &PyDict, py: Python) -> PyResult<Self> {
         // TODO:
         //   1. fix ContractClass deserialization
         //   2. parse PyDict directly to avoid having to serialize
 
-        // let json = PyModule::import(py, "json")?;
-        // let data: &PyAny = data.into();
-        // let dict = [("data", data), ("json", json.into())].into_py_dict(py);
-        // let s: &str = py.eval(CODE, None, Some(dict))?.extract()?;
-        // Self::loads(cls, &s)
-        let inner = ContractClass::new(Default::default(), Default::default(), None).unwrap();
-        Ok(PyContractClass { inner })
+        let json = PyModule::import(py, "json")?;
+        let data: &PyAny = data.into();
+        let dict = [("data", data), ("json", json.into())].into_py_dict(py);
+        let s: &str = py.eval("json.dumps(data)", None, Some(dict))?.extract()?;
+        Self::loads(cls, s)
     }
 
     #[classmethod]
