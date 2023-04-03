@@ -23,6 +23,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
+    starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use felt::Felt252;
@@ -196,7 +197,9 @@ impl InternalDeployAccount {
         match num_constructors {
             0 => {
                 if !self.constructor_calldata.is_empty() {
-                    todo!()
+                    return Err(TransactionError::Starkware(
+                        StarkwareError::TransactionFailed,
+                    ));
                 }
 
                 Ok(CallInfo::empty_constructor_call(
