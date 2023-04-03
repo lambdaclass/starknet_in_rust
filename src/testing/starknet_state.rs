@@ -194,7 +194,7 @@ impl StarknetState {
 
     pub fn add_messages_and_events(
         &mut self,
-        events: &Vec<Event>,
+        events: &[Event],
         l2_to_l1_messages: &Vec<L2toL1MessageInfo>,
     ) -> Result<(), StarknetStateError> {
         for msg in l2_to_l1_messages {
@@ -215,7 +215,7 @@ impl StarknetState {
             }
         }
 
-        let mut events = events.clone();
+        let mut events = events.to_owned();
         self.events.append(&mut events);
         Ok(())
     }
