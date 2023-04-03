@@ -486,7 +486,8 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_invoke_max_fee_non_zero_should_fail() {
+    // Test fee calculation is done correctly but payment to sequencer fails due to been WIP.
+    fn test_execute_invoke_fee_payment_to_sequencer_should_fail() {
         let internal_invoke_function = InternalInvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
@@ -531,14 +532,17 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
+        let mut config = StarknetGeneralConfig::default();
+        config.cairo_resource_fee_weights = HashMap::from([
+            (String::from("l1_gas_usage"), 0.into()),
+            (String::from("pedersen_builtin"), 16.into()),
+            (String::from("range_check_builtin"), 70.into()),
+        ]);
+
+        let expected_error = internal_invoke_function.execute(&mut state, &config);
 
         assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::ResourcesError
-        );
+        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(_));
     }
 
     #[test]
