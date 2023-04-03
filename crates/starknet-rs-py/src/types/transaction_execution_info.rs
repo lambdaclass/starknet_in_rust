@@ -3,8 +3,7 @@ use pyo3::prelude::*;
 use starknet_rs::business_logic::execution::objects::TransactionExecutionInfo;
 use std::collections::HashMap;
 
-#[pyclass]
-#[pyo3(name = "TransactionExecutionInfo")]
+#[pyclass(name = "TransactionExecutionInfo")]
 #[derive(Debug)]
 pub struct PyTransactionExecutionInfo {
     inner: TransactionExecutionInfo,

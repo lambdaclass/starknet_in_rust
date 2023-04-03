@@ -20,8 +20,7 @@ use starknet_rs::{
 };
 use std::collections::HashMap;
 
-#[pyclass]
-#[pyo3(name = "StarknetGeneralConfig")]
+#[pyclass(name = "StarknetGeneralConfig")]
 #[derive(Debug, Default, Clone)]
 pub struct PyStarknetGeneralConfig {
     pub(crate) inner: StarknetGeneralConfig,
@@ -119,8 +118,7 @@ impl<'a> From<&'a PyStarknetGeneralConfig> for &'a StarknetGeneralConfig {
     }
 }
 
-#[pyclass]
-#[pyo3(name = "StarknetOsConfig")]
+#[pyclass(name = "StarknetOsConfig")]
 #[derive(Debug, Clone, Default)]
 pub struct PyStarknetOsConfig {
     inner: StarknetOsConfig,

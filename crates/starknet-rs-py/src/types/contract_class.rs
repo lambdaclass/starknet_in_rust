@@ -11,8 +11,7 @@ type PyEntryPointType = i32;
 
 const _CODE: &str = "json.dumps(data)";
 
-#[pyclass]
-#[pyo3(name = "ContractClass")]
+#[pyclass(name = "ContractClass")]
 #[derive(Debug, Clone)]
 pub struct PyContractClass {
     pub(crate) inner: ContractClass,

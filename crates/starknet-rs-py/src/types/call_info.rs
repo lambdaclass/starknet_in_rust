@@ -10,8 +10,7 @@ use starknet_rs::{
     services::api::contract_class::EntryPointType,
 };
 
-#[pyclass]
-#[pyo3(name = "CallInfo")]
+#[pyclass(name = "CallInfo")]
 #[derive(Debug)]
 pub struct PyCallInfo {
     inner: CallInfo,

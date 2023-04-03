@@ -6,8 +6,7 @@ use starknet_rs::{
     utils::Address,
 };
 
-#[pyclass]
-#[pyo3(name = "BlockInfo")]
+#[pyclass(name = "BlockInfo")]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PyBlockInfo {
     inner: BlockInfo,
