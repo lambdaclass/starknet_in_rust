@@ -430,4 +430,36 @@ mod tests {
             TransactionError::State(StateError::ContractAddressUnavailable(..))
         )
     }
+
+    #[test]
+    #[should_panic]
+    // Should panic at no calldata for constructor. Error managment not implemented yet.
+    fn deploy_account_constructor_should_fail() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            Vec::new(),
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let class_hash = internal_deploy.class_hash();
+        state.set_contract_class(class_hash, &contract).unwrap();
+        internal_deploy
+            .execute(&mut state, &general_config)
+            .unwrap();
+    }
 }
