@@ -1,6 +1,5 @@
 use super::{
     hint_code::*,
-    os_syscall_handler::OsSyscallHandler,
     other_syscalls,
     syscall_request::*,
     syscall_response::{
@@ -383,15 +382,6 @@ where
         }
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub fn new_empty_os() -> Result<SyscallHintProcessor<OsSyscallHandler>, SyscallHandlerError> {
-        Ok(SyscallHintProcessor {
-            builtin_hint_processor: BuiltinHintProcessor::new_empty(),
-            syscall_handler: OsSyscallHandler::default(),
-        })
-    }
-
     pub fn should_run_syscall_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -552,7 +542,6 @@ mod tests {
             },
             transaction::objects::internal_invoke_function::InternalInvokeFunction,
         },
-        core::syscalls::os_syscall_handler::OsSyscallHandler,
         definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         memory_insert,
         services::api::contract_class::{ContractClass, EntryPointType},
@@ -563,7 +552,7 @@ mod tests {
     };
     use cairo_rs::relocatable;
     use num_traits::Num;
-    use std::{collections::VecDeque, path::PathBuf};
+    use std::path::PathBuf;
 
     type BusinessLogicSyscallHandler<'a> =
         crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
@@ -914,46 +903,6 @@ mod tests {
     }
 
     #[test]
-    fn get_tx_info_for_os_syscall_test() {
-        let mut vm = vm!();
-        add_segments!(vm, 3);
-
-        // insert data to form the request
-        memory_insert!(
-            vm,
-            [
-                ((1, 0), (2, 0)), //  syscall_ptr
-                ((2, 0), 8)       //  GetTxInfoRequest.selector
-            ]
-        );
-
-        // syscall_ptr
-        let ids_data = ids_data!["syscall_ptr"];
-
-        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
-        // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
-
-        syscall_handler_hint_processor.syscall_handler.tx_info_ptr = Some(relocatable!(18, 12));
-
-        let result = syscall_handler_hint_processor.execute_hint(
-            &mut vm,
-            &mut ExecutionScopes::new(),
-            &any_box!(hint_data),
-            &HashMap::new(),
-        );
-
-        assert_matches!(result, Ok(()));
-
-        // Check VM inserts
-        // GetTxInfoResponse
-        assert_matches!(
-            vm.get_relocatable(relocatable!(2, 1)),
-            Ok(relocatable!(18, 12))
-        );
-    }
-
-    #[test]
     fn test_get_caller_address_ok() {
         let mut vm = vm!();
 
@@ -1292,63 +1241,6 @@ mod tests {
             .read(&felt_to_hash(&address));
 
         assert_eq!(write, Ok(&Felt252::new(45)));
-    }
-
-    #[test]
-    fn test_os_storage_read_hint_ok() {
-        let mut vm = vm!();
-        add_segments!(vm, 3);
-
-        // insert data to form the request
-        memory_insert!(
-            vm,
-            [
-                ((1, 0), (2, 0)), //  syscall_ptr
-                ((2, 0), 10),     //  StorageReadRequest.selector
-                ((2, 1), 11)      //  StorageReadRequest.address
-            ]
-        );
-
-        // syscall_ptr
-        let ids_data = ids_data!["syscall_ptr"];
-
-        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
-        // invoke syscall
-        let mut syscall_handler_hint_processor = SyscallHintProcessor::new_empty_os().unwrap();
-
-        let execute_code_read_operation: VecDeque<Felt252> =
-            VecDeque::from([5.into(), 4.into(), 3.into(), 2.into(), 1.into()]);
-        syscall_handler_hint_processor.syscall_handler = OsSyscallHandler::new(
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            VecDeque::new(),
-            execute_code_read_operation.clone(),
-            HashMap::new(),
-            Some(Relocatable {
-                segment_index: 0,
-                offset: 0,
-            }),
-            None,
-            BlockInfo::default(),
-        );
-
-        let result = syscall_handler_hint_processor.execute_hint(
-            &mut vm,
-            &mut ExecutionScopes::new(),
-            &any_box!(hint_data),
-            &HashMap::new(),
-        );
-
-        assert_matches!(result, Ok(()));
-
-        // Check VM inserts
-        // StorageReadResponse
-        assert_matches!(
-            get_big_int(&vm, relocatable!(2, 2)),
-            Ok(response) if response == execute_code_read_operation.get(0).unwrap().clone()
-        );
     }
 
     #[test]
