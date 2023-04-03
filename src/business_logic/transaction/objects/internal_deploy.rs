@@ -25,6 +25,7 @@ use crate::{
 use felt::Felt252;
 use num_traits::Zero;
 
+#[derive(Debug)]
 pub struct InternalDeploy {
     pub hash_value: Felt252,
     pub version: u64,
@@ -208,7 +209,9 @@ impl InternalDeploy {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{collections::HashMap, path::PathBuf};
+
+    use cairo_rs::types::program::Program;
 
     use super::*;
     use crate::{
@@ -261,5 +264,19 @@ mod tests {
                 .unwrap(),
             &Felt252::from(10)
         );
+    }
+
+    #[test]
+    fn new_should_fail_with_error_computing_hash() {
+        let result = InternalDeploy::new(
+            Address(0.into()),
+            ContractClass::new(Program::default(), HashMap::new(), None).unwrap(),
+            vec![],
+            0.into(),
+            0,
+        )
+        .unwrap_err();
+
+        assert_matches!(result, SyscallHandlerError::ErrorComputingHash);
     }
 }
