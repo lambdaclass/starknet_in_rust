@@ -34,10 +34,10 @@ compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
 
 cairo_programs/%.json: cairo_programs/%.cairo
-	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json: starknet_programs/%.cairo
-	cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 # Compiles .cairo files into .json files. if the command fails, then it removes all of the .json files
 
 #
@@ -45,7 +45,7 @@ starknet_programs/%.json: starknet_programs/%.cairo
 #
 
 compile-abi:
-	cd starknet_programs/ && starknet-compile fibonacci.cairo \
+	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile fibonacci.cairo \
 		--output fibonacci_compiled.json \
 		--abi fibonacci_abi.json
 # This abi file is used for the `test_read_abi` test in contract_abi.rs
