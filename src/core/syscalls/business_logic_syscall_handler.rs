@@ -343,7 +343,7 @@ where
         Ok(deploy_contract_address)
     }
 
-    fn _call_contract(
+    fn syscall_call_contract(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
@@ -421,7 +421,7 @@ where
         &self.general_config.block_info
     }
 
-    fn _get_caller_address(
+    fn syscall_get_caller_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -434,7 +434,7 @@ where
         Ok(self.caller_address.clone())
     }
 
-    fn _get_contract_address(
+    fn syscall_get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -473,7 +473,7 @@ where
         Ok(())
     }
 
-    fn _get_tx_info_ptr(
+    fn syscall_get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
     ) -> Result<Relocatable, SyscallHandlerError> {
@@ -504,7 +504,7 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("library_call", vm, syscall_ptr)
+        self.call_contract_and_write_response("library_call", vm, syscall_ptr)
     }
 
     fn library_call_l1_handler(
@@ -512,7 +512,7 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
+        self.call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
     }
 
     fn call_contract(
@@ -520,17 +520,17 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("call_contract", vm, syscall_ptr)
+        self.call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
-    fn _storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
+    fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
             .read(&felt_to_hash(&address.0))
             .cloned()?)
     }
 
-    fn _storage_write(
+    fn syscall_storage_write(
         &mut self,
         address: Address,
         value: Felt252,
@@ -701,7 +701,7 @@ mod tests {
             .unwrap();
 
         assert_matches!(
-            syscall._get_contract_address(&vm, relocatable!(1, 0)),
+            syscall.syscall_get_contract_address(&vm, relocatable!(1, 0)),
             Ok(contract_address) if contract_address == syscall.contract_address
         )
     }
@@ -712,7 +712,7 @@ mod tests {
         let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
 
         assert_matches!(
-            syscall_handler._storage_read(Address(Felt252::zero())),
+            syscall_handler.syscall_storage_read(Address(Felt252::zero())),
             Ok(value) if value == Felt252::zero()
         );
     }

@@ -69,6 +69,13 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError>;
 
+    fn syscall_call_contract(
+        &mut self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<Vec<Felt252>, SyscallHandlerError>;
+
     fn storage_read(
         &mut self,
         vm: &mut VirtualMachine,
@@ -82,11 +89,13 @@ pub(crate) trait SyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
         };
 
-        let value = self._storage_read(request.address)?;
+        let value = self.syscall_storage_read(request.address)?;
         let response = StorageReadResponse::new(value);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError>;
 
     fn storage_write(
         &mut self,
@@ -101,15 +110,16 @@ pub(crate) trait SyscallHandler {
             return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
         };
 
-        self._storage_write(request.address, request.value)?;
+        self.syscall_storage_write(request.address, request.value)?;
 
         Ok(())
     }
 
-    fn _get_tx_info_ptr(
+    fn syscall_storage_write(
         &mut self,
-        vm: &mut VirtualMachine,
-    ) -> Result<Relocatable, SyscallHandlerError>;
+        address: Address,
+        value: Felt252,
+    ) -> Result<(), SyscallHandlerError>;
 
     fn syscall_deploy(
         &mut self,
@@ -145,13 +155,13 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
     // Executes the contract call and fills the CallContractResponse struct.
-    fn _call_contract_and_write_response(
+    fn call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let retdata = self._call_contract(syscall_name, vm, syscall_ptr)?;
+        let retdata = self.syscall_call_contract(syscall_name, vm, syscall_ptr)?;
 
         let retdata_maybe_reloc = retdata
             .clone()
@@ -164,35 +174,8 @@ pub(crate) trait SyscallHandler {
             self.allocate_segment(vm, retdata_maybe_reloc)?,
         );
 
-        self._write_syscall_response(&response, vm, syscall_ptr)
+        self.write_syscall_response(&response, vm, syscall_ptr)
     }
-
-    fn _call_contract(
-        &mut self,
-        syscall_name: &str,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<Vec<Felt252>, SyscallHandlerError>;
-
-    fn _get_caller_address(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<Address, SyscallHandlerError>;
-
-    fn _get_contract_address(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<Address, SyscallHandlerError>;
-
-    fn _storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError>;
-
-    fn _storage_write(
-        &mut self,
-        address: Address,
-        value: Felt252,
-    ) -> Result<(), SyscallHandlerError>;
 
     fn allocate_segment(
         &mut self,
@@ -200,7 +183,7 @@ pub(crate) trait SyscallHandler {
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
 
-    fn _write_syscall_response<T: WriteSyscallResponse>(
+    fn write_syscall_response<T: WriteSyscallResponse>(
         &self,
         response: &T,
         vm: &mut VirtualMachine,
@@ -238,11 +221,16 @@ pub(crate) trait SyscallHandler {
                 _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
             };
 
-        let tx_info = self._get_tx_info_ptr(vm)?;
+        let tx_info = self.syscall_get_tx_info_ptr(vm)?;
 
         let response = GetTxInfoResponse::new(tx_info);
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_get_tx_info_ptr(
+        &mut self,
+        vm: &mut VirtualMachine,
+    ) -> Result<Relocatable, SyscallHandlerError>;
 
     fn get_tx_signature(
         &mut self,
@@ -254,7 +242,7 @@ pub(crate) trait SyscallHandler {
             _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
         }
 
-        let tx_info_pr = self._get_tx_info_ptr(vm)?;
+        let tx_info_pr = self.syscall_get_tx_info_ptr(vm)?;
         let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
         let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
 
@@ -286,20 +274,32 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let caller_address = self._get_caller_address(vm, syscall_ptr)?;
+        let caller_address = self.syscall_get_caller_address(vm, syscall_ptr)?;
         let response = GetCallerAddressResponse::new(caller_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_get_caller_address(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn get_contract_address(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let contract_address = self._get_contract_address(vm, syscall_ptr)?;
+        let contract_address = self.syscall_get_contract_address(vm, syscall_ptr)?;
         let response = GetContractAddressResponse::new(contract_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
+
+    fn syscall_get_contract_address(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<Address, SyscallHandlerError>;
 
     fn get_sequencer_address(
         &mut self,
