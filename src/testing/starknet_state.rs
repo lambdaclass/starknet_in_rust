@@ -3,7 +3,7 @@ use crate::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, Event, TransactionExecutionContext, TransactionExecutionInfo},
+            objects::{CallInfo, Event, TransactionExecutionContext, TransactionExecutionInfo, OrderedL2ToL1Message, L2toL1MessageInfo},
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
@@ -149,8 +149,7 @@ impl StarknetState {
             &tx_execution_context,
         )?;
 
-        let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));
-        self.add_messages_and_events(&exec_info)?;
+        self.add_messages_and_events(&call_info.get_sorted_events()?, &call_info.get_sorted_l2_to_l1_messages()?)?;
 
         Ok(call_info)
     }
@@ -189,20 +188,20 @@ impl StarknetState {
         &mut self,
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
-        self.state = self.state.apply_to_copy();
+        // self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
-        let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
-        self.add_messages_and_events(&tx_execution_info)?;
+        self.add_messages_and_events(&tx.get_sorted_events()?, &tx.get_sorted_l2_to_l1_messages()?)?;
         Ok(tx)
     }
 
     pub fn add_messages_and_events(
         &mut self,
-        exec_info: &ExecutionInfo,
+        events: &Vec<Event>,
+        l2_to_l1_messages: &Vec<L2toL1MessageInfo>
     ) -> Result<(), StarknetStateError> {
-        for msg in exec_info.get_sorted_l2_to_l1_messages()? {
+        for msg in l2_to_l1_messages {
             let starknet_message =
-                StarknetMessageToL1::new(msg.from_address, msg.to_address, msg.payload);
+                StarknetMessageToL1::new(msg.from_address.clone(), msg.to_address.clone(), msg.payload.clone());
 
             self.l2_to_l1_messages_log.push(starknet_message.clone());
             let message_hash = starknet_message.get_hash();
@@ -215,7 +214,7 @@ impl StarknetState {
             }
         }
 
-        let mut events = exec_info.get_sorted_events()?;
+        let mut events = events.clone();
         self.events.append(&mut events);
         Ok(())
     }
