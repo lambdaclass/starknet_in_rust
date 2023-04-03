@@ -279,4 +279,25 @@ mod tests {
 
         assert_matches!(result, SyscallHandlerError::ErrorComputingHash);
     }
+
+    #[test]
+    fn handle_empty_constructor_should_fail_when_call_data_is_not_empty() {
+        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeploy {
+            hash_value: 0.into(),
+            version: 0,
+            contract_address: Address(1.into()),
+            contract_address_salt: Address(0.into()),
+            contract_hash: [1; 32],
+            constructor_calldata: vec![10.into()],
+            tx_type: TransactionType::Deploy,
+        };
+
+        let result = internal_deploy
+            .handle_empty_constructor(&mut state)
+            .unwrap_err();
+
+        assert_matches!(result, StarkwareError::TransactionFailed);
+    }
 }
