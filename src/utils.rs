@@ -467,7 +467,7 @@ pub mod test_utils {
 mod test {
     use super::*;
     use felt::{felt_str, Felt252};
-    use num_traits::{One, Zero};
+    use num_traits::{Bounded, One, Zero};
     use std::collections::HashMap;
 
     #[test]
@@ -602,29 +602,28 @@ mod test {
             ],
         );
     }
-    /*
+
     #[test]
     fn test_felt_to_field_element() {
-     // test with a negative number
-     let w = Felt252::new(-10);
-     let w_bytes = w.to_bytes_be();
-     let v = FieldElement::from_bytes_be(w_bytes);
+        // test with a negative number
+        let w = Felt252::new(-10);
+        let w_bytes = w.to_be_bytes();
+        let v = FieldElement::from_bytes_be(&w_bytes).unwrap();
 
-     assert_eq!(felt_to_field_element(&w).unwrap(), v); // TODO waiting for this PR to be merged https://github.com/lambdaclass/cairo-rs/pull/927
+        assert_eq!(felt_to_field_element(&w).unwrap(), v);
 
-     // test with zero
-     let x = Felt252::zero();
-     assert_eq!(felt_to_field_element(&x).unwrap(), FieldElement::ZERO);
+        // test with zero
+        let x = Felt252::zero();
+        assert_eq!(felt_to_field_element(&x).unwrap(), FieldElement::ZERO);
 
-     // test with 1
-     let y = Felt252::new(1);
-     assert_eq!(felt_to_field_element(&y).unwrap(), FieldElement::ONE);
+        // test with 1
+        let y = Felt252::new(1);
+        assert_eq!(felt_to_field_element(&y).unwrap(), FieldElement::ONE);
 
-     // test with the largest possible number
-     let z = Felt252::max_value();
-     assert_eq!(felt_to_field_element(&z).unwrap(), FieldElement::MAX);
+        // test with the largest possible number
+        let z = Felt252::max_value();
+        assert_eq!(felt_to_field_element(&z).unwrap(), FieldElement::MAX);
     }
-     */
 
     #[test]
     fn test_get_keys() {

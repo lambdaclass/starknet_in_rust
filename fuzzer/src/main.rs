@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate honggfuzz;
 
-use cairo_felt::Felt252;
+use felt::Felt252;
 use num_traits::Zero;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use starknet_rs::{
