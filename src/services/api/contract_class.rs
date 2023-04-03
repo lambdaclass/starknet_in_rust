@@ -244,16 +244,9 @@ mod tests {
 
     #[test]
     fn deserialize_contract_class() {
-        // let serialized = include_str!("example_class.json");
+        let serialized = include_str!("example_class.json");
 
-        // This fails:
-        // let _: ContractClass = serde_json::from_str(serialized).unwrap();
-
-        dbg!(serde_json::to_string(&EntryPointType::External).unwrap());
-        dbg!(serde_json::to_string(&EntryPointType::Constructor).unwrap());
-        dbg!(serde_json::to_string(&EntryPointType::L1Handler).unwrap());
-
-        assert!(false);
+        let _: Result<ContractClass, _> = serde_json::from_str(serialized);
 
         // assert!(res.is_ok());
     }
