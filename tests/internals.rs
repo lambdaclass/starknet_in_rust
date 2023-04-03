@@ -117,8 +117,8 @@ fn create_account_tx_test_state(
     let general_config = new_starknet_general_config_for_testing();
 
     let test_contract_class_hash = TEST_CLASS_HASH.clone().to_be_bytes();
-    let test_account_contract_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes().clone();
-    let test_erc20_class_hash = TEST_ERC20_CONTRACT_CLASS_HASH.to_be_bytes().clone();
+    let test_account_contract_class_hash = TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes();
+    let test_erc20_class_hash = TEST_ERC20_CONTRACT_CLASS_HASH.to_be_bytes();
     let class_hash_to_class = HashMap::from([
         (
             test_account_contract_class_hash,
