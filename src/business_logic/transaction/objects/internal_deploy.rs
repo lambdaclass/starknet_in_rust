@@ -25,6 +25,7 @@ use crate::{
 use felt::Felt252;
 use num_traits::Zero;
 
+#[derive(Debug)]
 pub struct InternalDeploy {
     pub(crate) hash_value: Felt252,
     pub(crate) version: u64,
@@ -219,20 +220,6 @@ mod tests {
         utils::calculate_sn_keccak,
     };
 
-    //make Debug trait available for InternalDeploy
-    impl std::fmt::Debug for InternalDeploy {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("InternalDeploy")
-                .field("hash_value", &self.hash_value)
-                .field("version", &self.version)
-                .field("contract_address", &self.contract_address)
-                .field("_contract_address_salt", &self._contract_address_salt)
-                .field("contract_hash", &self.contract_hash)
-                .field("constructor_calldata", &self.constructor_calldata)
-                .field("tx_type", &self.tx_type)
-                .finish()
-        }
-    }
     #[test]
     fn invoke_constructor_test() {
         // Instantiate CachedState
