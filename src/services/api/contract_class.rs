@@ -12,10 +12,13 @@ use cairo_rs::{
 };
 use felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
-use serde::{Deserialize, Serialize};
+use num_traits::Num;
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize};
 use starknet_api::state::EntryPoint;
 use std::{
     collections::HashMap,
+    fmt::Display,
     fs::File,
     io::{self, BufReader},
     path::PathBuf,
@@ -42,8 +45,10 @@ pub enum EntryPointType {
 )]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
+    #[serde(deserialize_with = "from_str_radix")]
     pub(crate) selector: Felt252,
     #[getset(get_copy = "pub")]
+    #[serde(deserialize_with = "from_str_radix")]
     pub(crate) offset: usize,
 }
 
@@ -238,9 +243,34 @@ fn to_cairo_runner_program(
     })
 }
 
+// Deserializes using from_str_radix. If the string starts with '0x'
+// it treats it as hexadecimal, else as decimal.
+fn from_str_radix<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Num,
+    T::FromStrRadixErr: Display,
+{
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    if s.starts_with("0x") {
+        T::from_str_radix(&s[2..], 16).map_err(D::Error::custom)
+    } else {
+        T::from_str_radix(s, 10).map_err(D::Error::custom)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deserialize_contract_entry_point() {
+        let serialized = r#"{"offset": "0x16e", "selector": "0x28ffe4ff0f226a9107253e17a904099aa4f63a02a5621de0576e5aa71bc5194"}"#;
+
+        let _: ContractEntryPoint = serde_json::from_str(serialized).unwrap();
+
+        // assert!(res.is_ok());
+    }
 
     #[test]
     fn deserialize_contract_class() {
