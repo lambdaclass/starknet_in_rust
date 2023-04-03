@@ -626,6 +626,32 @@ mod test {
     }
 
     #[test]
+    fn test_field_element_to_felt() {
+        // test with a negative number
+        let w = Felt252::new(-10);
+        let w_bytes = w.to_be_bytes();
+        let v = FieldElement::from_bytes_be(&w_bytes).unwrap();
+
+        assert_eq!(field_element_to_felt(&v), w);
+
+        // test with zero
+        assert_eq!(field_element_to_felt(&FieldElement::ZERO), Felt252::zero());
+
+        // test with 1
+        assert_eq!(field_element_to_felt(&FieldElement::ONE), Felt252::new(1));
+
+        // test with the largest possible number
+        assert_eq!(
+            field_element_to_felt(&FieldElement::MAX),
+            Felt252::max_value()
+        );
+    }
+
+    pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
+        Felt252::from_bytes_be(&felt.to_bytes_be())
+    }
+
+    #[test]
     fn test_get_keys() {
         let hashmap_one = HashMap::from([("one", 1), ("two", 2)]);
         let hashmap_two = HashMap::from([("three", 3), ("four", 4)]);
