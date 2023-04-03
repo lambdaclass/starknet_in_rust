@@ -217,7 +217,6 @@ fn invoke() {
                 signature.clone(),
                 StarknetChainId::TestNet.to_felt(),
                 Some(Felt::from(i)),
-                Felt::zero(),
             )
             .unwrap()
             .execute(&mut state_copy, config)
@@ -231,7 +230,6 @@ fn invoke() {
                 signature,
                 StarknetChainId::TestNet.to_felt(),
                 Some(Felt::from(i + 1)),
-                Felt::zero(),
             )
             .unwrap()
             .execute(&mut state_copy, config)

@@ -21,7 +21,7 @@ lazy_static! {
 }
 
 fn main() {
-    const RUNS: usize = 1000;
+    const RUNS: usize = 100;
     let mut starknet_state = StarknetState::new(None);
 
     for n in 0..RUNS {

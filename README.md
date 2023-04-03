@@ -19,19 +19,24 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 </div>
 
 ## Table of Contents
-- [Disclaimer](#%EF%B8%8F-disclaimer)
-- [About](#-about)
-- [Getting Started](#-getting-started)
-  * [Dependencies](#dependencies)
-  * [Installation](#installation)
-- [Usage](#-usage)
-  * [Running simple contracts](#running-simple-contracts)
-  * [Testing](#testing)
-- [Contributing](#-contributing)
-- [Related Projects](#-related-projects)
-- [Documentation](#-documentation)
-  * [StarkNet](#starknet)
-- [License](#%EF%B8%8F-license)
+- [Table of Contents](#table-of-contents)
+- [⚠️ Disclaimer](#️-disclaimer)
+- [📖 About](#-about)
+- [🌅 Getting Started](#-getting-started)
+  - [Dependencies](#dependencies)
+  - [Installation](#installation)
+    - [How to manually install the script dependencies](#how-to-manually-install-the-script-dependencies)
+- [🚀 Usage](#-usage)
+  - [Running simple contracts](#running-simple-contracts)
+  - [Using the Cli](#using-the-cli)
+  - [Testing](#testing)
+  - [Profiling](#profiling)
+  - [Benchmarking](#benchmarking)
+- [🛠 Contributing](#-contributing)
+- [🌞 Related Projects](#-related-projects)
+- [📚 Documentation](#-documentation)
+  - [StarkNet](#starknet)
+- [⚖️ License](#️-license)
 
 ## ⚠️ Disclaimer
 
@@ -106,6 +111,14 @@ $ make flamegraph
 ```
 
 to generate a flamegraph with info of the execution of the main operations.
+
+### Benchmarking
+
+Read the 'bench_integration.py' file to identify which lines need to be commented out for accurate results. Comment out those lines and then run the following command:
+
+```bash
+$ make benchmark
+```
 
 ## 🛠 Contributing
 

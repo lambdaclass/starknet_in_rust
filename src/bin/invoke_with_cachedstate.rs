@@ -60,7 +60,6 @@ fn main() {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(Felt::from(i * 2)),
-            Felt::zero(),
         )
         .unwrap()
         .execute(&mut cached_state, &general_config)
@@ -74,7 +73,6 @@ fn main() {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(Felt::from((i * 2) + 1)),
-            Felt::zero(),
         )
         .unwrap()
         .execute(&mut cached_state, &general_config)

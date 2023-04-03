@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use felt::{felt_str, Felt};
-use num_traits::{Num, Zero};
+use num_traits::Zero;
 
 use lazy_static::lazy_static;
 use starknet_rs::{
@@ -32,13 +32,13 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref FIB_SELECTOR: Felt = felt_str!("112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9");
+    static ref FIB_SELECTOR: Felt = felt_str!("485685360977693822178494178685050472186234432883326654755380582597179924681");
 
-    static ref EXPECTED_RES: Felt = felt_str!("1885488015763367495828256465007039431853769505513107413590764748562946299654");
+    static ref EXPECTED_RES: Felt = felt_str!("222450955505511890955301767713383614666194461405743219770606958667979327682");
 }
 
 fn main() {
-    const RUNS: usize = 10;
+    const RUNS: usize = 1000;
     let cached_state = create_initial_state();
 
     let mut starknet_state = StarknetState {
@@ -57,7 +57,7 @@ fn main() {
             .invoke_raw(
                 CONTRACT_ADDRESS.clone(),
                 FIB_SELECTOR.clone(),
-                [1.into(), 1.into(), 15000.into()].into(),
+                [1.into(), 1.into(), 1000.into()].into(),
                 0,
                 Some(Vec::new()),
                 Some(Felt::from(i)),

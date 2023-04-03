@@ -55,24 +55,23 @@ impl InternalInvokeFunction {
         signature: Vec<Felt>,
         chain_id: Felt,
         nonce: Option<Felt>,
-        hash_value: Felt,
     ) -> Result<Self, TransactionError> {
         let version = TRANSACTION_VERSION;
-        // let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
-        //     entry_point_selector.clone(),
-        //     nonce.clone(),
-        //     version,
-        // )?;
-        // let hash_value = calculate_transaction_hash_common(
-        //     TransactionHashPrefix::Invoke,
-        //     version,
-        //     &contract_address,
-        //     entry_point_selector_field,
-        //     &calldata,
-        //     max_fee,
-        //     chain_id,
-        //     &additional_data,
-        // )?;
+        let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
+            entry_point_selector.clone(),
+            nonce.clone(),
+            version,
+        )?;
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::Invoke,
+            version,
+            &contract_address,
+            entry_point_selector_field,
+            &calldata,
+            max_fee,
+            chain_id,
+            &additional_data,
+        )?;
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InternalInvokeFunction {

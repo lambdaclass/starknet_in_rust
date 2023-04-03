@@ -191,7 +191,6 @@ fn invoke_parser(
         vec![],
         Felt::zero(),
         Some(Felt::zero()),
-        Felt::zero(),
     )?;
     let _tx_info = internal_invoke.apply(cached_state, &StarknetGeneralConfig::default())?;
 
