@@ -255,7 +255,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
+        let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
             Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
@@ -292,7 +292,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
-            self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
             request
         } else {
@@ -349,7 +349,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Vec<Felt252>, SyscallHandlerError> {
-        let request = self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
+        let request = self.read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
         let entry_point_type;
         let function_selector;
@@ -360,7 +360,7 @@ where
         let call_data;
 
         // TODO: What about `delegate_call`, `delegate_l1_handler`?
-        //   The call to `self._read_and_validate_syscall_request()` will always fail in those
+        //   The call to `self.read_and_validate_syscall_request()` will always fail in those
         //   cases.
         match request {
             SyscallRequest::LibraryCall(request) => {
@@ -426,7 +426,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        match self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
+        match self.read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
             SyscallRequest::GetCallerAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest),
         }
@@ -439,7 +439,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        match self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
+        match self.read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
             SyscallRequest::GetContractAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetContractAddressRequest),
         };
@@ -453,7 +453,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = if let SyscallRequest::SendMessageToL1(request) =
-            self._read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
         {
             request
         } else {
@@ -541,7 +541,7 @@ where
         Ok(())
     }
 
-    fn _read_and_validate_syscall_request(
+    fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,

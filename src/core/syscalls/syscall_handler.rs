@@ -75,7 +75,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = if let SyscallRequest::StorageRead(request) =
-            self._read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
         {
             request
         } else {
@@ -94,7 +94,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = if let SyscallRequest::StorageWrite(request) =
-            self._read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
         {
             request
         } else {
@@ -137,7 +137,7 @@ pub(crate) trait SyscallHandler {
         Ok(())
     }
 
-    fn _read_and_validate_syscall_request(
+    fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
@@ -216,7 +216,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
+        self.read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
         GetBlockNumberResponse::new(self.get_block_info().block_number)
             .write_syscall_response(vm, syscall_ptr)
     }
@@ -233,7 +233,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request =
-            match self._read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+            match self.read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
                 SyscallRequest::GetTxInfo(request) => request,
                 _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
             };
@@ -249,7 +249,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        match self._read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
+        match self.read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
             SyscallRequest::GetTxSignature(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
         }
@@ -267,7 +267,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request = if let SyscallRequest::GetBlockTimestamp(request) =
-            self._read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
         {
             request
         } else {
@@ -307,7 +307,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let _request = if let SyscallRequest::GetSequencerAddress(request) =
-            self._read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
         {
             request
         } else {
