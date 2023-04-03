@@ -587,7 +587,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
         let signature = vec![1.into(), 2.into()];
 
-        // Declare tx should fail because nonce > 0 and version == 0
+        // Declare tx should fail because signature is not empty
         let internal_declare = InternalDeclare::new(
             fib_contract_class,
             chain_id,
@@ -658,7 +658,7 @@ mod tests {
             Vec::new(),
             Felt252::zero(),
         )
-        .expect("REASON");
+        .unwrap();
 
         let internal_declare_error = InternalDeclare::new(
             fib_contract_class,
@@ -669,7 +669,7 @@ mod tests {
             Vec::new(),
             Felt252::one(),
         )
-        .expect("REASON");
+        .unwrap();
 
         internal_declare
             .execute(&mut state, &StarknetGeneralConfig::default())
@@ -689,7 +689,7 @@ mod tests {
     }
 
     #[test]
-    fn execute_transaction_invalid_nonce_should_fail() {
+    fn execute_transaction_twice_should_fail() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
@@ -730,17 +730,6 @@ mod tests {
 
         // Declare same class twice
         let internal_declare = InternalDeclare::new(
-            fib_contract_class.clone(),
-            chain_id.clone(),
-            Address(Felt252::one()),
-            0,
-            1,
-            Vec::new(),
-            Felt252::zero(),
-        )
-        .expect("REASON");
-
-        let internal_declare_error = InternalDeclare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -749,14 +738,14 @@ mod tests {
             Vec::new(),
             Felt252::zero(),
         )
-        .expect("REASON");
+        .unwrap();
 
         internal_declare
             .execute(&mut state, &StarknetGeneralConfig::default())
             .unwrap();
 
         let expected_error =
-            internal_declare_error.execute(&mut state, &StarknetGeneralConfig::default());
+            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
 
         // ---------------------
         //      Comparison
@@ -793,7 +782,7 @@ mod tests {
             Vec::new(),
             Felt252::zero(),
         )
-        .expect("REASON");
+        .unwrap();
 
         let internal_declare_error =
             internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
@@ -855,7 +844,7 @@ mod tests {
             Vec::new(),
             Felt252::zero(),
         )
-        .expect("REASON");
+        .unwrap();
 
         assert_matches!(
             internal_declare.execute(&mut state, &StarknetGeneralConfig::default()),
