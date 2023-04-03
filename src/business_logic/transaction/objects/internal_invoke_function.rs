@@ -40,7 +40,9 @@ pub struct InternalInvokeFunction {
     tx_type: TransactionType,
     version: u64,
     validate_entry_point_selector: Felt252,
+    #[getset(get = "pub")]
     hash_value: Felt252,
+    #[getset(get = "pub")]
     signature: Vec<Felt252>,
     max_fee: u64,
     nonce: Option<Felt252>,
