@@ -14,7 +14,7 @@ use starknet_rs::{
 };
 
 #[pyclass(name = "CachedState")]
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct PyCachedState {
     state: InnerCachedState<InMemoryStateReader>,
 }
@@ -22,7 +22,7 @@ pub struct PyCachedState {
 #[pymethods]
 impl PyCachedState {
     #[new]
-    #[allow(unused)]
+    #[allow(unused_variables)]
     fn new(block_info: PyBlockInfo, state_reader: &PyAny, contract_class_cache: &PyAny) -> Self {
         // TODO: this should wrap state_reader with something that implements StateReader
         //  contract_class_cache and block_info can be safely ignored for the devnet

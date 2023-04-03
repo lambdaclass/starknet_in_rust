@@ -1,3 +1,4 @@
+use crate::cached_state::PyCachedState;
 use crate::types::{
     call_info::PyCallInfo, contract_class::PyContractClass,
     general_config::PyStarknetGeneralConfig, transaction::PyTransaction,
@@ -18,9 +19,15 @@ pub struct PyStarknetState {
 
 #[pymethods]
 impl PyStarknetState {
-    #[pyo3(name = "empty")]
+    #[new]
+    #[allow(unused_variables)]
+    fn new(state: PyCachedState, general_config: PyStarknetGeneralConfig) -> Self {
+        // TODO: this should use received state
+        Self::empty(Some(general_config))
+    }
+
     #[staticmethod]
-    pub fn new(config: Option<PyStarknetGeneralConfig>) -> Self {
+    pub fn empty(config: Option<PyStarknetGeneralConfig>) -> Self {
         let config = config.map(|c| c.inner);
         PyStarknetState {
             inner: InnerStarknetState::new(config),
