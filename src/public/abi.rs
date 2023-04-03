@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use num_traits::Num;
 use std::collections::HashMap;
 
-pub type AbiType = Vec<HashMap<String, String>>;
+pub type AbiType = Vec<HashMap<String, serde_json::Value>>;
 
 lazy_static! {
     pub static ref VALIDATE_ENTRY_POINT_SELECTOR: Felt252 = Felt252::from_str_radix(
