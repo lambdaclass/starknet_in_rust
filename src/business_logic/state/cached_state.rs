@@ -367,6 +367,24 @@ mod tests {
     }
 
     #[test]
+    fn set_contract_classes_twice_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        cached_state.set_contract_classes(HashMap::new()).unwrap();
+        let result = cached_state
+            .set_contract_classes(HashMap::new())
+            .unwrap_err();
+
+        assert_eq!(result, StateError::AssignedContractClassCache);
+    }
+
+    #[test]
     fn deploy_contract_address_out_of_range_error_test() {
         let state_reader = InMemoryStateReader::new(
             HashMap::new(),
