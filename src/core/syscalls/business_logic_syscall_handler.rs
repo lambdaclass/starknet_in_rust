@@ -330,7 +330,7 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: ClassHash = (request.class_hash).to_be_bytes();
+        let class_hash_bytes: ClassHash = request.class_hash.to_be_bytes();
 
         self.starknet_storage_state
             .state
