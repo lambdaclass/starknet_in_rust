@@ -1,10 +1,10 @@
 use felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::Num;
+use starknet_api::state::ContractClassAbiEntry;
 use std::collections::HashMap;
 
-// TODO: serde_json::Value -> SomeConcreteType
-pub type AbiType = Vec<HashMap<String, serde_json::Value>>;
+pub type AbiType = Vec<HashMap<String, ContractClassAbiEntry>>;
 
 lazy_static! {
     pub static ref VALIDATE_ENTRY_POINT_SELECTOR: Felt252 = Felt252::from_str_radix(
