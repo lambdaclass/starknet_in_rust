@@ -209,7 +209,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             .insert(storage_entry.clone(), value);
     }
 
-    fn replace_contract(
+    fn set_class_hash_at(
         &mut self,
         deploy_contract_address: Address,
         class_hash: ClassHash,
@@ -468,7 +468,7 @@ mod tests {
             .unwrap();
 
         assert!(cached_state
-            .replace_contract(contract_address.clone(), [12; 32])
+            .set_class_hash_at(contract_address.clone(), [12; 32])
             .is_ok());
 
         assert_matches!(

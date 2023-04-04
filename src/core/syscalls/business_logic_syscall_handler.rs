@@ -580,7 +580,7 @@ where
         let address = self.contract_address.clone();
         self.starknet_storage_state
             .state
-            .deploy_contract(address, felt_to_hash(&request.class_hash))
+            .set_class_hash_at(address, felt_to_hash(&request.class_hash))
             .unwrap();
 
         Ok(())

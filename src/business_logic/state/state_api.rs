@@ -32,7 +32,7 @@ pub trait State {
     ) -> Result<(), StateError>;
     fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError>;
     fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt252);
-    fn replace_contract(
+    fn set_class_hash_at(
         &mut self,
         contract_address: Address,
         class_hash: ClassHash,
