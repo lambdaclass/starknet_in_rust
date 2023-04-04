@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use crate::{
     business_logic::{
@@ -15,21 +15,21 @@ use crate::{
         },
     },
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::starknet_contract_address::compute_sierra_class_hash,
         errors::state_errors::StateError,
-        transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
+    utils::{calculate_tx_resources, Address, ClassHash},
 };
-use cairo_lang_compiler::{SierraProgram};
+use cairo_lang_starknet::{
+    casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
+};
 use felt::Felt252;
 use num_traits::Zero;
-
 #[derive(Debug)]
 pub struct InternalDeclareV2 {
     pub class_hash: ClassHash,
@@ -45,7 +45,8 @@ pub struct InternalDeclareV2 {
 }
 impl InternalDeclareV2 {
     pub fn new(
-        sierra_code: &SierraProgram,
+        sierra_class: &SierraContractClass,
+        compiled_class_hash: ClassHash,
         chain_id: Felt252,
         sender_address: Address,
         max_fee: u64,
@@ -54,19 +55,10 @@ impl InternalDeclareV2 {
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
         // compile sierra to contract class (ours)
-        //let contract_class = 
-        let contract_class = ContractClass::try_from(&sierra_code.to_string()[..]).unwrap();
-        let hash = compute_class_hash(&contract_class)?;
-        let class_hash = felt_to_hash(&hash);
-
-        let hash_value = calculate_declare_transaction_hash(
-            &contract_class,
-            chain_id,
-            &sender_address,
-            max_fee,
-            version,
-            nonce.clone(),
-        )?;
+        // compiled class hash
+        let casm_contract_class = CasmContractClass::from_contract_class(*sierra_class, true)
+            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
+        let class_hash = compute_sierra_class_hash(sierra_class);
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
@@ -288,32 +280,32 @@ impl InternalDeclareV2 {
 #[cfg(test)]
 mod tests {
 
-    use std::path::Path;
+    // use std::path::Path;
 
-    use felt::Felt252;
-    use num_traits::{One, Zero};
+    // use felt::Felt252;
+    // use num_traits::{One, Zero};
 
-    use crate::{definitions::general_config::StarknetChainId, utils::Address};
+    // use crate::{definitions::general_config::StarknetChainId, utils::Address};
 
-    use super::InternalDeclareV2;
+    // use super::InternalDeclareV2;
 
-    #[test]
-    fn create_declare_v2_test() {
-        let fib_path = "starknet_programs/fibonacci.json";
-        let chain_id = StarknetChainId::TestNet.to_felt();
+    // #[test]
+    // fn create_declare_v2_test() {
+    //     let fib_path = "starknet_programs/fibonacci.json";
+    //     let chain_id = StarknetChainId::TestNet.to_felt();
 
-        // declare tx
-        // let internal_declare = InternalDeclareV2::new(
-        //     &fib_path,
-        //     chain_id,
-        //     Address(Felt252::one()),
-        //     0,
-        //     1,
-        //     Vec::new(),
-        //     Felt252::zero(),
-        // )
-        // .unwrap();
+    // declare tx
+    // let internal_declare = InternalDeclareV2::new(
+    //     &fib_path,
+    //     chain_id,
+    //     Address(Felt252::one()),
+    //     0,
+    //     1,
+    //     Vec::new(),
+    //     Felt252::zero(),
+    // )
+    // .unwrap();
 
-        // println!("{:?}", internal_declare);
-    }
+    // println!("{:?}", internal_declare);
+    // }
 }

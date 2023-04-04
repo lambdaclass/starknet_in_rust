@@ -14,7 +14,6 @@ use cairo_rs::{
 use felt::Felt252;
 use sha3::{Digest, Keccak256};
 use std::{collections::HashMap, path::Path};
-
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
 
