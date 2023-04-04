@@ -1,26 +1,41 @@
 use super::objects::{CallInfo, CallType, TransactionExecutionContext};
 use crate::{
     business_logic::{
-        fact_state::state::ExecutionResourcesManager, state::state_api::State,
-        state::state_api::StateReader, transaction::error::TransactionError,
+        fact_state::{
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
+        },
+        state::state_api::State,
+        state::{cached_state::CachedState, state_api::StateReader, state_cache::StorageEntry},
+        transaction::error::TransactionError,
     },
     core::syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
-    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+    definitions::{
+        constants::{DEFAULT_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
+        general_config::StarknetGeneralConfig,
+    },
+    services::api::contract_class::{self, ContractClass, ContractEntryPoint, EntryPointType},
     starknet_runner::runner::StarknetRunner,
-    utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
+    utils::{
+        calculate_sn_keccak, get_deployed_address_class_hash_at_address,
+        validate_contract_deployed, Address,
+    },
 };
 use cairo_rs::{
-    types::relocatable::{MaybeRelocatable, Relocatable},
+    types::{
+        program::Program,
+        relocatable::{MaybeRelocatable, Relocatable},
+    },
     vm::{
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
         vm_core::VirtualMachine,
     },
+    with_std::collections::HashMap,
 };
 use felt::Felt252;
+use starknet_api::state;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
@@ -275,4 +290,94 @@ impl ExecutionEntryPoint {
 
         get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
     }
+}
+
+#[test]
+fn test_execute() {
+    //* --------------------------------------------
+    //*       Create a default contract data
+    //* --------------------------------------------
+
+    let contract_address = Address(1111.into());
+    let class_hash = [1; 32];
+    let call_data = Vec![Felt252::one];
+    let contract_class = ContractClass::new(
+        Program::default(),
+        HashMap::from([(
+            EntryPointType::Constructor,
+            vec![ContractEntryPoint::default()],
+        )]),
+        abi::None,
+    );
+
+    //* --------------------------------------------
+    //*          Create default context
+    //* --------------------------------------------
+
+    let general_config = StarknetGeneralConfig::default();
+
+    let tx_execution_context = TransactionExecutionContext::create_for_testing(
+        Address(0.into()),
+        10,
+        0.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+
+    //* --------------------------------------------
+    //*  Create starknet state with the contract
+    //*  (This would be the equivalent of
+    //*  declaring and deploying the contract)
+    //* -------------------------------------------
+
+    let mut state_reader = InMemoryStateReader::new(
+        HashMap::new(),
+        HashMap::new(),
+        HashMap::new(),
+        HashMap::new(),
+    );
+
+    state_reader
+        .address_to_class_hash
+        .insert(contract_address, class_hash);
+    state_reader
+        .address_to_nonce
+        .insert(contract_address, *tx_execution_context.nonce());
+    state_reader
+        .address_to_storage
+        .insert((contract_address, class_hash), Felt252::new(1));
+    state_reader
+        .class_hash_to_contract_class
+        .insert(class_hash, contract_class.unwrap());
+
+    let mut state = CachedState::new(
+        state_reader,
+        Some(HashMap::from([class_hash, contract_class])),
+    );
+
+    //* ------------------------------------
+    //*    Create execution entry point
+    //* ------------------------------------
+
+    let caller_address = Address(0.into());
+
+    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
+    let entry_point = ExecutionEntryPoint::new(
+        contract_address,
+        call_data,
+        entry_point_selector,
+        caller_address,
+        EntryPointType::External,
+        CallType::Delegate.into(),
+        class_hash.into(),
+    );
+
+    let execution = entry_point.execute(
+        state,
+        &general_config,
+        execution_resources_manager,
+        &tx_execution_context,
+    );
+
+    assert_eq!(execution.unwrap(), CallInfo())
 }
