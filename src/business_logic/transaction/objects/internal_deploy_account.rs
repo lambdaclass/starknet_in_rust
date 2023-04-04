@@ -13,7 +13,7 @@ use crate::{
         },
     },
     core::{
-        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        errors::syscall_handler_errors::SyscallHandlerError,
         transaction_hash::starknet_transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
@@ -137,7 +137,7 @@ impl InternalDeployAccount {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, StateError>
+    ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -146,18 +146,15 @@ impl InternalDeployAccount {
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let constructor_call_info = self
-            .handle_constructor(
-                contract_class,
-                state,
-                general_config,
-                &mut resources_manager,
-            )
-            .map_err::<StateError, _>(|_| todo!())?;
+        let constructor_call_info = self.handle_constructor(
+            contract_class,
+            state,
+            general_config,
+            &mut resources_manager,
+        )?;
 
-        let validate_info = self
-            .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .map_err::<StateError, _>(|_| todo!())?;
+        let validate_info =
+            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -166,7 +163,7 @@ impl InternalDeployAccount {
             state.count_actual_storage_changes(),
             None,
         )
-        .map_err::<StateError, _>(|_| todo!())?;
+        .map_err::<TransactionError, _>(|_| TransactionError::ResourcesCalculation)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
