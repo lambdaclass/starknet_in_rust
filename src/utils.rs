@@ -88,7 +88,16 @@ pub fn string_to_hash(class_string: &String) -> ClassHash {
     let parsed_felt =
         Felt252::from_str_radix(class_string.strip_prefix("0x").unwrap_or(class_string), 16);
 
-    parsed_felt.unwrap().to_be_bytes()
+    parsed_felt
+        .unwrap_or_else(|err| panic!("Problem parsing the string to a felt {:?}", err))
+        .to_be_bytes()
+
+    /*
+    let p = match parsed_felt{
+        Ok(parsed_felt) => parsed_felt.to_be_bytes(),
+        Err(error) => panic!("Problem parsing the string to a felt", error)
+    };
+    p */
 }
 
 // -------------------
