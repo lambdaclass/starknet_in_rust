@@ -351,3 +351,130 @@ impl InternalDeployAccount {
         Ok((Some(fee_transfer_info), actual_fee))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        core::contract_address::starknet_contract_address::compute_class_hash,
+        utils::felt_to_hash,
+    };
+
+    #[test]
+    fn get_state_selector() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut _state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let state_selector = internal_deploy.get_state_selector(general_config);
+
+        assert_eq!(
+            state_selector.contract_addresses,
+            vec![internal_deploy.contract_address]
+        );
+        assert_eq!(state_selector.class_hashes, vec![class_hash]);
+    }
+
+    #[test]
+    fn deploy_account_twice_should_fail() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let internal_deploy_error = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let class_hash = internal_deploy.class_hash();
+        state.set_contract_class(class_hash, &contract).unwrap();
+        internal_deploy
+            .execute(&mut state, &general_config)
+            .unwrap();
+        assert_matches!(
+            internal_deploy_error
+                .execute(&mut state, &general_config)
+                .unwrap_err(),
+            TransactionError::State(StateError::ContractAddressUnavailable(..))
+        )
+    }
+
+    #[test]
+    #[should_panic]
+    // Should panic at no calldata for constructor. Error managment not implemented yet.
+    fn deploy_account_constructor_should_fail() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            Vec::new(),
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let class_hash = internal_deploy.class_hash();
+        state.set_contract_class(class_hash, &contract).unwrap();
+        internal_deploy
+            .execute(&mut state, &general_config)
+            .unwrap();
+    }
+}
