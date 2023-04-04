@@ -234,11 +234,18 @@ fn to_cairo_runner_program(
 mod tests {
     use super::*;
     use felt::felt_str;
+    use std::io::Read;
 
     #[test]
     fn deserialize_contract_class() {
-        let serialized = include_str!("../../../tests/test_data/example_class.json");
-        let res = ContractClass::try_from(serialized);
+        let mut serialized = String::new();
+
+        // This specific contract compiles with --no_debug_info
+        File::open(PathBuf::from("starknet_programs/AccountPreset.json"))
+            .and_then(|mut f| f.read_to_string(&mut serialized))
+            .expect("should be able to read file");
+
+        let res = ContractClass::try_from(serialized.as_str());
 
         assert!(res.is_ok());
 
