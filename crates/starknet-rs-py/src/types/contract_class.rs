@@ -69,17 +69,25 @@ impl<'a> From<&'a PyContractClass> for &'a ContractClass {
 mod tests {
     use super::*;
     use pyo3::PyTypeInfo;
+    use std::path::PathBuf;
 
     #[test]
     fn load_contract_smoke_test() {
         Python::with_gil(|py| {
-            let cls = PyContractClass::type_object(py);
-            let dict = include_str!("../../../../tests/test_data/example_class.json");
+            let dict = std::fs::read_to_string(PathBuf::from(
+                "../../starknet_programs/account_without_validation.json",
+            ))
+            .expect("should be able to read file");
+
+            // All our contracts have 'null' flow_tracking_data, and that causes Python to blow up
+            let locals = [("null", PyDict::new(py))].into_py_dict(py);
+
             let data = py
-                .eval(dict, None, None)
+                .eval(dict.as_str(), None, Some(locals))
                 .and_then(PyAny::extract)
                 .expect("should eval to PyDict");
 
+            let cls = PyContractClass::type_object(py);
             let contract_class = PyContractClass::load(cls, data, py);
 
             assert!(contract_class.is_ok());
