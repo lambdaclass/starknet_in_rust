@@ -30,12 +30,6 @@ use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StateSelector {
-    pub contract_addresses: Vec<Address>,
-    pub class_hashes: Vec<ClassHash>,
-}
-
 #[derive(Clone, Debug, Getters)]
 pub struct InternalDeployAccount {
     #[getset(get = "pub")]
@@ -98,13 +92,6 @@ impl InternalDeployAccount {
             signature,
             chain_id,
         })
-    }
-
-    pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> StateSelector {
-        StateSelector {
-            contract_addresses: vec![self.contract_address.clone()],
-            class_hashes: vec![self.class_hash],
-        }
     }
 
     pub fn execute<S>(
@@ -177,7 +164,7 @@ impl InternalDeployAccount {
         )
     }
 
-    pub fn handle_constructor<S>(
+    fn handle_constructor<S>(
         &self,
         contract_class: ContractClass,
         state: &mut S,
@@ -230,7 +217,7 @@ impl InternalDeployAccount {
         Ok(())
     }
 
-    pub fn run_constructor_entrypoint<S>(
+    fn run_constructor_entrypoint<S>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -283,7 +270,7 @@ impl InternalDeployAccount {
         )
     }
 
-    pub fn run_validate_entrypoint<S>(
+    fn run_validate_entrypoint<S>(
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
