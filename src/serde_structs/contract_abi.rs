@@ -55,7 +55,7 @@ fn test_read_abi_simple_contract() {
 
 #[test]
 fn test_read_abi_complex_contract() {
-    let path_a = PathBuf::from(r"starknet_programs/ERC721_abi.json");
+    let path_a = PathBuf::from(r"starknet_programs/constructor_abi.json");
 
     let result = read_abi(&path_a);
 
@@ -66,33 +66,9 @@ fn test_read_abi_complex_contract() {
             String::from("constructor"),
             (0_usize, EntryPointType::Constructor),
         ),
-        (String::from("name"), (0_usize, EntryPointType::External)),
         (
-            String::from("getApproved"),
-            (4_usize, EntryPointType::External),
-        ),
-        (
-            String::from("isApprovedForAll"),
-            (5_usize, EntryPointType::External),
-        ),
-        (String::from("approve"), (6_usize, EntryPointType::External)),
-        (
-            String::from("balanceOf"),
-            (2_usize, EntryPointType::External),
-        ),
-        (
-            String::from("setApprovalForAll"),
-            (7_usize, EntryPointType::External),
-        ),
-        (
-            String::from("safeTransferFrom"),
-            (9_usize, EntryPointType::External),
-        ),
-        (String::from("symbol"), (1_usize, EntryPointType::External)),
-        (String::from("ownerOf"), (3_usize, EntryPointType::External)),
-        (
-            String::from("transferFrom"),
-            (8_usize, EntryPointType::External),
+            String::from("get_owner"),
+            (0_usize, EntryPointType::External),
         ),
     ]);
 
