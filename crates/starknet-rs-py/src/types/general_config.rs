@@ -118,7 +118,7 @@ impl<'a> From<&'a PyStarknetGeneralConfig> for &'a StarknetGeneralConfig {
     }
 }
 
-impl<'a> From<StarknetGeneralConfig> for PyStarknetGeneralConfig {
+impl From<StarknetGeneralConfig> for PyStarknetGeneralConfig {
     fn from(inner: StarknetGeneralConfig) -> Self {
         Self { inner }
     }
