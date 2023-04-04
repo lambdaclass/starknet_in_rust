@@ -75,3 +75,34 @@ fn test_read_abi_complex_contract() {
     // final check
     assert_eq!(result, expected_result)
 }
+
+#[test]
+fn test_read_abi_with_l1_handler_and_multiple_functions() {
+    let path_a = PathBuf::from(r"starknet_programs/l1l2_abi.json");
+
+    let result = read_abi(&path_a);
+
+    // this is the expected result of the function above
+
+    let expected_result: HashMap<String, (usize, EntryPointType)> = HashMap::from([
+        (
+            String::from("increase_balance"),
+            (1_usize, EntryPointType::External),
+        ),
+        (
+            String::from("withdraw"),
+            (2_usize, EntryPointType::External),
+        ),
+        (
+            String::from("get_balance"),
+            (0_usize, EntryPointType::External),
+        ),
+        (
+            String::from("deposit"),
+            (0_usize, EntryPointType::L1Handler),
+        ),
+    ]);
+
+    // final check
+    assert_eq!(result, expected_result)
+}

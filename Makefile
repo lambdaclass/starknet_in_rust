@@ -50,7 +50,10 @@ compile-abi:
 		--abi fibonacci_abi.json \
 		&& starknet-compile constructor.cairo \
 		--output constructor_compiled.json \
-		--abi constructor_abi.json 
+		--abi constructor_abi.json \
+		&& starknet-compile l1l2.cairo \
+		--output l1l2_compiled.json \
+		--abi l1l2_abi.json 
 
 # This abi file is used for the `test_read_abi` test in contract_abi.rs
 
