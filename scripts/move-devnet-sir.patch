@@ -26,7 +26,7 @@ index 51ffd51..48b2dca 100644
 -    sys.exit(f"Error: Invalid value of environment variable {_VM_VAR}: '{_cairo_vm}'")
 +_patch_starknet_rs()
 diff --git a/starknet_devnet/account.py b/starknet_devnet/account.py
-index 36c7cb5..ce7e84a 100644
+index 36c7cb5..95b25e7 100644
 --- a/starknet_devnet/account.py
 +++ b/starknet_devnet/account.py
 @@ -2,12 +2,12 @@
@@ -55,7 +55,7 @@ index 36c7cb5..ce7e84a 100644
              self.class_hash_bytes, contract_class
          )
 -        await starknet.state.state.deploy_contract(self.address, self.class_hash_bytes)
-+        await starknet.state.deploy_contract(self.address, self.class_hash_bytes)
++        starknet.state.deploy_contract(self.address, self.class_hash_bytes)
  
 -        await starknet.state.state.set_storage_at(
 +        starknet.state.set_storage_at(
