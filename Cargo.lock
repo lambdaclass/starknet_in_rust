@@ -2521,7 +2521,7 @@ dependencies = [
 [[package]]
 name = "starknet_api"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet-api?branch=main#99e02acf3dafc268b833d648f8bb51237eae61d2"
+source = "git+https://github.com/lambdaclass/starknet-api?branch=main#21db96d98054f2f8a8efa7c83c249b0e5b177396"
 dependencies = [
  "derive_more",
  "hex",

@@ -12,17 +12,8 @@ use cairo_rs::{
 };
 use felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
-use num_traits::Num;
-use serde::de::Error;
-use serde::{Deserialize, Deserializer, Serialize};
 use starknet_api::state::EntryPoint;
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    fs::File,
-    io::{self, BufReader},
-    path::PathBuf,
-};
+use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
     BuiltinName::pedersen,
@@ -32,23 +23,18 @@ pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
     BuiltinName::ec_op,
 ];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EntryPointType {
     External,
     L1Handler,
     Constructor,
 }
 
-#[derive(
-    Clone, CopyGetters, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, Serialize,
-)]
+#[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq)]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
-    #[serde(deserialize_with = "from_str_radix")]
     pub(crate) selector: Felt252,
     #[getset(get_copy = "pub")]
-    #[serde(deserialize_with = "from_str_radix")]
     pub(crate) offset: usize,
 }
 
@@ -56,7 +42,7 @@ pub struct ContractEntryPoint {
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Deserialize, Eq, Getters, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, Getters, PartialEq)]
 pub struct ContractClass {
     #[getset(get = "pub")]
     pub(crate) program: Program,
@@ -124,16 +110,18 @@ impl From<starknet_api::state::EntryPointType> for EntryPointType {
     }
 }
 
-impl From<starknet_api::state::ContractClass> for ContractClass {
-    fn from(contract_class: starknet_api::state::ContractClass) -> Self {
-        let program = to_cairo_runner_program(&contract_class.program).unwrap();
+impl TryFrom<starknet_api::state::ContractClass> for ContractClass {
+    type Error = ProgramError;
+
+    fn try_from(contract_class: starknet_api::state::ContractClass) -> Result<Self, Self::Error> {
+        let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
 
-        ContractClass {
+        Ok(ContractClass {
             program,
             entry_points_by_type,
             abi: None,
-        }
+        })
     }
 }
 
@@ -142,32 +130,31 @@ impl From<starknet_api::state::ContractClass> for ContractClass {
 // -------------------
 
 impl TryFrom<&str> for ContractClass {
-    type Error = io::Error;
+    type Error = ProgramError;
 
-    fn try_from(s: &str) -> io::Result<Self> {
+    fn try_from(s: &str) -> Result<Self, ProgramError> {
         let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
-        Ok(ContractClass::from(raw_contract_class))
+        ContractClass::try_from(raw_contract_class)
     }
 }
 
 impl TryFrom<PathBuf> for ContractClass {
-    type Error = io::Error;
+    type Error = ProgramError;
 
-    fn try_from(path: PathBuf) -> io::Result<Self> {
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         ContractClass::try_from(&path)
     }
 }
 
 impl TryFrom<&PathBuf> for ContractClass {
-    type Error = io::Error;
+    type Error = ProgramError;
 
-    fn try_from(path: &PathBuf) -> io::Result<Self> {
+    fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::state::ContractClass =
             serde_json::from_reader(reader)?;
-        let contract_class = ContractClass::from(raw_contract_class);
-        Ok(contract_class)
+        ContractClass::try_from(raw_contract_class)
     }
 }
 
@@ -243,41 +230,51 @@ fn to_cairo_runner_program(
     })
 }
 
-// Deserializes using from_str_radix. If the string starts with '0x'
-// it treats it as hexadecimal, else as decimal.
-fn from_str_radix<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Num,
-    T::FromStrRadixErr: Display,
-{
-    let s: &str = Deserialize::deserialize(deserializer)?;
-    if s.starts_with("0x") {
-        T::from_str_radix(&s[2..], 16).map_err(D::Error::custom)
-    } else {
-        T::from_str_radix(s, 10).map_err(D::Error::custom)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn deserialize_contract_entry_point() {
-        let serialized = r#"{"offset": "0x16e", "selector": "0x28ffe4ff0f226a9107253e17a904099aa4f63a02a5621de0576e5aa71bc5194"}"#;
-
-        let _: ContractEntryPoint = serde_json::from_str(serialized).unwrap();
-
-        // assert!(res.is_ok());
-    }
+    use felt::felt_str;
 
     #[test]
     fn deserialize_contract_class() {
         let serialized = include_str!("../../../tests/test_data/example_class.json");
+        let res = ContractClass::try_from(serialized);
 
-        let _: ContractClass = serde_json::from_str(serialized).unwrap();
+        assert!(res.is_ok());
 
-        // assert!(res.is_ok());
+        let contract_class = res.unwrap();
+
+        // We check only some of the attributes. Ideally we would serialize
+        // and compare with original
+        assert_eq!(contract_class.abi(), &None);
+        assert_eq!(
+            contract_class.program().builtins,
+            vec![
+                BuiltinName::pedersen,
+                BuiltinName::range_check,
+                BuiltinName::ecdsa,
+                BuiltinName::bitwise
+            ]
+        );
+        assert_eq!(contract_class.program().prime, PRIME_STR);
+        assert_eq!(
+            contract_class
+                .entry_points_by_type()
+                .get(&EntryPointType::L1Handler)
+                .unwrap(),
+            &vec![]
+        );
+        assert_eq!(
+            contract_class
+                .entry_points_by_type()
+                .get(&EntryPointType::Constructor)
+                .unwrap(),
+            &vec![ContractEntryPoint {
+                selector: felt_str!(
+                    "1159040026212278395030414237414753050475174923702621880048416706425641521556"
+                ),
+                offset: 366
+            }]
+        );
     }
 }
