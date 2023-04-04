@@ -2555,6 +2555,7 @@ dependencies = [
  "cairo-vm",
  "clap",
  "getset",
+ "hex",
  "lazy_static",
  "num-bigint",
  "num-integer",

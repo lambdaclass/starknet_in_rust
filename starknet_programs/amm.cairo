@@ -1,3 +1,6 @@
+// Contract taken from:
+// https://github.com/starkware-libs/cairo-lang/blob/master/src/starkware/starknet/apps/amm_sample/amm_sample.cairo
+
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin

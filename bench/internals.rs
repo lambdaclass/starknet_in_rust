@@ -1,4 +1,5 @@
 #![deny(warnings)]
+#![cfg(not(tarpaulin_include))]
 
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
