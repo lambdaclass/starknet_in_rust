@@ -37,6 +37,7 @@ impl PyContractClass {
 
     #[getter]
     pub fn abi(&self) -> PyResult<String> {
+        // TODO: this should return Option<PyAbiType>
         serde_json::to_string(&self.inner.abi()).map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 
