@@ -118,6 +118,12 @@ impl<'a> From<&'a PyStarknetGeneralConfig> for &'a StarknetGeneralConfig {
     }
 }
 
+impl<'a> From<StarknetGeneralConfig> for PyStarknetGeneralConfig {
+    fn from(inner: StarknetGeneralConfig) -> Self {
+        Self { inner }
+    }
+}
+
 #[pyclass(name = "StarknetOsConfig")]
 #[derive(Debug, Clone, Default)]
 pub struct PyStarknetOsConfig {
