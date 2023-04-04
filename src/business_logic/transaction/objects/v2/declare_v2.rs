@@ -15,24 +15,21 @@ use crate::{
         },
     },
     core::{
-        contract_address::starknet_contract_address::compute_sierra_class_hash,
+        contract_address::v2::starknet_sierra_contract_address::compute_sierra_class_hash,
         errors::state_errors::StateError,
     },
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, Address, ClassHash},
+    services::api::contract_class::EntryPointType,
+    utils::{calculate_tx_resources, Address},
 };
-use cairo_lang_starknet::{
-    casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
-};
+use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use felt::Felt252;
 use num_traits::Zero;
 #[derive(Debug)]
 pub struct InternalDeclareV2 {
-    pub class_hash: ClassHash,
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
@@ -40,13 +37,14 @@ pub struct InternalDeclareV2 {
     pub max_fee: u64,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
+    pub compiled_class_hash: Felt252,
+    pub sierra_contract_class: SierraContractClass,
     pub hash_value: Felt252,
-    pub contract_class: ContractClass,
 }
 impl InternalDeclareV2 {
     pub fn new(
-        sierra_class: &SierraContractClass,
-        compiled_class_hash: ClassHash,
+        sierra_contract_class: &SierraContractClass,
+        compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
         max_fee: u64,
@@ -55,15 +53,12 @@ impl InternalDeclareV2 {
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
         // compile sierra to contract class (ours)
-        // compiled class hash
-        let casm_contract_class = CasmContractClass::from_contract_class(*sierra_class, true)
-            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
-        let class_hash = compute_sierra_class_hash(sierra_class);
-
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
+        //let hash_value = ;
+
         let internal_declare = InternalDeclareV2 {
-            class_hash,
+            sierra_contract_class: sierra_contract_class.to_owned(),
             sender_address,
             tx_type: TransactionType::Declare,
             validate_entry_point_selector,
@@ -71,18 +66,12 @@ impl InternalDeclareV2 {
             max_fee,
             signature,
             nonce,
-            hash_value,
-            contract_class,
+            compiled_class_hash,
         };
 
         internal_declare.verify_version()?;
 
         Ok(internal_declare)
-    }
-
-    pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(&self.class_hash);
-        Vec::from([bytes])
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
@@ -121,6 +110,12 @@ impl InternalDeclareV2 {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+
+        let class_hash = compute_sierra_class_hash(&self.sierra_contract_class)?;
+
+        if class_hash != self.compiled_class_hash {
+            return Err(TransactionError::NotEqualClassHash);
+        }
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(

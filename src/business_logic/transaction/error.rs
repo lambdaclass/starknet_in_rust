@@ -98,6 +98,8 @@ pub enum TransactionError {
     InvalidTxContext,
     #[error("{0:?}")]
     SierraCompileError(String),
+    #[error("The hash of sierra contract classs is not equal to compiled class hash")]
+    NotEqualClassHash,
     #[error(transparent)]
     Vm(#[from] VirtualMachineError),
     #[error(transparent)]

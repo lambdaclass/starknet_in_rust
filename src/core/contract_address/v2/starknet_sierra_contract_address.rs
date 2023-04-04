@@ -1,11 +1,16 @@
 use std::{collections::HashMap, path::Path};
 
-use cairo_lang_starknet::{abi::Contract, contract_class::ContractClass as SierraContractClass};
+use cairo_lang_starknet::{
+    contract::starknet_keccak, contract_class::ContractClass as SierraContractClass,
+};
 use cairo_rs::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
     serde::deserialize_program::Identifier,
     types::{program::Program, relocatable::MaybeRelocatable},
-    vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
+    vm::{
+        runners::cairo_runner::{CairoArg, CairoRunner},
+        vm_core::VirtualMachine,
+    },
 };
 use felt::Felt252;
 
@@ -26,9 +31,38 @@ struct SierraStructContractClass {
     l1_handlers: Vec<ContractEntryPoint>,
     n_constructors: MaybeRelocatable,
     constructors: Vec<ContractEntryPoint>,
-    abi_hash: Option<Contract>,
+    abi_hash: Felt252,
     sierra_program_length: MaybeRelocatable,
     sierra_program_ptr: Vec<MaybeRelocatable>,
+}
+
+fn flat_into_maybe_relocs(contract_entrypoints: Vec<ContractEntryPoint>) -> Vec<MaybeRelocatable> {
+    contract_entrypoints
+        .iter()
+        .flat_map::<Vec<MaybeRelocatable>, _>(|contract_entrypoint| contract_entrypoint.into())
+        .collect::<Vec<MaybeRelocatable>>()
+}
+
+impl From<SierraStructContractClass> for CairoArg {
+    fn from(contract_class: SierraStructContractClass) -> Self {
+        let external_functions_flatted = flat_into_maybe_relocs(contract_class.external_functions);
+        let l1_handlers_flatted = flat_into_maybe_relocs(contract_class.l1_handlers);
+        let constructors_flatted = flat_into_maybe_relocs(contract_class.constructors);
+
+        let result = vec![
+            CairoArg::Single(contract_class.api_version),
+            CairoArg::Single(contract_class.n_external_functions),
+            CairoArg::Array(external_functions_flatted),
+            CairoArg::Single(contract_class.n_l1_handlers),
+            CairoArg::Array(l1_handlers_flatted),
+            CairoArg::Single(contract_class.n_constructors),
+            CairoArg::Array(constructors_flatted),
+            CairoArg::Single(contract_class.sierra_program_length),
+            CairoArg::Single(contract_class.abi_hash.into()),
+            CairoArg::Array(contract_class.sierra_program_ptr),
+        ];
+        CairoArg::Composed(result)
+    }
 }
 
 fn load_program() -> Result<Program, ContractAddressError> {
@@ -113,7 +147,11 @@ fn get_sierra_contract_class_struct(
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
-    let abi_hash = contract_class.abi;
+    let abi = contract_class
+        .abi
+        .ok_or(ContractAddressError::MissingAbi)?
+        .json();
+    let abi_hash = Felt252::from(starknet_keccak(abi.as_bytes()));
 
     let sierra_program_ptr = contract_class
         .sierra_program
