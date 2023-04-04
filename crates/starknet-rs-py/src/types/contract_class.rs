@@ -1,11 +1,11 @@
 use super::contract_entry_point::PyContractEntryPoint;
 use pyo3::{
-    exceptions::{PyRuntimeError, PyValueError},
+    exceptions::PyValueError,
     prelude::*,
     types::{IntoPyDict, PyDict, PyType},
 };
 use starknet_rs::services::api::contract_class::{ContractClass, EntryPointType};
-use std::collections::HashMap;
+use std::{collections::HashMap, io};
 
 type PyEntryPointType = i32;
 
@@ -13,6 +13,7 @@ type PyEntryPointType = i32;
 #[derive(Debug, Clone)]
 pub struct PyContractClass {
     pub(crate) inner: ContractClass,
+    abi: Option<Py<PyAny>>,
 }
 
 #[pymethods]
@@ -36,33 +37,48 @@ impl PyContractClass {
     }
 
     #[getter]
-    pub fn abi(&self) -> PyResult<String> {
-        // TODO: this should return Option<PyAbiType>
-        serde_json::to_string(&self.inner.abi()).map_err(|e| PyRuntimeError::new_err(e.to_string()))
+    pub fn abi(&self, _py: Python) -> Option<&Py<PyAny>> {
+        // TODO: this should be retrieved from self.inner
+        self.abi.as_ref()
     }
 
     #[classmethod]
     fn load(cls: &PyType, data: &PyDict, py: Python) -> PyResult<Self> {
         // TODO: parse PyDict directly to avoid having to serialize
         let json = PyModule::import(py, "json")?;
+
+        let abi = data.get_item("abi").map(Py::from);
+
         let data: &PyAny = data.into();
         let dict = [("data", data), ("json", json.into())].into_py_dict(py);
         let s: &str = py.eval("json.dumps(data)", None, Some(dict))?.extract()?;
-        Self::loads(cls, s)
+
+        Ok(Self {
+            abi,
+            ..Self::loads(cls, s)?
+        })
     }
 
     #[classmethod]
     fn loads(_cls: &PyType, s: &str) -> PyResult<Self> {
-        match ContractClass::try_from(s) {
-            Ok(inner) => Ok(Self { inner }),
-            Err(err) => Err(PyValueError::new_err(err.to_string())),
-        }
+        Self::try_from(s).map_err(|err| PyValueError::new_err(err.to_string()))
     }
 }
 
 impl<'a> From<&'a PyContractClass> for &'a ContractClass {
     fn from(class: &'a PyContractClass) -> Self {
         &class.inner
+    }
+}
+
+impl TryFrom<&str> for PyContractClass {
+    type Error = io::Error;
+
+    fn try_from(s: &str) -> io::Result<Self> {
+        Ok(Self {
+            inner: ContractClass::try_from(s)?,
+            abi: None,
+        })
     }
 }
 
