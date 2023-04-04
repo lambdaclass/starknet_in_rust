@@ -330,7 +330,7 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: ClassHash = (request.class_hash).to_be_bytes();
+        let class_hash_bytes: ClassHash = request.class_hash.to_be_bytes();
 
         self.starknet_storage_state
             .state
@@ -538,7 +538,7 @@ where
     fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
-            .read(&(address.0).to_be_bytes())
+            .read(&address.0.to_be_bytes())
             .cloned()?)
     }
 
