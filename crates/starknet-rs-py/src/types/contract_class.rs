@@ -1,6 +1,6 @@
 use super::contract_entry_point::PyContractEntryPoint;
 use pyo3::{
-    exceptions::PyRuntimeError,
+    exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
     types::{IntoPyDict, PyDict, PyType},
 };
@@ -42,10 +42,7 @@ impl PyContractClass {
 
     #[classmethod]
     fn load(cls: &PyType, data: &PyDict, py: Python) -> PyResult<Self> {
-        // TODO:
-        //   1. fix ContractClass deserialization
-        //   2. parse PyDict directly to avoid having to serialize
-
+        // TODO: parse PyDict directly to avoid having to serialize
         let json = PyModule::import(py, "json")?;
         let data: &PyAny = data.into();
         let dict = [("data", data), ("json", json.into())].into_py_dict(py);
@@ -54,13 +51,11 @@ impl PyContractClass {
     }
 
     #[classmethod]
-    fn loads(_cls: &PyType, _s: &str) -> PyResult<Self> {
-        // match serde_json::from_str(&s) {
-        //     Ok(inner) => Ok(Self { inner }),
-        //     Err(err) => Err(PyValueError::new_err(err.to_string())),
-        // }
-        let inner = ContractClass::new(Default::default(), Default::default(), None).unwrap();
-        Ok(PyContractClass { inner })
+    fn loads(_cls: &PyType, s: &str) -> PyResult<Self> {
+        match ContractClass::try_from(s) {
+            Ok(inner) => Ok(Self { inner }),
+            Err(err) => Err(PyValueError::new_err(err.to_string())),
+        }
     }
 }
 
@@ -72,9 +67,8 @@ impl<'a> From<&'a PyContractClass> for &'a ContractClass {
 
 #[cfg(test)]
 mod tests {
-    use pyo3::PyTypeInfo;
-
     use super::*;
+    use pyo3::PyTypeInfo;
 
     #[test]
     fn load_contract_smoke_test() {
