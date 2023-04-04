@@ -40,7 +40,7 @@ pub fn read_abi(abi_name: &PathBuf) -> HashMap<String, (usize, EntryPointType)> 
 }
 
 #[test]
-fn test_read_abi() {
+fn test_read_abi_simple_contract() {
     let path_a = PathBuf::from(r"starknet_programs/fibonacci_abi.json");
     // using the function to read an abi
     let result = read_abi(&path_a);
@@ -48,6 +48,53 @@ fn test_read_abi() {
     // this is the expected result of the function above
     let expected_result: HashMap<String, (usize, EntryPointType)> =
         HashMap::from([(String::from("fib"), (0_usize, EntryPointType::External))]);
+
+    // final check
+    assert_eq!(result, expected_result)
+}
+
+#[test]
+fn test_read_abi_complex_contract() {
+    let path_a = PathBuf::from(r"starknet_programs/ERC721_abi.json");
+
+    let result = read_abi(&path_a);
+
+    // this is the expected result of the function above
+
+    let expected_result: HashMap<String, (usize, EntryPointType)> = HashMap::from([
+        (
+            String::from("constructor"),
+            (0_usize, EntryPointType::Constructor),
+        ),
+        (String::from("name"), (0_usize, EntryPointType::External)),
+        (
+            String::from("getApproved"),
+            (4_usize, EntryPointType::External),
+        ),
+        (
+            String::from("isApprovedForAll"),
+            (5_usize, EntryPointType::External),
+        ),
+        (String::from("approve"), (6_usize, EntryPointType::External)),
+        (
+            String::from("balanceOf"),
+            (2_usize, EntryPointType::External),
+        ),
+        (
+            String::from("setApprovalForAll"),
+            (7_usize, EntryPointType::External),
+        ),
+        (
+            String::from("safeTransferFrom"),
+            (9_usize, EntryPointType::External),
+        ),
+        (String::from("symbol"), (1_usize, EntryPointType::External)),
+        (String::from("ownerOf"), (3_usize, EntryPointType::External)),
+        (
+            String::from("transferFrom"),
+            (8_usize, EntryPointType::External),
+        ),
+    ]);
 
     // final check
     assert_eq!(result, expected_result)
