@@ -30,11 +30,11 @@ use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------
-//* BusinessLogicHandler implementation
+//* DeprecatedBLSyscallHandler implementation
 //* -----------------------------------
-
+/// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
+pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -51,7 +51,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -69,7 +69,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         let internal_calls = Vec::new();
 
-        BusinessLogicSyscallHandler {
+        DeprecatedBLSyscallHandler {
             tx_execution_context,
             events,
             read_only_segments,
@@ -86,11 +86,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 
     pub fn default_with(state: &'a mut T) -> Self {
-        BusinessLogicSyscallHandler::new_for_testing(
-            BlockInfo::default(),
-            Default::default(),
-            state,
-        )
+        DeprecatedBLSyscallHandler::new_for_testing(BlockInfo::default(), Default::default(), state)
     }
 
     /// Increments the syscall count for a given `syscall_name` by 1.
@@ -137,7 +133,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let internal_calls = Vec::new();
         let expected_syscall_ptr = Relocatable::from((0, 0));
 
-        BusinessLogicSyscallHandler {
+        DeprecatedBLSyscallHandler {
             tx_execution_context,
             events,
             read_only_segments,
@@ -228,7 +224,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T> Borrow<T> for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> Borrow<T> for DeprecatedBLSyscallHandler<'a, T>
 where
     T: State + StateReader,
 {
@@ -237,7 +233,7 @@ where
     }
 }
 
-impl<'a, T> BorrowMut<T> for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> BorrowMut<T> for DeprecatedBLSyscallHandler<'a, T>
 where
     T: State + StateReader,
 {
@@ -246,7 +242,7 @@ where
     }
 }
 
-impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> SyscallHandler for DeprecatedBLSyscallHandler<'a, T>
 where
     T: Default + State + StateReader,
 {
@@ -555,7 +551,7 @@ where
     }
 }
 
-impl<'a, T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> SyscallHandlerPostRun for DeprecatedBLSyscallHandler<'a, T>
 where
     T: Default + State + StateReader,
 {
@@ -606,8 +602,8 @@ mod tests {
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 
-    type BusinessLogicSyscallHandler<'a> =
-        super::BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>;
+    type DeprecatedBLSyscallHandler<'a> =
+        super::DeprecatedBLSyscallHandler<'a, CachedState<InMemoryStateReader>>;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -630,7 +626,7 @@ mod tests {
     #[allow(dead_code)]
     fn deploy_from_zero_error() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -656,7 +652,7 @@ mod tests {
     #[test]
     fn can_allocate_segment() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
 
@@ -672,7 +668,7 @@ mod tests {
     #[test]
     fn test_get_block_number() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -692,7 +688,7 @@ mod tests {
     #[test]
     fn test_get_contract_address_ok() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -709,7 +705,7 @@ mod tests {
     #[test]
     fn test_storage_read_empty() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
 
         assert_matches!(
             syscall_handler._storage_read(Address(Felt252::zero())),

@@ -178,7 +178,7 @@ impl SyscallHandler for OsSyscallHandler {
     }
 
     /// Advance execute_code_read_iterators since the previous storage value is written
-    /// in each write operation. See BusinessLogicSysCallHandler._storage_write().
+    /// in each write operation. See DeprecatedBLSyscallHandler._storage_write().
     fn _storage_write(
         &mut self,
         _address: Address,
