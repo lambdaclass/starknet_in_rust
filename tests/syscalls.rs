@@ -96,19 +96,9 @@ fn test_contract<'a>(
                     )
                 }));
 
-                let nonce = Felt252::new(70);
-                let storage_entry = (contract_address.clone(), [29; 32]);
-                let storage_value = Felt252::new(574);
-
                 state_reader
                     .address_to_class_hash_mut()
                     .insert(contract_address.clone(), class_hash);
-                state_reader
-                    .address_to_nonce_mut()
-                    .insert(contract_address.clone(), nonce.clone());
-                state_reader
-                    .address_to_storage_mut()
-                    .insert(storage_entry.clone(), storage_value.clone());
                 state_reader
                     .class_hash_to_contract_class_mut()
                     .insert(class_hash, contract_class.clone());
