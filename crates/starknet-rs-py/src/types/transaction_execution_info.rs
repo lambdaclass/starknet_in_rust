@@ -1,5 +1,5 @@
 use super::{call_info::PyCallInfo, transaction::PyTransactionType};
-use pyo3::prelude::*;
+use pyo3::{exceptions::PyValueError, prelude::*};
 use starknet_rs::business_logic::execution::objects::TransactionExecutionInfo;
 use std::collections::HashMap;
 
@@ -59,6 +59,14 @@ impl PyTransactionExecutionInfo {
     #[getter]
     fn transaction_type(&self) -> Option<u64> {
         Some(self.inner.tx_type?.into())
+    }
+
+    fn get_sorted_events(&self) -> PyResult<Vec<u64>> {
+        match self.inner.get_sorted_events() {
+            // TODO: we should return Vec<PyEvent>, but we didn't implement PyEvent
+            Ok(_res) => Ok(vec![]),
+            Err(err) => Err(PyValueError::new_err(err.to_string())),
+        }
     }
 }
 

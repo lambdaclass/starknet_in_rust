@@ -661,7 +661,7 @@ index 0000000..c902bc8
 +def starknet_rs_py_monkeypatch():
 +    setattr(sys.modules["starkware.starknet.services.api.contract_class"], "ContractClass", starknet_rs_py.ContractClass)
 diff --git a/starknet_devnet/starknet_wrapper.py b/starknet_devnet/starknet_wrapper.py
-index ff38d1c..4dc7629 100644
+index ff38d1c..41e08d1 100644
 --- a/starknet_devnet/starknet_wrapper.py
 +++ b/starknet_devnet/starknet_wrapper.py
 @@ -7,9 +7,9 @@ from types import TracebackType
@@ -758,15 +758,15 @@ index ff38d1c..4dc7629 100644
                  )
  
          return self.starknet
-@@ -243,7 +246,7 @@ class StarknetWrapper:
-         """
-         Returns the StarknetState of the underlying Starknet instance.
-         """
--        return self.starknet.state
-+        return self.starknet
- 
-     async def _update_pending_state(
-         self,
+@@ -260,7 +263,7 @@ class StarknetWrapper:
+         # state update and preservation
+         previous_state = self.__current_cached_state
+         assert previous_state is not None
+-        current_state = self.get_state().state
++        current_state = self.get_state()
+         current_state.block_info = self.block_info_generator.next_block(
+             block_info=current_state.block_info,
+             general_config=self.get_state().general_config,
 @@ -316,13 +319,13 @@ class StarknetWrapper:
              # calculate class hash here if execution fails
              class_hash_int = int.from_bytes(tx_handler.internal_tx.class_hash, "big")
@@ -783,12 +783,21 @@ index ff38d1c..4dc7629 100644
                  class_hash=tx_handler.internal_tx.class_hash,
                  contract_class=external_tx.contract_class,
              )
+@@ -331,7 +334,7 @@ class StarknetWrapper:
+ 
+     def _update_block_number(self):
+         """Updates just the block number. Returns the old block info to allow reverting"""
+-        current_cached_state = self.get_state().state
++        current_cached_state = self.get_state()
+         block_info = current_cached_state.block_info
+         current_cached_state.block_info = BlockInfo(
+             gas_price=block_info.gas_price,
 @@ -475,7 +478,7 @@ class StarknetWrapper:
  
          async with self.__get_transaction_handler() as tx_handler:
              tx_handler.internal_tx = internal_tx
 -            await self.get_state().state.set_contract_class(
-+            self.get_state().state.set_contract_class(
++            self.get_state().set_contract_class(
                  class_hash=internal_tx.class_hash, contract_class=contract_class
              )
              tx_handler.execution_info = await self.__deploy(internal_tx)
@@ -819,6 +828,15 @@ index ff38d1c..4dc7629 100644
          return tx_execution_info
  
      async def _register_new_contracts(
+@@ -582,7 +585,7 @@ class StarknetWrapper:
+ 
+     async def get_class_by_hash(self, class_hash: int) -> ContractClass:
+         """Return contract class given class hash"""
+-        cached_state = self.get_state().state
++        cached_state = self.get_state()
+         class_hash_bytes = to_bytes(class_hash)
+         return await cached_state.get_contract_class(class_hash_bytes)
+ 
 @@ -591,7 +594,7 @@ class StarknetWrapper:
      ) -> int:
          """Return class hash give the contract address"""
@@ -910,15 +928,17 @@ index ff38d1c..4dc7629 100644
      async def __predeclare_starknet_cli_account(self):
          """Predeclares the account class used by Starknet CLI"""
 -        await self.get_state().state.set_contract_class(
-+        self.get_state().state.set_contract_class(
++        self.get_state().set_contract_class(
              to_bytes(STARKNET_CLI_ACCOUNT_CLASS_HASH), oz_account_class
          )
  
-@@ -861,6 +864,6 @@ class StarknetWrapper:
+@@ -860,7 +863,7 @@ class StarknetWrapper:
+         Check if the contract is deployed.
          """
          assert isinstance(address, int)
-         cached_state = self.get_state().state
+-        cached_state = self.get_state().state
 -        class_hash_bytes = await cached_state.get_class_hash_at(address)
++        cached_state = self.get_state()
 +        class_hash_bytes = cached_state.get_class_hash_at(address)
          class_hash_int = int.from_bytes(class_hash_bytes, "big")
          return bool(class_hash_int)
