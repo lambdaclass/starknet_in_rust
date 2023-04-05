@@ -1,11 +1,12 @@
 use super::contract_entry_point::PyContractEntryPoint;
+use cairo_vm::types::errors::program_errors::ProgramError;
 use pyo3::{
     exceptions::PyValueError,
     prelude::*,
     types::{IntoPyDict, PyDict, PyType},
 };
 use starknet_rs::services::api::contract_class::{ContractClass, EntryPointType};
-use std::{collections::HashMap, io};
+use std::collections::HashMap;
 
 type PyEntryPointType = i32;
 
@@ -72,9 +73,9 @@ impl<'a> From<&'a PyContractClass> for &'a ContractClass {
 }
 
 impl TryFrom<&str> for PyContractClass {
-    type Error = io::Error;
+    type Error = ProgramError;
 
-    fn try_from(s: &str) -> io::Result<Self> {
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         Ok(Self {
             inner: ContractClass::try_from(s)?,
             abi: None,
