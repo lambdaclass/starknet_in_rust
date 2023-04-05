@@ -557,17 +557,17 @@ mod tests {
     use num_traits::Num;
     use std::path::PathBuf;
 
-    type BusinessLogicSyscallHandler<'a> =
-        crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+    type DeprecatedBLSyscallHandler<'a> =
+        crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;
-    type SyscallHintProcessor<'a> = super::SyscallHintProcessor<BusinessLogicSyscallHandler<'a>>;
+    type SyscallHintProcessor<'a> = super::SyscallHintProcessor<DeprecatedBLSyscallHandler<'a>>;
 
     #[test]
     fn read_send_message_to_l1_request() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -589,7 +589,7 @@ mod tests {
     #[test]
     fn read_deploy_syscall_request() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -621,7 +621,7 @@ mod tests {
     #[test]
     fn get_block_timestamp_for_business_logic() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -640,7 +640,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -671,7 +671,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -722,7 +722,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -778,7 +778,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
@@ -884,7 +884,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         syscall_handler_hint_processor.syscall_handler.tx_info_ptr =
             Some(relocatable!(7, 0).into());
@@ -922,7 +922,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -967,7 +967,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -1013,7 +1013,7 @@ mod tests {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let hint_data =
             HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
@@ -1046,7 +1046,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -1085,7 +1085,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
@@ -1150,7 +1150,7 @@ mod tests {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let storage_value = Felt252::new(3);
         syscall_handler_hint_processor
@@ -1212,7 +1212,7 @@ mod tests {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         syscall_handler_hint_processor
             .syscall_handler
@@ -1282,7 +1282,7 @@ mod tests {
         // Create SyscallHintProcessor
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         // Initialize state.set_contract_classes
         syscall_handler_hint_processor
             .syscall_handler
@@ -1377,7 +1377,7 @@ mod tests {
         // Create SyscallHintProcessor
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         // Initialize state.set_contract_classes
         syscall_handler_hint_processor
             .syscall_handler

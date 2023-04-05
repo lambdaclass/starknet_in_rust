@@ -310,8 +310,8 @@ mod tests {
     };
     use cairo_rs::relocatable;
 
-    type BusinessLogicSyscallHandler<'a> =
-        crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+    type DeprecatedBLSyscallHandler<'a> =
+        crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn write_get_caller_address_response() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
