@@ -1,6 +1,6 @@
 use crate::{
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::starknet_contract_address::compute_deprecated_class_hash,
         errors::syscall_handler_errors::SyscallHandlerError,
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
@@ -129,8 +129,8 @@ pub fn calculate_declare_transaction_hash(
     version: u64,
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
-    let class_hash =
-        compute_class_hash(contract_class).map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+    let class_hash = compute_deprecated_class_hash(contract_class)
+        .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
     let (calldata, additional_data) = if version > 0 {
         (Vec::new(), vec![class_hash])

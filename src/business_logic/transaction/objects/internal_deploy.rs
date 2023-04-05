@@ -9,7 +9,7 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::starknet_contract_address::compute_deprecated_class_hash,
         errors::syscall_handler_errors::SyscallHandlerError,
         transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
     },
@@ -43,7 +43,7 @@ impl InternalDeploy {
         chain_id: Felt252,
         version: u64,
     ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_class_hash(&contract_class)
+        let class_hash = compute_deprecated_class_hash(&contract_class)
             .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
 
         let contract_hash: ClassHash = felt_to_hash(&class_hash);
