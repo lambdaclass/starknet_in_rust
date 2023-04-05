@@ -513,8 +513,8 @@ dependencies = [
 
 [[package]]
 name = "cairo-felt"
-version = "0.2.0"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=d180881ec875ddcba705b8f9e9e11fa8c4745c7a#d180881ec875ddcba705b8f9e9e11fa8c4745c7a"
+version = "0.3.0-rc1"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954#725c17e6b4c50ecf9fbb0113ecf172d858372954"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -524,14 +524,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "cairo-take_until_unbalanced"
+version = "0.24.2-rc1"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954#725c17e6b4c50ecf9fbb0113ecf172d858372954"
+dependencies = [
+ "nom",
+]
+
+[[package]]
 name = "cairo-vm"
-version = "0.2.0"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=d180881ec875ddcba705b8f9e9e11fa8c4745c7a#d180881ec875ddcba705b8f9e9e11fa8c4745c7a"
+version = "0.3.0-rc1"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954#725c17e6b4c50ecf9fbb0113ecf172d858372954"
 dependencies = [
  "anyhow",
  "bincode",
  "bitvec 1.0.1",
  "cairo-felt",
+ "cairo-take_until_unbalanced",
  "generic-array",
  "hashbrown 0.13.2",
  "hex",
@@ -542,7 +551,6 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
- "parse-hyperlinks",
  "rand_core",
  "serde",
  "serde_bytes",
@@ -1719,14 +1727,6 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-sys 0.45.0",
-]
-
-[[package]]
-name = "parse-hyperlinks"
-version = "0.23.4"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=d180881ec875ddcba705b8f9e9e11fa8c4745c7a#d180881ec875ddcba705b8f9e9e11fa8c4745c7a"
-dependencies = [
- "nom",
 ]
 
 [[package]]

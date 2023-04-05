@@ -65,11 +65,11 @@ where
     ) -> Result<(), TransactionError> {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
-
         Ok(self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
             verify_secure,
+            None,
             &mut self.vm,
             &mut self.hint_processor,
         )?)
