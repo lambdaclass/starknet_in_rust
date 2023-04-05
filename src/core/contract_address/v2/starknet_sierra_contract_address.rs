@@ -113,13 +113,13 @@ fn get_contract_entry_points(
     let program_length = contract_class.sierra_program.len();
 
     let entry_points = match entry_point_type {
-        EntryPointType::Constructor => contract_class.entry_points_by_type.constructor,
-        EntryPointType::External => contract_class.entry_points_by_type.external,
-        EntryPointType::L1Handler => contract_class.entry_points_by_type.l1_handler,
+        EntryPointType::Constructor => contract_class.entry_points_by_type.constructor.clone(),
+        EntryPointType::External => contract_class.entry_points_by_type.external.clone(),
+        EntryPointType::L1Handler => contract_class.entry_points_by_type.l1_handler.clone(),
     };
 
     let program_len = program_length;
-    for entry_point in entry_points {
+    for entry_point in &entry_points {
         if entry_point.function_idx > program_len {
             return Err(ContractAddressError::InvalidOffset(
                 entry_point.function_idx,
@@ -149,14 +149,15 @@ fn get_sierra_contract_class_struct(
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
     let abi = contract_class
         .abi
+        .clone()
         .ok_or(ContractAddressError::MissingAbi)?
         .json();
-    let abi_hash = Felt252::from(starknet_keccak(abi.as_bytes()));
 
+    let abi_hash = Felt252::from(starknet_keccak(abi.as_bytes()));
     let sierra_program_ptr = contract_class
         .sierra_program
         .iter()
-        .map(|b| Felt252::from(b.value).into())
+        .map(|b| Felt252::from(b.value.clone()).into())
         .collect();
 
     Ok(SierraStructContractClass {

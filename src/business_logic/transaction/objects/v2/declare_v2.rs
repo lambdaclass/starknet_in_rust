@@ -43,6 +43,7 @@ pub struct InternalDeclareV2 {
 }
 
 impl InternalDeclareV2 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sierra_contract_class: &SierraContractClass,
         compiled_class_hash: Felt252,
@@ -225,6 +226,8 @@ impl InternalDeclareV2 {
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
+    // TODO: delete once used
+    #[allow(dead_code)]
     fn handle_nonce<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
