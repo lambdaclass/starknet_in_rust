@@ -37,18 +37,18 @@ cairo_programs/%.json: cairo_programs/%.cairo
 	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json: starknet_programs/%.cairo
-	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && \
+	cd starknet_programs/ && \
+	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
+	../$< \
+	--output ./$*.json \
+	--abi ./$*_abi.json \
+	|| rm ./$*.json ./$*_abi.json
 # Compiles .cairo files into .json files. if the command fails, then it removes all of the .json files
 
 #
 # Normal rules.
 #
-
-compile-abi:
-	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile fibonacci.cairo \
-		--output fibonacci_compiled.json \
-		--abi fibonacci_abi.json
-# This abi file is used for the `test_read_abi` test in contract_abi.rs
 
 build: compile-cairo compile-starknet
 	cargo build --release --all
@@ -72,7 +72,7 @@ clean:
 clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet compile-abi
+test: compile-cairo compile-starknet
 	cargo test
 
 test-py: compile-cairo compile-starknet
