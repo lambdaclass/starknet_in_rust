@@ -32,7 +32,7 @@ use std::borrow::{Borrow, BorrowMut};
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
 //* -----------------------------------
-// This is the old version of the BusinessLogicSyscallHandler
+/// This is the old version of the BusinessLogicSyscallHandler
 #[derive(Debug)]
 pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
