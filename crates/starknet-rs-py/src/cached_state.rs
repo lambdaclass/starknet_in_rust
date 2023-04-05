@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::types::contract_class::PyContractClass;
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
@@ -11,8 +10,9 @@ use starknet_rs::{
             state_api::{State, StateReader},
         },
     },
-    utils::{felt_to_hash, Address},
+    utils::{felt_to_hash, Address, ClassHash},
 };
+use std::collections::HashMap;
 
 #[pyclass]
 #[pyo3(name = "CachedState")]
@@ -61,10 +61,9 @@ impl PyCachedState {
 
     fn set_contract_class(
         &mut self,
-        address: BigUint,
+        address: ClassHash,
         contract_class: &PyContractClass,
     ) -> PyResult<()> {
-        let address = felt_to_hash(&Felt::from(address));
         let contract_class = contract_class.inner.clone();
         self.state
             .set_contract_class(&address, &contract_class)
