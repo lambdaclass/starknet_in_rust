@@ -59,6 +59,7 @@ check: compile-cairo compile-starknet
 deps: check-python-version 
 	cargo install cargo-tarpaulin --version 0.23.1
 	cargo install flamegraph --version 0.6.2
+	cargo install cargo-llvm-cov --version 0.5.14
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
@@ -78,8 +79,8 @@ test-py: compile-cairo compile-starknet
 	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
 coverage: compile-cairo compile-starknet compile-abi
-	cargo tarpaulin
-	-rm -f default.profraw
+	cargo llvm-cov --ignore-filename-regex 'main.rs'
+	cargo llvm-cov report --lcov --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh
