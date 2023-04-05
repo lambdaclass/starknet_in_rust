@@ -208,6 +208,19 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             .storage_writes
             .insert(storage_entry.clone(), value);
     }
+
+    fn set_contract_class(
+        &mut self,
+        class_hash: &ClassHash,
+        contract_class: &ContractClass,
+    ) -> Result<(), StateError> {
+        self.contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingContractClassCache)?
+            .insert(*class_hash, contract_class.clone());
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

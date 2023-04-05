@@ -17,13 +17,14 @@ use crate::{
     core::{
         contract_address::v2::starknet_sierra_contract_address::compute_sierra_class_hash,
         errors::state_errors::StateError,
+        transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
     },
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
-    utils::{calculate_tx_resources, Address},
+    utils::{calculate_tx_resources, felt_to_hash, Address},
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use felt::Felt252;
@@ -41,6 +42,7 @@ pub struct InternalDeclareV2 {
     pub sierra_contract_class: SierraContractClass,
     pub hash_value: Felt252,
 }
+
 impl InternalDeclareV2 {
     pub fn new(
         sierra_contract_class: &SierraContractClass,
@@ -52,10 +54,17 @@ impl InternalDeclareV2 {
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
-        // compile sierra to contract class (ours)
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
-        //let hash_value = ;
+        let hash_value = calculate_declare_v2_transaction_hash(
+            sierra_contract_class,
+            compiled_class_hash,
+            chain_id,
+            &sender_address,
+            max_fee,
+            version,
+            nonce,
+        )?;
 
         let internal_declare = InternalDeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
@@ -67,6 +76,7 @@ impl InternalDeclareV2 {
             signature,
             nonce,
             compiled_class_hash,
+            hash_value,
         };
 
         internal_declare.verify_version()?;
@@ -150,6 +160,11 @@ impl InternalDeclareV2 {
             n_steps,
             self.version,
         )
+    }
+
+    pub fn get_calldata(&self) -> Vec<Felt252> {
+        let bytes = self.compiled_class_hash.clone();
+        Vec::from([bytes])
     }
 
     pub fn run_validate_entrypoint<S: Default + State + StateReader>(
@@ -244,15 +259,16 @@ impl InternalDeclareV2 {
 
         self.handle_nonce(state)?;
         // Set contract class
-        match state.get_contract_class(&self.class_hash) {
+        let class_hash = felt_to_hash(&self.compiled_class_hash);
+        match state.get_contract_class(&class_hash) {
             Err(StateError::MissingClassHash()) => {
                 // Class is undeclared; declare it.
-                state.set_contract_class(&self.class_hash, &self.contract_class)?;
+                state.set_sierra_contract_class(&class_hash, &self.sierra_contract_class)?;
             }
             Err(error) => return Err(error.into()),
             Ok(_) => {
                 // Class is already declared; cannot redeclare.
-                return Err(TransactionError::ClassAlreadyDeclared(self.class_hash));
+                return Err(TransactionError::ClassAlreadyDeclared(class_hash));
             }
         }
 

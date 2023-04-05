@@ -4,6 +4,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
+use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use felt::Felt252;
 
 pub trait StateReader {
@@ -32,4 +33,9 @@ pub trait State {
     ) -> Result<(), StateError>;
     fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError>;
     fn set_storage_at(&mut self, storage_entry: &StorageEntry, value: Felt252);
+    fn set_sierra_contract_class(
+        &mut self,
+        class_hash: &ClassHash,
+        contract_class: &SierraContractClass,
+    ) -> Result<(), StateError>;
 }

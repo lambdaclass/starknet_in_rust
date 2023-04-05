@@ -1,6 +1,9 @@
 use crate::{
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::{
+            starknet_contract_address::compute_class_hash,
+            v2::starknet_sierra_contract_address::compute_sierra_class_hash,
+        },
         errors::syscall_handler_errors::SyscallHandlerError,
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
@@ -8,6 +11,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::Address,
 };
+use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use felt::{felt_str, Felt252};
 use num_traits::Zero;
 
@@ -137,6 +141,37 @@ pub fn calculate_declare_transaction_hash(
     } else {
         (vec![class_hash], vec![nonce])
     };
+
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::Declare,
+        version,
+        sender_address,
+        Felt252::zero(),
+        &calldata,
+        max_fee,
+        chain_id,
+        &additional_data,
+    )
+}
+
+// ----------------------------
+//      V2 Hash Functions
+// ----------------------------
+
+pub fn calculate_declare_v2_transaction_hash(
+    contract_class: &SierraContractClass,
+    compiled_class_hash: Felt252,
+    chain_id: Felt252,
+    sender_address: &Address,
+    max_fee: u64,
+    version: u64,
+    nonce: Felt252,
+) -> Result<Felt252, SyscallHandlerError> {
+    let class_hash = compute_sierra_class_hash(contract_class)
+        .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+
+    let calldata = [class_hash].to_vec();
+    let additional_data = [nonce, compiled_class_hash].to_vec();
 
     calculate_transaction_hash_common(
         TransactionHashPrefix::Declare,
