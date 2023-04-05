@@ -57,7 +57,6 @@ check: compile-cairo compile-starknet
 	cargo check --all
 
 deps: check-python-version 
-	cargo install cargo-tarpaulin --version 0.23.1
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	python3 -m venv starknet-venv
