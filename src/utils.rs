@@ -89,15 +89,8 @@ pub fn string_to_hash(class_string: &String) -> ClassHash {
         Felt252::from_str_radix(class_string.strip_prefix("0x").unwrap_or(class_string), 16);
 
     parsed_felt
-        .unwrap_or_else(|err| panic!("Problem parsing the string to a felt {:?}", err))
+        .unwrap_or_else(|err| panic!("Problem parsing the string to a felt {err}"))
         .to_be_bytes()
-
-    /*
-    let p = match parsed_felt{
-        Ok(parsed_felt) => parsed_felt.to_be_bytes(),
-        Err(error) => panic!("Problem parsing the string to a felt", error)
-    };
-    p */
 }
 
 // -------------------
@@ -584,7 +577,7 @@ mod test {
 
     #[test]
     fn test_felt_to_hash() {
-        assert_eq!(Felt252::zero().to_be_bytes(), [0u8; 32]);
+        assert_eq!(&Felt252::zero().to_be_bytes(), &[0u8; 32]);
         assert_eq!(
             Felt252::one().to_be_bytes(),
             [
