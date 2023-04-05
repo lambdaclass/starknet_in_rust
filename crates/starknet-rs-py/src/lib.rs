@@ -137,7 +137,7 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_function(validate_segment_pointers)?;
 
     //  starkware.starknet.core.os.syscall_utils
-    // m.add_class::<PyBusinessLogicSysCallHandler>()?;
+    // m.add_class::<PyDeprecatedBLSyscallHandler>()?;
     // m.add_class::<PyHandlerException>()?;
 
     //  starkware.starknet.services.api.feeder_gateway.feeder_gateway_client

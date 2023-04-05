@@ -460,12 +460,12 @@ pub mod test_utils {
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
             let mut state = CachedState::<InMemoryStateReader>::default();
             let mut hint_processor = $crate::core::syscalls::syscall_handler::SyscallHintProcessor::<
-                $crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler::<
+                $crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler::<
                     $crate::business_logic::state::cached_state::CachedState<
                         $crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
                     >,
                 >,
-            >::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            >::new(DeprecatedBLSyscallHandler::default_with(&mut state));
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
