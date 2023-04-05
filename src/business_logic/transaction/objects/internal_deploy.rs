@@ -303,6 +303,7 @@ mod tests {
         assert_matches!(result, StarkwareError::TransactionFailed);
     }
 
+    #[test]
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
         let state_reader = InMemoryStateReader::default();
