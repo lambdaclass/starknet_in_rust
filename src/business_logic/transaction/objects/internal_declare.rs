@@ -837,7 +837,7 @@ mod tests {
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
-            1000,
+            10,
             1,
             Vec::new(),
             Felt252::zero(),
@@ -846,7 +846,7 @@ mod tests {
 
         assert_matches!(
             internal_declare.execute(&mut state, &StarknetGeneralConfig::default()),
-            Err(TransactionError::ResourcesError { .. })
+            Err(TransactionError::FeeError(_))
         );
     }
 }
