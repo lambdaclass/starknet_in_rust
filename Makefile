@@ -78,7 +78,7 @@ test-py: compile-cairo compile-starknet
 	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
 coverage: compile-cairo compile-starknet compile-abi
-	cargo tarpaulin
+	cargo tarpaulin --engine llvm
 	-rm -f default.profraw
 
 heaptrack:
