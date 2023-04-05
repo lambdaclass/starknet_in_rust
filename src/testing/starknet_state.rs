@@ -272,16 +272,19 @@ mod tests {
     use felt::felt_str;
     use num_traits::Num;
 
+    use super::*;
     use crate::{
-        business_logic::{execution::objects::CallType, state::state_cache::StorageEntry},
+        business_logic::{
+            execution::objects::{CallType, OrderedL2ToL1Message},
+            state::state_cache::StorageEntry,
+        },
         core::contract_address::starknet_contract_address::compute_class_hash,
+        core::errors::state_errors::StateError,
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
-        utils::felt_to_hash,
+        utils::{calculate_sn_keccak, felt_to_hash},
     };
-
-    use super::*;
 
     #[test]
     fn test_deploy() {
@@ -524,5 +527,132 @@ mod tests {
         };
 
         assert_eq!(tx_info, expected_info);
+    }
+
+    #[test]
+    fn test_execute_entry_point_raw() {
+        let mut starknet_state = StarknetState::new(None);
+        let path = PathBuf::from("starknet_programs/fibonacci.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_address_salt = Address(1.into());
+
+        let (contract_address, _exec_info) = starknet_state
+            .deploy(contract_class, vec![], contract_address_salt)
+            .unwrap();
+
+        // fibonacci selector
+        let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"fib"));
+        let result = starknet_state
+            .execute_entry_point_raw(
+                contract_address,
+                entrypoint_selector,
+                vec![1.into(), 1.into(), 10.into()],
+                Address(0.into()),
+            )
+            .unwrap()
+            .retdata;
+        assert_eq!(result, vec![144.into()]);
+    }
+
+    #[test]
+    fn test_add_messages_and_events() {
+        let mut starknet_state = StarknetState::new(None);
+        let test_msg_1 = OrderedL2ToL1Message {
+            order: 1,
+            to_address: Address(0.into()),
+            payload: vec![0.into()],
+        };
+        let test_msg_2 = OrderedL2ToL1Message {
+            order: 2,
+            to_address: Address(0.into()),
+            payload: vec![0.into()],
+        };
+
+        let exec_info = ExecutionInfo::Call(Box::new(CallInfo {
+            l2_to_l1_messages: vec![test_msg_1, test_msg_2],
+            ..Default::default()
+        }));
+
+        starknet_state.add_messages_and_events(&exec_info).unwrap();
+        let msg_hash =
+            StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
+                .get_hash();
+
+        let messages = starknet_state.l2_to_l1_messages;
+        let mut expected_messages = HashMap::new();
+        expected_messages.insert(msg_hash, 2);
+        assert_eq!(messages, expected_messages);
+    }
+
+    #[test]
+    fn test_consume_message_hash() {
+        let mut starknet_state = StarknetState::new(None);
+        let test_msg_1 = OrderedL2ToL1Message {
+            order: 1,
+            to_address: Address(0.into()),
+            payload: vec![0.into()],
+        };
+        let test_msg_2 = OrderedL2ToL1Message {
+            order: 2,
+            to_address: Address(0.into()),
+            payload: vec![0.into()],
+        };
+
+        let exec_info = ExecutionInfo::Call(Box::new(CallInfo {
+            l2_to_l1_messages: vec![test_msg_1, test_msg_2],
+            ..Default::default()
+        }));
+
+        starknet_state.add_messages_and_events(&exec_info).unwrap();
+        let msg_hash =
+            StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
+                .get_hash();
+
+        starknet_state
+            .consume_message_hash(msg_hash.clone())
+            .unwrap();
+        let messages = starknet_state.l2_to_l1_messages;
+        let mut expected_messages = HashMap::new();
+        expected_messages.insert(msg_hash, 1);
+        assert_eq!(messages, expected_messages);
+    }
+
+    #[test]
+    fn test_consume_message_hash_twice_should_fail() {
+        let mut starknet_state = StarknetState::new(None);
+        let test_msg = OrderedL2ToL1Message {
+            order: 1,
+            to_address: Address(0.into()),
+            payload: vec![0.into()],
+        };
+
+        let exec_info = ExecutionInfo::Call(Box::new(CallInfo {
+            l2_to_l1_messages: vec![test_msg],
+            ..Default::default()
+        }));
+
+        starknet_state.add_messages_and_events(&exec_info).unwrap();
+        let msg_hash =
+            StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
+                .get_hash();
+
+        starknet_state
+            .consume_message_hash(msg_hash.clone())
+            .unwrap();
+        let err = starknet_state.consume_message_hash(msg_hash).unwrap_err();
+        assert_matches!(err, StarknetStateError::InvalidMessageHash);
+    }
+
+    #[test]
+    fn test_create_invoke_function_should_fail_with_none_contract_state() {
+        let mut starknet_state = StarknetState::new(None);
+
+        let err = starknet_state
+            .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None)
+            .unwrap_err();
+        assert_matches!(
+            err,
+            TransactionError::State(StateError::NoneContractState(_))
+        );
     }
 }
