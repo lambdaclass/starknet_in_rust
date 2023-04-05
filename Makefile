@@ -80,7 +80,7 @@ test-py: compile-cairo compile-starknet
 
 coverage: compile-cairo compile-starknet compile-abi
 	cargo llvm-cov --ignore-filename-regex 'main.rs'
-	cargo llvm-cov report --lcov --output-path lcov.info
+	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh
