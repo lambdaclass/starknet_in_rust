@@ -860,4 +860,24 @@ mod tests {
             TransactionError::UnauthorizedActionOnValidate
         );
     }
+
+    #[test]
+    fn preprocess_invoke_function_fields_nonce_is_none() {
+        let entry_point_selector = Felt252::from_str_radix(
+            "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+            16,
+        )
+        .unwrap();
+        let result = preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0);
+
+        let expected_additional_data: Vec<Felt252> = Vec::new();
+        let expected_entry_point_selector_field = entry_point_selector;
+        assert_eq!(
+            result.unwrap(),
+            (
+                expected_entry_point_selector_field,
+                expected_additional_data
+            )
+        )
+    }
 }
