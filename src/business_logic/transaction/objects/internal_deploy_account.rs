@@ -362,7 +362,10 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::contract_address::starknet_contract_address::compute_class_hash,
+        core::{
+            contract_address::starknet_contract_address::compute_class_hash,
+            errors::state_errors::StateError,
+        },
         utils::felt_to_hash,
     };
 
