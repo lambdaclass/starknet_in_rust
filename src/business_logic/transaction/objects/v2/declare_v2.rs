@@ -66,8 +66,6 @@ impl InternalDeclareV2 {
             nonce.clone(),
         )?;
 
-        dbg!("after hash");
-
         let internal_declare = InternalDeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sender_address,
@@ -323,9 +321,8 @@ mod tests {
             0,
             [].to_vec(),
             Felt252::zero(),
-        )
-        .unwrap();
+        );
 
-        println!("{:?}", internal_declare);
+        assert!(internal_declare.is_ok());
     }
 }

@@ -6,7 +6,10 @@ use cairo_rs::{
     serde::deserialize_program::Identifier,
     types::{program::Program, relocatable::MaybeRelocatable},
     vm::{
-        runners::{cairo_runner::{CairoArg, CairoRunner}, builtin_runner::BuiltinRunner},
+        runners::{
+            builtin_runner::BuiltinRunner,
+            cairo_runner::{CairoArg, CairoRunner},
+        },
         vm_core::VirtualMachine,
     },
 };
@@ -80,15 +83,19 @@ pub fn compute_sierra_class_hash(
     let contract_class_struct =
         &get_sierra_contract_class_struct(&program.identifiers, contract_class)?.into();
 
-    dbg!("after contract class");
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
-    dbg!("adter runner");
+
     runner.initialize_function_runner(&mut vm)?;
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
-    let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
-    
+    let entrypoint = program
+        .identifiers
+        .get("__main__.class_hash")
+        .unwrap()
+        .pc
+        .unwrap();
+
     // Poseidon base needs to be passed on to the runner in order to enable it to compute it correctly
     let poseidon_runner = vm
         .get_builtin_runners()
@@ -99,10 +106,7 @@ pub fn compute_sierra_class_hash(
 
     runner.run_from_entrypoint(
         entrypoint,
-        &[
-            &poseidon_base.into(),
-            contract_class_struct,
-        ],
+        &[&poseidon_base.into(), contract_class_struct],
         true,
         &mut vm,
         &mut hint_processor,
@@ -134,7 +138,6 @@ fn get_contract_entry_points(
             ));
         }
     }
-    dbg!("after for loops");
 
     Ok(entry_points
         .iter()
@@ -152,10 +155,10 @@ fn get_sierra_contract_class_struct(
 ) -> Result<SierraStructContractClass, ContractAddressError> {
     //println!("{:?}", identifiers);
     let contract_class_version_iden = identifiers
-        .get("__main__.CONTRACT_CLASS_VERSION").unwrap();
-        // .ok_or_else(|| {
-        //     ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
-        // })?;
+        .get("__main__.CONTRACT_CLASS_VERSION")
+        .ok_or_else(|| {
+            ContractAddressError::MissingIdentifier("__main__.CONTRACT_CLASS_VERSION".to_string())
+        })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;

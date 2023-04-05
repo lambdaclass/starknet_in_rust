@@ -171,7 +171,6 @@ pub fn calculate_declare_v2_transaction_hash(
     let calldata = [class_hash].to_vec();
     let additional_data = [nonce, compiled_class_hash].to_vec();
 
-    dbg!("additional data");
     calculate_transaction_hash_common(
         TransactionHashPrefix::Declare,
         version,
