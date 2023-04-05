@@ -7,7 +7,7 @@ use crate::types::{
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
-use starknet_rs::business_logic::state::state_api::State;
+use starknet_rs::business_logic::state::state_api::{State, StateReader};
 use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
 use starknet_rs::utils::{felt_to_hash, Address, ClassHash};
 
@@ -173,6 +173,14 @@ impl PyStarknetState {
     #[getter]
     pub fn general_config(&self) -> PyStarknetGeneralConfig {
         self.inner.general_config.clone().into()
+    }
+
+    pub fn get_class_hash_at(&mut self, address: BigUint) -> PyResult<ClassHash> {
+        self.inner
+            .state
+            .get_class_hash_at(&Address(Felt252::from(address)))
+            .cloned()
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 }
 
