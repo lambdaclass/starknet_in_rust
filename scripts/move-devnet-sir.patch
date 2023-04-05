@@ -661,7 +661,7 @@ index 0000000..c902bc8
 +def starknet_rs_py_monkeypatch():
 +    setattr(sys.modules["starkware.starknet.services.api.contract_class"], "ContractClass", starknet_rs_py.ContractClass)
 diff --git a/starknet_devnet/starknet_wrapper.py b/starknet_devnet/starknet_wrapper.py
-index ff38d1c..c961c4c 100644
+index ff38d1c..4dc7629 100644
 --- a/starknet_devnet/starknet_wrapper.py
 +++ b/starknet_devnet/starknet_wrapper.py
 @@ -7,9 +7,9 @@ from types import TracebackType
@@ -736,6 +736,15 @@ index ff38d1c..c961c4c 100644
              await self.__create_genesis_block()
              self.__initialized = True
  
+@@ -211,7 +212,7 @@ class StarknetWrapper:
+         return await self.blocks.generate_empty_block(self.get_state(), state_update)
+ 
+     async def __preserve_current_state(self, state: CachedState):
+-        self.__current_cached_state = deepcopy(state)
++        self.__current_cached_state = state.clone()
+ 
+     async def __init_starknet(self):
+         """
 @@ -230,8 +231,10 @@ class StarknetWrapper:
                      chain_id=self.config.chain_id,
                  )
@@ -749,15 +758,67 @@ index ff38d1c..c961c4c 100644
                  )
  
          return self.starknet
-@@ -322,7 +325,7 @@ class StarknetWrapper:
+@@ -243,7 +246,7 @@ class StarknetWrapper:
+         """
+         Returns the StarknetState of the underlying Starknet instance.
+         """
+-        return self.starknet.state
++        return self.starknet
+ 
+     async def _update_pending_state(
+         self,
+@@ -316,13 +319,13 @@ class StarknetWrapper:
+             # calculate class hash here if execution fails
+             class_hash_int = int.from_bytes(tx_handler.internal_tx.class_hash, "big")
+ 
+-            tx_handler.execution_info = await state.execute_tx(tx_handler.internal_tx)
++            tx_handler.execution_info = state.execute_tx(tx_handler.internal_tx)
+ 
+             tx_handler.explicitly_declared.append(class_hash_int)
  
              # alpha-goerli allows multiple declarations of the same class.
              # Even though execute_tx is performed, class needs to be set explicitly
 -            await state.state.set_contract_class(
-+            await state.set_contract_class(
++            state.set_contract_class(
                  class_hash=tx_handler.internal_tx.class_hash,
                  contract_class=external_tx.contract_class,
              )
+@@ -475,7 +478,7 @@ class StarknetWrapper:
+ 
+         async with self.__get_transaction_handler() as tx_handler:
+             tx_handler.internal_tx = internal_tx
+-            await self.get_state().state.set_contract_class(
++            self.get_state().state.set_contract_class(
+                 class_hash=internal_tx.class_hash, contract_class=contract_class
+             )
+             tx_handler.execution_info = await self.__deploy(internal_tx)
+@@ -500,7 +503,7 @@ class StarknetWrapper:
+             tx_handler.internal_tx = InternalInvokeFunction.from_external(
+                 external_tx, state.general_config
+             )
+-            tx_handler.execution_info = await state.execute_tx(tx_handler.internal_tx)
++            tx_handler.execution_info = state.execute_tx(tx_handler.internal_tx)
+             tx_handler.internal_calls = (
+                 tx_handler.execution_info.call_info.internal_calls
+             )
+@@ -540,7 +543,7 @@ class StarknetWrapper:
+         """Perform call according to specifications in `transaction`."""
+         state = await self.__get_query_state(block_id)
+ 
+-        call_info = await state.copy().execute_entry_point_raw(
++        call_info = state.copy().execute_entry_point_raw(
+             contract_address=transaction.contract_address,
+             selector=transaction.entry_point_selector,
+             calldata=transaction.calldata,
+@@ -556,7 +559,7 @@ class StarknetWrapper:
+         This way InternalDeploy doesn't have to be created twice, calculating hash every time.
+         """
+         state = self.get_state()
+-        tx_execution_info = await state.execute_tx(tx=deploy_tx)
++        tx_execution_info = state.execute_tx(tx=deploy_tx)
+         return tx_execution_info
+ 
+     async def _register_new_contracts(
 @@ -591,7 +594,7 @@ class StarknetWrapper:
      ) -> int:
          """Return class hash give the contract address"""
@@ -781,10 +842,28 @@ index ff38d1c..c961c4c 100644
          """
          state = await self.__get_query_state(block_id)
 -        return hex(await state.state.get_storage_at(contract_address, key))
-+        return hex(await state.get_storage_at(contract_address, key))
++        return hex(state.get_storage_at(contract_address, key))
  
      async def load_messaging_contract_in_l1(
          self, network_url: str, contract_address: str, network_id: str
+@@ -675,7 +678,7 @@ class StarknetWrapper:
+         # Execute transactions inside StarknetWrapper
+         async with self.__get_transaction_handler() as tx_handler:
+             tx_handler.internal_tx = transaction
+-            tx_handler.execution_info = await state.execute_tx(tx_handler.internal_tx)
++            tx_handler.execution_info = state.execute_tx(tx_handler.internal_tx)
+             tx_handler.internal_calls = (
+                 tx_handler.execution_info.call_info.internal_calls
+             )
+@@ -693,7 +696,7 @@ class StarknetWrapper:
+         for transaction in transactions_to_execute:
+             async with self.__get_transaction_handler() as tx_handler:
+                 tx_handler.internal_tx = transaction
+-                tx_handler.execution_info = await state.execute_tx(
++                tx_handler.execution_info = state.execute_tx(
+                     tx_handler.internal_tx
+                 )
+                 tx_handler.internal_calls = (
 @@ -752,7 +755,7 @@ class StarknetWrapper:
          """Calculates traces and fees by simulating tx on state copy.
          Uses the resulting state for each consecutive estimation"""
@@ -821,15 +900,28 @@ index ff38d1c..c961c4c 100644
          )
          return fee_estimation_info
  
-@@ -841,7 +844,7 @@ class StarknetWrapper:
+@@ -841,11 +844,11 @@ class StarknetWrapper:
      ):
          """Returns nonce of contract with `contract_address`"""
          state = await self.__get_query_state(block_id)
 -        return await state.state.get_nonce_at(contract_address)
-+        return await state.get_nonce_at(contract_address)
++        return state.get_nonce_at(contract_address)
  
      async def __predeclare_starknet_cli_account(self):
          """Predeclares the account class used by Starknet CLI"""
+-        await self.get_state().state.set_contract_class(
++        self.get_state().state.set_contract_class(
+             to_bytes(STARKNET_CLI_ACCOUNT_CLASS_HASH), oz_account_class
+         )
+ 
+@@ -861,6 +864,6 @@ class StarknetWrapper:
+         """
+         assert isinstance(address, int)
+         cached_state = self.get_state().state
+-        class_hash_bytes = await cached_state.get_class_hash_at(address)
++        class_hash_bytes = cached_state.get_class_hash_at(address)
+         class_hash_int = int.from_bytes(class_hash_bytes, "big")
+         return bool(class_hash_int)
 diff --git a/starknet_devnet/state_archive.py b/starknet_devnet/state_archive.py
 index 95e3ab2..57df788 100644
 --- a/starknet_devnet/state_archive.py

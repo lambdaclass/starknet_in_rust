@@ -182,6 +182,11 @@ impl PyStarknetState {
             .cloned()
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
+
+    pub fn clone(&self) -> Self {
+        let inner = self.inner.clone();
+        Self { inner }
+    }
 }
 
 #[cfg(test)]
