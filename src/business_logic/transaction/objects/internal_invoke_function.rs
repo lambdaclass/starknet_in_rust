@@ -880,4 +880,22 @@ mod tests {
             )
         )
     }
+
+    #[test]
+    fn invoke_version_one_with_no_nonce_should_fail() {
+        let expected_error = preprocess_invoke_function_fields(
+            Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            None,
+            1,
+        );
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvokeFunctionNonZeroMissingNonce
+        )
+    }
 }
