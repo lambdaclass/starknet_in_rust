@@ -16,7 +16,7 @@ use crate::{
     services::api::contract_class::EntryPointType,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use felt::{Felt252, ParseFeltError};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
@@ -84,13 +84,12 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
     Felt252::from_bytes_be(&felt.to_bytes_be())
 }
 
-pub fn string_to_hash(class_string: &String) -> ClassHash {
+pub fn string_to_hash(class_string: &String) -> Result<ClassHash, ParseFeltError> {
     let parsed_felt =
-        Felt252::from_str_radix(class_string.strip_prefix("0x").unwrap_or(class_string), 16);
+        Felt252::from_str_radix(class_string.strip_prefix("0x").unwrap_or(class_string), 16)?
+            .to_be_bytes();
 
-    parsed_felt
-        .unwrap_or_else(|err| panic!("Problem parsing the string to a felt {err}"))
-        .to_be_bytes()
+    Ok(parsed_felt)
 }
 
 // -------------------
@@ -671,7 +670,7 @@ mod test {
     #[test]
     fn test_string_to_hash() {
         assert_eq!(
-            string_to_hash(&String::from("0x0")),
+            string_to_hash(&String::from("0x0")).unwrap(),
             [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0
@@ -682,7 +681,8 @@ mod test {
         assert_eq!(
             string_to_hash(&String::from(
                 "0x800000000000011000000000000000000000000000000000000000000000000"
-            )),
+            ))
+            .unwrap(),
             [
                 8, 0, 0, 0, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0
@@ -693,7 +693,8 @@ mod test {
         assert_eq!(
             string_to_hash(&String::from(
                 "0x8D7EB76070A08AECFC1E1DE5CF543CA2FC8A8C6FA3BA0000000000000000000"
-            )),
+            ))
+            .unwrap(),
             [
                 0, 215, 235, 118, 7, 10, 8, 157, 207, 193, 225, 222, 92, 245, 67, 202, 47, 200,
                 168, 198, 250, 59, 159, 255, 255, 255, 255, 255, 255, 255, 255, 255

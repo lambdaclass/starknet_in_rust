@@ -139,7 +139,10 @@ fn deploy_parser(
         Address(0.into()),
     )?;
 
-    cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
+    cached_state.deploy_contract(
+        Address(address.clone()),
+        string_to_hash(&args.class_hash).unwrap(),
+    )?;
     let tx_hash = calculate_deploy_transaction_hash(
         0,
         &Address(address.clone()),
