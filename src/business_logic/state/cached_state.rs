@@ -115,7 +115,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             let nonce = self.state_reader.get_nonce_at(contract_address)?;
             self.cache
                 .nonce_initial_values
-                .insert(contract_address.clone(), nonce.clone());
+                .insert(contract_address.clone(), nonce);
         }
         self.cache
             .get_nonce(contract_address)
@@ -126,7 +126,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             let value = match self.state_reader.get_storage_at(storage_entry) {
-                Ok(x) => x.clone(),
+                Ok(x) => x,
                 Err(
                     StateError::Storage(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
