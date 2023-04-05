@@ -6,7 +6,7 @@ use cairo_rs::{
     serde::deserialize_program::Identifier,
     types::{program::Program, relocatable::MaybeRelocatable},
     vm::{
-        runners::cairo_runner::{CairoArg, CairoRunner},
+        runners::{cairo_runner::{CairoArg, CairoRunner}, builtin_runner::BuiltinRunner},
         vm_core::VirtualMachine,
     },
 };
@@ -56,8 +56,8 @@ impl From<SierraStructContractClass> for CairoArg {
             CairoArg::Array(l1_handlers_flatted),
             CairoArg::Single(contract_class.n_constructors),
             CairoArg::Array(constructors_flatted),
-            CairoArg::Single(contract_class.sierra_program_length),
             CairoArg::Single(contract_class.abi_hash.into()),
+            CairoArg::Single(contract_class.sierra_program_length),
             CairoArg::Array(contract_class.sierra_program_ptr),
         ];
         CairoArg::Composed(result)
@@ -66,7 +66,7 @@ impl From<SierraStructContractClass> for CairoArg {
 
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
-        Path::new("cairo_programs/contracts.json"),
+        Path::new("cairo_programs/contract_class.json"),
         None,
     )?)
 }
@@ -91,19 +91,27 @@ pub fn compute_sierra_class_hash(
     // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
     // TODO: Looks like we can get this value from the identifier, but the value is a Felt252.
     // We need to cast that into a usize.
-    // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
-    let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
-
-    runner
-        .run_from_entrypoint(
-            188,
-            &[&hash_base.into(), contract_class_struct],
-            true,
-            &mut vm,
-            &mut hint_processor,
-        )
+    let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
+    
+    // Poseidon base needs to be passed on to the runner in order to enable it to compute it correctly
+    let poseidon_runner = vm
+        .get_builtin_runners()
+        .iter()
+        .find(|x| matches!(x, BuiltinRunner::Poseidon(_)))
         .unwrap();
-    dbg!("after entrypoint");
+    let poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
+
+    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
+    runner.run_from_entrypoint(
+        entrypoint,
+        &[
+            &poseidon_base.into(),
+            contract_class_struct,
+        ],
+        true,
+        &mut vm,
+        &mut hint_processor,
+    )?;
 
     match vm.get_return_values(2)?.get(1) {
         Some(MaybeRelocatable::Int(felt)) => Ok(felt.clone()),
@@ -149,7 +157,7 @@ fn get_sierra_contract_class_struct(
 ) -> Result<SierraStructContractClass, ContractAddressError> {
     //println!("{:?}", identifiers);
     let contract_class_version_iden = identifiers
-        .get("starkware.starknet.core.os.contract_class.contract_class.CONTRACT_CLASS_VERSION").unwrap();
+        .get("__main__.CONTRACT_CLASS_VERSION").unwrap();
         // .ok_or_else(|| {
         //     ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
         // })?;
