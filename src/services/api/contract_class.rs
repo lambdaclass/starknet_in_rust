@@ -61,9 +61,7 @@ pub struct ContractClass {
 }
 
 impl ContractClass {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) fn new(
+    pub fn new(
         program: Program,
         entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
         abi: Option<AbiType>,

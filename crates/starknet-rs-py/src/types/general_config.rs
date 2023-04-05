@@ -109,6 +109,12 @@ impl PyStarknetGeneralConfig {
     }
 }
 
+impl<'a> From<&'a PyStarknetGeneralConfig> for &'a StarknetGeneralConfig {
+    fn from(value: &'a PyStarknetGeneralConfig) -> Self {
+        &value.inner
+    }
+}
+
 #[pyclass]
 #[pyo3(name = "StarknetOsConfig")]
 #[derive(Debug, Clone, Default)]
@@ -139,6 +145,12 @@ impl PyStarknetOsConfig {
         let address = Address(Felt252::from(fee_token_address));
         let inner = StarknetOsConfig::new(chain_id.into(), address, 0);
         Self { inner }
+    }
+}
+
+impl From<PyStarknetGeneralConfig> for StarknetGeneralConfig {
+    fn from(pyconfig: PyStarknetGeneralConfig) -> Self {
+        pyconfig.inner
     }
 }
 

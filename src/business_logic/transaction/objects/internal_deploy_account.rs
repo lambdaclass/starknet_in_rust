@@ -49,6 +49,9 @@ pub struct InternalDeployAccount {
     version: u64,
     nonce: Felt252,
     max_fee: u64,
+    #[getset(get = "pub")]
+    hash_value: Felt252,
+    #[getset(get = "pub")]
     signature: Vec<Felt252>,
     chain_id: StarknetChainId,
 }
@@ -65,21 +68,33 @@ impl InternalDeployAccount {
         contract_address_salt: Address,
         chain_id: StarknetChainId,
     ) -> Result<Self, SyscallHandlerError> {
-        let contract_address = calculate_contract_address(
+        let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),
             &constructor_calldata,
             Address(Felt252::zero()),
+        )?);
+
+        let hash_value = calculate_deploy_account_transaction_hash(
+            version,
+            &contract_address,
+            Felt252::from_bytes_be(&class_hash),
+            &constructor_calldata,
+            max_fee,
+            nonce.clone(),
+            contract_address_salt.0.clone(),
+            chain_id.to_felt(),
         )?;
 
         Ok(Self {
-            contract_address: Address(contract_address),
+            contract_address,
             contract_address_salt,
             class_hash,
             constructor_calldata,
             version,
             nonce,
             max_fee,
+            hash_value,
             signature,
             chain_id,
         })

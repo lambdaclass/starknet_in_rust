@@ -26,13 +26,13 @@ use felt::Felt252;
 use num_traits::Zero;
 
 pub struct InternalDeploy {
-    pub(crate) hash_value: Felt252,
-    pub(crate) version: u64,
-    pub(crate) contract_address: Address,
-    pub(crate) _contract_address_salt: Address,
-    pub(crate) contract_hash: ClassHash,
-    pub(crate) constructor_calldata: Vec<Felt252>,
-    pub(crate) tx_type: TransactionType,
+    pub hash_value: Felt252,
+    pub version: u64,
+    pub contract_address: Address,
+    pub contract_address_salt: Address,
+    pub contract_hash: ClassHash,
+    pub constructor_calldata: Vec<Felt252>,
+    pub tx_type: TransactionType,
 }
 
 impl InternalDeploy {
@@ -65,7 +65,7 @@ impl InternalDeploy {
             hash_value,
             version,
             contract_address,
-            _contract_address_salt: contract_address_salt,
+            contract_address_salt,
             contract_hash,
             constructor_calldata,
             tx_type: TransactionType::Deploy,
@@ -238,7 +238,7 @@ mod tests {
             hash_value: 0.into(),
             version: 0,
             contract_address: Address(1.into()),
-            _contract_address_salt: Address(0.into()),
+            contract_address_salt: Address(0.into()),
             contract_hash: class_hash,
             constructor_calldata: vec![10.into()],
             tx_type: TransactionType::Deploy,

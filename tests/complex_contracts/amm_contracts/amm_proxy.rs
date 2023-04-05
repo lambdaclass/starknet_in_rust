@@ -1,4 +1,4 @@
-use crate::amm_contracts::utils::{deploy, execute_entry_point, get_accessed_keys, CallConfig};
+use crate::complex_contracts::utils::*;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt252;
 use starknet_crypto::FieldElement;
@@ -8,7 +8,7 @@ use starknet_rs::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
+        state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
@@ -21,14 +21,27 @@ fn amm_proxy_init_pool_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, contract_class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, contract_class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
+        &[],
         &general_config,
-    );
+    )
+    .unwrap();
+
+    let proxy_entry_points_by_type = state
+        .get_contract_class(&proxy_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -39,6 +52,8 @@ fn amm_proxy_init_pool_test() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
+        entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -94,14 +109,27 @@ fn amm_proxy_get_pool_token_balance_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, contract_class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, contract_class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
+        &[],
         &general_config,
-    );
+    )
+    .unwrap();
+
+    let proxy_entry_points_by_type = state
+        .get_contract_class(&proxy_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -112,6 +140,8 @@ fn amm_proxy_get_pool_token_balance_test() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
+        entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -174,14 +204,27 @@ fn amm_proxy_add_demo_token_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, contract_class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, contract_class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
+        &[],
         &general_config,
-    );
+    )
+    .unwrap();
+
+    let proxy_entry_points_by_type = state
+        .get_contract_class(&proxy_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -192,6 +235,8 @@ fn amm_proxy_add_demo_token_test() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
+        entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -260,14 +305,27 @@ fn amm_proxy_get_account_token_balance() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, contract_class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, contract_class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
+        &[],
         &general_config,
-    );
+    )
+    .unwrap();
+
+    let proxy_entry_points_by_type = state
+        .get_contract_class(&proxy_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -278,6 +336,8 @@ fn amm_proxy_get_account_token_balance() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
+        entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -359,14 +419,27 @@ fn amm_proxy_swap() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, contract_class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, contract_class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
     // Deploy proxy
     let (proxy_address, proxy_class_hash) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
+        &[],
         &general_config,
-    );
+    )
+    .unwrap();
+
+    let proxy_entry_points_by_type = state
+        .get_contract_class(&proxy_class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -377,6 +450,8 @@ fn amm_proxy_swap() {
         caller_address: &caller_address,
         address: &proxy_address,
         class_hash: &proxy_class_hash,
+        entry_points_by_type: &proxy_entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };

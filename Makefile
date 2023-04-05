@@ -26,6 +26,7 @@ deps-venv:
 	pip install \
 		fastecdsa \
 		typeguard==2.13.0 \
+		openzeppelin-cairo-contracts==0.6.1 \
 		maturin \
 		cairo-lang==0.10.3
 
@@ -74,8 +75,7 @@ test: compile-cairo compile-starknet compile-abi
 	cargo test
 
 test-py: compile-cairo compile-starknet
-	. starknet-venv/bin/activate
-	cargo test -p starknet-rs-py --no-default-features --features embedded-python
+	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
 coverage: compile-cairo compile-starknet compile-abi
 	cargo tarpaulin

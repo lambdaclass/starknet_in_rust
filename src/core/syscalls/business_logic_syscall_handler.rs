@@ -255,7 +255,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = match self._read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
+        let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
             Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
@@ -286,13 +286,13 @@ where
         Ok(segment_start)
     }
 
-    fn _deploy(
+    fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         let request = if let SyscallRequest::Deploy(request) =
-            self._read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
             request
         } else {
@@ -343,13 +343,13 @@ where
         Ok(deploy_contract_address)
     }
 
-    fn _call_contract(
+    fn syscall_call_contract(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Vec<Felt252>, SyscallHandlerError> {
-        let request = self._read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
+        let request = self.read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
         let entry_point_type;
         let function_selector;
@@ -360,7 +360,7 @@ where
         let call_data;
 
         // TODO: What about `delegate_call`, `delegate_l1_handler`?
-        //   The call to `self._read_and_validate_syscall_request()` will always fail in those
+        //   The call to `self.read_and_validate_syscall_request()` will always fail in those
         //   cases.
         match request {
             SyscallRequest::LibraryCall(request) => {
@@ -421,12 +421,12 @@ where
         &self.general_config.block_info
     }
 
-    fn _get_caller_address(
+    fn syscall_get_caller_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        match self._read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
+        match self.read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
             SyscallRequest::GetCallerAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest),
         }
@@ -434,12 +434,12 @@ where
         Ok(self.caller_address.clone())
     }
 
-    fn _get_contract_address(
+    fn syscall_get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        match self._read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
+        match self.read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
             SyscallRequest::GetContractAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetContractAddressRequest),
         };
@@ -453,7 +453,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = if let SyscallRequest::SendMessageToL1(request) =
-            self._read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
+            self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
         {
             request
         } else {
@@ -473,7 +473,7 @@ where
         Ok(())
     }
 
-    fn _get_tx_info_ptr(
+    fn syscall_get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
     ) -> Result<Relocatable, SyscallHandlerError> {
@@ -504,7 +504,7 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("library_call", vm, syscall_ptr)
+        self.call_contract_and_write_response("library_call", vm, syscall_ptr)
     }
 
     fn library_call_l1_handler(
@@ -512,7 +512,7 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
+        self.call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
     }
 
     fn call_contract(
@@ -520,17 +520,17 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        self._call_contract_and_write_response("call_contract", vm, syscall_ptr)
+        self.call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
-    fn _storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
+    fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
             .read(&felt_to_hash(&address.0))
             .cloned()?)
     }
 
-    fn _storage_write(
+    fn syscall_storage_write(
         &mut self,
         address: Address,
         value: Felt252,
@@ -541,7 +541,7 @@ where
         Ok(())
     }
 
-    fn _read_and_validate_syscall_request(
+    fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
@@ -648,7 +648,7 @@ mod tests {
         );
 
         assert_matches!(
-            syscall._deploy(&vm, relocatable!(1, 0)),
+            syscall.syscall_deploy(&vm, relocatable!(1, 0)),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
     }
@@ -701,7 +701,7 @@ mod tests {
             .unwrap();
 
         assert_matches!(
-            syscall._get_contract_address(&vm, relocatable!(1, 0)),
+            syscall.syscall_get_contract_address(&vm, relocatable!(1, 0)),
             Ok(contract_address) if contract_address == syscall.contract_address
         )
     }
@@ -712,7 +712,7 @@ mod tests {
         let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
 
         assert_matches!(
-            syscall_handler._storage_read(Address(Felt252::zero())),
+            syscall_handler.syscall_storage_read(Address(Felt252::zero())),
             Ok(value) if value == Felt252::zero()
         );
     }

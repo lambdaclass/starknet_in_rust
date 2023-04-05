@@ -8,7 +8,7 @@ type PyEntryPointType = i32;
 
 #[pyclass]
 #[pyo3(name = "ContractClass")]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PyContractClass {
     pub(crate) inner: ContractClass,
 }
@@ -47,6 +47,11 @@ impl PyContractClass {
     }
 }
 
+impl<'a> From<&'a PyContractClass> for &'a ContractClass {
+    fn from(class: &'a PyContractClass) -> Self {
+        &class.inner
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

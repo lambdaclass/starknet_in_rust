@@ -1,4 +1,3 @@
-use crate::types::contract_class::PyContractClass;
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
@@ -13,6 +12,8 @@ use starknet_rs::{
     utils::{felt_to_hash, Address, ClassHash},
 };
 use std::collections::HashMap;
+
+use crate::types::contract_class::PyContractClass;
 
 #[pyclass]
 #[pyo3(name = "CachedState")]
@@ -79,6 +80,12 @@ impl PyCachedState {
             ),
             Felt252::from(value),
         );
+    }
+}
+
+impl<'a> From<&'a mut PyCachedState> for &'a mut InnerCachedState<InMemoryStateReader> {
+    fn from(state: &'a mut PyCachedState) -> Self {
+        &mut state.state
     }
 }
 
