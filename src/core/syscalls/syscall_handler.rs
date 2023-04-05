@@ -474,7 +474,7 @@ where
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_contract_address(vm, syscall_ptr)
             }
-            _ => Err(SyscallHandlerError::NotImplemented),
+            _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
         }
     }
 }
@@ -490,8 +490,11 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
-                    SyscallHandlerError::Hint(e) => e,
-                    _ => HintError::UnknownHint(e.to_string()),
+                    SyscallHandlerError::NotImplemented(hint_code) => {
+                        HintError::UnknownHint(hint_code)
+                    }
+
+                    e => HintError::CustomHint(e.to_string()),
                 })?;
         }
         Ok(())
