@@ -13,7 +13,7 @@ use starknet_rs::{
             internal_invoke_function::InternalInvokeFunction,
         },
     },
-    core::contract_address::starknet_contract_address::compute_class_hash,
+    core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
     definitions::general_config::StarknetChainId,
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::ContractClass,
@@ -27,7 +27,7 @@ lazy_static! {
         "starknet_programs/account_without_validation.json",
     ))
     .unwrap();
-    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(
+    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_deprecated_class_hash(
         &CONTRACT_CLASS
     ).unwrap());
     static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
