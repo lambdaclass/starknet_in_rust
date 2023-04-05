@@ -87,10 +87,6 @@ pub fn compute_sierra_class_hash(
     runner.initialize_function_runner(&mut vm)?;
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
-
-    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
-    // TODO: Looks like we can get this value from the identifier, but the value is a Felt252.
-    // We need to cast that into a usize.
     let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
     
     // Poseidon base needs to be passed on to the runner in order to enable it to compute it correctly
@@ -101,7 +97,6 @@ pub fn compute_sierra_class_hash(
         .unwrap();
     let poseidon_base = MaybeRelocatable::from((poseidon_runner.base() as isize, 0));
 
-    // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
     runner.run_from_entrypoint(
         entrypoint,
         &[
