@@ -44,3 +44,5 @@ default.profraw
 /scripts/reports
 __pycache__/
 .pytest_cache/
+# codecov report
+lcov.info
