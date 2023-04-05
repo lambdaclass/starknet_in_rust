@@ -1,4 +1,5 @@
 use crate::cached_state::PyCachedState;
+use crate::types::block_info::PyBlockInfo;
 use crate::types::{
     call_info::PyCallInfo, contract_class::PyContractClass,
     general_config::PyStarknetGeneralConfig, transaction::PyTransaction,
@@ -186,6 +187,16 @@ impl PyStarknetState {
     pub fn clone(&self) -> Self {
         let inner = self.inner.clone();
         Self { inner }
+    }
+
+    #[getter("block_info")]
+    pub fn get_block_info(&self) -> PyBlockInfo {
+        self.inner.general_config.block_info().clone().into()
+    }
+
+    #[setter("block_info")]
+    pub fn set_block_info(&mut self, block_info: PyBlockInfo) {
+        *self.inner.general_config.block_info_mut() = block_info.into();
     }
 }
 

@@ -91,6 +91,18 @@ impl PyBlockInfo {
     }
 }
 
+impl From<BlockInfo> for PyBlockInfo {
+    fn from(inner: BlockInfo) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<PyBlockInfo> for BlockInfo {
+    fn from(py_value: PyBlockInfo) -> Self {
+        py_value.inner
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
