@@ -1,5 +1,5 @@
 #![deny(warnings)]
-#![cfg(not(tarpaulin_include))]
+#![cfg_attr(coverage_nightly, feature(no_coverage))]
 
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
