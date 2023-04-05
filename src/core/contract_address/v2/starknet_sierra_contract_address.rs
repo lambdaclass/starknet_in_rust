@@ -23,7 +23,7 @@ use crate::{
 // ---------------------------------
 
 struct SierraStructContractClass {
-    api_version: MaybeRelocatable,
+    contract_class_version_iden: MaybeRelocatable,
     n_external_functions: MaybeRelocatable,
     external_functions: Vec<ContractEntryPoint>,
     n_l1_handlers: MaybeRelocatable,
@@ -49,7 +49,7 @@ impl From<SierraStructContractClass> for CairoArg {
         let constructors_flatted = flat_into_maybe_relocs(contract_class.constructors);
 
         let result = vec![
-            CairoArg::Single(contract_class.api_version),
+            CairoArg::Single(contract_class.contract_class_version_iden),
             CairoArg::Single(contract_class.n_external_functions),
             CairoArg::Array(external_functions_flatted),
             CairoArg::Single(contract_class.n_l1_handlers),
@@ -94,13 +94,15 @@ pub fn compute_sierra_class_hash(
     // let entrypoint = program.identifiers.get("__main__.class_hash").unwrap().pc.unwrap();
     let hash_base: MaybeRelocatable = runner.add_additional_hash_builtin(&mut vm).into();
 
-    runner.run_from_entrypoint(
-        188,
-        &[&hash_base.into(), contract_class_struct],
-        true,
-        &mut vm,
-        &mut hint_processor,
-    ).unwrap();
+    runner
+        .run_from_entrypoint(
+            188,
+            &[&hash_base.into(), contract_class_struct],
+            true,
+            &mut vm,
+            &mut hint_processor,
+        )
+        .unwrap();
     dbg!("after entrypoint");
 
     match vm.get_return_values(2)?.get(1) {
@@ -145,9 +147,12 @@ fn get_sierra_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
     contract_class: &SierraContractClass,
 ) -> Result<SierraStructContractClass, ContractAddressError> {
-    let api_version = identifiers.get("__main__.API_VERSION").ok_or_else(|| {
-        ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
-    })?;
+    //println!("{:?}", identifiers);
+    let contract_class_version_iden = identifiers
+        .get("starkware.starknet.core.os.contract_class.contract_class.CONTRACT_CLASS_VERSION").unwrap();
+        // .ok_or_else(|| {
+        //     ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
+        // })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
@@ -164,7 +169,7 @@ fn get_sierra_contract_class_struct(
         .map(|b| Felt252::from(b.value.clone()).into())
         .collect();
 
-    let api_version = api_version
+    let contract_class_version_iden = contract_class_version_iden
         .value
         .as_ref()
         .ok_or(ContractAddressError::NoneApiVersion)?
@@ -172,7 +177,7 @@ fn get_sierra_contract_class_struct(
         .into();
 
     Ok(SierraStructContractClass {
-        api_version,
+        contract_class_version_iden,
         n_external_functions: Felt252::from(external_functions.len()).into(),
         external_functions,
         n_l1_handlers: Felt252::from(l1_handlers.len()).into(),

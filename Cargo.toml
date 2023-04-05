@@ -22,8 +22,7 @@ thiserror = { version = "1.0.32" }
 clap = { version = "4.1.8", features = ["derive"] }
 actix-web = "4.3.1"
 awc = "3.1.1"
-cairo-lang-starknet = { path = "../cairo/crates/cairo-lang-starknet" }
-cairo-lang-compiler = { path = "../cairo/crates/cairo-lang-compiler" }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
