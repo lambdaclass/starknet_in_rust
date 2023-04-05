@@ -283,7 +283,7 @@ mod tests {
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
-        utils::{calculate_sn_keccak, felt_to_hash},
+        utils::calculate_sn_keccak,
     };
 
     #[test]

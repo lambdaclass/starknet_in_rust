@@ -428,7 +428,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -491,7 +491,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -554,7 +554,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -616,7 +616,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -696,7 +696,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -802,7 +802,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
 
