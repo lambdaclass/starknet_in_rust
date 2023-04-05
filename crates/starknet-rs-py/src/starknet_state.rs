@@ -170,6 +170,7 @@ impl PyStarknetState {
         self.inner.state.set_storage_at(&(address, key), value);
     }
 
+    #[getter]
     pub fn general_config(&self) -> PyStarknetGeneralConfig {
         self.inner.general_config.clone().into()
     }
