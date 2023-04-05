@@ -1,5 +1,3 @@
-use std::{collections::HashMap, path::Path};
-
 use cairo_lang_starknet::{
     contract::starknet_keccak, contract_class::ContractClass as SierraContractClass,
 };
@@ -13,6 +11,7 @@ use cairo_rs::{
     },
 };
 use felt::Felt252;
+use std::{collections::HashMap, path::Path};
 
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
@@ -81,9 +80,12 @@ pub fn compute_sierra_class_hash(
     let contract_class_struct =
         &get_sierra_contract_class_struct(&program.identifiers, contract_class)?.into();
 
+    dbg!("after contract class");
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
+    dbg!("adter runner");
     runner.initialize_function_runner(&mut vm)?;
+
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
     // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
@@ -98,7 +100,8 @@ pub fn compute_sierra_class_hash(
         true,
         &mut vm,
         &mut hint_processor,
-    )?;
+    ).unwrap();
+    dbg!("after entrypoint");
 
     match vm.get_return_values(2)?.get(1) {
         Some(MaybeRelocatable::Int(felt)) => Ok(felt.clone()),
@@ -126,6 +129,7 @@ fn get_contract_entry_points(
             ));
         }
     }
+    dbg!("after for loops");
 
     Ok(entry_points
         .iter()
@@ -160,13 +164,15 @@ fn get_sierra_contract_class_struct(
         .map(|b| Felt252::from(b.value.clone()).into())
         .collect();
 
+    let api_version = api_version
+        .value
+        .as_ref()
+        .ok_or(ContractAddressError::NoneApiVersion)?
+        .to_owned()
+        .into();
+
     Ok(SierraStructContractClass {
-        api_version: api_version
-            .value
-            .as_ref()
-            .ok_or(ContractAddressError::NoneApiVersion)?
-            .to_owned()
-            .into(),
+        api_version,
         n_external_functions: Felt252::from(external_functions.len()).into(),
         external_functions,
         n_l1_handlers: Felt252::from(l1_handlers.len()).into(),

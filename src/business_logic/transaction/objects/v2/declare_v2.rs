@@ -66,6 +66,8 @@ impl InternalDeclareV2 {
             nonce.clone(),
         )?;
 
+        dbg!("after hash");
+
         let internal_declare = InternalDeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sender_address,
@@ -294,33 +296,36 @@ impl InternalDeclareV2 {
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::File, io::BufReader, path::PathBuf};
 
-    // use std::path::Path;
+    use super::InternalDeclareV2;
+    use crate::{definitions::general_config::StarknetChainId, utils::Address};
+    use felt::Felt252;
+    use num_traits::Zero;
 
-    // use felt::Felt252;
-    // use num_traits::{One, Zero};
+    #[test]
+    fn create_declare_v2_test() {
+        let path = PathBuf::from("starknet_programs/test_sierra.json");
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let chain_id = StarknetChainId::TestNet.to_felt();
 
-    // use crate::{definitions::general_config::StarknetChainId, utils::Address};
+        let sender_address = Address(0.into());
 
-    // use super::InternalDeclareV2;
+        let internal_declare = InternalDeclareV2::new(
+            &sierra_contract_class,
+            Felt252::zero(),
+            chain_id,
+            sender_address,
+            0,
+            0,
+            [].to_vec(),
+            Felt252::zero(),
+        )
+        .unwrap();
 
-    // #[test]
-    // fn create_declare_v2_test() {
-    //     let fib_path = "starknet_programs/fibonacci.json";
-    //     let chain_id = StarknetChainId::TestNet.to_felt();
-
-    // declare tx
-    // let internal_declare = InternalDeclareV2::new(
-    //     &fib_path,
-    //     chain_id,
-    //     Address(Felt252::one()),
-    //     0,
-    //     1,
-    //     Vec::new(),
-    //     Felt252::zero(),
-    // )
-    // .unwrap();
-
-    // println!("{:?}", internal_declare);
-    // }
+        println!("{:?}", internal_declare);
+    }
 }
