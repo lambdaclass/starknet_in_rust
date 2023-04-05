@@ -16,7 +16,6 @@ use crate::{
     },
     core::{
         contract_address::v2::starknet_sierra_contract_address::compute_sierra_class_hash,
-        errors::state_errors::StateError,
         transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
     },
     definitions::{
@@ -24,7 +23,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::EntryPointType,
-    utils::{calculate_tx_resources, felt_to_hash, Address},
+    utils::{calculate_tx_resources, Address},
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use felt::Felt252;
@@ -58,12 +57,12 @@ impl InternalDeclareV2 {
 
         let hash_value = calculate_declare_v2_transaction_hash(
             sierra_contract_class,
-            compiled_class_hash,
+            compiled_class_hash.clone(),
             chain_id,
             &sender_address,
             max_fee,
             version,
-            nonce,
+            nonce.clone(),
         )?;
 
         let internal_declare = InternalDeclareV2 {
@@ -248,44 +247,46 @@ impl InternalDeclareV2 {
         Ok(())
     }
 
-    /// Calculates actual fee used by the transaction using the execution
-    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-        general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+    // TODO: adapt this function to accept sierra contract classes, it must be checked in cairo-lang how to do it
 
-        self.handle_nonce(state)?;
-        // Set contract class
-        let class_hash = felt_to_hash(&self.compiled_class_hash);
-        match state.get_contract_class(&class_hash) {
-            Err(StateError::MissingClassHash()) => {
-                // Class is undeclared; declare it.
-                state.set_sierra_contract_class(&class_hash, &self.sierra_contract_class)?;
-            }
-            Err(error) => return Err(error.into()),
-            Ok(_) => {
-                // Class is already declared; cannot redeclare.
-                return Err(TransactionError::ClassAlreadyDeclared(class_hash));
-            }
-        }
+    // Calculates actual fee used by the transaction using the execution
+    // info returned by apply(), then updates the transaction execution info with the data of the fee.
+    // pub fn execute<S: Default + State + StateReader + Clone>(
+    //     &self,
+    //     state: &mut S,
+    //     general_config: &StarknetGeneralConfig,
+    // ) -> Result<TransactionExecutionInfo, TransactionError> {
+    //     let concurrent_exec_info = self.apply(state, general_config)?;
 
-        let (fee_transfer_info, actual_fee) = self.charge_fee(
-            state,
-            &concurrent_exec_info.actual_resources,
-            general_config,
-        )?;
+    //     self.handle_nonce(state)?;
+    //     // Set contract class
+    //     let class_hash = felt_to_hash(&self.compiled_class_hash);
+    //     match state.get_contract_class(&class_hash) {
+    //         Err(StateError::MissingClassHash()) => {
+    //             // Class is undeclared; declare it.
+    //             state.set_sierra_contract_class(&class_hash, &self.sierra_contract_class)?;
+    //         }
+    //         Err(error) => return Err(error.into()),
+    //         Ok(_) => {
+    //             // Class is already declared; cannot redeclare.
+    //             return Err(TransactionError::ClassAlreadyDeclared(class_hash));
+    //         }
+    //     }
 
-        Ok(
-            TransactionExecutionInfo::from_concurrent_state_execution_info(
-                concurrent_exec_info,
-                actual_fee,
-                fee_transfer_info,
-            ),
-        )
-    }
+    //     let (fee_transfer_info, actual_fee) = self.charge_fee(
+    //         state,
+    //         &concurrent_exec_info.actual_resources,
+    //         general_config,
+    //     )?;
+
+    //     Ok(
+    //         TransactionExecutionInfo::from_concurrent_state_execution_info(
+    //             concurrent_exec_info,
+    //             actual_fee,
+    //             fee_transfer_info,
+    //         ),
+    //     )
+    // }
 }
 
 #[cfg(test)]
