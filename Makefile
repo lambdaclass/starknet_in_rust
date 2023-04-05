@@ -37,18 +37,18 @@ cairo_programs/%.json: cairo_programs/%.cairo
 	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json: starknet_programs/%.cairo
-	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && \
+	cd starknet_programs/ && \
+	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
+	../$< \
+	--output ./$*.json \
+	--abi ./$*_abi.json \
+	|| rm ./$*.json ./$*_abi.json
 # Compiles .cairo files into .json files. if the command fails, then it removes all of the .json files
 
 #
 # Normal rules.
 #
-
-compile-abi:
-	. starknet-venv/bin/activate && cd starknet_programs/ && starknet-compile fibonacci.cairo \
-		--output fibonacci_compiled.json \
-		--abi fibonacci_abi.json
-# This abi file is used for the `test_read_abi` test in contract_abi.rs
 
 build: compile-cairo compile-starknet
 	cargo build --release --all
@@ -59,6 +59,7 @@ check: compile-cairo compile-starknet
 deps: check-python-version 
 	cargo install cargo-tarpaulin --version 0.23.1
 	cargo install flamegraph --version 0.6.2
+	cargo install cargo-llvm-cov --version 0.5.14
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
@@ -71,15 +72,15 @@ clean:
 clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet compile-abi
+test: compile-cairo compile-starknet
 	cargo test
 
 test-py: compile-cairo compile-starknet
 	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
 coverage: compile-cairo compile-starknet compile-abi
-	cargo tarpaulin
-	-rm -f default.profraw
+	cargo llvm-cov --ignore-filename-regex 'main.rs'
+	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh

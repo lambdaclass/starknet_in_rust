@@ -1,5 +1,3 @@
-#![cfg(not(tarpaulin_include))]
-
 use actix_web::{post, web, App, HttpResponse, HttpServer};
 use clap::{Args, Parser, Subcommand};
 use felt::Felt252;
