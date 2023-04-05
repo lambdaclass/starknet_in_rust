@@ -183,7 +183,6 @@ impl StarknetState {
         &mut self,
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
-        // self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
         self.add_messages_and_events(
             &tx.get_sorted_events()?,
