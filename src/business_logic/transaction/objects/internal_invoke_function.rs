@@ -839,4 +839,25 @@ mod tests {
         .unwrap_err();
         assert_matches!(expected_error, TransactionError::InvokeFunctionZeroHasNonce)
     }
+
+    #[test]
+    // the test should try to make verify_no_calls_to_other_contracts fail
+    fn verify_no_calls_to_other_contracts_should_fail() {
+        let mut call_info = CallInfo::default();
+        let mut internal_calls = Vec::new();
+        let internal_call = CallInfo {
+            contract_address: Address(1.into()),
+            ..Default::default()
+        };
+        internal_calls.push(internal_call);
+        call_info.internal_calls = internal_calls;
+
+        let expected_error = verify_no_calls_to_other_contracts(&call_info);
+
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::UnauthorizedActionOnValidate
+        );
+    }
 }
