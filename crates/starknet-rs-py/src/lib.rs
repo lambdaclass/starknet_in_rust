@@ -52,7 +52,8 @@ use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarkn
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
 
 #[pymodule]
-pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
+#[pyo3(name = "starknet_rs_py")]
+pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
 
     // ~~~~~~~~~~~~~~~~~~~~
@@ -83,14 +84,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_class::<PyEntryPointType>()?;
 
-    // TODO: export from starknet-rs when implemented
-    reexport(
-        py,
-        m,
-        "starkware.starknet.business_logic.transaction.objects",
-        vec!["InternalL1Handler"],
-    )?;
-
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Functions
     // ~~~~~~~~~~~~~~~~~~~~
@@ -108,6 +101,9 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
     m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
+
+    // This function initializes the module's reexports
+    m.add_function(wrap_pyfunction!(add_reexports, m)?)?;
 
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Constants
@@ -174,10 +170,22 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // Felt252 number of bits
     m.add("CONTRACT_ADDRESS_BITS", 251)?;
 
+    Ok(())
+}
+
+/// Initializes reexported module attributes.
+// NOTE: this is needed to avoid circular dependencies because of the monkeypatch.
+#[pyfunction(name = "init")]
+pub fn add_reexports(py: Python, opt_m: Option<&PyModule>) -> PyResult<()> {
+    // It's Option<_> to avoid having to pass the module in Python
+    let m = match opt_m {
+        Some(module) => module,
+        None => PyModule::import(py, "starknet_rs_py")?,
+    };
+
     // ~~~~~~~~~~~~
     //  Reexported
     // ~~~~~~~~~~~~
-
     reexport(
         py,
         m,
@@ -265,7 +273,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec!["SyncState", "StateReader"],
     )?;
 
-    // TODO: check
     reexport(
         py,
         m,
@@ -273,12 +280,15 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         vec!["StarknetContract"],
     )?;
 
-    // TODO: check
     reexport(
         py,
         m,
         "starkware.starknet.business_logic.transaction.objects",
-        vec!["InternalAccountTransaction", "InternalTransaction"],
+        vec![
+            "InternalAccountTransaction",
+            "InternalTransaction",
+            "InternalL1Handler", // TODO: export from starknet-rs when implemented
+        ],
     )?;
 
     reexport(
@@ -343,7 +353,7 @@ fn reexport(py: Python, dst: &PyModule, src_name: &str, names: Vec<&str>) -> PyR
 
 #[cfg(test)]
 mod test {
-    use pyo3::prelude::*;
+    use super::*;
 
     #[test]
     fn starknet_rs_py_test() {
@@ -352,6 +362,26 @@ mod test {
             let module = PyModule::new(py, "My Module");
             let res = crate::starknet_rs_py(py, module.unwrap());
             assert!(res.is_ok(), "{res:?}");
+        });
+    }
+
+    #[test]
+    fn starknet_rs_py_add_reexports() {
+        Python::with_gil(|py| {
+            // try loading our module
+            let m = PyModule::new(py, "starknet_rs_py").unwrap();
+
+            starknet_rs_py(py, &m).unwrap();
+
+            let res = m.get_item("StarknetErrorCode");
+
+            assert!(res.is_err(), "{res:?}");
+
+            add_reexports(py, Some(m)).unwrap();
+
+            let res = m.get_item("StarknetErrorCode");
+
+            assert!(res.is_err(), "{res:?}");
         });
     }
 }
