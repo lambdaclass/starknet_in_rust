@@ -40,8 +40,7 @@ fn amm_proxy_init_pool_test() {
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -128,8 +127,7 @@ fn amm_proxy_get_pool_token_balance_test() {
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -223,8 +221,7 @@ fn amm_proxy_add_demo_token_test() {
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -324,8 +321,7 @@ fn amm_proxy_get_account_token_balance() {
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -438,8 +434,7 @@ fn amm_proxy_swap() {
     let proxy_entry_points_by_type = state
         .get_contract_class(&proxy_class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());

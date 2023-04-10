@@ -98,7 +98,7 @@ fn main() {
             let contract_class = ContractClass::try_from(path).unwrap();
 
             let storage_entrypoint_selector = contract_class
-                .entry_points_by_type()
+                .entry_points_by_type
                 .get(&EntryPointType::External)
                 .unwrap()
                 .get(0)

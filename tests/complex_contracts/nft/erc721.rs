@@ -43,8 +43,7 @@ fn erc721_constructor_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
     let entry_point_type = EntryPointType::External;
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut call_config = CallConfig {
@@ -91,8 +90,8 @@ fn erc721_balance_of_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
+
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
@@ -169,8 +168,7 @@ fn erc721_test_owner_of() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -240,8 +238,7 @@ fn erc721_test_get_approved() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -328,8 +325,7 @@ fn erc721_test_is_approved_for_all() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -419,8 +415,7 @@ fn erc721_test_approve() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -512,8 +507,7 @@ fn erc721_set_approval_for_all() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -599,8 +593,7 @@ fn erc721_transfer_from_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -727,8 +720,7 @@ fn erc721_transfer_from_and_get_owner_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -810,8 +802,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let caller_address = Address(666.into());
     let general_config = StarknetGeneralConfig::default();
@@ -869,8 +860,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -937,8 +927,7 @@ fn erc721_transfer_fail_to_zero_address() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -987,8 +976,7 @@ fn erc721_transfer_fail_not_owner() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,

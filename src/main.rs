@@ -161,7 +161,7 @@ fn invoke_parser(
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
 
-    let entry_points_by_type = contract_class.entry_points_by_type.clone();
+    let entry_points_by_type = contract_class.entry_points_by_type;
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
         .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;
@@ -214,7 +214,7 @@ fn call_parser(
     let class_hash = *cached_state.get_class_hash_at(&contract_address)?;
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
-    let entry_points_by_type = contract_class.entry_points_by_type.clone();
+    let entry_points_by_type = contract_class.entry_points_by_type;
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
         .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;

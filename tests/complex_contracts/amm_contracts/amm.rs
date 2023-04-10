@@ -73,8 +73,7 @@ fn amm_init_pool_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let accessed_storage_keys =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
@@ -129,8 +128,7 @@ fn amm_add_demo_tokens_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let mut call_config = CallConfig {
         state: &mut state,
@@ -193,8 +191,7 @@ fn amm_get_pool_token_balance() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -256,8 +253,7 @@ fn amm_swap_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
@@ -346,8 +342,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
     let calldata = [Felt252::new(2_u32.pow(30)), Felt252::new(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -381,8 +376,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
     let calldata = [Felt252::zero(), Felt252::new(10)].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -416,8 +410,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
     let calldata = [Felt252::new(1), Felt252::new(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -451,8 +444,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
     let calldata = [Felt252::new(1), Felt252::new(100)].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -489,8 +481,7 @@ fn amm_get_account_token_balance_test() {
     let entry_points_by_type = state
         .get_contract_class(&class_hash)
         .unwrap()
-        .entry_points_by_type()
-        .clone();
+        .entry_points_by_type;
     //add 10 tokens of token type 1
     let caller_address = Address(0000.into());
     let calldata = [10.into(), 0.into()].to_vec();
