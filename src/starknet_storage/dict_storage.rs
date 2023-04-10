@@ -41,7 +41,7 @@ impl Storage for DictStorage {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::utils::test_utils::storage_key;
     use coverage_helper::test;
 

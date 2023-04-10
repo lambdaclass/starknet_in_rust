@@ -338,6 +338,7 @@ fn reexport(py: Python, dst: &PyModule, src_name: &str, names: Vec<&str>) -> PyR
 
 #[cfg(test)]
 mod test {
+    use coverage_helper::test;
     use pyo3::prelude::*;
 
     #[test]

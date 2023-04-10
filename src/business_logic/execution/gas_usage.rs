@@ -127,7 +127,7 @@ pub fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) ->
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::get_event_emission_cost;
     use super::*;
     use crate::{
