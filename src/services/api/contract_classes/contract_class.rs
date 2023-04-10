@@ -1,5 +1,4 @@
-use super::contract_class_errors::ContractClassError;
-use crate::public::abi::AbiType;
+use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
 use cairo_rs::{
     serde::deserialize_program::{
         deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
@@ -110,7 +109,7 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
 impl From<starknet_api::state::EntryPointType> for EntryPointType {
     fn from(entry_type: starknet_api::state::EntryPointType) -> Self {
         type ApiEPT = starknet_api::state::EntryPointType;
-        type StarknetEPT = crate::services::api::contract_class::EntryPointType;
+        type StarknetEPT = crate::services::api::contract_classes::contract_class::EntryPointType;
 
         match entry_type {
             ApiEPT::Constructor => StarknetEPT::Constructor,

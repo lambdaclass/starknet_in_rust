@@ -13,7 +13,7 @@ use starknet_rs::{
         transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
 

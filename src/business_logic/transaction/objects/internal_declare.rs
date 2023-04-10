@@ -20,7 +20,7 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::contract_class::{ContractClass, EntryPointType},
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -310,7 +310,7 @@ mod tests {
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
-        services::api::contract_class::{ContractClass, EntryPointType},
+        services::api::contract_classes::contract_class::{ContractClass, EntryPointType},
         utils::{felt_to_hash, Address},
     };
 

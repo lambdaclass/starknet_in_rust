@@ -16,7 +16,7 @@ use starknet_rs::{
     core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
     definitions::general_config::StarknetChainId,
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::contract_class::ContractClass,
     utils::{felt_to_hash, Address},
 };
 use std::{hint::black_box, path::PathBuf};

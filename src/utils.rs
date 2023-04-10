@@ -13,7 +13,7 @@ use crate::{
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::contract_class::EntryPointType,
 };
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt252;

@@ -22,7 +22,7 @@ use starknet_rs::{
         DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT, DEFAULT_GAS_PRICE,
         DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS, TRANSACTION_VERSION,
     },
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::contract_class::ContractClass,
 };
 
 use starknet_state::PyStarknetState;

@@ -7,7 +7,7 @@ use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::{
     business_logic::execution::objects::{CallInfo, CallType},
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::contract_class::EntryPointType,
 };
 
 #[pyclass]

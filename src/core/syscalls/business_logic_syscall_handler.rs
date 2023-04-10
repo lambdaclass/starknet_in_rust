@@ -18,7 +18,9 @@ use crate::{
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
+    services::api::{
+        contract_class_errors::ContractClassError, contract_classes::contract_class::EntryPointType,
+    },
     utils::*,
 };
 use cairo_rs::{

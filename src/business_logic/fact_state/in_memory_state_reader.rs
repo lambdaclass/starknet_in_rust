@@ -1,7 +1,7 @@
 use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
 use felt::Felt252;
@@ -79,7 +79,9 @@ impl StateReader for InMemoryStateReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_class::{ContractEntryPoint, EntryPointType};
+    use crate::services::api::contract_classes::contract_class::{
+        ContractEntryPoint, EntryPointType,
+    };
     use cairo_rs::types::program::Program;
 
     #[test]

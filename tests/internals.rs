@@ -42,7 +42,7 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{

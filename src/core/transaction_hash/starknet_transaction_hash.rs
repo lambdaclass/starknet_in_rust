@@ -6,7 +6,7 @@ use crate::{
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::contract_class::ContractClass,
     utils::Address,
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;

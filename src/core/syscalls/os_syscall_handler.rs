@@ -5,7 +5,7 @@ use crate::{
         state::state_api_objects::BlockInfo,
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::contract_class::EntryPointType,
     utils::Address,
 };
 use cairo_rs::{
