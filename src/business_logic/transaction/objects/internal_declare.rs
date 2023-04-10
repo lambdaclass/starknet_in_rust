@@ -20,7 +20,7 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -43,7 +43,7 @@ pub struct InternalDeclare {
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
     pub hash_value: Felt252,
-    pub contract_class: ContractClass,
+    pub contract_class: DeprecatedContractClass,
 }
 
 // ------------------------------------------------------------
@@ -51,7 +51,7 @@ pub struct InternalDeclare {
 // ------------------------------------------------------------
 impl InternalDeclare {
     pub fn new(
-        contract_class: ContractClass,
+        contract_class: DeprecatedContractClass,
         chain_id: Felt252,
         sender_address: Address,
         max_fee: u64,
@@ -310,7 +310,7 @@ mod tests {
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
-        services::api::contract_class::{ContractClass, EntryPointType},
+        services::api::contract_class::{DeprecatedContractClass, EntryPointType},
         utils::{felt_to_hash, Address},
     };
 
@@ -320,7 +320,7 @@ mod tests {
     fn declare_fibonacci() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = DeprecatedContractClass::try_from(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -352,7 +352,7 @@ mod tests {
         //* ---------------------------------------
 
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class = DeprecatedContractClass::try_from(fib_path).unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 

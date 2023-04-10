@@ -42,7 +42,7 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
@@ -89,11 +89,11 @@ lazy_static! {
     static ref ACTUAL_FEE: Felt252 = Felt252::zero();
 }
 
-fn get_contract_class<P>(path: P) -> Result<ContractClass, Box<dyn std::error::Error>>
+fn get_contract_class<P>(path: P) -> Result<DeprecatedContractClass, Box<dyn std::error::Error>>
 where
     P: Into<PathBuf>,
 {
-    Ok(ContractClass::try_from(path.into())?)
+    Ok(DeprecatedContractClass::try_from(path.into())?)
 }
 
 pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
@@ -646,11 +646,11 @@ fn test_declare_tx() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
     assert_eq!(state, expected_state_before_tx());
     let declare_tx = declare_tx();
-    // Check ContractClass is not set before the declare_tx
+    // Check DeprecatedContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
     // Execute declare_tx
     let result = declare_tx.execute(&mut state, &general_config).unwrap();
-    // Check ContractClass is set after the declare_tx
+    // Check DeprecatedContractClass is set after the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
     let expected_execution_info = TransactionExecutionInfo::new(
@@ -954,9 +954,9 @@ fn expected_deploy_account_states() -> (
                     ),
                         ]),
             HashMap::from([
-                (felt_to_hash(&0x110.into()), ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap()),
-                (felt_to_hash(&0x111.into()), ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap()),
-                (felt_to_hash(&0x1010.into()), ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap()),
+                (felt_to_hash(&0x110.into()), DeprecatedContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap()),
+                (felt_to_hash(&0x111.into()), DeprecatedContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap()),
+                (felt_to_hash(&0x1010.into()), DeprecatedContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap()),
             ]),
         ),
         Some(ContractClassCache::new()),
@@ -1065,13 +1065,13 @@ fn expected_deploy_account_states() -> (
     state_after
         .set_contract_class(
             &felt_to_hash(&0x1010.into()),
-            &ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap(),
+            &DeprecatedContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap(),
         )
         .unwrap();
     state_after
         .set_contract_class(
             &felt_to_hash(&0x111.into()),
-            &ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap(),
+            &DeprecatedContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap(),
         )
         .unwrap();
 
@@ -1083,7 +1083,7 @@ fn test_state_for_declare_tx() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
     let declare_tx = declare_tx();
-    // Check ContractClass is not set before the declare_tx
+    // Check DeprecatedContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
     assert_eq!(
         state.get_nonce_at(&declare_tx.sender_address),

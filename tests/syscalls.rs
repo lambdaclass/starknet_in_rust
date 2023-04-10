@@ -22,7 +22,7 @@ use starknet_rs::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
         general_config::{StarknetChainId, StarknetGeneralConfig},
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::{collections::HashSet, iter::empty, path::Path};
@@ -51,7 +51,7 @@ fn test_contract<'a>(
     internal_calls: impl Into<Vec<CallInfo>>,
     return_data: impl Into<Vec<Felt252>>,
 ) {
-    let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
+    let contract_class = DeprecatedContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
     let tx_execution_context = tx_context.unwrap_or_else(|| {
@@ -82,7 +82,7 @@ fn test_contract<'a>(
         let mut contract_class_cache = ContractClassCache::new();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
-            let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+            let contract_class = DeprecatedContractClass::try_from(contract_path.to_path_buf())
                 .expect("Could not load extra contract from JSON");
 
             contract_class_cache.insert(class_hash, contract_class.clone());

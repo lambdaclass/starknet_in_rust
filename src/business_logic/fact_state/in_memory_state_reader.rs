@@ -1,7 +1,7 @@
 use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::DeprecatedContractClass,
     utils::{Address, ClassHash},
 };
 use felt::Felt252;
@@ -17,7 +17,7 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_storage: HashMap<StorageEntry, Felt252>,
     #[getset(get_mut = "pub")]
-    pub class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
+    pub class_hash_to_contract_class: HashMap<ClassHash, DeprecatedContractClass>,
 }
 
 impl InMemoryStateReader {
@@ -25,7 +25,7 @@ impl InMemoryStateReader {
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
         address_to_storage: HashMap<StorageEntry, Felt252>,
-        class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
+        class_hash_to_contract_class: HashMap<ClassHash, DeprecatedContractClass>,
     ) -> Self {
         Self {
             address_to_class_hash,
@@ -37,7 +37,10 @@ impl InMemoryStateReader {
 }
 
 impl StateReader for InMemoryStateReader {
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
+    fn get_contract_class(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> Result<DeprecatedContractClass, StateError> {
         let contract_class = self
             .class_hash_to_contract_class
             .get(class_hash)
@@ -128,7 +131,7 @@ mod tests {
         );
 
         let contract_class_key = [0; 32];
-        let contract_class = ContractClass::new(
+        let contract_class = DeprecatedContractClass::new(
             Program::default(),
             HashMap::from([(
                 EntryPointType::Constructor,

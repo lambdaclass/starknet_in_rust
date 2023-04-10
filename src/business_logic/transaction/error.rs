@@ -64,7 +64,7 @@ pub enum TransactionError {
     MissigContractClass,
     #[error("Contract address {0:?} is not deployed")]
     NotDeployedContract(ClassHash),
-    #[error("Non-unique entry points are not possible in a ContractClass object")]
+    #[error("Non-unique entry points are not possible in a DeprecatedContractClass object")]
     NonUniqueEntryPoint,
     #[error("Requested entry point was not found")]
     EntryPointNotFound,

@@ -18,7 +18,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
@@ -38,7 +38,7 @@ pub struct InternalDeploy {
 impl InternalDeploy {
     pub fn new(
         contract_address_salt: Address,
-        contract_class: ContractClass,
+        contract_class: DeprecatedContractClass,
         constructor_calldata: Vec<Felt252>,
         chain_id: Felt252,
         version: u64,
@@ -228,7 +228,8 @@ mod tests {
         // Set contract_class
         let class_hash: ClassHash = [1; 32];
         let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
+            DeprecatedContractClass::try_from(PathBuf::from("starknet_programs/constructor.json"))
+                .unwrap();
 
         state
             .set_contract_class(&class_hash, &contract_class)

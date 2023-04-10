@@ -31,7 +31,7 @@ use starknet_rs::{
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::contract_abi::read_abi,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::DeprecatedContractClass,
     utils::{felt_to_hash, string_to_hash, Address},
 };
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
@@ -106,7 +106,7 @@ fn declare_parser(
     cached_state: &mut CachedState<InMemoryStateReader>,
     args: &DeclareArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
-    let contract_class = ContractClass::try_from(&args.contract)?;
+    let contract_class = DeprecatedContractClass::try_from(&args.contract)?;
     let class_hash = compute_deprecated_class_hash(&contract_class)?;
     cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
 

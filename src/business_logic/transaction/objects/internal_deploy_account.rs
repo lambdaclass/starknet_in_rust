@@ -22,7 +22,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use felt::Felt252;
@@ -164,7 +164,7 @@ impl InternalDeployAccount {
 
     pub fn handle_constructor<S>(
         &self,
-        contract_class: ContractClass,
+        contract_class: DeprecatedContractClass,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,

@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::DeprecatedContractClass,
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash},
 };
@@ -13,8 +13,8 @@ use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::collections::HashMap;
 
-// K: class_hash V: ContractClass
-pub type ContractClassCache = HashMap<ClassHash, ContractClass>;
+// K: class_hash V: DeprecatedContractClass
+pub type ContractClassCache = HashMap<ClassHash, DeprecatedContractClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -80,7 +80,10 @@ impl<T: StateReader + Clone> CachedState<T> {
 }
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
+    fn get_contract_class(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> Result<DeprecatedContractClass, StateError> {
         if !self.get_contract_classes()?.contains_key(class_hash) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
             self.set_contract_class(class_hash, &contract_class)?;
@@ -158,7 +161,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
     fn set_contract_class(
         &mut self,
         class_hash: &ClassHash,
-        contract_class: &ContractClass,
+        contract_class: &DeprecatedContractClass,
     ) -> Result<(), StateError> {
         self.contract_classes
             .as_mut()
@@ -267,7 +270,7 @@ mod tests {
             HashMap::new(),
         );
 
-        let contract_class = ContractClass::new(
+        let contract_class = DeprecatedContractClass::new(
             Program::default(),
             HashMap::from([(
                 EntryPointType::Constructor,

@@ -22,7 +22,7 @@ pub enum Prefix {
     Float,
     Str,
     ContractState,
-    ContractClass,
+    DeprecatedContractClass,
 }
 
 impl Storage for DictStorage {

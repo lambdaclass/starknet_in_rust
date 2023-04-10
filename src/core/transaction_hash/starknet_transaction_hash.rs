@@ -5,7 +5,7 @@ use crate::{
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::DeprecatedContractClass,
     utils::Address,
 };
 use felt::{felt_str, Felt252};
@@ -122,7 +122,7 @@ pub fn calculate_deploy_account_transaction_hash(
 }
 
 pub fn calculate_declare_transaction_hash(
-    contract_class: &ContractClass,
+    contract_class: &DeprecatedContractClass,
     chain_id: Felt252,
     sender_address: &Address,
     max_fee: u64,

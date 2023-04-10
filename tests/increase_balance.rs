@@ -15,7 +15,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_cache::StorageEntry},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -30,7 +30,7 @@ fn hello_starknet_increase_balance() {
     // ---------------------------------------------------------
 
     let path = PathBuf::from("starknet_programs/increase_balance.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
+    let contract_class = DeprecatedContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     // External entry point, increase_balance function increase_balance.cairo:L13
