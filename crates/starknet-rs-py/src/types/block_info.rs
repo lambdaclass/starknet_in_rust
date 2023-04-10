@@ -85,7 +85,6 @@ impl PyBlockInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use coverage_helper::test;
     use pyo3::{types::IntoPyDict, IntoPy, PyTypeInfo, Python};
 
     #[test]
