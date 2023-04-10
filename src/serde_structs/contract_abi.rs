@@ -1,4 +1,4 @@
-use crate::services::api::contract_classes::contract_class::EntryPointType;
+use crate::services::api::contract_class::EntryPointType;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{collections::HashMap, fs::File, path::PathBuf};

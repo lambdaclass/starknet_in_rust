@@ -14,7 +14,7 @@ use starknet_rs::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_class::{ContractClass, EntryPointType},
     utils::{felt_to_hash, Address},
 };
 use std::path::PathBuf;
@@ -26,7 +26,7 @@ fn internal_deploy_account() {
 
     state.set_contract_classes(Default::default()).unwrap();
 
-    let contract_class = DeprecatedContractClass::try_from(PathBuf::from(
+    let contract_class = ContractClass::try_from(PathBuf::from(
         "starknet_programs/account_without_validation.json",
     ))
     .unwrap();

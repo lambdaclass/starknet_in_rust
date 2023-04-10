@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::contract_class::DeprecatedContractClass,
+    services::api::contract_class::ContractClass,
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash},
 };
@@ -13,8 +13,8 @@ use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::collections::HashMap;
 
-// K: class_hash V: DeprecatedContractClass
-pub type ContractClassCache = HashMap<ClassHash, DeprecatedContractClass>;
+// K: class_hash V: ContractClass
+pub type ContractClassCache = HashMap<ClassHash, ContractClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -80,10 +80,7 @@ impl<T: StateReader + Clone> CachedState<T> {
 }
 
 impl<T: StateReader + Clone> StateReader for CachedState<T> {
-    fn get_contract_class(
-        &mut self,
-        class_hash: &ClassHash,
-    ) -> Result<DeprecatedContractClass, StateError> {
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
         if !self.get_contract_classes()?.contains_key(class_hash) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
             self.set_contract_class(class_hash, &contract_class)?;
@@ -161,7 +158,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
     fn set_contract_class(
         &mut self,
         class_hash: &ClassHash,
-        contract_class: &DeprecatedContractClass,
+        contract_class: &ContractClass,
     ) -> Result<(), StateError> {
         self.contract_classes
             .as_mut()
@@ -218,7 +215,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
-        services::api::contract_classes::contract_class::{ContractEntryPoint, EntryPointType},
+        services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
     use cairo_rs::types::program::Program;
 
@@ -270,7 +267,7 @@ mod tests {
             HashMap::new(),
         );
 
-        let contract_class = DeprecatedContractClass::new(
+        let contract_class = ContractClass::new(
             Program::default(),
             HashMap::from([(
                 EntryPointType::Constructor,

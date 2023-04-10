@@ -17,7 +17,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 
@@ -95,7 +95,7 @@ fn main() {
             // ---------------------------------------------------------
 
             let path = PathBuf::from(&json_file_name);
-            let contract_class = DeprecatedContractClass::try_from(path).unwrap();
+            let contract_class = ContractClass::try_from(path).unwrap();
 
             let storage_entrypoint_selector = contract_class
                 .entry_points_by_type()

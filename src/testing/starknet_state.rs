@@ -23,7 +23,7 @@ use crate::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
-        contract_classes::contract_class::{DeprecatedContractClass, EntryPointType},
+        contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
     utils::{Address, ClassHash},
@@ -69,7 +69,7 @@ impl StarknetState {
     /// contract_class - a compiled StarkNet contract
     pub fn declare(
         &mut self,
-        contract_class: DeprecatedContractClass,
+        contract_class: ContractClass,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
             contract_class,
@@ -153,7 +153,7 @@ impl StarknetState {
     /// the salt to use for deploying. Otherwise, the salt is randomized.
     pub fn deploy(
         &mut self,
-        contract_class: DeprecatedContractClass,
+        contract_class: ContractClass,
         constructor_calldata: Vec<Felt252>,
         contract_address_salt: Address,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
@@ -287,7 +287,7 @@ mod tests {
     fn test_deploy() {
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
-        let contract_class = DeprecatedContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::try_from(path).unwrap();
         let contract_address_salt = Address(1.into());
 
         // expected results
@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn test_declare() {
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = DeprecatedContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::try_from(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -415,7 +415,7 @@ mod tests {
         //      Test declare with starknet state
         // --------------------------------------------
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = DeprecatedContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
 
         let (ret_class_hash, _exec_info) =
             starknet_state.declare(fib_contract_class.clone()).unwrap();
@@ -457,7 +457,7 @@ mod tests {
 
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
-        let contract_class = DeprecatedContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::try_from(path).unwrap();
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 

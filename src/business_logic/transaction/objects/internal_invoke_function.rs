@@ -22,7 +22,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_classes::contract_class::EntryPointType,
+    services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt252;
@@ -346,7 +346,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        services::api::contract_classes::contract_class::DeprecatedContractClass,
+        services::api::contract_class::ContractClass,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
@@ -376,8 +376,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class =
-            DeprecatedContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json"))
-                .unwrap();
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();

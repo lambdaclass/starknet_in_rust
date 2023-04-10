@@ -14,7 +14,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_cache::StorageEntry},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ use std::path::PathBuf;
 #[test]
 fn test_internal_calls() {
     let contract_class =
-        DeprecatedContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
+        ContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
             .expect("Could not load contract from JSON");
 
     let general_config = StarknetGeneralConfig::default();

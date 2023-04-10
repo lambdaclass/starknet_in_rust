@@ -1,4 +1,5 @@
-use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
+use super::contract_class_errors::ContractClassError;
+use crate::public::abi::AbiType;
 use cairo_rs::{
     serde::deserialize_program::{
         deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
@@ -50,7 +51,7 @@ pub struct ContractEntryPoint {
 // -------------------------------
 
 #[derive(Clone, Debug, Deserialize, Eq, Getters, PartialEq, Serialize)]
-pub struct DeprecatedContractClass {
+pub struct ContractClass {
     #[getset(get = "pub")]
     pub(crate) program: Program,
     #[getset(get = "pub")]
@@ -59,7 +60,7 @@ pub struct DeprecatedContractClass {
     pub(crate) abi: Option<AbiType>,
 }
 
-impl DeprecatedContractClass {
+impl ContractClass {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     pub(crate) fn new(
@@ -77,7 +78,7 @@ impl DeprecatedContractClass {
             }
         }
 
-        Ok(DeprecatedContractClass {
+        Ok(ContractClass {
             program,
             entry_points_by_type,
             abi,
@@ -109,7 +110,7 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
 impl From<starknet_api::state::EntryPointType> for EntryPointType {
     fn from(entry_type: starknet_api::state::EntryPointType) -> Self {
         type ApiEPT = starknet_api::state::EntryPointType;
-        type StarknetEPT = crate::services::api::contract_classes::contract_class::EntryPointType;
+        type StarknetEPT = crate::services::api::contract_class::EntryPointType;
 
         match entry_type {
             ApiEPT::Constructor => StarknetEPT::Constructor,
@@ -119,12 +120,12 @@ impl From<starknet_api::state::EntryPointType> for EntryPointType {
     }
 }
 
-impl From<starknet_api::state::ContractClass> for DeprecatedContractClass {
+impl From<starknet_api::state::ContractClass> for ContractClass {
     fn from(contract_class: starknet_api::state::ContractClass) -> Self {
         let program = to_cairo_runner_program(&contract_class.program).unwrap();
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
 
-        DeprecatedContractClass {
+        ContractClass {
             program,
             entry_points_by_type,
             abi: None,
@@ -136,24 +137,24 @@ impl From<starknet_api::state::ContractClass> for DeprecatedContractClass {
 //  Helper Functions
 // -------------------
 
-impl TryFrom<&str> for DeprecatedContractClass {
+impl TryFrom<&str> for ContractClass {
     type Error = io::Error;
 
     fn try_from(s: &str) -> io::Result<Self> {
         let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
-        Ok(DeprecatedContractClass::from(raw_contract_class))
+        Ok(ContractClass::from(raw_contract_class))
     }
 }
 
-impl TryFrom<PathBuf> for DeprecatedContractClass {
+impl TryFrom<PathBuf> for ContractClass {
     type Error = io::Error;
 
     fn try_from(path: PathBuf) -> io::Result<Self> {
-        DeprecatedContractClass::try_from(&path)
+        ContractClass::try_from(&path)
     }
 }
 
-impl TryFrom<&PathBuf> for DeprecatedContractClass {
+impl TryFrom<&PathBuf> for ContractClass {
     type Error = io::Error;
 
     fn try_from(path: &PathBuf) -> io::Result<Self> {
@@ -161,7 +162,7 @@ impl TryFrom<&PathBuf> for DeprecatedContractClass {
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::state::ContractClass =
             serde_json::from_reader(reader)?;
-        let contract_class = DeprecatedContractClass::from(raw_contract_class);
+        let contract_class = ContractClass::from(raw_contract_class);
         Ok(contract_class)
     }
 }

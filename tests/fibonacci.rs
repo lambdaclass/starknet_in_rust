@@ -15,7 +15,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_class::{ContractClass, EntryPointType},
     utils::{Address, ClassHash},
 };
 use std::{collections::HashMap, path::PathBuf};
@@ -27,7 +27,7 @@ fn integration_test() {
     // ---------------------------------------------------------
 
     let path = PathBuf::from("starknet_programs/fibonacci.json");
-    let contract_class = DeprecatedContractClass::try_from(path).unwrap();
+    let contract_class = ContractClass::try_from(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     let fib_entrypoint_selector = entry_points_by_type

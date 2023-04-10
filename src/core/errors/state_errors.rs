@@ -35,7 +35,7 @@ pub enum StateError {
     #[error(transparent)]
     Storage(#[from] StorageError),
     #[error(transparent)]
-    DeprecatedContractClass(#[from] ContractClassError),
+    ContractClass(#[from] ContractClassError),
     #[error("Constructor calldata is empty")]
     ConstructorCalldataEmpty(),
     #[error("Error in ExecutionEntryPoint")]

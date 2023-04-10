@@ -17,7 +17,7 @@ use starknet_rs::{
         constants::TRANSACTION_VERSION,
         general_config::StarknetGeneralConfig,
     },
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_class::{ContractClass, EntryPointType},
     starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
@@ -29,7 +29,7 @@ fn test_contract(
     call_data: Vec<Felt252>,
     return_data: impl Into<Vec<Felt252>>,
 ) {
-    let contract_class = DeprecatedContractClass::try_from(contract_path.as_ref().to_path_buf())
+    let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
 

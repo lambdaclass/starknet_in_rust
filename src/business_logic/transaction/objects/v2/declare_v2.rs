@@ -22,7 +22,7 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::contract_class::EntryPointType,
+    services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;

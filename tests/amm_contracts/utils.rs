@@ -16,7 +16,7 @@ use starknet_rs::{
         transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{collections::HashSet, path::PathBuf};
@@ -126,7 +126,7 @@ pub fn deploy(
     config: &StarknetGeneralConfig,
 ) -> (Address, [u8; 32]) {
     let path = PathBuf::from(path);
-    let contract_class = DeprecatedContractClass::try_from(path).unwrap();
+    let contract_class = ContractClass::try_from(path).unwrap();
 
     let internal_deploy = InternalDeploy::new(
         Address(0.into()),
