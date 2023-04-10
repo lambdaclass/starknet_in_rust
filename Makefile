@@ -59,6 +59,7 @@ check: compile-cairo compile-starknet
 deps: check-python-version 
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
+	rustup toolchain install nightly
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
