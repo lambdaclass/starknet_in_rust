@@ -43,6 +43,7 @@ pub struct StarknetState {
 }
 
 impl StarknetState {
+    #[cfg_attr(coverage_nightly, no_coverage)]
     pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
