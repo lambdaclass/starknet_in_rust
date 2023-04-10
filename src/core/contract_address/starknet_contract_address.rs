@@ -195,6 +195,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use felt::Felt252;
     use num_traits::Num;
 

@@ -235,6 +235,7 @@ pub fn build_general_config(_raw_general_config: &PyDict) -> PyResult<PyStarknet
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use pyo3::{types::IntoPyDict, PyTypeInfo, Python};
 
     #[test]

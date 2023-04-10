@@ -134,6 +134,7 @@ mod tests {
         business_logic::execution::objects::{L2toL1MessageInfo, OrderedL2ToL1Message},
         utils::Address,
     };
+    use coverage_helper::test;
 
     #[test]
     fn test_event_emission_cost() {

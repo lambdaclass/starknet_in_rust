@@ -350,6 +350,7 @@ mod tests {
         },
         services::api::contract_class::ContractClass,
     };
+    use coverage_helper::test;
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
 

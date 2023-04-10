@@ -152,6 +152,7 @@ impl PyStarknetState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use pyo3::{types::IntoPyDict, PyTypeInfo, Python};
 
     #[test]
