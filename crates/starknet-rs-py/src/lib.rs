@@ -372,7 +372,7 @@ mod test {
             // try loading our module
             let m = PyModule::new(py, "starknet_rs_py").unwrap();
 
-            starknet_rs_py(py, &m).unwrap();
+            starknet_rs_py(py, m).unwrap();
 
             let res = m.getattr("StarknetErrorCode");
 
