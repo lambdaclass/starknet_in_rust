@@ -18,7 +18,7 @@ use starknet_rs::{
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::starknet_contract_address::compute_deprecated_class_hash,
         errors::contract_address_errors::ContractAddressError,
         transaction_hash::starknet_transaction_hash::{
             calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
@@ -109,7 +109,7 @@ fn declare_parser(
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_class =
         ContractClass::try_from(&args.contract).map_err(ContractAddressError::Program)?;
-    let class_hash = compute_class_hash(&contract_class)?;
+    let class_hash = compute_deprecated_class_hash(&contract_class)?;
     cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
 
     let tx_hash = calculate_declare_transaction_hash(
