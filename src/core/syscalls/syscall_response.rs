@@ -306,7 +306,7 @@ mod tests {
             state::cached_state::CachedState,
         },
         core::syscalls::syscall_handler::SyscallHandler,
-        utils::test_utils::vm,
+        utils::{get_integer, test_utils::vm},
     };
     use cairo_rs::relocatable;
 
@@ -324,24 +324,18 @@ mod tests {
 
         add_segments!(vm, 2);
 
+        let caller_address = 3;
         let response = GetCallerAddressResponse {
-            caller_address: 3.into(),
+            caller_address: caller_address.into(),
         };
 
         assert!(syscall
-            ._write_syscall_response(&response, &mut vm, relocatable!(1, 0))
+            .write_syscall_response(&response, &mut vm, relocatable!(1, 0))
             .is_ok());
 
         // Check Vm inserts
-        // Since we can't access the vm.memory, these inserts should check the ._write_syscall_response inserts
-        // The ._write_syscall_response should insert the response.caller_address in the position (1,1)
-        // Because the vm memory is write once, trying to insert an 8 in that position should return an error
-        assert!(vm
-            .insert_value::<Felt252>(relocatable!(1, 1), 8.into())
-            .is_err());
-        // Inserting a 3 should be OK because is the value inserted by ._write_syscall_response
-        assert!(vm
-            .insert_value::<Felt252>(relocatable!(1, 1), 3.into())
-            .is_ok())
+        // The .write_syscall_response should insert the response.caller_address in the position (1,1)
+
+        assert_matches!(get_integer(&vm, relocatable!(1, 1)), Ok(x) if x == caller_address);
     }
 }

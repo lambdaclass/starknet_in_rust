@@ -384,6 +384,73 @@ mod tests {
     }
 
     #[test]
+    fn set_contract_classes_twice_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        cached_state.set_contract_classes(HashMap::new()).unwrap();
+        let result = cached_state
+            .set_contract_classes(HashMap::new())
+            .unwrap_err();
+
+        assert_eq!(result, StateError::AssignedContractClassCache);
+    }
+
+    #[test]
+    fn deploy_contract_address_out_of_range_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let contract_address = Address(0.into());
+
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        let result = cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap_err();
+
+        assert_eq!(
+            result,
+            StateError::ContractAddressOutOfRangeAddress(contract_address)
+        );
+    }
+
+    #[test]
+    fn deploy_contract_address_in_use_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let contract_address = Address(42.into());
+
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap();
+        let result = cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap_err();
+
+        assert_eq!(
+            result,
+            StateError::ContractAddressUnavailable(contract_address)
+        );
+    }
+
+    #[test]
     fn cached_state_replace_contract_test() {
         let state_reader = InMemoryStateReader::new(
             HashMap::new(),
