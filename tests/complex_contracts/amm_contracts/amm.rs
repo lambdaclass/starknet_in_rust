@@ -9,7 +9,7 @@ use starknet_rs::{
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::cached_state::CachedState,
+        state::{cached_state::CachedState, state_api::StateReader},
         transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
@@ -17,7 +17,7 @@ use starknet_rs::{
     utils::{calculate_sn_keccak, Address},
 };
 
-use crate::amm_contracts::utils::*;
+use crate::complex_contracts::utils::*;
 
 fn init_pool(
     calldata: &[Felt252],
@@ -57,14 +57,24 @@ fn amm_init_pool_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"init_pool"));
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let accessed_storage_keys =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
@@ -88,6 +98,8 @@ fn amm_init_pool_test() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -103,18 +115,30 @@ fn amm_add_demo_tokens_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -158,9 +182,19 @@ fn amm_get_pool_token_balance() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
 
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -170,6 +204,8 @@ fn amm_get_pool_token_balance() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -210,8 +246,18 @@ fn amm_swap_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
 
     let calldata = [10000.into(), 10000.into()].to_vec();
     let caller_address = Address(0000.into());
@@ -222,6 +268,8 @@ fn amm_swap_test() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -288,9 +336,18 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
-
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
     let calldata = [Felt252::new(2_u32.pow(30)), Felt252::new(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -300,6 +357,8 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -312,9 +371,18 @@ fn amm_swap_should_fail_with_unexistent_token() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
-
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
     let calldata = [Felt252::zero(), Felt252::new(10)].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -324,6 +392,8 @@ fn amm_swap_should_fail_with_unexistent_token() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -336,9 +406,18 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
-
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
     let calldata = [Felt252::new(1), Felt252::new(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -348,6 +427,8 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -360,9 +441,18 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
-
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
     let calldata = [Felt252::new(1), Felt252::new(100)].to_vec();
     let caller_address = Address(0000.into());
     let general_config = StarknetGeneralConfig::default();
@@ -372,6 +462,8 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
@@ -387,9 +479,18 @@ fn amm_get_account_token_balance_test() {
     let general_config = StarknetGeneralConfig::default();
     let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
     // Deploy contract
-    let (contract_address, class_hash) =
-        deploy(&mut state, "starknet_programs/amm.json", &general_config);
-
+    let (contract_address, class_hash) = deploy(
+        &mut state,
+        "starknet_programs/amm.json",
+        &[],
+        &general_config,
+    )
+    .unwrap();
+    let entry_points_by_type = state
+        .get_contract_class(&class_hash)
+        .unwrap()
+        .entry_points_by_type()
+        .clone();
     //add 10 tokens of token type 1
     let caller_address = Address(0000.into());
     let calldata = [10.into(), 0.into()].to_vec();
@@ -401,6 +502,8 @@ fn amm_get_account_token_balance_test() {
         caller_address: &caller_address,
         address: &contract_address,
         class_hash: &class_hash,
+        entry_points_by_type: &entry_points_by_type,
+        entry_point_type: &EntryPointType::External,
         general_config: &general_config,
         resources_manager: &mut resources_manager,
     };
