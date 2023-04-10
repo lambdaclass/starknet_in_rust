@@ -141,7 +141,8 @@ fn deploy_parser(
 
     cached_state.deploy_contract(
         Address(address.clone()),
-        string_to_hash(&args.class_hash).unwrap(),
+        string_to_hash(&args.class_hash)
+            .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
     )?;
     let tx_hash = calculate_deploy_transaction_hash(
         0,
