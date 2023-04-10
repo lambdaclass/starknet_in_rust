@@ -25,6 +25,8 @@ awc = "3.1.1"
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 
+starknet-contract-class = { path = "crates/starknet-contract-class" }
+
 [dev-dependencies]
 assert_matches = "1.5.0"
 rusty-hook = "0.11"

@@ -1,7 +1,7 @@
 use crate::{
     business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
+    services::api::contract_class::{ContractClass, SUPPORTED_BUILTINS},
     utils::{Address, ClassHash},
 };
 use felt::Felt252;
@@ -43,7 +43,7 @@ impl StateReader for InMemoryStateReader {
             .get(class_hash)
             .ok_or(StateError::MissingClassHash())
             .cloned()?;
-        contract_class.validate()?;
+        contract_class.validate(&SUPPORTED_BUILTINS)?;
         Ok(contract_class)
     }
 
