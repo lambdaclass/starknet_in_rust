@@ -1,6 +1,6 @@
 use num_bigint::BigUint;
 use pyo3::prelude::*;
-use starknet_rs::services::api::contract_class::ContractEntryPoint;
+use starknet_rs::services::api::contract_classes::contract_class::ContractEntryPoint;
 
 #[pyclass]
 #[pyo3(name = "ContractEntryPoint")]
