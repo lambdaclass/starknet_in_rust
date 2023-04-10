@@ -1,15 +1,17 @@
 use super::contract_entry_point::PyContractEntryPoint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
-use starknet_rs::services::api::contract_classes::contract_class::{ContractClass, EntryPointType};
+use starknet_rs::services::api::contract_classes::contract_class::{
+    DeprecatedContractClass, EntryPointType,
+};
 use std::collections::HashMap;
 
 type PyEntryPointType = i32;
 
 #[pyclass]
-#[pyo3(name = "ContractClass")]
+#[pyo3(name = "DeprecatedContractClass")]
 #[derive(Debug)]
 pub struct PyContractClass {
-    pub(crate) inner: ContractClass,
+    pub(crate) inner: DeprecatedContractClass,
 }
 
 #[pymethods]

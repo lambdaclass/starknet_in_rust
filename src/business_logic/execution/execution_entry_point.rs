@@ -10,7 +10,7 @@ use crate::{
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_classes::contract_class::{
-        ContractClass, ContractEntryPoint, EntryPointType,
+        ContractEntryPoint, DeprecatedContractClass, EntryPointType,
     },
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
@@ -191,7 +191,7 @@ impl ExecutionEntryPoint {
     /// default if there is one and the requested one is not found.
     fn get_selected_entry_point(
         &self,
-        contract_class: &ContractClass,
+        contract_class: &DeprecatedContractClass,
         _class_hash: [u8; 32],
     ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class

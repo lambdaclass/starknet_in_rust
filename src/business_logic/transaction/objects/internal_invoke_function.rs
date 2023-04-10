@@ -346,7 +346,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        services::api::contract_classes::contract_class::ContractClass,
+        services::api::contract_classes::contract_class::DeprecatedContractClass,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
@@ -376,7 +376,8 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+            DeprecatedContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json"))
+                .unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();

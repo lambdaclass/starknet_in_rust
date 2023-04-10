@@ -50,7 +50,7 @@ pub struct ContractEntryPoint {
 // -------------------------------
 
 #[derive(Clone, Debug, Deserialize, Eq, Getters, PartialEq, Serialize)]
-pub struct ContractClass {
+pub struct DeprecatedContractClass {
     #[getset(get = "pub")]
     pub(crate) program: Program,
     #[getset(get = "pub")]
@@ -59,7 +59,7 @@ pub struct ContractClass {
     pub(crate) abi: Option<AbiType>,
 }
 
-impl ContractClass {
+impl DeprecatedContractClass {
     // TODO: Remove warning inhibitor when finally used.
     #[allow(dead_code)]
     pub(crate) fn new(
@@ -77,7 +77,7 @@ impl ContractClass {
             }
         }
 
-        Ok(ContractClass {
+        Ok(DeprecatedContractClass {
             program,
             entry_points_by_type,
             abi,
@@ -119,12 +119,12 @@ impl From<starknet_api::state::EntryPointType> for EntryPointType {
     }
 }
 
-impl From<starknet_api::state::ContractClass> for ContractClass {
+impl From<starknet_api::state::ContractClass> for DeprecatedContractClass {
     fn from(contract_class: starknet_api::state::ContractClass) -> Self {
         let program = to_cairo_runner_program(&contract_class.program).unwrap();
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
 
-        ContractClass {
+        DeprecatedContractClass {
             program,
             entry_points_by_type,
             abi: None,
@@ -136,24 +136,24 @@ impl From<starknet_api::state::ContractClass> for ContractClass {
 //  Helper Functions
 // -------------------
 
-impl TryFrom<&str> for ContractClass {
+impl TryFrom<&str> for DeprecatedContractClass {
     type Error = io::Error;
 
     fn try_from(s: &str) -> io::Result<Self> {
         let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
-        Ok(ContractClass::from(raw_contract_class))
+        Ok(DeprecatedContractClass::from(raw_contract_class))
     }
 }
 
-impl TryFrom<PathBuf> for ContractClass {
+impl TryFrom<PathBuf> for DeprecatedContractClass {
     type Error = io::Error;
 
     fn try_from(path: PathBuf) -> io::Result<Self> {
-        ContractClass::try_from(&path)
+        DeprecatedContractClass::try_from(&path)
     }
 }
 
-impl TryFrom<&PathBuf> for ContractClass {
+impl TryFrom<&PathBuf> for DeprecatedContractClass {
     type Error = io::Error;
 
     fn try_from(path: &PathBuf) -> io::Result<Self> {
@@ -161,7 +161,7 @@ impl TryFrom<&PathBuf> for ContractClass {
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::state::ContractClass =
             serde_json::from_reader(reader)?;
-        let contract_class = ContractClass::from(raw_contract_class);
+        let contract_class = DeprecatedContractClass::from(raw_contract_class);
         Ok(contract_class)
     }
 }

@@ -555,7 +555,9 @@ mod tests {
         core::syscalls::os_syscall_handler::OsSyscallHandler,
         definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         memory_insert,
-        services::api::contract_classes::contract_class::{ContractClass, EntryPointType},
+        services::api::contract_classes::contract_class::{
+            DeprecatedContractClass, EntryPointType,
+        },
         utils::{
             felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
@@ -1398,7 +1400,8 @@ mod tests {
 
         // Set contract class
         let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+            DeprecatedContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json"))
+                .unwrap();
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
@@ -1492,7 +1495,7 @@ mod tests {
             .unwrap();
 
         // Set contract class
-        let contract_class = ContractClass::try_from(PathBuf::from(
+        let contract_class = DeprecatedContractClass::try_from(PathBuf::from(
             "starknet_programs/storage_var_and_constructor.json",
         ))
         .unwrap();

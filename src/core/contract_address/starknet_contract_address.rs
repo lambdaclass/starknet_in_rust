@@ -3,7 +3,7 @@
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
     services::api::contract_classes::contract_class::{
-        ContractClass, ContractEntryPoint, EntryPointType,
+        ContractEntryPoint, DeprecatedContractClass, EntryPointType,
     },
 };
 use cairo_rs::{
@@ -32,7 +32,7 @@ fn load_program() -> Result<Program, ContractAddressError> {
 }
 
 fn get_contract_entry_points(
-    contract_class: &ContractClass,
+    contract_class: &DeprecatedContractClass,
     entry_point_type: &EntryPointType,
 ) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
     let program_length = contract_class.program.data.len();
@@ -73,7 +73,7 @@ fn starknet_keccak(data: &[u8]) -> Felt252 {
 
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
-fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt252 {
+fn compute_hinted_class_hash(_contract_class: &DeprecatedContractClass) -> Felt252 {
     let keccak_input =
         r#"{"abi": contract_class.abi, "program": contract_class.program}"#.as_bytes();
     starknet_keccak(keccak_input)
@@ -82,7 +82,7 @@ fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt252 {
 /// Returns the serialization of a contract as a list of field elements.
 fn get_contract_class_struct(
     identifiers: &HashMap<String, Identifier>,
-    contract_class: &ContractClass,
+    contract_class: &DeprecatedContractClass,
 ) -> Result<DeprecatedCompiledClass, ContractAddressError> {
     let api_version = identifiers
         .get("__main__.DEPRECATED_COMPILED_CLASS_VERSION")
@@ -171,7 +171,7 @@ impl From<DeprecatedCompiledClass> for CairoArg {
 
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
 pub fn compute_deprecated_class_hash(
-    contract_class: &ContractClass,
+    contract_class: &DeprecatedContractClass,
 ) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
@@ -243,7 +243,7 @@ mod tests {
                 offset: 2,
             }],
         );
-        let contract_class = ContractClass {
+        let contract_class = DeprecatedContractClass {
             program: load_program().unwrap(),
             entry_points_by_type,
             abi: None,
@@ -286,7 +286,7 @@ mod tests {
                 offset: 2,
             }],
         );
-        let contract_class = ContractClass {
+        let contract_class = DeprecatedContractClass {
             program: load_program().unwrap(),
             entry_points_by_type,
             abi: None,
@@ -325,7 +325,7 @@ mod tests {
                 offset: 12,
             }],
         );
-        let contract_class = ContractClass {
+        let contract_class = DeprecatedContractClass {
             program: load_program().unwrap(),
             entry_points_by_type,
             abi: None,

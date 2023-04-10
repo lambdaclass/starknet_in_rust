@@ -16,14 +16,14 @@ use starknet_rs::{
     core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
     definitions::general_config::StarknetChainId,
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_classes::contract_class::ContractClass,
+    services::api::contract_classes::contract_class::DeprecatedContractClass,
     utils::{felt_to_hash, Address},
 };
 use std::{hint::black_box, path::PathBuf};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+    static ref CONTRACT_CLASS: DeprecatedContractClass = DeprecatedContractClass::try_from(PathBuf::from(
         "starknet_programs/account_without_validation.json",
     ))
     .unwrap();
