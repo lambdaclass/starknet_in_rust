@@ -23,7 +23,7 @@ use crate::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
-        contract_class::{DeprecatedContractClass, EntryPointType},
+        contract_classes::deprecated_contract_class::{DeprecatedContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
     utils::{Address, ClassHash},

@@ -16,7 +16,9 @@ use starknet_rs::{
         transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        DeprecatedContractClass, EntryPointType,
+    },
     utils::{calculate_sn_keccak, Address},
 };
 use std::{collections::HashSet, path::PathBuf};

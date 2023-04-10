@@ -5,7 +5,7 @@ use crate::{
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,
-    services::api::contract_class::DeprecatedContractClass,
+    services::api::contract_classes::deprecated_contract_class::DeprecatedContractClass,
     utils::Address,
 };
 use felt::{felt_str, Felt252};

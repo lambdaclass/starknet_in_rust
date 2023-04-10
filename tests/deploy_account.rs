@@ -14,7 +14,9 @@ use starknet_rs::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        DeprecatedContractClass, EntryPointType,
+    },
     utils::{felt_to_hash, Address},
 };
 use std::path::PathBuf;

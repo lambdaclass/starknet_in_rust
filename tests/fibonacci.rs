@@ -15,7 +15,9 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        DeprecatedContractClass, EntryPointType,
+    },
     utils::{Address, ClassHash},
 };
 use std::{collections::HashMap, path::PathBuf};

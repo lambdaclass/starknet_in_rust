@@ -22,7 +22,9 @@ use starknet_rs::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
         general_config::{StarknetChainId, StarknetGeneralConfig},
     },
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        DeprecatedContractClass, EntryPointType,
+    },
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::{collections::HashSet, iter::empty, path::Path};

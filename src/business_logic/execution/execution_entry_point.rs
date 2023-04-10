@@ -9,7 +9,9 @@ use crate::{
         syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractEntryPoint, DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        ContractEntryPoint, DeprecatedContractClass, EntryPointType,
+    },
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
 };

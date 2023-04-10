@@ -2,7 +2,9 @@
 /// (ie, declarations that do not correspond to Cairo 1 contracts)
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
-    services::api::contract_class::{ContractEntryPoint, DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        ContractEntryPoint, DeprecatedContractClass, EntryPointType,
+    },
 };
 use cairo_rs::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,

@@ -42,7 +42,9 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        DeprecatedContractClass, EntryPointType,
+    },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{

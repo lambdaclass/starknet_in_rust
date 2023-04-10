@@ -18,7 +18,9 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class::{DeprecatedContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        DeprecatedContractClass, EntryPointType,
+    },
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
