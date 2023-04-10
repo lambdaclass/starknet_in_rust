@@ -19,13 +19,21 @@ use starknet_rs::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
-use std::{collections::HashSet, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 pub struct CallConfig<'a> {
     pub state: &'a mut CachedState<InMemoryStateReader>,
     pub caller_address: &'a Address,
     pub address: &'a Address,
     pub class_hash: &'a [u8; 32],
+    pub entry_points_by_type: &'a HashMap<
+        EntryPointType,
+        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
+    >,
+    pub entry_point_type: &'a EntryPointType,
     pub general_config: &'a StarknetGeneralConfig,
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }
@@ -45,6 +53,9 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
 
     let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
 
+    if keys.is_empty() {
+        accessed_storage_keys.insert(variable_hash.to_bytes_be());
+    }
     for key in keys {
         accessed_storage_keys.insert(key.to_bytes_be());
     }
@@ -54,6 +65,7 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
 
 pub fn get_entry_points(
     function_name: &str,
+    entry_point_type: &EntryPointType,
     address: &Address,
     class_hash: &[u8; 32],
     calldata: &[Felt252],
@@ -69,15 +81,13 @@ pub fn get_entry_points(
     //*    Create execution entry point
     //* ------------------------------------
 
-    let entry_point_type = EntryPointType::External;
-
     (
         ExecutionEntryPoint::new(
             address.clone(),
             calldata.to_vec(),
             entrypoint_selector.clone(),
             caller_address.clone(),
-            entry_point_type,
+            *entry_point_type,
             Some(CallType::Delegate),
             Some(*class_hash),
         ),
@@ -93,6 +103,7 @@ pub fn execute_entry_point(
     // Entry point for init pool
     let (exec_entry_point, _) = get_entry_points(
         function_name,
+        call_config.entry_point_type,
         call_config.address,
         call_config.class_hash,
         calldata,
@@ -123,29 +134,27 @@ pub fn execute_entry_point(
 pub fn deploy(
     state: &mut CachedState<InMemoryStateReader>,
     path: &str,
+    calldata: &[Felt252],
     config: &StarknetGeneralConfig,
-) -> (Address, [u8; 32]) {
+) -> Result<(Address, [u8; 32]), TransactionError> {
     let path = PathBuf::from(path);
     let contract_class = ContractClass::try_from(path).unwrap();
 
     let internal_deploy = InternalDeploy::new(
         Address(0.into()),
         contract_class.clone(),
-        vec![],
+        calldata.to_vec(),
         0.into(),
         0,
-    )
-    .unwrap();
+    )?;
     let class_hash = internal_deploy.class_hash();
-    state
-        .set_contract_class(&class_hash, &contract_class)
-        .unwrap();
+    state.set_contract_class(&class_hash, &contract_class)?;
 
-    let tx_execution_info = internal_deploy.apply(state, config).unwrap();
+    let tx_execution_info = internal_deploy.apply(state, config)?;
 
     let call_info = tx_execution_info.call_info.unwrap();
     let contract_address = call_info.contract_address;
     let class_hash = call_info.class_hash.unwrap();
 
-    (contract_address, class_hash)
+    Ok((contract_address, class_hash))
 }
