@@ -52,7 +52,6 @@ use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarkn
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
 
 #[pymodule]
-#[pyo3(name = "starknet_rs_py")]
 pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
 
@@ -375,15 +374,15 @@ mod test {
 
             starknet_rs_py(py, &m).unwrap();
 
-            let res = m.get_item("StarknetErrorCode");
+            let res = m.getattr("StarknetErrorCode");
 
             assert!(res.is_err(), "{res:?}");
 
             add_reexports(py, Some(m)).unwrap();
 
-            let res = m.get_item("StarknetErrorCode");
+            let res = m.getattr("StarknetErrorCode");
 
-            assert!(res.is_err(), "{res:?}");
+            assert!(res.is_ok(), "{res:?}");
         });
     }
 }
