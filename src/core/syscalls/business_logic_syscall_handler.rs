@@ -1,5 +1,5 @@
 use super::{
-    syscall_handler::{SyscallHandler, SyscallHandlerPostRun},
+    syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
     syscall_info::get_syscall_size_from_name,
     syscall_request::*,
 };
@@ -244,7 +244,7 @@ where
     }
 }
 
-impl<'a, T> SyscallHandler for DeprecatedBLSyscallHandler<'a, T>
+impl<'a, T> DeprecatedSyscallHandler for DeprecatedBLSyscallHandler<'a, T>
 where
     T: Default + State + StateReader,
 {
@@ -614,7 +614,7 @@ mod tests {
         },
         core::{
             errors::syscall_handler_errors::SyscallHandlerError,
-            syscalls::syscall_handler::SyscallHandler,
+            syscalls::syscall_handler::DeprecatedSyscallHandler,
         },
         utils::{test_utils::*, Address},
     };
