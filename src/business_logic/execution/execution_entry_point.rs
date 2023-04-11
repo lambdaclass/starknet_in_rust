@@ -6,7 +6,7 @@ use crate::{
     },
     core::syscalls::{
         business_logic_syscall_handler::DeprecatedBLSyscallHandler,
-        syscall_handler::{SyscallHandler, SyscallHintProcessor},
+        syscall_handler::{DeprecatedSyscallHandler, SyscallHintProcessor},
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
