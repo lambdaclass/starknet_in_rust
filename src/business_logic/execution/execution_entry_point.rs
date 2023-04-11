@@ -18,7 +18,10 @@ use crate::{
     },
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     starknet_runner::runner::StarknetRunner,
-    utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
+    utils::{
+        calculate_sn_keccak, get_deployed_address_class_hash_at_address,
+        validate_contract_deployed, Address,
+    },
 };
 use cairo_rs::{
     types::{
@@ -32,6 +35,7 @@ use cairo_rs::{
     with_std::collections::HashMap,
 };
 use felt::Felt252;
+use std::path::PathBuf;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
@@ -290,91 +294,116 @@ impl ExecutionEntryPoint {
 
 #[test]
 fn test_execute() {
+    // ---------------------------------------------------------
+    //  Create program and entry point types for contract class
+    // ---------------------------------------------------------
+
+    let path = PathBuf::from("starknet_programs/storage.json");
+    let contract_class = ContractClass::try_from(path).unwrap();
+    let entry_points_by_type = contract_class.entry_points_by_type().clone();
+
+    let storage_entrypoint_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(0)
+        .unwrap()
+        .selector()
+        .clone();
+
     //* --------------------------------------------
-    //*       Create a default contract data
+    //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let contract_address = Address(1111.into());
+    let mut contract_class_cache = HashMap::new();
+
+    //  ------------ contract data --------------------
+
+    let address = Address(1111.into());
     let class_hash = [1; 32];
-    let call_data = vec![Felt252::new(1)];
-    let contract_class = ContractClass::new(
-        Program::default(),
-        HashMap::from([(
-            EntryPointType::Constructor,
-            vec![ContractEntryPoint::default()],
-        )]),
-        None,
-    )
-    .unwrap();
+    let nonce = Felt252::new(88);
+    let storage_entry = (address.clone(), [90; 32]);
+    let storage_value = Felt252::new(10902);
 
-    //* --------------------------------------------
-    //*          Create default context
-    //* --------------------------------------------
-
-    let general_config = StarknetGeneralConfig::default();
-
-    let tx_execution_context = TransactionExecutionContext::create_for_testing(
-        Address(0.into()),
-        10,
-        0.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-
-    //* --------------------------------------------
-    //*  Create starknet state with the contract
-    //*  (This would be the equivalent of
-    //*  declaring and deploying the contract)
-    //* -------------------------------------------
-
-    let mut state_reader = InMemoryStateReader::new(
-        HashMap::new(),
-        HashMap::new(),
-        HashMap::new(),
-        HashMap::new(),
-    );
-
+    contract_class_cache.insert(class_hash, contract_class);
+    let mut state_reader = InMemoryStateReader::default();
     state_reader
-        .address_to_class_hash
-        .insert(contract_address.clone(), class_hash);
-    state_reader.address_to_nonce.insert(
-        contract_address.clone(),
-        tx_execution_context.nonce().clone(),
-    );
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
     state_reader
-        .address_to_storage
-        .insert((contract_address.clone(), class_hash), Felt252::new(1));
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
     state_reader
-        .class_hash_to_contract_class
-        .insert(class_hash, contract_class.clone());
+        .address_to_storage_mut()
+        .insert(storage_entry, storage_value);
 
-    let mut state = CachedState::new(
-        state_reader,
-        Some(HashMap::from([(class_hash, contract_class)])),
-    );
+    //* ---------------------------------------
+    //*    Create state with previous data
+    //* ---------------------------------------
+
+    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
 
     //* ------------------------------------
     //*    Create execution entry point
     //* ------------------------------------
 
-    let caller_address = Address(0.into());
+    let calldata = [].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
 
-    let entry_point = ExecutionEntryPoint::new(
-        contract_address,
-        call_data,
-        DEFAULT_ENTRY_POINT_SELECTOR.clone(),
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata.clone(),
+        storage_entrypoint_selector.clone(),
         caller_address,
-        EntryPointType::Constructor,
-        CallType::Delegate.into(),
-        class_hash.into(),
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
     );
 
-    let execution = entry_point.execute(
-        &mut state,
-        &general_config,
-        &mut ExecutionResourcesManager::default(),
-        &tx_execution_context,
+    //* --------------------
+    //*   Execute contract
+    //* ---------------------
+    let general_config = StarknetGeneralConfig::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
     );
+    let mut resources_manager = ExecutionResourcesManager::default();
 
-    assert_eq!(execution.unwrap(), CallInfo::default())
+    let expected_key = calculate_sn_keccak("_counter".as_bytes());
+
+    let mut expected_accessed_storage_keys = HashSet::new();
+    expected_accessed_storage_keys.insert(expected_key);
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(storage_entrypoint_selector),
+        entry_point_type: Some(EntryPointType::External),
+        calldata,
+        retdata: [42.into()].to_vec(),
+        execution_resources: ExecutionResources::default(),
+        class_hash: Some(class_hash),
+        storage_read_values: vec![42.into()],
+        accessed_storage_keys: expected_accessed_storage_keys,
+        ..Default::default()
+    };
+
+    assert_eq!(
+        exec_entry_point
+            .execute(
+                &mut state,
+                &general_config,
+                &mut resources_manager,
+                &tx_execution_context
+            )
+            .unwrap(),
+        expected_call_info
+    );
 }
