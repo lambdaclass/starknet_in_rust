@@ -294,6 +294,7 @@ mod tests {
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
+        testing::type_utils::ExecutionInfo,
         utils::{calculate_sn_keccak, felt_to_hash},
     };
 
@@ -584,7 +585,12 @@ mod tests {
             ..Default::default()
         }));
 
-        starknet_state.add_messages_and_events(&exec_info).unwrap();
+        starknet_state
+            .add_messages_and_events(
+                &exec_info.get_sorted_events().unwrap(),
+                &exec_info.get_sorted_l2_to_l1_messages().unwrap(),
+            )
+            .unwrap();
         let msg_hash =
             StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
                 .get_hash();
@@ -614,7 +620,12 @@ mod tests {
             ..Default::default()
         }));
 
-        starknet_state.add_messages_and_events(&exec_info).unwrap();
+        starknet_state
+            .add_messages_and_events(
+                &exec_info.get_sorted_events().unwrap(),
+                &exec_info.get_sorted_l2_to_l1_messages().unwrap(),
+            )
+            .unwrap();
         let msg_hash =
             StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
                 .get_hash();
@@ -642,7 +653,12 @@ mod tests {
             ..Default::default()
         }));
 
-        starknet_state.add_messages_and_events(&exec_info).unwrap();
+        starknet_state
+            .add_messages_and_events(
+                &exec_info.get_sorted_events().unwrap(),
+                &exec_info.get_sorted_l2_to_l1_messages().unwrap(),
+            )
+            .unwrap();
         let msg_hash =
             StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
                 .get_hash();
