@@ -430,7 +430,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -493,7 +493,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -556,7 +556,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -618,7 +618,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -698,7 +698,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -804,7 +804,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
