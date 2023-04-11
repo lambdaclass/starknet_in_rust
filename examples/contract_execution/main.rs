@@ -1,133 +1,112 @@
 #![deny(warnings)]
 
+//! A simple example of starknet-rs use.
+//!
+//! In [`test_contract`] we have all the interaction with the crate's API.
+//! In [`main`] we use it to run a compiled contract's entrypoint and print
+//! the returned data.
+//!
+//! It also includes some small tests that assert the data returned by
+//! running some pre-compiled contracts is as expected.
+
 use felt::Felt252;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
-        },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::cached_state::CachedState,
-    },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_class::ContractClass,
+    testing::starknet_state::StarknetState,
     utils::{calculate_sn_keccak, Address},
 };
 use std::path::Path;
 
 fn main() {
-    test_contract(
-        "starknet_programs/fibonacci.json", /* Your compiled contract path */
-        "fib",                              /* The entrypoint you are wanting to execute */
-        [1.into(), 1.into(), 10.into()].to_vec(), /* The parameters needed in order to call that entrypoint */
-        [144.into()].to_vec(),                    /* The expected returned value */
-    );
+    // replace this with the path to your compiled contract
+    let contract_path = "starknet_programs/factorial.json";
+
+    // replace this with the name of your entrypoint
+    let entry_point: &str = "factorial";
+
+    // replace this with the arguments for the entrypoint
+    let calldata: Vec<Felt252> = [1.into(), 1.into(), 10.into()].to_vec();
+
+    let retdata = test_contract(contract_path, entry_point, calldata);
+
+    let result_strs: Vec<String> = retdata.iter().map(Felt252::to_string).collect();
+    let joined_str = result_strs.join(", ");
+
+    println!("The returned values were: {joined_str}");
 }
 
-#[test]
-fn test_fibonacci() {
-    test_contract(
-        "starknet_programs/fibonacci.json",
-        "fib",
-        [1.into(), 1.into(), 10.into()].to_vec(),
-        [144.into()].to_vec(),
-    );
-}
-
-#[test]
-fn test_factorial() {
-    test_contract(
-        "starknet_programs/factorial.json",
-        "factorial",
-        [10.into()].to_vec(),
-        [3628800.into()].to_vec(),
-    );
-}
-
+/// This function:
+///  - declares a new contract class
+///  - deploys a new contract
+///  - executes the given entry point in the deployed contract
 fn test_contract(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
-    call_data: Vec<Felt252>,
-    return_data: impl Into<Vec<Felt252>>,
-) {
+    calldata: Vec<Felt252>,
+) -> Vec<Felt252> {
+    //* --------------------------------------------
+    //*             Initialize state
+    //* --------------------------------------------
+    let mut state = StarknetState::new(None);
+
+    //* --------------------------------------------
+    //*          Read contract from file
+    //* --------------------------------------------
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
     //* --------------------------------------------
-    //*       Create a default contract data
+    //*        Declare new contract class
     //* --------------------------------------------
-
-    let contract_address = Address(1111.into());
-    let class_hash = [1; 32];
-
-    //* --------------------------------------------
-    //*          Create default context
-    //* --------------------------------------------
-
-    let general_config = StarknetGeneralConfig::default();
-
-    let tx_execution_context = TransactionExecutionContext::create_for_testing(
-        Address(0.into()),
-        10,
-        0.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
+    state
+        .declare(contract_class.clone())
+        .expect("Could not declare the contract class");
 
     //* --------------------------------------------
-    //*  Create starknet state with the contract
-    //*  (This would be the equivalent of
-    //*  declaring and deploying the contract)
-    //* -------------------------------------------
+    //*     Deploy new contract class instance
+    //* --------------------------------------------
+    let (contract_address, _) = state
+        .deploy(contract_class, vec![], Default::default())
+        .expect("Could not deploy contract");
 
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(contract_address.clone(), class_hash);
-
-    let mut state = CachedState::new(state_reader, Some([(class_hash, contract_class)].into()));
-
-    //* ------------------------------------
-    //*    Create execution entry point
-    //* ------------------------------------
-
-    let caller_address = Address(0.into());
-
+    //* --------------------------------------------
+    //*        Execute contract entrypoint
+    //* --------------------------------------------
     let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
-    let entry_point = ExecutionEntryPoint::new(
-        contract_address.clone(),
-        call_data.clone(),
-        entry_point_selector.clone(),
-        caller_address.clone(),
-        EntryPointType::External,
-        CallType::Delegate.into(),
-        class_hash.into(),
-    );
 
-    let mut resources_manager = ExecutionResourcesManager::default();
+    let caller_address = Address::default();
 
-    assert_eq!(
-        entry_point
-            .execute(
-                &mut state,
-                &general_config,
-                &mut resources_manager,
-                &tx_execution_context,
-            )
-            .expect("Could not execute contract"),
-        CallInfo {
-            contract_address,
-            caller_address,
-            entry_point_type: EntryPointType::External.into(),
-            call_type: CallType::Delegate.into(),
-            class_hash: class_hash.into(),
-            entry_point_selector: Some(entry_point_selector),
-            calldata: call_data,
-            retdata: return_data.into(),
-            ..Default::default()
-        },
+    let callinfo = state
+        .execute_entry_point_raw(
+            contract_address.clone(),
+            entry_point_selector.clone(),
+            calldata.clone(),
+            caller_address.clone(),
+        )
+        .expect("Could not execute entry point");
+
+    //* --------------------------------------------
+    //*          Extract return values
+    //* --------------------------------------------
+    callinfo.retdata
+}
+
+#[test]
+fn test_fibonacci() {
+    let retdata = test_contract(
+        "starknet_programs/fibonacci.json",
+        "fib",
+        [1.into(), 1.into(), 10.into()].to_vec(),
     );
+    assert_eq!(retdata, vec![144.into()]);
+}
+
+#[test]
+fn test_factorial() {
+    let retdata = test_contract(
+        "starknet_programs/factorial.json",
+        "factorial",
+        [10.into()].to_vec(),
+    );
+    assert_eq!(retdata, vec![3628800.into()]);
 }
