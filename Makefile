@@ -28,7 +28,7 @@ deps-venv:
 		typeguard==2.13.0 \
 		openzeppelin-cairo-contracts==0.6.1 \
 		maturin \
-		cairo-lang==0.10.3
+		cairo-lang==0.11
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)

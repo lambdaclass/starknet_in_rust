@@ -179,7 +179,7 @@ pub fn compute_deprecated_class_hash(
 
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
-    runner.initialize_function_runner(&mut vm)?;
+    runner.initialize_function_runner(&mut vm, false)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
     let hash_runner = vm
@@ -200,6 +200,7 @@ pub fn compute_deprecated_class_hash(
         entrypoint,
         &[&hash_base.into(), contract_class_struct],
         true,
+        None,
         &mut vm,
         &mut hint_processor,
     )?;
