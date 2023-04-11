@@ -575,7 +575,7 @@ mod test {
     }
 
     #[test]
-    fn test_felt_to_hash() {
+    fn test_to_be_bytes() {
         assert_eq!(&Felt252::zero().to_be_bytes(), &[0u8; 32]);
         assert_eq!(
             Felt252::one().to_be_bytes(),
