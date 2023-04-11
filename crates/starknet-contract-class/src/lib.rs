@@ -11,9 +11,7 @@ use cairo_vm::{
     types::{
         errors::program_errors::ProgramError, program::Program, relocatable::MaybeRelocatable,
     },
-    utils::is_subsequence,
 };
-use error::ContractClassError;
 use serde::Deserialize;
 use starknet_api::state::{ContractClassAbiEntry, EntryPoint};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
@@ -39,42 +37,10 @@ pub type AbiType = Vec<HashMap<String, ContractClassAbiEntry>>;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
 #[serde(try_from = "starknet_api::state::ContractClass")]
-pub struct ContractClass {
+pub struct ParsedContractClass {
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub abi: Option<AbiType>,
-}
-
-impl ContractClass {
-    pub fn new(
-        program: Program,
-        entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
-        abi: Option<AbiType>,
-    ) -> Result<Self, ContractClassError> {
-        for entry_points in entry_points_by_type.values() {
-            let mut index = 1;
-            while let Some(entry_point) = entry_points.get(index) {
-                if entry_point.selector > entry_points[index - 1].selector {
-                    return Err(ContractClassError::EntrypointError(entry_points.clone()));
-                }
-                index += 1;
-            }
-        }
-
-        Ok(ContractClass {
-            program,
-            entry_points_by_type,
-            abi,
-        })
-    }
-
-    pub fn validate(&self, supported_builtins: &[BuiltinName]) -> Result<(), ContractClassError> {
-        if !is_subsequence(&self.program.builtins, supported_builtins) {
-            return Err(ContractClassError::DisorderedBuiltins);
-        };
-
-        Ok(())
-    }
 }
 
 // -------------------------------
@@ -103,14 +69,14 @@ impl From<starknet_api::state::EntryPointType> for EntryPointType {
     }
 }
 
-impl TryFrom<starknet_api::state::ContractClass> for ContractClass {
+impl TryFrom<starknet_api::state::ContractClass> for ParsedContractClass {
     type Error = ProgramError;
 
     fn try_from(contract_class: starknet_api::state::ContractClass) -> Result<Self, Self::Error> {
         let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
 
-        Ok(ContractClass {
+        Ok(Self {
             program,
             entry_points_by_type,
             abi: None,
@@ -122,24 +88,24 @@ impl TryFrom<starknet_api::state::ContractClass> for ContractClass {
 //  Helper Functions
 // -------------------
 
-impl TryFrom<&str> for ContractClass {
+impl TryFrom<&str> for ParsedContractClass {
     type Error = ProgramError;
 
     fn try_from(s: &str) -> Result<Self, ProgramError> {
         let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
-        ContractClass::try_from(raw_contract_class)
+        Self::try_from(raw_contract_class)
     }
 }
 
-impl TryFrom<PathBuf> for ContractClass {
+impl TryFrom<PathBuf> for ParsedContractClass {
     type Error = ProgramError;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        ContractClass::try_from(&path)
+        Self::try_from(&path)
     }
 }
 
-impl TryFrom<&PathBuf> for ContractClass {
+impl TryFrom<&PathBuf> for ParsedContractClass {
     type Error = ProgramError;
 
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
@@ -147,7 +113,7 @@ impl TryFrom<&PathBuf> for ContractClass {
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::state::ContractClass =
             serde_json::from_reader(reader)?;
-        ContractClass::try_from(raw_contract_class)
+        Self::try_from(raw_contract_class)
     }
 }
 
@@ -230,7 +196,7 @@ mod tests {
     use std::io::Read;
 
     #[test]
-    fn contract_class_try_from_string() {
+    fn try_from_string() {
         let mut serialized = String::new();
 
         // This specific contract compiles with --no_debug_info
@@ -238,7 +204,7 @@ mod tests {
             .and_then(|mut f| f.read_to_string(&mut serialized))
             .expect("should be able to read file");
 
-        let res = ContractClass::try_from(serialized.as_str());
+        let res = ParsedContractClass::try_from(serialized.as_str());
 
         assert!(res.is_ok());
 
@@ -279,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn contract_class_deserialize_equals_try_from() {
+    fn deserialize_equals_try_from() {
         let mut serialized = String::new();
 
         // This specific contract compiles with --no_debug_info
@@ -287,7 +253,7 @@ mod tests {
             .and_then(|mut f| f.read_to_string(&mut serialized))
             .expect("should be able to read file");
 
-        let result_try_from = ContractClass::try_from(serialized.as_str());
+        let result_try_from = ParsedContractClass::try_from(serialized.as_str());
         let result_deserialize = serde_json::from_str(&serialized);
 
         assert!(result_try_from.is_ok());
