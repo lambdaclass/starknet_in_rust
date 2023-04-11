@@ -20,10 +20,30 @@ use std::path::Path;
 
 fn main() {
     test_contract(
+        "starknet_programs/fibonacci.json", /* Your compiled contract path */
+        "fib",                              /* The entrypoint you are wanting to execute */
+        [1.into(), 1.into(), 10.into()].to_vec(), /* The parameters needed in order to call that entrypoint */
+        [144.into()].to_vec(),                    /* The expected returned value */
+    );
+}
+
+#[test]
+fn test_fibonacci() {
+    test_contract(
         "starknet_programs/fibonacci.json",
         "fib",
         [1.into(), 1.into(), 10.into()].to_vec(),
         [144.into()].to_vec(),
+    );
+}
+
+#[test]
+fn test_factorial() {
+    test_contract(
+        "starknet_programs/factorial.json",
+        "factorial",
+        [10.into()].to_vec(),
+        [3628800.into()].to_vec(),
     );
 }
 
@@ -109,25 +129,5 @@ fn test_contract(
             retdata: return_data.into(),
             ..Default::default()
         },
-    );
-}
-
-#[test]
-fn test_fibonacci() {
-    test_contract(
-        "starknet_programs/fibonacci.json",
-        "fib",
-        [1.into(), 1.into(), 10.into()].to_vec(),
-        [144.into()].to_vec(),
-    );
-}
-
-#[test]
-fn test_factorial() {
-    test_contract(
-        "starknet_programs/factorial.json",
-        "factorial",
-        [10.into()].to_vec(),
-        [3628800.into()].to_vec(),
     );
 }
