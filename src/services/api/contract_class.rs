@@ -1,20 +1,17 @@
-use crate::public::abi::AbiType;
-use cairo_rs::serde::deserialize_program::BuiltinName;
-use cairo_rs::types::errors::program_errors::ProgramError;
-use cairo_rs::types::program::Program;
-use cairo_rs::utils::is_subsequence;
-use getset::Getters;
-use serde::Deserialize;
-use starknet_contract_class::error::ContractClassError;
-use starknet_contract_class::ParsedContractClass;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::PathBuf;
-
 // Reexport starknet-contract-class objects
 pub use starknet_contract_class::ContractEntryPoint;
 pub use starknet_contract_class::EntryPointType;
+
+use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
+use cairo_rs::{
+    serde::deserialize_program::BuiltinName,
+    types::{errors::program_errors::ProgramError, program::Program},
+    utils::is_subsequence,
+};
+use getset::Getters;
+use serde::Deserialize;
+use starknet_contract_class::ParsedContractClass;
+use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
     BuiltinName::pedersen,

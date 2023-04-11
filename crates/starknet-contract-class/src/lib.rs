@@ -1,7 +1,5 @@
 #![deny(warnings)]
 
-pub mod error;
-
 use cairo_felt::{Felt252, PRIME_STR};
 use cairo_vm::{
     serde::deserialize_program::{

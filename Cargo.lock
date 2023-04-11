@@ -2145,7 +2145,6 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet_api",
- "thiserror",
 ]
 
 [[package]]
