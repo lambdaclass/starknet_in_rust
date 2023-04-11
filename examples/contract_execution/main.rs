@@ -78,10 +78,10 @@ fn test_contract(
 
     let callinfo = state
         .execute_entry_point_raw(
-            contract_address.clone(),
-            entry_point_selector.clone(),
-            calldata.clone(),
-            caller_address.clone(),
+            contract_address,
+            entry_point_selector,
+            calldata,
+            caller_address,
         )
         .expect("Could not execute entry point");
 
