@@ -188,7 +188,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .state
             .get_contract_class(&class_hash_bytes)?;
         let constructor_entry_points = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&EntryPointType::Constructor)
             .ok_or(ContractClassError::NoneEntryPointType)?;
         if constructor_entry_points.is_empty() {
