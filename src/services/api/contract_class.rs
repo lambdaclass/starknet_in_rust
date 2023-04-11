@@ -29,11 +29,11 @@ const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
 #[serde(from = "ParsedContractClass")]
 pub struct ContractClass {
     #[getset(get = "pub")]
-    pub program: Program,
+    pub(crate) program: Program,
     #[getset(get = "pub")]
-    pub entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+    pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     #[getset(get = "pub")]
-    pub abi: Option<AbiType>,
+    pub(crate) abi: Option<AbiType>,
 }
 
 impl ContractClass {

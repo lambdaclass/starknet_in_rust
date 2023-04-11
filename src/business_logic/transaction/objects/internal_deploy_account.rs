@@ -186,7 +186,7 @@ impl InternalDeployAccount {
         S: Default + State + StateReader,
     {
         let num_constructors = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&EntryPointType::Constructor)
             .map(Vec::len)
             .unwrap_or(0);

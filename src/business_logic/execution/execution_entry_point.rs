@@ -119,7 +119,7 @@ impl ExecutionEntryPoint {
         // create starknet runner
 
         let mut vm = VirtualMachine::new(false);
-        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all", false)?;
+        let mut cairo_runner = CairoRunner::new(contract_class.program(), "all", false)?;
         cairo_runner.initialize_function_runner(&mut vm)?;
 
         let mut tmp_state = T::default();
@@ -193,7 +193,7 @@ impl ExecutionEntryPoint {
         _class_hash: [u8; 32],
     ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&self.entry_point_type)
             .ok_or(TransactionError::InvalidEntryPoints)?;
 

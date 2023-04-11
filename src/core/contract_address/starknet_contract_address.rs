@@ -29,10 +29,10 @@ fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
 ) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
-    let program_length = contract_class.program.data.len();
+    let program_length = contract_class.program().data.len();
 
     let entry_points = contract_class
-        .entry_points_by_type
+        .entry_points_by_type()
         .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
@@ -84,7 +84,7 @@ fn get_contract_class_struct(
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
-    let builtin_list = &contract_class.program.builtins;
+    let builtin_list = &contract_class.program().builtins;
 
     Ok(StructContractClass {
         api_version: api_version
@@ -107,8 +107,8 @@ fn get_contract_class_struct(
             })
             .collect::<Vec<MaybeRelocatable>>(),
         hinted_class_hash: compute_hinted_class_hash(contract_class).into(),
-        bytecode_length: Felt252::from(contract_class.program.data.len()).into(),
-        bytecode_ptr: contract_class.program.data.clone(),
+        bytecode_length: Felt252::from(contract_class.program().data.len()).into(),
+        bytecode_ptr: contract_class.program().data.clone(),
     })
 }
 

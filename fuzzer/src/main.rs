@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate honggfuzz;
 
+use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt252;
 use num_traits::Zero;
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -27,13 +27,12 @@ use std::{
 };
 
 use std::fs;
+use std::fs::File;
+use std::io::Write;
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
 use tempfile::tempdir_in;
-use std::fs::File;
-use std::io::Write;
-
 
 fn main() {
     println!("Starting fuzzer");
@@ -41,7 +40,6 @@ fn main() {
     fs::create_dir("cairo_programs").expect("Failed to create cairo_programs/ directory");
     loop {
         fuzz!(|data: &[u8]| {
-
             iteration += 1;
 
             // ---------------------------------------------------------
@@ -60,21 +58,22 @@ fn main() {
                 _counter.write('";
 
             let input = data_to_ascii(data);
-            
+
             let file_content2 = "');
                 return _counter.read();
             }
             ";
             let file_name = format!("cairo_programs/output-{}.cairo", iteration);
 
-            let file_content  = file_content1.to_owned() + &input + file_content2 ;
+            let file_content = file_content1.to_owned() + &input + file_content2;
 
             println!("{:?}", file_content);
             // ---------------------------------------------------------
-            //  Create the .cairo file 
+            //  Create the .cairo file
             // ---------------------------------------------------------
-            
-            fs::write(file_name, file_content.as_bytes()).expect("Failed to write generated cairo program");
+
+            fs::write(file_name, file_content.as_bytes())
+                .expect("Failed to write generated cairo program");
 
             // ---------------------------------------------------------
             //  Compile the .cairo file to create the .json file
@@ -84,11 +83,11 @@ fn main() {
             let json_file_name = format!("cairo_programs/output-{}.json", iteration);
 
             let _output = Command::new("starknet-compile")
-                        .arg(cairo_file_name.clone())
-                        .arg("--output")
-                        .arg(json_file_name.clone())
-                        .output()
-                        .expect("failed to execute process");
+                .arg(cairo_file_name.clone())
+                .arg("--output")
+                .arg(json_file_name.clone())
+                .output()
+                .expect("failed to execute process");
 
             // ---------------------------------------------------------
             //  Create program and entry point types for contract class
@@ -98,16 +97,17 @@ fn main() {
             let contract_class = ContractClass::try_from(path).unwrap();
 
             let storage_entrypoint_selector = contract_class
-                .entry_points_by_type
+                .entry_points_by_type()
                 .get(&EntryPointType::External)
                 .unwrap()
                 .get(0)
                 .unwrap()
                 .selector()
                 .clone();
-            
+
             fs::remove_file(cairo_file_name).expect("Failed to remove generated cairo source");
-            fs::remove_file(json_file_name).expect("Failed to remove generated cairo compiled program");
+            fs::remove_file(json_file_name)
+                .expect("Failed to remove generated cairo compiled program");
 
             //* --------------------------------------------
             //*    Create state reader with class hash data
@@ -185,7 +185,7 @@ fn main() {
                 accessed_storage_keys: expected_accessed_storage_keys,
                 ..Default::default()
             };
-            
+
             assert_eq!(
                 exec_entry_point
                     .execute(
@@ -197,7 +197,7 @@ fn main() {
                     .unwrap(),
                 expected_call_info
             );
-            
+
             assert!(!state.cache().storage_writes().is_empty());
             assert_eq!(
                 state
@@ -207,7 +207,6 @@ fn main() {
                     .cloned(),
                 Some(Felt252::from_bytes_be(data_to_ascii(data).as_bytes()))
             );
-
         });
         thread::sleep(Duration::from_secs(1));
     }
@@ -217,21 +216,19 @@ fn data_to_ascii(data: &[u8]) -> String {
     let data_string = String::from_utf8_lossy(data);
     let mut chars = Vec::new();
     for i in data_string.chars() {
-        if !i.is_ascii(){
-            chars.push('X');     
+        if !i.is_ascii() {
+            chars.push('X');
         } else if (i.clone() as u32) < 40 {
             let num_string = (i.clone() as u32).to_string();
-            for j in num_string.chars(){
+            for j in num_string.chars() {
                 chars.push(j);
             }
         } else {
             chars.push(i);
         };
-        
     }
 
     let mut data_ascii: String = chars.iter().collect();
     data_ascii.truncate(30);
     data_ascii
-    
 }

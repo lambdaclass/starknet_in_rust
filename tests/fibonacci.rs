@@ -28,7 +28,7 @@ fn integration_test() {
 
     let path = PathBuf::from("starknet_programs/fibonacci.json");
     let contract_class = ContractClass::try_from(path).unwrap();
-    let entry_points_by_type = contract_class.entry_points_by_type.clone();
+    let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     let fib_entrypoint_selector = entry_points_by_type
         .get(&EntryPointType::External)

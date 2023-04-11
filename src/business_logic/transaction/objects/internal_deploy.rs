@@ -87,7 +87,7 @@ impl InternalDeploy {
         let contract_class = state.get_contract_class(&class_hash)?;
 
         let constructors = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&EntryPointType::Constructor);
 
         if constructors.map(Vec::is_empty).unwrap_or(true) {

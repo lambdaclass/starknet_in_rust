@@ -17,7 +17,7 @@ impl PyContractClass {
     #[getter]
     pub fn entry_points_by_type(&self) -> HashMap<PyEntryPointType, Vec<PyContractEntryPoint>> {
         self.inner
-            .entry_points_by_type
+            .entry_points_by_type()
             .iter()
             .map(|(k, v)| {
                 (
@@ -34,7 +34,7 @@ impl PyContractClass {
 
     #[getter]
     pub fn abi(&self) -> PyResult<String> {
-        serde_json::to_string(&self.inner.abi).map_err(|e| PyRuntimeError::new_err(e.to_string()))
+        serde_json::to_string(&self.inner.abi()).map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 }
 
