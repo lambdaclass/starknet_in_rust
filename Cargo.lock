@@ -3216,6 +3216,7 @@ dependencies = [
  "assert_matches",
  "awc",
  "cairo-felt 0.2.0",
+ "cairo-lang-compiler",
  "cairo-lang-starknet",
  "cairo-vm",
  "cargo-llvm-cov",
