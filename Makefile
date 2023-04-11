@@ -73,7 +73,7 @@ clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet
-	cargo test
+	cargo test --all --all-targets --exclude starknet-rs-py
 
 test-py: compile-cairo compile-starknet
 	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
@@ -87,4 +87,3 @@ heaptrack:
 
 flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals
-
