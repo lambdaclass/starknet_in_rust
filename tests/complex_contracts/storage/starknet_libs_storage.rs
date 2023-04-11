@@ -1,10 +1,6 @@
-use std::collections::HashSet;
-
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
 use felt::Felt252;
 use num_bigint::BigUint;
-use num_traits::Zero;
-use sha3::digest::typenum::U256;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
@@ -12,7 +8,6 @@ use starknet_rs::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{cached_state::CachedState, state_api::StateReader},
-        transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
