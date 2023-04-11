@@ -54,7 +54,7 @@ build: compile-cairo compile-starknet
 	cargo build --release --all
 
 check: compile-cairo compile-starknet
-	cargo check --all
+	cargo check --all --all-targets
 
 deps: check-python-version 
 	cargo install flamegraph --version 0.6.2
