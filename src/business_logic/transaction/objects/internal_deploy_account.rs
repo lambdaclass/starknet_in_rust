@@ -354,6 +354,7 @@ impl InternalDeployAccount {
 
 #[cfg(test)]
 mod tests {
+    use coverage_helper::test;
     use std::path::PathBuf;
 
     use super::*;

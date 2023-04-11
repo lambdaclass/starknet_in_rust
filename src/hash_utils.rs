@@ -52,6 +52,7 @@ pub(crate) fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, Sysca
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use felt::felt_str;
 
     #[test]
