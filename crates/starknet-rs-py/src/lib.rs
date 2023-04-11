@@ -3,8 +3,7 @@
 mod cached_state;
 mod starknet_state;
 mod types;
-
-use std::ops::Shl;
+mod utils;
 
 use self::{
     cached_state::PyCachedState,
@@ -12,6 +11,27 @@ use self::{
         block_info::PyBlockInfo, call_info::PyCallInfo, contract_class::PyContractClass,
         contract_entry_point::PyContractEntryPoint, execution_resources::PyExecutionResources,
         ordered_event::PyOrderedEvent, ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
+    },
+};
+use crate::{
+    types::{
+        general_config::build_general_config,
+        starknet_message_to_l1::PyStarknetMessageToL1,
+        transaction::{PyTransaction, PyTransactionType},
+        transaction_execution_info::PyTransactionExecutionInfo,
+        transactions::{
+            declare::PyInternalDeclare, deploy::PyInternalDeploy,
+            deploy_account::PyInternalDeployAccount, invoke_function::PyInternalInvokeFunction,
+        },
+    },
+    utils::{
+        py_calculate_contract_address, py_calculate_contract_address_from_hash,
+        py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
+        py_validate_contract_deployed,
+        transaction_hash::{
+            py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
+            py_calculate_transaction_hash_common, PyTransactionHashPrefix,
+        },
     },
 };
 use cairo_felt::{felt_str, Felt252};
@@ -24,18 +44,22 @@ use starknet_rs::{
     },
     services::api::contract_class::ContractClass,
 };
-
 use starknet_state::PyStarknetState;
+use std::ops::Shl;
 use types::general_config::{PyStarknetChainId, PyStarknetGeneralConfig, PyStarknetOsConfig};
 
 #[cfg(all(feature = "extension-module", feature = "embedded-python"))]
 compile_error!("\"extension-module\" is incompatible with \"embedded-python\" as it inhibits linking with cpython");
 
 #[pymodule]
-pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
+pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     eprintln!("WARN: using starknet_rs_py");
+
+    // ~~~~~~~~~~~~~~~~~~~~
+    //  Exported Classes
+    // ~~~~~~~~~~~~~~~~~~~~
+
     m.add_class::<PyStarknetState>()?;
-    // starkware.starknet.business_logic.state.state
     m.add_class::<PyBlockInfo>()?;
     m.add_class::<PyCachedState>()?;
     m.add_class::<PyStarknetGeneralConfig>()?;
@@ -151,42 +175,36 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_class::<PyDeploy>()?;
     // m.add_class::<PyTransaction>()?;
 
+    m.add_class::<PyTransactionHashPrefix>()?;
+    m.add_class::<PyTransaction>()?;
+    m.add_class::<PyTransactionType>()?;
+    m.add_class::<PyStarknetMessageToL1>()?;
+    m.add_class::<PyTransactionExecutionInfo>()?;
+    m.add_class::<PyInternalDeclare>()?;
+    m.add_class::<PyInternalDeploy>()?;
+    m.add_class::<PyInternalDeployAccount>()?;
+    m.add_class::<PyInternalInvokeFunction>()?;
+
     //  starkware.starknet.business_logic.transaction.objects
-    // m.add_class::<PyInternalL1Handler>()?;
-    // m.add_class::<PyInternalAccountTransaction>()?;
-    // m.add_class::<PyInternalDeclare>()?;
-    // m.add_class::<PyInternalDeploy>()?;
-    // m.add_class::<PyInternalDeployAccount>()?;
-    // m.add_class::<PyInternalInvokeFunction>()?;
-    // m.add_class::<PyInternalTransaction>()?;
-    // m.add_class::<PyTransactionExecutionInfo>()?;
+    // m.add_class::<PyInternalL1Handler>()?;  // isn't implemented
 
-    //  starkware.starknet.testing.contract
-    // m.add_class::<PyStarknetContract>()?;
+    // ~~~~~~~~~~~~~~~~~~~~
+    //  Exported Functions
+    // ~~~~~~~~~~~~~~~~~~~~
 
-    //  starkware.starknet.business_logic.transaction.fee
-    // m.add_function(calculate_tx_fee)?;
-
-    //  starkware.starknet.definitions.transaction_type
-    // m.add_class::<PyTransactionType>()?;
-
-    //  starkware.starknet.services.api.feeder_gateway.request_objects
-    // m.add_class::<PyCallFunction>()?;
-    // m.add_class::<PyCallL1Handler>()?;
-
-    //  starkware.starknet.services.api.messages
-    // m.add_class::<PyStarknetMessageToL1>()?;
-
-    //  starkware.starknet.services.api.gateway.transaction_utils
-    // m.add_function(compress_program)?;
-    // m.add_function(decompress_program)?;
-
-    //  starkware.starknet.wallets.open_zeppelin
-    // m.add_function(sign_deploy_account_tx)?;
-    // m.add_function(sign_invoke_tx)?;
-
-    //  starkware.starknet.cli.starknet_cli
-    // m.add_function(get_salt)?;
+    m.add_function(wrap_pyfunction!(build_general_config, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_transaction_hash_common, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_declare_transaction_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_deploy_transaction_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        py_calculate_contract_address_from_hash,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_contract_address, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_event_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
+    m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
 
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Constants
@@ -198,7 +216,7 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add("DEFAULT_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
     m.add("DEFAULT_VALIDATE_MAX_STEPS", DEFAULT_VALIDATE_MAX_N_STEPS)?;
 
-    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::testnet())?;
+    m.add("DEFAULT_CHAIN_ID", PyStarknetChainId::TestNet)?;
     m.add(
         "DEFAULT_SEQUENCER_ADDRESS",
         DEFAULT_SEQUENCER_ADDRESS.0.to_biguint(),
@@ -255,6 +273,170 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     // Felt252 number of bits
     m.add("CONTRACT_ADDRESS_BITS", 251)?;
 
+    // ~~~~~~~~~~~~
+    //  Reexported
+    // ~~~~~~~~~~~~
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.definitions.error_codes",
+        vec!["StarknetErrorCode"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.gateway.transaction",
+        vec![
+            "AccountTransaction",
+            "Declare",
+            "DeployAccount",
+            "InvokeFunction",
+            "Deploy",
+        ],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.feeder_gateway.response_objects",
+        vec![
+            "DeployedContract",
+            "FeeEstimationInfo",
+            "StorageEntry",    // alias Tuple[int, int]
+            "BlockIdentifier", // Union[int, Literal["latest"], Literal["pending"]]
+            "StateDiff",
+            "BlockStateUpdate",
+            "BlockStatus",
+            "BlockTransactionTraces",
+            "TransactionSimulationInfo",
+            "StarknetBlock",
+            "TransactionInfo",
+            "TransactionReceipt",
+            "TransactionStatus",
+            "TransactionTrace",
+            "TransactionExecution",
+            "TransactionSpecificInfo",
+            "Event",
+            "FunctionInvocation",
+            "L2ToL1Message",
+            "DeclareSpecificInfo",
+            "DeployAccountSpecificInfo",
+            "DeploySpecificInfo",
+            "InvokeSpecificInfo",
+            "L1HandlerSpecificInfo",
+        ],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.feeder_gateway.request_objects",
+        vec!["CallL1Handler", "CallFunction"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.feeder_gateway.feeder_gateway_client",
+        vec!["FeederGatewayClient"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.testing.starknet",
+        vec!["Starknet", "StarknetCallInfo"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.execution.objects",
+        vec!["ResourcesMapping"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.state.state_api",
+        vec!["SyncState", "StateReader"],
+    )?;
+
+    // TODO: check
+    reexport(
+        py,
+        m,
+        "starkware.starknet.testing.contract",
+        vec!["StarknetContract"],
+    )?;
+
+    // TODO: check
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.transaction.objects",
+        vec!["InternalAccountTransaction", "InternalTransaction"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.wallets.open_zeppelin",
+        vec!["sign_deploy_account_tx", "sign_invoke_tx"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.public.abi",
+        vec![
+            "AbiEntryType", // alias Dict[str, Any]
+            // TODO: export from starknet-rs when implemented
+            "get_selector_from_name",
+            "get_storage_var_address",
+        ],
+    )?;
+
+    // TODO: export from starknet-rs when implemented
+    reexport(
+        py,
+        m,
+        "starkware.starknet.core.os.block_hash.block_hash",
+        vec!["calculate_block_hash"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.utils",
+        vec!["verify_version"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.services.api.gateway.transaction_utils",
+        vec!["compress_program", "decompress_program"],
+    )?;
+
+    reexport(
+        py,
+        m,
+        "starkware.starknet.cli.starknet_cli",
+        vec!["get_salt"],
+    )?;
+
+    Ok(())
+}
+
+fn reexport(py: Python, dst: &PyModule, src_name: &str, names: Vec<&str>) -> PyResult<()> {
+    let src = PyModule::import(py, src_name)?;
+    for name in names {
+        dst.add(name, src.getattr(name)?)?;
+    }
+
     Ok(())
 }
 
@@ -265,8 +447,10 @@ mod test {
     #[test]
     fn starknet_rs_py_test() {
         Python::with_gil(|py| {
+            // try loading our module
             let module = PyModule::new(py, "My Module");
-            assert!(crate::starknet_rs_py(py, module.unwrap()).is_ok());
+            let res = crate::starknet_rs_py(py, module.unwrap());
+            assert!(res.is_ok(), "{res:?}");
         });
     }
 }

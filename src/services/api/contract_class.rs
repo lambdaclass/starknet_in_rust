@@ -12,14 +12,8 @@ use cairo_rs::{
 };
 use felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
-use serde::{Deserialize, Serialize};
 use starknet_api::deprecated_contract_class::EntryPoint;
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{self, BufReader},
-    path::PathBuf,
-};
+use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
     BuiltinName::pedersen,
@@ -29,16 +23,14 @@ pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
     BuiltinName::ec_op,
 ];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EntryPointType {
     External,
     L1Handler,
     Constructor,
 }
 
-#[derive(
-    Clone, CopyGetters, Debug, Default, Deserialize, Eq, Getters, Hash, PartialEq, Serialize,
-)]
+#[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq)]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
     pub(crate) selector: Felt252,
@@ -50,7 +42,7 @@ pub struct ContractEntryPoint {
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Deserialize, Eq, Getters, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, Getters, PartialEq)]
 pub struct ContractClass {
     #[getset(get = "pub")]
     pub(crate) program: Program,
@@ -61,9 +53,7 @@ pub struct ContractClass {
 }
 
 impl ContractClass {
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
-    pub(crate) fn new(
+    pub fn new(
         program: Program,
         entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
         abi: Option<AbiType>,
@@ -120,16 +110,20 @@ impl From<starknet_api::deprecated_contract_class::EntryPointType> for EntryPoin
     }
 }
 
-impl From<starknet_api::deprecated_contract_class::ContractClass> for ContractClass {
-    fn from(contract_class: starknet_api::deprecated_contract_class::ContractClass) -> Self {
-        let program = to_cairo_runner_program(&contract_class.program).unwrap();
+impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for ContractClass {
+    type Error = ProgramError;
+
+    fn try_from(
+        contract_class: starknet_api::deprecated_contract_class::ContractClass,
+    ) -> Result<Self, Self::Error> {
+        let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
 
-        ContractClass {
+        Ok(ContractClass {
             program,
             entry_points_by_type,
             abi: None,
-        }
+        })
     }
 }
 
@@ -138,33 +132,32 @@ impl From<starknet_api::deprecated_contract_class::ContractClass> for ContractCl
 // -------------------
 
 impl TryFrom<&str> for ContractClass {
-    type Error = io::Error;
+    type Error = ProgramError;
 
-    fn try_from(s: &str) -> io::Result<Self> {
+    fn try_from(s: &str) -> Result<Self, ProgramError> {
         let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_str(s)?;
-        Ok(ContractClass::from(raw_contract_class))
+        ContractClass::try_from(raw_contract_class)
     }
 }
 
 impl TryFrom<PathBuf> for ContractClass {
-    type Error = io::Error;
+    type Error = ProgramError;
 
-    fn try_from(path: PathBuf) -> io::Result<Self> {
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         ContractClass::try_from(&path)
     }
 }
 
 impl TryFrom<&PathBuf> for ContractClass {
-    type Error = io::Error;
+    type Error = ProgramError;
 
-    fn try_from(path: &PathBuf) -> io::Result<Self> {
+    fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_reader(reader)?;
-        let contract_class = ContractClass::from(raw_contract_class);
-        Ok(contract_class)
+        ContractClass::try_from(raw_contract_class)
     }
 }
 
@@ -238,4 +231,60 @@ fn to_cairo_runner_program(
             .collect(),
         instruction_locations: None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use felt::felt_str;
+    use std::io::Read;
+
+    #[test]
+    fn deserialize_contract_class() {
+        let mut serialized = String::new();
+
+        // This specific contract compiles with --no_debug_info
+        File::open(PathBuf::from("starknet_programs/AccountPreset.json"))
+            .and_then(|mut f| f.read_to_string(&mut serialized))
+            .expect("should be able to read file");
+
+        let res = ContractClass::try_from(serialized.as_str());
+
+        assert!(res.is_ok());
+
+        let contract_class = res.unwrap();
+
+        // We check only some of the attributes. Ideally we would serialize
+        // and compare with original
+        assert_eq!(contract_class.abi(), &None);
+        assert_eq!(
+            contract_class.program().builtins,
+            vec![
+                BuiltinName::pedersen,
+                BuiltinName::range_check,
+                BuiltinName::ecdsa,
+                BuiltinName::bitwise
+            ]
+        );
+        assert_eq!(contract_class.program().prime, PRIME_STR);
+        assert_eq!(
+            contract_class
+                .entry_points_by_type()
+                .get(&EntryPointType::L1Handler)
+                .unwrap(),
+            &vec![]
+        );
+        assert_eq!(
+            contract_class
+                .entry_points_by_type()
+                .get(&EntryPointType::Constructor)
+                .unwrap(),
+            &vec![ContractEntryPoint {
+                selector: felt_str!(
+                    "1159040026212278395030414237414753050475174923702621880048416706425641521556"
+                ),
+                offset: 366
+            }]
+        );
+    }
 }
