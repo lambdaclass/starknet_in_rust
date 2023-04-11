@@ -6,11 +6,12 @@ Please refer to the user guide section in this [repository](https://github.com/l
 
 ## 2. Run the fuzzer 
 
-1. Clone the proyect in the container.
-2. Start the enviroment following the proyect main README.
-3. Run the command `HFUZZ_RUN_ARGS="-n 1" cargo hfuzz run fuzzer` within the fuzzer folder.
-4. The crashes found will be stored in the hfuzz_workspace folder along with the crash report and all the inputs used.
+1. Start the container as explained in last section.
+2. Clone the proyect in the container with `git clone -b main --single-branch --depth 1 https://github.com/lambdaclass/starknet_in_rust.git`.
+3. Run the command `HFUZZ_RUN_ARGS="-n 1" cargo hfuzz run fuzzer` within the _fuzzer_ folder.
 
-## 3. Analice the crash 
+The crashes found will be stored in the _hfuzz_workspace_ folder along with the reports and all the inputs used.
 
-Once you found a crash, to debug use the command `cargo hfuzz run-debug fuzzer <crash file> `
+## 3. Analyze the crash 
+
+Once you find a crash, use the command `cargo hfuzz run-debug fuzzer <crash file> ` to debug.
