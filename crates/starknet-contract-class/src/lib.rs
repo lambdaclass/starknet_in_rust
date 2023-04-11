@@ -14,6 +14,7 @@ use cairo_vm::{
     utils::is_subsequence,
 };
 use error::ContractClassError;
+use serde::Deserialize;
 use starknet_api::state::{ContractClassAbiEntry, EntryPoint};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
@@ -36,7 +37,8 @@ pub type AbiType = Vec<HashMap<String, ContractClassAbiEntry>>;
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(try_from = "starknet_api::state::ContractClass")]
 pub struct ContractClass {
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
@@ -228,7 +230,7 @@ mod tests {
     use std::io::Read;
 
     #[test]
-    fn deserialize_contract_class() {
+    fn contract_class_try_from_string() {
         let mut serialized = String::new();
 
         // This specific contract compiles with --no_debug_info
@@ -274,5 +276,23 @@ mod tests {
                 offset: 366
             }]
         );
+    }
+
+    #[test]
+    fn contract_class_deserialize_equals_try_from() {
+        let mut serialized = String::new();
+
+        // This specific contract compiles with --no_debug_info
+        File::open(PathBuf::from("../../starknet_programs/AccountPreset.json"))
+            .and_then(|mut f| f.read_to_string(&mut serialized))
+            .expect("should be able to read file");
+
+        let result_try_from = ContractClass::try_from(serialized.as_str());
+        let result_deserialize = serde_json::from_str(&serialized);
+
+        assert!(result_try_from.is_ok());
+        assert!(result_deserialize.is_ok());
+
+        assert_eq!(result_try_from.unwrap(), result_deserialize.unwrap());
     }
 }
