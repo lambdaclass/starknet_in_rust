@@ -308,7 +308,6 @@ mod tests {
     #[test]
     fn create_declare_v2_test() {
         let dir = current_dir();
-        println!("cirrent dir {:?}", dir);
         let path = PathBuf::from("starknet_programs/fibonacci.cairo");
         let compiler_config = CompilerConfig {
             replace_ids: true,
