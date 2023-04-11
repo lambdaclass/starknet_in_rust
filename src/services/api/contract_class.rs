@@ -3,6 +3,7 @@ use cairo_rs::serde::deserialize_program::BuiltinName;
 use cairo_rs::types::errors::program_errors::ProgramError;
 use cairo_rs::types::program::Program;
 use cairo_rs::utils::is_subsequence;
+use getset::Getters;
 use serde::Deserialize;
 use starknet_contract_class::error::ContractClassError;
 use starknet_contract_class::ParsedContractClass;
@@ -27,11 +28,14 @@ const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Eq, Getters, PartialEq, Deserialize)]
 #[serde(from = "ParsedContractClass")]
 pub struct ContractClass {
+    #[getset(get = "pub")]
     pub program: Program,
+    #[getset(get = "pub")]
     pub entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+    #[getset(get = "pub")]
     pub abi: Option<AbiType>,
 }
 
@@ -109,5 +113,61 @@ impl TryFrom<&PathBuf> for ContractClass {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         Ok(serde_json::from_reader(reader)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use felt::{felt_str, PRIME_STR};
+    use std::io::Read;
+
+    #[test]
+    fn deserialize_contract_class() {
+        let mut serialized = String::new();
+
+        // This specific contract compiles with --no_debug_info
+        File::open(PathBuf::from("starknet_programs/AccountPreset.json"))
+            .and_then(|mut f| f.read_to_string(&mut serialized))
+            .expect("should be able to read file");
+
+        let res = ContractClass::try_from(serialized.as_str());
+
+        assert!(res.is_ok());
+
+        let contract_class = res.unwrap();
+
+        // We check only some of the attributes. Ideally we would serialize
+        // and compare with original
+        assert_eq!(contract_class.abi(), &None);
+        assert_eq!(
+            contract_class.program().builtins,
+            vec![
+                BuiltinName::pedersen,
+                BuiltinName::range_check,
+                BuiltinName::ecdsa,
+                BuiltinName::bitwise
+            ]
+        );
+        assert_eq!(contract_class.program().prime, PRIME_STR);
+        assert_eq!(
+            contract_class
+                .entry_points_by_type()
+                .get(&EntryPointType::L1Handler)
+                .unwrap(),
+            &vec![]
+        );
+        assert_eq!(
+            contract_class
+                .entry_points_by_type()
+                .get(&EntryPointType::Constructor)
+                .unwrap(),
+            &vec![ContractEntryPoint {
+                selector: felt_str!(
+                    "1159040026212278395030414237414753050475174923702621880048416706425641521556"
+                ),
+                offset: 366
+            }]
+        );
     }
 }
