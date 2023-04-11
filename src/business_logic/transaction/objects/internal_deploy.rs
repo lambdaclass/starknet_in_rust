@@ -229,7 +229,7 @@ mod tests {
         // Set contract_class
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
-        let class_hash: Felt252 = compute_class_hash(&contract_class).unwrap();
+        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
         let mut class_hash_bytes = [0u8; 32];
         class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
@@ -278,7 +278,7 @@ mod tests {
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
 
-        let class_hash: Felt252 = compute_class_hash(&contract_class).unwrap();
+        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
         let mut class_hash_bytes = [0u8; 32];
         class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
@@ -307,7 +307,7 @@ mod tests {
         let contract_class =
             ContractClass::try_from(PathBuf::from("starknet_programs/amm.json")).unwrap();
 
-        let class_hash: Felt252 = compute_class_hash(&contract_class).unwrap();
+        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
         let mut class_hash_bytes = [0u8; 32];
         class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());

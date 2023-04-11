@@ -265,12 +265,12 @@ mod test {
     #[test]
     fn run_from_entrypoint_should_fail_with_no_exec_base() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert!(runner.run_from_entrypoint(1, &[]).is_err())
@@ -279,12 +279,12 @@ mod test {
     #[test]
     fn get_os_segment_ptr_range_should_fail_when_ptr_offset_is_not_zero() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert_matches!(
@@ -296,12 +296,12 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_when_offset_is_not_zero() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::RelocatableValue((0, 1).into());
@@ -316,12 +316,12 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_when_base_is_not_a_value() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::Int((1).into());
@@ -336,12 +336,12 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_with_invalid_segment_size() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
@@ -354,14 +354,14 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_when_stop_is_not_a_value() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         vm.add_memory_segment();
         vm.compute_segments_effective_sizes();
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
@@ -375,14 +375,14 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_with_invalid_stop_pointer() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         vm.add_memory_segment();
         vm.compute_segments_effective_sizes();
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
