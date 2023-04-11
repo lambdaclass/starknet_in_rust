@@ -204,6 +204,12 @@ pub(crate) trait SyscallHandler {
             .write_syscall_response(vm, syscall_ptr)
     }
 
+    fn replace_class(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError>;
+
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ***********************************
     //  Implementation of Default methods
@@ -344,6 +350,7 @@ pub(crate) trait SyscallHandler {
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -474,7 +481,7 @@ where
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_contract_address(vm, syscall_ptr)
             }
-            _ => Err(SyscallHandlerError::NotImplemented),
+            _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
         }
     }
 }
@@ -490,8 +497,11 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
-                    SyscallHandlerError::Hint(e) => e,
-                    _ => HintError::UnknownHint(e.to_string()),
+                    SyscallHandlerError::NotImplemented(hint_code) => {
+                        HintError::UnknownHint(hint_code)
+                    }
+
+                    e => HintError::CustomHint(e.to_string()),
                 })?;
         }
         Ok(())

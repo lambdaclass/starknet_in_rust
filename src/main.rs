@@ -1,5 +1,3 @@
-#![cfg(not(tarpaulin_include))]
-
 use actix_web::{post, web, App, HttpResponse, HttpServer};
 use clap::{Args, Parser, Subcommand};
 use felt::Felt252;
@@ -21,6 +19,7 @@ use starknet_rs::{
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
+        errors::contract_address_errors::ContractAddressError,
         transaction_hash::starknet_transaction_hash::{
             calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
             calculate_transaction_hash_common, TransactionHashPrefix,
@@ -108,7 +107,8 @@ fn declare_parser(
     cached_state: &mut CachedState<InMemoryStateReader>,
     args: &DeclareArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
-    let contract_class = ContractClass::try_from(&args.contract)?;
+    let contract_class =
+        ContractClass::try_from(&args.contract).map_err(ContractAddressError::Program)?;
     let class_hash = compute_class_hash(&contract_class)?;
     cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
 

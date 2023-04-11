@@ -367,7 +367,11 @@ where
                 entry_point_type = match syscall_name {
                     "library_call" => EntryPointType::External,
                     "library_call_l1_handler" => EntryPointType::L1Handler,
-                    _ => return Err(SyscallHandlerError::NotImplemented),
+                    _ => {
+                        return Err(SyscallHandlerError::UnknownSyscall(
+                            syscall_name.to_string(),
+                        ))
+                    }
                 };
                 function_selector = request.function_selector;
                 class_hash = Some(felt_to_hash(&request.class_hash));
@@ -379,7 +383,11 @@ where
             SyscallRequest::CallContract(request) => {
                 entry_point_type = match syscall_name {
                     "call_contract" => EntryPointType::External,
-                    _ => return Err(SyscallHandlerError::NotImplemented),
+                    _ => {
+                        return Err(SyscallHandlerError::UnknownSyscall(
+                            syscall_name.to_string(),
+                        ))
+                    }
                 };
                 function_selector = request.function_selector;
                 class_hash = None;
@@ -388,7 +396,11 @@ where
                 call_type = CallType::Call;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
-            _ => return Err(SyscallHandlerError::NotImplemented),
+            _ => {
+                return Err(SyscallHandlerError::UnknownSyscall(
+                    syscall_name.to_string(),
+                ))
+            }
         }
 
         let entry_point = ExecutionEntryPoint::new(
@@ -552,6 +564,26 @@ where
 
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
+    }
+
+    fn replace_class(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)
+        {
+            Ok(SyscallRequest::ReplaceClass(replace_class_request)) => replace_class_request,
+            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
+        };
+
+        let address = self.contract_address.clone();
+        self.starknet_storage_state
+            .state
+            .set_class_hash_at(address, felt_to_hash(&request.class_hash))
+            .unwrap();
+
+        Ok(())
     }
 }
 

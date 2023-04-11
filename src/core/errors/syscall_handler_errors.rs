@@ -29,8 +29,8 @@ pub enum SyscallHandlerError {
     ExpectedGetBlockTimestampRequest,
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1, found: {0}")]
     DeployFromZero(usize),
-    #[error("Hint not implemented")]
-    NotImplemented,
+    #[error("Hint not implemented: {0}")]
+    NotImplemented(String),
     #[error("HintData is incorrect")]
     WrongHintData,
     #[error("Unknown hint")]
