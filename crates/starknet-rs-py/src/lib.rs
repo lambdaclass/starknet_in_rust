@@ -302,7 +302,6 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         m,
         "starkware.starknet.services.api.feeder_gateway.response_objects",
         vec![
-            "DeployedContract",
             "FeeEstimationInfo",
             "StorageEntry",    // alias Tuple[int, int]
             "BlockIdentifier", // Union[int, Literal["latest"], Literal["pending"]]
@@ -347,7 +346,7 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
         py,
         m,
         "starkware.starknet.testing.starknet",
-        vec!["Starknet", "StarknetCallInfo"],
+        vec!["Starknet"],
     )?;
 
     reexport(
