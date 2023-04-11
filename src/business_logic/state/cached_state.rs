@@ -194,7 +194,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             .insert(deploy_contract_address.clone(), class_hash);
         self.cache
             .nonce_writes_mut()
-            .insert(deploy_contract_address, Felt252::from(0));
+            .insert(deploy_contract_address, Felt252::zero());
         Ok(())
     }
 
