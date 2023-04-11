@@ -235,6 +235,7 @@ mod tests {
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
     use cairo_rs::types::program::Program;
+    use coverage_helper::test;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {

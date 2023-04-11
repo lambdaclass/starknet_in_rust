@@ -561,6 +561,7 @@ mod tests {
         },
     };
     use cairo_rs::relocatable;
+    use coverage_helper::test;
     use num_traits::Num;
     use std::path::PathBuf;
 

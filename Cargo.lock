@@ -763,6 +763,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "coverage-helper"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9db510e477cf3c14a6c56aa2ed28e499f1e27e01c17723b41ece793d11cf3fe"
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2267,6 +2273,7 @@ dependencies = [
  "cairo-vm",
  "cargo-llvm-cov",
  "clap",
+ "coverage-helper",
  "getset",
  "hex",
  "lazy_static",

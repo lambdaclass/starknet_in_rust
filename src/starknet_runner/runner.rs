@@ -236,6 +236,7 @@ mod test {
         types::relocatable::{MaybeRelocatable, Relocatable},
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
+    use coverage_helper::test;
 
     type SyscallHintProcessor<'a> = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
         BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>,

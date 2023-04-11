@@ -309,6 +309,7 @@ mod tests {
         utils::{get_integer, test_utils::vm},
     };
     use cairo_rs::relocatable;
+    use coverage_helper::test;
 
     type BusinessLogicSyscallHandler<'a> =
         crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
