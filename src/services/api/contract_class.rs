@@ -11,7 +11,7 @@ use cairo_rs::{
 use getset::Getters;
 use serde::Deserialize;
 use starknet_contract_class::ParsedContractClass;
-use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
     BuiltinName::pedersen,
@@ -107,9 +107,7 @@ impl TryFrom<&PathBuf> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-        Ok(serde_json::from_reader(reader)?)
+        Ok(ParsedContractClass::try_from(path)?.into())
     }
 }
 
@@ -117,7 +115,7 @@ impl TryFrom<&PathBuf> for ContractClass {
 mod tests {
     use super::*;
     use felt::{felt_str, PRIME_STR};
-    use std::io::Read;
+    use std::{fs::File, io::Read};
 
     #[test]
     fn deserialize_contract_class() {
