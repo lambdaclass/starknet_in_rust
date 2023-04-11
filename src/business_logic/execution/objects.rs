@@ -569,6 +569,7 @@ impl L2toL1MessageInfo {
 mod tests {
     use super::*;
     use crate::{business_logic::execution::objects::CallInfo, utils::Address};
+    use coverage_helper::test;
 
     #[test]
     fn non_optional_calls_test() {

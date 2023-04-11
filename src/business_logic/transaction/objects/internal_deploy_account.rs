@@ -355,6 +355,7 @@ impl InternalDeployAccount {
 #[cfg(test)]
 mod tests {
     use crate::core::errors::state_errors::StateError;
+    use coverage_helper::test;
     use std::path::PathBuf;
 
     use super::*;

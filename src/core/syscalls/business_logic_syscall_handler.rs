@@ -634,6 +634,7 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
+    use coverage_helper::test;
     use felt::Felt252;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};

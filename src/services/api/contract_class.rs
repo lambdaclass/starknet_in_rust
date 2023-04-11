@@ -233,6 +233,7 @@ fn to_cairo_runner_program(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use felt::felt_str;
     use std::io::Read;
 

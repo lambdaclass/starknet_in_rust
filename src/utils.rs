@@ -467,6 +467,7 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use super::*;
+    use coverage_helper::test;
     use felt::{felt_str, Felt252};
     use num_traits::{Bounded, One, Zero};
     use std::collections::HashMap;

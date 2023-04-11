@@ -209,6 +209,7 @@ impl InternalDeploy {
 
 #[cfg(test)]
 mod tests {
+    use coverage_helper::test;
     use std::{collections::HashMap, path::PathBuf};
 
     use super::*;

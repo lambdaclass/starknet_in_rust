@@ -292,6 +292,7 @@ impl InternalDeclare {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
