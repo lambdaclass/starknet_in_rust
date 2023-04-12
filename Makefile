@@ -3,8 +3,8 @@
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
-	CFLAGS  += -I/opt/homebrew/opt/gmp/include
-	LDFLAGS += -L/opt/homebrew/opt/gmp/lib
+	export CFLAGS  += -I/opt/homebrew/opt/gmp/include
+	export LDFLAGS += -L/opt/homebrew/opt/gmp/lib
 endif
 
 
@@ -62,7 +62,7 @@ deps: check-python-version
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	rustup toolchain install nightly
-	python3 -m venv starknet-venv
+	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
 clean:
