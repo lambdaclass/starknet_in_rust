@@ -204,12 +204,6 @@ pub(crate) trait SyscallHandler {
             .write_syscall_response(vm, syscall_ptr)
     }
 
-    fn replace_class(
-        &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
-
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // ***********************************
     //  Implementation of Default methods
@@ -350,7 +344,6 @@ pub(crate) trait SyscallHandler {
             "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
             "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
-            "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -1473,5 +1466,24 @@ mod tests {
         assert_eq!(result_call_info.calldata, vec![10.into()]);
         assert_eq!(result_call_info.retdata, vec![260.into()]);
         assert_eq!(result_call_info.storage_read_values, vec![250.into()]);
+    }
+
+    #[test]
+    fn test_get_ids_data() {
+        let mut reference_ids = HashMap::new();
+        let mut references = HashMap::new();
+        let reference_1 = HintReference::new(0, 1, true, false);
+        let reference_2 = HintReference::new(1, 2, false, true);
+        reference_ids.insert("reference_1".to_string(), 1);
+        reference_ids.insert("reference_2".to_string(), 2);
+        references.insert(1, reference_1.clone());
+        references.insert(2, reference_2.clone());
+
+        let ids_data = get_ids_data(&reference_ids, &references).unwrap();
+        let expecter_ids_data = HashMap::from_iter(vec![
+            ("reference_1".to_string(), reference_1),
+            ("reference_2".to_string(), reference_2),
+        ]);
+        assert_eq!(ids_data, expecter_ids_data);
     }
 }

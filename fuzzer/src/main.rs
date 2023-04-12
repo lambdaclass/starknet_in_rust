@@ -100,7 +100,7 @@ fn main() {
                 .unwrap()
                 .get(0)
                 .unwrap()
-                .selector()
+                .selector
                 .clone();
 
             fs::remove_file(cairo_file_name).expect("Failed to remove generated cairo source");

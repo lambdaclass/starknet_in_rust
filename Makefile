@@ -10,9 +10,11 @@ endif
 
 CAIRO_SOURCES=$(wildcard cairo_programs/*.cairo)
 CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
+CAIRO_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(CAIRO_SOURCES))
 
 STARKNET_SOURCES=$(wildcard starknet_programs/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
+STARKNET_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(STARKNET_SOURCES))
 
 BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
 BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
@@ -30,13 +32,13 @@ deps-venv:
 		maturin \
 		cairo-lang==0.10.3
 
-compile-cairo: $(CAIRO_TARGETS)
-compile-starknet: $(STARKNET_TARGETS)
+compile-cairo: $(CAIRO_TARGETS) $(CAIRO_ABI_TARGETS)
+compile-starknet: $(STARKNET_TARGETS) $(STARKNET_ABI_TARGETS)
 
-cairo_programs/%.json: cairo_programs/%.cairo
+cairo_programs/%.json cairo_programs/%_abi.json: cairo_programs/%.cairo
 	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
-starknet_programs/%.json: starknet_programs/%.cairo
+starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 	. starknet-venv/bin/activate && \
 	cd starknet_programs/ && \
 	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
