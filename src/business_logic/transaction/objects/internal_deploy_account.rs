@@ -13,7 +13,7 @@ use crate::{
         },
     },
     core::{
-        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        errors::syscall_handler_errors::SyscallHandlerError,
         transaction_hash::starknet_transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
@@ -23,6 +23,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class::{ContractClass, EntryPointType},
+    starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use felt::Felt252;
@@ -136,7 +137,7 @@ impl InternalDeployAccount {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, StateError>
+    ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: Default + State + StateReader,
     {
@@ -145,18 +146,15 @@ impl InternalDeployAccount {
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let constructor_call_info = self
-            .handle_constructor(
-                contract_class,
-                state,
-                general_config,
-                &mut resources_manager,
-            )
-            .map_err::<StateError, _>(|_| todo!())?;
+        let constructor_call_info = self.handle_constructor(
+            contract_class,
+            state,
+            general_config,
+            &mut resources_manager,
+        )?;
 
-        let validate_info = self
-            .run_validate_entrypoint(state, &mut resources_manager, general_config)
-            .map_err::<StateError, _>(|_| todo!())?;
+        let validate_info =
+            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -165,7 +163,7 @@ impl InternalDeployAccount {
             state.count_actual_storage_changes(),
             None,
         )
-        .map_err::<StateError, _>(|_| todo!())?;
+        .map_err::<TransactionError, _>(|_| TransactionError::ResourcesCalculation)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -188,7 +186,7 @@ impl InternalDeployAccount {
         S: Default + State + StateReader,
     {
         let num_constructors = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&EntryPointType::Constructor)
             .map(Vec::len)
             .unwrap_or(0);
@@ -196,7 +194,9 @@ impl InternalDeployAccount {
         match num_constructors {
             0 => {
                 if !self.constructor_calldata.is_empty() {
-                    todo!()
+                    return Err(TransactionError::Starkware(
+                        StarkwareError::TransactionFailed,
+                    ));
                 }
 
                 Ok(CallInfo::empty_constructor_call(
@@ -349,5 +349,136 @@ impl InternalDeployAccount {
             execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use coverage_helper::test;
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        core::{
+            contract_address::starknet_contract_address::compute_class_hash,
+            errors::state_errors::StateError,
+        },
+        utils::felt_to_hash,
+    };
+
+    #[test]
+    fn get_state_selector() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut _state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let state_selector = internal_deploy.get_state_selector(general_config);
+
+        assert_eq!(
+            state_selector.contract_addresses,
+            vec![internal_deploy.contract_address]
+        );
+        assert_eq!(state_selector.class_hashes, vec![class_hash]);
+    }
+
+    #[test]
+    fn deploy_account_twice_should_fail() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let internal_deploy_error = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            vec![10.into()],
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let class_hash = internal_deploy.class_hash();
+        state.set_contract_class(class_hash, &contract).unwrap();
+        internal_deploy
+            .execute(&mut state, &general_config)
+            .unwrap();
+        assert_matches!(
+            internal_deploy_error
+                .execute(&mut state, &general_config)
+                .unwrap_err(),
+            TransactionError::State(StateError::ContractAddressUnavailable(..))
+        )
+    }
+
+    #[test]
+    #[should_panic]
+    // Should panic at no calldata for constructor. Error managment not implemented yet.
+    fn deploy_account_constructor_should_fail() {
+        let path = PathBuf::from("starknet_programs/constructor.json");
+        let contract = ContractClass::try_from(path).unwrap();
+
+        let hash = compute_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        let general_config = StarknetGeneralConfig::default();
+        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+
+        let internal_deploy = InternalDeployAccount::new(
+            class_hash,
+            0,
+            0,
+            0.into(),
+            Vec::new(),
+            Vec::new(),
+            Address(0.into()),
+            StarknetChainId::TestNet2,
+        )
+        .unwrap();
+
+        let class_hash = internal_deploy.class_hash();
+        state.set_contract_class(class_hash, &contract).unwrap();
+        internal_deploy
+            .execute(&mut state, &general_config)
+            .unwrap();
     }
 }

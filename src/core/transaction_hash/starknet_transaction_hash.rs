@@ -152,6 +152,7 @@ pub fn calculate_declare_transaction_hash(
 
 #[cfg(test)]
 mod tests {
+    use coverage_helper::test;
     use felt::felt_str;
 
     use super::*;

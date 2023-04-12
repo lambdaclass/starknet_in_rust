@@ -1,5 +1,3 @@
-#![cfg(not(tarpaulin_include))]
-
 use actix_web::{post, web, App, HttpResponse, HttpServer};
 use clap::{Args, Parser, Subcommand};
 use felt::Felt252;
@@ -21,6 +19,7 @@ use starknet_rs::{
     },
     core::{
         contract_address::starknet_contract_address::compute_class_hash,
+        errors::contract_address_errors::ContractAddressError,
         transaction_hash::starknet_transaction_hash::{
             calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
             calculate_transaction_hash_common, TransactionHashPrefix,
@@ -108,7 +107,8 @@ fn declare_parser(
     cached_state: &mut CachedState<InMemoryStateReader>,
     args: &DeclareArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
-    let contract_class = ContractClass::try_from(&args.contract)?;
+    let contract_class =
+        ContractClass::try_from(&args.contract).map_err(ContractAddressError::Program)?;
     let class_hash = compute_class_hash(&contract_class)?;
     cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
 
@@ -161,7 +161,7 @@ fn invoke_parser(
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
 
-    let entry_points_by_type = contract_class.entry_points_by_type().clone();
+    let entry_points_by_type = contract_class.entry_points_by_type();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
         .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;
@@ -171,7 +171,7 @@ fn invoke_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
+        .selector
         .clone();
 
     let calldata = match &args.inputs {
@@ -214,7 +214,7 @@ fn call_parser(
     let class_hash = *cached_state.get_class_hash_at(&contract_address)?;
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
-    let entry_points_by_type = contract_class.entry_points_by_type().clone();
+    let entry_points_by_type = contract_class.entry_points_by_type();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
         .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;
@@ -224,7 +224,7 @@ fn call_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
+        .selector
         .clone();
     let caller_address = Address(0.into());
     let calldata = match &args.inputs {

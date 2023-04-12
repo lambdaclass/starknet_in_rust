@@ -1,3 +1,4 @@
+use crate::cached_state::PyCachedState;
 use crate::types::{
     call_info::PyCallInfo, contract_class::PyContractClass,
     general_config::PyStarknetGeneralConfig, transaction::PyTransaction,
@@ -8,19 +9,24 @@ use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::business_logic::state::state_api::State;
 use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
-use starknet_rs::utils::{Address, ClassHash};
+use starknet_rs::utils::{felt_to_hash, Address, ClassHash};
 
-#[pyclass]
-#[pyo3(name = "StarknetState")]
+#[pyclass(name = "StarknetState")]
 pub struct PyStarknetState {
     inner: InnerStarknetState,
 }
 
 #[pymethods]
 impl PyStarknetState {
-    #[pyo3(name = "empty")]
+    #[new]
+    #[allow(unused_variables)]
+    fn new(state: PyCachedState, general_config: PyStarknetGeneralConfig) -> Self {
+        // TODO: this should use received state
+        Self::empty(Some(general_config))
+    }
+
     #[staticmethod]
-    pub fn new(config: Option<PyStarknetGeneralConfig>) -> Self {
+    pub fn empty(config: Option<PyStarknetGeneralConfig>) -> Self {
         let config = config.map(|c| c.inner);
         PyStarknetState {
             inner: InnerStarknetState::new(config),
@@ -146,6 +152,27 @@ impl PyStarknetState {
             .set_contract_class(&hash, &contract_class.inner.clone())
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         Ok(())
+    }
+
+    fn deploy_contract(&mut self, address: BigUint, hash: ClassHash) -> PyResult<()> {
+        let address = Address(Felt252::from(address));
+        self.inner
+            .state
+            .deploy_contract(address, hash)
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {
+        let address = Address(Felt252::from(address));
+        let key = felt_to_hash(&Felt252::from(key));
+        let value = Felt252::from(value);
+        self.inner.state.set_storage_at(&(address, key), value);
+    }
+
+    #[getter]
+    pub fn general_config(&self) -> PyStarknetGeneralConfig {
+        self.inner.general_config.clone().into()
     }
 }
 

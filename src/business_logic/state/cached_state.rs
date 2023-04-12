@@ -218,6 +218,7 @@ mod tests {
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
     use cairo_rs::types::program::Program;
+    use coverage_helper::test;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
@@ -364,5 +365,72 @@ mod tests {
         let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
 
         assert_eq!(new_result, Ok(&new_value));
+    }
+
+    #[test]
+    fn set_contract_classes_twice_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        cached_state.set_contract_classes(HashMap::new()).unwrap();
+        let result = cached_state
+            .set_contract_classes(HashMap::new())
+            .unwrap_err();
+
+        assert_eq!(result, StateError::AssignedContractClassCache);
+    }
+
+    #[test]
+    fn deploy_contract_address_out_of_range_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let contract_address = Address(0.into());
+
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        let result = cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap_err();
+
+        assert_eq!(
+            result,
+            StateError::ContractAddressOutOfRangeAddress(contract_address)
+        );
+    }
+
+    #[test]
+    fn deploy_contract_address_in_use_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let contract_address = Address(42.into());
+
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap();
+        let result = cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap_err();
+
+        assert_eq!(
+            result,
+            StateError::ContractAddressUnavailable(contract_address)
+        );
     }
 }

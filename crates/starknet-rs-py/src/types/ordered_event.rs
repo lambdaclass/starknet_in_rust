@@ -3,8 +3,7 @@ use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::business_logic::execution::objects::OrderedEvent;
 
-#[pyclass]
-#[pyo3(name = "OrderedEvent")]
+#[pyclass(name = "OrderedEvent")]
 #[derive(Debug)]
 pub struct PyOrderedEvent {
     inner: OrderedEvent,

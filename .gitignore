@@ -42,3 +42,6 @@ starknet-venv/
 default.profraw
 **.DS_Store
 /scripts/reports
+
+# codecov report
+lcov.info

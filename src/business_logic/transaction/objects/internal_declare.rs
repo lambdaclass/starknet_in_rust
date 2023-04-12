@@ -33,6 +33,7 @@ use std::collections::HashMap;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
+#[derive(Debug)]
 pub struct InternalDeclare {
     pub class_hash: ClassHash,
     pub sender_address: Address,
@@ -257,7 +258,6 @@ impl InternalDeclare {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
-
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
@@ -295,6 +295,7 @@ impl InternalDeclare {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
@@ -417,6 +418,438 @@ mod tests {
                 .apply(&mut state, &StarknetGeneralConfig::default())
                 .unwrap(),
             transaction_exec_info
+        );
+    }
+
+    #[test]
+    fn verify_version_zero_should_fail_max_fee() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::new(1));
+
+        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+        let max_fee = 1000;
+        let version = 0;
+
+        // Declare tx should fail because max_fee > 0 and version == 0
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            max_fee,
+            version,
+            Vec::new(),
+            Felt252::from(max_fee),
+        );
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+        assert!(internal_declare.is_err());
+        assert_matches!(
+            internal_declare.unwrap_err(),
+            TransactionError::StarknetError(..)
+        );
+    }
+
+    #[test]
+    fn verify_version_zero_should_fail_nonce() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::new(1));
+
+        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+        let nonce = Felt252::from(148);
+        let version = 0;
+
+        // Declare tx should fail because nonce > 0 and version == 0
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            version,
+            Vec::new(),
+            nonce,
+        );
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+        assert!(internal_declare.is_err());
+        assert_matches!(
+            internal_declare.unwrap_err(),
+            TransactionError::StarknetError(..)
+        );
+    }
+
+    #[test]
+    fn verify_signature_should_fail_not_empty_list() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::new(1));
+
+        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+        let signature = vec![1.into(), 2.into()];
+
+        // Declare tx should fail because signature is not empty
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            0,
+            signature,
+            Felt252::zero(),
+        );
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+        assert!(internal_declare.is_err());
+        assert_matches!(
+            internal_declare.unwrap_err(),
+            TransactionError::StarknetError(..)
+        );
+    }
+
+    #[test]
+    fn execute_class_already_declared_should_fail() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::zero());
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // Declare same class twice
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class.clone(),
+            chain_id.clone(),
+            Address(Felt252::one()),
+            0,
+            1,
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+
+        let internal_declare_error = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            1,
+            Vec::new(),
+            Felt252::one(),
+        )
+        .unwrap();
+
+        internal_declare
+            .execute(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        let expected_error =
+            internal_declare_error.execute(&mut state, &StarknetGeneralConfig::default());
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::ClassAlreadyDeclared(..)
+        );
+    }
+
+    #[test]
+    fn execute_transaction_twice_should_fail() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::zero());
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // Declare same class twice
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            1,
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+
+        internal_declare
+            .execute(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        let expected_error =
+            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvalidTransactionNonce(..)
+        )
+    }
+
+    #[test]
+    fn validate_transaction_should_fail() {
+        // Instantiate CachedState
+        let contract_class_cache = HashMap::new();
+
+        let state_reader = InMemoryStateReader::default();
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        // There are no account contracts in the state, so the transaction should fail
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            1,
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+
+        let internal_declare_error =
+            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
+
+        assert!(internal_declare_error.is_err());
+        assert_matches!(
+            internal_declare_error.unwrap_err(),
+            TransactionError::NotDeployedContract(..)
+        );
+    }
+
+    #[test]
+    fn execute_transaction_charge_fee_should_fail() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
+
+        contract_class_cache.insert(class_hash, contract_class);
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address, Felt252::zero());
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
+        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // Use max_fee with certain value to make sure that the transaction fails due to weight resources
+        let internal_declare = InternalDeclare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            1000,
+            1,
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+
+        assert_matches!(
+            internal_declare.execute(&mut state, &StarknetGeneralConfig::default()),
+            Err(TransactionError::ResourcesError { .. })
         );
     }
 }

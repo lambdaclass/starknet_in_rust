@@ -188,7 +188,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .state
             .get_contract_class(&class_hash_bytes)?;
         let constructor_entry_points = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&EntryPointType::Constructor)
             .ok_or(ContractClassError::NoneEntryPointType)?;
         if constructor_entry_points.is_empty() {
@@ -367,7 +367,11 @@ where
                 entry_point_type = match syscall_name {
                     "library_call" => EntryPointType::External,
                     "library_call_l1_handler" => EntryPointType::L1Handler,
-                    _ => return Err(SyscallHandlerError::NotImplemented),
+                    _ => {
+                        return Err(SyscallHandlerError::UnknownSyscall(
+                            syscall_name.to_string(),
+                        ))
+                    }
                 };
                 function_selector = request.function_selector;
                 class_hash = Some(felt_to_hash(&request.class_hash));
@@ -379,7 +383,11 @@ where
             SyscallRequest::CallContract(request) => {
                 entry_point_type = match syscall_name {
                     "call_contract" => EntryPointType::External,
-                    _ => return Err(SyscallHandlerError::NotImplemented),
+                    _ => {
+                        return Err(SyscallHandlerError::UnknownSyscall(
+                            syscall_name.to_string(),
+                        ))
+                    }
                 };
                 function_selector = request.function_selector;
                 class_hash = None;
@@ -388,7 +396,11 @@ where
                 call_type = CallType::Call;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
-            _ => return Err(SyscallHandlerError::NotImplemented),
+            _ => {
+                return Err(SyscallHandlerError::UnknownSyscall(
+                    syscall_name.to_string(),
+                ))
+            }
         }
 
         let entry_point = ExecutionEntryPoint::new(
@@ -602,6 +614,7 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
+    use coverage_helper::test;
     use felt::Felt252;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};

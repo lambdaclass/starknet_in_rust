@@ -474,7 +474,7 @@ where
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_contract_address(vm, syscall_ptr)
             }
-            _ => Err(SyscallHandlerError::NotImplemented),
+            _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
         }
     }
 }
@@ -490,8 +490,11 @@ impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
-                    SyscallHandlerError::Hint(e) => e,
-                    _ => HintError::UnknownHint(e.to_string()),
+                    SyscallHandlerError::NotImplemented(hint_code) => {
+                        HintError::UnknownHint(hint_code)
+                    }
+
+                    e => HintError::CustomHint(e.to_string()),
                 })?;
         }
         Ok(())
@@ -551,6 +554,7 @@ mod tests {
         },
     };
     use cairo_rs::relocatable;
+    use coverage_helper::test;
     use num_traits::Num;
     use std::path::PathBuf;
 
@@ -1462,5 +1466,24 @@ mod tests {
         assert_eq!(result_call_info.calldata, vec![10.into()]);
         assert_eq!(result_call_info.retdata, vec![260.into()]);
         assert_eq!(result_call_info.storage_read_values, vec![250.into()]);
+    }
+
+    #[test]
+    fn test_get_ids_data() {
+        let mut reference_ids = HashMap::new();
+        let mut references = HashMap::new();
+        let reference_1 = HintReference::new(0, 1, true, false);
+        let reference_2 = HintReference::new(1, 2, false, true);
+        reference_ids.insert("reference_1".to_string(), 1);
+        reference_ids.insert("reference_2".to_string(), 2);
+        references.insert(1, reference_1.clone());
+        references.insert(2, reference_2.clone());
+
+        let ids_data = get_ids_data(&reference_ids, &references).unwrap();
+        let expecter_ids_data = HashMap::from_iter(vec![
+            ("reference_1".to_string(), reference_1),
+            ("reference_2".to_string(), reference_2),
+        ]);
+        assert_eq!(ids_data, expecter_ids_data);
     }
 }

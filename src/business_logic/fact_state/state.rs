@@ -42,7 +42,7 @@ impl ExecutionResourcesManager {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, PartialEq, Debug)]
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
@@ -132,11 +132,18 @@ impl StateDiff {
 
 #[cfg(test)]
 mod test {
+    use coverage_helper::test;
+    use std::collections::HashMap;
+
     use super::StateDiff;
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::{
+                cached_state::{CachedState, ContractClassCache},
+                state_api::StateReader,
+                state_cache::{StateCache, StorageEntry},
+            },
         },
         utils::Address,
     };
@@ -162,5 +169,110 @@ mod test {
         let diff = StateDiff::from_cached_state(cached_state).unwrap();
 
         assert_eq!(0, diff.storage_updates.len());
+    }
+
+    #[test]
+    fn execution_resources_manager_should_start_with_zero_syscall_counter() {
+        let execution_resources_manager = super::ExecutionResourcesManager::new(
+            vec!["syscall1".to_string(), "syscall2".to_string()],
+            Default::default(),
+        );
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(0)
+        );
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall2"),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn execution_resources_manager_should_increment_one_to_the_syscall_counter() {
+        let mut execution_resources_manager = super::ExecutionResourcesManager::new(
+            vec!["syscall1".to_string(), "syscall2".to_string()],
+            Default::default(),
+        );
+
+        execution_resources_manager
+            .increment_syscall_counter("syscall1", 1)
+            .unwrap();
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(1)
+        );
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall2"),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn state_diff_to_cached_state_should_return_correct_cached_state() {
+        let mut state_reader = InMemoryStateReader::default();
+
+        let contract_address = Address(32123.into());
+        let class_hash = [9; 32];
+        let nonce = Felt252::new(42);
+
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address.clone(), nonce);
+
+        let mut cached_state_original = CachedState::new(state_reader.clone(), None);
+
+        let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+
+        let mut cached_state = diff.to_cached_state(state_reader).unwrap();
+
+        assert_eq!(
+            cached_state_original.get_contract_classes(),
+            cached_state.get_contract_classes()
+        );
+        assert_eq!(
+            cached_state_original.get_nonce_at(&contract_address),
+            cached_state.get_nonce_at(&contract_address)
+        );
+    }
+
+    #[test]
+    fn state_diff_squash_with_itself_should_return_same_diff() {
+        let mut state_reader = InMemoryStateReader::default();
+
+        let contract_address = Address(32123.into());
+        let class_hash = [9; 32];
+        let nonce = Felt252::new(42);
+
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let entry: StorageEntry = (Address(555.into()), [0; 32]);
+        let mut storage_writes = HashMap::new();
+        storage_writes.insert(entry, Felt252::new(666));
+        let cache = StateCache::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            storage_writes,
+        );
+        let cached_state =
+            CachedState::new_for_testing(state_reader, Some(ContractClassCache::new()), cache);
+
+        let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
+
+        let diff_squashed = diff.squash(diff.clone()).unwrap();
+
+        assert_eq!(diff, diff_squashed);
     }
 }

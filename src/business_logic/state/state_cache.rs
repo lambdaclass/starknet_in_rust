@@ -149,6 +149,7 @@ impl StateCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
 
     #[test]
     fn state_chache_set_initial_values() {
