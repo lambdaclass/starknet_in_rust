@@ -18,19 +18,22 @@ starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "
     "testing",
 ] }
 starknet-crypto = "0.2.0"
-thiserror = { version = "1.0.32" }
+thiserror = "1.0.32"
 clap = { version = "4.1.8", features = ["derive"] }
 actix-web = "4.3.1"
 awc = "3.1.1"
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 
+starknet-contract-class = { path = "crates/starknet-contract-class" }
+
 [dev-dependencies]
 assert_matches = "1.5.0"
 rusty-hook = "0.11"
+coverage-helper = "0.1.0"
 
 [workspace]
-members = ["crates/starknet-rs-py"]
+members = ["crates/starknet-rs-py", "crates/starknet-contract-class"]
 
 [[bench]]
 path = "bench/internals.rs"

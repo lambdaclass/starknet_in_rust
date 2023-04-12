@@ -81,6 +81,7 @@ mod tests {
     use super::*;
     use crate::services::api::contract_class::{ContractEntryPoint, EntryPointType};
     use cairo_rs::types::program::Program;
+    use coverage_helper::test;
 
     #[test]
     fn get_contract_state_test() {

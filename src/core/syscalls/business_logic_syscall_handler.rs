@@ -188,7 +188,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .state
             .get_contract_class(&class_hash_bytes)?;
         let constructor_entry_points = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&EntryPointType::Constructor)
             .ok_or(ContractClassError::NoneEntryPointType)?;
         if constructor_entry_points.is_empty() {
@@ -614,6 +614,7 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
+    use coverage_helper::test;
     use felt::Felt252;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};

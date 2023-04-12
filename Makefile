@@ -10,9 +10,11 @@ endif
 
 CAIRO_SOURCES=$(wildcard cairo_programs/*.cairo)
 CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
+CAIRO_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(CAIRO_SOURCES))
 
 STARKNET_SOURCES=$(wildcard starknet_programs/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
+STARKNET_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(STARKNET_SOURCES))
 
 BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
 BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
@@ -30,13 +32,13 @@ deps-venv:
 		maturin \
 		cairo-lang==0.10.3
 
-compile-cairo: $(CAIRO_TARGETS)
-compile-starknet: $(STARKNET_TARGETS)
+compile-cairo: $(CAIRO_TARGETS) $(CAIRO_ABI_TARGETS)
+compile-starknet: $(STARKNET_TARGETS) $(STARKNET_ABI_TARGETS)
 
-cairo_programs/%.json: cairo_programs/%.cairo
+cairo_programs/%.json cairo_programs/%_abi.json: cairo_programs/%.cairo
 	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
-starknet_programs/%.json: starknet_programs/%.cairo
+starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 	. starknet-venv/bin/activate && \
 	cd starknet_programs/ && \
 	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
@@ -57,9 +59,9 @@ check: compile-cairo compile-starknet
 	cargo check --all
 
 deps: check-python-version 
-	cargo install cargo-tarpaulin --version 0.23.1
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
+	rustup toolchain install nightly
 	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
@@ -73,18 +75,17 @@ clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet
-	cargo test
+	cargo test --all --exclude starknet-rs-py
 
 test-py: compile-cairo compile-starknet
 	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
 coverage: compile-cairo compile-starknet compile-abi
-	cargo llvm-cov --ignore-filename-regex 'main.rs'
-	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
+	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs'
+	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh
 
 flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals
-
