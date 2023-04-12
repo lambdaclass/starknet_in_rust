@@ -3,7 +3,7 @@ use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::business_logic::execution::objects::OrderedL2ToL1Message;
 
-#[pyclass(name = "OrderedEvent")]
+#[pyclass(name = "OrderedL2ToL1Message")]
 #[derive(Debug)]
 pub struct PyOrderedL2ToL1Message {
     inner: OrderedL2ToL1Message,
