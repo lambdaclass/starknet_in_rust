@@ -3,8 +3,8 @@
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
-	CFLAGS  += -I/opt/homebrew/opt/gmp/include
-	LDFLAGS += -L/opt/homebrew/opt/gmp/lib
+	export CFLAGS  += -I/opt/homebrew/opt/gmp/include
+	export LDFLAGS += -L/opt/homebrew/opt/gmp/lib
 endif
 
 
