@@ -208,23 +208,6 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             .storage_writes
             .insert(storage_entry.clone(), value);
     }
-
-    fn set_class_hash_at(
-        &mut self,
-        deploy_contract_address: Address,
-        class_hash: ClassHash,
-    ) -> Result<(), StateError> {
-        if deploy_contract_address == Address(0.into()) {
-            return Err(StateError::ContractAddressOutOfRangeAddress(
-                deploy_contract_address,
-            ));
-        }
-
-        self.cache
-            .class_hash_writes
-            .insert(deploy_contract_address, class_hash);
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -235,6 +218,7 @@ mod tests {
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
     use cairo_rs::types::program::Program;
+    use coverage_helper::test;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
@@ -447,33 +431,6 @@ mod tests {
         assert_eq!(
             result,
             StateError::ContractAddressUnavailable(contract_address)
-        );
-    }
-
-    #[test]
-    fn cached_state_replace_contract_test() {
-        let state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
-
-        let contract_address = Address(32123.into());
-
-        let mut cached_state = CachedState::new(state_reader, None);
-
-        cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
-            .unwrap();
-
-        assert!(cached_state
-            .set_class_hash_at(contract_address.clone(), [12; 32])
-            .is_ok());
-
-        assert_matches!(
-            cached_state.get_class_hash_at(&contract_address),
-            Ok(class_hash) if class_hash == &[12u8; 32]
         );
     }
 }

@@ -35,7 +35,7 @@ fn integration_test() {
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
+        .selector
         .clone();
 
     //* --------------------------------------------

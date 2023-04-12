@@ -116,6 +116,7 @@ impl Default for StarknetGeneralConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
     use felt::felt_str;
 
     #[test]

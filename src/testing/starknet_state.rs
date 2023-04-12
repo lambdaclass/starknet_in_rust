@@ -278,6 +278,7 @@ impl StarknetState {
 
 #[cfg(test)]
 mod tests {
+    use coverage_helper::test;
     use std::path::PathBuf;
 
     use felt::felt_str;

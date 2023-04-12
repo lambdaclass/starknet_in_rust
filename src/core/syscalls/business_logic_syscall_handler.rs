@@ -188,7 +188,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .state
             .get_contract_class(&class_hash_bytes)?;
         let constructor_entry_points = contract_class
-            .entry_points_by_type
+            .entry_points_by_type()
             .get(&EntryPointType::Constructor)
             .ok_or(ContractClassError::NoneEntryPointType)?;
         if constructor_entry_points.is_empty() {
@@ -565,26 +565,6 @@ where
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
-
-    fn replace_class(
-        &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
-        let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)
-        {
-            Ok(SyscallRequest::ReplaceClass(replace_class_request)) => replace_class_request,
-            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
-        };
-
-        let address = self.contract_address.clone();
-        self.starknet_storage_state
-            .state
-            .set_class_hash_at(address, felt_to_hash(&request.class_hash))
-            .unwrap();
-
-        Ok(())
-    }
 }
 
 impl<'a, T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<'a, T>
@@ -634,6 +614,7 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
+    use coverage_helper::test;
     use felt::Felt252;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
