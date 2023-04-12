@@ -29,8 +29,40 @@ use felt::Felt252;
 use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
-pub struct BusinessLogicSyscallHandler;
+pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
+    pub storage: ContractStorageState<'a, T>,
+}
 
+impl<'a, T: State + StateReader> BusinessLogicSyscallHandler {
+    // this should be in the SyscallHandler trait.
+    pub fn storage_read(self: Self, remaining_gas: u32, request: CairoStructProxy) -> () {
+        if request.reserved != 0 {
+            panic!("Unsupported address domain: {}.", request.reserved);
+        }
+
+        let value = self._storage_read(request.key);
+
+        let response_header = ResponseHeader {
+            gas: remaining_gas,
+            failure_flag: 0,
+        };
+        let response = StorageReadResponse { value };
+        // Ok((response_header, response))
+        ()
+    }
+
+    fn _storage_read(self: &Self, key: u32) -> u32 {
+        self.storage.read(key)
+    }
+
+    // pub fn storage_read(self: Self, remaining_gas: u32, request: CairoStructProxy) -> SyscallFullResponse:
+    // assert request.reserved == 0, f"Unsupported address domain: {request.reserved}."
+    // value = self._storage_read(key=cast_to_int(request.key))
+
+    // response_header = self.structs.ResponseHeader(gas=remaining_gas, failure_flag=0)
+    // response = self.structs.StorageReadResponse(value=value)
+    // return response_header, response
+}
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
 //* -----------------------------------
