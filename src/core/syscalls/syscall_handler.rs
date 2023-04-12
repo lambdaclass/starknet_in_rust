@@ -339,7 +339,7 @@ pub(crate) trait DeprecatedSyscallHandler {
             "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
             "get_tx_info" => GetTxInfoRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
-            "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => DeprecatedSendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" | "library_call_l1_handler" => {
                 LibraryCallStruct::from_ptr(vm, syscall_ptr)
             }
@@ -586,7 +586,7 @@ mod tests {
         );
         assert_matches!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
-            Ok(request) if request == SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+            Ok(request) if request == SyscallRequest::SendMessageToL1(DeprecatedSendMessageToL1SysCall {
                 _selector: 0.into(),
                 to_address: Address(1.into()),
                 payload_size: 2,

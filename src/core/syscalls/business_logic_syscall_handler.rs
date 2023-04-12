@@ -1,6 +1,6 @@
 use super::{
     syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
-    syscall_info::get_syscall_size_from_name,
+    syscall_info::get_deprecated_syscall_size_from_name,
     syscall_request::*,
 };
 use crate::{
@@ -560,7 +560,7 @@ where
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        self.expected_syscall_ptr.offset += get_deprecated_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 

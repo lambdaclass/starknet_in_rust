@@ -10,7 +10,7 @@ pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
     GetTxInfo(GetTxInfoRequest),
     Deploy(DeployRequestStruct),
-    SendMessageToL1(SendMessageToL1SysCall),
+    SendMessageToL1(DeprecatedSendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
     GetContractAddress(GetContractAddressRequest),
@@ -63,8 +63,21 @@ pub(crate) struct DeployRequestStruct {
     pub(crate) deploy_from_zero: usize,
 }
 
+// Arguments given in the syscall documentation
+// https://github.com/starkware-libs/cairo-lang/blob/c954f154bbab04c3fb27f7598b015a9475fc628e/src/starkware/starknet/common/new_syscalls.cairo#L138
+// to_address
+// The recipient’s L1 address.
+
+// payload
+// The array containing the message payload -> relocatable
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SendMessageToL1SysCall {
+    pub(crate) to_address: Address,
+    pub(crate) payload_start: Relocatable,
+    pub(crate) payload_end: Relocatable,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeprecatedSendMessageToL1SysCall {
     pub(crate) _selector: Felt252,
     pub(crate) to_address: Address,
     pub(crate) payload_size: usize,
@@ -141,8 +154,8 @@ impl From<DeployRequestStruct> for SyscallRequest {
     }
 }
 
-impl From<SendMessageToL1SysCall> for SyscallRequest {
-    fn from(send_message_to_l1_sys_call: SendMessageToL1SysCall) -> SyscallRequest {
+impl From<DeprecatedSendMessageToL1SysCall> for SyscallRequest {
+    fn from(send_message_to_l1_sys_call: DeprecatedSendMessageToL1SysCall) -> SyscallRequest {
         SyscallRequest::SendMessageToL1(send_message_to_l1_sys_call)
     }
 }
@@ -316,7 +329,7 @@ impl FromPtr for DeployRequestStruct {
     }
 }
 
-impl FromPtr for SendMessageToL1SysCall {
+impl FromPtr for DeprecatedSendMessageToL1SysCall {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -326,12 +339,14 @@ impl FromPtr for SendMessageToL1SysCall {
         let payload_size = get_integer(vm, &syscall_ptr + 2)?;
         let payload_ptr = get_relocatable(vm, &syscall_ptr + 3)?;
 
-        Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
-            _selector,
-            to_address,
-            payload_size,
-            payload_ptr,
-        }))
+        Ok(SyscallRequest::SendMessageToL1(
+            DeprecatedSendMessageToL1SysCall {
+                _selector,
+                to_address,
+                payload_size,
+                payload_ptr,
+            },
+        ))
     }
 }
 
