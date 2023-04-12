@@ -2,7 +2,7 @@ use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
     business_logic::transaction::error::TransactionError,
     core::syscalls::syscall_handler::{
-        SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
+        DeprecatedSyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
 use cairo_rs::{
@@ -21,7 +21,7 @@ use std::{borrow::Cow, collections::HashMap};
 
 pub(crate) struct StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
@@ -30,14 +30,14 @@ where
 
 impl<H> StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub fn map_hint_processor<H2>(
         self,
         hint_processor: SyscallHintProcessor<H2>,
     ) -> StarknetRunner<H2>
     where
-        H2: SyscallHandler,
+        H2: DeprecatedSyscallHandler,
     {
         StarknetRunner {
             cairo_runner: self.cairo_runner,
@@ -70,6 +70,7 @@ where
             entrypoint,
             &args,
             verify_secure,
+            None,
             &mut self.vm,
             &mut self.hint_processor,
         )?;
@@ -265,7 +266,7 @@ mod test {
     #[test]
     fn run_from_entrypoint_should_fail_with_no_exec_base() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -279,7 +280,7 @@ mod test {
     #[test]
     fn get_os_segment_ptr_range_should_fail_when_ptr_offset_is_not_zero() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -296,7 +297,7 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_when_offset_is_not_zero() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -316,7 +317,7 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_when_base_is_not_a_value() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -336,7 +337,7 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_with_invalid_segment_size() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -354,7 +355,7 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_when_stop_is_not_a_value() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         vm.add_memory_segment();
         vm.compute_segments_effective_sizes();
@@ -375,7 +376,7 @@ mod test {
     #[test]
     fn validate_segment_pointers_should_fail_with_invalid_stop_pointer() {
         let program = cairo_rs::types::program::Program::default();
-        let cairo_runner = CairoRunner::new(&program, "all", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         vm.add_memory_segment();
         vm.compute_segments_effective_sizes();

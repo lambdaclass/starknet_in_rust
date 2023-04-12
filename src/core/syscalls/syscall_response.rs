@@ -305,7 +305,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::syscalls::syscall_handler::SyscallHandler,
+        core::syscalls::syscall_handler::DeprecatedSyscallHandler,
         utils::{get_integer, test_utils::vm},
     };
     use cairo_rs::relocatable;
