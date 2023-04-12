@@ -393,8 +393,8 @@ mod tests {
                 call_type: CallType::Delegate.into(),
                 class_hash: class_hash.into(),
                 entry_point_selector: Some(entry_point_selector),
-                calldata: call_data.into(),
-                retdata: return_data.into(),
+                calldata: call_data,
+                retdata: return_data,
                 ..Default::default()
             },
         );
