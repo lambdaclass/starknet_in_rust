@@ -2285,7 +2285,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "starknet-contract-class",
- "starknet-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.2.0",
  "starknet_api",
  "thiserror",
 ]
