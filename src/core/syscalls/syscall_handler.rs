@@ -586,7 +586,7 @@ mod tests {
         );
         assert_matches!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
-            Ok(request) if request == SyscallRequest::SendMessageToL1(DeprecatedSendMessageToL1SysCall {
+            Ok(request) if request == SyscallRequest::DeprecatedSendMessageToL1(DeprecatedSendMessageToL1SysCall {
                 _selector: 0.into(),
                 to_address: Address(1.into()),
                 payload_size: 2,

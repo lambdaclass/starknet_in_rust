@@ -462,7 +462,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::SendMessageToL1(request) =
+        let request = if let SyscallRequest::DeprecatedSendMessageToL1(request) =
             self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
         {
             request

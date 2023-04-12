@@ -10,7 +10,8 @@ pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
     GetTxInfo(GetTxInfoRequest),
     Deploy(DeployRequestStruct),
-    SendMessageToL1(DeprecatedSendMessageToL1SysCall),
+    SendMessageToL1(SendMessageToL1SysCall),
+    DeprecatedSendMessageToL1(DeprecatedSendMessageToL1SysCall),
     LibraryCall(LibraryCallStruct),
     GetCallerAddress(GetCallerAddressRequest),
     GetContractAddress(GetContractAddressRequest),
@@ -156,7 +157,7 @@ impl From<DeployRequestStruct> for SyscallRequest {
 
 impl From<DeprecatedSendMessageToL1SysCall> for SyscallRequest {
     fn from(send_message_to_l1_sys_call: DeprecatedSendMessageToL1SysCall) -> SyscallRequest {
-        SyscallRequest::SendMessageToL1(send_message_to_l1_sys_call)
+        SyscallRequest::DeprecatedSendMessageToL1(send_message_to_l1_sys_call)
     }
 }
 
@@ -329,6 +330,23 @@ impl FromPtr for DeployRequestStruct {
     }
 }
 
+impl FromPtr for SendMessageToL1SysCall {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let to_address = Address(get_big_int(vm, syscall_ptr)?);
+        let payload_start = get_relocatable(vm, &syscall_ptr + 1)?;
+        let payload_end = get_relocatable(vm, &syscall_ptr + 2)?;
+
+        Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+            to_address,
+            payload_start,
+            payload_end,
+        }))
+    }
+}
+
 impl FromPtr for DeprecatedSendMessageToL1SysCall {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -339,7 +357,7 @@ impl FromPtr for DeprecatedSendMessageToL1SysCall {
         let payload_size = get_integer(vm, &syscall_ptr + 2)?;
         let payload_ptr = get_relocatable(vm, &syscall_ptr + 3)?;
 
-        Ok(SyscallRequest::SendMessageToL1(
+        Ok(SyscallRequest::DeprecatedSendMessageToL1(
             DeprecatedSendMessageToL1SysCall {
                 _selector,
                 to_address,
