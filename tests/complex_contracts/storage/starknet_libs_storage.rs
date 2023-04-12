@@ -23,7 +23,7 @@ fn normalize_big_address_test() {
     // Deploy contract
     let (contract_address, class_hash) = deploy(
         &mut state,
-        "starknet_programs/starknet-libs-storage.json",
+        "starknet_programs/starknet_libs_storage.json",
         &[],
         &general_config,
     )
@@ -77,7 +77,7 @@ fn normalize_small_address_test() {
     // Deploy contract
     let (contract_address, class_hash) = deploy(
         &mut state,
-        "starknet_programs/starknet-libs-storage.json",
+        "starknet_programs/starknet_libs_storage.json",
         &[],
         &general_config,
     )
