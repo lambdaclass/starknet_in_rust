@@ -54,7 +54,6 @@ It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust im
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 ```bash
 $ make deps
-$ make compile-cairo
 $ make build
 ```
 Check the [Makefile](/Makefile) for additional targets.
