@@ -336,7 +336,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
-            "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
+            "emit_event" => DeprecatedEmitEventStruct::from_ptr(vm, syscall_ptr),
             "get_tx_info" => GetTxInfoRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),

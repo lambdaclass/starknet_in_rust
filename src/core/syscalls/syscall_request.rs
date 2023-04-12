@@ -8,6 +8,8 @@ use felt::Felt252;
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventStruct),
+    // Deprecated SyscallRequests variants
+    DeprecatedEmitEvent(DeprecatedEmitEventStruct),
     GetTxInfo(GetTxInfoRequest),
     Deploy(DeployRequestStruct),
     SendMessageToL1(SendMessageToL1SysCall),
@@ -40,6 +42,14 @@ pub(crate) struct GetSequencerAddressRequest {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventStruct {
+    pub(crate) keys_start: Relocatable,
+    pub(crate) keys_end: Relocatable,
+    pub(crate) data_start: Relocatable,
+    pub(crate) data_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeprecatedEmitEventStruct {
     pub(crate) selector: Felt252,
     pub(crate) keys_len: usize,
     pub(crate) keys: Relocatable,
@@ -135,6 +145,12 @@ impl From<EmitEventStruct> for SyscallRequest {
     }
 }
 
+impl From<DeprecatedEmitEventStruct> for SyscallRequest {
+    fn from(emit_event_struct: DeprecatedEmitEventStruct) -> SyscallRequest {
+        SyscallRequest::DeprecatedEmitEvent(emit_event_struct)
+    }
+}
+
 impl From<DeployRequestStruct> for SyscallRequest {
     fn from(deploy_request_struct: DeployRequestStruct) -> SyscallRequest {
         SyscallRequest::Deploy(deploy_request_struct)
@@ -223,13 +239,33 @@ impl FromPtr for EmitEventStruct {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let keys_start = get_relocatable(vm, syscall_ptr)?;
+        let keys_end = get_relocatable(vm, &syscall_ptr + 1)?;
+        let data_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let data_end = get_relocatable(vm, &syscall_ptr + 3)?;
+
+        Ok(EmitEventStruct {
+            keys_start,
+            keys_end,
+            data_start,
+            data_end,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for DeprecatedEmitEventStruct {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let keys_len = get_integer(vm, &syscall_ptr + 1)?;
         let keys = get_relocatable(vm, &syscall_ptr + 2)?;
         let data_len = get_integer(vm, &syscall_ptr + 3)?;
         let data = get_relocatable(vm, &syscall_ptr + 4)?;
 
-        Ok(EmitEventStruct {
+        Ok(DeprecatedEmitEventStruct {
             selector,
             keys_len,
             keys,
