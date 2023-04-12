@@ -34,6 +34,8 @@ use cairo_rs::{
 use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
+pub trait SyscallHandler {}
+
 //* ---------------------
 //* DeprecatedSyscallHandler Trait
 //* ---------------------
