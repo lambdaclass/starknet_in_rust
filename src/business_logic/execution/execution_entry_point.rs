@@ -350,7 +350,7 @@ mod tests {
 
         state_reader
             .address_to_storage
-            .insert((contract_address.clone(), [0; 32].into()), Felt252::new(1));
+            .insert((contract_address.clone(), [0; 32]), Felt252::new(1));
 
         let mut contract_class_cache = HashMap::new();
         contract_class_cache.insert(class_hash, contract_class);
