@@ -86,7 +86,7 @@ pub fn compute_sierra_class_hash(
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
 
-    runner.initialize_function_runner(&mut vm)?;
+    runner.initialize_function_runner(&mut vm, true)?;
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
     let entrypoint = program
@@ -108,6 +108,7 @@ pub fn compute_sierra_class_hash(
         entrypoint,
         &[&poseidon_base.into(), contract_class_struct],
         true,
+        None,
         &mut vm,
         &mut hint_processor,
     )?;
