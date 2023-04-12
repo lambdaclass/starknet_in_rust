@@ -2,8 +2,7 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
-#[pyclass]
-#[pyo3(name = "ExecutionResources")]
+#[pyclass(name = "ExecutionResources")]
 #[derive(Debug)]
 pub struct PyExecutionResources {
     inner: ExecutionResources,

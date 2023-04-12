@@ -3,7 +3,7 @@ use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::{services::api::messages::StarknetMessageToL1, utils::Address};
 
-#[pyclass]
+#[pyclass(name = "StarknetMessageToL1")]
 pub struct PyStarknetMessageToL1 {
     inner: StarknetMessageToL1,
 }
