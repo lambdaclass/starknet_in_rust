@@ -1,8 +1,7 @@
+use crate::utils::Address;
 use felt::Felt252;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
-
-use crate::utils::Address;
 
 /// A StarkNet Message from L2 to L1.
 #[derive(Debug, Clone)]
