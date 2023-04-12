@@ -1,8 +1,10 @@
-use super::objects::{CallInfo, CallType, TransactionExecutionContext};
 use crate::{
     business_logic::{
-        fact_state::state::ExecutionResourcesManager, state::state_api::State,
-        state::state_api::StateReader, transaction::error::TransactionError,
+        execution::objects::{CallInfo, CallType, TransactionExecutionContext},
+        fact_state::state::ExecutionResourcesManager,
+        state::state_api::State,
+        state::state_api::StateReader,
+        transaction::error::TransactionError,
     },
     core::syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -274,5 +276,127 @@ impl ExecutionEntryPoint {
         };
 
         get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
+    use crate::business_logic::{
+        execution::execution_entry_point::ExecutionEntryPoint, state::cached_state::CachedState,
+    };
+    use crate::definitions::constants::TRANSACTION_VERSION;
+    use crate::utils::calculate_sn_keccak;
+    use crate::{
+        business_logic::{
+            execution::objects::{CallInfo, CallType, TransactionExecutionContext},
+            fact_state::state::ExecutionResourcesManager,
+        },
+        definitions::general_config::StarknetGeneralConfig,
+        services::api::contract_class::{ContractClass, EntryPointType},
+        utils::Address,
+    };
+    use cairo_rs::with_std::collections::HashMap;
+    use felt::Felt252;
+    use std::path::Path;
+    #[test]
+    fn test_execution_entrypoint() {
+        let contract_path = "starknet_programs/fibonacci.json";
+        let entry_point = "fib";
+        let call_data = [1.into(), 1.into(), 10.into()].to_vec();
+        let return_data = [144.into()].to_vec();
+
+        let contract_class =
+            ContractClass::try_from(<str as AsRef<Path>>::as_ref(contract_path).to_path_buf())
+                .expect("Could not load contract from JSON");
+
+        //* --------------------------------------------
+        //*       Create a default contract data
+        //* --------------------------------------------
+
+        let contract_address = Address(1111.into());
+        let class_hash = [1; 32];
+
+        //* --------------------------------------------
+        //*          Create default context
+        //* --------------------------------------------
+
+        let general_config = StarknetGeneralConfig::default();
+
+        let tx_execution_context = TransactionExecutionContext::create_for_testing(
+            Address(0.into()),
+            10,
+            0.into(),
+            general_config.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION,
+        );
+
+        //* --------------------------------------------
+        //*  Create starknet state with the contract
+        //*  (This would be the equivalent of
+        //*  declaring and deploying the contract)
+        //* -------------------------------------------
+
+        let mut state_reader = InMemoryStateReader::default();
+
+        state_reader
+            .address_to_class_hash
+            .insert(contract_address.clone(), class_hash);
+
+        state_reader.address_to_nonce.insert(
+            contract_address.clone(),
+            tx_execution_context.nonce().clone(),
+        );
+
+        state_reader
+            .address_to_storage
+            .insert((contract_address.clone(), [0; 32].into()), Felt252::new(1));
+
+        let mut contract_class_cache = HashMap::new();
+        contract_class_cache.insert(class_hash, contract_class);
+
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+
+        //* ------------------------------------
+        //*    Create execution entry point
+        //* ------------------------------------
+
+        let caller_address = Address(0.into());
+
+        let entry_point_selector =
+            Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
+        let entry_point = ExecutionEntryPoint::new(
+            contract_address.clone(),
+            call_data.clone(),
+            entry_point_selector.clone(),
+            caller_address.clone(),
+            EntryPointType::External,
+            CallType::Delegate.into(),
+            class_hash.into(),
+        );
+
+        let mut resources_manager = ExecutionResourcesManager::default();
+
+        assert_eq!(
+            entry_point
+                .execute(
+                    &mut state,
+                    &general_config,
+                    &mut resources_manager,
+                    &tx_execution_context,
+                )
+                .expect("Could not execute contract"),
+            CallInfo {
+                contract_address,
+                caller_address,
+                entry_point_type: EntryPointType::External.into(),
+                call_type: CallType::Delegate.into(),
+                class_hash: class_hash.into(),
+                entry_point_selector: Some(entry_point_selector),
+                calldata: call_data.into(),
+                retdata: return_data.into(),
+                ..Default::default()
+            },
+        );
     }
 }
