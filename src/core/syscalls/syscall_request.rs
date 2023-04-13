@@ -43,14 +43,14 @@ pub(crate) trait FromPtr {
 #[allow(unused)]
 pub(crate) struct DeployRequest {
     // The hash of the class to deploy.
-    class_hash: Felt252,
+    pub(crate) class_hash: Felt252,
     // A salt for the new contract address calculation.
-    salt: Felt252,
+    pub(crate) salt: Felt252,
     // The calldata for the constructor.
-    calldata_start: Relocatable,
-    calldata_end: Relocatable,
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
     // Used for deterministic contract address deployment.
-    deploy_from_zero: Felt252,
+    pub(crate) deploy_from_zero: Felt252,
 }
 
 impl FromPtr for DeployRequest {
