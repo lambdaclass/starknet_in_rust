@@ -10,7 +10,7 @@ use starknet_rs::{
             state_api::{State, StateReader},
         },
     },
-    utils::{felt_to_hash, Address},
+    utils::Address,
 };
 
 #[pyclass(name = "CachedState")]
@@ -50,7 +50,7 @@ impl PyCachedState {
             .state
             .get_storage_at(&(
                 Address(Felt252::from(address)),
-                felt_to_hash(&Felt252::from(key)),
+                Felt252::from(key).to_be_bytes(),
             ))
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?
             .to_biguint())
@@ -60,7 +60,7 @@ impl PyCachedState {
         self.state.set_storage_at(
             &(
                 Address(Felt252::from(address)),
-                felt_to_hash(&Felt252::from(key)),
+                Felt252::from(key).to_be_bytes(),
             ),
             Felt252::from(value),
         );

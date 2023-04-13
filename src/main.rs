@@ -33,7 +33,7 @@ use starknet_rs::{
     parser_errors::ParserError,
     serde_structs::contract_abi::read_abi,
     services::api::contract_class::ContractClass,
-    utils::{felt_to_hash, string_to_hash, Address},
+    utils::{string_to_hash, Address},
 };
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 
@@ -110,7 +110,7 @@ fn declare_parser(
     let contract_class =
         ContractClass::try_from(&args.contract).map_err(ContractAddressError::Program)?;
     let class_hash = compute_class_hash(&contract_class)?;
-    cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
+    cached_state.set_contract_class(&class_hash.to_be_bytes(), &contract_class)?;
 
     let tx_hash = calculate_declare_transaction_hash(
         &contract_class,
@@ -139,7 +139,11 @@ fn deploy_parser(
         Address(0.into()),
     )?;
 
-    cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
+    cached_state.deploy_contract(
+        Address(address.clone()),
+        string_to_hash(&args.class_hash)
+            .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
+    )?;
     let tx_hash = calculate_deploy_transaction_hash(
         0,
         &Address(address.clone()),

@@ -9,7 +9,7 @@ use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::business_logic::state::state_api::State;
 use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
-use starknet_rs::utils::{felt_to_hash, Address, ClassHash};
+use starknet_rs::utils::{Address, ClassHash};
 
 #[pyclass(name = "StarknetState")]
 pub struct PyStarknetState {
@@ -165,7 +165,7 @@ impl PyStarknetState {
 
     pub fn set_storage_at(&mut self, address: BigUint, key: BigUint, value: BigUint) {
         let address = Address(Felt252::from(address));
-        let key = felt_to_hash(&Felt252::from(key));
+        let key = (Felt252::from(key)).to_be_bytes();
         let value = Felt252::from(value);
         self.inner.state.set_storage_at(&(address, key), value);
     }

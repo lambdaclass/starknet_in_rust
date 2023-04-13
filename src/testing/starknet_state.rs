@@ -284,7 +284,7 @@ mod tests {
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
-        utils::{calculate_sn_keccak, felt_to_hash},
+        utils::calculate_sn_keccak,
     };
 
     #[test]
@@ -298,7 +298,7 @@ mod tests {
 
         // ----- calculate fib class hash ---------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         let address = Address(felt_str!(
             "2066790681318687707025847340457605657642478884993868155391041767964612021885"
@@ -358,7 +358,7 @@ mod tests {
         //  ------------ contract data --------------------
         // hack store account contract
         let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
         contract_class_cache.insert(class_hash, contract_class.clone());
 
         // store sender_address
@@ -430,7 +430,7 @@ mod tests {
 
         // ----- calculate fib class hash ---------
         let hash = compute_class_hash(&fib_contract_class).unwrap();
-        let fib_class_hash = felt_to_hash(&hash);
+        let fib_class_hash = hash.to_be_bytes();
 
         // check that it return the correct clash hash
         assert_eq!(ret_class_hash, fib_class_hash);
@@ -497,7 +497,7 @@ mod tests {
         // expected result
         // ----- calculate fib class hash ---------
         let hash = compute_class_hash(&contract_class).unwrap();
-        let fib_class_hash = felt_to_hash(&hash);
+        let fib_class_hash = hash.to_be_bytes();
 
         let address = felt_str!(
             "2066790681318687707025847340457605657642478884993868155391041767964612021885"

@@ -354,6 +354,7 @@ impl InternalDeployAccount {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::errors::state_errors::StateError;
     use coverage_helper::test;
     use std::path::PathBuf;
 
@@ -363,11 +364,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::{
-            contract_address::starknet_contract_address::compute_class_hash,
-            errors::state_errors::StateError,
-        },
-        utils::felt_to_hash,
+        core::contract_address::starknet_contract_address::compute_class_hash,
     };
 
     #[test]
@@ -376,7 +373,7 @@ mod tests {
         let contract = ContractClass::try_from(path).unwrap();
 
         let hash = compute_class_hash(&contract).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         let general_config = StarknetGeneralConfig::default();
         let mut _state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
@@ -408,7 +405,7 @@ mod tests {
         let contract = ContractClass::try_from(path).unwrap();
 
         let hash = compute_class_hash(&contract).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         let general_config = StarknetGeneralConfig::default();
         let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
@@ -458,7 +455,7 @@ mod tests {
         let contract = ContractClass::try_from(path).unwrap();
 
         let hash = compute_class_hash(&contract).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         let general_config = StarknetGeneralConfig::default();
         let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));

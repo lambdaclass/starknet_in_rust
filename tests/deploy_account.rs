@@ -15,7 +15,7 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{felt_to_hash, Address},
+    utils::Address,
 };
 use std::path::PathBuf;
 
@@ -31,7 +31,7 @@ fn internal_deploy_account() {
     ))
     .unwrap();
 
-    let class_hash = felt_to_hash(&compute_class_hash(&contract_class).unwrap());
+    let class_hash = compute_class_hash(&contract_class).unwrap().to_be_bytes();
 
     state
         .set_contract_class(&class_hash, &contract_class)
