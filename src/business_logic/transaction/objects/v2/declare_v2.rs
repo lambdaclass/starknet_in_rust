@@ -294,41 +294,39 @@ impl InternalDeclareV2 {
 
 // TODO: uncomment this tests moduloe once the sierra compiler is fully functional
 
-#[cfg(test)]
-mod tests {
-    use super::InternalDeclareV2;
-    use crate::{definitions::general_config::StarknetChainId, utils::Address};
-    use cairo_lang_compiler::CompilerConfig;
-    use cairo_lang_starknet::contract_class::compile_path;
-    use felt::Felt252;
-    use num_traits::Zero;
-    use std::env::current_dir;
-    use std::path::PathBuf;
+// #[cfg(test)]
+// mod tests {
+//     use super::InternalDeclareV2;
+//     use crate::{definitions::general_config::StarknetChainId, utils::Address};
+//     use cairo_lang_compiler::CompilerConfig;
+//     use cairo_lang_starknet::contract_class::compile_path;
+//     use felt::Felt252;
+//     use num_traits::Zero;
+//     use std::path::PathBuf;
 
-    #[test]
-    fn create_declare_v2_test() {
-        let dir = current_dir();
-        let path = PathBuf::from("starknet_programs/fibonacci.cairo");
-        let compiler_config = CompilerConfig {
-            replace_ids: true,
-            ..Default::default()
-        };
-        let sierra_contract_class = compile_path(path.as_path(), compiler_config).unwrap();
-        let chain_id = StarknetChainId::TestNet.to_felt();
+//     #[test]
+//     fn create_declare_v2_test() {
+//         let path = PathBuf::from("starknet_programs/fibonacci.cairo");
+//         let compiler_config = CompilerConfig {
+//             replace_ids: true,
+//             ..Default::default()
+//         };
+//         let sierra_contract_class = compile_path(path.as_path(), compiler_config).unwrap();
+//         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        let sender_address = Address(0.into());
+//         let sender_address = Address(0.into());
 
-        let internal_declare = InternalDeclareV2::new(
-            &sierra_contract_class,
-            Felt252::zero(),
-            chain_id,
-            sender_address,
-            0,
-            0,
-            [].to_vec(),
-            Felt252::zero(),
-        );
+//         let internal_declare = InternalDeclareV2::new(
+//             &sierra_contract_class,
+//             Felt252::zero(),
+//             chain_id,
+//             sender_address,
+//             0,
+//             0,
+//             [].to_vec(),
+//             Felt252::zero(),
+//         );
 
-        assert!(internal_declare.is_ok());
-    }
-}
+//         assert!(internal_declare.is_ok());
+//     }
+// }
