@@ -1,16 +1,6 @@
 use super::{
-    deprecated_syscall_request::*,
-    deprecated_syscall_response::{
-        DeprecatedCallContractResponse, DeprecatedDeployResponse, DeprecatedGetBlockNumberResponse,
-        DeprecatedGetBlockTimestampResponse, DeprecatedGetCallerAddressResponse,
-        DeprecatedGetContractAddressResponse, DeprecatedGetSequencerAddressResponse,
-        DeprecatedGetTxInfoResponse, DeprecatedGetTxSignatureResponse,
-        DeprecatedStorageReadResponse, DeprecatedWriteSyscallResponse,
-    },
-    hint_code::*,
-    other_syscalls,
-    syscall_request::SyscallRequest,
-    syscall_response::{DeployResponse, FailureReason, ResponseBody, SyscallResponse},
+    deprecated_syscall_request::*, deprecated_syscall_response::*, hint_code::*, other_syscalls,
+    syscall_request::*, syscall_response::*,
 };
 use crate::{
     business_logic::{
@@ -99,7 +89,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
-            // "deploy" => DeployResponse::from_ptr(vm, syscall_ptr),
+            "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
