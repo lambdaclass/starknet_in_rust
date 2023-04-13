@@ -212,6 +212,26 @@ impl Default for CallInfo {
     }
 }
 
+// ----------------------
+// CallResult structure
+// ----------------------
+
+pub struct CallResult {
+    pub gas_consumed: u64,
+    pub is_success: bool,
+    pub retdata: Vec<MaybeRelocatable>,
+}
+
+impl From<CallInfo> for CallResult {
+    fn from(info: CallInfo) -> Self {
+        Self {
+            gas_consumed: 0,
+            is_success: true,
+            retdata: info.retdata.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 // -------------------------
 //  Events Structures
 // -------------------------
