@@ -1,11 +1,15 @@
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 use crate::{
-    business_logic::{execution::objects::CallType, fact_state::state::ExecutionResourcesManager},
+    business_logic::{
+        execution::{execution_entry_point::ExecutionEntryPoint, objects::CallType},
+        fact_state::state::ExecutionResourcesManager,
+    },
     core::{
         errors::syscall_handler_errors::SyscallHandlerError,
         syscalls::syscall_request::SyscallRequest,
     },
+    services::api::contract_class::EntryPointType,
     utils::{get_felt_range, Address},
 };
 
@@ -55,10 +59,21 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             return Err(SyscallHandlerError::ExpectedCallContractRequest);
         };
 
-        let _calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
-        let _contract_address = request.contract_address;
-        let _caller_address = &self.caller_address;
-        let _call_type = CallType::Call;
+        let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
+        let contract_address = request.contract_address;
+        let caller_address = &self.caller_address;
+        let call_type = Some(CallType::Call);
+
+        let _call = ExecutionEntryPoint::new(
+            contract_address,
+            calldata,
+            request.selector,
+            caller_address.clone(),
+            EntryPointType::External,
+            call_type,
+            None,
+        );
+
         /*
         calldata = self._get_felt_range(
             start_addr=request.calldata_start, end_addr=request.calldata_end
