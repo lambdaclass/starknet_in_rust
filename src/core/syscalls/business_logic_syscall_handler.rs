@@ -31,9 +31,9 @@ use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
 pub struct BusinessLogicSyscallHandler {
-    pub(crate) _tx_execution_context: TransactionExecutionContext,
+    pub(crate) tx_execution_context: TransactionExecutionContext,
     pub(crate) resources_manager: ExecutionResourcesManager,
-    pub(crate) _l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
@@ -44,9 +44,9 @@ impl BusinessLogicSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Self {
         BusinessLogicSyscallHandler {
-            _tx_execution_context: tx_execution_context,
+            tx_execution_context,
             resources_manager,
-            _l2_to_l1_messages: Vec::new(),
+            l2_to_l1_messages: Vec::new(),
             expected_syscall_ptr: syscall_ptr,
         }
     }
@@ -71,12 +71,32 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         Ok(syscall_request)
     }
 
+    //TODO remove allow irrefutable_let_patterns
+    #[allow(irrefutable_let_patterns)]
     fn send_message_to_l1(
         &mut self,
-        _vm: &VirtualMachine,
-        _syscall_ptr: Relocatable,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        todo!()
+        let request = if let SyscallRequest::SendMessageToL1(request) =
+            self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedSendMessageToL1);
+        };
+
+        let payload = get_felt_range(vm, request.payload_start, request.payload_end)?;
+
+        self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
+            self.tx_execution_context.n_sent_messages,
+            request.to_address,
+            payload,
+        ));
+
+        // Update messages count.
+        self.tx_execution_context.n_sent_messages += 1;
+        Ok(())
     }
 }
 
