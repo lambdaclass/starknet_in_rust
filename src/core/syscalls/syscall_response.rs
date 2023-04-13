@@ -7,5 +7,5 @@ pub struct SyscallResponse {
     /// If the syscall succeeded.
     failure_flag: bool,
     /// Syscall specific response fields.
-    syscall_response: ResponseBody,
+    body: ResponseBody,
 }
