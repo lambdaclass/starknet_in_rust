@@ -12,7 +12,7 @@ use starknet_rs::hash_utils::calculate_contract_address;
 use starknet_rs::utils::Address;
 use starknet_rs::{
     business_logic::transaction::fee::calculate_tx_fee,
-    core::contract_address::starknet_contract_address::compute_class_hash,
+    core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
     utils::validate_contract_deployed,
 };
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ pub(crate) fn py_calculate_tx_fee(
 #[pyfunction]
 #[pyo3(name = "compute_class_hash")]
 pub(crate) fn py_compute_class_hash(contract_class: &PyContractClass) -> PyResult<BigUint> {
-    match compute_class_hash(contract_class.into()) {
+    match compute_deprecated_class_hash(contract_class.into()) {
         Ok(res) => Ok(res.to_biguint()),
         Err(err) => Err(PyValueError::new_err(err.to_string())),
     }

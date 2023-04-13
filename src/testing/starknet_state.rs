@@ -278,8 +278,10 @@ mod tests {
             execution::objects::{CallType, OrderedL2ToL1Message},
             state::state_cache::StorageEntry,
         },
-        core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
-        core::errors::state_errors::StateError,
+        core::{
+            contract_address::starknet_contract_address::compute_deprecated_class_hash,
+            errors::state_errors::StateError,
+        },
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
