@@ -307,13 +307,13 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::syscalls::syscall_handler::DeprecatedSyscallHandler,
+        core::syscalls::deprecated_syscall_handler::DeprecatedSyscallHandler,
         utils::{get_integer, test_utils::vm},
     };
     use cairo_rs::relocatable;
 
     type DeprecatedBLSyscallHandler<'a> =
-        crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler<
+        crate::core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;
