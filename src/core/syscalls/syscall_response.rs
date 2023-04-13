@@ -4,8 +4,6 @@ pub enum ResponseBody {}
 pub struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
     gas: u64,
-    /// If the syscall succeeded.
-    failure_flag: bool,
     /// Syscall specific response fields.
     body: ResponseBody,
 }
