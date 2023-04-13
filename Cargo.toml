@@ -33,9 +33,16 @@ rusty-hook = "0.11"
 coverage-helper = "0.1.0"
 
 [workspace]
-members = ["crates/starknet-rs-py", "crates/starknet-contract-class"]
+members = ["crates/starknet-rs-py", "crates/starknet-contract-class", "fuzzer"]
 
 [[bench]]
 path = "bench/internals.rs"
 name = "internals"
 harness = false
+
+[profile.release.package.fuzzer]
+strip = "debuginfo"
+overflow-checks = true
+opt-level = 3
+debug = true
+debug-assertions = true

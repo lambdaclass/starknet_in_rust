@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 #[macro_use]
 extern crate honggfuzz;
 
@@ -11,8 +13,7 @@ use starknet_rs::{
             objects::{CallInfo, CallType, TransactionExecutionContext},
         },
         fact_state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::cached_state::CachedState,
     },
@@ -27,17 +28,14 @@ use std::{
 };
 
 use std::fs;
-use std::fs::File;
-use std::io::Write;
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
-use tempfile::tempdir_in;
 
 fn main() {
     println!("Starting fuzzer");
     let mut iteration = 0;
-    fs::create_dir("cairo_programs").expect("Failed to create cairo_programs/ directory");
+    fs::create_dir("fuzzer/cairo_programs").expect("Failed to create cairo_programs/ directory");
     loop {
         fuzz!(|data: &[u8]| {
             iteration += 1;
@@ -63,11 +61,11 @@ fn main() {
                 return _counter.read();
             }
             ";
-            let file_name = format!("cairo_programs/output-{}.cairo", iteration);
+            let file_name = format!("cairo_programs/output-{iteration}.cairo");
 
             let file_content = file_content1.to_owned() + &input + file_content2;
 
-            println!("{:?}", file_content);
+            println!("{file_content:?}");
             // ---------------------------------------------------------
             //  Create the .cairo file
             // ---------------------------------------------------------
@@ -79,8 +77,8 @@ fn main() {
             //  Compile the .cairo file to create the .json file
             // ---------------------------------------------------------
 
-            let cairo_file_name = format!("cairo_programs/output-{}.cairo", iteration);
-            let json_file_name = format!("cairo_programs/output-{}.json", iteration);
+            let cairo_file_name = format!("cairo_programs/output-{iteration}.cairo");
+            let json_file_name = format!("cairo_programs/output-{iteration}.json");
 
             let _output = Command::new("starknet-compile")
                 .arg(cairo_file_name.clone())
@@ -102,7 +100,7 @@ fn main() {
                 .unwrap()
                 .get(0)
                 .unwrap()
-                .selector()
+                .selector
                 .clone();
 
             fs::remove_file(cairo_file_name).expect("Failed to remove generated cairo source");
@@ -119,13 +117,12 @@ fn main() {
 
             let address = Address(1111.into());
             let class_hash = [1; 32];
-            let contract_state = ContractState::new(class_hash, 3.into(), HashMap::new());
 
             contract_class_cache.insert(class_hash, contract_class);
-            let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
+            let mut state_reader = InMemoryStateReader::default();
             state_reader
-                .contract_states_mut()
-                .insert(address.clone(), contract_state);
+                .address_to_class_hash_mut()
+                .insert(address.clone(), class_hash);
 
             //* ---------------------------------------
             //*    Create state with previous data
@@ -218,8 +215,8 @@ fn data_to_ascii(data: &[u8]) -> String {
     for i in data_string.chars() {
         if !i.is_ascii() {
             chars.push('X');
-        } else if (i.clone() as u32) < 40 {
-            let num_string = (i.clone() as u32).to_string();
+        } else if (i as u32) < 40 {
+            let num_string = (i as u32).to_string();
             for j in num_string.chars() {
                 chars.push(j);
             }
