@@ -563,6 +563,20 @@ pub(crate) trait SyscallHandler {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
+
+    fn read_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "call_contract" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
+        }
+    }
 }
 
 #[cfg(test)]

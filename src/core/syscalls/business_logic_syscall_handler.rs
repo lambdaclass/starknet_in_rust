@@ -671,11 +671,11 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
     fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
-        _vm: &VirtualMachine,
-        _syscall_ptr: Relocatable,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         self.increment_syscall_count(syscall_name);
-        //let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
+        let _syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
         //self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         //Ok(syscall_request)
