@@ -1,5 +1,7 @@
 use super::{
-    syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
+    syscall_handler::{
+        DeprecatedSyscallHandler, SyscallHandler, SyscallHandlerPostRun, SyscallResponse,
+    },
     syscall_info::get_syscall_size_from_name,
     syscall_request::*,
 };
@@ -29,7 +31,7 @@ use felt::Felt252;
 use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
-pub struct BusinessLogicSyscallHandler;
+pub struct BusinessLogicSyscallHandler<T: State + StateReader>;
 
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
@@ -602,6 +604,20 @@ where
             ));
         }
         self.validate_read_only_segments(runner)
+    }
+}
+
+impl<T> SyscallHandler<T> for BusinessLogicSyscallHandler<T>
+where
+    T: Default + State + StateReader,
+{
+    fn call_contract(
+        &mut self,
+        remaining_gas: Felt252,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallResponse<T>, SyscallHandlerError> {
+        self.call_contract_and_write_response("call_contract", remaining_gas, vm, syscall_ptr)
     }
 }
 

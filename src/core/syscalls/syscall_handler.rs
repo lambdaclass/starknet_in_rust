@@ -34,7 +34,41 @@ use cairo_rs::{
 use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
-pub trait SyscallHandler {}
+pub struct SyscallResponse<Syscall> {
+    syscall_response: Syscall,
+}
+
+pub trait SyscallHandler<Syscall> {
+    fn call_contract(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallResponse<Syscall>, SyscallHandlerError>;
+
+    // Executes the contract call and fills the CallContractResponse struct.
+    fn call_contract_and_write_response(
+        &mut self,
+        syscall_name: &str,
+        remaining_gas: Felt252,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let retdata = self.syscall_call_contract(syscall_name, vm, syscall_ptr)?;
+
+        let retdata_maybe_reloc = retdata
+            .clone()
+            .into_iter()
+            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
+            .collect::<Vec<MaybeRelocatable>>();
+
+        let response = CallContractResponse::new(
+            retdata.len(),
+            self.allocate_segment(vm, retdata_maybe_reloc)?,
+        );
+
+        self.write_syscall_response(&response, vm, syscall_ptr)
+    }
+}
 
 //* ---------------------
 //* DeprecatedSyscallHandler Trait
