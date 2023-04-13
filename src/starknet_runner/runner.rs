@@ -1,7 +1,7 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
     business_logic::transaction::error::TransactionError,
-    core::syscalls::syscall_handler::{
+    core::syscalls::deprecated_syscall_handler::{
         DeprecatedSyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
@@ -232,16 +232,17 @@ mod test {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState, transaction::error::TransactionError,
         },
-        core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler,
+        core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
     };
     use cairo_rs::{
         types::relocatable::{MaybeRelocatable, Relocatable},
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
 
-    type SyscallHintProcessor<'a> = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
-        DeprecatedBLSyscallHandler<'a, CachedState<InMemoryStateReader>>,
-    >;
+    type SyscallHintProcessor<'a> =
+        crate::core::syscalls::deprecated_syscall_handler::SyscallHintProcessor<
+            DeprecatedBLSyscallHandler<'a, CachedState<InMemoryStateReader>>,
+        >;
 
     #[test]
     fn prepare_os_context_test() {
