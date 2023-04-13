@@ -1,7 +1,8 @@
 use super::{
     deprecated_syscall_request::*,
-    syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
+    syscall_handler::{DeprecatedSyscallHandler, SyscallHandler, SyscallHandlerPostRun},
     syscall_info::get_syscall_size_from_name,
+    syscall_response::SyscallResponse,
 };
 use crate::{
     business_logic::{
@@ -14,7 +15,10 @@ use crate::{
         },
         transaction::error::TransactionError,
     },
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    core::{
+        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        syscalls::syscall_request::SyscallRequest,
+    },
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
@@ -597,6 +601,74 @@ where
             ));
         }
         self.validate_read_only_segments(runner)
+    }
+}
+
+impl SyscallHandler for BusinessLogicSyscallHandler {
+    #[allow(irrefutable_let_patterns)]
+    fn call_contract(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+        _remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let request = if let SyscallRequest::CallContract(request) =
+            self.read_and_validate_syscall_request("call_contract", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedCallContractRequest);
+        };
+
+        let _calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
+        /*
+        calldata = self._get_felt_range(
+            start_addr=request.calldata_start, end_addr=request.calldata_end
+        )
+        class_hash: Optional[int] = None
+        if syscall_name == "call_contract":
+            contract_address = cast_to_int(request.contract_address)
+            caller_address = self.entry_point.contract_address
+            call_type = CallType.CALL
+        elif syscall_name == "library_call":
+            contract_address = self.entry_point.contract_address
+            caller_address = self.entry_point.caller_address
+            call_type = CallType.DELEGATE
+            class_hash = cast_to_int(request.class_hash)
+        else:
+            raise NotImplementedError(f"Unsupported call type {syscall_name}.")
+
+        call = self.execute_entry_point_cls(
+            call_type=call_type,
+            contract_address=contract_address,
+            entry_point_selector=cast_to_int(request.selector),
+            entry_point_type=EntryPointType.EXTERNAL,
+            calldata=calldata,
+            caller_address=caller_address,
+            initial_gas=remaining_gas,
+            class_hash=class_hash,
+            code_address=None,
+        )
+
+        return self.execute_entry_point(call=call)
+        */
+        todo!()
+    }
+
+    fn read_and_validate_syscall_request(
+        &mut self,
+        _syscall_name: &str,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        /*
+        self.increment_syscall_count(syscall_name);
+        let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
+
+        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        Ok(syscall_request)
+        */
+        todo!()
     }
 }
 
