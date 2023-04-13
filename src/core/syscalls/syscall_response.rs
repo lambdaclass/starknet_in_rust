@@ -1,9 +1,9 @@
-pub enum ResponseBody {}
+pub(crate) enum ResponseBody {}
 
 #[allow(unused)]
-pub struct SyscallResponse {
+pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
     gas: u64,
     /// Syscall specific response fields.
-    body: ResponseBody,
+    body: Option<ResponseBody>,
 }
