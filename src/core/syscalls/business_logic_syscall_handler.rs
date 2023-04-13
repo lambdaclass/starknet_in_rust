@@ -1,5 +1,5 @@
 use super::{
-    syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
+    syscall_handler::{DeprecatedSyscallHandler, SyscallHandler, SyscallHandlerPostRun},
     syscall_info::get_syscall_size_from_name,
     syscall_request::*,
 };
@@ -33,9 +33,9 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub storage: ContractStorageState<'a, T>,
 }
 
-impl<'a, T: State + StateReader> BusinessLogicSyscallHandler {
+impl<'a, T: State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
     // this should be in the SyscallHandler trait.
-    pub fn storage_read(self: Self, remaining_gas: u32, request: CairoStructProxy) -> () {
+    fn storage_read(self: Self, remaining_gas: u32, request: CairoStructProxy) -> () {
         if request.reserved != 0 {
             panic!("Unsupported address domain: {}.", request.reserved);
         }
@@ -51,8 +51,8 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler {
         ()
     }
 
-    fn _storage_read(self: &Self, key: u32) -> u32 {
-        self.storage.read(key)
+    fn _storage_read(self: &Self, key: Felt252) -> Result<Felt252, StateError> {
+        self.storage.read(&ClassHash::from(key.into())).cloned()
     }
 
     // pub fn storage_read(self: Self, remaining_gas: u32, request: CairoStructProxy) -> SyscallFullResponse:

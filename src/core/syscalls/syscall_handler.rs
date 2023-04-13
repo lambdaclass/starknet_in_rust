@@ -13,7 +13,7 @@ use crate::{
         execution::objects::TxInfoStruct, state::state_api_objects::BlockInfo,
         transaction::error::TransactionError,
     },
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
     utils::Address,
 };
 use cairo_rs::{
@@ -34,7 +34,38 @@ use cairo_rs::{
 use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
-pub trait SyscallHandler {}
+pub trait SyscallHandler {
+    fn storage_read(
+        &mut self,
+        remaining_gas: u32,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Response {
+        let request = if let SyscallRequest::StorageRead(request) =
+            self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        if request.reserved != 0 {
+            panic!("Unsupported address domain: {}.", request.reserved);
+        }
+
+        let value = self._storage_read(request.key);
+
+        let response_header = ResponseHeader {
+            gas: remaining_gas,
+            failure_flag: 0,
+        };
+        let response = StorageReadResponse { value };
+        // Ok((response_header, response))
+        ()
+    }
+
+    fn _storage_read(self: &Self, key: Felt252) -> Result<Felt252, StateError>;
+}
 
 //* ---------------------
 //* DeprecatedSyscallHandler Trait
