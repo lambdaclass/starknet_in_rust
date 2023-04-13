@@ -1,7 +1,8 @@
 use super::{
+    deprecated_syscall_request::*,
     syscall_handler::{DeprecatedSyscallHandler, SyscallHandler, SyscallHandlerPostRun},
-    syscall_info::get_deprecated_syscall_size_from_name,
-    syscall_request::*,
+    syscall_info::{get_deprecated_syscall_size_from_name, get_syscall_size_from_name},
+    syscall_request::SyscallRequest,
 };
 use crate::{
     business_logic::{
@@ -66,7 +67,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        self.expected_syscall_ptr.offset += get_deprecated_syscall_size_from_name(syscall_name);
+        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 
@@ -302,7 +303,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
-            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
+            Ok(DeprecatedSyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
 
@@ -337,7 +338,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        let request = if let SyscallRequest::Deploy(request) =
+        let request = if let DeprecatedSyscallRequest::Deploy(request) =
             self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
             request
@@ -409,7 +410,7 @@ where
         //   The call to `self.read_and_validate_syscall_request()` will always fail in those
         //   cases.
         match request {
-            SyscallRequest::LibraryCall(request) => {
+            DeprecatedSyscallRequest::LibraryCall(request) => {
                 entry_point_type = match syscall_name {
                     "library_call" => EntryPointType::External,
                     "library_call_l1_handler" => EntryPointType::L1Handler,
@@ -426,7 +427,7 @@ where
                 call_type = CallType::Delegate;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
-            SyscallRequest::CallContract(request) => {
+            DeprecatedSyscallRequest::CallContract(request) => {
                 entry_point_type = match syscall_name {
                     "call_contract" => EntryPointType::External,
                     _ => {
@@ -485,7 +486,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
-            SyscallRequest::GetCallerAddress(_) => {}
+            DeprecatedSyscallRequest::GetCallerAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest),
         }
 
@@ -498,7 +499,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
-            SyscallRequest::GetContractAddress(_) => {}
+            DeprecatedSyscallRequest::GetContractAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetContractAddressRequest),
         };
 
@@ -510,7 +511,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::DeprecatedSendMessageToL1(request) =
+        let request = if let DeprecatedSyscallRequest::SendMessageToL1(request) =
             self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
         {
             request
@@ -604,7 +605,7 @@ where
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
@@ -619,7 +620,9 @@ where
     ) -> Result<(), SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)
         {
-            Ok(SyscallRequest::ReplaceClass(replace_class_request)) => replace_class_request,
+            Ok(DeprecatedSyscallRequest::ReplaceClass(replace_class_request)) => {
+                replace_class_request
+            }
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
 

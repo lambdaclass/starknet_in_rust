@@ -75,6 +75,23 @@ pub fn get_integer_range(
         .collect::<Vec<Felt252>>())
 }
 
+pub fn get_felt_range(
+    vm: &VirtualMachine,
+    start_addr: Relocatable,
+    end_addr: Relocatable,
+) -> Result<Vec<Felt252>, SyscallHandlerError> {
+    if start_addr.segment_index != end_addr.segment_index {
+        return Err(SyscallHandlerError::InconsistentSegmentIndices);
+    }
+
+    if start_addr.offset > end_addr.offset {
+        return Err(SyscallHandlerError::StartOffsetGreaterThanEndOffset);
+    }
+
+    let size = end_addr.offset - start_addr.offset;
+    get_integer_range(vm, start_addr, size)
+}
+
 pub fn felt_to_field_element(value: &Felt252) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
         .map_err(|_| SyscallHandlerError::FailToComputeHash)
