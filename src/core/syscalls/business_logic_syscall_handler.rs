@@ -1,5 +1,5 @@
 use super::{
-    syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
+    syscall_handler::{DeprecatedSyscallHandler, SyscallHandler, SyscallHandlerPostRun},
     syscall_info::get_deprecated_syscall_size_from_name,
     syscall_request::*,
 };
@@ -29,7 +29,55 @@ use felt::Felt252;
 use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
-pub struct BusinessLogicSyscallHandler;
+pub struct BusinessLogicSyscallHandler {
+    pub(crate) _tx_execution_context: TransactionExecutionContext,
+    pub(crate) resources_manager: ExecutionResourcesManager,
+    pub(crate) _l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub(crate) expected_syscall_ptr: Relocatable,
+}
+
+impl BusinessLogicSyscallHandler {
+    pub fn new(
+        tx_execution_context: TransactionExecutionContext,
+        resources_manager: ExecutionResourcesManager,
+        syscall_ptr: Relocatable,
+    ) -> Self {
+        BusinessLogicSyscallHandler {
+            _tx_execution_context: tx_execution_context,
+            resources_manager,
+            _l2_to_l1_messages: Vec::new(),
+            expected_syscall_ptr: syscall_ptr,
+        }
+    }
+
+    fn increment_syscall_count(&mut self, syscall_name: &str) {
+        self.resources_manager
+            .increment_syscall_counter(syscall_name, 1);
+    }
+}
+
+impl SyscallHandler for BusinessLogicSyscallHandler {
+    fn read_and_validate_syscall_request(
+        &mut self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        self.increment_syscall_count(syscall_name);
+        let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
+
+        self.expected_syscall_ptr.offset += get_deprecated_syscall_size_from_name(syscall_name);
+        Ok(syscall_request)
+    }
+
+    fn send_message_to_l1(
+        &mut self,
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        todo!()
+    }
+}
 
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
