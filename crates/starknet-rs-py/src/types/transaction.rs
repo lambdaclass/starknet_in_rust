@@ -42,3 +42,20 @@ pub enum PyTransactionType {
     #[pyo3(name = "L1_HANDLER")]
     L1Handler,
 }
+
+// TODO: remove impl when pyo3 adds Enum subclassing
+// https://github.com/PyO3/pyo3/issues/2887
+#[pymethods]
+impl PyTransactionType {
+    #[getter]
+    fn name(&self) -> &str {
+        match self {
+            Self::Declare => "DECLARE",
+            Self::Deploy => "DEPLOY",
+            Self::DeployAccount => "DEPLOY_ACCOUNT",
+            Self::InitializeBlockInfo => "INITIALIZE_BLOCK_INFO",
+            Self::InvokeFunction => "INVOKE_FUNCTION",
+            Self::L1Handler => "L1_HANDLER",
+        }
+    }
+}

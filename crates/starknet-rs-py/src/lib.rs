@@ -15,6 +15,7 @@ use self::{
 };
 use crate::{
     types::{
+        contract_entry_point::PyEntryPointType,
         general_config::build_general_config,
         starknet_message_to_l1::PyStarknetMessageToL1,
         transaction::{PyTransaction, PyTransactionType},
@@ -42,7 +43,6 @@ use starknet_rs::{
         DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT, DEFAULT_GAS_PRICE,
         DEFAULT_SEQUENCER_ADDRESS, DEFAULT_VALIDATE_MAX_N_STEPS, TRANSACTION_VERSION,
     },
-    services::api::contract_class::ContractClass,
 };
 use starknet_state::PyStarknetState;
 use std::ops::Shl;
@@ -81,8 +81,15 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyInternalDeployAccount>()?;
     m.add_class::<PyInternalInvokeFunction>()?;
 
-    //  starkware.starknet.business_logic.transaction.objects
-    // m.add_class::<PyInternalL1Handler>()?;  // isn't implemented
+    m.add_class::<PyEntryPointType>()?;
+
+    // TODO: export from starknet-rs when implemented
+    reexport(
+        py,
+        m,
+        "starkware.starknet.business_logic.transaction.objects",
+        vec!["InternalL1Handler"],
+    )?;
 
     // ~~~~~~~~~~~~~~~~~~~~
     //  Exported Functions
@@ -130,10 +137,8 @@ pub fn starknet_rs_py(py: Python, m: &PyModule) -> PyResult<()> {
     // open_zeppelin's account contract
     m.add(
         "account_contract",
-        PyContractClass {
-            inner: ContractClass::try_from(include_str!("../../../starknet_programs/Account.json"))
-                .expect("program couldn't be parsed"),
-        },
+        PyContractClass::try_from(include_str!("../../../starknet_programs/Account.json"))
+            .expect("program couldn't be parsed"),
     )?;
 
     m.add("LATEST_BLOCK_ID", "latest")?;

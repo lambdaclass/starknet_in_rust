@@ -17,8 +17,7 @@ use starknet_rs::{
 };
 use std::collections::HashMap;
 
-#[pyfunction]
-#[pyo3(name = "calculate_tx_fee")]
+#[pyfunction(name = "calculate_tx_fee")]
 pub(crate) fn py_calculate_tx_fee(
     resources: HashMap<String, usize>,
     gas_price: u64,
@@ -30,8 +29,7 @@ pub(crate) fn py_calculate_tx_fee(
     }
 }
 
-#[pyfunction]
-#[pyo3(name = "compute_class_hash")]
+#[pyfunction(name = "compute_class_hash")]
 pub(crate) fn py_compute_class_hash(contract_class: &PyContractClass) -> PyResult<BigUint> {
     match compute_class_hash(contract_class.into()) {
         Ok(res) => Ok(res.to_biguint()),
@@ -40,8 +38,7 @@ pub(crate) fn py_compute_class_hash(contract_class: &PyContractClass) -> PyResul
 }
 
 // TODO: this may need to accept &impl State
-#[pyfunction]
-#[pyo3(name = "validate_contract_deployed")]
+#[pyfunction(name = "validate_contract_deployed")]
 pub(crate) fn py_validate_contract_deployed(
     state: &mut PyCachedState,
     contract_address: BigUint,
@@ -53,8 +50,7 @@ pub(crate) fn py_validate_contract_deployed(
     }
 }
 
-#[pyfunction]
-#[pyo3(name = "calculate_event_hash")]
+#[pyfunction(name = "calculate_event_hash")]
 pub(crate) fn py_calculate_event_hash(
     from_address: BigUint,
     keys: Vec<BigUint>,
@@ -68,8 +64,7 @@ pub(crate) fn py_calculate_event_hash(
     }
 }
 
-#[pyfunction]
-#[pyo3(name = "calculate_contract_address")]
+#[pyfunction(name = "calculate_contract_address")]
 pub(crate) fn py_calculate_contract_address(
     salt: BigUint,
     contract_class: &PyContractClass,
@@ -86,8 +81,7 @@ pub(crate) fn py_calculate_contract_address(
     }
 }
 
-#[pyfunction]
-#[pyo3(name = "calculate_contract_address_from_hash")]
+#[pyfunction(name = "calculate_contract_address_from_hash")]
 pub(crate) fn py_calculate_contract_address_from_hash(
     salt: BigUint,
     class_hash: BigUint,

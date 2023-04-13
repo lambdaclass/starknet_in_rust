@@ -9,11 +9,11 @@ serde_json = "1.0.94"
 
 [dependencies.cairo-felt]
 git = "https://github.com/lambdaclass/cairo-rs.git"
-rev = "77fe09ebbf72710935b455b1c5ff56b0bad7a4b8"
+rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0"
 
 [dependencies.cairo-vm]
 git = "https://github.com/lambdaclass/cairo-rs.git"
-rev = "77fe09ebbf72710935b455b1c5ff56b0bad7a4b8"
+rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0"
 
 [dependencies.starknet_api]
 git = "https://github.com/lambdaclass/starknet-api"
