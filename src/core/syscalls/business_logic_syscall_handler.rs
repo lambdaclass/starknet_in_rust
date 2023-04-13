@@ -9,15 +9,25 @@ use crate::{
     utils::get_felt_range,
 };
 
-use super::{syscall_handler::SyscallHandler, syscall_response::SyscallResponse};
+use super::{
+    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
+    syscall_response::SyscallResponse,
+};
 
 pub struct BusinessLogicSyscallHandler {
     pub(crate) resources_manager: ExecutionResourcesManager,
+    pub(crate) expected_syscall_ptr: Relocatable,
 }
 
 impl BusinessLogicSyscallHandler {
-    pub fn new(resources_manager: ExecutionResourcesManager) -> Self {
-        Self { resources_manager }
+    pub fn new(
+        resources_manager: ExecutionResourcesManager,
+        expected_syscall_ptr: Relocatable,
+    ) -> Self {
+        Self {
+            resources_manager,
+            expected_syscall_ptr,
+        }
     }
 
     fn increment_syscall_count(&mut self, syscall_name: &str) {
@@ -86,7 +96,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        //self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 }
