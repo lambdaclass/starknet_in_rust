@@ -2,13 +2,21 @@ use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 use crate::{
     business_logic::{
-        execution::{execution_entry_point::ExecutionEntryPoint, objects::CallType},
+        execution::{
+            execution_entry_point::ExecutionEntryPoint,
+            objects::{CallType, TransactionExecutionContext},
+        },
         fact_state::state::ExecutionResourcesManager,
+        state::{
+            contract_storage_state::ContractStorageState,
+            state_api::{State, StateReader},
+        },
     },
     core::{
         errors::syscall_handler_errors::SyscallHandlerError,
         syscalls::syscall_request::SyscallRequest,
     },
+    definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
     utils::{get_felt_range, Address},
 };
@@ -18,22 +26,33 @@ use super::{
     syscall_response::SyscallResponse,
 };
 
-pub struct BusinessLogicSyscallHandler {
+pub struct BusinessLogicSyscallHandler<'a, T: Default + State + StateReader> {
+    pub(crate) tx_execution_context: TransactionExecutionContext,
     pub(crate) resources_manager: ExecutionResourcesManager,
     pub(crate) expected_syscall_ptr: Relocatable,
     pub(crate) caller_address: Address,
+    pub(crate) general_config: StarknetGeneralConfig,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
 }
 
-impl BusinessLogicSyscallHandler {
+impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new(
+        tx_execution_context: TransactionExecutionContext,
+        state: &'a mut T,
+        contract_address: Address,
         resources_manager: ExecutionResourcesManager,
         expected_syscall_ptr: Relocatable,
         caller_address: Address,
+        general_config: StarknetGeneralConfig,
     ) -> Self {
+        let starknet_storage_state = ContractStorageState::new(state, contract_address);
         Self {
+            tx_execution_context,
             resources_manager,
             expected_syscall_ptr,
             caller_address,
+            general_config,
+            starknet_storage_state,
         }
     }
 
@@ -43,7 +62,7 @@ impl BusinessLogicSyscallHandler {
     }
 }
 
-impl SyscallHandler for BusinessLogicSyscallHandler {
+impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
     #[allow(irrefutable_let_patterns)]
     fn call_contract(
         &mut self,
@@ -64,7 +83,7 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
         let caller_address = &self.caller_address;
         let call_type = Some(CallType::Call);
 
-        let _call = ExecutionEntryPoint::new(
+        let call = ExecutionEntryPoint::new(
             contract_address,
             calldata,
             request.selector,
@@ -74,37 +93,15 @@ impl SyscallHandler for BusinessLogicSyscallHandler {
             None,
         );
 
-        /*
-        calldata = self._get_felt_range(
-            start_addr=request.calldata_start, end_addr=request.calldata_end
-        )
-        class_hash: Optional[int] = None
-        if syscall_name == "call_contract":
-            contract_address = cast_to_int(request.contract_address)
-            caller_address = self.entry_point.contract_address
-            call_type = CallType.CALL
-        elif syscall_name == "library_call":
-            contract_address = self.entry_point.contract_address
-            caller_address = self.entry_point.caller_address
-            call_type = CallType.DELEGATE
-            class_hash = cast_to_int(request.class_hash)
-        else:
-            raise NotImplementedError(f"Unsupported call type {syscall_name}.")
+        let _callinfo = call
+            .execute(
+                self.starknet_storage_state.state,
+                &self.general_config,
+                &mut self.resources_manager,
+                &self.tx_execution_context,
+            )
+            .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
-        call = self.execute_entry_point_cls(
-            call_type=call_type,
-            contract_address=contract_address,
-            entry_point_selector=cast_to_int(request.selector),
-            entry_point_type=EntryPointType.EXTERNAL,
-            calldata=calldata,
-            caller_address=caller_address,
-            initial_gas=remaining_gas,
-            class_hash=class_hash,
-            code_address=None,
-        )
-
-        return self.execute_entry_point(call=call)
-        */
         todo!()
     }
 
