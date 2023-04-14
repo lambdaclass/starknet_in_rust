@@ -3,7 +3,7 @@ use felt::Felt252;
 
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
-    utils::{get_big_int, get_relocatable},
+    utils::{get_big_int, get_integer, get_relocatable},
 };
 
 // TODO: maybe we could make FromPtr trait more general, making
@@ -50,7 +50,7 @@ pub(crate) struct DeployRequest {
     pub(crate) calldata_start: Relocatable,
     pub(crate) calldata_end: Relocatable,
     // Used for deterministic contract address deployment.
-    pub(crate) deploy_from_zero: Felt252,
+    pub(crate) deploy_from_zero: usize,
 }
 
 impl FromPtr for DeployRequest {
@@ -63,7 +63,7 @@ impl FromPtr for DeployRequest {
         let salt = get_big_int(vm, (syscall_ptr + 1)?)?;
         let calldata_start = get_relocatable(vm, (syscall_ptr + 2)?)?;
         let calldata_end = get_relocatable(vm, (syscall_ptr + 3)?)?;
-        let deploy_from_zero = get_big_int(vm, (syscall_ptr + 4)?)?;
+        let deploy_from_zero = get_integer(vm, (syscall_ptr + 4)?)?;
 
         Ok(SyscallRequest::Deploy(DeployRequest {
             class_hash,
