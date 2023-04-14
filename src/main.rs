@@ -168,7 +168,7 @@ fn invoke_parser(
         Felt252::from_str_radix(&args.address[2..], 16)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
-    let class_hash = *cached_state.get_class_hash_at(&contract_address)?;
+    let class_hash = cached_state.get_class_hash_at(&contract_address)?;
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
 
@@ -222,7 +222,7 @@ fn call_parser(
         Felt252::from_str_radix(&args.address[2..], 16)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
-    let class_hash = *cached_state.get_class_hash_at(&contract_address)?;
+    let class_hash = cached_state.get_class_hash_at(&contract_address)?;
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let entry_points_by_type = contract_class.entry_points_by_type();

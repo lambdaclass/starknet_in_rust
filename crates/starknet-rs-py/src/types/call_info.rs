@@ -11,7 +11,7 @@ use starknet_rs::{
 };
 
 #[pyclass(name = "CallInfo")]
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PyCallInfo {
     inner: CallInfo,
 }
@@ -121,5 +121,11 @@ impl PyCallInfo {
 impl From<CallInfo> for PyCallInfo {
     fn from(inner: CallInfo) -> Self {
         Self { inner }
+    }
+}
+
+impl From<PyCallInfo> for CallInfo {
+    fn from(py_value: PyCallInfo) -> Self {
+        py_value.inner
     }
 }

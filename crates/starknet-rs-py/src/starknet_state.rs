@@ -1,4 +1,5 @@
 use crate::cached_state::PyCachedState;
+use crate::types::block_info::PyBlockInfo;
 use crate::types::{
     call_info::PyCallInfo, contract_class::PyContractClass,
     general_config::PyStarknetGeneralConfig, transaction::PyTransaction,
@@ -7,7 +8,7 @@ use crate::types::{
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
-use starknet_rs::business_logic::state::state_api::State;
+use starknet_rs::business_logic::state::state_api::{State, StateReader};
 use starknet_rs::testing::starknet_state::StarknetState as InnerStarknetState;
 use starknet_rs::utils::{Address, ClassHash};
 
@@ -173,6 +174,29 @@ impl PyStarknetState {
     #[getter]
     pub fn general_config(&self) -> PyStarknetGeneralConfig {
         self.inner.general_config.clone().into()
+    }
+
+    pub fn get_class_hash_at(&mut self, address: BigUint) -> PyResult<ClassHash> {
+        self.inner
+            .state
+            .get_class_hash_at(&Address(Felt252::from(address)))
+            .cloned()
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))
+    }
+
+    pub fn clone(&self) -> Self {
+        let inner = self.inner.clone();
+        Self { inner }
+    }
+
+    #[getter("block_info")]
+    pub fn get_block_info(&self) -> PyBlockInfo {
+        self.inner.general_config.block_info().clone().into()
+    }
+
+    #[setter("block_info")]
+    pub fn set_block_info(&mut self, block_info: PyBlockInfo) {
+        *self.inner.general_config.block_info_mut() = block_info.into();
     }
 }
 

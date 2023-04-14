@@ -37,7 +37,7 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
     pub general_config: StarknetGeneralConfig,
@@ -279,7 +279,7 @@ impl StarknetState {
 
         let nonce = match nonce {
             Some(n) => n,
-            None => self.state.get_nonce_at(&contract_address)?.to_owned(),
+            None => self.state.get_nonce_at(&contract_address)?,
         };
 
         InternalInvokeFunction::new(
