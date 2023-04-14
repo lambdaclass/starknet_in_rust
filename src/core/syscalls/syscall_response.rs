@@ -1,9 +1,13 @@
-pub(crate) enum ResponseBody {}
+use felt::Felt252;
+
+pub(crate) enum ResponseBody {
+    StorageReadResponse { value: Option<Felt252> },
+}
 
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
-    gas: u64,
+    pub(crate) gas: u64,
     /// Syscall specific response fields.
-    body: Option<ResponseBody>,
+    pub(crate) body: Option<ResponseBody>,
 }
