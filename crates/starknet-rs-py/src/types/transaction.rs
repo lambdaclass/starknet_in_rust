@@ -1,6 +1,9 @@
 use num_bigint::BigUint;
 use pyo3::prelude::*;
-use starknet_rs::{business_logic::transaction::transactions::Transaction, utils::ClassHash};
+use starknet_rs::{
+    business_logic::transaction::transactions::Transaction,
+    definitions::transaction_type::TransactionType, utils::ClassHash,
+};
 
 #[pyclass(name = "Transaction")]
 pub struct PyTransaction {
@@ -56,6 +59,19 @@ impl PyTransactionType {
             Self::InitializeBlockInfo => "INITIALIZE_BLOCK_INFO",
             Self::InvokeFunction => "INVOKE_FUNCTION",
             Self::L1Handler => "L1_HANDLER",
+        }
+    }
+}
+
+impl From<PyTransactionType> for TransactionType {
+    fn from(py_tx_type: PyTransactionType) -> Self {
+        match py_tx_type {
+            PyTransactionType::Declare => Self::Declare,
+            PyTransactionType::Deploy => Self::Deploy,
+            PyTransactionType::DeployAccount => Self::DeployAccount,
+            PyTransactionType::InitializeBlockInfo => Self::InitializeBlockInfo,
+            PyTransactionType::InvokeFunction => Self::InvokeFunction,
+            PyTransactionType::L1Handler => Self::L1Handler,
         }
     }
 }

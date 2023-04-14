@@ -1,16 +1,36 @@
-use super::call_info::PyCallInfo;
-use pyo3::prelude::*;
+use super::{call_info::PyCallInfo, transaction::PyTransactionType};
+use pyo3::{exceptions::PyValueError, prelude::*};
 use starknet_rs::business_logic::execution::objects::TransactionExecutionInfo;
 use std::collections::HashMap;
 
 #[pyclass(name = "TransactionExecutionInfo")]
-#[derive(Debug)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PyTransactionExecutionInfo {
     inner: TransactionExecutionInfo,
 }
 
 #[pymethods]
 impl PyTransactionExecutionInfo {
+    #[new]
+    fn new(
+        actual_fee: u64,
+        actual_resources: HashMap<String, usize>,
+        validate_info: Option<PyCallInfo>,
+        call_info: Option<PyCallInfo>,
+        fee_transfer_info: Option<PyCallInfo>,
+        tx_type: Option<PyTransactionType>,
+    ) -> Self {
+        let inner = TransactionExecutionInfo::new(
+            validate_info.map(Into::into),
+            call_info.map(Into::into),
+            fee_transfer_info.map(Into::into),
+            actual_fee,
+            actual_resources,
+            tx_type.map(Into::into),
+        );
+        Self { inner }
+    }
+
     #[getter]
     fn validate_info(&self) -> Option<PyCallInfo> {
         self.inner.validate_info.clone().map(Into::into)
@@ -39,6 +59,14 @@ impl PyTransactionExecutionInfo {
     #[getter]
     fn transaction_type(&self) -> Option<u64> {
         Some(self.inner.tx_type?.into())
+    }
+
+    fn get_sorted_events(&self) -> PyResult<Vec<u64>> {
+        match self.inner.get_sorted_events() {
+            // TODO: we should return Vec<PyEvent>, but we didn't implement PyEvent
+            Ok(_res) => Ok(vec![]),
+            Err(err) => Err(PyValueError::new_err(err.to_string())),
+        }
     }
 }
 

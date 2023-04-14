@@ -34,6 +34,7 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
+#[derive(Clone)]
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
     pub general_config: StarknetGeneralConfig,
