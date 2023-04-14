@@ -1,5 +1,6 @@
 use felt::Felt252;
 
+#[allow(dead_code)]
 pub(crate) enum ResponseBody {
     StorageReadResponse { value: Option<Felt252> },
 }

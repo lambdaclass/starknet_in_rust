@@ -10,7 +10,7 @@ use crate::{
         },
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    utils::{Address, ClassHash},
+    utils::Address,
 };
 
 use super::{
@@ -48,7 +48,7 @@ where
     T: Default + State + StateReader,
 {
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.storage.read(&ClassHash::from(key)).cloned()
+        self.storage.read(&key).cloned()
     }
 
     fn read_and_validate_syscall_request(
