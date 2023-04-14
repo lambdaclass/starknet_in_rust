@@ -180,7 +180,6 @@ impl PyStarknetState {
         self.inner
             .state
             .get_class_hash_at(&Address(Felt252::from(address)))
-            .cloned()
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 
