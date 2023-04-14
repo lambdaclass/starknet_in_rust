@@ -41,9 +41,9 @@ use std::collections::HashMap;
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
     pub general_config: StarknetGeneralConfig,
-    pub l2_to_l1_messages: HashMap<Vec<u8>, usize>,
-    pub l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
-    pub events: Vec<Event>,
+    l2_to_l1_messages: HashMap<Vec<u8>, usize>,
+    l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
+    events: Vec<Event>,
 }
 
 impl StarknetState {
@@ -53,6 +53,24 @@ impl StarknetState {
 
         let state = CachedState::new(state_reader, Some(HashMap::new()));
 
+        let l2_to_l1_messages = HashMap::new();
+        let l2_to_l1_messages_log = Vec::new();
+
+        let events = Vec::new();
+        StarknetState {
+            state,
+            general_config,
+            l2_to_l1_messages,
+            l2_to_l1_messages_log,
+            events,
+        }
+    }
+
+    pub fn new_with_states(
+        config: Option<StarknetGeneralConfig>,
+        state: CachedState<InMemoryStateReader>,
+    ) -> Self {
+        let general_config = config.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 

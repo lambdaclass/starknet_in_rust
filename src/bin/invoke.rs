@@ -42,10 +42,7 @@ fn main() {
     const RUNS: usize = 10000;
     let cached_state = create_initial_state();
 
-    let mut starknet_state = StarknetState {
-        state: cached_state,
-        ..Default::default()
-    };
+    let mut starknet_state = StarknetState::new_with_states(Default::default(), cached_state);
 
     starknet_state
         .state
