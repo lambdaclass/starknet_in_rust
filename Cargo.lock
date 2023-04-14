@@ -2345,6 +2345,7 @@ dependencies = [
  "getset",
  "hex",
  "lazy_static",
+ "mimalloc",
  "num-bigint",
  "num-integer",
  "num-traits",

@@ -89,3 +89,10 @@ heaptrack:
 
 flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals
+
+benchmark: compile-cairo compile-starknet
+	cargo build --release --all-targets
+	./scripts/bench-invoke.sh
+	./scripts/bench-deploy-invoke.sh
+	./scripts/bench-fibonacci.sh
+	./scripts/bench-deploy.sh

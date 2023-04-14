@@ -12,12 +12,21 @@ use cairo_rs::{
     },
 };
 use felt::Felt252;
+use lazy_static::lazy_static;
 use sha3::{Digest, Keccak256};
 use std::{collections::HashMap, path::Path};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
+pub const CONTRACT_STR: &str = include_str!("../../../cairo_programs/contracts.json");
 
+lazy_static! {
+    // static ref PATH_BUF_CONTRACTS = BufReader::from(CONTRACT_STR);
+    static ref HASH_CALCULATION_PROGRAM: Program =
+        Program::from_bytes(CONTRACT_STR.as_bytes(), None).unwrap();
+}
+
+#[allow(dead_code)]
 fn load_program() -> Result<Program, ContractAddressError> {
     Ok(Program::from_file(
         Path::new("cairo_programs/contracts.json"),
@@ -163,12 +172,12 @@ impl From<StructContractClass> for CairoArg {
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
 pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
-    let program = load_program()?;
+    let hash_calculation_program = HASH_CALCULATION_PROGRAM.clone();
     let contract_class_struct =
-        &get_contract_class_struct(&program.identifiers, contract_class)?.into();
+        &get_contract_class_struct(&hash_calculation_program.identifiers, contract_class)?.into();
 
     let mut vm = VirtualMachine::new(false);
-    let mut runner = CairoRunner::new(&program, "all", false)?;
+    let mut runner = CairoRunner::new(&hash_calculation_program, "all", false)?;
     runner.initialize_function_runner(&mut vm)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 

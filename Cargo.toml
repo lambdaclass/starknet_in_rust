@@ -3,6 +3,10 @@ name = "starknet-rs"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["with_mimalloc"]
+with_mimalloc = ["mimalloc"]
+
 [dependencies]
 cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
 felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
@@ -22,6 +26,7 @@ thiserror = "1.0.32"
 clap = { version = "4.1.8", features = ["derive"] }
 actix-web = "4.3.1"
 awc = "3.1.1"
+mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 
