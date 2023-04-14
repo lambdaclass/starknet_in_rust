@@ -89,8 +89,6 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     general_config: &StarknetGeneralConfig,
     cairo_resource_usage: &HashMap<String, usize>,
 ) -> Result<f64, TransactionError> {
-    // Ensure that every key in `general_config.cairo_resource_fee_weights` is present in
-    // `cairo_resource_usage`.
     if !cairo_resource_usage
         .keys()
         .all(|k| k == "l1_gas_usage" || general_config.cairo_resource_fee_weights.contains_key(k))
