@@ -212,7 +212,7 @@ impl StarknetState {
     pub fn add_messages_and_events(
         &mut self,
         events: &[Event],
-        l2_to_l1_messages: &Vec<L2toL1MessageInfo>,
+        l2_to_l1_messages: &[L2toL1MessageInfo],
     ) -> Result<(), StarknetStateError> {
         for msg in l2_to_l1_messages {
             let starknet_message = StarknetMessageToL1::new(
