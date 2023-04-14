@@ -283,7 +283,7 @@ impl InternalInvokeFunction {
                 Ok(())
             }
             Some(nonce) => {
-                if nonce != current_nonce {
+                if *nonce != current_nonce {
                     return Err(TransactionError::InvalidTransactionNonce(
                         current_nonce.to_string(),
                         nonce.to_string(),

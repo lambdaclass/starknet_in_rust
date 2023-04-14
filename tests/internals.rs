@@ -462,7 +462,7 @@ fn validate_final_balances<S>(
             *erc20_account_balance_storage_key,
         ))
         .unwrap();
-    assert_eq!(account_balance, &Felt252::zero());
+    assert_eq!(account_balance, Felt252::zero());
 
     let sequencer_balance = state
         .get_storage_at(&(
@@ -473,7 +473,7 @@ fn validate_final_balances<S>(
             TEST_ERC20_SEQUENCER_BALANCE_KEY.to_be_bytes(),
         ))
         .unwrap();
-    assert_eq!(sequencer_balance, expected_sequencer_balance);
+    assert_eq!(sequencer_balance, *expected_sequencer_balance);
 }
 
 #[test]
@@ -491,10 +491,10 @@ fn test_create_account_tx_test_state() {
             TEST_ERC20_ACCOUNT_BALANCE_KEY.to_be_bytes(),
         ))
         .unwrap();
-    assert_eq!(value, &*ACTUAL_FEE);
+    assert_eq!(value, *ACTUAL_FEE);
 
     let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
-    assert_eq!(class_hash, &TEST_CLASS_HASH.to_be_bytes());
+    assert_eq!(class_hash, TEST_CLASS_HASH.to_be_bytes());
 
     let contract_class = state
         .get_contract_class(&TEST_ERC20_CONTRACT_CLASS_HASH.to_be_bytes())
@@ -898,7 +898,7 @@ fn test_deploy_account() {
     let nonce_from_state = state
         .get_nonce_at(deploy_account_tx.contract_address())
         .unwrap();
-    assert_eq!(nonce_from_state, &Felt252::one());
+    assert_eq!(nonce_from_state, Felt252::one());
 
     let hash = &TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
@@ -907,7 +907,7 @@ fn test_deploy_account() {
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
         .unwrap();
-    assert_eq!(class_hash_from_state, deploy_account_tx.class_hash());
+    assert_eq!(class_hash_from_state, *deploy_account_tx.class_hash());
 }
 
 fn expected_deploy_account_states() -> (
@@ -1088,16 +1088,10 @@ fn test_state_for_declare_tx() {
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    assert_eq!(
-        state.get_nonce_at(&declare_tx.sender_address),
-        Ok(&0.into())
-    );
+    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(0.into()));
     // Execute declare_tx
     assert!(declare_tx.execute(&mut state, &general_config).is_ok());
-    assert_eq!(
-        state.get_nonce_at(&declare_tx.sender_address),
-        Ok(&1.into())
-    );
+    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(1.into()));
 
     // Check state.state_reader
     let mut state_reader = state.state_reader().clone();

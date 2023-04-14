@@ -251,7 +251,7 @@ impl StarknetState {
 
         let nonce = match nonce {
             Some(n) => n,
-            None => self.state.get_nonce_at(&contract_address)?.to_owned(),
+            None => self.state.get_nonce_at(&contract_address)?,
         };
 
         InternalInvokeFunction::new(
