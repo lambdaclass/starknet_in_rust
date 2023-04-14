@@ -176,8 +176,6 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 // NOTE: this is needed to avoid circular dependencies because of the monkeypatch.
 #[pyfunction(name = "init")]
 pub fn add_reexports(py: Python, opt_m: Option<&PyModule>) -> PyResult<()> {
-    eprintln!("DEBUG: initializing exports");
-
     // It's Option<_> to avoid having to pass the module in Python
     let m = match opt_m {
         Some(module) => module,
