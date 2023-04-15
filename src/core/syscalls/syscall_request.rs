@@ -34,6 +34,12 @@ pub(crate) trait FromPtr {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
+impl From<SendMessageToL1SysCall> for SyscallRequest {
+    fn from(syscall: SendMessageToL1SysCall) -> Self {
+        SyscallRequest::SendMessageToL1(syscall)
+    }
+}
+
 impl FromPtr for SendMessageToL1SysCall {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -43,19 +49,11 @@ impl FromPtr for SendMessageToL1SysCall {
         let payload_start = get_relocatable(vm, &syscall_ptr + 1)?;
         let payload_end = get_relocatable(vm, &syscall_ptr + 2)?;
 
-        Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+        Ok(SendMessageToL1SysCall {
             to_address,
             payload_start,
             payload_end,
-        }))
+        }
+        .into())
     }
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//  CountFields implementations
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-pub(crate) trait CountFields {
-    /// Returns the amount of fields of a struct
-    fn count_fields() -> usize;
 }

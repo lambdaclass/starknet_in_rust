@@ -2,14 +2,18 @@ use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
 
-use super::syscall_request::{FromPtr, SendMessageToL1SysCall, SyscallRequest};
+use super::{
+    syscall_request::{FromPtr, SendMessageToL1SysCall, SyscallRequest},
+    syscall_response::SyscallResponse,
+};
 
 pub(crate) trait SyscallHandler {
     fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
 
     fn read_and_validate_syscall_request(
         &mut self,
