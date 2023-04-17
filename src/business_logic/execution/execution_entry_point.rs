@@ -98,6 +98,23 @@ impl ExecutionEntryPoint {
         )
     }
 
+    /// Executes the selected entry point with the given calldata in the specified contract.
+    /// The information collected from this run (number of steps required, modifications to the
+    /// contract storage, etc.) is saved on the resources manager.
+    /// Returns a CallInfo object that represents the execution.
+
+    pub fn execute_v2<S>(
+        &self,
+        _state: &mut S,
+        _general_config: &mut StarknetGeneralConfig,
+        _support_reverted: bool,
+    ) -> Result<CallInfo, TransactionError>
+    where
+        S: Default + State + StateReader,
+    {
+        todo!()
+    }
+
     /// Runs the selected entry point with the given calldata in the code of the contract deployed
     /// at self.code_address.
     /// The execution is done in the context (e.g., storage) of the contract at

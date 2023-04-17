@@ -42,6 +42,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) entry_point: ExecutionEntryPoint,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
+    pub(crate) support_reverted: bool,
 }
 
 impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
@@ -84,7 +85,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             return Ok(call_info.result());
         }
 
-        // return a struct with other data
         let call = ExecutionEntryPoint::new(
             contract_address.clone(),
             constructor_calldata,
@@ -96,12 +96,12 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             remainig_gas,
         );
 
+        // TODO: implement this function and logic once execution entry point is unlocked
         let call_info = call
-            .execute(
+            .execute_v2(
                 self.starknet_storage_state.state,
-                &self.general_config,
-                &mut self.resources_manager,
-                &self.tx_execution_context,
+                &mut self.general_config,
+                self.support_reverted,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
