@@ -26,5 +26,7 @@ pub struct DeployResponse {
 pub struct FailureReason {
     pub retdata_start: Relocatable,
     pub retdata_end: Relocatable,
-    //body: Option<ResponseBody>,
+    // Syscall specific response fields.
+    // TODO: this cause circular dependency
+    //pub(crate) body: Option<ResponseBody>,
 }
