@@ -4,7 +4,7 @@ use felt::Felt252;
 pub enum ResponseBody {
     Deploy(DeployResponse),
     Failure(FailureReason),
-
+}
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
@@ -26,5 +26,5 @@ pub struct DeployResponse {
 pub struct FailureReason {
     pub retdata_start: Relocatable,
     pub retdata_end: Relocatable,
-    body: Option<ResponseBody>,
+    //body: Option<ResponseBody>,
 }

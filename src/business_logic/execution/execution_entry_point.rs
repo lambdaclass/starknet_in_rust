@@ -38,7 +38,7 @@ pub struct ExecutionEntryPoint {
     #[allow(unused)]
     initial_gas: u64,
 }
-
+#[allow(clippy::too_many_arguments)]
 impl ExecutionEntryPoint {
     pub fn new(
         contract_address: Address,
