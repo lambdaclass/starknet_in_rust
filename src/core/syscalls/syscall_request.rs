@@ -1,22 +1,22 @@
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
-
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable},
 };
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::Felt252;
 
 // TODO: maybe we could make FromPtr trait more general, making
 //   it "move" the pointer received like they do in cairo-lang
-/// The size of the RequestHeader in VM memory
-/// ```
-/// struct RequestHeader {
-///     // The syscall selector.
-///     selector: Felt252,
-///     // The amount of gas left before the syscall execution.
-///     gas: Felt252,
-/// }
-/// ```
+// The size of the RequestHeader in VM memory
+// ```
+// struct RequestHeader {
+//     // The syscall selector.
+//     selector: Felt252,
+//     // The amount of gas left before the syscall execution.
+//     gas: Felt252,
+// }
+// ```
+
 const HEADER_OFFSET: usize = 2;
 
 #[allow(unused)]

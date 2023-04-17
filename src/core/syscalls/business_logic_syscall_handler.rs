@@ -18,7 +18,9 @@ use crate::{
         },
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+    },
     hash_utils::calculate_contract_address,
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
     utils::{felt_to_hash, get_felt_range, Address, ClassHash},
@@ -37,6 +39,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) internal_calls: Vec<CallInfo>,
+    pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) entry_point: ExecutionEntryPoint,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
 }
@@ -55,7 +58,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u64,
-    ) -> Result<(), StateError> {
+    ) -> Result<CallResult, StateError> {
         let contract_class = self
             .starknet_storage_state
             .state
@@ -76,10 +79,9 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 self.entry_point.contract_address.clone(),
                 Some(class_hash_bytes),
             );
-            self.internal_calls.push(call_info);
+            self.internal_calls.push(call_info.clone());
 
-            // should return call result
-            return Ok(());
+            return Ok(call_info.result());
         }
 
         // return a struct with other data
@@ -91,9 +93,10 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
+            remainig_gas,
         );
 
-        let _call_info = call
+        let call_info = call
             .execute(
                 self.starknet_storage_state.state,
                 &self.general_config,
@@ -102,11 +105,13 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
-        todo!()
+        self.internal_calls.push(call_info.clone());
+
+        Ok(call_info.result())
     }
 }
 
-impl<'a, T: State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
     fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
@@ -125,6 +130,7 @@ impl<'a, T: State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<
         &mut self,
         vm: &VirtualMachine,
         syscall_request: SyscallRequest,
+        remaining_gas: u64,
     ) -> Result<(Address, CallResult), SyscallHandlerError> {
         let SyscallRequest::Deploy(request) = syscall_request;
 
@@ -159,19 +165,20 @@ impl<'a, T: State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<
             .state
             .deploy_contract(contract_address.clone(), class_hash_bytes)?;
 
-        self.execute_constructor_entry_point(
+        let result = self.execute_constructor_entry_point(
             &contract_address,
             class_hash_bytes,
             constructor_calldata,
+            remaining_gas,
         )?;
-        Ok(contract_address);
-        todo!();
+
+        Ok((contract_address, result))
     }
 
     fn allocate_segment(
         &mut self,
-        vm: &mut VirtualMachine,
-        data: Vec<cairo_rs::types::relocatable::MaybeRelocatable>,
+        _vm: &mut VirtualMachine,
+        _data: Vec<cairo_rs::types::relocatable::MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         todo!()
     }

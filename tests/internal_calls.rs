@@ -63,6 +63,7 @@ fn test_internal_calls() {
         EntryPointType::External,
         CallType::Delegate.into(),
         Some([0x01; 32]),
+        0,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

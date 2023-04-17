@@ -16,6 +16,7 @@ pub(crate) trait SyscallHandler {
         &mut self,
         vm: &VirtualMachine,
         syscall_request: SyscallRequest,
+        remaining_gas: u64,
     ) -> Result<(Address, CallResult), SyscallHandlerError>;
 
     fn deploy(
@@ -25,7 +26,7 @@ pub(crate) trait SyscallHandler {
         syscall_request: SyscallRequest,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let (contract_address, result) = self.syscall_deploy(vm, syscall_request)?;
+        let (contract_address, result) = self.syscall_deploy(vm, syscall_request, remaining_gas)?;
 
         remaining_gas -= result.gas_consumed;
 

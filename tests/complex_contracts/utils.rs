@@ -90,6 +90,7 @@ pub fn get_entry_points(
             *entry_point_type,
             Some(CallType::Delegate),
             Some(*class_hash),
+            0,
         ),
         entrypoint_selector,
     )

@@ -127,6 +127,7 @@ impl StarknetState {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let mut state_copy = self.state.apply_to_copy();

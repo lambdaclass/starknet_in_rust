@@ -44,6 +44,8 @@ pub struct CallInfo {
     pub storage_read_values: Vec<Felt252>,
     pub accessed_storage_keys: HashSet<ClassHash>,
     pub internal_calls: Vec<CallInfo>,
+    pub gas_consumed: u64,
+    pub failure_flag: bool,
 }
 
 impl CallInfo {
@@ -76,6 +78,8 @@ impl CallInfo {
             storage_read_values: Vec::new(),
             accessed_storage_keys: HashSet::new(),
             internal_calls: Vec::new(),
+            gas_consumed: 0,
+            failure_flag: false,
         }
     }
 
@@ -184,6 +188,14 @@ impl CallInfo {
                 .collect()
         })
     }
+
+    pub fn result(&self) -> CallResult {
+        CallResult {
+            gas_consumed: self.gas_consumed,
+            is_success: self.failure_flag,
+            retdata: self.retdata.iter().map(|f| f.into()).collect(),
+        }
+    }
 }
 
 impl Default for CallInfo {
@@ -208,6 +220,8 @@ impl Default for CallInfo {
                 builtin_instance_counter: HashMap::new(),
             },
             events: Vec::new(),
+            gas_consumed: 0,
+            failure_flag: false,
         }
     }
 }

@@ -239,6 +239,7 @@ fn call_parser(
         *entry_point_type,
         None,
         None,
+        0,
     );
     let call_info = execution_entry_point.execute(
         cached_state,

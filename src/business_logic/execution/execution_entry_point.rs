@@ -23,6 +23,8 @@ use cairo_rs::{
 use felt::Felt252;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
+
+// initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
 #[derive(Debug)]
 pub struct ExecutionEntryPoint {
     call_type: CallType,
@@ -33,6 +35,8 @@ pub struct ExecutionEntryPoint {
     caller_address: Address,
     entry_point_selector: Felt252,
     entry_point_type: EntryPointType,
+    #[allow(unused)]
+    initial_gas: u64,
 }
 
 impl ExecutionEntryPoint {
@@ -44,6 +48,7 @@ impl ExecutionEntryPoint {
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
         class_hash: Option<[u8; 32]>,
+        initial_gas: u64,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
@@ -54,6 +59,7 @@ impl ExecutionEntryPoint {
             caller_address,
             entry_point_selector,
             entry_point_type,
+            initial_gas,
         }
     }
 
@@ -248,6 +254,8 @@ impl ExecutionEntryPoint {
             storage_read_values: syscall_handler.starknet_storage_state.read_values,
             accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
             internal_calls: syscall_handler.internal_calls,
+            failure_flag: false,
+            gas_consumed: 0,
         })
     }
 
