@@ -91,8 +91,8 @@ fn amm_proxy_init_pool_test() {
         execution_resources: ExecutionResources {
             n_memory_holes: 20,
             builtin_instance_counter: HashMap::from([
-                ("pedersen".to_string(), 2),
-                ("range_check".to_string(), 14),
+                ("pedersen_builtin".to_string(), 2),
+                ("range_check_builtin".to_string(), 14),
             ]),
             ..Default::default()
         },
@@ -186,8 +186,8 @@ fn amm_proxy_get_pool_token_balance_test() {
         execution_resources: ExecutionResources {
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
-                ("pedersen".to_string(), 1),
-                ("range_check".to_string(), 3),
+                ("pedersen_builtin".to_string(), 1),
+                ("range_check_builtin".to_string(), 3),
             ]),
             ..Default::default()
         },
@@ -287,8 +287,8 @@ fn amm_proxy_add_demo_token_test() {
         execution_resources: ExecutionResources {
             n_memory_holes: 42,
             builtin_instance_counter: HashMap::from([
-                ("pedersen".to_string(), 8),
-                ("range_check".to_string(), 20),
+                ("pedersen_builtin".to_string(), 8),
+                ("range_check_builtin".to_string(), 20),
             ]),
             ..Default::default()
         },
@@ -401,8 +401,8 @@ fn amm_proxy_get_account_token_balance() {
         execution_resources: ExecutionResources {
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
-                ("pedersen".to_string(), 2),
-                ("range_check".to_string(), 3),
+                ("pedersen_builtin".to_string(), 2),
+                ("range_check_builtin".to_string(), 3),
             ]),
             ..Default::default()
         },
@@ -522,8 +522,8 @@ fn amm_proxy_swap() {
         execution_resources: ExecutionResources {
             n_memory_holes: 93,
             builtin_instance_counter: HashMap::from([
-                ("pedersen".to_string(), 14),
-                ("range_check".to_string(), 41),
+                ("pedersen_builtin".to_string(), 14),
+                ("range_check_builtin".to_string(), 41),
             ]),
             ..Default::default()
         },
