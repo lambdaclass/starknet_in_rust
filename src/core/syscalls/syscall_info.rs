@@ -1,3 +1,6 @@
+use cairo_lang_casm::hints::Hint;
+use cairo_rs::serde::deserialize_program::HintParams;
+
 pub fn get_syscall_size_from_name(syscall_name: &str) -> usize {
     match syscall_name {
         "call_contract" => 7,
@@ -17,5 +20,95 @@ pub fn get_syscall_size_from_name(syscall_name: &str) -> usize {
         "storage_write" => 3,
         "replace_class" => 2,
         _ => unreachable!(),
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) fn hint_to_hint_params(hint: Hint) -> HintParams {
+    match hint {
+        Hint::AllocSegment { dst } => todo!(),
+        Hint::TestLessThan { lhs, rhs, dst } => todo!(),
+        Hint::TestLessThanOrEqual { lhs, rhs, dst } => todo!(),
+        Hint::DivMod {
+            lhs,
+            rhs,
+            quotient,
+            remainder,
+        } => todo!(),
+        Hint::Uint256DivMod {
+            dividend_low,
+            dividend_high,
+            divisor_low,
+            divisor_high,
+            quotient0,
+            quotient1,
+            divisor0,
+            divisor1,
+            extra0,
+            extra1,
+            remainder_low,
+            remainder_high,
+        } => todo!(),
+        Hint::SquareRoot { value, dst } => todo!(),
+        Hint::LinearSplit {
+            value,
+            scalar,
+            max_x,
+            x,
+            y,
+        } => todo!(),
+        Hint::AllocFelt252Dict { segment_arena_ptr } => todo!(),
+        Hint::Felt252DictRead {
+            dict_ptr,
+            key,
+            value_dst,
+        } => todo!(),
+        Hint::Felt252DictWrite {
+            dict_ptr,
+            key,
+            value,
+        } => todo!(),
+        Hint::GetSegmentArenaIndex {
+            dict_end_ptr,
+            dict_index,
+        } => todo!(),
+        Hint::InitSquashData {
+            dict_accesses,
+            ptr_diff,
+            n_accesses,
+            big_keys,
+            first_key,
+        } => todo!(),
+        Hint::GetCurrentAccessIndex { range_check_ptr } => todo!(),
+        Hint::ShouldSkipSquashLoop { should_skip_loop } => todo!(),
+        Hint::GetCurrentAccessDelta { index_delta_minus1 } => todo!(),
+        Hint::ShouldContinueSquashLoop { should_continue } => todo!(),
+        Hint::AssertCurrentAccessIndicesIsEmpty => todo!(),
+        Hint::AssertAllAccessesUsed { n_used_accesses } => todo!(),
+        Hint::AssertAllKeysUsed => todo!(),
+        Hint::GetNextDictKey { next_key } => todo!(),
+        Hint::AssertLtAssertValidInput { a, b } => todo!(),
+        Hint::AssertLeFindSmallArcs {
+            range_check_ptr,
+            a,
+            b,
+        } => todo!(),
+        Hint::AssertLeIsFirstArcExcluded {
+            skip_exclude_a_flag,
+        } => todo!(),
+        Hint::AssertLeIsSecondArcExcluded {
+            skip_exclude_b_minus_a,
+        } => todo!(),
+        Hint::AssertLeAssertThirdArcExcluded => todo!(),
+        Hint::RandomEcPoint { x, y } => todo!(),
+        Hint::FieldSqrt { val, sqrt } => todo!(),
+        Hint::SystemCall { system } => todo!(),
+        Hint::DebugPrint { start, end } => todo!(),
+        Hint::AllocConstantSize { size, dst } => todo!(),
+        Hint::SetBlockNumber { value } => todo!(),
+        Hint::SetBlockTimestamp { value } => todo!(),
+        Hint::SetCallerAddress { value } => todo!(),
+        Hint::SetContractAddress { value } => todo!(),
+        Hint::SetSequencerAddress { value } => todo!(),
     }
 }
