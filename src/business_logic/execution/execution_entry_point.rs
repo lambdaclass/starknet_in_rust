@@ -24,7 +24,7 @@ use felt::Felt252;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 
-// initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
+// TODO:initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
 #[derive(Debug)]
 pub struct ExecutionEntryPoint {
     call_type: CallType,
