@@ -1,6 +1,7 @@
 use crate::{
     business_logic::state::{cached_state::CachedState, state_api::StateReader},
     core::errors::state_errors::StateError,
+    services::api::contract_class::ContractClass,
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
@@ -42,11 +43,16 @@ impl ExecutionResourcesManager {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+enum CompiledClass {
+    Deprecated(ContractClass),
+}
+
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
-    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, HashMap<Address, ClassHash>>,
+    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
     pub(crate) storage_updates: HashMap<Felt252, HashMap<ClassHash, Address>>,
 }
 
@@ -105,6 +111,10 @@ impl StateDiff {
         self.address_to_nonce.extend(other.address_to_nonce);
         let address_to_nonce = self.address_to_nonce.clone();
 
+        self.class_hash_to_compiled_class
+            .extend(other.class_hash_to_compiled_class);
+        let class_hash_to_compiled_class = self.class_hash_to_compiled_class.clone();
+
         let mut storage_updates = HashMap::new();
 
         let addresses: Vec<Felt252> =
@@ -124,29 +134,6 @@ impl StateDiff {
                 .to_owned();
             map_a.extend(map_b);
             storage_updates.insert(address, map_a.clone());
-        }
-
-        let mut class_hash_to_compiled_class = HashMap::new();
-
-        let class_hashes = get_keys(
-            self.class_hash_to_compiled_class.clone(),
-            other.class_hash_to_compiled_class.clone(),
-        );
-
-        for class_hash in class_hashes {
-            let default: HashMap<Address, ClassHash> = HashMap::new();
-            let mut map_a = self
-                .class_hash_to_compiled_class
-                .get(&class_hash)
-                .unwrap_or(&default)
-                .to_owned();
-            let map_b = other
-                .class_hash_to_compiled_class
-                .get(&class_hash)
-                .unwrap_or(&default)
-                .to_owned();
-            map_a.extend(map_b);
-            class_hash_to_compiled_class.insert(class_hash, map_a.clone());
         }
 
         Ok(StateDiff {
@@ -286,6 +273,8 @@ mod test {
         let mut storage_writes = HashMap::new();
         storage_writes.insert(entry, Felt252::new(666));
         let cache = StateCache::new(
+            HashMap::new(),
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
