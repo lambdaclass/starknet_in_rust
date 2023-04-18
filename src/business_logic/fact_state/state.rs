@@ -43,8 +43,8 @@ impl ExecutionResourcesManager {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-enum CompiledClass {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CompiledClass {
     Deprecated(ContractClass),
 }
 
@@ -97,6 +97,7 @@ impl StateDiff {
 
         cache_state.cache_mut().set_initial_values(
             &self.address_to_class_hash,
+            &self.class_hash_to_compiled_class,
             &self.address_to_nonce,
             &cache_storage_mapping,
         )?;
