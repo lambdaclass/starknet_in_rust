@@ -378,7 +378,11 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut _state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut _state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
@@ -410,7 +414,11 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
@@ -460,7 +468,11 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,

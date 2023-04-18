@@ -4,6 +4,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
@@ -72,6 +73,20 @@ impl StateReader for InMemoryStateReader {
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
+        todo!()
+    }
+
+    fn get_compiled_class(
+        &mut self,
+        _compiled_class_hash: &ClassHash,
+    ) -> Result<&CasmContractClass, StateError> {
+        todo!()
+    }
+
+    fn get_compiled_class_hash(
+        &mut self,
+        _class_hash: &ClassHash,
+    ) -> Result<&ClassHash, StateError> {
         todo!()
     }
 }
