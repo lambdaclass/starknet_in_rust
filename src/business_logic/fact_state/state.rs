@@ -126,7 +126,28 @@ impl StateDiff {
             storage_updates.insert(address, map_a.clone());
         }
 
-        let class_hash_to_compiled_class = HashMap::new();
+        let mut class_hash_to_compiled_class = HashMap::new();
+
+        let class_hashes = get_keys(
+            self.class_hash_to_compiled_class.clone(),
+            other.class_hash_to_compiled_class.clone(),
+        );
+
+        for class_hash in class_hashes {
+            let default: HashMap<Address, ClassHash> = HashMap::new();
+            let mut map_a = self
+                .class_hash_to_compiled_class
+                .get(&class_hash)
+                .unwrap_or(&default)
+                .to_owned();
+            let map_b = other
+                .class_hash_to_compiled_class
+                .get(&class_hash)
+                .unwrap_or(&default)
+                .to_owned();
+            map_a.extend(map_b);
+            class_hash_to_compiled_class.insert(class_hash, map_a.clone());
+        }
 
         Ok(StateDiff {
             address_to_class_hash,
