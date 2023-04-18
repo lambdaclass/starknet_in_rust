@@ -8,7 +8,9 @@ use crate::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext, OrderedEvent, OrderedL2ToL1Message},
+            objects::{
+                CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+            },
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
@@ -30,7 +32,7 @@ use crate::{
 
 use super::{
     syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
-    syscall_request::SyscallRequest, syscall_response::SyscallResponse,
+    syscall_response::SyscallResponse,
 };
 
 //TODO Remove allow dead_code after merging to 0.11
@@ -91,7 +93,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         self.resources_manager
             .increment_syscall_counter(syscall_name, 1);
     }
-    
+
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -166,7 +168,7 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
 
         Ok(SyscallResponse { gas, body })
     }
-    
+
     fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
@@ -208,5 +210,5 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
 
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
-    }  
+    }
 }

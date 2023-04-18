@@ -1,9 +1,9 @@
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_relocatable, Address},
 };
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::Felt252;
 
 #[allow(unused)]
 pub(crate) enum SyscallRequest {
