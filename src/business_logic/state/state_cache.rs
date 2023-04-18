@@ -42,7 +42,7 @@ impl StateCache {
         nonce_initial_values: HashMap<Address, Felt252>,
         storage_initial_values: HashMap<StorageEntry, Felt252>,
         class_hash_writes: HashMap<Address, ClassHash>,
-        compiled_class_hash_initial_values_writes: HashMap<ClassHash, CompiledClass>,
+        compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<StorageEntry, Felt252>,
     ) -> Self {
@@ -52,7 +52,7 @@ impl StateCache {
             nonce_initial_values,
             storage_initial_values,
             class_hash_writes,
-            compiled_class_hash_writes: compiled_class_hash_initial_values_writes,
+            compiled_class_hash_writes,
             nonce_writes,
             storage_writes,
         }
@@ -78,7 +78,7 @@ impl StateCache {
         nonce_initial_values: HashMap<Address, Felt252>,
         storage_initial_values: HashMap<StorageEntry, Felt252>,
         class_hash_writes: HashMap<Address, [u8; 32]>,
-        compiled_class_hash_initial_values_writes: HashMap<ClassHash, CompiledClass>,
+        compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<(Address, [u8; 32]), Felt252>,
     ) -> Self {
@@ -88,7 +88,7 @@ impl StateCache {
             nonce_initial_values,
             storage_initial_values,
             class_hash_writes,
-            compiled_class_hash_writes: compiled_class_hash_initial_values_writes,
+            compiled_class_hash_writes,
             nonce_writes,
             storage_writes,
         }
@@ -184,14 +184,21 @@ impl StateCache {
 
 #[cfg(test)]
 mod tests {
+
+    use cairo_rs::types::program::Program;
+
+    use crate::services::api::contract_class::ContractClass;
+
     use super::*;
 
     #[test]
     fn state_chache_set_initial_values() {
         let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [8; 32])]);
-        let class_hash_to_compiled_class_hash =
-            HashMap::from([(ClassHash([8; 32]), CompiledClass::default())]);
+        let compiled_class = CompiledClass::Deprecated(
+            ContractClass::new(Program::default(), HashMap::new(), None).unwrap(),
+        );
+        let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);
 
@@ -205,7 +212,10 @@ mod tests {
             .is_ok());
 
         assert_eq!(state_cache.class_hash_writes, address_to_class_hash);
-        assert_eq!(state_cache.compiled_class_hash_writes, compiled_class_hash);
+        assert_eq!(
+            state_cache.compiled_class_hash_writes,
+            class_hash_to_compiled_class_hash
+        );
         assert_eq!(state_cache.nonce_writes, address_to_nonce);
         assert_eq!(state_cache.storage_writes, storage_updates);
 
@@ -219,8 +229,10 @@ mod tests {
     fn state_chache_update_writes_from_other() {
         let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [11; 32])]);
-        let class_hash_to_compiled_class_hash =
-            HashMap::from([(ClassHash([8; 32]), CompiledClass::default())]);
+        let compiled_class = CompiledClass::Deprecated(
+            ContractClass::new(Program::default(), HashMap::new(), None).unwrap(),
+        );
+        let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class.clone())]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(20.into()), [1; 32]), 18.into())]);
 
@@ -254,8 +266,8 @@ mod tests {
             Some(&[13; 32])
         );
         assert_eq!(
-            state_cache.get_compiled_class_hash(class_hash),
-            Some(&CompiledClass::default())
+            state_cache.get_compiled_class_hash(&[8; 32]),
+            Some(&compiled_class)
         );
         assert_eq!(
             state_cache.nonce_writes,
