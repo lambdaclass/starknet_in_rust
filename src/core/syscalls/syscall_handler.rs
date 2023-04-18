@@ -13,7 +13,7 @@ pub(crate) trait SyscallHandler {
         remaining_gas: u64,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError>;
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
 
     fn send_message_to_l1(
         &mut self,

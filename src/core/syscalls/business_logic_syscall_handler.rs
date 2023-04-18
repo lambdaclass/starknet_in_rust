@@ -90,10 +90,10 @@ where
 {
     fn emit_event(
         &mut self,
-        _remaining_gas: u64,
+        remaining_gas: u64,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<(), SyscallHandlerError> {
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
             Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
@@ -106,7 +106,10 @@ where
 
         // Update events count.
         self.tx_execution_context.n_emitted_events += 1;
-        Ok(())
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
+        })
     }
 
     fn read_and_validate_syscall_request(
