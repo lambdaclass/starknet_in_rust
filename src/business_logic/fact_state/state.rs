@@ -73,7 +73,10 @@ impl StateDiff {
         let address_to_nonce =
             subtract_mappings(state_cache.nonce_writes, state_cache.nonce_initial_values);
 
-        let class_hash_to_compiled_class = subtract_mappings(HashMap::new(), HashMap::new());
+        let class_hash_to_compiled_class = subtract_mappings(
+            state_cache.compiled_class_hash_writes,
+            state_cache.compiled_class_hash_initial_values,
+        );
 
         let address_to_class_hash = subtract_mappings(
             state_cache.class_hash_writes,
