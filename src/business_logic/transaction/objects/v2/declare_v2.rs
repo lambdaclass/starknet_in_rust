@@ -187,6 +187,7 @@ impl InternalDeclareV2 {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = entry_point.execute(
