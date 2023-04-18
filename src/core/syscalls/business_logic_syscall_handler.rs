@@ -88,7 +88,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .increment_syscall_counter(syscall_name, 1);
     }
 
-    fn _storage_write(&mut self, key: Felt252, value: Felt252) {
+    fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
         self.starknet_storage_state.write(&key.to_le_bytes(), value)
     }
 }
@@ -114,6 +114,8 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
                 request.reserved,
             ));
         }
+
+        self.syscall_storage_write(request.key, request.value);
 
         Ok(SyscallResponse {
             gas: remaining_gas,
