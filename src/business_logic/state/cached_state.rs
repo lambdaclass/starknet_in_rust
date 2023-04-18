@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash},
 };
@@ -232,7 +232,9 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
-        services::api::contract_class::{ContractEntryPoint, EntryPointType},
+        services::api::contract_classes::deprecated_contract_class::{
+            ContractEntryPoint, EntryPointType,
+        },
     };
     use cairo_rs::types::program::Program;
 

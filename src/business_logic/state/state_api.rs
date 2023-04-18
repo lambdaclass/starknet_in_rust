@@ -1,7 +1,7 @@
 use super::state_cache::StorageEntry;
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
 use felt::Felt252;
