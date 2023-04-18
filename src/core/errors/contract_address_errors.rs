@@ -23,6 +23,8 @@ pub enum ContractAddressError {
     Memory(#[from] MemoryError),
     #[error("Index out of range")]
     IndexOutOfRange,
+    #[error("Missing abi in sierra contract class")]
+    MissingAbi,
     #[error(transparent)]
     CairoRunner(#[from] RunnerError),
     #[error(transparent)]
