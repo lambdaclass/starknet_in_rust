@@ -57,6 +57,8 @@ pub enum SyscallHandlerError {
     ExpectedGetContractAddressRequest,
     #[error("Expected CallContractRequest")]
     ExpectedCallContractRequest,
+    #[error("Expected a LibraryCallRequest")]
+    ExpectedLibraryCallRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
     #[error("Memory error: {0}")]

@@ -5,8 +5,9 @@ use crate::{
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt252;
 
-#[allow(unused)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
+    LibraryCall(LibraryCallRequest),
     CallContract(CallContractRequest),
     SendMessageToL1(SendMessageToL1SysCall),
 }
@@ -16,6 +17,14 @@ pub(crate) struct CallContractRequest {
     pub(crate) selector: Felt252,
     pub(crate) contract_address: Address,
     pub(crate) function_selector: Felt252,
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct LibraryCallRequest {
+    pub(crate) class_hash: Felt252,
+    pub(crate) selector: Felt252,
     pub(crate) calldata_start: Relocatable,
     pub(crate) calldata_end: Relocatable,
 }
@@ -40,15 +49,17 @@ impl From<CallContractRequest> for SyscallRequest {
     }
 }
 
+impl From<LibraryCallRequest> for SyscallRequest {
+    fn from(library_call_request: LibraryCallRequest) -> Self {
+        SyscallRequest::LibraryCall(library_call_request)
+    }
+}
+
 impl From<SendMessageToL1SysCall> for SyscallRequest {
     fn from(syscall: SendMessageToL1SysCall) -> Self {
         SyscallRequest::SendMessageToL1(syscall)
     }
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
-//  FromPtr implementations
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 pub(crate) trait FromPtr {
     fn from_ptr(
@@ -71,6 +82,26 @@ impl FromPtr for CallContractRequest {
             selector,
             contract_address,
             function_selector,
+            calldata_start,
+            calldata_end,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for LibraryCallRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let class_hash = get_big_int(vm, syscall_ptr)?;
+        let selector = get_big_int(vm, &syscall_ptr + 1)?;
+        let calldata_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let calldata_end = get_relocatable(vm, &syscall_ptr + 3)?;
+
+        Ok(LibraryCallRequest {
+            class_hash,
+            selector,
             calldata_start,
             calldata_end,
         }

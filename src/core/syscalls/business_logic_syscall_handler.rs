@@ -18,27 +18,23 @@ use crate::{
             state_api::{State, StateReader},
         },
     },
-    core::{
-        errors::syscall_handler_errors::SyscallHandlerError,
-        syscalls::{
-            syscall_request::SyscallRequest,
-            syscall_response::{CallContractResponse, ResponseBody},
-        },
-    },
+    core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
     utils::{get_felt_range, Address},
 };
 
 use super::{
-    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
-    syscall_response::SyscallResponse,
+    syscall_handler::SyscallHandler,
+    syscall_info::get_syscall_size_from_name,
+    syscall_request::SyscallRequest,
+    syscall_response::{CallContractResponse, ResponseBody, SyscallResponse},
 };
 
 //TODO Remove allow dead_code after merging to 0.11
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
+pub struct BusinessLogicSyscallHandler<'a, T: Default + State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -53,17 +49,20 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) expected_syscall_ptr: Relocatable,
+    pub(crate) entry_point: ExecutionEntryPoint,
 }
 
 impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
         resources_manager: ExecutionResourcesManager,
-        caller_address: Address,
+        expected_syscall_ptr: Relocatable,
         contract_address: Address,
+        caller_address: Address,
         general_config: StarknetGeneralConfig,
-        syscall_ptr: Relocatable,
+        tx_execution_context: TransactionExecutionContext,
+        entry_point: ExecutionEntryPoint,
     ) -> Self {
         let events = Vec::new();
         let read_only_segments = Vec::new();
@@ -85,7 +84,8 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             tx_info_ptr,
             starknet_storage_state,
             internal_calls,
-            expected_syscall_ptr: syscall_ptr,
+            expected_syscall_ptr,
+            entry_point,
         }
     }
 
@@ -107,6 +107,43 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         Ok(segment_start)
     }
+
+    fn call_contract_helper(
+        &mut self,
+        vm: &mut VirtualMachine,
+        remaining_gas: u64,
+        execution_entry_point: ExecutionEntryPoint,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let result = execution_entry_point
+            .execute(
+                self.starknet_storage_state.state,
+                &self.general_config,
+                &mut self.resources_manager,
+                &self.tx_execution_context,
+            )
+            .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
+
+        let retdata_maybe_reloc = result
+            .retdata
+            .clone()
+            .into_iter()
+            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
+            .collect::<Vec<MaybeRelocatable>>();
+
+        let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
+        let retdata_end = (retdata_start + result.retdata.len())?;
+
+        self.internal_calls.push(result);
+
+        //TODO: remaining_gas -= result.gas_consumed
+        let gas = remaining_gas;
+        let body = Some(ResponseBody::CallContract(CallContractResponse {
+            retdata_start,
+            retdata_end,
+        }));
+
+        Ok(SyscallResponse { gas, body })
+    }
 }
 
 impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
@@ -125,48 +162,17 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         };
 
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
-        let contract_address = request.contract_address;
-        let caller_address = &self.caller_address;
-        let call_type = Some(CallType::Call);
-
-        let call = ExecutionEntryPoint::new(
-            contract_address,
+        let execution_entry_point = ExecutionEntryPoint::new(
+            request.contract_address,
             calldata,
             request.selector,
-            caller_address.clone(),
+            self.caller_address.clone(),
             EntryPointType::External,
-            call_type,
+            Some(CallType::Call),
             None,
         );
 
-        let result = call
-            .execute(
-                self.starknet_storage_state.state,
-                &self.general_config,
-                &mut self.resources_manager,
-                &self.tx_execution_context,
-            )
-            .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
-
-        let retdata_maybe_reloc = result
-            .retdata
-            .clone()
-            .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
-            .collect::<Vec<MaybeRelocatable>>();
-        let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
-        let retdata_end = (retdata_start + result.retdata.len())?;
-
-        self.internal_calls.push(result);
-
-        //TODO: remaining_gas -= result.gas_consumed
-        let gas = remaining_gas;
-        let body = Some(ResponseBody::CallContract(CallContractResponse {
-            retdata_start,
-            retdata_end,
-        }));
-
-        Ok(SyscallResponse { gas, body })
+        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
     }
 
     fn send_message_to_l1(
@@ -210,5 +216,31 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
 
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
+    }
+
+    fn library_call(
+        &mut self,
+        remaining_gas: u64,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let request =
+            match self.read_and_validate_syscall_request("library_call", vm, syscall_ptr)? {
+                SyscallRequest::LibraryCall(request) => request,
+                _ => return Err(SyscallHandlerError::ExpectedLibraryCallRequest),
+            };
+
+        let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
+        let execution_entry_point = ExecutionEntryPoint::new(
+            self.entry_point.contract_address.clone(),
+            calldata,
+            request.selector,
+            self.caller_address.clone(),
+            EntryPointType::External,
+            Some(CallType::Delegate),
+            None,
+        );
+
+        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
     }
 }
