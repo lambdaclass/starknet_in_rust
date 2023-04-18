@@ -43,6 +43,7 @@ impl ExecutionResourcesManager {
     }
 }
 
+//TODO: Remove this once we have a proper CompiledClass
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CompiledClass {
     Deprecated(ContractClass),
