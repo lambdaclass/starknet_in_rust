@@ -51,6 +51,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
 impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
