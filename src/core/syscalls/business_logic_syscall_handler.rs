@@ -148,15 +148,12 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
     fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        request: SyscallRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = if let SyscallRequest::CallContract(request) =
-            self.read_and_validate_syscall_request("call_contract", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedCallContractRequest);
+        let request = match request {
+            SyscallRequest::CallContract(request) => request,
+            _ => return Err(SyscallHandlerError::ExpectedCallContractRequest),
         };
 
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
