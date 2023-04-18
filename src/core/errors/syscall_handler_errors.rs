@@ -5,6 +5,7 @@ use cairo_rs::{
         hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
     },
 };
+use felt::Felt252;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -21,6 +22,10 @@ pub enum SyscallHandlerError {
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
     ExpectedDeployRequestStruct,
+    #[error("Expected StorageWriteSyscall")]
+    ExpectedStorageWriteSyscall,
+    #[error("Unsopported address domain: {0}")]
+    UnsopportedAddressDomain(Felt252),
     #[error("Expected GetCallerAddressRequest")]
     ExpectedGetCallerAddressRequest,
     #[error("Expected SendMessageToL1")]

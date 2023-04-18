@@ -1,13 +1,15 @@
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::Felt252;
+
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_relocatable, Address},
 };
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
 
 #[allow(unused)]
 pub(crate) enum SyscallRequest {
     CallContract(CallContractRequest),
+    StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1SysCall),
 }
 
@@ -18,6 +20,19 @@ pub(crate) struct CallContractRequest {
     pub(crate) function_selector: Felt252,
     pub(crate) calldata_start: Relocatable,
     pub(crate) calldata_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageWriteRequest {
+    pub(crate) reserved: Felt252,
+    pub(crate) key: Felt252,
+    pub(crate) value: Felt252,
+}
+
+impl From<StorageWriteRequest> for SyscallRequest {
+    fn from(storage_write_request: StorageWriteRequest) -> SyscallRequest {
+        SyscallRequest::StorageWrite(storage_write_request)
+    }
 }
 
 // Arguments given in the syscall documentation
@@ -73,6 +88,24 @@ impl FromPtr for CallContractRequest {
             function_selector,
             calldata_start,
             calldata_end,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let reserved = get_big_int(vm, syscall_ptr)?;
+        let key = get_big_int(vm, &syscall_ptr + 1)?;
+        let value = get_big_int(vm, &syscall_ptr + 2)?;
+
+        Ok(StorageWriteRequest {
+            reserved,
+            key,
+            value,
         }
         .into())
     }
