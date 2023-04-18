@@ -10,6 +10,7 @@ use crate::{
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
     StorageRead(StorageReadRequest),
+    StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1SysCall),
 }
 
@@ -17,6 +18,13 @@ pub(crate) enum SyscallRequest {
 pub(crate) struct StorageReadRequest {
     pub(crate) key: [u8; 32],
     pub(crate) reserved: Felt252,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageWriteRequest {
+    pub(crate) reserved: Felt252,
+    pub(crate) key: Felt252,
+    pub(crate) value: Felt252,
 }
 
 // Arguments given in the syscall documentation
@@ -39,6 +47,11 @@ impl From<SendMessageToL1SysCall> for SyscallRequest {
     }
 }
 
+impl From<StorageWriteRequest> for SyscallRequest {
+    fn from(storage_write_request: StorageWriteRequest) -> SyscallRequest {
+        SyscallRequest::StorageWrite(storage_write_request)
+    }
+}
 impl From<StorageReadRequest> for SyscallRequest {
     fn from(storage_read_request: StorageReadRequest) -> SyscallRequest {
         SyscallRequest::StorageRead(storage_read_request)
@@ -63,6 +76,24 @@ impl FromPtr for StorageReadRequest {
         let key = get_big_int(vm, syscall_ptr)?.to_be_bytes();
         let reserved = get_big_int(vm, &syscall_ptr + 1)?;
         Ok(StorageReadRequest { key, reserved }.into())
+    }
+}
+
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let reserved = get_big_int(vm, syscall_ptr)?;
+        let key = get_big_int(vm, &syscall_ptr + 1)?;
+        let value = get_big_int(vm, &syscall_ptr + 2)?;
+
+        Ok(StorageWriteRequest {
+            reserved,
+            key,
+            value,
+        }
+        .into())
     }
 }
 
