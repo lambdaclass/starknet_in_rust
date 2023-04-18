@@ -4,8 +4,9 @@ use num_traits::Zero;
 
 use crate::core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError};
 
+use super::syscall_request::{SendMessageToL1SysCall, StorageReadRequest, SyscallRequest};
 use super::{
-    syscall_request::{FromPtr, StorageReadRequest, SyscallRequest},
+    syscall_request::FromPtr,
     syscall_response::{ResponseBody, SyscallResponse},
 };
 
@@ -37,6 +38,12 @@ pub(crate) trait SyscallHandler {
     }
 
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError>;
+    fn send_message_to_l1(
+        &mut self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
 
     fn read_and_validate_syscall_request(
         &mut self,
@@ -53,6 +60,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
             "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
