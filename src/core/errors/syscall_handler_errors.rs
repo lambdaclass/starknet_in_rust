@@ -71,6 +71,8 @@ pub enum SyscallHandlerError {
     InconsistentSegmentIndices,
     #[error("Start offset greater than end offset")]
     StartOffsetGreaterThanEndOffset,
+    #[error("Incorrect request in syscall {0}")]
+    IncorrectSyscall(String),
     #[error(transparent)]
     State(#[from] StateError),
     #[error(transparent)]

@@ -48,6 +48,8 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) support_reverted: bool,
 }
 
+// TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
+
 impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
@@ -57,16 +59,17 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         contract_address: Address,
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
+        entry_point: ExecutionEntryPoint,
     ) -> Self {
         let events = Vec::new();
         let read_only_segments = Vec::new();
         let l2_to_l1_messages = Vec::new();
-        let tx_info_ptr = None;
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
         let internal_calls = Vec::new();
 
         BusinessLogicSyscallHandler {
             tx_execution_context,
+            entry_point,
             events,
             read_only_segments,
             resources_manager,
@@ -164,7 +167,10 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         syscall_request: SyscallRequest,
         remaining_gas: u64,
     ) -> Result<(Address, CallResult), SyscallHandlerError> {
-        let SyscallRequest::Deploy(request) = syscall_request;
+        let request = match syscall_request {
+            SyscallRequest::Deploy(request) => request,
+            _ => return Err(SyscallHandlerError::IncorrectSyscall("Deploy".to_string())),
+        };
 
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
             return Err(SyscallHandlerError::DeployFromZero(
@@ -242,7 +248,7 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         self.tx_execution_context.n_sent_messages += 1;
         Ok(SyscallResponse {
             gas: remaining_gas,
-            //body: None,
+            body: None,
         })
     }
 }

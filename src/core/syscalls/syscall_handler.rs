@@ -52,7 +52,7 @@ pub(crate) trait SyscallHandler {
         };
         let response = SyscallResponse {
             gas: remaining_gas,
-            body,
+            body: Some(body),
         };
 
         Ok(response)

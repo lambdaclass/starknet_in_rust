@@ -10,7 +10,7 @@ pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
     pub gas: u64,
     /// Syscall specific response fields.
-    pub body: ResponseBody,
+    pub body: Option<ResponseBody>,
 }
 
 // ----------------------
