@@ -46,6 +46,7 @@ impl ExecutionResourcesManager {
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
+    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, HashMap<Address, ClassHash>>,
     pub(crate) storage_updates: HashMap<Felt252, HashMap<ClassHash, Address>>,
 }
 
@@ -66,6 +67,8 @@ impl StateDiff {
         let address_to_nonce =
             subtract_mappings(state_cache.nonce_writes, state_cache.nonce_initial_values);
 
+        let class_hash_to_compiled_class = subtract_mappings(HashMap::new(), HashMap::new());
+
         let address_to_class_hash = subtract_mappings(
             state_cache.class_hash_writes,
             state_cache.class_hash_initial_values,
@@ -74,6 +77,7 @@ impl StateDiff {
         Ok(StateDiff {
             address_to_class_hash,
             address_to_nonce,
+            class_hash_to_compiled_class,
             storage_updates,
         })
     }
@@ -122,9 +126,12 @@ impl StateDiff {
             storage_updates.insert(address, map_a.clone());
         }
 
+        let class_hash_to_compiled_class = HashMap::new();
+
         Ok(StateDiff {
             address_to_class_hash,
             address_to_nonce,
+            class_hash_to_compiled_class,
             storage_updates,
         })
     }
