@@ -26,7 +26,7 @@ pub(crate) trait SyscallHandler {
     fn storage_write(
         &mut self,
         vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        request: SyscallRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError>;
 

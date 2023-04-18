@@ -94,19 +94,15 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 }
 
 impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
-    #[allow(irrefutable_let_patterns)]
     fn storage_write(
         &mut self,
-        vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &mut VirtualMachine,
+        request: SyscallRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = if let SyscallRequest::StorageWrite(request) =
-            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedStorageWriteSyscall);
+        let request = match request {
+            SyscallRequest::StorageWrite(request) => request,
+            _ => return Err(SyscallHandlerError::ExpectedStorageWriteSyscall),
         };
 
         if request.reserved != 0.into() {
