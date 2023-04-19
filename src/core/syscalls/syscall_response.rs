@@ -3,6 +3,7 @@ use felt::Felt252;
 
 pub enum ResponseBody {
     Deploy(DeployResponse),
+    CallContract(CallContractResponse),
     Failure(FailureReason),
 }
 #[allow(unused)]
@@ -29,4 +30,10 @@ pub struct FailureReason {
     // Syscall specific response fields.
     // TODO: this cause circular dependency
     //pub(crate) body: Option<ResponseBody>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractResponse {
+    pub(crate) retdata_start: Relocatable,
+    pub(crate) retdata_end: Relocatable,
 }
