@@ -6,8 +6,9 @@ use crate::{
     utils::{get_big_int, get_relocatable, Address},
 };
 
-#[allow(unused)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
+    LibraryCall(LibraryCallRequest),
     CallContract(CallContractRequest),
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1SysCall),
@@ -23,16 +24,18 @@ pub(crate) struct CallContractRequest {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct LibraryCallRequest {
+    pub(crate) class_hash: Felt252,
+    pub(crate) selector: Felt252,
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageWriteRequest {
     pub(crate) reserved: Felt252,
     pub(crate) key: Felt252,
     pub(crate) value: Felt252,
-}
-
-impl From<StorageWriteRequest> for SyscallRequest {
-    fn from(storage_write_request: StorageWriteRequest) -> SyscallRequest {
-        SyscallRequest::StorageWrite(storage_write_request)
-    }
 }
 
 // Arguments given in the syscall documentation
@@ -55,12 +58,23 @@ impl From<CallContractRequest> for SyscallRequest {
     }
 }
 
+impl From<LibraryCallRequest> for SyscallRequest {
+    fn from(library_call_request: LibraryCallRequest) -> Self {
+        SyscallRequest::LibraryCall(library_call_request)
+    }
+}
+
 impl From<SendMessageToL1SysCall> for SyscallRequest {
     fn from(syscall: SendMessageToL1SysCall) -> Self {
         SyscallRequest::SendMessageToL1(syscall)
     }
 }
 
+impl From<StorageWriteRequest> for SyscallRequest {
+    fn from(storage_write_request: StorageWriteRequest) -> SyscallRequest {
+        SyscallRequest::StorageWrite(storage_write_request)
+    }
+}
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  FromPtr implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,19 +107,21 @@ impl FromPtr for CallContractRequest {
     }
 }
 
-impl FromPtr for StorageWriteRequest {
+impl FromPtr for LibraryCallRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let reserved = get_big_int(vm, syscall_ptr)?;
-        let key = get_big_int(vm, &syscall_ptr + 1)?;
-        let value = get_big_int(vm, &syscall_ptr + 2)?;
+        let class_hash = get_big_int(vm, syscall_ptr)?;
+        let selector = get_big_int(vm, &syscall_ptr + 1)?;
+        let calldata_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let calldata_end = get_relocatable(vm, &syscall_ptr + 3)?;
 
-        Ok(StorageWriteRequest {
-            reserved,
-            key,
-            value,
+        Ok(LibraryCallRequest {
+            class_hash,
+            selector,
+            calldata_start,
+            calldata_end,
         }
         .into())
     }
@@ -124,6 +140,24 @@ impl FromPtr for SendMessageToL1SysCall {
             to_address,
             payload_start,
             payload_end,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let reserved = get_big_int(vm, syscall_ptr)?;
+        let key = get_big_int(vm, &syscall_ptr + 1)?;
+        let value = get_big_int(vm, &syscall_ptr + 2)?;
+
+        Ok(StorageWriteRequest {
+            reserved,
+            key,
+            value,
         }
         .into())
     }

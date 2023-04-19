@@ -26,7 +26,7 @@ use felt::Felt252;
 #[derive(Debug)]
 pub struct ExecutionEntryPoint {
     call_type: CallType,
-    contract_address: Address,
+    pub(crate) contract_address: Address,
     code_address: Option<Address>,
     class_hash: Option<[u8; 32]>,
     calldata: Vec<Felt252>,
