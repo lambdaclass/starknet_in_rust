@@ -201,7 +201,7 @@ where
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
         self.starknet_storage_state.read(&key).cloned()
     }
-    #[allow(irrefutable_let_patterns)]
+
     fn storage_write(
         &mut self,
         _vm: &mut VirtualMachine,
