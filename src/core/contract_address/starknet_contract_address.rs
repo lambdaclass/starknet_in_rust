@@ -4,7 +4,7 @@ use crate::{
 };
 use cairo_rs::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
-    serde::deserialize_program::Identifier,
+    serde::deserialize_program::{BuiltinName, Identifier},
     types::{program::Program, relocatable::MaybeRelocatable},
     vm::{
         runners::cairo_runner::{CairoArg, CairoRunner},
@@ -38,7 +38,7 @@ fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
 ) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
-    let program_length = contract_class.program().data.len();
+    let program_length = contract_class.program().iter_data().count();
 
     let entry_points = contract_class
         .entry_points_by_type()
@@ -93,8 +93,11 @@ fn get_contract_class_struct(
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
-    let builtin_list = &contract_class.program().builtins;
+    let builtin_list: &Vec<BuiltinName> =
+        &contract_class.program().iter_builtins().cloned().collect();
 
+    let contract_class_data: Vec<MaybeRelocatable> =
+        contract_class.program().iter_data().cloned().collect();
     Ok(StructContractClass {
         api_version: api_version
             .value
@@ -116,8 +119,8 @@ fn get_contract_class_struct(
             })
             .collect::<Vec<MaybeRelocatable>>(),
         hinted_class_hash: compute_hinted_class_hash(contract_class).into(),
-        bytecode_length: Felt252::from(contract_class.program().data.len()).into(),
-        bytecode_ptr: contract_class.program().data.clone(),
+        bytecode_length: Felt252::from(contract_class_data.len()).into(),
+        bytecode_ptr: contract_class_data,
     })
 }
 
@@ -178,7 +181,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
 
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&hash_calculation_program, "all", false)?;
-    runner.initialize_function_runner(&mut vm)?;
+    runner.initialize_function_runner(&mut vm, false)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
     // 188 is the entrypoint since is the __main__.class_hash function in our compiled program identifier.
@@ -191,6 +194,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         188,
         &[&hash_base.into(), contract_class_struct],
         true,
+        None,
         &mut vm,
         &mut hint_processor,
     )?;

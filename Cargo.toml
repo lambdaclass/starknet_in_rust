@@ -8,8 +8,8 @@ default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
 
 [dependencies]
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
-felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
+cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "11b6c379b96e452e671ec9bdeeebf1d85e584484" }
+felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "11b6c379b96e452e671ec9bdeeebf1d85e584484" }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }

@@ -143,48 +143,27 @@ pub fn to_cairo_runner_program(
     let program = program.clone();
     let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
 
-    let start = match identifiers.get("__main__.__start__") {
-        Some(identifier) => identifier.pc,
-        None => None,
-    };
-    let end = match identifiers.get("__main__.__end__") {
-        Some(identifier) => identifier.pc,
-        None => None,
-    };
     if program.prime != *PRIME_STR {
         return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
     };
 
-    Ok(Program {
-        builtins: serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
-        prime: PRIME_STR.to_string(),
-        data: deserialize_array_of_bigint_hex(program.data)?,
-        constants: {
-            let mut constants = HashMap::new();
-            for (key, value) in identifiers.iter() {
-                if value.type_.as_deref() == Some("const") {
-                    let value = value
-                        .value
-                        .clone()
-                        .ok_or_else(|| ProgramError::ConstWithoutValue(key.to_owned()))?;
-                    constants.insert(key.to_owned(), value);
-                }
-            }
+    let error_message_attributes = serde_json::from_value::<Vec<Attribute>>(program.attributes)?
+        .into_iter()
+        .filter(|attr| attr.name == "error_message")
+        .collect();
 
-            constants
-        },
-        main: None,
-        start,
-        end,
-        hints: serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
-        reference_manager: serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
+    let program = Program::new(
+        serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
+        deserialize_array_of_bigint_hex(program.data)?,
+        None,
+        serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
+        serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
         identifiers,
-        error_message_attributes: serde_json::from_value::<Vec<Attribute>>(program.attributes)?
-            .into_iter()
-            .filter(|attr| attr.name == "error_message")
-            .collect(),
-        instruction_locations: None,
-    })
+        error_message_attributes,
+        None,
+    )?;
+
+    Ok(program)
 }
 
 #[cfg(test)]
@@ -211,8 +190,11 @@ mod tests {
         // We check only some of the attributes. Ideally we would serialize
         // and compare with original
         assert_eq!(contract_class.abi, None);
+
+        let program_builtins: Vec<BuiltinName> =
+            contract_class.program.iter_builtins().cloned().collect();
         assert_eq!(
-            contract_class.program.builtins,
+            program_builtins,
             vec![
                 BuiltinName::pedersen,
                 BuiltinName::range_check,
@@ -220,7 +202,6 @@ mod tests {
                 BuiltinName::bitwise
             ]
         );
-        assert_eq!(contract_class.program.prime, PRIME_STR);
         assert_eq!(
             contract_class
                 .entry_points_by_type

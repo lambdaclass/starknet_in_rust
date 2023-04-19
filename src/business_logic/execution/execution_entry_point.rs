@@ -122,7 +122,7 @@ impl ExecutionEntryPoint {
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
         let mut cairo_runner = CairoRunner::new(contract_class.program(), "all", false)?;
-        cairo_runner.initialize_function_runner(&mut vm)?;
+        cairo_runner.initialize_function_runner(&mut vm, false)?;
 
         validate_contract_deployed(state, &self.contract_address)?;
 

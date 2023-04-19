@@ -56,6 +56,7 @@ where
             entrypoint,
             &args,
             verify_secure,
+            None,
             &mut self.vm,
             &mut self.hint_processor,
         )?;

@@ -60,7 +60,12 @@ impl ContractClass {
     }
 
     pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
-        if !is_subsequence(&self.program.builtins, &SUPPORTED_BUILTINS) {
+        let program_builtins = self
+            .program
+            .iter_builtins()
+            .cloned()
+            .collect::<Vec<BuiltinName>>();
+        if !is_subsequence(&program_builtins, &SUPPORTED_BUILTINS) {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
@@ -136,8 +141,14 @@ mod tests {
         // We check only some of the attributes. Ideally we would serialize
         // and compare with original
         assert_eq!(contract_class.abi(), &None);
+
+        let program_builtins = contract_class
+            .program()
+            .iter_builtins()
+            .cloned()
+            .collect::<Vec<BuiltinName>>();
         assert_eq!(
-            contract_class.program().builtins,
+            program_builtins,
             vec![
                 BuiltinName::pedersen,
                 BuiltinName::range_check,
@@ -145,7 +156,7 @@ mod tests {
                 BuiltinName::bitwise
             ]
         );
-        assert_eq!(contract_class.program().prime, PRIME_STR);
+        assert_eq!(contract_class.program().prime(), PRIME_STR);
         assert_eq!(
             contract_class
                 .entry_points_by_type()
