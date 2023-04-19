@@ -92,10 +92,10 @@ where
         &mut self,
         remaining_gas: u64,
         vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        request: SyscallRequest,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
-            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
+        let request = match request {
+            SyscallRequest::EmitEvent(emit_event_struct) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
 
