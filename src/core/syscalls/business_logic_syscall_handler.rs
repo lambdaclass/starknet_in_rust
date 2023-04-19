@@ -1,7 +1,10 @@
+#![allow(dead_code)]
+
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
+use felt::Felt252;
 
 use crate::{
     business_logic::{
@@ -14,14 +17,15 @@ use crate::{
             state_api::{State, StateReader},
         },
     },
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    core::{
+        errors::syscall_handler_errors::SyscallHandlerError, syscalls::syscall_request::FromPtr,
+    },
     definitions::general_config::StarknetGeneralConfig,
     utils::{get_felt_range, Address},
 };
 
 use super::{syscall_handler::SyscallHandler, syscall_request::SyscallRequest};
 use super::{syscall_info::get_syscall_size_from_name, syscall_response::SyscallResponse};
-use felt::Felt252;
 
 //TODO Remove allow dead_code after merging to 0.11
 #[allow(dead_code)]
@@ -82,6 +86,10 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         self.resources_manager
             .increment_syscall_counter(syscall_name, 1);
     }
+
+    fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
+        self.starknet_storage_state.write(&key.to_le_bytes(), value)
+    }
 }
 
 impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
@@ -111,6 +119,34 @@ where
             body: None,
         })
     }
+    #[allow(irrefutable_let_patterns)]
+    fn storage_write(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let request = if let SyscallRequest::StorageWrite(request) =
+            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedStorageWriteSyscall);
+        };
+
+        if request.reserved != 0.into() {
+            return Err(SyscallHandlerError::UnsopportedAddressDomain(
+                request.reserved,
+            ));
+        }
+
+        self.syscall_storage_write(request.key, request.value);
+
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
+        })
+    }
 
     fn read_and_validate_syscall_request(
         &mut self,
@@ -124,6 +160,22 @@ where
 
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
+    }
+
+    fn read_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "storage_write" => {
+                super::syscall_request::StorageWriteRequest::from_ptr(vm, syscall_ptr)
+            }
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
+        }
     }
 
     //TODO remove allow irrefutable_let_patterns

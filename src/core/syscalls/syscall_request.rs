@@ -1,12 +1,15 @@
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::Felt252;
+
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_relocatable, Address},
 };
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
     EmitEvent(EmitEventSysCall),
+    StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1SysCall),
 }
 
@@ -16,6 +19,13 @@ pub(crate) struct EmitEventSysCall {
     pub(crate) keys_end: Relocatable,
     pub(crate) data_start: Relocatable,
     pub(crate) data_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageWriteRequest {
+    pub(crate) reserved: Felt252,
+    pub(crate) key: Felt252,
+    pub(crate) value: Felt252,
 }
 
 // Arguments given in the syscall documentation
@@ -35,6 +45,11 @@ pub(crate) struct SendMessageToL1SysCall {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
+impl From<StorageWriteRequest> for SyscallRequest {
+    fn from(storage_write_request: StorageWriteRequest) -> SyscallRequest {
+        SyscallRequest::StorageWrite(storage_write_request)
+    }
+}
 
 impl From<EmitEventSysCall> for SyscallRequest {
     fn from(emit_event_struct: EmitEventSysCall) -> SyscallRequest {
@@ -74,6 +89,23 @@ impl FromPtr for EmitEventSysCall {
             keys_end,
             data_start,
             data_end,
+        }
+        .into())
+    }
+}
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let reserved = get_big_int(vm, syscall_ptr)?;
+        let key = get_big_int(vm, &syscall_ptr + 1)?;
+        let value = get_big_int(vm, &syscall_ptr + 2)?;
+
+        Ok(StorageWriteRequest {
+            reserved,
+            key,
+            value,
         }
         .into())
     }
