@@ -1,4 +1,7 @@
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::vm_core::VirtualMachine,
+};
 use felt::Felt252;
 use num_traits::{One, Zero};
 
@@ -40,7 +43,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
-    pub(crate) read_only_segments: Vec<Relocatable>,
+    pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) entry_point: ExecutionEntryPoint,
@@ -216,10 +219,15 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
 
     fn allocate_segment(
         &mut self,
-        _vm: &mut VirtualMachine,
-        _data: Vec<cairo_rs::types::relocatable::MaybeRelocatable>,
+        vm: &mut VirtualMachine,
+        data: Vec<cairo_rs::types::relocatable::MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
-        todo!();
+        let segment_start = vm.add_memory_segment();
+        let segment_end = vm.write_arg(segment_start, &data)?;
+        let sub = segment_end.sub(&segment_start.to_owned().into())?;
+        let segment = (segment_start.to_owned(), sub);
+        self.read_only_segments.push(segment);
+        Ok(segment_start)
     }
     //TODO remove allow irrefutable_let_patterns
     #[allow(irrefutable_let_patterns)]
