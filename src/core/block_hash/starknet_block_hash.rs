@@ -17,7 +17,6 @@ pub fn calculate_tx_hashes_with_signatures(
     tx_signatures: Vec<Vec<Felt252>>,
 ) -> Result<Vec<Felt252>, SyscallHandlerError> {
     zip(tx_hashes, tx_signatures)
-        .into_iter()
         .map(|(hash, signature)| calculate_single_tx_hash_with_signature(hash, signature))
         .collect::<Result<Vec<Felt252>, _>>()
 }
@@ -56,6 +55,7 @@ pub fn calculate_event_hash(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
 
     #[test]
     fn calculate_event_hash_test() {

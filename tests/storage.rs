@@ -36,7 +36,7 @@ fn integration_storage_test() {
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
+        .selector
         .clone();
 
     //* --------------------------------------------

@@ -47,28 +47,28 @@ impl StateReader for InMemoryStateReader {
         Ok(contract_class)
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let class_hash = self
             .address_to_class_hash
             .get(contract_address)
             .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
-        class_hash
+        class_hash.cloned()
     }
 
-    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt252, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         let nonce = self
             .address_to_nonce
             .get(contract_address)
             .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
-        nonce
+        nonce.cloned()
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt252, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         let storage = self
             .address_to_storage
             .get(storage_entry)
             .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()));
-        storage
+        storage.cloned()
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
@@ -81,6 +81,7 @@ mod tests {
     use super::*;
     use crate::services::api::contract_class::{ContractEntryPoint, EntryPointType};
     use cairo_rs::types::program::Program;
+    use coverage_helper::test;
 
     #[test]
     fn get_contract_state_test() {
@@ -109,12 +110,12 @@ mod tests {
 
         assert_eq!(
             state_reader.get_class_hash_at(&contract_address),
-            Ok(&class_hash)
+            Ok(class_hash)
         );
-        assert_eq!(state_reader.get_nonce_at(&contract_address), Ok(&nonce));
+        assert_eq!(state_reader.get_nonce_at(&contract_address), Ok(nonce));
         assert_eq!(
             state_reader.get_storage_at(&storage_entry),
-            Ok(&storage_value)
+            Ok(storage_value)
         );
     }
 

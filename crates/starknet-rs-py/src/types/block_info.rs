@@ -1,11 +1,13 @@
 use cairo_felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*, types::PyType};
-use starknet_rs::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
+use starknet_rs::{
+    business_logic::state::state_api_objects::BlockInfo, definitions::constants::DEFAULT_GAS_PRICE,
+    utils::Address,
+};
 
-#[pyclass]
-#[pyo3(name = "BlockInfo")]
-#[derive(Debug)]
+#[pyclass(name = "BlockInfo")]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PyBlockInfo {
     inner: BlockInfo,
 }
@@ -40,10 +42,17 @@ impl PyBlockInfo {
 
     /// Returns a BlockInfo object with default gas_price.
     #[classmethod]
-    fn create_for_testing(_cls: &PyType, block_number: u64, block_timestamp: u64) -> PyBlockInfo {
+    fn create_for_testing(
+        _cls: &PyType,
+        block_number: u64,
+        block_timestamp: u64,
+        gas_price: Option<u64>,
+    ) -> PyBlockInfo {
+        let gas_price = gas_price.unwrap_or(DEFAULT_GAS_PRICE);
         let inner = BlockInfo {
             block_number,
             block_timestamp,
+            gas_price,
             ..Default::default()
         };
         Self { inner }
@@ -82,8 +91,20 @@ impl PyBlockInfo {
     }
 }
 
+impl From<BlockInfo> for PyBlockInfo {
+    fn from(inner: BlockInfo) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<PyBlockInfo> for BlockInfo {
+    fn from(py_value: PyBlockInfo) -> Self {
+        py_value.inner
+    }
+}
+
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
     use pyo3::{types::IntoPyDict, IntoPy, PyTypeInfo, Python};
 
@@ -91,8 +112,8 @@ mod tests {
     fn validate_legal_progress() {
         Python::with_gil(|py| {
             let cls = <PyBlockInfo as PyTypeInfo>::type_object(py);
-            let block_info = PyBlockInfo::create_for_testing(cls, 1, 5).into_py(py);
-            let next_block_info = PyBlockInfo::create_for_testing(cls, 2, 13).into_py(py);
+            let block_info = PyBlockInfo::create_for_testing(cls, 1, 5, None).into_py(py);
+            let next_block_info = PyBlockInfo::create_for_testing(cls, 2, 13, None).into_py(py);
 
             let locals = [
                 ("block_info", block_info),

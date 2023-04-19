@@ -11,8 +11,7 @@ use starknet_rs::{
 
 use crate::types::contract_class::PyContractClass;
 
-#[pyclass]
-#[pyo3(name = "TransactionHashPrefix")]
+#[pyclass(name = "TransactionHashPrefix")]
 #[derive(Debug)]
 pub enum PyTransactionHashPrefix {
     #[pyo3(name = "DECLARE")]
@@ -51,8 +50,7 @@ impl From<&PyTransactionHashPrefix> for TransactionHashPrefix {
     }
 }
 
-#[pyfunction]
-#[pyo3(name = "calculate_deploy_transaction_hash")]
+#[pyfunction(name = "calculate_deploy_transaction_hash")]
 pub(crate) fn py_calculate_deploy_transaction_hash(
     version: u64,
     contract_address: BigUint,
@@ -73,8 +71,7 @@ pub(crate) fn py_calculate_deploy_transaction_hash(
     }
 }
 
-#[pyfunction]
-#[pyo3(name = "calculate_declare_transaction_hash")]
+#[pyfunction(name = "calculate_declare_transaction_hash")]
 pub(crate) fn py_calculate_declare_transaction_hash(
     contract_class: &PyContractClass,
     chain_id: BigUint,
@@ -99,8 +96,7 @@ pub(crate) fn py_calculate_declare_transaction_hash(
     }
 }
 
-#[pyfunction]
-#[pyo3(name = "calculate_transaction_hash_common")]
+#[pyfunction(name = "calculate_transaction_hash_common")]
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn py_calculate_transaction_hash_common(
     tx_hash_prefix: &PyTransactionHashPrefix,

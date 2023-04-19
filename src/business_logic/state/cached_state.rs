@@ -92,10 +92,10 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
             .to_owned())
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(x) => *x,
+                Ok(x) => x,
                 Err(StateError::NoneContractState(_)) => [0; 32],
                 Err(e) => return Err(e),
             };
@@ -107,24 +107,26 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         self.cache
             .get_class_hash(contract_address)
             .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
+            .cloned()
     }
 
-    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt252, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
             let nonce = self.state_reader.get_nonce_at(contract_address)?;
             self.cache
                 .nonce_initial_values
-                .insert(contract_address.clone(), nonce.clone());
+                .insert(contract_address.clone(), nonce);
         }
         self.cache
             .get_nonce(contract_address)
             .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))
+            .cloned()
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt252, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             let value = match self.state_reader.get_storage_at(storage_entry) {
-                Ok(x) => x.clone(),
+                Ok(x) => x,
                 Err(
                     StateError::Storage(StorageError::ErrorFetchingData)
                     | StateError::EmptyKeyInStorage
@@ -142,6 +144,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         self.cache
             .get_storage(storage_entry)
             .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
+            .cloned()
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
@@ -180,7 +183,7 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         }
 
         match self.get_class_hash_at(&deploy_contract_address) {
-            Ok(x) if x == &[0; 32] => {}
+            Ok(x) if x == [0; 32] => {}
             Ok(_) => {
                 return Err(StateError::ContractAddressUnavailable(
                     deploy_contract_address.clone(),
@@ -190,13 +193,16 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         }
 
         self.cache
-            .class_hash_writes
-            .insert(deploy_contract_address, class_hash);
+            .class_hash_writes_mut()
+            .insert(deploy_contract_address.clone(), class_hash);
+        self.cache
+            .nonce_writes_mut()
+            .insert(deploy_contract_address, Felt252::zero());
         Ok(())
     }
 
     fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError> {
-        let new_nonce = self.get_nonce_at(contract_address)? + 1;
+        let new_nonce = &self.get_nonce_at(contract_address)? + 1;
         self.cache
             .nonce_writes
             .insert(contract_address.clone(), new_nonce);
@@ -218,6 +224,7 @@ mod tests {
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
     use cairo_rs::types::program::Program;
+    use coverage_helper::test;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
@@ -248,13 +255,16 @@ mod tests {
 
         assert_eq!(
             cached_state.get_class_hash_at(&contract_address),
-            Ok(&class_hash)
+            Ok(class_hash)
         );
-        assert_eq!(cached_state.get_nonce_at(&contract_address), Ok(&nonce));
+        assert_eq!(
+            cached_state.get_nonce_at(&contract_address),
+            Ok(nonce.clone())
+        );
         cached_state.increment_nonce(&contract_address).unwrap();
         assert_eq!(
             cached_state.get_nonce_at(&contract_address),
-            Ok(&(nonce + Felt252::new(1)))
+            Ok(nonce + Felt252::new(1))
         );
     }
 
@@ -308,12 +318,12 @@ mod tests {
         let value = Felt252::new(10);
         cached_state.set_storage_at(&storage_entry, value.clone());
 
-        assert_eq!(cached_state.get_storage_at(&storage_entry), Ok(&value));
+        assert_eq!(cached_state.get_storage_at(&storage_entry), Ok(value));
 
         let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
         assert_eq!(
             cached_state.get_storage_at(&storage_entry_2).unwrap(),
-            &Felt252::zero(),
+            Felt252::zero(),
         );
     }
 
@@ -354,7 +364,7 @@ mod tests {
         cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
         let result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
 
-        assert_eq!(result, Ok(&value));
+        assert_eq!(result, Ok(value.clone()));
 
         // rewrite storage_key
         let new_value = value + 3_usize;
@@ -363,6 +373,73 @@ mod tests {
 
         let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
 
-        assert_eq!(new_result, Ok(&new_value));
+        assert_eq!(new_result, Ok(new_value));
+    }
+
+    #[test]
+    fn set_contract_classes_twice_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        cached_state.set_contract_classes(HashMap::new()).unwrap();
+        let result = cached_state
+            .set_contract_classes(HashMap::new())
+            .unwrap_err();
+
+        assert_eq!(result, StateError::AssignedContractClassCache);
+    }
+
+    #[test]
+    fn deploy_contract_address_out_of_range_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let contract_address = Address(0.into());
+
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        let result = cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap_err();
+
+        assert_eq!(
+            result,
+            StateError::ContractAddressOutOfRangeAddress(contract_address)
+        );
+    }
+
+    #[test]
+    fn deploy_contract_address_in_use_error_test() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let contract_address = Address(42.into());
+
+        let mut cached_state = CachedState::new(state_reader, None);
+
+        cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap();
+        let result = cached_state
+            .deploy_contract(contract_address.clone(), [10; 32])
+            .unwrap_err();
+
+        assert_eq!(
+            result,
+            StateError::ContractAddressUnavailable(contract_address)
+        );
     }
 }

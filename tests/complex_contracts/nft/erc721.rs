@@ -93,6 +93,7 @@ fn erc721_balance_of_test() {
         .unwrap()
         .entry_points_by_type()
         .clone();
+
     let mut call_config = CallConfig {
         state: &mut state,
         caller_address: &caller_address,

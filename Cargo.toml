@@ -3,9 +3,13 @@ name = "starknet-rs"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["with_mimalloc"]
+with_mimalloc = ["mimalloc"]
+
 [dependencies]
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "77fe09ebbf72710935b455b1c5ff56b0bad7a4b8" }
-felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "77fe09ebbf72710935b455b1c5ff56b0bad7a4b8" }
+cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
+felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
@@ -17,21 +21,33 @@ sha3 = "0.10.1"
 starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "main", features = [
     "testing",
 ] }
-starknet-crypto = "0.2.0"
-thiserror = { version = "1.0.32" }
+starknet-crypto = "0.4.3"
+thiserror = "1.0.32"
 clap = { version = "4.1.8", features = ["derive"] }
 actix-web = "4.3.1"
 awc = "3.1.1"
+mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
+cargo-llvm-cov = "0.5.14"
+
+starknet-contract-class = { path = "crates/starknet-contract-class" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 rusty-hook = "0.11"
+coverage-helper = "0.1.0"
 
 [workspace]
-members = ["crates/starknet-rs-py"]
+members = ["crates/starknet-rs-py", "crates/starknet-contract-class", "fuzzer"]
 
 [[bench]]
 path = "bench/internals.rs"
 name = "internals"
 harness = false
+
+[profile.release.package.fuzzer]
+strip = "debuginfo"
+overflow-checks = true
+opt-level = 3
+debug = true
+debug-assertions = true

@@ -1,12 +1,11 @@
+use crate::utils::Address;
 use felt::Felt252;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
 
-use crate::utils::Address;
-
 /// A StarkNet Message from L2 to L1.
 #[derive(Debug, Clone)]
-pub(crate) struct StarknetMessageToL1 {
+pub struct StarknetMessageToL1 {
     from_address: Address,
     to_address: Address,
     payload: Vec<Felt252>,
@@ -44,55 +43,61 @@ impl StarknetMessageToL1 {
     }
 }
 
-#[test]
-fn create_starknet_message_to_l1() {
-    let from_address = Address(42.into());
-    let to_address = Address(1729.into());
-    let payload: Vec<Felt252> = vec![1.into(), 2.into(), 3.into(), 4.into()];
-    let message = StarknetMessageToL1::new(from_address, to_address, payload);
+#[cfg(test)]
+mod test {
+    use super::*;
+    use coverage_helper::test;
 
-    assert_eq!(message.from_address, Address(42.into()));
-    assert_eq!(message.to_address, Address(1729.into()));
-    assert_eq!(
-        message.payload,
-        vec![1.into(), 2.into(), 3.into(), 4.into()]
-    )
-}
+    #[test]
+    fn create_starknet_message_to_l1() {
+        let from_address = Address(42.into());
+        let to_address = Address(1729.into());
+        let payload: Vec<Felt252> = vec![1.into(), 2.into(), 3.into(), 4.into()];
+        let message = StarknetMessageToL1::new(from_address, to_address, payload);
 
-#[test]
-fn encode_starknet_message_to_l1() {
-    let message = StarknetMessageToL1::new(
-        Address(42.into()),
-        Address(1729.into()),
-        vec![1.into(), 2.into(), 3.into(), 4.into()],
-    );
+        assert_eq!(message.from_address, Address(42.into()));
+        assert_eq!(message.to_address, Address(1729.into()));
+        assert_eq!(
+            message.payload,
+            vec![1.into(), 2.into(), 3.into(), 4.into()]
+        )
+    }
 
-    let expected_output = vec![
-        42.into(),
-        1729.into(),
-        4.into(),
-        1.into(),
-        2.into(),
-        3.into(),
-        4.into(),
-    ];
+    #[test]
+    fn encode_starknet_message_to_l1() {
+        let message = StarknetMessageToL1::new(
+            Address(42.into()),
+            Address(1729.into()),
+            vec![1.into(), 2.into(), 3.into(), 4.into()],
+        );
 
-    assert_eq!(message.encode(), expected_output);
-}
+        let expected_output = vec![
+            42.into(),
+            1729.into(),
+            4.into(),
+            1.into(),
+            2.into(),
+            3.into(),
+            4.into(),
+        ];
 
-#[test]
-fn get_hash_for_starknet_message_to_l1() {
-    let message = StarknetMessageToL1::new(
-        Address(42.into()),
-        Address(1729.into()),
-        vec![1.into(), 2.into(), 3.into(), 4.into()],
-    );
+        assert_eq!(message.encode(), expected_output);
+    }
 
-    assert_eq!(
-        message.get_hash(),
-        Vec::from([
-            35, 146, 105, 229, 123, 197, 150, 164, 71, 161, 100, 157, 18, 54, 233, 219, 32, 150,
-            155, 238, 74, 8, 254, 114, 153, 144, 74, 32, 110, 104, 86, 42
-        ])
-    )
+    #[test]
+    fn get_hash_for_starknet_message_to_l1() {
+        let message = StarknetMessageToL1::new(
+            Address(42.into()),
+            Address(1729.into()),
+            vec![1.into(), 2.into(), 3.into(), 4.into()],
+        );
+
+        assert_eq!(
+            message.get_hash(),
+            Vec::from([
+                35, 146, 105, 229, 123, 197, 150, 164, 71, 161, 100, 157, 18, 54, 233, 219, 32,
+                150, 155, 238, 74, 8, 254, 114, 153, 144, 74, 32, 110, 104, 86, 42
+            ])
+        )
+    }
 }

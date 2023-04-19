@@ -1,18 +1,33 @@
 diff --git a/starknet_devnet/__init__.py b/starknet_devnet/__init__.py
-index 51ffd51..2c09627 100644
+index 51ffd51..1c8bcb0 100644
 --- a/starknet_devnet/__init__.py
 +++ b/starknet_devnet/__init__.py
-@@ -53,7 +53,7 @@ def _patch_copy():
+@@ -78,15 +78,14 @@ def _patch_cairo_vm():
+     warn("Using Cairo VM: Rust")
  
-     from copy import copy
  
--    from starkware.starknet.services.api.contract_class import ContractClass
-+    from starknet_rs_py import ContractClass
+-_VM_VAR = "STARKNET_DEVNET_CAIRO_VM"
+-_cairo_vm = os.environ.get(_VM_VAR)
++def _patch_starknet_rs():
++    from starknet_devnet.starknet_rs_patch import starknet_rs_py_monkeypatch
  
-     def simpler_copy(self, memo):  # pylint: disable=unused-argument
-         """
+-if _cairo_vm == "rust":
+-    _patch_cairo_vm()
++    starknet_rs_py_monkeypatch()
++
++    from .util import warn
++
++    warn("Patching...")
+ 
+-elif not _cairo_vm or _cairo_vm == "python":
+-    # python VM set by default
+-    pass
+ 
+-else:
+-    sys.exit(f"Error: Invalid value of environment variable {_VM_VAR}: '{_cairo_vm}'")
++_patch_starknet_rs()
 diff --git a/starknet_devnet/account.py b/starknet_devnet/account.py
-index 36c7cb5..bfc74c9 100644
+index 36c7cb5..253cb62 100644
 --- a/starknet_devnet/account.py
 +++ b/starknet_devnet/account.py
 @@ -2,12 +2,12 @@
@@ -32,8 +47,24 @@ index 36c7cb5..bfc74c9 100644
  
  from starknet_devnet.account_util import set_balance
  from starknet_devnet.contract_class_wrapper import ContractClassWrapper
+@@ -54,12 +54,10 @@ class Account:
+         """Deploy this account and set its balance."""
+         starknet: Starknet = self.starknet_wrapper.starknet
+         contract_class = self.contract_class
+-        await starknet.state.state.set_contract_class(
+-            self.class_hash_bytes, contract_class
+-        )
+-        await starknet.state.state.deploy_contract(self.address, self.class_hash_bytes)
++        starknet.state.set_contract_class(self.class_hash_bytes, contract_class)
++        starknet.state.deploy_contract(self.address, self.class_hash_bytes)
+ 
+-        await starknet.state.state.set_storage_at(
++        starknet.state.set_storage_at(
+             self.address, get_selector_from_name("Account_public_key"), self.public_key
+         )
+ 
 diff --git a/starknet_devnet/account_util.py b/starknet_devnet/account_util.py
-index df809df..83ce915 100644
+index df809df..4ec19a2 100644
 --- a/starknet_devnet/account_util.py
 +++ b/starknet_devnet/account_util.py
 @@ -7,13 +7,13 @@ from typing import List, NamedTuple, Sequence, Tuple
@@ -54,6 +85,18 @@ index df809df..83ce915 100644
  
  from .util import Uint256
  
+@@ -123,9 +123,5 @@ async def set_balance(state: StarknetState, address: int, balance: int):
+     balance_address = pedersen_hash(get_selector_from_name("ERC20_balances"), address)
+     balance_uint256 = Uint256.from_felt(balance)
+ 
+-    await state.state.set_storage_at(
+-        fee_token_address, balance_address, balance_uint256.low
+-    )
+-    await state.state.set_storage_at(
+-        fee_token_address, balance_address + 1, balance_uint256.high
+-    )
++    state.set_storage_at(fee_token_address, balance_address, balance_uint256.low)
++    state.set_storage_at(fee_token_address, balance_address + 1, balance_uint256.high)
 diff --git a/starknet_devnet/block_info_generator.py b/starknet_devnet/block_info_generator.py
 index 3812ffa..def6a9f 100644
 --- a/starknet_devnet/block_info_generator.py
@@ -70,7 +113,7 @@ index 3812ffa..def6a9f 100644
  from starknet_devnet.constants import CAIRO_LANG_VERSION
  
 diff --git a/starknet_devnet/blocks.py b/starknet_devnet/blocks.py
-index 60f8dd6..26327be 100644
+index 60f8dd6..57167bd 100644
 --- a/starknet_devnet/blocks.py
 +++ b/starknet_devnet/blocks.py
 @@ -4,12 +4,12 @@ Class for generating and handling blocks
@@ -98,6 +141,24 @@ index 60f8dd6..26327be 100644
  from starkware.starkware_utils.error_handling import StarkErrorCode
  
  from .constants import CAIRO_LANG_VERSION, DUMMY_STATE_ROOT
+@@ -180,7 +180,7 @@ class DevnetBlocks:
+         Generates pending objects (block, updates) and stores them as private properties.
+         The method `store_pending` can be used after this method.
+         """
+-        timestamp = state.state.block_info.block_timestamp
++        timestamp = state.block_info.block_timestamp
+         signatures = [tx.get_signature() for tx in transactions or []]
+         internal_transactions = [tx.internal_tx for tx in transactions or []]
+         transaction_receipts = tuple(tx.get_execution() for tx in transactions or ())
+@@ -200,7 +200,7 @@ class DevnetBlocks:
+             timestamp=timestamp,
+             transaction_receipts=transaction_receipts,
+             status=BlockStatus.PENDING,
+-            gas_price=state.state.block_info.gas_price,
++            gas_price=state.block_info.gas_price,
+             sequencer_address=state.general_config.sequencer_address,
+             parent_block_hash=parent_block_hash,
+             starknet_version=CAIRO_LANG_VERSION,
 diff --git a/starknet_devnet/blueprints/feeder_gateway.py b/starknet_devnet/blueprints/feeder_gateway.py
 index 867ade6..09215e0 100644
 --- a/starknet_devnet/blueprints/feeder_gateway.py
@@ -278,10 +339,10 @@ index 7727eae..c4c87f1 100644
  
  from starknet_devnet.constants import CAIRO_LANG_VERSION
 diff --git a/starknet_devnet/cairo_rs_py_patch.py b/starknet_devnet/cairo_rs_py_patch.py
-index 8a00a5b..f598ce6 100644
+index 8a00a5b..28dde19 100644
 --- a/starknet_devnet/cairo_rs_py_patch.py
 +++ b/starknet_devnet/cairo_rs_py_patch.py
-@@ -30,26 +30,25 @@ from starkware.cairo.lang.vm.vm_exceptions import (
+@@ -30,25 +30,24 @@ from starkware.cairo.lang.vm.vm_exceptions import (
      VmExceptionBase,
  )
  from starkware.python.utils import safe_zip
@@ -310,23 +371,23 @@ index 8a00a5b..f598ce6 100644
 -from starkware.starknet.definitions.general_config import StarknetGeneralConfig
 -from starkware.starknet.public import abi as starknet_abi
 -from starkware.starknet.public.abi import SYSCALL_PTR_OFFSET
--from starkware.starknet.services.api.contract_class import ContractClass
 +from starknet_rs_py import StarknetErrorCode
 +from starknet_rs_py import StarknetGeneralConfig
 +from starknet_rs_py import SYSCALL_PTR_OFFSET
-+from starknet_rs_py import ContractClass
+ from starkware.starknet.services.api.contract_class import ContractClass
  from starkware.starkware_utils.error_handling import (
      ErrorCode,
-     StarkException,
-@@ -105,7 +104,7 @@ def cairo_rs_py_run(
+@@ -104,9 +103,7 @@ def cairo_rs_py_run(
+ 
      validate_contract_deployed(state=state, contract_address=self.contract_address)
  
-     initial_syscall_ptr = cast(
+-    initial_syscall_ptr = cast(
 -        RelocatableValue, os_context[starknet_abi.SYSCALL_PTR_OFFSET]
-+        RelocatableValue, os_context[SYSCALL_PTR_OFFSET]
-     )
+-    )
++    initial_syscall_ptr = cast(RelocatableValue, os_context[SYSCALL_PTR_OFFSET])
      syscall_handler = syscall_utils.BusinessLogicSysCallHandler(
          execute_entry_point_cls=ExecuteEntryPoint,
+         tx_execution_context=tx_execution_context,
 diff --git a/starknet_devnet/contract_class_wrapper.py b/starknet_devnet/contract_class_wrapper.py
 index 7eb1fae..be5a72c 100644
 --- a/starknet_devnet/contract_class_wrapper.py
@@ -341,7 +402,7 @@ index 7eb1fae..be5a72c 100644
  
  @dataclass
 diff --git a/starknet_devnet/devnet_config.py b/starknet_devnet/devnet_config.py
-index 08f7daa..24fc6b5 100644
+index 08f7daa..fb32787 100644
 --- a/starknet_devnet/devnet_config.py
 +++ b/starknet_devnet/devnet_config.py
 @@ -13,10 +13,10 @@ from aiohttp.client_exceptions import ClientConnectorError, InvalidURL
@@ -359,8 +420,26 @@ index 08f7daa..24fc6b5 100644
      FeederGatewayClient,
  )
  
+@@ -41,7 +41,7 @@ NETWORK_TO_URL = {
+     "alpha-mainnet": "https://alpha-mainnet.starknet.io",
+ }
+ NETWORK_NAMES = ", ".join(NETWORK_TO_URL.keys())
+-CHAIN_IDS = ", ".join([member.name for member in StarknetChainId])
++CHAIN_IDS = ", ".join([member.name for member in StarknetChainId.variants()])
+ 
+ 
+ def _fork_network(network_id: str):
+@@ -71,7 +71,7 @@ def _fork_block(specifier: str):
+ def _chain_id(chain_id: str):
+     """Parse chain id.'"""
+     try:
+-        chain_id = StarknetChainId[chain_id]
++        chain_id = StarknetChainId.get(chain_id)
+     except KeyError:
+         sys.exit(
+             f"Error: The value of --chain-id must be in {{{CHAIN_IDS}}}, got: {chain_id}"
 diff --git a/starknet_devnet/fee_token.py b/starknet_devnet/fee_token.py
-index 0e646b4..b0d3222 100644
+index 0e646b4..b20ddef 100644
 --- a/starknet_devnet/fee_token.py
 +++ b/starknet_devnet/fee_token.py
 @@ -4,11 +4,12 @@ Fee token and its predefined constants.
@@ -381,6 +460,64 @@ index 0e646b4..b0d3222 100644
  
  from starknet_devnet.account_util import get_execute_args
  from starknet_devnet.chargeable_account import ChargeableAccount
+@@ -52,33 +53,27 @@ class FeeToken:
+         starknet: Starknet = self.starknet_wrapper.starknet
+         contract_class = FeeToken.get_contract_class()
+ 
+-        await starknet.state.state.set_contract_class(
+-            FeeToken.HASH_BYTES, contract_class
+-        )
++        starknet.state.set_contract_class(FeeToken.HASH_BYTES, contract_class)
+ 
+-        # pylint: disable=protected-access
+-        starknet.state.state.cache._class_hash_writes[
+-            FeeToken.ADDRESS
+-        ] = FeeToken.HASH_BYTES
+-        # replace with await starknet.state.state.deploy_contract
++        starknet.state.deploy_contract(FeeToken.ADDRESS, FeeToken.HASH_BYTES)
+ 
+         # mimic constructor
+-        await starknet.state.state.set_storage_at(
++        starknet.state.set_storage_at(
+             FeeToken.ADDRESS,
+             get_selector_from_name("ERC20_name"),
+             str_to_felt(FeeToken.NAME),
+         )
+-        await starknet.state.state.set_storage_at(
++        starknet.state.set_storage_at(
+             FeeToken.ADDRESS,
+             get_selector_from_name("ERC20_symbol"),
+             str_to_felt(FeeToken.SYMBOL),
+         )
+-        await starknet.state.state.set_storage_at(
++        starknet.state.set_storage_at(
+             FeeToken.ADDRESS,
+             get_selector_from_name("ERC20_decimals"),
+             18,
+         )
+-        await starknet.state.state.set_storage_at(
++        starknet.state.set_storage_at(
+             FeeToken.ADDRESS,
+             get_selector_from_name("Ownable_owner"),
+             ChargeableAccount.ADDRESS,
+@@ -115,7 +110,7 @@ class FeeToken:
+ 
+         # we need a funded account for this since the tx has to be signed and a fee will be charged
+         # a user-intedded predeployed account cannot be used for this
+-        nonce = await starknet.state.state.get_nonce_at(ChargeableAccount.ADDRESS)
++        nonce = starknet.state.get_nonce_at(ChargeableAccount.ADDRESS)
+         chargeable_address = hex(ChargeableAccount.ADDRESS)
+         signature, execute_calldata = get_execute_args(
+             calls=[(hex(FeeToken.ADDRESS), "mint", calldata)],
+@@ -151,7 +146,7 @@ class FeeToken:
+             internal_tx = InternalInvokeFunction.from_external(
+                 transaction, starknet.state.general_config
+             )
+-            await starknet.state.execute_tx(internal_tx)
++            starknet.state.execute_tx(internal_tx)
+         else:
+             _, tx_hash_int = await self.starknet_wrapper.invoke(transaction)
+             tx_hash = hex(tx_hash_int)
 diff --git a/starknet_devnet/forked_state.py b/starknet_devnet/forked_state.py
 index 419e4ab..69735fc 100644
 --- a/starknet_devnet/forked_state.py
@@ -411,7 +548,7 @@ index 419e4ab..69735fc 100644
  
  from .block_info_generator import now
 diff --git a/starknet_devnet/general_config.py b/starknet_devnet/general_config.py
-index 2a3d036..4ab9189 100644
+index 2a3d036..bc6bcba 100644
 --- a/starknet_devnet/general_config.py
 +++ b/starknet_devnet/general_config.py
 @@ -1,8 +1,14 @@
@@ -425,7 +562,7 @@ index 2a3d036..4ab9189 100644
 +    CONTRACT_STATES_COMMITMENT_TREE_HEIGHT,
 +    EVENT_COMMITMENT_TREE_HEIGHT,
 +    CONTRACT_ADDRESS_BITS,
-+    TRANSACTION_COMMITMENT_TREE_HEIGHT
++    TRANSACTION_COMMITMENT_TREE_HEIGHT,
 +)
 +from starknet_rs_py import (
      DEFAULT_GAS_PRICE,
@@ -530,8 +667,46 @@ index 8ed2ee8..e2ccbab 100644
      AccountTransaction,
      Declare,
      DeployAccount,
+diff --git a/starknet_devnet/starknet_rs_patch.py b/starknet_devnet/starknet_rs_patch.py
+new file mode 100644
+index 0000000..35413c0
+--- /dev/null
++++ b/starknet_devnet/starknet_rs_patch.py
+@@ -0,0 +1,32 @@
++import sys
++
++import starknet_rs_py
++
++
++def starknet_rs_py_monkeypatch():
++    # used internally
++    setattr(
++        sys.modules["starkware.starknet.services.api.contract_class"],
++        "ContractClass",
++        starknet_rs_py.ContractClass,
++    )
++
++    for obj in (
++        "InternalDeclare",
++        "InternalDeploy",
++        "InternalDeployAccount",
++        "InternalInvokeFunction",
++        # "InternalL1Handler",
++        # "InternalTransaction",
++    ):
++        import starkware.starknet.business_logic.transaction.objects
++
++        setattr(
++            sys.modules["starkware.starknet.business_logic.transaction.objects"],
++            obj,
++            getattr(starknet_rs_py, obj),
++        )
++
++    # finish initializing module
++    # needed because of circular dependencies between starknet_rs_py and cairo-lang
++    starknet_rs_py.init()
 diff --git a/starknet_devnet/starknet_wrapper.py b/starknet_devnet/starknet_wrapper.py
-index ff38d1c..0ed0f71 100644
+index ff38d1c..a937b4d 100644
 --- a/starknet_devnet/starknet_wrapper.py
 +++ b/starknet_devnet/starknet_wrapper.py
 @@ -7,9 +7,9 @@ from types import TracebackType
@@ -547,7 +722,7 @@ index ff38d1c..0ed0f71 100644
      CallInfo,
      InternalDeclare,
      InternalDeploy,
-@@ -19,20 +19,20 @@ from starkware.starknet.business_logic.transaction.objects import (
+@@ -19,20 +19,21 @@ from starkware.starknet.business_logic.transaction.objects import (
      InternalTransaction,
      TransactionExecutionInfo,
  )
@@ -566,6 +741,7 @@ index ff38d1c..0ed0f71 100644
 +from starknet_rs_py import StarknetErrorCode
 +from starknet_rs_py import TransactionType
 +from starknet_rs_py import ContractClass, EntryPointType
++from starknet_rs_py import StarknetState
 +from starknet_rs_py import (
      CallFunction,
      CallL1Handler,
@@ -575,7 +751,7 @@ index ff38d1c..0ed0f71 100644
      LATEST_BLOCK_ID,
      PENDING_BLOCK_ID,
      BlockStateUpdate,
-@@ -43,16 +43,16 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
+@@ -43,16 +44,16 @@ from starkware.starknet.services.api.feeder_gateway.response_objects import (
      TransactionStatus,
      TransactionTrace,
  )
@@ -597,6 +773,223 @@ index ff38d1c..0ed0f71 100644
      account_contract as oz_account_class,
  )
  from starkware.starkware_utils.error_handling import StarkErrorCode, StarkException
+@@ -148,7 +149,7 @@ class StarknetWrapper:
+             await self.__predeclare_starknet_cli_account()
+             await self.__udc.deploy()
+ 
+-            await self.__preserve_current_state(starknet.state.state)
++            await self.__preserve_current_state(starknet.state)
+             await self.__create_genesis_block()
+             self.__initialized = True
+ 
+@@ -211,7 +212,7 @@ class StarknetWrapper:
+         return await self.blocks.generate_empty_block(self.get_state(), state_update)
+ 
+     async def __preserve_current_state(self, state: CachedState):
+-        self.__current_cached_state = deepcopy(state)
++        self.__current_cached_state = state.clone()
+ 
+     async def __init_starknet(self):
+         """
+@@ -230,8 +231,10 @@ class StarknetWrapper:
+                     chain_id=self.config.chain_id,
+                 )
+             else:
+-                self.starknet = await Starknet.empty(
+-                    general_config=build_devnet_general_config(self.config.chain_id)
++                self.starknet = Starknet(
++                    StarknetState.empty(
++                        build_devnet_general_config(self.config.chain_id)
++                    )
+                 )
+ 
+         return self.starknet
+@@ -260,7 +263,7 @@ class StarknetWrapper:
+         # state update and preservation
+         previous_state = self.__current_cached_state
+         assert previous_state is not None
+-        current_state = self.get_state().state
++        current_state = self.get_state()
+         current_state.block_info = self.block_info_generator.next_block(
+             block_info=current_state.block_info,
+             general_config=self.get_state().general_config,
+@@ -316,13 +319,13 @@ class StarknetWrapper:
+             # calculate class hash here if execution fails
+             class_hash_int = int.from_bytes(tx_handler.internal_tx.class_hash, "big")
+ 
+-            tx_handler.execution_info = await state.execute_tx(tx_handler.internal_tx)
++            tx_handler.execution_info = state.execute_tx(tx_handler.internal_tx)
+ 
+             tx_handler.explicitly_declared.append(class_hash_int)
+ 
+             # alpha-goerli allows multiple declarations of the same class.
+             # Even though execute_tx is performed, class needs to be set explicitly
+-            await state.state.set_contract_class(
++            state.set_contract_class(
+                 class_hash=tx_handler.internal_tx.class_hash,
+                 contract_class=external_tx.contract_class,
+             )
+@@ -331,7 +334,7 @@ class StarknetWrapper:
+ 
+     def _update_block_number(self):
+         """Updates just the block number. Returns the old block info to allow reverting"""
+-        current_cached_state = self.get_state().state
++        current_cached_state = self.get_state()
+         block_info = current_cached_state.block_info
+         current_cached_state.block_info = BlockInfo(
+             gas_price=block_info.gas_price,
+@@ -475,7 +478,7 @@ class StarknetWrapper:
+ 
+         async with self.__get_transaction_handler() as tx_handler:
+             tx_handler.internal_tx = internal_tx
+-            await self.get_state().state.set_contract_class(
++            self.get_state().set_contract_class(
+                 class_hash=internal_tx.class_hash, contract_class=contract_class
+             )
+             tx_handler.execution_info = await self.__deploy(internal_tx)
+@@ -500,7 +503,7 @@ class StarknetWrapper:
+             tx_handler.internal_tx = InternalInvokeFunction.from_external(
+                 external_tx, state.general_config
+             )
+-            tx_handler.execution_info = await state.execute_tx(tx_handler.internal_tx)
++            tx_handler.execution_info = state.execute_tx(tx_handler.internal_tx)
+             tx_handler.internal_calls = (
+                 tx_handler.execution_info.call_info.internal_calls
+             )
+@@ -540,7 +543,7 @@ class StarknetWrapper:
+         """Perform call according to specifications in `transaction`."""
+         state = await self.__get_query_state(block_id)
+ 
+-        call_info = await state.copy().execute_entry_point_raw(
++        call_info = state.copy().execute_entry_point_raw(
+             contract_address=transaction.contract_address,
+             selector=transaction.entry_point_selector,
+             calldata=transaction.calldata,
+@@ -556,7 +559,7 @@ class StarknetWrapper:
+         This way InternalDeploy doesn't have to be created twice, calculating hash every time.
+         """
+         state = self.get_state()
+-        tx_execution_info = await state.execute_tx(tx=deploy_tx)
++        tx_execution_info = state.execute_tx(tx=deploy_tx)
+         return tx_execution_info
+ 
+     async def _register_new_contracts(
+@@ -582,7 +585,7 @@ class StarknetWrapper:
+ 
+     async def get_class_by_hash(self, class_hash: int) -> ContractClass:
+         """Return contract class given class hash"""
+-        cached_state = self.get_state().state
++        cached_state = self.get_state()
+         class_hash_bytes = to_bytes(class_hash)
+         return await cached_state.get_contract_class(class_hash_bytes)
+ 
+@@ -591,7 +594,7 @@ class StarknetWrapper:
+     ) -> int:
+         """Return class hash give the contract address"""
+         state = await self.__get_query_state(block_id)
+-        cached_state = state.state
++        cached_state = state
+         class_hash_bytes = await cached_state.get_class_hash_at(contract_address)
+         class_hash_int = int.from_bytes(class_hash_bytes, "big")
+ 
+@@ -607,7 +610,7 @@ class StarknetWrapper:
+     ) -> ContractClass:
+         """Return contract class given the contract address"""
+         state = await self.__get_query_state(block_id)
+-        cached_state = state.state
++        cached_state = state
+         class_hash_int = await self.get_class_hash_at(contract_address)
+         class_hash_bytes = to_bytes(class_hash_int)
+         return await cached_state.get_contract_class(class_hash_bytes)
+@@ -640,7 +643,7 @@ class StarknetWrapper:
+         from the contract at `contract_address`.
+         """
+         state = await self.__get_query_state(block_id)
+-        return hex(await state.state.get_storage_at(contract_address, key))
++        return hex(state.get_storage_at(contract_address, key))
+ 
+     async def load_messaging_contract_in_l1(
+         self, network_url: str, contract_address: str, network_id: str
+@@ -675,7 +678,7 @@ class StarknetWrapper:
+         # Execute transactions inside StarknetWrapper
+         async with self.__get_transaction_handler() as tx_handler:
+             tx_handler.internal_tx = transaction
+-            tx_handler.execution_info = await state.execute_tx(tx_handler.internal_tx)
++            tx_handler.execution_info = state.execute_tx(tx_handler.internal_tx)
+             tx_handler.internal_calls = (
+                 tx_handler.execution_info.call_info.internal_calls
+             )
+@@ -693,9 +696,7 @@ class StarknetWrapper:
+         for transaction in transactions_to_execute:
+             async with self.__get_transaction_handler() as tx_handler:
+                 tx_handler.internal_tx = transaction
+-                tx_handler.execution_info = await state.execute_tx(
+-                    tx_handler.internal_tx
+-                )
++                tx_handler.execution_info = state.execute_tx(tx_handler.internal_tx)
+                 tx_handler.internal_calls = (
+                     tx_handler.execution_info.call_info.internal_calls
+                 )
+@@ -752,7 +753,7 @@ class StarknetWrapper:
+         """Calculates traces and fees by simulating tx on state copy.
+         Uses the resulting state for each consecutive estimation"""
+         state = await self.__get_query_state(block_id)
+-        cached_state_copy = state.state
++        cached_state_copy = state
+ 
+         traces = []
+         fee_estimation_infos = []
+@@ -791,7 +792,7 @@ class StarknetWrapper:
+             traces.append(trace)
+ 
+             fee_estimation_info = get_fee_estimation_info(
+-                execution_info.actual_fee, state.state.block_info.gas_price
++                execution_info.actual_fee, state.block_info.gas_price
+             )
+             fee_estimation_infos.append(fee_estimation_info)
+ 
+@@ -809,7 +810,7 @@ class StarknetWrapper:
+ 
+         execution_info = await internal_call.apply_state_updates(
+             # pylint: disable=protected-access
+-            state.state._copy(),
++            state._copy(),
+             state.general_config,
+         )
+ 
+@@ -820,7 +821,7 @@ class StarknetWrapper:
+         )
+ 
+         fee_estimation_info = get_fee_estimation_info(
+-            actual_fee, state.state.block_info.gas_price
++            actual_fee, state.block_info.gas_price
+         )
+         return fee_estimation_info
+ 
+@@ -841,11 +842,11 @@ class StarknetWrapper:
+     ):
+         """Returns nonce of contract with `contract_address`"""
+         state = await self.__get_query_state(block_id)
+-        return await state.state.get_nonce_at(contract_address)
++        return state.get_nonce_at(contract_address)
+ 
+     async def __predeclare_starknet_cli_account(self):
+         """Predeclares the account class used by Starknet CLI"""
+-        await self.get_state().state.set_contract_class(
++        self.get_state().set_contract_class(
+             to_bytes(STARKNET_CLI_ACCOUNT_CLASS_HASH), oz_account_class
+         )
+ 
+@@ -860,7 +861,7 @@ class StarknetWrapper:
+         Check if the contract is deployed.
+         """
+         assert isinstance(address, int)
+-        cached_state = self.get_state().state
+-        class_hash_bytes = await cached_state.get_class_hash_at(address)
++        cached_state = self.get_state()
++        class_hash_bytes = cached_state.get_class_hash_at(address)
+         class_hash_int = int.from_bytes(class_hash_bytes, "big")
+         return bool(class_hash_int)
 diff --git a/starknet_devnet/state_archive.py b/starknet_devnet/state_archive.py
 index 95e3ab2..57df788 100644
 --- a/starknet_devnet/state_archive.py
@@ -643,7 +1036,7 @@ index d7aa7b7..03fea29 100644
      TransactionExecutionInfo,
  )
 diff --git a/starknet_devnet/udc.py b/starknet_devnet/udc.py
-index 5799dba..cae8255 100644
+index 5799dba..8aab778 100644
 --- a/starknet_devnet/udc.py
 +++ b/starknet_devnet/udc.py
 @@ -2,8 +2,9 @@
@@ -658,11 +1051,22 @@ index 5799dba..cae8255 100644
  
  
  class UDC:
+@@ -38,8 +39,6 @@ class UDC:
+         starknet: Starknet = self.starknet_wrapper.starknet
+         contract_class = UDC.get_contract_class()
+ 
+-        await starknet.state.state.set_contract_class(UDC.HASH_BYTES, contract_class)
++        starknet.state.set_contract_class(UDC.HASH_BYTES, contract_class)
+ 
+-        # pylint: disable=protected-access
+-        starknet.state.state.cache._class_hash_writes[UDC.ADDRESS] = UDC.HASH_BYTES
+-        # replace with await starknet.state.state.deploy_contract
++        starknet.state.deploy_contract(UDC.ADDRESS, UDC.HASH_BYTES)
 diff --git a/starknet_devnet/util.py b/starknet_devnet/util.py
-index ea98aa9..4b1f92c 100644
+index ea98aa9..f3749a5 100644
 --- a/starknet_devnet/util.py
 +++ b/starknet_devnet/util.py
-@@ -7,15 +7,17 @@ import sys
+@@ -7,14 +7,14 @@ import sys
  from dataclasses import dataclass
  from typing import Dict, List, Set, Union
  
@@ -677,14 +1081,19 @@ index ea98aa9..4b1f92c 100644
      StorageEntry,
  )
 -from starkware.starknet.testing.contract import StarknetContract
--from starkware.starkware_utils.error_handling import StarkException
-+
 +from starknet_rs_py import StarknetContract
-+from starknet_rs_py import StarkErrorCode, StarkException
+ from starkware.starkware_utils.error_handling import StarkException
+ 
+ 
+diff --git a/test/__init__.py b/test/__init__.py
+index e69de29..848ca1c 100644
+--- a/test/__init__.py
++++ b/test/__init__.py
+@@ -0,0 +1,4 @@
++import starknet_rs_py
 +
- 
- 
- def custom_int(arg: str) -> int:
++# needed for initializing reexports
++starknet_rs_py.init()
 diff --git a/test/account.py b/test/account.py
 index 181d822..49c2fb2 100644
 --- a/test/account.py
@@ -705,7 +1114,7 @@ index 181d822..49c2fb2 100644
  from starknet_devnet.account_util import AccountCall, get_execute_args
  
 diff --git a/test/rpc/conftest.py b/test/rpc/conftest.py
-index 345be48..44d004f 100644
+index 345be48..b8fd376 100644
 --- a/test/rpc/conftest.py
 +++ b/test/rpc/conftest.py
 @@ -17,22 +17,22 @@ from test.util import load_file_content, mint
@@ -715,12 +1124,11 @@ index 345be48..44d004f 100644
 -from starkware.starknet.business_logic.transaction.objects import InternalDeployAccount
 -from starkware.starknet.core.os.class_hash import compute_class_hash
 -from starkware.starknet.definitions.general_config import DEFAULT_CHAIN_ID
--from starkware.starknet.services.api.contract_class import ContractClass
--from starkware.starknet.services.api.feeder_gateway.response_objects import (
 +from starknet_rs_py import InternalDeployAccount
 +from starknet_rs_py import compute_class_hash
 +from starknet_rs_py import DEFAULT_CHAIN_ID
-+from starknet_rs_py import ContractClass
+ from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.feeder_gateway.response_objects import (
 +from starknet_rs_py import (
      DeployAccountSpecificInfo,
  )
@@ -766,7 +1174,7 @@ index 69ed65b..207abbe 100644
  from starknet_devnet.blueprints.rpc.utils import BlockId, rpc_felt
  
 diff --git a/test/rpc/test_rpc_estimate_fee.py b/test/rpc/test_rpc_estimate_fee.py
-index 040ad71..165db6f 100644
+index 040ad71..ef26558 100644
 --- a/test/rpc/test_rpc_estimate_fee.py
 +++ b/test/rpc/test_rpc_estimate_fee.py
 @@ -16,16 +16,16 @@ from test.shared import (
@@ -779,11 +1187,10 @@ index 040ad71..165db6f 100644
  )
 -from starkware.starknet.definitions.general_config import StarknetChainId
 -from starkware.starknet.public.abi import get_selector_from_name
--from starkware.starknet.services.api.contract_class import ContractClass
--from starkware.starknet.services.api.gateway.transaction import (
 +from starknet_rs_py import StarknetChainId
 +from starknet_rs_py import get_selector_from_name
-+from starknet_rs_py import ContractClass
+ from starkware.starknet.services.api.contract_class import ContractClass
+-from starkware.starknet.services.api.gateway.transaction import (
 +from starknet_rs_py import (
      DEFAULT_DECLARE_SENDER_ADDRESS,
  )
@@ -927,7 +1334,7 @@ index e573242..3048de0 100644
  from .account import invoke
  from .shared import (
 diff --git a/test/test_chain_id_cli_params.py b/test/test_chain_id_cli_params.py
-index afa7940..3734d07 100644
+index afa7940..19d529b 100644
 --- a/test/test_chain_id_cli_params.py
 +++ b/test/test_chain_id_cli_params.py
 @@ -3,7 +3,7 @@
@@ -939,6 +1346,24 @@ index afa7940..3734d07 100644
  
  from starknet_devnet.devnet_config import CHAIN_IDS
  
+@@ -31,7 +31,7 @@ ACTIVE_DEVNET = DevnetBackgroundProc()
+ 
+ @pytest.mark.parametrize(
+     "chain_id",
+-    [member.name for member in StarknetChainId],
++    [member.name for member in StarknetChainId.variants()],
+ )
+ def test_chain_id_valid(chain_id):
+     """Test if chain id works"""
+@@ -67,7 +67,7 @@ def test_chain_id_invalid(chain_id):
+     "run_devnet_in_background, chain_id",
+     [
+         ([*PREDEPLOY_ACCOUNT_CLI_ARGS, "--chain-id", chain_id.name], chain_id)
+-        for chain_id in StarknetChainId
++        for chain_id in StarknetChainId.variants()
+     ],
+     indirect=True,
+ )
 diff --git a/test/test_declare.py b/test/test_declare.py
 index f32162c..7401e79 100644
 --- a/test/test_declare.py
@@ -1065,6 +1490,26 @@ index dc560e2..48e53de 100644
  from starkware.starkware_utils.error_handling import StarkErrorCode
  
  from .account import invoke
+diff --git a/test/test_postman.py b/test/test_postman.py
+index f3808cf..f43fdb9 100644
+--- a/test/test_postman.py
++++ b/test/test_postman.py
+@@ -303,6 +303,7 @@ def _l1_l2_message_exchange(web3, l1l2_example_contract, l2_contract_address):
+     )
+ 
+ 
++@pytest.mark.skip(reason="Postman not supported")
+ @pytest.mark.web3_messaging
+ @devnet_in_background(*PREDEPLOY_ACCOUNT_CLI_ARGS)
+ def test_postman():
+@@ -338,6 +339,7 @@ def _load_l1_messaging_contract(req_dict: dict):
+     )
+ 
+ 
++@pytest.mark.skip(reason="Postman not supported")
+ @pytest.mark.web3_messaging
+ @devnet_in_background(*PREDEPLOY_ACCOUNT_CLI_ARGS)
+ def test_invalid_starknet_function_call_load_l1_messaging_contract():
 diff --git a/test/test_state_update.py b/test/test_state_update.py
 index f821613..11df98a 100644
 --- a/test/test_state_update.py

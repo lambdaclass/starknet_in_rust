@@ -132,6 +132,7 @@ impl StateDiff {
 
 #[cfg(test)]
 mod test {
+    use coverage_helper::test;
     use std::collections::HashMap;
 
     use super::StateDiff;

@@ -113,7 +113,7 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
-        T: Default + State + StateReader,
+        T: State + StateReader,
     {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
@@ -156,7 +156,7 @@ impl InternalInvokeFunction {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: Default + State + StateReader,
+        T: State + StateReader,
     {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -186,7 +186,7 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        T: Default + State + StateReader + Clone,
+        T: State + StateReader + Clone,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -221,7 +221,7 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<FeeInfo, TransactionError>
     where
-        S: Clone + Default + State + StateReader,
+        S: Clone + State + StateReader,
     {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -242,7 +242,7 @@ impl InternalInvokeFunction {
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
     /// then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -265,7 +265,7 @@ impl InternalInvokeFunction {
         )
     }
 
-    fn handle_nonce<S: Default + State + StateReader + Clone>(
+    fn handle_nonce<S: State + StateReader + Clone>(
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
@@ -283,7 +283,7 @@ impl InternalInvokeFunction {
                 Ok(())
             }
             Some(nonce) => {
-                if nonce != current_nonce {
+                if *nonce != current_nonce {
                     return Err(TransactionError::InvalidTransactionNonce(
                         current_nonce.to_string(),
                         nonce.to_string(),
@@ -350,6 +350,7 @@ mod tests {
         },
         services::api::contract_class::ContractClass,
     };
+    use coverage_helper::test;
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
 
@@ -417,5 +418,485 @@ mod tests {
             internal_invoke_function.calldata
         );
         assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+    }
+
+    #[test]
+    fn test_execute_specific_concurrent_changes() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 0,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: Some(0.into()),
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let result = internal_invoke_function
+            .execute(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
+        assert_eq!(
+            result.call_info.as_ref().unwrap().class_hash,
+            Some(class_hash)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().entry_point_selector,
+            Some(internal_invoke_function.entry_point_selector)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().calldata,
+            internal_invoke_function.calldata
+        );
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+    }
+
+    #[test]
+    fn test_apply_invoke_entrypoint_not_found_should_fail() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_type: EntryPointType::External,
+            calldata: Vec::new(),
+            tx_type: TransactionType::InvokeFunction,
+            version: 0,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: Some(0.into()),
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/amm.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let expected_error =
+            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default());
+
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::EntryPointNotFound
+        );
+    }
+
+    #[test]
+    fn test_run_validate_entrypoint_nonce_is_none_should_fail() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_type: EntryPointType::External,
+            calldata: Vec::new(),
+            tx_type: TransactionType::InvokeFunction,
+            version: 1,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: None,
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/amm.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let expected_error =
+            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default());
+
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvalidTxContext
+        );
+    }
+
+    #[test]
+    // Test fee calculation is done correctly but payment to sequencer fails due to been WIP.
+    fn test_execute_invoke_fee_payment_to_sequencer_should_fail() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 1,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 1000,
+            nonce: Some(0.into()),
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let mut config = StarknetGeneralConfig::default();
+        config.cairo_resource_fee_weights = HashMap::from([
+            (String::from("l1_gas_usage"), 0.into()),
+            (String::from("pedersen_builtin"), 16.into()),
+            (String::from("range_check_builtin"), 70.into()),
+        ]);
+
+        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let error_msg = "Fee transfer failure".to_string();
+        assert!(expected_error.is_err());
+        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
+    }
+
+    #[test]
+    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_fail() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 1,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 1000,
+            nonce: Some(0.into()),
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let mut config = StarknetGeneralConfig::default();
+        config.cairo_resource_fee_weights = HashMap::from([
+            (String::from("l1_gas_usage"), 0.into()),
+            (String::from("pedersen_builtin"), 16.into()),
+            (String::from("range_check_builtin"), 70.into()),
+        ]);
+        config.starknet_os_config.gas_price = 1;
+
+        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let error_msg = "Actual fee exceeded max fee.".to_string();
+        assert!(expected_error.is_err());
+        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
+    }
+
+    #[test]
+    fn test_execute_invoke_twice_should_fail() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 1,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: Some(0.into()),
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        internal_invoke_function
+            .execute(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        let expected_error =
+            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
+
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvalidTransactionNonce(..)
+        )
+    }
+
+    #[test]
+    fn test_execute_inovoke_nonce_missing_should_fail() {
+        let internal_invoke_function = InternalInvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 1,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: None,
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let expected_error =
+            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
+
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvalidTxContext
+        )
+    }
+
+    #[test]
+    fn invoke_version_zero_with_non_zero_nonce_should_fail() {
+        let expected_error = preprocess_invoke_function_fields(
+            Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            Some(1.into()),
+            0,
+        )
+        .unwrap_err();
+        assert_matches!(expected_error, TransactionError::InvokeFunctionZeroHasNonce)
+    }
+
+    #[test]
+    // the test should try to make verify_no_calls_to_other_contracts fail
+    fn verify_no_calls_to_other_contracts_should_fail() {
+        let mut call_info = CallInfo::default();
+        let mut internal_calls = Vec::new();
+        let internal_call = CallInfo {
+            contract_address: Address(1.into()),
+            ..Default::default()
+        };
+        internal_calls.push(internal_call);
+        call_info.internal_calls = internal_calls;
+
+        let expected_error = verify_no_calls_to_other_contracts(&call_info);
+
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::UnauthorizedActionOnValidate
+        );
+    }
+
+    #[test]
+    fn preprocess_invoke_function_fields_nonce_is_none() {
+        let entry_point_selector = Felt252::from_str_radix(
+            "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+            16,
+        )
+        .unwrap();
+        let result = preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0);
+
+        let expected_additional_data: Vec<Felt252> = Vec::new();
+        let expected_entry_point_selector_field = entry_point_selector;
+        assert_eq!(
+            result.unwrap(),
+            (
+                expected_entry_point_selector_field,
+                expected_additional_data
+            )
+        )
+    }
+
+    #[test]
+    fn invoke_version_one_with_no_nonce_should_fail() {
+        let expected_error = preprocess_invoke_function_fields(
+            Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            None,
+            1,
+        );
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvokeFunctionNonZeroMissingNonce
+        )
     }
 }

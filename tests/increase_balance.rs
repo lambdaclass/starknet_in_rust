@@ -39,7 +39,7 @@ fn hello_starknet_increase_balance() {
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
+        .selector
         .clone();
 
     //* --------------------------------------------

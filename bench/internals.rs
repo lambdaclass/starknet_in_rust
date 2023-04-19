@@ -1,5 +1,4 @@
 #![deny(warnings)]
-#![cfg(not(tarpaulin_include))]
 
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -18,7 +17,7 @@ use starknet_rs::{
     definitions::general_config::StarknetChainId,
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_class::ContractClass,
-    utils::{felt_to_hash, Address},
+    utils::Address,
 };
 use std::{hint::black_box, path::PathBuf};
 
@@ -28,9 +27,9 @@ lazy_static! {
         "starknet_programs/account_without_validation.json",
     ))
     .unwrap();
-    static ref CLASS_HASH: [u8; 32] = felt_to_hash(&compute_class_hash(
+    static ref CLASS_HASH: [u8; 32] = compute_class_hash(
         &CONTRACT_CLASS
-    ).unwrap());
+    ).unwrap().to_be_bytes();
     static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
         "3577223136242220508961486249701638158054969090851914040041358274796489907314"
     ));
@@ -46,7 +45,6 @@ lazy_static! {
 fn scope<T>(f: impl FnOnce() -> T) -> T {
     f()
 }
-
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
@@ -171,9 +169,7 @@ fn invoke() {
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
         .unwrap();
-
     let config = &Default::default();
-
     let salt = Address(felt_str!(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     ));

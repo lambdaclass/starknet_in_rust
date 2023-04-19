@@ -42,3 +42,7 @@ starknet-venv/
 default.profraw
 **.DS_Store
 /scripts/reports
+__pycache__/
+.pytest_cache/
+# codecov report
+lcov.info
