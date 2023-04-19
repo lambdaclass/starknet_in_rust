@@ -1,8 +1,10 @@
 use crate::{
-    business_logic::state::{state_api::StateReader, state_cache::StorageEntry},
+    business_logic::state::{
+        cached_state::CasmClassCache, state_api::StateReader, state_cache::StorageEntry,
+    },
     core::errors::state_errors::StateError,
     services::api::contract_class::ContractClass,
-    utils::{Address, ClassHash},
+    utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
@@ -19,6 +21,10 @@ pub struct InMemoryStateReader {
     pub address_to_storage: HashMap<StorageEntry, Felt252>,
     #[getset(get_mut = "pub")]
     pub class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
+    #[getset(get_mut = "pub")]
+    pub(crate) casm_contract_classes: CasmClassCache,
+    #[getset(get_mut = "pub")]
+    class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
 impl InMemoryStateReader {
@@ -27,12 +33,16 @@ impl InMemoryStateReader {
         address_to_nonce: HashMap<Address, Felt252>,
         address_to_storage: HashMap<StorageEntry, Felt252>,
         class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
+        casm_contract_classes: CasmClassCache,
+        class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
     ) -> Self {
         Self {
             address_to_class_hash,
             address_to_nonce,
             address_to_storage,
             class_hash_to_contract_class,
+            casm_contract_classes,
+            class_hash_to_compiled_class_hash,
         }
     }
 }
@@ -78,16 +88,20 @@ impl StateReader for InMemoryStateReader {
 
     fn get_compiled_class(
         &mut self,
-        _compiled_class_hash: &ClassHash,
+        compiled_class_hash: &ClassHash,
     ) -> Result<&CasmContractClass, StateError> {
-        todo!()
+        self.casm_contract_classes
+            .get(compiled_class_hash)
+            .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))
     }
 
     fn get_compiled_class_hash(
         &mut self,
-        _class_hash: &ClassHash,
+        class_hash: &ClassHash,
     ) -> Result<&ClassHash, StateError> {
-        todo!()
+        self.class_hash_to_compiled_class_hash
+            .get(class_hash)
+            .ok_or(StateError::NoneCompiledHash(*class_hash))
     }
 }
 
@@ -100,6 +114,8 @@ mod tests {
     #[test]
     fn get_contract_state_test() {
         let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
@@ -140,6 +156,8 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
         );
 
         let contract_class_key = [0; 32];
@@ -166,6 +184,8 @@ mod tests {
     #[should_panic]
     fn count_actual_storage_changes_is_a_wip() {
         let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),

@@ -1,6 +1,6 @@
 use crate::{
     core::errors::state_errors::StateError,
-    utils::{Address, ClassHash},
+    utils::{Address, ClassHash, CompiledClassHash},
 };
 use felt::Felt252;
 use getset::{Getters, MutGetters};
@@ -27,7 +27,8 @@ pub struct StateCache {
     pub(crate) nonce_writes: HashMap<Address, Felt252>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) storage_writes: HashMap<StorageEntry, Felt252>,
-    pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
+    #[get_mut = "pub"]
+    pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
 impl StateCache {

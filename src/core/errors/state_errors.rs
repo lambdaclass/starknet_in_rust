@@ -42,6 +42,10 @@ pub enum StateError {
     ConstructorCalldataEmpty(),
     #[error("Error in ExecutionEntryPoint")]
     ExecutionEntryPoint(),
+    #[error("{0:?}")]
+    NoneCompiledClass(ClassHash),
+    #[error("{0:?}")]
+    NoneCompiledHash(ClassHash),
     #[error("No class hash declared in class_hash_to_contract_class")]
     MissingClassHash(),
 }
