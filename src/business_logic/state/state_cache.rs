@@ -1,6 +1,6 @@
 use crate::{
-    business_logic::fact_state::state::CompiledClass,
     core::errors::state_errors::StateError,
+    services::api::contract_classes::compiled_class::CompiledClass,
     utils::{Address, ClassHash},
 };
 use felt::Felt252;
@@ -187,7 +187,7 @@ mod tests {
 
     use cairo_rs::types::program::Program;
 
-    use crate::services::api::contract_class::ContractClass;
+    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
 
     use super::*;
 
@@ -195,9 +195,9 @@ mod tests {
     fn state_chache_set_initial_values() {
         let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [8; 32])]);
-        let compiled_class = CompiledClass::Deprecated(
+        let compiled_class = CompiledClass::Deprecated(Box::new(
             ContractClass::new(Program::default(), HashMap::new(), None).unwrap(),
-        );
+        ));
         let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);
@@ -229,9 +229,9 @@ mod tests {
     fn state_chache_update_writes_from_other() {
         let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [11; 32])]);
-        let compiled_class = CompiledClass::Deprecated(
+        let compiled_class = CompiledClass::Deprecated(Box::new(
             ContractClass::new(Program::default(), HashMap::new(), None).unwrap(),
-        );
+        ));
         let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class.clone())]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(20.into()), [1; 32]), 18.into())]);

@@ -1,7 +1,7 @@
 use crate::{
     business_logic::state::{cached_state::CachedState, state_api::StateReader},
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::compiled_class::CompiledClass,
     starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
@@ -41,12 +41,6 @@ impl ExecutionResourcesManager {
             .get(syscall_name)
             .map(ToOwned::to_owned)
     }
-}
-
-//TODO: Remove this once we have a proper CompiledClass
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum CompiledClass {
-    Deprecated(ContractClass),
 }
 
 #[derive(Default, Clone, PartialEq, Debug)]
