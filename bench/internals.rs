@@ -90,7 +90,7 @@ fn deploy_account() {
                 vec![],
                 signature,
                 salt,
-                StarknetChainId::TestNet,
+                StarknetChainId::TestNet.to_felt(),
                 None,
             )
             .unwrap();
