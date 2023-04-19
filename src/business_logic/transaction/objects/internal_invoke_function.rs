@@ -22,7 +22,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use felt::Felt252;
@@ -350,7 +350,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        services::api::contract_class::ContractClass,
+        services::api::contract_classes::deprecated_contract_class::ContractClass,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};

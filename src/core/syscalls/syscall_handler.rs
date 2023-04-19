@@ -72,6 +72,13 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 
+    fn storage_write(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
+
     fn read_syscall_request(
         &self,
         syscall_name: &str,
@@ -80,6 +87,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
+            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),

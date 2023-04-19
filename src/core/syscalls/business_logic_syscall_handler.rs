@@ -1,9 +1,4 @@
-use cairo_rs::{
-    types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::vm_core::VirtualMachine,
-};
-use felt::Felt252;
-use num_traits::{One, Zero};
+#![allow(dead_code)]
 
 use crate::{
     business_logic::{
@@ -28,13 +23,27 @@ use crate::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
     hash_utils::calculate_contract_address,
-    services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::deprecated_contract_class::EntryPointType,
+    },
     utils::{felt_to_hash, get_felt_range, Address, ClassHash},
 };
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::vm_core::VirtualMachine,
+};
+use felt::Felt252;
+use num_traits::{One, Zero};
 
-use super::{syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name};
+use super::{
+    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
+    syscall_request::FromPtr,
+};
 
-#[allow(unused)]
+//TODO Remove allow dead_code after merging to 0.11
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) expected_syscall_ptr: Relocatable,
@@ -149,9 +158,42 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         Ok(call_info.result())
     }
+
+    fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
+        self.starknet_storage_state.write(&key.to_le_bytes(), value)
+    }
 }
 
 impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
+    #[allow(irrefutable_let_patterns)]
+    fn storage_write(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let request = if let SyscallRequest::StorageWrite(request) =
+            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedStorageWriteSyscall);
+        };
+
+        if request.reserved != 0.into() {
+            return Err(SyscallHandlerError::UnsopportedAddressDomain(
+                request.reserved,
+            ));
+        }
+
+        self.syscall_storage_write(request.key, request.value);
+
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
+        })
+    }
+
     fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
@@ -229,6 +271,23 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         self.read_only_segments.push(segment);
         Ok(segment_start)
     }
+
+    fn read_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "storage_write" => {
+                super::syscall_request::StorageWriteRequest::from_ptr(vm, syscall_ptr)
+            }
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
+        }
+    }
+
     //TODO remove allow irrefutable_let_patterns
     #[allow(irrefutable_let_patterns)]
     fn send_message_to_l1(
