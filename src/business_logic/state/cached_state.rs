@@ -174,12 +174,16 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         &mut self,
         compiled_class_hash: &ClassHash,
     ) -> Result<&CasmContractClass, StateError> {
-        let casm_class = self.get_casm_classes()?.get(compiled_class_hash);
-        if casm_class.is_none() {
-            let casm = self.state_reader.get_compiled_class(compiled_class_hash)?;
-            self.get_casm_classes()?.insert(*compiled_class_hash, *casm);
+        let mut casm_class = self.get_casm_classes()?.clone();
+        if casm_class.get(compiled_class_hash).is_none() {
+            let casm = self
+                .state_reader
+                .get_compiled_class(compiled_class_hash)?
+                .clone();
+            casm_class.insert(*compiled_class_hash, casm);
+            self.casm_contract_classes = Some(casm_class);
         }
-        Ok(casm_class.unwrap())
+        Ok(self.get_casm_classes()?.get(compiled_class_hash).unwrap())
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)

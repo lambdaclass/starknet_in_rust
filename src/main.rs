@@ -296,6 +296,7 @@ pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
             InMemoryStateReader::default(),
             Some(HashMap::new()),
+            None,
         )),
     });
 

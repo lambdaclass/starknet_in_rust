@@ -189,6 +189,7 @@ fn create_account_tx_test_state(
             state_reader
         },
         Some(HashMap::new()),
+        None,
     );
 
     Ok((general_config, cached_state))
@@ -199,7 +200,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
 
     let state_cache = ContractClassCache::new();
 
-    CachedState::new(in_memory_state_reader, Some(state_cache))
+    CachedState::new(in_memory_state_reader, Some(state_cache), None)
 }
 
 fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
@@ -224,6 +225,7 @@ fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
         in_memory_state_reader,
         Some(contract_classes_cache),
         state_cache_after_invoke_tx(),
+        None,
     )
 }
 
@@ -312,6 +314,8 @@ fn state_cache_after_invoke_tx() -> StateCache {
         ),
     ]);
 
+    let compiled_class_hash = HashMap::new();
+
     StateCache::new_for_testing(
         class_hash_initial_values,
         nonce_initial_values,
@@ -319,6 +323,7 @@ fn state_cache_after_invoke_tx() -> StateCache {
         class_hash_writes,
         nonce_writes,
         storage_writes,
+        compiled_class_hash,
     )
 }
 
@@ -960,6 +965,7 @@ fn expected_deploy_account_states() -> (
             ]),
         ),
         Some(ContractClassCache::new()),
+        None
     );
     state_before.set_storage_at(
         &(
@@ -1238,7 +1244,8 @@ fn test_state_for_declare_tx() {
                     0.into()
                 ),
             ]),
-        )
+            HashMap::new()
+        ),
     );
 
     // Check state.contract_classes
