@@ -33,7 +33,7 @@ pub struct FailureReason {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct CallContractResponse {
-    pub(crate) retdata_start: Relocatable,
-    pub(crate) retdata_end: Relocatable,
+pub struct CallContractResponse {
+    pub retdata_start: Relocatable,
+    pub retdata_end: Relocatable,
 }

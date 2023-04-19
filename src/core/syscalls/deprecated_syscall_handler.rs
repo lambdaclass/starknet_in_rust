@@ -1,5 +1,4 @@
 use super::{
-    deprecated_syscall_request::FromPtr,
     deprecated_syscall_request::*,
     deprecated_syscall_response::{
         DeprecatedCallContractResponse, DeprecatedDeployResponse, DeprecatedGetBlockNumberResponse,
