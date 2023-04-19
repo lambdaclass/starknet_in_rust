@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
@@ -18,7 +20,14 @@ use crate::{
             state_api::{State, StateReader},
         },
     },
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    core::{
+        errors::syscall_handler_errors::SyscallHandlerError,
+        syscalls::syscall_request::FromPtr,
+        syscalls::{
+            syscall_request::SyscallRequest,
+            syscall_response::{CallContractResponse, ResponseBody},
+        },
+    },
     definitions::general_config::StarknetGeneralConfig,
     services::api::contract_class::EntryPointType,
     utils::{get_felt_range, Address},
@@ -144,9 +153,43 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         Ok(SyscallResponse { gas, body })
     }
+
+    fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
+        self.starknet_storage_state.write(&key.to_le_bytes(), value)
+    }
 }
 
+
 impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
+    fn storage_write(
+        &mut self,
+        vm: &mut VirtualMachine,
+        remaining_gas: u64,
+        execution_entry_point: ExecutionEntryPoint,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let request = if let SyscallRequest::StorageWrite(request) =
+            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedStorageWriteSyscall);
+        };
+
+        if request.reserved != 0.into() {
+            return Err(SyscallHandlerError::UnsopportedAddressDomain(
+                request.reserved,
+            ));
+        }
+
+        self.syscall_storage_write(request.key, request.value);
+
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
+        })
+    }
+
+
     fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
@@ -173,6 +216,22 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         );
 
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
+    }
+
+    fn read_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "storage_write" => {
+                super::syscall_request::StorageWriteRequest::from_ptr(vm, syscall_ptr)
+            }
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
+        }
     }
 
     fn send_message_to_l1(
