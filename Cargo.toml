@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "725c17e6b4c50ecf9fbb0113ecf172d858372954" }
+cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "a9933181fccde616d5fd9599fdddf64886057329" }
 cairo-lang-casm = {git = "https://github.com/starkware-libs/cairo", rev = "08418c3d7a852d084db0ac246a440d1b76655779"}
-felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "725c17e6b4c50ecf9fbb0113ecf172d858372954" }
+felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "a9933181fccde616d5fd9599fdddf64886057329" }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
