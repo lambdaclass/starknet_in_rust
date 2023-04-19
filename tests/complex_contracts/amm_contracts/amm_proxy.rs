@@ -19,7 +19,11 @@ use std::collections::{HashMap, HashSet};
 #[test]
 fn amm_proxy_init_pool_test() {
     let general_config = StarknetGeneralConfig::default();
-    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    let mut state = CachedState::new(
+        InMemoryStateReader::default(),
+        Some(Default::default()),
+        None,
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -107,7 +111,11 @@ fn amm_proxy_init_pool_test() {
 #[test]
 fn amm_proxy_get_pool_token_balance_test() {
     let general_config = StarknetGeneralConfig::default();
-    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    let mut state = CachedState::new(
+        InMemoryStateReader::default(),
+        Some(Default::default()),
+        None,
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -202,7 +210,11 @@ fn amm_proxy_get_pool_token_balance_test() {
 #[test]
 fn amm_proxy_add_demo_token_test() {
     let general_config = StarknetGeneralConfig::default();
-    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    let mut state = CachedState::new(
+        InMemoryStateReader::default(),
+        Some(Default::default()),
+        None,
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -303,7 +315,11 @@ fn amm_proxy_add_demo_token_test() {
 #[test]
 fn amm_proxy_get_account_token_balance() {
     let general_config = StarknetGeneralConfig::default();
-    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    let mut state = CachedState::new(
+        InMemoryStateReader::default(),
+        Some(Default::default()),
+        None,
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -417,7 +433,11 @@ fn amm_proxy_get_account_token_balance() {
 #[test]
 fn amm_proxy_swap() {
     let general_config = StarknetGeneralConfig::default();
-    let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+    let mut state = CachedState::new(
+        InMemoryStateReader::default(),
+        Some(Default::default()),
+        None,
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,

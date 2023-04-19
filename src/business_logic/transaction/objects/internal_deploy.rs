@@ -225,7 +225,7 @@ mod tests {
     fn invoke_constructor_test() {
         // Instantiate CachedState
         let state_reader = InMemoryStateReader::default();
-        let mut state = CachedState::new(state_reader, Some(Default::default()));
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         // Set contract_class
         let contract_class =
@@ -273,7 +273,7 @@ mod tests {
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
         let state_reader = InMemoryStateReader::default();
-        let mut state = CachedState::new(state_reader, Some(Default::default()));
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         // Set contract_class
         let contract_class =
@@ -302,7 +302,7 @@ mod tests {
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
         let state_reader = InMemoryStateReader::default();
-        let mut state = CachedState::new(state_reader, Some(Default::default()));
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         // Set contract_class
         let contract_class =
