@@ -148,6 +148,7 @@ impl InternalDeploy {
             EntryPointType::Constructor,
             None,
             None,
+            0,
         );
 
         let tx_execution_context = TransactionExecutionContext::new(

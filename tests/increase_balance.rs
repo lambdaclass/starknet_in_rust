@@ -90,6 +90,7 @@ fn hello_starknet_increase_balance() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
+        0,
     );
 
     //* --------------------

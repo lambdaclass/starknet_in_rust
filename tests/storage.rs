@@ -87,6 +87,7 @@ fn integration_storage_test() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
+        0,
     );
 
     //* --------------------

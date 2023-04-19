@@ -114,6 +114,7 @@ fn test_contract<'a>(
         EntryPointType::External,
         CallType::Delegate.into(),
         Some(class_hash),
+        0,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

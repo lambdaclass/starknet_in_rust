@@ -25,18 +25,22 @@ use cairo_rs::{
 use felt::Felt252;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
+
+// TODO:initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
 #[derive(Debug)]
 pub struct ExecutionEntryPoint {
     call_type: CallType,
-    contract_address: Address,
+    pub(crate) contract_address: Address,
     code_address: Option<Address>,
     class_hash: Option<[u8; 32]>,
     calldata: Vec<Felt252>,
     caller_address: Address,
     entry_point_selector: Felt252,
     entry_point_type: EntryPointType,
+    #[allow(unused)]
+    initial_gas: u64,
 }
-
+#[allow(clippy::too_many_arguments)]
 impl ExecutionEntryPoint {
     pub fn new(
         contract_address: Address,
@@ -46,6 +50,7 @@ impl ExecutionEntryPoint {
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
         class_hash: Option<[u8; 32]>,
+        initial_gas: u64,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
@@ -56,6 +61,7 @@ impl ExecutionEntryPoint {
             caller_address,
             entry_point_selector,
             entry_point_type,
+            initial_gas,
         }
     }
 
@@ -92,6 +98,23 @@ impl ExecutionEntryPoint {
             runner.hint_processor.syscall_handler,
             retdata,
         )
+    }
+
+    /// Executes the selected entry point with the given calldata in the specified contract.
+    /// The information collected from this run (number of steps required, modifications to the
+    /// contract storage, etc.) is saved on the resources manager.
+    /// Returns a CallInfo object that represents the execution.
+
+    pub fn execute_v2<S>(
+        &self,
+        _state: &mut S,
+        _general_config: &mut StarknetGeneralConfig,
+        _support_reverted: bool,
+    ) -> Result<CallInfo, TransactionError>
+    where
+        S: Default + State + StateReader,
+    {
+        todo!()
     }
 
     /// Runs the selected entry point with the given calldata in the code of the contract deployed
@@ -250,6 +273,8 @@ impl ExecutionEntryPoint {
             storage_read_values: syscall_handler.starknet_storage_state.read_values,
             accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
             internal_calls: syscall_handler.internal_calls,
+            failure_flag: false,
+            gas_consumed: 0,
         })
     }
 

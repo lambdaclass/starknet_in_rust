@@ -247,6 +247,7 @@ impl InternalDeployAccount {
             EntryPointType::Constructor,
             None,
             None,
+            0,
         );
 
         let call_info = entry_point.execute(
@@ -310,6 +311,7 @@ impl InternalDeployAccount {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = call.execute(

@@ -523,6 +523,8 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InternalInvokeFunction {
 
 fn expected_fee_transfer_info() -> CallInfo {
     CallInfo {
+        failure_flag: false,
+        gas_consumed: 0,
         caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         call_type: Some(CallType::Call),
         contract_address: Address(Felt252::from(4097)),
