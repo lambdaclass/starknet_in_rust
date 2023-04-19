@@ -3,8 +3,8 @@ use crate::{
         cached_state::CasmClassCache, state_api::StateReader, state_cache::StorageEntry,
     },
     core::errors::state_errors::StateError,
-    utils::{Address, ClassHash, CompiledClassHash},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
@@ -88,7 +88,7 @@ impl StateReader for InMemoryStateReader {
 
     fn get_compiled_class(
         &mut self,
-        compiled_class_hash: &ClassHash,
+        compiled_class_hash: &CompiledClassHash,
     ) -> Result<&CasmContractClass, StateError> {
         self.casm_contract_classes
             .get(compiled_class_hash)
@@ -98,7 +98,7 @@ impl StateReader for InMemoryStateReader {
     fn get_compiled_class_hash(
         &mut self,
         class_hash: &ClassHash,
-    ) -> Result<&ClassHash, StateError> {
+    ) -> Result<&CompiledClassHash, StateError> {
         self.class_hash_to_compiled_class_hash
             .get(class_hash)
             .ok_or(StateError::NoneCompiledHash(*class_hash))

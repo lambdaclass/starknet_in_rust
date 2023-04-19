@@ -6,7 +6,7 @@ use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     starknet_storage::errors::storage_errors::StorageError,
-    utils::{subtract_mappings, Address, ClassHash},
+    utils::{subtract_mappings, Address, ClassHash, CompiledClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
@@ -272,6 +272,29 @@ impl<T: StateReader + Clone> State for CachedState<T> {
         self.cache
             .class_hash_writes
             .insert(deploy_contract_address, class_hash);
+        Ok(())
+    }
+
+    fn set_compiled_class(
+        &mut self,
+        compiled_class_hash: &CompiledClassHash,
+        casm_class: CasmContractClass,
+    ) -> Result<(), StateError> {
+        self.casm_contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingCasmClassCache)?
+            .insert(*compiled_class_hash, casm_class);
+        Ok(())
+    }
+
+    fn set_compiled_class_hash(
+        &mut self,
+        class_hash: ClassHash,
+        compiled_class_hash: &CompiledClassHash,
+    ) -> Result<(), StateError> {
+        self.cache
+            .class_hash_to_compiled_class_hash
+            .insert(class_hash, *compiled_class_hash);
         Ok(())
     }
 }

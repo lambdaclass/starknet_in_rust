@@ -2,7 +2,7 @@ use super::state_cache::StorageEntry;
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    utils::{Address, ClassHash},
+    utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
@@ -21,11 +21,13 @@ pub trait StateReader {
     /// Return de casm contract class of the given class hash.
     fn get_compiled_class(
         &mut self,
-        compiled_class_hash: &ClassHash,
+        compiled_class_hash: &CompiledClassHash,
     ) -> Result<&CasmContractClass, StateError>;
     /// Return the class hash of the given casm contract class
-    fn get_compiled_class_hash(&mut self, class_hash: &ClassHash)
-        -> Result<&ClassHash, StateError>;
+    fn get_compiled_class_hash(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> Result<&CompiledClassHash, StateError>;
 }
 
 pub trait State {
@@ -45,5 +47,15 @@ pub trait State {
         &mut self,
         contract_address: Address,
         class_hash: ClassHash,
+    ) -> Result<(), StateError>;
+    fn set_compiled_class(
+        &mut self,
+        compiled_class_hash: &CompiledClassHash,
+        casm_class: CasmContractClass,
+    ) -> Result<(), StateError>;
+    fn set_compiled_class_hash(
+        &mut self,
+        class_hash: ClassHash,
+        compiled_class_hash: &CompiledClassHash,
     ) -> Result<(), StateError>;
 }
