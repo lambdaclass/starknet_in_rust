@@ -2,6 +2,10 @@
 
 use std::collections::HashMap;
 
+use super::{
+    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
+    syscall_request::FromPtr,
+};
 use crate::{
     business_logic::{
         execution::{
@@ -36,12 +40,34 @@ use cairo_rs::{
     vm::vm_core::VirtualMachine,
 };
 use felt::Felt252;
+use lazy_static::lazy_static;
 use num_traits::{One, Zero};
 
-use super::{
-    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
-    syscall_request::FromPtr,
-};
+lazy_static! {
+    /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
+    static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> =
+        {
+        let mut map: HashMap<Felt252, &'static str> = HashMap::with_capacity(9);
+
+        map.insert(92376026794327011772951660_u128.into(), "library_call");
+        map.insert(25500403217443378527601783667_u128.into(), "replace_class");
+        map.insert(
+            94901967946959054011942058057773508207_u128.into(),
+            "get_execution_info",
+        );
+        map.insert(100890693370601760042082660_u128.into(), "storage_read");
+        map.insert(20853273475220472486191784820_u128.into(), "call_contract");
+        map.insert(
+            433017908768303439907196859243777073_u128.into(),
+            "send_message_to_l1",
+        );
+        map.insert(75202468540281_u128.into(), "deploy");
+        map.insert(1280709301550335749748_u128.into(), "emit_event");
+        map.insert(25828017502874050592466629733_u128.into(), "storage_write");
+
+        map
+    };
+}
 
 //TODO Remove allow dead_code after merging to 0.11
 #[allow(dead_code)]
@@ -60,7 +86,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) entry_point: ExecutionEntryPoint,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) support_reverted: bool,
-    pub(crate) selector_to_syscall: HashMap<Felt252, &'static str>,
+    pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
 }
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
@@ -97,7 +123,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             internal_calls,
             expected_syscall_ptr: syscall_ptr,
             support_reverted: false,
-            selector_to_syscall: BusinessLogicSyscallHandler::<T>::create_selector_to_syscall_map(),
+            selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
 
@@ -165,29 +191,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
         self.starknet_storage_state.write(&key.to_le_bytes(), value)
-    }
-
-    /// Returns a felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
-    fn create_selector_to_syscall_map() -> HashMap<Felt252, &'static str> {
-        let mut map: HashMap<Felt252, &str> = HashMap::with_capacity(9);
-
-        map.insert(92376026794327011772951660_u128.into(), "library_call");
-        map.insert(25500403217443378527601783667_u128.into(), "replace_class");
-        map.insert(
-            94901967946959054011942058057773508207_u128.into(),
-            "get_execution_info",
-        );
-        map.insert(100890693370601760042082660_u128.into(), "storage_read");
-        map.insert(20853273475220472486191784820_u128.into(), "call_contract");
-        map.insert(
-            433017908768303439907196859243777073_u128.into(),
-            "send_message_to_l1",
-        );
-        map.insert(75202468540281_u128.into(), "deploy");
-        map.insert(1280709301550335749748_u128.into(), "emit_event");
-        map.insert(25828017502874050592466629733_u128.into(), "storage_write");
-
-        map
     }
 }
 
