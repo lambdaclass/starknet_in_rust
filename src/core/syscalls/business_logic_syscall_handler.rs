@@ -29,7 +29,7 @@ use crate::{
         },
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{get_felt_range, Address},
 };
 
