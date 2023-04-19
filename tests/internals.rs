@@ -42,7 +42,7 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
@@ -528,6 +528,8 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InternalInvokeFunction {
 
 fn expected_fee_transfer_info() -> CallInfo {
     CallInfo {
+        failure_flag: false,
+        gas_consumed: 0,
         caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         call_type: Some(CallType::Call),
         contract_address: Address(Felt252::from(4097)),

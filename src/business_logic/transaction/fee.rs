@@ -11,7 +11,7 @@ use crate::{
     definitions::{
         constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
 use felt::Felt252;
 use num_traits::ToPrimitive;
@@ -51,6 +51,7 @@ pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
         EntryPointType::External,
         None,
         None,
+        0,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

@@ -13,7 +13,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -87,6 +87,7 @@ fn integration_storage_test() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
+        0,
     );
 
     //* --------------------

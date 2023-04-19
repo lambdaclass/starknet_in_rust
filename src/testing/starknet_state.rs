@@ -23,7 +23,7 @@ use crate::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
-        contract_class::{ContractClass, EntryPointType},
+        contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
     utils::{Address, ClassHash},
@@ -127,6 +127,7 @@ impl StarknetState {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let mut state_copy = self.state.apply_to_copy();

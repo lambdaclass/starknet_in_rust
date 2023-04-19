@@ -14,7 +14,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_cache::StorageEntry},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::PathBuf;
@@ -63,6 +63,7 @@ fn test_internal_calls() {
         EntryPointType::External,
         CallType::Delegate.into(),
         Some([0x01; 32]),
+        0,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

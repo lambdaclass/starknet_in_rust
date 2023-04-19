@@ -18,7 +18,9 @@ use std::{collections::HashMap, path::Path};
 
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
-    services::api::contract_class::{ContractEntryPoint, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        ContractEntryPoint, EntryPointType,
+    },
 };
 
 // ---------------------------------

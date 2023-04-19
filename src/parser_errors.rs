@@ -4,7 +4,7 @@ use crate::{
         contract_address_errors::ContractAddressError, state_errors::StateError,
         syscall_handler_errors::SyscallHandlerError,
     },
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
 use thiserror::Error;
 

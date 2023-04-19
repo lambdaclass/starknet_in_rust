@@ -22,7 +22,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
@@ -247,6 +247,7 @@ impl InternalDeployAccount {
             EntryPointType::Constructor,
             None,
             None,
+            0,
         );
 
         let call_info = entry_point.execute(
@@ -310,6 +311,7 @@ impl InternalDeployAccount {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = call.execute(

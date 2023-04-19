@@ -5,7 +5,7 @@ use crate::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
 use cairo_rs::{
@@ -44,6 +44,8 @@ pub struct CallInfo {
     pub storage_read_values: Vec<Felt252>,
     pub accessed_storage_keys: HashSet<ClassHash>,
     pub internal_calls: Vec<CallInfo>,
+    pub gas_consumed: u64,
+    pub failure_flag: bool,
 }
 
 impl CallInfo {
@@ -76,6 +78,8 @@ impl CallInfo {
             storage_read_values: Vec::new(),
             accessed_storage_keys: HashSet::new(),
             internal_calls: Vec::new(),
+            gas_consumed: 0,
+            failure_flag: false,
         }
     }
 
@@ -184,6 +188,14 @@ impl CallInfo {
                 .collect()
         })
     }
+
+    pub fn result(&self) -> CallResult {
+        CallResult {
+            gas_consumed: self.gas_consumed,
+            is_success: self.failure_flag,
+            retdata: self.retdata.iter().map(|f| f.into()).collect(),
+        }
+    }
 }
 
 impl Default for CallInfo {
@@ -208,6 +220,28 @@ impl Default for CallInfo {
                 builtin_instance_counter: HashMap::new(),
             },
             events: Vec::new(),
+            gas_consumed: 0,
+            failure_flag: false,
+        }
+    }
+}
+
+// ----------------------
+// CallResult structure
+// ----------------------
+
+pub struct CallResult {
+    pub gas_consumed: u64,
+    pub is_success: bool,
+    pub retdata: Vec<MaybeRelocatable>,
+}
+
+impl From<CallInfo> for CallResult {
+    fn from(info: CallInfo) -> Self {
+        Self {
+            gas_consumed: 0,
+            is_success: true,
+            retdata: info.retdata.into_iter().map(Into::into).collect(),
         }
     }
 }
