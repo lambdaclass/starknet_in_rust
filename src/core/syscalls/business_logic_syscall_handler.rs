@@ -34,10 +34,8 @@ use crate::{
 };
 
 use super::{
-    syscall_handler::SyscallHandler,
-    syscall_info::get_syscall_size_from_name,
-    syscall_request::SyscallRequest,
-    syscall_response::{CallContractResponse, ResponseBody, SyscallResponse},
+    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
+    syscall_response::SyscallResponse,
 };
 
 //TODO Remove allow dead_code after merging to 0.11
@@ -159,13 +157,12 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-
 impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
     fn storage_write(
         &mut self,
         vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
         remaining_gas: u64,
-        execution_entry_point: ExecutionEntryPoint,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let request = if let SyscallRequest::StorageWrite(request) =
             self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
@@ -189,19 +186,15 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         })
     }
 
-
     fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        request: SyscallRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = if let SyscallRequest::CallContract(request) =
-            self.read_and_validate_syscall_request("call_contract", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedCallContractRequest);
+        let request = match request {
+            SyscallRequest::CallContract(request) => request,
+            _ => return Err(SyscallHandlerError::ExpectedCallContractRequest),
         };
 
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;

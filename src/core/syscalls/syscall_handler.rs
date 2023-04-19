@@ -1,6 +1,7 @@
 use super::{
     syscall_request::{
-        CallContractRequest, FromPtr, LibraryCallRequest, SendMessageToL1SysCall, StorageWriteRequest, SyscallRequest,
+        CallContractRequest, FromPtr, LibraryCallRequest, SendMessageToL1SysCall,
+        StorageWriteRequest, SyscallRequest,
     },
     syscall_response::SyscallResponse,
 };
