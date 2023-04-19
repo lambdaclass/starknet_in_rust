@@ -47,26 +47,26 @@ lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> =
         {
-        let mut map: HashMap<Felt252, &'static str> = HashMap::with_capacity(9);
+            let mut map: HashMap<Felt252, &'static str> = HashMap::with_capacity(9);
 
-        map.insert(92376026794327011772951660_u128.into(), "library_call");
-        map.insert(25500403217443378527601783667_u128.into(), "replace_class");
-        map.insert(
-            94901967946959054011942058057773508207_u128.into(),
-            "get_execution_info",
-        );
-        map.insert(100890693370601760042082660_u128.into(), "storage_read");
-        map.insert(20853273475220472486191784820_u128.into(), "call_contract");
-        map.insert(
-            433017908768303439907196859243777073_u128.into(),
-            "send_message_to_l1",
-        );
-        map.insert(75202468540281_u128.into(), "deploy");
-        map.insert(1280709301550335749748_u128.into(), "emit_event");
-        map.insert(25828017502874050592466629733_u128.into(), "storage_write");
+            map.insert(92376026794327011772951660_u128.into(), "library_call");
+            map.insert(25500403217443378527601783667_u128.into(), "replace_class");
+            map.insert(
+                94901967946959054011942058057773508207_u128.into(),
+                "get_execution_info",
+            );
+            map.insert(100890693370601760042082660_u128.into(), "storage_read");
+            map.insert(20853273475220472486191784820_u128.into(), "call_contract");
+            map.insert(
+                433017908768303439907196859243777073_u128.into(),
+                "send_message_to_l1",
+            );
+            map.insert(75202468540281_u128.into(), "deploy");
+            map.insert(1280709301550335749748_u128.into(), "emit_event");
+            map.insert(25828017502874050592466629733_u128.into(), "storage_write");
 
-        map
-    };
+            map
+        };
 }
 
 //TODO Remove allow dead_code after merging to 0.11
