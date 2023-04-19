@@ -1,7 +1,7 @@
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
-    utils::{Address, ClassHash},
+    utils::{Address, ClassHash, CompiledClassHash},
 };
 use felt::Felt252;
 use getset::{Getters, MutGetters};
@@ -32,6 +32,8 @@ pub struct StateCache {
     pub(crate) nonce_writes: HashMap<Address, Felt252>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) storage_writes: HashMap<StorageEntry, Felt252>,
+    #[get_mut = "pub"]
+    pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
 impl StateCache {
@@ -45,6 +47,7 @@ impl StateCache {
         compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<StorageEntry, Felt252>,
+        class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
     ) -> Self {
         Self {
             class_hash_initial_values,
@@ -55,6 +58,7 @@ impl StateCache {
             compiled_class_hash_writes,
             nonce_writes,
             storage_writes,
+            class_hash_to_compiled_class_hash,
         }
     }
 
@@ -68,6 +72,7 @@ impl StateCache {
             compiled_class_hash_writes: HashMap::new(),
             nonce_writes: HashMap::new(),
             storage_writes: HashMap::new(),
+            class_hash_to_compiled_class_hash: HashMap::new(),
         }
     }
 
@@ -81,6 +86,7 @@ impl StateCache {
         compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<(Address, [u8; 32]), Felt252>,
+        class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
     ) -> Self {
         Self {
             class_hash_initial_values,
@@ -91,6 +97,7 @@ impl StateCache {
             compiled_class_hash_writes,
             nonce_writes,
             storage_writes,
+            class_hash_to_compiled_class_hash,
         }
     }
 

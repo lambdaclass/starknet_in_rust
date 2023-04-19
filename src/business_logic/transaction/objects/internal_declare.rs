@@ -348,7 +348,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -452,7 +452,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -515,7 +515,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -578,7 +578,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -640,7 +640,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -720,7 +720,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -768,7 +768,7 @@ mod tests {
 
         let state_reader = InMemoryStateReader::default();
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         // There are no account contracts in the state, so the transaction should fail
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
@@ -826,7 +826,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data

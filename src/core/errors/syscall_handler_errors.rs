@@ -60,6 +60,10 @@ pub enum SyscallHandlerError {
     VirtualMachine(#[from] VirtualMachineError),
     #[error("Expected GetContractAddressRequest")]
     ExpectedGetContractAddressRequest,
+    #[error("Expected CallContractRequest")]
+    ExpectedCallContractRequest,
+    #[error("Expected a LibraryCallRequest")]
+    ExpectedLibraryCallRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
     #[error("Memory error: {0}")]

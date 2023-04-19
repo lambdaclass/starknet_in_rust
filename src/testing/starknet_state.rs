@@ -47,7 +47,7 @@ impl StarknetState {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
-        let state = CachedState::new(state_reader, Some(HashMap::new()));
+        let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -386,7 +386,7 @@ mod tests {
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class.clone());
 
-        let state = CachedState::new(state_reader, Some(contract_class_cache));
+        let state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* --------------------------------------------
         //*    Create starknet state with previous data

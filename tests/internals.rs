@@ -189,6 +189,7 @@ fn create_account_tx_test_state(
             state_reader
         },
         Some(HashMap::new()),
+        None,
     );
 
     Ok((general_config, cached_state))
@@ -199,7 +200,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
 
     let state_cache = ContractClassCache::new();
 
-    CachedState::new(in_memory_state_reader, Some(state_cache))
+    CachedState::new(in_memory_state_reader, Some(state_cache), None)
 }
 
 fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
@@ -224,6 +225,7 @@ fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
         in_memory_state_reader,
         Some(contract_classes_cache),
         state_cache_after_invoke_tx(),
+        None,
     )
 }
 
@@ -314,6 +316,7 @@ fn state_cache_after_invoke_tx() -> StateCache {
 
     let compiled_class_hash_initial_values = HashMap::new();
     let compiled_class_hash_writes = HashMap::new();
+    let compiled_class_hash = HashMap::new();
 
     StateCache::new_for_testing(
         class_hash_initial_values,
@@ -324,6 +327,7 @@ fn state_cache_after_invoke_tx() -> StateCache {
         compiled_class_hash_writes,
         nonce_writes,
         storage_writes,
+        compiled_class_hash,
     )
 }
 
@@ -369,6 +373,8 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
                 get_contract_class(TEST_CONTRACT_PATH).unwrap(),
             ),
         ]),
+        HashMap::new(),
+        HashMap::new(),
     )
 }
 
@@ -965,8 +971,11 @@ fn expected_deploy_account_states() -> (
                 (felt_to_hash(&0x111.into()), ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap()),
                 (felt_to_hash(&0x1010.into()), ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap()),
             ]),
+            HashMap::new(),
+            HashMap::new()
         ),
         Some(ContractClassCache::new()),
+        None
     );
     state_before.set_storage_at(
         &(
@@ -1247,7 +1256,8 @@ fn test_state_for_declare_tx() {
                     0.into()
                 ),
             ]),
-        )
+            HashMap::new()
+        ),
     );
 
     // Check state.contract_classes
