@@ -51,7 +51,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -241,7 +241,7 @@ where
 
 impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
 where
-    T: Default + State + StateReader,
+    T: State + StateReader,
 {
     fn emit_event(
         &mut self,
@@ -559,7 +559,7 @@ where
 
 impl<'a, T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<'a, T>
 where
-    T: Default + State + StateReader,
+    T: State + StateReader,
 {
     fn post_run(
         &self,
