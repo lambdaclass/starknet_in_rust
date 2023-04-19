@@ -64,7 +64,7 @@ fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
@@ -103,7 +103,7 @@ fn declare() {
     const RUNS: usize = 5;
 
     let state_reader = InMemoryStateReader::default();
-    let state = CachedState::new(state_reader, Some(Default::default()));
+    let state = CachedState::new(state_reader, Some(Default::default()), None);
 
     let config = &Default::default();
 
@@ -135,7 +135,7 @@ fn deploy() {
     const RUNS: usize = 8;
 
     let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
@@ -165,7 +165,7 @@ fn invoke() {
     const RUNS: usize = 100;
 
     let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
