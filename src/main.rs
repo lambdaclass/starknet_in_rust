@@ -32,7 +32,7 @@ use starknet_rs::{
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::contract_abi::read_abi,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{felt_to_hash, string_to_hash, Address},
 };
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
@@ -239,6 +239,7 @@ fn call_parser(
         *entry_point_type,
         None,
         None,
+        0,
     );
     let call_info = execution_entry_point.execute(
         cached_state,
@@ -296,6 +297,7 @@ pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
             InMemoryStateReader::default(),
             Some(HashMap::new()),
+            None,
         )),
     });
 

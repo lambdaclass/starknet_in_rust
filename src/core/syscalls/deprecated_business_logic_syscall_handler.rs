@@ -1,7 +1,7 @@
 use super::{
     deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
     deprecated_syscall_request::*,
-    syscall_info::get_syscall_size_from_name,
+    syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
     business_logic::{
@@ -18,7 +18,10 @@ use crate::{
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::deprecated_contract_class::EntryPointType,
+    },
     utils::*,
 };
 use cairo_rs::{
@@ -203,6 +206,7 @@ impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
+            0,
         );
 
         let _call_info = call
@@ -400,6 +404,7 @@ where
             entry_point_type,
             Some(call_type),
             class_hash,
+            0,
         );
 
         entry_point
@@ -551,7 +556,7 @@ where
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        self.expected_syscall_ptr.offset += get_deprecated_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 

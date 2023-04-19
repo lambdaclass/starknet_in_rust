@@ -16,7 +16,7 @@ use starknet_rs::{
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;
@@ -98,7 +98,7 @@ fn test_contract<'a>(
 
         Some(contract_class_cache)
     };
-    let mut state = CachedState::new(state_reader, contract_class_cache);
+    let mut state = CachedState::new(state_reader, contract_class_cache, None);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
@@ -114,6 +114,7 @@ fn test_contract<'a>(
         EntryPointType::External,
         CallType::Delegate.into(),
         Some(class_hash),
+        0,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

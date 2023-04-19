@@ -20,7 +20,7 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -189,6 +189,7 @@ impl InternalDeclare {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = entry_point.execute(
@@ -310,7 +311,9 @@ mod tests {
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
-        services::api::contract_class::{ContractClass, EntryPointType},
+        services::api::contract_classes::deprecated_contract_class::{
+            ContractClass, EntryPointType,
+        },
         utils::{felt_to_hash, Address},
     };
 
@@ -345,7 +348,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -449,7 +452,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -512,7 +515,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -575,7 +578,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -637,7 +640,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -717,7 +720,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -765,7 +768,7 @@ mod tests {
 
         let state_reader = InMemoryStateReader::default();
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         // There are no account contracts in the state, so the transaction should fail
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
@@ -823,7 +826,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data

@@ -22,7 +22,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
@@ -247,6 +247,7 @@ impl InternalDeployAccount {
             EntryPointType::Constructor,
             None,
             None,
+            0,
         );
 
         let call_info = entry_point.execute(
@@ -310,6 +311,7 @@ impl InternalDeployAccount {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = call.execute(
@@ -378,7 +380,11 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut _state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut _state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
@@ -410,7 +416,11 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
@@ -460,7 +470,11 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
