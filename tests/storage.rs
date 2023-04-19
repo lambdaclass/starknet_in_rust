@@ -69,7 +69,7 @@ fn integration_storage_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+    let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -87,6 +87,7 @@ fn integration_storage_test() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
+        0,
     );
 
     //* --------------------

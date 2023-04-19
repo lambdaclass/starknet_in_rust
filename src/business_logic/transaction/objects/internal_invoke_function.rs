@@ -130,6 +130,7 @@ impl InternalInvokeFunction {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = call.execute(
@@ -166,6 +167,7 @@ impl InternalInvokeFunction {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         call.execute(
@@ -390,7 +392,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -456,7 +458,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -518,7 +520,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -570,7 +572,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -627,7 +629,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -686,7 +688,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -746,7 +748,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -806,7 +808,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None);
+        let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();

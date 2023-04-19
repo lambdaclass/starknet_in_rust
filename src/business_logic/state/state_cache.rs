@@ -1,6 +1,6 @@
 use crate::{
     core::errors::state_errors::StateError,
-    utils::{Address, ClassHash},
+    utils::{Address, ClassHash, CompiledClassHash},
 };
 use felt::Felt252;
 use getset::{Getters, MutGetters};
@@ -27,6 +27,8 @@ pub struct StateCache {
     pub(crate) nonce_writes: HashMap<Address, Felt252>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) storage_writes: HashMap<StorageEntry, Felt252>,
+    #[get_mut = "pub"]
+    pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
 impl StateCache {
@@ -37,6 +39,7 @@ impl StateCache {
         class_hash_writes: HashMap<Address, ClassHash>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<StorageEntry, Felt252>,
+        class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
     ) -> Self {
         Self {
             class_hash_initial_values,
@@ -45,6 +48,7 @@ impl StateCache {
             class_hash_writes,
             nonce_writes,
             storage_writes,
+            class_hash_to_compiled_class_hash,
         }
     }
 
@@ -56,6 +60,7 @@ impl StateCache {
             class_hash_writes: HashMap::new(),
             nonce_writes: HashMap::new(),
             storage_writes: HashMap::new(),
+            class_hash_to_compiled_class_hash: HashMap::new(),
         }
     }
 
@@ -66,6 +71,7 @@ impl StateCache {
         class_hash_writes: HashMap<Address, [u8; 32]>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<(Address, [u8; 32]), Felt252>,
+        class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
     ) -> Self {
         Self {
             class_hash_initial_values,
@@ -74,6 +80,7 @@ impl StateCache {
             class_hash_writes,
             nonce_writes,
             storage_writes,
+            class_hash_to_compiled_class_hash,
         }
     }
 

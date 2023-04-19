@@ -72,7 +72,7 @@ fn hello_starknet_increase_balance() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+    let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -90,6 +90,7 @@ fn hello_starknet_increase_balance() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
+        0,
     );
 
     //* --------------------
