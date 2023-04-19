@@ -14,13 +14,12 @@ use super::{
 pub(crate) trait SyscallHandler {
     fn storage_read(
         &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        _vm: &VirtualMachine,
+        request: SyscallRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = match self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)
-        {
-            Ok(SyscallRequest::StorageRead(storage_read_request)) => storage_read_request,
+        let request = match request {
+            SyscallRequest::StorageRead(storage_read_request) => storage_read_request,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
 
