@@ -590,7 +590,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "sha3",
- "starknet-crypto 0.4.2",
+ "starknet-crypto 0.4.3",
  "thiserror",
  "thiserror-no-std",
 ]
@@ -2244,9 +2244,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-crypto"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d49eb65d58fa98a164ad2cd4d04775885386b83bdad6060f168a38ede77c9aed"
+checksum = "8802a516a2556b2ddb9630898d2c8387d928a3e603799b8b2a7dc4018b852c8f"
 dependencies = [
  "crypto-bigint 0.4.9",
  "hex",
@@ -2354,7 +2354,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "starknet-contract-class",
- "starknet-crypto 0.2.0",
+ "starknet-crypto 0.4.3",
  "starknet_api",
  "thiserror",
 ]
