@@ -95,11 +95,11 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
         resources_manager: ExecutionResourcesManager,
-        expected_syscall_ptr: Relocatable,
-        contract_address: Address,
         caller_address: Address,
+        contract_address: Address,
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
         entry_point: ExecutionEntryPoint,
@@ -111,6 +111,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let internal_calls = Vec::new();
 
         BusinessLogicSyscallHandler {
+            tx_execution_context,
             entry_point,
             events,
             read_only_segments,
@@ -291,6 +292,7 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
             EntryPointType::External,
             Some(CallType::Call),
             None,
+            0,
         );
 
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
@@ -440,6 +442,7 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
             EntryPointType::External,
             Some(CallType::Delegate),
             None,
+            0,
         );
 
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
