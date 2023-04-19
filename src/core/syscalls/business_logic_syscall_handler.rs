@@ -3,16 +3,36 @@
 use std::collections::HashMap;
 
 use super::{
-    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
-    syscall_request::FromPtr,
+    syscall_handler::SyscallHandler,
+    syscall_info::get_syscall_size_from_name,
+    syscall_request::{FromPtr, SyscallRequest},
+    syscall_response::{CallContractResponse, ResponseBody},
 };
-use crate::business_logic::{
-    execution::execution_entry_point::ExecutionEntryPoint,
-    fact_state::state::ExecutionResourcesManager,
-    state::{
-        contract_storage_state::ContractStorageState,
-        state_api::{State, StateReader},
+use crate::{
+    business_logic::{
+        execution::{
+            execution_entry_point::ExecutionEntryPoint,
+            objects::{
+                CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
+                TransactionExecutionContext,
+            },
+        },
+        fact_state::state::ExecutionResourcesManager,
+        state::{
+            contract_storage_state::ContractStorageState,
+            state_api::{State, StateReader},
+        },
     },
+    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+    },
+    hash_utils::calculate_contract_address,
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::deprecated_contract_class::EntryPointType,
+    },
+    utils::{felt_to_hash, get_felt_range, Address, ClassHash},
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
@@ -22,10 +42,7 @@ use felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::{One, Zero};
 
-use super::{
-    syscall_handler::SyscallHandler, syscall_info::get_syscall_size_from_name,
-    syscall_response::SyscallResponse,
-};
+use super::syscall_response::SyscallResponse;
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> =
@@ -94,7 +111,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let internal_calls = Vec::new();
 
         BusinessLogicSyscallHandler {
-            tx_execution_context,
             entry_point,
             events,
             read_only_segments,
@@ -363,7 +379,7 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
 
     fn send_message_to_l1(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {

@@ -1,4 +1,5 @@
 use cairo_rs::types::relocatable::Relocatable;
+use felt::Felt252;
 
 pub enum ResponseBody {
     Deploy(DeployResponse),

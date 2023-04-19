@@ -1,7 +1,21 @@
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-
 use std::ops::Add;
+
+use crate::{
+    business_logic::execution::objects::CallResult,
+    core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address,
+};
+use cairo_rs::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::vm_core::VirtualMachine,
+};
+
+use super::{
+    syscall_request::{
+        CallContractRequest, DeployRequest, FromPtr, LibraryCallRequest, SendMessageToL1SysCall,
+        StorageWriteRequest, SyscallRequest,
+    },
+    syscall_response::{DeployResponse, FailureReason, ResponseBody, SyscallResponse},
+};
 
 #[allow(unused)]
 pub(crate) trait SyscallHandler {
@@ -54,7 +68,7 @@ pub(crate) trait SyscallHandler {
     fn send_message_to_l1(
         &mut self,
         vm: &mut VirtualMachine,
-        request: SyscallRequest,
+        syscall_ptr: Relocatable,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError>;
 
@@ -103,13 +117,6 @@ pub(crate) trait SyscallHandler {
             )),
         }
     }
-
-    fn send_message_to_l1(
-        &mut self,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-        remaining_gas: u64,
-    ) -> Result<SyscallResponse, SyscallHandlerError>;
 
     fn allocate_segment(
         &mut self,
