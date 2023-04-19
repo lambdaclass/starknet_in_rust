@@ -1,8 +1,8 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
     business_logic::transaction::error::TransactionError,
-    core::syscalls::syscall_handler::{
-        SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
+    core::syscalls::deprecated_syscall_handler::{
+        DeprecatedSyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
 use cairo_rs::{
@@ -21,7 +21,7 @@ use std::{borrow::Cow, collections::HashMap};
 
 pub(crate) struct StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
@@ -30,14 +30,14 @@ where
 
 impl<H> StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub fn map_hint_processor<H2>(
         self,
         hint_processor: SyscallHintProcessor<H2>,
     ) -> StarknetRunner<H2>
     where
-        H2: SyscallHandler,
+        H2: DeprecatedSyscallHandler,
     {
         StarknetRunner {
             cairo_runner: self.cairo_runner,
@@ -240,7 +240,7 @@ mod test {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState, transaction::error::TransactionError,
         },
-        core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
     };
     use cairo_rs::{
         types::relocatable::{MaybeRelocatable, Relocatable},
@@ -248,9 +248,10 @@ mod test {
     };
     use coverage_helper::test;
 
-    type SyscallHintProcessor<'a> = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
-        BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>,
-    >;
+    type SyscallHintProcessor<'a> =
+        crate::core::syscalls::deprecated_syscall_handler::SyscallHintProcessor<
+            DeprecatedBLSyscallHandler<'a, CachedState<InMemoryStateReader>>,
+        >;
 
     #[test]
     fn prepare_os_context_test() {
@@ -260,7 +261,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
@@ -280,7 +281,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert!(runner.run_from_entrypoint(1, &[]).is_err())
@@ -294,7 +295,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert_matches!(
@@ -311,7 +312,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::RelocatableValue((0, 1).into());
@@ -331,7 +332,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::Int((1).into());
@@ -351,7 +352,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
@@ -371,7 +372,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
@@ -392,7 +393,7 @@ mod test {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());

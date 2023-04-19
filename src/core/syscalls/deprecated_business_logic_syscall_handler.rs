@@ -1,7 +1,7 @@
 use super::{
-    syscall_handler::{SyscallHandler, SyscallHandlerPostRun},
+    deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
+    deprecated_syscall_request::*,
     syscall_info::get_syscall_size_from_name,
-    syscall_request::*,
 };
 use crate::{
     business_logic::{
@@ -34,24 +34,24 @@ use std::borrow::{Borrow, BorrowMut};
 //* -----------------------------------
 
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
-    pub(crate) tx_execution_context: TransactionExecutionContext,
+pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
+    pub(crate) caller_address: Address,
+    pub(crate) contract_address: Address,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
+    pub(crate) expected_syscall_ptr: Relocatable,
+    pub(crate) general_config: StarknetGeneralConfig,
+    pub(crate) internal_calls: Vec<CallInfo>,
+    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     /// A list of dynamically allocated segments that are expected to be read-only.
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) resources_manager: ExecutionResourcesManager,
-    pub(crate) contract_address: Address,
-    pub(crate) caller_address: Address,
-    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub(crate) general_config: StarknetGeneralConfig,
-    pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
-    pub(crate) internal_calls: Vec<CallInfo>,
-    pub(crate) expected_syscall_ptr: Relocatable,
+    pub(crate) tx_execution_context: TransactionExecutionContext,
+    pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
 }
 
-impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -69,7 +69,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         let internal_calls = Vec::new();
 
-        BusinessLogicSyscallHandler {
+        DeprecatedBLSyscallHandler {
             tx_execution_context,
             events,
             read_only_segments,
@@ -86,11 +86,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 
     pub fn default_with(state: &'a mut T) -> Self {
-        BusinessLogicSyscallHandler::new_for_testing(
-            BlockInfo::default(),
-            Default::default(),
-            state,
-        )
+        DeprecatedBLSyscallHandler::new_for_testing(BlockInfo::default(), Default::default(), state)
     }
 
     /// Increments the syscall count for a given `syscall_name` by 1.
@@ -130,7 +126,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let internal_calls = Vec::new();
         let expected_syscall_ptr = Relocatable::from((0, 0));
 
-        BusinessLogicSyscallHandler {
+        DeprecatedBLSyscallHandler {
             tx_execution_context,
             events,
             read_only_segments,
@@ -221,7 +217,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T> Borrow<T> for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> Borrow<T> for DeprecatedBLSyscallHandler<'a, T>
 where
     T: State + StateReader,
 {
@@ -230,7 +226,7 @@ where
     }
 }
 
-impl<'a, T> BorrowMut<T> for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> BorrowMut<T> for DeprecatedBLSyscallHandler<'a, T>
 where
     T: State + StateReader,
 {
@@ -239,7 +235,7 @@ where
     }
 }
 
-impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> DeprecatedSyscallHandler for DeprecatedBLSyscallHandler<'a, T>
 where
     T: Default + State + StateReader,
 {
@@ -249,7 +245,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
-            Ok(SyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
+            Ok(DeprecatedSyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
 
@@ -284,7 +280,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        let request = if let SyscallRequest::Deploy(request) =
+        let request = if let DeprecatedSyscallRequest::Deploy(request) =
             self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
         {
             request
@@ -356,7 +352,7 @@ where
         //   The call to `self.read_and_validate_syscall_request()` will always fail in those
         //   cases.
         match request {
-            SyscallRequest::LibraryCall(request) => {
+            DeprecatedSyscallRequest::LibraryCall(request) => {
                 entry_point_type = match syscall_name {
                     "library_call" => EntryPointType::External,
                     "library_call_l1_handler" => EntryPointType::L1Handler,
@@ -373,7 +369,7 @@ where
                 call_type = CallType::Delegate;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
-            SyscallRequest::CallContract(request) => {
+            DeprecatedSyscallRequest::CallContract(request) => {
                 entry_point_type = match syscall_name {
                     "call_contract" => EntryPointType::External,
                     _ => {
@@ -432,7 +428,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
-            SyscallRequest::GetCallerAddress(_) => {}
+            DeprecatedSyscallRequest::GetCallerAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest),
         }
 
@@ -445,7 +441,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
-            SyscallRequest::GetContractAddress(_) => {}
+            DeprecatedSyscallRequest::GetContractAddress(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetContractAddressRequest),
         };
 
@@ -457,7 +453,7 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::SendMessageToL1(request) =
+        let request = if let DeprecatedSyscallRequest::SendMessageToL1(request) =
             self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
         {
             request
@@ -548,7 +544,7 @@ where
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
@@ -557,7 +553,7 @@ where
     }
 }
 
-impl<'a, T> SyscallHandlerPostRun for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> SyscallHandlerPostRun for DeprecatedBLSyscallHandler<'a, T>
 where
     T: Default + State + StateReader,
 {
@@ -586,7 +582,7 @@ mod tests {
         },
         core::{
             errors::syscall_handler_errors::SyscallHandlerError,
-            syscalls::syscall_handler::SyscallHandler,
+            syscalls::deprecated_syscall_handler::DeprecatedSyscallHandler,
         },
         utils::{test_utils::*, Address},
     };
@@ -609,8 +605,8 @@ mod tests {
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 
-    type BusinessLogicSyscallHandler<'a> =
-        super::BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>;
+    type DeprecatedBLSyscallHandler<'a> =
+        super::DeprecatedBLSyscallHandler<'a, CachedState<InMemoryStateReader>>;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -633,7 +629,7 @@ mod tests {
     #[allow(dead_code)]
     fn deploy_from_zero_error() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -659,7 +655,7 @@ mod tests {
     #[test]
     fn can_allocate_segment() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
 
@@ -675,7 +671,7 @@ mod tests {
     #[test]
     fn test_get_block_number() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -695,7 +691,7 @@ mod tests {
     #[test]
     fn test_get_contract_address_ok() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
         add_segments!(vm, 2);
@@ -712,7 +708,7 @@ mod tests {
     #[test]
     fn test_storage_read_empty() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut syscall_handler = BusinessLogicSyscallHandler::default_with(&mut state);
+        let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
 
         assert_matches!(
             syscall_handler.syscall_storage_read(Address(Felt252::zero())),

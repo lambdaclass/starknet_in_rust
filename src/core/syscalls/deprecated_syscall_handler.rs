@@ -1,12 +1,14 @@
 use super::{
+    deprecated_syscall_request::*,
+    deprecated_syscall_response::{
+        DeprecatedCallContractResponse, DeprecatedDeployResponse, DeprecatedGetBlockNumberResponse,
+        DeprecatedGetBlockTimestampResponse, DeprecatedGetCallerAddressResponse,
+        DeprecatedGetContractAddressResponse, DeprecatedGetSequencerAddressResponse,
+        DeprecatedGetTxInfoResponse, DeprecatedGetTxSignatureResponse,
+        DeprecatedStorageReadResponse, DeprecatedWriteSyscallResponse,
+    },
     hint_code::*,
     other_syscalls,
-    syscall_request::*,
-    syscall_response::{
-        CallContractResponse, DeployResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
-        GetCallerAddressResponse, GetContractAddressResponse, GetSequencerAddressResponse,
-        GetTxInfoResponse, GetTxSignatureResponse, StorageReadResponse, WriteSyscallResponse,
-    },
 };
 use crate::{
     business_logic::{
@@ -38,7 +40,7 @@ use std::{any::Any, collections::HashMap};
 //* SyscallHandler Trait
 //* ---------------------
 
-pub(crate) trait SyscallHandler {
+pub(crate) trait DeprecatedSyscallHandler {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -81,7 +83,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::StorageRead(request) =
+        let request = if let DeprecatedSyscallRequest::StorageRead(request) =
             self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
         {
             request
@@ -90,7 +92,7 @@ pub(crate) trait SyscallHandler {
         };
 
         let value = self.syscall_storage_read(request.address)?;
-        let response = StorageReadResponse::new(value);
+        let response = DeprecatedStorageReadResponse::new(value);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -102,7 +104,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::StorageWrite(request) =
+        let request = if let DeprecatedSyscallRequest::StorageWrite(request) =
             self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
         {
             request
@@ -134,7 +136,7 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         let contract_address = self.syscall_deploy(vm, syscall_ptr)?;
 
-        let response = DeployResponse::new(
+        let response = DeprecatedDeployResponse::new(
             contract_address.0,
             0.into(),
             Relocatable {
@@ -152,7 +154,7 @@ pub(crate) trait SyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError>;
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError>;
 
     // Executes the contract call and fills the CallContractResponse struct.
     fn call_contract_and_write_response(
@@ -169,7 +171,7 @@ pub(crate) trait SyscallHandler {
             .map(|item| MaybeRelocatable::from(Felt252::new(item)))
             .collect::<Vec<MaybeRelocatable>>();
 
-        let response = CallContractResponse::new(
+        let response = DeprecatedCallContractResponse::new(
             retdata.len(),
             self.allocate_segment(vm, retdata_maybe_reloc)?,
         );
@@ -183,7 +185,7 @@ pub(crate) trait SyscallHandler {
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
 
-    fn write_syscall_response<T: WriteSyscallResponse>(
+    fn write_syscall_response<T: DeprecatedWriteSyscallResponse>(
         &self,
         response: &T,
         vm: &mut VirtualMachine,
@@ -200,7 +202,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self.read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
-        GetBlockNumberResponse::new(self.get_block_info().block_number)
+        DeprecatedGetBlockNumberResponse::new(self.get_block_info().block_number)
             .write_syscall_response(vm, syscall_ptr)
     }
 
@@ -217,13 +219,13 @@ pub(crate) trait SyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         let _request =
             match self.read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
-                SyscallRequest::GetTxInfo(request) => request,
+                DeprecatedSyscallRequest::GetTxInfo(request) => request,
                 _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
             };
 
         let tx_info = self.syscall_get_tx_info_ptr(vm)?;
 
-        let response = GetTxInfoResponse::new(tx_info);
+        let response = DeprecatedGetTxInfoResponse::new(tx_info);
         response.write_syscall_response(vm, syscall_ptr)
     }
 
@@ -238,13 +240,14 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
-            SyscallRequest::GetTxSignature(_) => {}
+            DeprecatedSyscallRequest::GetTxSignature(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
         }
 
         let tx_info_pr = self.syscall_get_tx_info_ptr(vm)?;
         let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
-        let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
+        let response =
+            DeprecatedGetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -254,7 +257,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let _request = if let SyscallRequest::GetBlockTimestamp(request) =
+        let _request = if let DeprecatedSyscallRequest::GetBlockTimestamp(request) =
             self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
         {
             request
@@ -264,7 +267,7 @@ pub(crate) trait SyscallHandler {
 
         let block_timestamp = self.get_block_info().block_timestamp;
 
-        let response = GetBlockTimestampResponse::new(block_timestamp);
+        let response = DeprecatedGetBlockTimestampResponse::new(block_timestamp);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -275,7 +278,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let caller_address = self.syscall_get_caller_address(vm, syscall_ptr)?;
-        let response = GetCallerAddressResponse::new(caller_address);
+        let response = DeprecatedGetCallerAddressResponse::new(caller_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
 
@@ -291,7 +294,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let contract_address = self.syscall_get_contract_address(vm, syscall_ptr)?;
-        let response = GetContractAddressResponse::new(contract_address);
+        let response = DeprecatedGetContractAddressResponse::new(contract_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
 
@@ -306,7 +309,7 @@ pub(crate) trait SyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let _request = if let SyscallRequest::GetSequencerAddress(request) =
+        let _request = if let DeprecatedSyscallRequest::GetSequencerAddress(request) =
             self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
         {
             request
@@ -316,7 +319,7 @@ pub(crate) trait SyscallHandler {
 
         let sequencer_address = self.get_block_info().sequencer_address.clone();
 
-        let response = GetSequencerAddressResponse::new(sequencer_address);
+        let response = DeprecatedGetSequencerAddressResponse::new(sequencer_address);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -326,24 +329,28 @@ pub(crate) trait SyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         match syscall_name {
-            "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
-            "get_tx_info" => GetTxInfoRequest::from_ptr(vm, syscall_ptr),
-            "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
-            "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
+            "emit_event" => DeprecatedEmitEventStruct::from_ptr(vm, syscall_ptr),
+            "get_tx_info" => DeprecatedGetTxInfoRequest::from_ptr(vm, syscall_ptr),
+            "deploy" => DeprecatedDeployRequestStruct::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => DeprecatedSendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
             "library_call" | "library_call_l1_handler" => {
-                LibraryCallStruct::from_ptr(vm, syscall_ptr)
+                DeprecatedLibraryCallStruct::from_ptr(vm, syscall_ptr)
             }
-            "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
-            "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
-            "get_contract_address" => GetContractAddressRequest::from_ptr(vm, syscall_ptr),
-            "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
-            "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
-            "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
-            "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
-            "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
-            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "call_contract" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
+            "get_caller_address" => DeprecatedGetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_contract_address" => {
+                DeprecatedGetContractAddressRequest::from_ptr(vm, syscall_ptr)
+            }
+            "get_sequencer_address" => {
+                DeprecatedGetSequencerAddressRequest::from_ptr(vm, syscall_ptr)
+            }
+            "get_block_number" => DeprecatedGetBlockNumberRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_signature" => DeprecatedGetTxSignatureRequest::from_ptr(vm, syscall_ptr),
+            "get_block_timestamp" => DeprecatedGetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
+            "storage_read" => DeprecatedStorageReadRequest::from_ptr(vm, syscall_ptr),
+            "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -366,14 +373,14 @@ pub(crate) trait SyscallHandlerPostRun {
 //* Structs implementations
 //* ------------------------
 
-pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
+pub(crate) struct SyscallHintProcessor<H: DeprecatedSyscallHandler> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: H,
 }
 
 impl<H> SyscallHintProcessor<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub fn new(syscall_handler: H) -> Self {
         SyscallHintProcessor {
@@ -479,7 +486,7 @@ where
     }
 }
 
-impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
+impl<H: DeprecatedSyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -558,17 +565,17 @@ mod tests {
     use num_traits::Num;
     use std::path::PathBuf;
 
-    type BusinessLogicSyscallHandler<'a> =
-        crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+    type DeprecatedBLSyscallHandler<'a> =
+        crate::core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;
-    type SyscallHintProcessor<'a> = super::SyscallHintProcessor<BusinessLogicSyscallHandler<'a>>;
+    type SyscallHintProcessor<'a> = super::SyscallHintProcessor<DeprecatedBLSyscallHandler<'a>>;
 
     #[test]
     fn read_send_message_to_l1_request() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 3);
 
@@ -578,7 +585,7 @@ mod tests {
         );
         assert_matches!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
-            Ok(request) if request == SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+            Ok(request) if request == DeprecatedSyscallRequest::SendMessageToL1(DeprecatedSendMessageToL1SysCall {
                 _selector: 0.into(),
                 to_address: Address(1.into()),
                 payload_size: 2,
@@ -590,7 +597,7 @@ mod tests {
     #[test]
     fn read_deploy_syscall_request() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -608,7 +615,7 @@ mod tests {
 
         assert_matches!(
             syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
-            Ok(request) if request == SyscallRequest::Deploy(DeployRequestStruct {
+            Ok(request) if request == DeprecatedSyscallRequest::Deploy(DeprecatedDeployRequestStruct {
                 _selector: 0.into(),
                 class_hash: 1.into(),
                 contract_address_salt: 2.into(),
@@ -622,7 +629,7 @@ mod tests {
     #[test]
     fn get_block_timestamp_for_business_logic() {
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let syscall = BusinessLogicSyscallHandler::default_with(&mut state);
+        let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
 
@@ -641,7 +648,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -672,7 +679,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -723,7 +730,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         syscall_handler
             .execute_hint(
                 &mut vm,
@@ -779,7 +786,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
@@ -885,7 +892,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         syscall_handler_hint_processor.syscall_handler.tx_info_ptr =
             Some(relocatable!(7, 0).into());
@@ -923,7 +930,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -968,7 +975,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -1014,7 +1021,7 @@ mod tests {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let hint_data =
             HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
@@ -1047,7 +1054,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         hint_processor
             .execute_hint(
                 &mut vm,
@@ -1086,7 +1093,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
@@ -1151,7 +1158,7 @@ mod tests {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         let storage_value = Felt252::new(3);
         syscall_handler_hint_processor
@@ -1213,7 +1220,7 @@ mod tests {
 
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
 
         syscall_handler_hint_processor
             .syscall_handler
@@ -1283,7 +1290,7 @@ mod tests {
         // Create SyscallHintProcessor
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         // Initialize state.set_contract_classes
         syscall_handler_hint_processor
             .syscall_handler
@@ -1378,7 +1385,7 @@ mod tests {
         // Create SyscallHintProcessor
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall_handler_hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut state));
         // Initialize state.set_contract_classes
         syscall_handler_hint_processor
             .syscall_handler

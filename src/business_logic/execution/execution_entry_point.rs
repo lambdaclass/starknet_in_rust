@@ -7,8 +7,8 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::{SyscallHandler, SyscallHintProcessor},
+        deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
+        deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHintProcessor},
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
@@ -98,7 +98,7 @@ impl ExecutionEntryPoint {
     /// at self.code_address.
     /// The execution is done in the context (e.g., storage) of the contract at
     /// self.contract_address.
-    /// Returns the corresponding CairoFunctionRunner and BusinessLogicSysCallHandler in order to
+    /// Returns the corresponding CairoFunctionRunner and DeprecatedBLSyscallHandler in order to
     /// retrieve the execution information.
     fn run<'a, T>(
         &self,
@@ -106,7 +106,7 @@ impl ExecutionEntryPoint {
         resources_manager: &ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
         tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<StarknetRunner<BusinessLogicSyscallHandler<'a, T>>, TransactionError>
+    ) -> Result<StarknetRunner<DeprecatedBLSyscallHandler<'a, T>>, TransactionError>
     where
         T: Default + State + StateReader,
     {
@@ -126,7 +126,7 @@ impl ExecutionEntryPoint {
 
         let mut tmp_state = T::default();
         let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut tmp_state));
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut tmp_state));
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // prepare OS context
@@ -140,7 +140,7 @@ impl ExecutionEntryPoint {
             _ => return Err(TransactionError::NotARelocatableValue),
         };
 
-        let syscall_handler = BusinessLogicSyscallHandler::new(
+        let syscall_handler = DeprecatedBLSyscallHandler::new(
             tx_execution_context.clone(),
             state,
             resources_manager.clone(),
@@ -223,7 +223,7 @@ impl ExecutionEntryPoint {
     fn build_call_info<S>(
         &self,
         previous_cairo_usage: ExecutionResources,
-        syscall_handler: BusinessLogicSyscallHandler<S>,
+        syscall_handler: DeprecatedBLSyscallHandler<S>,
         retdata: Vec<Felt252>,
     ) -> Result<CallInfo, TransactionError>
     where
