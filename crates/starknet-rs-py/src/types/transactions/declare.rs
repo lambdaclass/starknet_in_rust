@@ -16,7 +16,7 @@ use starknet_rs::{
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
     },
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
 

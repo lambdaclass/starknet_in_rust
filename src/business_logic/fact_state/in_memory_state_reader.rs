@@ -3,8 +3,8 @@ use crate::{
         cached_state::CasmClassCache, state_api::StateReader, state_cache::StorageEntry,
     },
     core::errors::state_errors::StateError,
-    services::api::contract_class::ContractClass,
     utils::{Address, ClassHash, CompiledClassHash},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
@@ -108,7 +108,9 @@ impl StateReader for InMemoryStateReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_class::{ContractEntryPoint, EntryPointType};
+    use crate::services::api::contract_classes::deprecated_contract_class::{
+        ContractEntryPoint, EntryPointType,
+    };
     use cairo_rs::types::program::Program;
 
     #[test]

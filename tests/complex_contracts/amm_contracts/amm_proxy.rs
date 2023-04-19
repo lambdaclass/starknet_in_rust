@@ -11,7 +11,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
 use std::collections::{HashMap, HashSet};
