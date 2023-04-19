@@ -18,7 +18,7 @@ use crate::{
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
-        general_config::{StarknetChainId, StarknetGeneralConfig},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
@@ -54,7 +54,6 @@ pub struct InternalDeployAccount {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
-    chain_id: StarknetChainId,
 }
 
 impl InternalDeployAccount {
@@ -67,7 +66,7 @@ impl InternalDeployAccount {
         constructor_calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         contract_address_salt: Address,
-        chain_id: StarknetChainId,
+        chain_id: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -84,7 +83,7 @@ impl InternalDeployAccount {
             max_fee,
             nonce.clone(),
             contract_address_salt.0.clone(),
-            chain_id.to_felt(),
+            chain_id,
         )?;
 
         Ok(Self {
@@ -97,7 +96,6 @@ impl InternalDeployAccount {
             max_fee,
             hash_value,
             signature,
-            chain_id,
         })
     }
 
@@ -264,17 +262,7 @@ impl InternalDeployAccount {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
-            calculate_deploy_account_transaction_hash(
-                self.version,
-                &self.contract_address,
-                Felt252::from_bytes_be(&self.class_hash),
-                &self.constructor_calldata,
-                self.max_fee,
-                self.nonce.clone(),
-                self.contract_address_salt.0.clone(),
-                self.chain_id.to_felt(),
-            )
-            .unwrap(),
+            self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
             self.nonce.clone(),
@@ -354,7 +342,9 @@ impl InternalDeployAccount {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::errors::state_errors::StateError;
+    use crate::{
+        core::errors::state_errors::StateError, definitions::general_config::StarknetChainId,
+    };
     use coverage_helper::test;
     use std::path::PathBuf;
 
@@ -386,7 +376,7 @@ mod tests {
             vec![10.into()],
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
         )
         .unwrap();
 
@@ -418,7 +408,7 @@ mod tests {
             vec![10.into()],
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
         )
         .unwrap();
 
@@ -430,7 +420,7 @@ mod tests {
             vec![10.into()],
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
         )
         .unwrap();
 
@@ -468,7 +458,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
         )
         .unwrap();
 

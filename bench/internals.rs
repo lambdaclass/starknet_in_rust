@@ -88,7 +88,7 @@ fn deploy_account() {
                 vec![],
                 signature,
                 salt,
-                StarknetChainId::TestNet,
+                StarknetChainId::TestNet.to_felt(),
             )
             .unwrap();
             internal_deploy_account.execute(&mut state_copy, config)
