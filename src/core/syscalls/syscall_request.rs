@@ -6,12 +6,12 @@ use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
-    EmitEvent(EmitEventStruct),
+    EmitEvent(EmitEventSysCall),
     SendMessageToL1(SendMessageToL1SysCall),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct EmitEventStruct {
+pub(crate) struct EmitEventSysCall {
     pub(crate) keys_start: Relocatable,
     pub(crate) keys_end: Relocatable,
     pub(crate) data_start: Relocatable,
@@ -36,8 +36,8 @@ pub(crate) struct SendMessageToL1SysCall {
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-impl From<EmitEventStruct> for SyscallRequest {
-    fn from(emit_event_struct: EmitEventStruct) -> SyscallRequest {
+impl From<EmitEventSysCall> for SyscallRequest {
+    fn from(emit_event_struct: EmitEventSysCall) -> SyscallRequest {
         SyscallRequest::EmitEvent(emit_event_struct)
     }
 }
@@ -59,7 +59,7 @@ pub(crate) trait FromPtr {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
-impl FromPtr for EmitEventStruct {
+impl FromPtr for EmitEventSysCall {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -69,7 +69,7 @@ impl FromPtr for EmitEventStruct {
         let data_start = get_relocatable(vm, &syscall_ptr + 2)?;
         let data_end = get_relocatable(vm, &syscall_ptr + 3)?;
 
-        Ok(EmitEventStruct {
+        Ok(EmitEventSysCall {
             keys_start,
             keys_end,
             data_start,
