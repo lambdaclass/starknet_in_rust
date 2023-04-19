@@ -564,7 +564,9 @@ mod tests {
         },
         definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         memory_insert,
-        services::api::contract_class::{ContractClass, EntryPointType},
+        services::api::contract_classes::deprecated_contract_class::{
+            ContractClass, EntryPointType,
+        },
         utils::{
             felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},

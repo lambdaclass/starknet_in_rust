@@ -11,7 +11,7 @@ use crate::{
     definitions::{
         constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
 use felt::Felt252;
 use num_traits::ToPrimitive;
