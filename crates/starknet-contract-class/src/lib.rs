@@ -137,7 +137,7 @@ fn convert_entry_points(
     converted_entries
 }
 
-fn to_cairo_runner_program(
+pub fn to_cairo_runner_program(
     program: &starknet_api::state::Program,
 ) -> Result<Program, ProgramError> {
     let program = program.clone();
