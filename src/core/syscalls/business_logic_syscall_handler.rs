@@ -222,13 +222,12 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         &mut self,
         remaining_gas: u64,
         vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        library_call_request: SyscallRequest,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request =
-            match self.read_and_validate_syscall_request("library_call", vm, syscall_ptr)? {
-                SyscallRequest::LibraryCall(request) => request,
-                _ => return Err(SyscallHandlerError::ExpectedLibraryCallRequest),
-            };
+        let request = match library_call_request {
+            SyscallRequest::LibraryCall(request) => request,
+            _ => return Err(SyscallHandlerError::ExpectedLibraryCallRequest),
+        };
 
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(

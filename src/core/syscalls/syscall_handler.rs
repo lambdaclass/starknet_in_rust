@@ -19,7 +19,7 @@ pub(crate) trait SyscallHandler {
         &mut self,
         remaining_gas: u64,
         vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        library_call_request: SyscallRequest,
     ) -> Result<SyscallResponse, SyscallHandlerError>;
 
     fn read_and_validate_syscall_request(
