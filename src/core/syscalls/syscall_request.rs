@@ -22,6 +22,8 @@ const HEADER_OFFSET: usize = 2;
 #[allow(unused)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
+    LibraryCall(LibraryCallRequest),
+    CallContract(CallContractRequest),
     Deploy(DeployRequest),
     StorageRead(StorageReadRequest),
     StorageWrite(StorageWriteRequest),
@@ -53,6 +55,23 @@ pub(crate) struct StorageReadRequest {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractRequest {
+    pub(crate) selector: Felt252,
+    pub(crate) contract_address: Address,
+    pub(crate) function_selector: Felt252,
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct LibraryCallRequest {
+    pub(crate) class_hash: Felt252,
+    pub(crate) selector: Felt252,
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageWriteRequest {
     pub(crate) reserved: Felt252,
     pub(crate) key: Felt252,
@@ -71,6 +90,18 @@ pub(crate) struct SendMessageToL1SysCall {
     pub(crate) to_address: Address,
     pub(crate) payload_start: Relocatable,
     pub(crate) payload_end: Relocatable,
+}
+
+impl From<CallContractRequest> for SyscallRequest {
+    fn from(call_contract_request: CallContractRequest) -> SyscallRequest {
+        SyscallRequest::CallContract(call_contract_request)
+    }
+}
+
+impl From<LibraryCallRequest> for SyscallRequest {
+    fn from(library_call_request: LibraryCallRequest) -> Self {
+        SyscallRequest::LibraryCall(library_call_request)
+    }
 }
 
 impl From<SendMessageToL1SysCall> for SyscallRequest {
@@ -134,19 +165,42 @@ impl FromPtr for DeployRequest {
     }
 }
 
-impl FromPtr for StorageWriteRequest {
+impl FromPtr for CallContractRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let reserved = get_big_int(vm, syscall_ptr)?;
-        let key = get_big_int(vm, &syscall_ptr + 1)?;
-        let value = get_big_int(vm, &syscall_ptr + 2)?;
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let contract_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
+        let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
+        let calldata_start = get_relocatable(vm, &syscall_ptr + 3)?;
+        let calldata_end = get_relocatable(vm, &syscall_ptr + 4)?;
+        Ok(CallContractRequest {
+            selector,
+            contract_address,
+            function_selector,
+            calldata_start,
+            calldata_end,
+        }
+        .into())
+    }
+}
 
-        Ok(StorageWriteRequest {
-            reserved,
-            key,
-            value,
+impl FromPtr for LibraryCallRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let class_hash = get_big_int(vm, syscall_ptr)?;
+        let selector = get_big_int(vm, &syscall_ptr + 1)?;
+        let calldata_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let calldata_end = get_relocatable(vm, &syscall_ptr + 3)?;
+
+        Ok(LibraryCallRequest {
+            class_hash,
+            selector,
+            calldata_start,
+            calldata_end,
         }
         .into())
     }
@@ -165,6 +219,24 @@ impl FromPtr for SendMessageToL1SysCall {
             to_address,
             payload_start,
             payload_end,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let reserved = get_big_int(vm, syscall_ptr)?;
+        let key = get_big_int(vm, &syscall_ptr + 1)?;
+        let value = get_big_int(vm, &syscall_ptr + 2)?;
+
+        Ok(StorageWriteRequest {
+            reserved,
+            key,
+            value,
         }
         .into())
     }

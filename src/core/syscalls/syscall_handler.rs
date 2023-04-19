@@ -1,22 +1,25 @@
-use cairo_rs::types::relocatable::MaybeRelocatable;
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use std::ops::Add;
+
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::Felt252;
 use num_traits::Zero;
 
-use crate::business_logic::execution::objects::CallResult;
-use crate::core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError};
-use crate::utils::Address;
-
-use super::syscall_request::{
-    DeployRequest, SendMessageToL1SysCall, StorageReadRequest, SyscallRequest,
-};
+use super::syscall_request::StorageReadRequest;
 use super::syscall_response::{DeployResponse, FailureReason, ResponseBody};
 use super::{
     syscall_request::{FromPtr, StorageWriteRequest},
     syscall_response::SyscallResponse,
 };
+use crate::core::errors::state_errors::StateError;
+use crate::{
+    business_logic::execution::objects::CallResult,
+    core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address,
+};
 
-use std::ops::Add;
+use super::syscall_request::{
+    CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1SysCall, SyscallRequest,
+};
 
 #[allow(unused)]
 pub(crate) trait SyscallHandler {
@@ -94,9 +97,23 @@ pub(crate) trait SyscallHandler {
 
     fn send_message_to_l1(
         &mut self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
         remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
+
+    fn call_contract(
+        &mut self,
+        vm: &mut VirtualMachine,
+        request: SyscallRequest,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
+
+    fn library_call(
+        &mut self,
+        remaining_gas: u64,
+        vm: &mut VirtualMachine,
+        library_call_request: SyscallRequest,
     ) -> Result<SyscallResponse, SyscallHandlerError>;
 
     fn read_and_validate_syscall_request(
@@ -121,6 +138,8 @@ pub(crate) trait SyscallHandler {
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
             "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
+            "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
+            "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),

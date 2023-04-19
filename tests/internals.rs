@@ -314,13 +314,17 @@ fn state_cache_after_invoke_tx() -> StateCache {
         ),
     ]);
 
+    let compiled_class_hash_initial_values = HashMap::new();
+    let compiled_class_hash_writes = HashMap::new();
     let compiled_class_hash = HashMap::new();
 
     StateCache::new_for_testing(
         class_hash_initial_values,
+        compiled_class_hash_initial_values,
         nonce_initial_values,
         storage_initial_values,
         class_hash_writes,
+        compiled_class_hash_writes,
         nonce_writes,
         storage_writes,
         compiled_class_hash,
@@ -1181,6 +1185,7 @@ fn test_state_for_declare_tx() {
                     felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
                 )
             ]),
+            HashMap::new(),
             HashMap::from([(
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
                 0.into()
@@ -1215,6 +1220,7 @@ fn test_state_for_declare_tx() {
                     0.into()
                 )
             ]),
+            HashMap::new(),
             HashMap::new(),
             HashMap::from([(
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),

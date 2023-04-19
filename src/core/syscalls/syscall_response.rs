@@ -6,6 +6,7 @@ use felt::Felt252;
 pub(crate) enum ResponseBody {
     StorageReadResponse { value: Option<Felt252> },
     Deploy(DeployResponse),
+    CallContract(CallContractResponse),
     Failure(FailureReason),
 }
 #[allow(unused)]
@@ -32,4 +33,10 @@ pub struct FailureReason {
     // Syscall specific response fields.
     // TODO: this cause circular dependency
     //pub(crate) body: Option<ResponseBody>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CallContractResponse {
+    pub retdata_start: Relocatable,
+    pub retdata_end: Relocatable,
 }
