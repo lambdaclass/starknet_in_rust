@@ -14,7 +14,7 @@ use starknet_rs::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{felt_to_hash, Address},
 };
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ use std::path::PathBuf;
 #[test]
 fn internal_deploy_account() {
     let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, None);
+    let mut state = CachedState::new(state_reader, None, None);
 
     state.set_contract_classes(Default::default()).unwrap();
 

@@ -60,6 +60,10 @@ pub enum SyscallHandlerError {
     VirtualMachine(#[from] VirtualMachineError),
     #[error("Expected GetContractAddressRequest")]
     ExpectedGetContractAddressRequest,
+    #[error("Expected CallContractRequest")]
+    ExpectedCallContractRequest,
+    #[error("Expected a LibraryCallRequest")]
+    ExpectedLibraryCallRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
     #[error("Memory error: {0}")]
@@ -76,6 +80,8 @@ pub enum SyscallHandlerError {
     InconsistentSegmentIndices,
     #[error("Start offset greater than end offset")]
     StartOffsetGreaterThanEndOffset,
+    #[error("Incorrect request in syscall {0}")]
+    IncorrectSyscall(String),
     #[error(transparent)]
     State(#[from] StateError),
     #[error(transparent)]

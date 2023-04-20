@@ -3,22 +3,55 @@ use felt::Felt252;
 
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
-    utils::{get_big_int, get_relocatable, Address},
+    utils::{get_big_int, get_integer, get_relocatable, Address},
 };
+// TODO: maybe we could make FromPtr trait more general, making
+//   it "move" the pointer received like they do in cairo-lang
+// The size of the RequestHeader in VM memory
+// ```
+// struct RequestHeader {
+//     // The syscall selector.
+//     selector: Felt252,
+//     // The amount of gas left before the syscall execution.
+//     gas: Felt252,
+// }
+// ```
 
-#[derive(Debug, PartialEq)]
+const HEADER_OFFSET: usize = 2;
+
+#[allow(unused)]
 pub(crate) enum SyscallRequest {
-    EmitEvent(EmitEventSysCall),
+    EmitEvent(EmitEventRequest),
+    LibraryCall(LibraryCallRequest),
+    CallContract(CallContractRequest),
+    Deploy(DeployRequest),
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1SysCall),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct EmitEventSysCall {
+pub(crate) struct EmitEventRequest {
     pub(crate) keys_start: Relocatable,
     pub(crate) keys_end: Relocatable,
     pub(crate) data_start: Relocatable,
     pub(crate) data_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CallContractRequest {
+    pub(crate) selector: Felt252,
+    pub(crate) contract_address: Address,
+    pub(crate) function_selector: Felt252,
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct LibraryCallRequest {
+    pub(crate) class_hash: Felt252,
+    pub(crate) selector: Felt252,
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -42,18 +75,38 @@ pub(crate) struct SendMessageToL1SysCall {
     pub(crate) payload_end: Relocatable,
 }
 
+#[allow(unused)]
+pub(crate) struct DeployRequest {
+    // The hash of the class to deploy.
+    pub(crate) class_hash: Felt252,
+    // A salt for the new contract address calculation.
+    pub(crate) salt: Felt252,
+    // The calldata for the constructor.
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
+    // Used for deterministic contract address deployment.
+    pub(crate) deploy_from_zero: usize,
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
-impl From<StorageWriteRequest> for SyscallRequest {
-    fn from(storage_write_request: StorageWriteRequest) -> SyscallRequest {
-        SyscallRequest::StorageWrite(storage_write_request)
+
+impl From<EmitEventRequest> for SyscallRequest {
+    fn from(emit_event_struct: EmitEventRequest) -> SyscallRequest {
+        SyscallRequest::EmitEvent(emit_event_struct)
     }
 }
 
-impl From<EmitEventSysCall> for SyscallRequest {
-    fn from(emit_event_struct: EmitEventSysCall) -> SyscallRequest {
-        SyscallRequest::EmitEvent(emit_event_struct)
+impl From<CallContractRequest> for SyscallRequest {
+    fn from(call_contract_request: CallContractRequest) -> SyscallRequest {
+        SyscallRequest::CallContract(call_contract_request)
+    }
+}
+
+impl From<LibraryCallRequest> for SyscallRequest {
+    fn from(library_call_request: LibraryCallRequest) -> Self {
+        SyscallRequest::LibraryCall(library_call_request)
     }
 }
 
@@ -63,10 +116,14 @@ impl From<SendMessageToL1SysCall> for SyscallRequest {
     }
 }
 
+impl From<StorageWriteRequest> for SyscallRequest {
+    fn from(storage_write_request: StorageWriteRequest) -> SyscallRequest {
+        SyscallRequest::StorageWrite(storage_write_request)
+    }
+}
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
-//  FromPtr implementations
+//  FromPtr trait
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -74,7 +131,7 @@ pub(crate) trait FromPtr {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
-impl FromPtr for EmitEventSysCall {
+impl FromPtr for EmitEventRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -84,7 +141,7 @@ impl FromPtr for EmitEventSysCall {
         let data_start = get_relocatable(vm, &syscall_ptr + 2)?;
         let data_end = get_relocatable(vm, &syscall_ptr + 3)?;
 
-        Ok(EmitEventSysCall {
+        Ok(EmitEventRequest {
             keys_start,
             keys_end,
             data_start,
@@ -93,19 +150,65 @@ impl FromPtr for EmitEventSysCall {
         .into())
     }
 }
-impl FromPtr for StorageWriteRequest {
+
+impl FromPtr for DeployRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        mut syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        syscall_ptr += HEADER_OFFSET;
+        let class_hash = get_big_int(vm, syscall_ptr)?;
+        let salt = get_big_int(vm, (syscall_ptr + 1)?)?;
+        let calldata_start = get_relocatable(vm, (syscall_ptr + 2)?)?;
+        let calldata_end = get_relocatable(vm, (syscall_ptr + 3)?)?;
+        let deploy_from_zero = get_integer(vm, (syscall_ptr + 4)?)?;
+
+        Ok(SyscallRequest::Deploy(DeployRequest {
+            class_hash,
+            salt,
+            calldata_start,
+            calldata_end,
+            deploy_from_zero,
+        }))
+    }
+}
+
+impl FromPtr for CallContractRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let reserved = get_big_int(vm, syscall_ptr)?;
-        let key = get_big_int(vm, &syscall_ptr + 1)?;
-        let value = get_big_int(vm, &syscall_ptr + 2)?;
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let contract_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
+        let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
+        let calldata_start = get_relocatable(vm, &syscall_ptr + 3)?;
+        let calldata_end = get_relocatable(vm, &syscall_ptr + 4)?;
+        Ok(CallContractRequest {
+            selector,
+            contract_address,
+            function_selector,
+            calldata_start,
+            calldata_end,
+        }
+        .into())
+    }
+}
 
-        Ok(StorageWriteRequest {
-            reserved,
-            key,
-            value,
+impl FromPtr for LibraryCallRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let class_hash = get_big_int(vm, syscall_ptr)?;
+        let selector = get_big_int(vm, &syscall_ptr + 1)?;
+        let calldata_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let calldata_end = get_relocatable(vm, &syscall_ptr + 3)?;
+
+        Ok(LibraryCallRequest {
+            class_hash,
+            selector,
+            calldata_start,
+            calldata_end,
         }
         .into())
     }
@@ -124,6 +227,24 @@ impl FromPtr for SendMessageToL1SysCall {
             to_address,
             payload_start,
             payload_end,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for StorageWriteRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let reserved = get_big_int(vm, syscall_ptr)?;
+        let key = get_big_int(vm, &syscall_ptr + 1)?;
+        let value = get_big_int(vm, &syscall_ptr + 2)?;
+
+        Ok(StorageWriteRequest {
+            reserved,
+            key,
+            value,
         }
         .into())
     }

@@ -18,7 +18,10 @@ use crate::{
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::deprecated_contract_class::EntryPointType,
+    },
     utils::*,
 };
 use cairo_rs::{
@@ -203,6 +206,7 @@ impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
+            0,
         );
 
         let _call_info = call
@@ -400,6 +404,7 @@ where
             entry_point_type,
             Some(call_type),
             class_hash,
+            0,
         );
 
         entry_point

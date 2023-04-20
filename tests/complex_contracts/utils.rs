@@ -16,7 +16,7 @@ use starknet_rs::{
         transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -31,7 +31,7 @@ pub struct CallConfig<'a> {
     pub class_hash: &'a [u8; 32],
     pub entry_points_by_type: &'a HashMap<
         EntryPointType,
-        Vec<starknet_rs::services::api::contract_class::ContractEntryPoint>,
+        Vec<starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractEntryPoint>,
     >,
     pub entry_point_type: &'a EntryPointType,
     pub general_config: &'a StarknetGeneralConfig,
@@ -90,6 +90,7 @@ pub fn get_entry_points(
             *entry_point_type,
             Some(CallType::Delegate),
             Some(*class_hash),
+            0,
         ),
         entrypoint_selector,
     )

@@ -23,7 +23,7 @@ use crate::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
-        contract_class::{ContractClass, EntryPointType},
+        contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
     utils::{Address, ClassHash},
@@ -47,7 +47,7 @@ impl StarknetState {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
-        let state = CachedState::new(state_reader, Some(HashMap::new()));
+        let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -127,6 +127,7 @@ impl StarknetState {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let mut state_copy = self.state.apply_to_copy();
@@ -385,7 +386,7 @@ mod tests {
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class.clone());
 
-        let state = CachedState::new(state_reader, Some(contract_class_cache));
+        let state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* --------------------------------------------
         //*    Create starknet state with previous data

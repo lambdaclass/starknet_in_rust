@@ -15,7 +15,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_cache::StorageEntry},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -72,7 +72,7 @@ fn hello_starknet_increase_balance() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+    let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -90,6 +90,7 @@ fn hello_starknet_increase_balance() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
+        0,
     );
 
     //* --------------------
