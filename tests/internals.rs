@@ -9,6 +9,7 @@ use cairo_rs::vm::{
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
+use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
@@ -43,10 +44,6 @@ use starknet_rs::{
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
-};
-use starknet_rs::{
-    core::errors::state_errors::StateError,
-    services::api::contract_classes::compiled_class::CompiledClass,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -590,9 +587,7 @@ fn expected_fee_transfer_info() -> CallInfo {
 
 fn declare_tx() -> InternalDeclare {
     InternalDeclare {
-        compiled_class: CompiledClass::Deprecated(Box::new(
-            get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap(),
-        )),
+        contract_class: get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
