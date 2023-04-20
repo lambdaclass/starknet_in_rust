@@ -273,7 +273,7 @@ where
             body: None,
         })
     }
-    #[allow(irrefutable_let_patterns)]
+
     fn storage_write(
         &mut self,
         _vm: &mut VirtualMachine,
