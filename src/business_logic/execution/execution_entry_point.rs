@@ -9,8 +9,9 @@ use crate::{
         deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHintProcessor},
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::deprecated_contract_class::{
-        ContractClass, ContractEntryPoint, EntryPointType,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass,
+        deprecated_contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     },
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
@@ -136,78 +137,24 @@ impl ExecutionEntryPoint {
         // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
-            .get_contract_class(&class_hash)
-            .map_err(|_| TransactionError::MissigContractClass)?;
+            .get_compiled_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
 
-        // fetch selected entry point
-        let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
-        // create starknet runner
-
-        let mut vm = VirtualMachine::new(false);
-        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all_cairo", false)?;
-        cairo_runner.initialize_function_runner(&mut vm, true)?;
-
-        let mut tmp_state = T::default();
-        let hint_processor =
-            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut tmp_state));
-        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
-
-        // prepare OS context
-        let os_context = runner.prepare_os_context();
-
-        validate_contract_deployed(state, &self.contract_address)?;
-
-        // fetch syscall_ptr
-        let initial_syscall_ptr: Relocatable = match os_context.get(0) {
-            Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
-            _ => return Err(TransactionError::NotARelocatableValue),
-        };
-
-        let syscall_handler = DeprecatedBLSyscallHandler::new(
-            tx_execution_context.clone(),
-            state,
-            resources_manager.clone(),
-            self.caller_address.clone(),
-            self.contract_address.clone(),
-            general_config.clone(),
-            initial_syscall_ptr,
-        );
-
-        let mut runner = runner.map_hint_processor(SyscallHintProcessor::new(syscall_handler));
-
-        // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
-        let data = self.calldata.clone().iter().map(|d| d.into()).collect();
-        let alloc_pointer = runner
-            .hint_processor
-            .syscall_handler
-            .allocate_segment(&mut runner.vm, data)?
-            .into();
-
-        let entry_point_args = [
-            &CairoArg::Single(self.entry_point_selector.clone().into()),
-            &CairoArg::Array(os_context.clone()),
-            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
-            &CairoArg::Single(alloc_pointer),
-        ];
-
-        let entrypoint = entry_point.offset;
-
-        // cairo runner entry point
-        runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
-        runner.validate_and_process_os_context(os_context)?;
-
-        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
-        let args_ptr = (runner
-            .cairo_runner
-            .get_initial_fp()
-            .ok_or(TransactionError::MissingInitialFp)?
-            - (entry_point_args.len() + 2))?;
-
-        runner
-            .vm
-            .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
-
-        Ok(runner)
+        match contract_class {
+            CompiledClass::Deprecated(contract_class) => {
+                return self._execute_version0_class(
+                    state,
+                    resources_manager,
+                    general_config,
+                    tx_execution_context,
+                    contract_class,
+                    class_hash,
+                )
+            }
+            CompiledClass::Casm(_contract_class) => {
+                todo!()
+            }
+        }
     }
 
     /// Returns the entry point with selector corresponding with self.entry_point_selector, or the
@@ -301,5 +248,88 @@ impl ExecutionEntryPoint {
         };
 
         get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
+    }
+
+    fn _execute_version0_class<'a, T>(
+        &self,
+        state: &'a mut T,
+        resources_manager: &ExecutionResourcesManager,
+        general_config: &StarknetGeneralConfig,
+        tx_execution_context: &TransactionExecutionContext,
+        contract_class: Box<ContractClass>,
+        class_hash: [u8; 32],
+    ) -> Result<StarknetRunner<DeprecatedBLSyscallHandler<'a, T>>, TransactionError>
+    where
+        T: Default + State + StateReader,
+    {
+        // fetch selected entry point
+        let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
+
+        // create starknet runner
+        let mut vm = VirtualMachine::new(false);
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all_cairo", false)?;
+        cairo_runner.initialize_function_runner(&mut vm, true)?;
+
+        let mut tmp_state = T::default();
+        let hint_processor =
+            SyscallHintProcessor::new(DeprecatedBLSyscallHandler::default_with(&mut tmp_state));
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+
+        // prepare OS context
+        let os_context = runner.prepare_os_context();
+
+        validate_contract_deployed(state, &self.contract_address)?;
+
+        // fetch syscall_ptr
+        let initial_syscall_ptr: Relocatable = match os_context.get(0) {
+            Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
+            _ => return Err(TransactionError::NotARelocatableValue),
+        };
+
+        let syscall_handler = DeprecatedBLSyscallHandler::new(
+            tx_execution_context.clone(),
+            state,
+            resources_manager.clone(),
+            self.caller_address.clone(),
+            self.contract_address.clone(),
+            general_config.clone(),
+            initial_syscall_ptr,
+        );
+
+        let mut runner = runner.map_hint_processor(SyscallHintProcessor::new(syscall_handler));
+
+        // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
+        let data = self.calldata.clone().iter().map(|d| d.into()).collect();
+        let alloc_pointer = runner
+            .hint_processor
+            .syscall_handler
+            .allocate_segment(&mut runner.vm, data)?
+            .into();
+
+        let entry_point_args = [
+            &CairoArg::Single(self.entry_point_selector.clone().into()),
+            &CairoArg::Array(os_context.clone()),
+            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
+            &CairoArg::Single(alloc_pointer),
+        ];
+
+        let entrypoint = entry_point.offset;
+
+        // cairo runner entry point
+        runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
+        runner.validate_and_process_os_context(os_context)?;
+
+        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        let args_ptr = (runner
+            .cairo_runner
+            .get_initial_fp()
+            .ok_or(TransactionError::MissingInitialFp)?
+            - (entry_point_args.len() + 2))?;
+
+        runner
+            .vm
+            .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
+
+        Ok(runner)
     }
 }
