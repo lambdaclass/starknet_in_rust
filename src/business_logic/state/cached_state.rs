@@ -85,12 +85,6 @@ impl<T: StateReader + Clone> CachedState<T> {
             .ok_or(StateError::MissingCasmClassCache)
     }
 
-    pub(crate) fn get_compiled_classes(&mut self) -> Result<&CasmClassCache, StateError> {
-        self.casm_contract_classes
-            .as_ref()
-            .ok_or(StateError::MissingCasmClassCache)
-    }
-
     /// Apply updates to parent state.
     pub(crate) fn apply(&self, parent: &mut CachedState<T>) {
         // TODO assert: if self.state_reader == parent
@@ -182,7 +176,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         &mut self,
         compiled_class_hash: &ClassHash,
     ) -> Result<CompiledClass, StateError> {
-        let mut casm_class = self.get_compiled_classes()?.clone();
+        let mut casm_class = self.get_casm_classes()?.clone();
         if casm_class.get(compiled_class_hash).is_none() {
             let casm = self.state_reader.get_compiled_class(compiled_class_hash)?;
             if let CompiledClass::Casm(casm) = casm {
