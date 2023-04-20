@@ -20,7 +20,10 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass,
+        deprecated_contract_class::{ContractClass, EntryPointType},
+    },
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -44,7 +47,7 @@ pub struct InternalDeclare {
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
     pub hash_value: Felt252,
-    pub contract_class: ContractClass,
+    pub compiled_class: CompiledClass,
 }
 
 // ------------------------------------------------------------
@@ -84,7 +87,7 @@ impl InternalDeclare {
             signature,
             nonce,
             hash_value,
-            contract_class,
+            compiled_class: CompiledClass::Deprecated(Box::new(contract_class)),
         };
 
         internal_declare.verify_version()?;
@@ -264,7 +267,7 @@ impl InternalDeclare {
         match state.get_contract_class(&self.class_hash) {
             Err(StateError::MissingClassHash()) => {
                 // Class is undeclared; declare it.
-                state.set_contract_class(&self.class_hash, &self.contract_class)?;
+                state.set_compiled_class(&self.class_hash, &self.compiled_class)?;
             }
             Err(error) => return Err(error.into()),
             Ok(_) => {
