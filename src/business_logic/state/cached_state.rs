@@ -4,11 +4,13 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        casm_contract_class::CasmContractClass, compiled_class::CompiledClass,
+        deprecated_contract_class::ContractClass,
+    },
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash, CompiledClassHash},
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
@@ -173,17 +175,21 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     fn get_compiled_class(
         &mut self,
         compiled_class_hash: &ClassHash,
-    ) -> Result<&CasmContractClass, StateError> {
+    ) -> Result<CompiledClass, StateError> {
         let mut casm_class = self.get_casm_classes()?.clone();
         if casm_class.get(compiled_class_hash).is_none() {
-            let casm = self
-                .state_reader
-                .get_compiled_class(compiled_class_hash)?
-                .clone();
-            casm_class.insert(*compiled_class_hash, casm);
-            self.casm_contract_classes = Some(casm_class);
+            let casm = self.state_reader.get_compiled_class(compiled_class_hash)?;
+            if let CompiledClass::Casm(casm) = casm {
+                casm_class.insert(*compiled_class_hash, *casm);
+                self.casm_contract_classes = Some(casm_class);
+            }
         }
-        Ok(self.get_casm_classes()?.get(compiled_class_hash).unwrap())
+        Ok(CompiledClass::Casm(Box::new(
+            self.get_casm_classes()?
+                .get(compiled_class_hash)
+                .unwrap()
+                .clone(),
+        )))
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
