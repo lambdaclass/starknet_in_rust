@@ -180,7 +180,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
         &get_contract_class_struct(&hash_calculation_program.identifiers, contract_class)?.into();
 
     let mut vm = VirtualMachine::new(false);
-    let mut runner = CairoRunner::new(&hash_calculation_program, "all", false)?;
+    let mut runner = CairoRunner::new(&hash_calculation_program, "all_cairo", false)?;
     runner.initialize_function_runner(&mut vm, false)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
