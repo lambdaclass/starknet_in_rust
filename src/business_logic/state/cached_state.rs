@@ -187,7 +187,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         Ok(CompiledClass::Casm(Box::new(
             self.get_casm_classes()?
                 .get(compiled_class_hash)
-                .unwrap()
+                .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))?
                 .clone(),
         )))
     }
