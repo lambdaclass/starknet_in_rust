@@ -290,24 +290,13 @@ impl<T: StateReader + Clone> State for CachedState<T> {
     fn set_compiled_class(
         &mut self,
         compiled_class_hash: &CompiledClassHash,
-        compiled_class: &CompiledClass,
+        casm_class: CasmContractClass,
     ) -> Result<(), StateError> {
-        match compiled_class {
-            CompiledClass::Casm(casm_class) => {
-                self.casm_contract_classes
-                    .as_mut()
-                    .ok_or(StateError::MissingCasmClassCache)?
-                    .insert(*compiled_class_hash, *casm_class.clone());
-                Ok(())
-            }
-            CompiledClass::Deprecated(contract_class) => {
-                self.contract_classes
-                    .as_mut()
-                    .ok_or(StateError::MissingCasmClassCache)?
-                    .insert(*compiled_class_hash, *contract_class.clone());
-                Ok(())
-            }
-        }
+        self.casm_contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingCasmClassCache)?
+            .insert(*compiled_class_hash, casm_class);
+        Ok(())
     }
 
     fn set_compiled_class_hash(

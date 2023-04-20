@@ -2,7 +2,8 @@ use super::state_cache::StorageEntry;
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        casm_contract_class::CasmContractClass, compiled_class::CompiledClass,
+        deprecated_contract_class::ContractClass,
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
@@ -52,7 +53,7 @@ pub trait State {
     fn set_compiled_class(
         &mut self,
         compiled_class_hash: &CompiledClassHash,
-        casm_class: &CompiledClass,
+        casm_class: CasmContractClass,
     ) -> Result<(), StateError>;
     fn set_compiled_class_hash(
         &mut self,
