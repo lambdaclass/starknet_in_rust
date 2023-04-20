@@ -25,7 +25,7 @@ pub(crate) enum SyscallRequest {
     CallContract(CallContractRequest),
     Deploy(DeployRequest),
     StorageWrite(StorageWriteRequest),
-    SendMessageToL1(SendMessageToL1SysCall),
+    SendMessageToL1(SendMessageToL1SysCallRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -60,7 +60,7 @@ pub(crate) struct StorageWriteRequest {
 // payload
 // The array containing the message payload -> relocatable
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct SendMessageToL1SysCall {
+pub(crate) struct SendMessageToL1SysCallRequest {
     pub(crate) to_address: Address,
     pub(crate) payload_start: Relocatable,
     pub(crate) payload_end: Relocatable,
@@ -78,8 +78,8 @@ impl From<LibraryCallRequest> for SyscallRequest {
     }
 }
 
-impl From<SendMessageToL1SysCall> for SyscallRequest {
-    fn from(syscall: SendMessageToL1SysCall) -> Self {
+impl From<SendMessageToL1SysCallRequest> for SyscallRequest {
+    fn from(syscall: SendMessageToL1SysCallRequest) -> Self {
         SyscallRequest::SendMessageToL1(syscall)
     }
 }
@@ -183,7 +183,7 @@ impl FromPtr for LibraryCallRequest {
     }
 }
 
-impl FromPtr for SendMessageToL1SysCall {
+impl FromPtr for SendMessageToL1SysCallRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -192,7 +192,7 @@ impl FromPtr for SendMessageToL1SysCall {
         let payload_start = get_relocatable(vm, &syscall_ptr + 1)?;
         let payload_end = get_relocatable(vm, &syscall_ptr + 2)?;
 
-        Ok(SendMessageToL1SysCall {
+        Ok(SendMessageToL1SysCallRequest {
             to_address,
             payload_start,
             payload_end,

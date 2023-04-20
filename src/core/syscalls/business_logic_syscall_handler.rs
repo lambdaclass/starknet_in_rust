@@ -1,12 +1,15 @@
-#![allow(dead_code)]
+#![allow(dead_code)] // TODO: Remove this!
 
 use std::collections::HashMap;
 
 use super::{
     syscall_handler::SyscallHandler,
     syscall_info::get_syscall_size_from_name,
-    syscall_request::{FromPtr, SyscallRequest},
-    syscall_response::{CallContractResponse, ResponseBody},
+    syscall_request::{
+        CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1SysCallRequest,
+        StorageWriteRequest, SyscallRequest,
+    },
+    syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
 use crate::{
     business_logic::{
@@ -32,21 +35,23 @@ use crate::{
         contract_class_errors::ContractClassError,
         contract_classes::deprecated_contract_class::EntryPointType,
     },
-    utils::{felt_to_hash, get_felt_range, Address, ClassHash},
+    utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::vm_core::VirtualMachine,
+    vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
 };
 use felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::{One, Zero};
 
 use super::syscall_response::SyscallResponse;
+
+const STEP: u64 = 100;
+const SYSCALL_BASE: u64 = 100 * STEP;
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
-    static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> =
-        {
+    static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> = {
             let mut map: HashMap<Felt252, &'static str> = HashMap::with_capacity(9);
 
             map.insert(92376026794327011772951660_u128.into(), "library_call");
@@ -66,7 +71,34 @@ lazy_static! {
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
 
             map
-        };
+    };
+
+    // TODO: There is no reason why this could not be in the syscall enum itself AFAICT
+    // Taken from starkware/starknet/constants.py in cairo-lang
+    // See further documentation on cairo_programs/constants.cairo
+    /// Maps syscall name to gas costs
+    static ref SYSCALL_GAS_COST: HashMap<&'static str, u64> = {
+        let mut map = HashMap::new();
+
+        map.insert("initial", 100_000_000 * STEP);
+        map.insert("entry_point_initial_budget", 100 * STEP);
+
+        map.insert("entry_point", map["entry_point_initial_budget"] + 500 * STEP);
+        map.insert("fee_transfer", map["entry_point"] + 100 * STEP);
+        map.insert("transaction", 2 * map["entry_point"] + map["fee_transfer"] + 100 * STEP);
+
+        map.insert("call_contract", SYSCALL_BASE + 10 * STEP + map["entry_point"]);
+        map.insert("deploy", SYSCALL_BASE + 200 * STEP + map["entry_point"]);
+        map.insert("get_execution_info", SYSCALL_BASE + 10 * STEP);
+        map.insert("library_call", map["call_contract"]);
+        map.insert("replace_class", SYSCALL_BASE + 50 * STEP);
+        map.insert("storage_read", SYSCALL_BASE + 50 * STEP);
+        map.insert("storage_write", SYSCALL_BASE + 50 * STEP);
+        map.insert("emit_event", SYSCALL_BASE + 10 * STEP);
+        map.insert("send_message_to_l1", SYSCALL_BASE + 50 * STEP);
+
+        map
+    };
 }
 
 //TODO Remove allow dead_code after merging to 0.11
@@ -244,20 +276,80 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
         self.starknet_storage_state.write(&key.to_le_bytes(), value)
     }
+
+    fn syscall(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let syscall_name = self.selector_to_syscall.get(&selector).ok_or(
+            SyscallHandlerError::SelectorNotInHandlerMap(selector.to_string()),
+        )?;
+
+        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
+        let initial_gas = 0u64; //get_big_int(vm, (syscall_ptr + 1)?)?;
+
+        // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
+        let required_gas: u64 = SYSCALL_GAS_COST
+            .get(syscall_name)
+            .map(|&x| x - SYSCALL_BASE)
+            .ok_or(SyscallHandlerError::SelectorDoesNotHaveAssociatedGas(
+                selector.to_string(),
+            ))?;
+
+        let response = if initial_gas < required_gas {
+            let out_of_gas_felt = Felt252::from_bytes_be("Out of gas".as_bytes());
+            let retdata_start =
+                self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_gas_felt)])?;
+            let response_body = ResponseBody::Failure(FailureReason {
+                retdata_start,
+                retdata_end: (retdata_start + 1)?,
+            });
+
+            SyscallResponse {
+                gas: initial_gas,
+                body: Some(response_body),
+            }
+        } else {
+            // Execute.
+            let remaining_gas = initial_gas - required_gas;
+
+            // Write response to the syscall segment.
+            // TODO: self.write_syscall_response()
+            self.execute_syscall(request, remaining_gas, vm)?
+        };
+
+        self.expected_syscall_ptr = vm
+            .write_arg(syscall_ptr, &response)?
+            .get_relocatable()
+            .ok_or(MemoryError::WriteArg)?;
+        Ok(())
+    }
+
+    fn execute_syscall(
+        &mut self,
+        request: SyscallRequest,
+        remaining_gas: u64,
+        vm: &mut VirtualMachine,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        match request {
+            SyscallRequest::LibraryCall(req) => self.library_call(vm, req, remaining_gas),
+            SyscallRequest::CallContract(req) => self.call_contract(vm, req, remaining_gas),
+            SyscallRequest::Deploy(req) => self.deploy(vm, req, remaining_gas),
+            SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
+            SyscallRequest::SendMessageToL1(req) => self.send_message_to_l1(vm, req, remaining_gas),
+        }
+    }
 }
 
 impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
     fn storage_write(
         &mut self,
         _vm: &mut VirtualMachine,
-        request: SyscallRequest,
+        request: StorageWriteRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = match request {
-            SyscallRequest::StorageWrite(request) => request,
-            _ => return Err(SyscallHandlerError::ExpectedStorageWriteSyscall),
-        };
-
         if request.reserved != 0.into() {
             return Err(SyscallHandlerError::UnsopportedAddressDomain(
                 request.reserved,
@@ -275,14 +367,9 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
     fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
-        request: SyscallRequest,
+        request: CallContractRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = match request {
-            SyscallRequest::CallContract(request) => request,
-            _ => return Err(SyscallHandlerError::ExpectedCallContractRequest),
-        };
-
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(
             request.contract_address,
@@ -301,14 +388,9 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
     fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
-        syscall_request: SyscallRequest,
+        request: DeployRequest,
         remaining_gas: u64,
     ) -> Result<(Address, CallResult), SyscallHandlerError> {
-        let request = match syscall_request {
-            SyscallRequest::Deploy(request) => request,
-            _ => return Err(SyscallHandlerError::IncorrectSyscall("Deploy".to_string())),
-        };
-
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
             return Err(SyscallHandlerError::DeployFromZero(
                 request.deploy_from_zero,
@@ -363,36 +445,12 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
         Ok(segment_start)
     }
 
-    fn read_syscall_request(
-        &self,
-        syscall_name: &str,
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
-        match syscall_name {
-            "storage_write" => {
-                super::syscall_request::StorageWriteRequest::from_ptr(vm, syscall_ptr)
-            }
-            _ => Err(SyscallHandlerError::UnknownSyscall(
-                syscall_name.to_string(),
-            )),
-        }
-    }
-
     fn send_message_to_l1(
         &mut self,
         vm: &mut VirtualMachine,
-        syscall_ptr: Relocatable,
+        request: SendMessageToL1SysCallRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = if let SyscallRequest::SendMessageToL1(request) =
-            self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedSendMessageToL1);
-        };
-
         let payload = get_felt_range(vm, request.payload_start, request.payload_end)?;
 
         self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
@@ -411,12 +469,12 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
 
     fn read_and_validate_syscall_request(
         &mut self,
-        syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        syscall_name: &str,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         self.increment_syscall_count(syscall_name);
-        let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
+        let syscall_request = self.read_syscall_request(vm, syscall_ptr, syscall_name)?;
 
         self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
@@ -424,15 +482,10 @@ impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSysca
 
     fn library_call(
         &mut self,
-        remaining_gas: u64,
         vm: &mut VirtualMachine,
-        library_call_request: SyscallRequest,
+        request: LibraryCallRequest,
+        remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = match library_call_request {
-            SyscallRequest::LibraryCall(request) => request,
-            _ => return Err(SyscallHandlerError::ExpectedLibraryCallRequest),
-        };
-
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(
             self.entry_point.contract_address.clone(),
