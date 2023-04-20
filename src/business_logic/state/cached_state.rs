@@ -176,20 +176,37 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         &mut self,
         compiled_class_hash: &ClassHash,
     ) -> Result<CompiledClass, StateError> {
-        let mut casm_class = self.get_casm_classes()?.clone();
-        if casm_class.get(compiled_class_hash).is_none() {
-            let casm = self.state_reader.get_compiled_class(compiled_class_hash)?;
-            if let CompiledClass::Casm(casm) = casm {
-                casm_class.insert(*compiled_class_hash, *casm);
-                self.casm_contract_classes = Some(casm_class);
+        if let Some(casm_class) = &mut self.casm_contract_classes {
+            if casm_class.get(compiled_class_hash).is_none() {
+                let casm = self.state_reader.get_compiled_class(compiled_class_hash)?;
+                if let CompiledClass::Casm(casm) = casm {
+                    casm_class.insert(*compiled_class_hash, *casm);
+                    self.casm_contract_classes = Some(casm_class.clone());
+                }
             }
+            Ok(CompiledClass::Casm(Box::new(
+                self.get_casm_classes()?
+                    .get(compiled_class_hash)
+                    .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))?
+                    .clone(),
+            )))
+        } else if let Some(contract_class) = &mut self.contract_classes {
+            if contract_class.get(compiled_class_hash).is_none() {
+                let contract = self.state_reader.get_compiled_class(compiled_class_hash)?;
+                if let CompiledClass::Deprecated(contract) = contract {
+                    contract_class.insert(*compiled_class_hash, *contract);
+                    self.contract_classes = Some(contract_class.clone());
+                }
+            }
+            Ok(CompiledClass::Deprecated(Box::new(
+                self.get_contract_classes()?
+                    .get(compiled_class_hash)
+                    .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))?
+                    .clone(),
+            )))
+        } else {
+            Err(StateError::MissingContractClassCache)
         }
-        Ok(CompiledClass::Casm(Box::new(
-            self.get_casm_classes()?
-                .get(compiled_class_hash)
-                .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))?
-                .clone(),
-        )))
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
