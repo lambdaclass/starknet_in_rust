@@ -14,7 +14,7 @@ use cairo_rs::{
 use felt::Felt252;
 use lazy_static::lazy_static;
 use sha3::{Digest, Keccak256};
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
@@ -84,12 +84,9 @@ fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt252 {
 
 /// Returns the serialization of a contract as a list of field elements.
 fn get_contract_class_struct(
-    identifiers: &HashMap<String, Identifier>,
+    api_version_identifier: &Identifier,
     contract_class: &ContractClass,
 ) -> Result<StructContractClass, ContractAddressError> {
-    let api_version = identifiers.get("__main__.API_VERSION").ok_or_else(|| {
-        ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
-    })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
@@ -99,7 +96,7 @@ fn get_contract_class_struct(
     let contract_class_data: Vec<MaybeRelocatable> =
         contract_class.program().iter_data().cloned().collect();
     Ok(StructContractClass {
-        api_version: api_version
+        api_version: api_version_identifier
             .value
             .as_ref()
             .ok_or(ContractAddressError::NoneApiVersion)?
@@ -176,8 +173,14 @@ impl From<StructContractClass> for CairoArg {
 pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let hash_calculation_program = HASH_CALCULATION_PROGRAM.clone();
+    let api_version_identifier = contract_class
+        .program
+        .get_identifier("__main__.API_VERSION")
+        .ok_or_else(|| {
+            ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
+        })?;
     let contract_class_struct =
-        &get_contract_class_struct(&hash_calculation_program.identifiers, contract_class)?.into();
+        &get_contract_class_struct(api_version_identifier, contract_class)?.into();
 
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&hash_calculation_program, "all_cairo", false)?;
@@ -207,6 +210,8 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use coverage_helper::test;
     use felt::Felt252;
