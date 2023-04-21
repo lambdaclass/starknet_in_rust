@@ -13,6 +13,7 @@ use super::{
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
+use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
         execution::{
@@ -73,6 +74,8 @@ lazy_static! {
             map.insert(75202468540281_u128.into(), "deploy");
             map.insert(1280709301550335749748_u128.into(), "emit_event");
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
+
+            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())), "get_block_number");
 
             map
     };
@@ -348,6 +351,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
             SyscallRequest::SendMessageToL1(req) => self.send_message_to_l1(vm, req, remaining_gas),
             SyscallRequest::EmitEvent(req) => self.emit_event(vm, req, remaining_gas),
+            SyscallRequest::GetBlockNumber => self.get_block_number(vm, remaining_gas),
         }
     }
 }
@@ -372,6 +376,19 @@ where
         Ok(SyscallResponse {
             gas: remaining_gas,
             body: None,
+        })
+    }
+
+    fn get_block_number(
+        &mut self,
+        _vm: &mut VirtualMachine,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: Some(ResponseBody::GetBlockNumber {
+                number: self.general_config.block_info.block_number.into(),
+            }),
         })
     }
 

@@ -5,6 +5,7 @@ use felt::Felt252;
 #[allow(dead_code)]
 pub(crate) enum ResponseBody {
     StorageReadResponse { value: Option<Felt252> },
+    GetBlockNumber { number: Felt252 },
     Deploy(DeployResponse),
     CallContract(CallContractResponse),
     Failure(FailureReason),
