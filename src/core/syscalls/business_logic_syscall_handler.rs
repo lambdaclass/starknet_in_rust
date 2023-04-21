@@ -38,12 +38,16 @@ use crate::{
     utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
 use cairo_rs::{
-    types::relocatable::{MaybeRelocatable, Relocatable},
+    types::{
+        errors::math_errors::MathError,
+        relocatable::{MaybeRelocatable, Relocatable},
+    },
     vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
 };
 use felt::Felt252;
 use lazy_static::lazy_static;
-use num_traits::{One, Zero};
+
+use num_traits::{One, ToPrimitive, Zero};
 
 use super::syscall_response::SyscallResponse;
 
@@ -288,10 +292,13 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         )?;
 
         let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
-        let initial_gas = 0u64; //get_big_int(vm, (syscall_ptr + 1)?)?;
+        let initial_gas: Felt252 = get_big_int(vm, (syscall_ptr + 1)?)?;
+        let initial_gas: u64 = initial_gas
+            .to_u64()
+            .ok_or(MathError::Felt252ToU64Conversion(initial_gas))?;
 
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
-        let required_gas: u64 = SYSCALL_GAS_COST
+        let required_gas = SYSCALL_GAS_COST
             .get(syscall_name)
             .map(|&x| x - SYSCALL_BASE)
             .ok_or(SyscallHandlerError::SelectorDoesNotHaveAssociatedGas(
@@ -316,7 +323,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             let remaining_gas = initial_gas - required_gas;
 
             // Write response to the syscall segment.
-            // TODO: self.write_syscall_response()
             self.execute_syscall(request, remaining_gas, vm)?
         };
 
