@@ -82,67 +82,26 @@ impl InternalDeclareV2 {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            if !self.max_fee.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+        if self.version == 0 {
+            if self.sender_address != Address(1.into()) {
+                return Err(TransactionError::InvalidSenderAddress);
             }
 
-            if !self.nonce.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+            if self.max_fee != 0 {
+                return Err(TransactionError::InvalidMaxFee);
+            }
+
+            if self.nonce != 0.into() {
+                return Err(TransactionError::InvalidNonce);
+            }
+
+            if self.signature.len() != 0 {
+                return Err(TransactionError::InvalidSignature);
             }
         }
 
-        if !self.signature.len().is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The signature field in Declare transactions must be an empty list.".to_string(),
-            ));
-        }
         Ok(())
     }
-
-    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
-    /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    // pub fn apply<S: Default + State + StateReader + Clone>(
-    //     &self,
-    //     state: &mut S,
-    //     general_config: &StarknetGeneralConfig,
-    // ) -> Result<TransactionExecutionInfo, TransactionError> {
-    //     self.verify_version()?;
-
-    //     // validate transaction
-    //     let mut resources_manager = ExecutionResourcesManager::default();
-    //     let validate_info =
-    //         self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
-
-    //     let class_hash = compute_sierra_class_hash(&self.sierra_contract_class)?;
-
-    //     if class_hash != self.compiled_class_hash {
-    //         return Err(TransactionError::NotEqualClassHash);
-    //     }
-
-    //     let changes = state.count_actual_storage_changes();
-    //     let actual_resources = calculate_tx_resources(
-    //         resources_manager,
-    //         &[Some(validate_info.clone())],
-    //         TransactionType::Declare,
-    //         changes,
-    //         None,
-    //     )
-    //     .map_err(|_| TransactionError::ResourcesCalculation)?;
-
-    //     Ok(
-    //         TransactionExecutionInfo::create_concurrent_stage_execution_info(
-    //             validate_info,
-    //             None,
-    //             actual_resources,
-    //             Some(self.tx_type),
-    //         ),
-    //     )
-    // }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Internal Account Functions
