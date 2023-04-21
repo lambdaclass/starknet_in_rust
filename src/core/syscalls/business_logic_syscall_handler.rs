@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 
+use super::syscall_request::StorageWriteRequest;
+use super::syscall_response::SyscallResponse;
 use super::{
     syscall_handler::SyscallHandler,
     syscall_info::get_syscall_size_from_name,
@@ -41,8 +43,6 @@ use cairo_rs::{
 use felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::{One, Zero};
-
-use super::syscall_response::SyscallResponse;
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> =
@@ -128,6 +128,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         }
     }
 
+    /// Increments the syscall count for a given `syscall_name` by 1.
     fn increment_syscall_count(&mut self, syscall_name: &str) {
         self.resources_manager
             .increment_syscall_counter(syscall_name, 1);
@@ -250,6 +251,30 @@ impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
 where
     T: Default + State + StateReader,
 {
+    fn emit_event(
+        &mut self,
+        remaining_gas: u64,
+        vm: &VirtualMachine,
+        request: SyscallRequest,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let request = match request {
+            SyscallRequest::EmitEvent(emit_event_struct) => emit_event_struct,
+            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
+        };
+
+        let order = self.tx_execution_context.n_emitted_events;
+        let keys: Vec<Felt252> = get_felt_range(vm, request.keys_start, request.keys_end)?;
+        let data: Vec<Felt252> = get_felt_range(vm, request.data_start, request.data_end)?;
+        self.events.push(OrderedEvent::new(order, keys, data));
+
+        // Update events count.
+        self.tx_execution_context.n_emitted_events += 1;
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
+        })
+    }
+
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
         self.starknet_storage_state.read(&key).cloned()
     }
@@ -377,9 +402,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
-            "storage_write" => {
-                super::syscall_request::StorageWriteRequest::from_ptr(vm, syscall_ptr)
-            }
+            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
