@@ -12,6 +12,10 @@ use thiserror::Error;
 pub enum SyscallHandlerError {
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
+    #[error("The selector '{0}' is not in the syscall handler's selector to syscall map")]
+    SelectorNotInHandlerMap(String),
+    #[error("The selector '{0}' does not have an associated cost")]
+    SelectorDoesNotHaveAssociatedGas(String),
     #[error("Couldn't execute syscall: {0}")]
     ExecutionError(String),
     #[error("Couldn't convert Felt to usize")]
