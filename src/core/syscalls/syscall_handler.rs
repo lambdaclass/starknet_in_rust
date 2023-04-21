@@ -6,11 +6,6 @@ use felt::Felt252;
 use num_traits::Zero;
 
 use super::syscall_request::StorageReadRequest;
-use super::syscall_response::{DeployResponse, FailureReason, ResponseBody};
-use super::{
-    syscall_request::{FromPtr, StorageWriteRequest},
-    syscall_response::SyscallResponse,
-};
 use crate::core::errors::state_errors::StateError;
 use crate::{
     business_logic::execution::objects::CallResult,
@@ -30,14 +25,9 @@ pub(crate) trait SyscallHandler {
     fn storage_read(
         &mut self,
         _vm: &VirtualMachine,
-        request: SyscallRequest,
+        request: StorageReadRequest,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = match request {
-            SyscallRequest::StorageRead(storage_read_request) => storage_read_request,
-            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
-        };
-
         if request.reserved != Felt252::zero() {
             return Err(SyscallHandlerError::UnsupportedAddressDomain(
                 request.reserved.to_string(),

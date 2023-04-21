@@ -343,6 +343,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::LibraryCall(req) => self.library_call(vm, req, remaining_gas),
             SyscallRequest::CallContract(req) => self.call_contract(vm, req, remaining_gas),
             SyscallRequest::Deploy(req) => self.deploy(vm, req, remaining_gas),
+            SyscallRequest::StorageRead(req) => self.storage_read(vm, req, remaining_gas),
             SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
             SyscallRequest::SendMessageToL1(req) => self.send_message_to_l1(vm, req, remaining_gas),
         }
