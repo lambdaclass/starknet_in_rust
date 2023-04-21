@@ -88,4 +88,6 @@ pub enum SyscallHandlerError {
     MathError(#[from] MathError),
     #[error(transparent)]
     Hint(#[from] HintError),
+    #[error("Unsupported address domain: {0}")]
+    UnsupportedAddressDomain(String),
 }

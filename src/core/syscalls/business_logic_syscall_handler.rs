@@ -246,7 +246,14 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T: Default + State + StateReader> SyscallHandler for BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
+where
+    T: Default + State + StateReader,
+{
+    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
+        self.starknet_storage_state.read(&key).cloned()
+    }
+
     fn storage_write(
         &mut self,
         _vm: &mut VirtualMachine,

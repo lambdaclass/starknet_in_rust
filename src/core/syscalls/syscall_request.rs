@@ -20,12 +20,38 @@ use crate::{
 const HEADER_OFFSET: usize = 2;
 
 #[allow(unused)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
     LibraryCall(LibraryCallRequest),
     CallContract(CallContractRequest),
     Deploy(DeployRequest),
+    StorageRead(StorageReadRequest),
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1SysCall),
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//  SyscallRequest variants
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#[allow(unused)]
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeployRequest {
+    // The hash of the class to deploy.
+    pub(crate) class_hash: Felt252,
+    // A salt for the new contract address calculation.
+    pub(crate) salt: Felt252,
+    // The calldata for the constructor.
+    pub(crate) calldata_start: Relocatable,
+    pub(crate) calldata_end: Relocatable,
+    // Used for deterministic contract address deployment.
+    pub(crate) deploy_from_zero: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct StorageReadRequest {
+    pub(crate) key: [u8; 32],
+    pub(crate) reserved: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -89,9 +115,16 @@ impl From<StorageWriteRequest> for SyscallRequest {
         SyscallRequest::StorageWrite(storage_write_request)
     }
 }
+impl From<StorageReadRequest> for SyscallRequest {
+    fn from(storage_read_request: StorageReadRequest) -> SyscallRequest {
+        SyscallRequest::StorageRead(storage_read_request)
+    }
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  FromPtr trait
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
+
 pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
@@ -99,26 +132,16 @@ pub(crate) trait FromPtr {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
-//  SyscallRequest variants
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#[allow(unused)]
-pub(crate) struct DeployRequest {
-    // The hash of the class to deploy.
-    pub(crate) class_hash: Felt252,
-    // A salt for the new contract address calculation.
-    pub(crate) salt: Felt252,
-    // The calldata for the constructor.
-    pub(crate) calldata_start: Relocatable,
-    pub(crate) calldata_end: Relocatable,
-    // Used for deterministic contract address deployment.
-    pub(crate) deploy_from_zero: usize,
+impl FromPtr for StorageReadRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let key = get_big_int(vm, syscall_ptr)?.to_be_bytes();
+        let reserved = get_big_int(vm, &syscall_ptr + 1)?;
+        Ok(StorageReadRequest { key, reserved }.into())
+    }
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
-//  FromPtr implementations
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 impl FromPtr for DeployRequest {
     fn from_ptr(

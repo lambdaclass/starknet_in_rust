@@ -1,24 +1,54 @@
 use std::ops::Add;
 
+use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_rs::vm::vm_core::VirtualMachine;
+use felt::Felt252;
+use num_traits::Zero;
+
+use super::syscall_request::StorageReadRequest;
+use super::syscall_response::{DeployResponse, FailureReason, ResponseBody};
+use super::{
+    syscall_request::{FromPtr, StorageWriteRequest},
+    syscall_response::SyscallResponse,
+};
+use crate::core::errors::state_errors::StateError;
 use crate::{
     business_logic::execution::objects::CallResult,
     core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address,
 };
-use cairo_rs::{
-    types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::vm_core::VirtualMachine,
-};
 
-use super::{
-    syscall_request::{
-        CallContractRequest, DeployRequest, FromPtr, LibraryCallRequest, SendMessageToL1SysCall,
-        StorageWriteRequest, SyscallRequest,
-    },
-    syscall_response::{DeployResponse, FailureReason, ResponseBody, SyscallResponse},
+use super::syscall_request::{
+    CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1SysCall, SyscallRequest,
 };
 
 #[allow(unused)]
 pub(crate) trait SyscallHandler {
+    fn storage_read(
+        &mut self,
+        _vm: &VirtualMachine,
+        request: SyscallRequest,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let request = match request {
+            SyscallRequest::StorageRead(storage_read_request) => storage_read_request,
+            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
+        };
+
+        if request.reserved != Felt252::zero() {
+            return Err(SyscallHandlerError::UnsupportedAddressDomain(
+                request.reserved.to_string(),
+            ));
+        }
+
+        let value = self._storage_read(request.key)?;
+
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: Some(ResponseBody::StorageReadResponse { value: Some(value) }),
+        })
+    }
+
+    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError>;
     fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
@@ -107,6 +137,7 @@ pub(crate) trait SyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
+            "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
             "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
