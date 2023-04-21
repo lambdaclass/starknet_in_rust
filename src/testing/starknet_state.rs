@@ -296,10 +296,10 @@ impl StarknetState {
 
 #[cfg(test)]
 mod tests {
+    use cairo_vm::felt::felt_str;
     use coverage_helper::test;
     use std::path::PathBuf;
 
-    use felt::felt_str;
     use num_traits::Num;
 
     use super::*;

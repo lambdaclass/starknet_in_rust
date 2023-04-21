@@ -119,8 +119,8 @@ impl TryFrom<&PathBuf> for ContractClass {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairo_vm::felt::{felt_str, PRIME_STR};
     use coverage_helper::test;
-    use felt::{felt_str, PRIME_STR};
     use std::{fs::File, io::Read};
 
     #[test]

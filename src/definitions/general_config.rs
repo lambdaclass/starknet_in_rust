@@ -116,8 +116,8 @@ impl Default for StarknetGeneralConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairo_vm::felt::felt_str;
     use coverage_helper::test;
-    use felt::felt_str;
 
     #[test]
     fn starknet_chain_to_felt() {

@@ -52,8 +52,8 @@ pub(crate) fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, Sysca
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairo_vm::felt::felt_str;
     use coverage_helper::test;
-    use felt::felt_str;
 
     #[test]
     fn test_compute_hash_on_elements() {
@@ -119,7 +119,7 @@ mod tests {
 
         assert_matches!(
             result_2,
-            Ok(x) if x ==felt_str!(
+            Ok(x) if x == felt_str!(
                 "2864535578326518086698404810362457605993575745991923092043914398137702365865"
             )
         );
