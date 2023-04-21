@@ -2,14 +2,14 @@
 
 use std::collections::HashMap;
 
-use super::syscall_request::StorageWriteRequest;
+use super::syscall_request::{EmitEventRequest, StorageWriteRequest};
 use super::syscall_response::SyscallResponse;
 use super::{
     syscall_handler::SyscallHandler,
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
         CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
-        StorageWriteRequest, SyscallRequest,
+        SyscallRequest,
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
@@ -50,8 +50,6 @@ use felt::Felt252;
 use lazy_static::lazy_static;
 
 use num_traits::{One, ToPrimitive, Zero};
-
-use super::syscall_response::SyscallResponse;
 
 const STEP: u64 = 100;
 const SYSCALL_BASE: u64 = 100 * STEP;
@@ -349,6 +347,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::StorageRead(req) => self.storage_read(vm, req, remaining_gas),
             SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
             SyscallRequest::SendMessageToL1(req) => self.send_message_to_l1(vm, req, remaining_gas),
+            SyscallRequest::EmitEvent(req) => self.emit_event(vm, req, remaining_gas),
         }
     }
 }
@@ -359,15 +358,10 @@ where
 {
     fn emit_event(
         &mut self,
-        remaining_gas: u64,
         vm: &VirtualMachine,
-        request: SyscallRequest,
+        request: EmitEventRequest,
+        remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let request = match request {
-            SyscallRequest::EmitEvent(emit_event_struct) => emit_event_struct,
-            _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
-        };
-
         let order = self.tx_execution_context.n_emitted_events;
         let keys: Vec<Felt252> = get_felt_range(vm, request.keys_start, request.keys_end)?;
         let data: Vec<Felt252> = get_felt_range(vm, request.data_start, request.data_end)?;
