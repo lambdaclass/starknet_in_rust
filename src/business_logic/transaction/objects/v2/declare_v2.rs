@@ -95,7 +95,7 @@ impl InternalDeclareV2 {
                 return Err(TransactionError::InvalidNonce);
             }
 
-            if self.signature.len() != 0 {
+            if self.signature.is_empty() {
                 return Err(TransactionError::InvalidSignature);
             }
         }
@@ -237,7 +237,7 @@ impl InternalDeclareV2 {
             &tx_execution_context,
         )?;
 
-        let class_hash = state.get_class_hash_at(&self.sender_address)?.clone();
+        let class_hash = *state.get_class_hash_at(&self.sender_address)?;
         let _compiled_class_hash = state.get_compiled_class_hash(&class_hash)?;
 
         remaining_gas -= call_info.gas_consumed;

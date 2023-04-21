@@ -33,7 +33,7 @@ pub trait StateReader {
         &mut self,
         class_hash: &ClassHash,
     ) -> Result<CasmContractClass, StateError> {
-        let compiled_class_hash = self.get_compiled_class_hash(class_hash)?.clone();
+        let compiled_class_hash = *self.get_compiled_class_hash(class_hash)?;
         if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
             let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
             Ok(compiled_class.clone())
