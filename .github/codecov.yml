@@ -6,3 +6,4 @@ comment:
   require_changes: true  # if true: only post the comment if coverage changes
   require_base: false        # [yes :: must have a base report to post]
   require_head: true       # [yes :: must have a head report to post]
+  
