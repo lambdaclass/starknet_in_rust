@@ -316,7 +316,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             let remaining_gas = initial_gas - required_gas;
 
             // Write response to the syscall segment.
-            // TODO: self.write_syscall_response()
             self.execute_syscall(request, remaining_gas, vm)?
         };
 
