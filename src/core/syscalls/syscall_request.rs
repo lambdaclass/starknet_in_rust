@@ -22,6 +22,7 @@ const HEADER_OFFSET: usize = 2;
 #[allow(unused)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
+    EmitEvent(EmitEventRequest),
     LibraryCall(LibraryCallRequest),
     CallContract(CallContractRequest),
     Deploy(DeployRequest),
@@ -52,6 +53,14 @@ pub(crate) struct DeployRequest {
 pub(crate) struct StorageReadRequest {
     pub(crate) key: [u8; 32],
     pub(crate) reserved: Felt252,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct EmitEventRequest {
+    pub(crate) keys_start: Relocatable,
+    pub(crate) keys_end: Relocatable,
+    pub(crate) data_start: Relocatable,
+    pub(crate) data_end: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -92,6 +101,16 @@ pub(crate) struct SendMessageToL1Request {
     pub(crate) payload_end: Relocatable,
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Into<SyscallRequest> implementations
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+impl From<EmitEventRequest> for SyscallRequest {
+    fn from(emit_event_struct: EmitEventRequest) -> SyscallRequest {
+        SyscallRequest::EmitEvent(emit_event_struct)
+    }
+}
+
 impl From<CallContractRequest> for SyscallRequest {
     fn from(call_contract_request: CallContractRequest) -> SyscallRequest {
         SyscallRequest::CallContract(call_contract_request)
@@ -130,6 +149,26 @@ pub(crate) trait FromPtr {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
+}
+
+impl FromPtr for EmitEventRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let keys_start = get_relocatable(vm, syscall_ptr)?;
+        let keys_end = get_relocatable(vm, &syscall_ptr + 1)?;
+        let data_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let data_end = get_relocatable(vm, &syscall_ptr + 3)?;
+
+        Ok(EmitEventRequest {
+            keys_start,
+            keys_end,
+            data_start,
+            data_end,
+        }
+        .into())
+    }
 }
 
 impl FromPtr for StorageReadRequest {

@@ -22,6 +22,13 @@ use super::{
 
 #[allow(unused)]
 pub(crate) trait SyscallHandler {
+    fn emit_event(
+        &mut self,
+        remaining_gas: u64,
+        vm: &VirtualMachine,
+        request: SyscallRequest,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
+
     fn storage_read(
         &mut self,
         _vm: &VirtualMachine,
@@ -130,6 +137,7 @@ pub(crate) trait SyscallHandler {
         syscall_name: &str,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
+            "emit_event" => EmitEventRequest::from_ptr(vm, syscall_ptr),
             "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
             "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
