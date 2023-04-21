@@ -82,12 +82,24 @@ impl ExecutionEntryPoint {
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
-        let runner = self.run(
-            state,
-            resources_manager,
-            general_config,
-            tx_execution_context,
-        )?;
+        let class_hash = self.get_code_class_hash(state)?;
+        let contract_class = state
+            .get_compiled_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+
+        let runner = match contract_class {
+            CompiledClass::Deprecated(contract_class) => self._execute_version0_class(
+                state,
+                resources_manager,
+                general_config,
+                tx_execution_context,
+                contract_class,
+                class_hash,
+            )?,
+            CompiledClass::Casm(_contract_class) => {
+                todo!()
+            }
+        };
 
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
@@ -124,37 +136,18 @@ impl ExecutionEntryPoint {
     /// self.contract_address.
     /// Returns the corresponding CairoFunctionRunner and DeprecatedBLSyscallHandler in order to
     /// retrieve the execution information.
+    #[allow(dead_code)]
     fn run<'a, T>(
         &self,
-        state: &'a mut T,
-        resources_manager: &ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
-        tx_execution_context: &TransactionExecutionContext,
+        _state: &'a mut T,
+        _resources_manager: &ExecutionResourcesManager,
+        _general_config: &StarknetGeneralConfig,
+        _tx_execution_context: &TransactionExecutionContext,
     ) -> Result<StarknetRunner<DeprecatedBLSyscallHandler<'a, T>>, TransactionError>
     where
         T: Default + State + StateReader,
     {
-        // Prepare input for Starknet runner.
-        let class_hash = self.get_code_class_hash(state)?;
-        let contract_class = state
-            .get_compiled_class(&class_hash)
-            .map_err(|_| TransactionError::MissingCompiledClass)?;
-
-        match contract_class {
-            CompiledClass::Deprecated(contract_class) => {
-                return self._execute_version0_class(
-                    state,
-                    resources_manager,
-                    general_config,
-                    tx_execution_context,
-                    contract_class,
-                    class_hash,
-                )
-            }
-            CompiledClass::Casm(_contract_class) => {
-                todo!()
-            }
-        }
+        todo!()
     }
 
     /// Returns the entry point with selector corresponding with self.entry_point_selector, or the
