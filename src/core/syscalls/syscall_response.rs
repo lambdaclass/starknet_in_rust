@@ -1,7 +1,10 @@
 use cairo_rs::types::relocatable::Relocatable;
 use felt::Felt252;
 
-pub enum ResponseBody {
+// TODO: remove once used.
+#[allow(dead_code)]
+pub(crate) enum ResponseBody {
+    StorageReadResponse { value: Option<Felt252> },
     Deploy(DeployResponse),
     CallContract(CallContractResponse),
     Failure(FailureReason),

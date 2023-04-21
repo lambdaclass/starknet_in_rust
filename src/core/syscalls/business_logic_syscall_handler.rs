@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use super::syscall_request::StorageWriteRequest;
 use super::syscall_response::SyscallResponse;
 use super::{
     syscall_handler::SyscallHandler,
@@ -274,6 +275,10 @@ where
         })
     }
 
+    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
+        self.starknet_storage_state.read(&key).cloned()
+    }
+
     fn storage_write(
         &mut self,
         _vm: &mut VirtualMachine,
@@ -397,9 +402,7 @@ where
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         match syscall_name {
-            "storage_write" => {
-                super::syscall_request::StorageWriteRequest::from_ptr(vm, syscall_ptr)
-            }
+            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
