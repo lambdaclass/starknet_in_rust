@@ -79,6 +79,7 @@ impl<T: StateReader + Clone> CachedState<T> {
             .ok_or(StateError::MissingContractClassCache)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_casm_classes(&mut self) -> Result<&CasmClassCache, StateError> {
         self.casm_contract_classes
             .as_ref()
@@ -177,35 +178,32 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
         compiled_class_hash: &ClassHash,
     ) -> Result<CompiledClass, StateError> {
         if let Some(casm_class) = &mut self.casm_contract_classes {
-            if casm_class.get(compiled_class_hash).is_none() {
-                let casm = self.state_reader.get_compiled_class(compiled_class_hash)?;
-                if let CompiledClass::Casm(casm) = casm {
-                    casm_class.insert(*compiled_class_hash, *casm);
+            if let Some(class) = casm_class.get(compiled_class_hash) {
+                return Ok(CompiledClass::Casm(Box::new(class.clone())));
+            }
+        }
+        if let Some(contract_class) = &mut self.contract_classes {
+            if let Some(class) = contract_class.get(compiled_class_hash) {
+                return Ok(CompiledClass::Deprecated(Box::new(class.clone())));
+            }
+        }
+        let contract = self.state_reader.get_compiled_class(compiled_class_hash);
+        match contract {
+            Ok(CompiledClass::Casm(class)) => {
+                if let Some(casm_class) = &mut self.casm_contract_classes {
+                    casm_class.insert(*compiled_class_hash, *class.clone());
                     self.casm_contract_classes = Some(casm_class.clone());
                 }
+                Ok(CompiledClass::Casm(class))
             }
-            Ok(CompiledClass::Casm(Box::new(
-                self.get_casm_classes()?
-                    .get(compiled_class_hash)
-                    .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))?
-                    .clone(),
-            )))
-        } else if let Some(contract_class) = &mut self.contract_classes {
-            if contract_class.get(compiled_class_hash).is_none() {
-                let contract = self.state_reader.get_compiled_class(compiled_class_hash)?;
-                if let CompiledClass::Deprecated(contract) = contract {
-                    contract_class.insert(*compiled_class_hash, *contract);
+            Ok(CompiledClass::Deprecated(class)) => {
+                if let Some(contract_class) = &mut self.contract_classes {
+                    contract_class.insert(*compiled_class_hash, *class.clone());
                     self.contract_classes = Some(contract_class.clone());
                 }
+                Ok(CompiledClass::Deprecated(class))
             }
-            Ok(CompiledClass::Deprecated(Box::new(
-                self.get_contract_classes()?
-                    .get(compiled_class_hash)
-                    .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))?
-                    .clone(),
-            )))
-        } else {
-            Err(StateError::MissingContractClassCache)
+            _ => Err(StateError::NoneCompiledClass(*compiled_class_hash)),
         }
     }
 
