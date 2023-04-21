@@ -149,10 +149,13 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
 
     // Indentation for transactions meant to query and not addressed to the OS.
     let query_version_base = Felt252::from(1).shl(128u32); // == 2 ** 128
-    let query_version = query_version_base + Felt252::from(TRANSACTION_VERSION);
+    let query_version = query_version_base + TRANSACTION_VERSION.clone();
     m.add("QUERY_VERSION", query_version.to_biguint())?;
 
-    m.add("TRANSACTION_VERSION", TRANSACTION_VERSION)?;
+    m.add(
+        "TRANSACTION_VERSION",
+        TRANSACTION_VERSION.clone().to_biguint(),
+    )?;
 
     // The (empirical) L1 gas cost of each Cairo step.
     pub const N_STEPS_FEE_WEIGHT: f64 = 0.05;

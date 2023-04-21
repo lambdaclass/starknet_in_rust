@@ -47,7 +47,7 @@ pub struct InternalDeployAccount {
     class_hash: ClassHash,
     #[getset(get = "pub")]
     constructor_calldata: Vec<Felt252>,
-    version: u64,
+    version: Felt252,
     nonce: Felt252,
     max_fee: u64,
     #[getset(get = "pub")]
@@ -62,7 +62,7 @@ impl InternalDeployAccount {
     pub fn new(
         class_hash: ClassHash,
         max_fee: u64,
-        version: u64,
+        version: Felt252,
         nonce: Felt252,
         constructor_calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
@@ -77,7 +77,7 @@ impl InternalDeployAccount {
         )?);
 
         let hash_value = calculate_deploy_account_transaction_hash(
-            version,
+            version.clone(),
             &contract_address,
             Felt252::from_bytes_be(&class_hash),
             &constructor_calldata,
@@ -210,7 +210,7 @@ impl InternalDeployAccount {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -262,7 +262,7 @@ impl InternalDeployAccount {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
             calculate_deploy_account_transaction_hash(
-                self.version,
+                self.version.clone(),
                 &self.contract_address,
                 Felt252::from_bytes_be(&self.class_hash),
                 &self.constructor_calldata,
@@ -276,7 +276,7 @@ impl InternalDeployAccount {
             self.max_fee,
             self.nonce.clone(),
             n_steps,
-            self.version,
+            self.version.clone(),
         )
     }
 
@@ -289,7 +289,7 @@ impl InternalDeployAccount {
     where
         S: State + StateReader,
     {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(None);
         }
 
@@ -378,7 +378,7 @@ mod tests {
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
             0,
-            0,
+            0.into(),
             0.into(),
             vec![10.into()],
             Vec::new(),
@@ -410,7 +410,7 @@ mod tests {
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
             0,
-            0,
+            0.into(),
             0.into(),
             vec![10.into()],
             Vec::new(),
@@ -422,7 +422,7 @@ mod tests {
         let internal_deploy_error = InternalDeployAccount::new(
             class_hash,
             0,
-            0,
+            0.into(),
             0.into(),
             vec![10.into()],
             Vec::new(),
@@ -460,7 +460,7 @@ mod tests {
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
             0,
-            0,
+            0.into(),
             0.into(),
             Vec::new(),
             Vec::new(),

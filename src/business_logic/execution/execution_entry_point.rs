@@ -324,7 +324,7 @@ mod tests {
             10,
             0.into(),
             general_config.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION,
+            TRANSACTION_VERSION.clone(),
         );
 
         //* --------------------------------------------

@@ -52,7 +52,7 @@ impl From<&PyTransactionHashPrefix> for TransactionHashPrefix {
 
 #[pyfunction(name = "calculate_deploy_transaction_hash")]
 pub(crate) fn py_calculate_deploy_transaction_hash(
-    version: u64,
+    version: BigUint,
     contract_address: BigUint,
     constructor_calldata: Vec<BigUint>,
     chain_id: BigUint,
@@ -60,6 +60,8 @@ pub(crate) fn py_calculate_deploy_transaction_hash(
     let contract_address = Address(Felt252::from(contract_address));
     let constructor_calldata: Vec<_> = constructor_calldata.into_iter().map(Into::into).collect();
     let chain_id = Felt252::from(chain_id);
+    let version = Felt252::from(version);
+
     match calculate_deploy_transaction_hash(
         version,
         &contract_address,
@@ -77,12 +79,14 @@ pub(crate) fn py_calculate_declare_transaction_hash(
     chain_id: BigUint,
     sender_address: BigUint,
     max_fee: u64,
-    version: u64,
+    version: BigUint,
     nonce: BigUint,
 ) -> PyResult<BigUint> {
     let chain_id = Felt252::from(chain_id);
     let sender_address = Address(Felt252::from(sender_address));
     let nonce = Felt252::from(nonce);
+    let version = Felt252::from(version);
+
     match calculate_declare_transaction_hash(
         contract_class.into(),
         chain_id,
@@ -100,7 +104,7 @@ pub(crate) fn py_calculate_declare_transaction_hash(
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn py_calculate_transaction_hash_common(
     tx_hash_prefix: &PyTransactionHashPrefix,
-    version: u64,
+    version: BigUint,
     contract_address: BigUint,
     entry_point_selector: BigUint,
     calldata: Vec<BigUint>,
@@ -114,6 +118,7 @@ pub(crate) fn py_calculate_transaction_hash_common(
     let chain_id = Felt252::from(chain_id);
     let calldata: Vec<_> = calldata.into_iter().map(Felt252::from).collect();
     let additional_data: Vec<_> = additional_data.into_iter().map(Felt252::from).collect();
+    let version = Felt252::from(version);
 
     match calculate_transaction_hash_common(
         tx_hash_prefix,

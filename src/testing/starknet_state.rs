@@ -98,7 +98,7 @@ impl StarknetState {
             self.chain_id(),
             Address(Felt252::one()),
             0,
-            0,
+            0.into(),
             Vec::new(),
             0.into(),
         )?;
@@ -187,7 +187,7 @@ impl StarknetState {
             contract_class.clone(),
             constructor_calldata,
             chain_id,
-            TRANSACTION_VERSION,
+            TRANSACTION_VERSION.clone(),
         )?);
 
         self.state

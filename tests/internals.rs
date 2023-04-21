@@ -579,7 +579,7 @@ fn declare_tx() -> InternalDeclare {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-        version: 1,
+        version: 1.into(),
         max_fee: 2,
         signature: vec![],
         nonce: 0.into(),
@@ -812,7 +812,7 @@ fn test_deploy_account() {
     let deploy_account_tx = InternalDeployAccount::new(
         TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes(),
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),
@@ -1324,7 +1324,7 @@ fn test_deploy_undeclared_account() {
     let deploy_account_tx = InternalDeployAccount::new(
         not_deployed_class_hash,
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),

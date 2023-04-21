@@ -783,7 +783,7 @@ mod tests {
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
-            version: 51,
+            version: 51.into(),
             account_contract_address: Address(260.into()),
             max_fee: 261,
             transaction_hash: 262.into(),
@@ -819,8 +819,8 @@ mod tests {
 
         // TxInfoStruct
         assert_matches!(
-            get_integer(&vm, relocatable!(4, 0)),
-            Ok(field) if field == tx_execution_context.version as usize
+            get_big_int(&vm, relocatable!(4, 0)),
+            Ok(field) if field == tx_execution_context.version
         );
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 1)),
@@ -1090,7 +1090,7 @@ mod tests {
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
-            version: 51,
+            version: 51.into(),
             account_contract_address: Address(260.into()),
             max_fee: 261,
             transaction_hash: 262.into(),

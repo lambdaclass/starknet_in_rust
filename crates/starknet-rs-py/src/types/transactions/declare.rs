@@ -31,7 +31,7 @@ impl PyInternalDeclare {
     #[new]
     fn new(
         hash_value: BigUint,
-        version: u64,
+        version: BigUint,
         max_fee: u64,
         signature: Vec<BigUint>,
         nonce: BigUint,
@@ -44,6 +44,7 @@ impl PyInternalDeclare {
         let hash_value = Felt252::from(hash_value);
         let contract_class =
             ContractClass::new(Default::default(), Default::default(), None).unwrap();
+        let version = Felt252::from(version);
 
         let inner = InternalDeclare {
             class_hash,

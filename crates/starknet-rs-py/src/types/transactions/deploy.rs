@@ -32,7 +32,7 @@ impl PyInternalDeploy {
         contract_hash: ClassHash,
         contract_address_salt: BigUint,
         hash_value: BigUint,
-        version: u64,
+        version: BigUint,
         constructor_calldata: Vec<BigUint>,
     ) -> Self {
         let contract_address = Address(Felt252::from(contract_address));
@@ -42,6 +42,7 @@ impl PyInternalDeploy {
             .map(Felt252::from)
             .collect();
         let hash_value = Felt252::from(hash_value);
+        let version = Felt252::from(version);
 
         let inner = InternalDeploy {
             hash_value,
