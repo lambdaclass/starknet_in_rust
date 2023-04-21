@@ -8,11 +8,11 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
+use cairo_rs::felt::Felt252;
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
-use felt::Felt252;
 use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::{HashMap, HashSet};

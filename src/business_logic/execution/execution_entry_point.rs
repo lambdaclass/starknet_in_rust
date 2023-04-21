@@ -15,6 +15,7 @@ use crate::{
     starknet_runner::runner::{prepare_os_context, StarknetRunner},
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
 };
+use cairo_rs::felt::Felt252;
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -22,7 +23,6 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt252;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 #[derive(Debug)]
@@ -292,8 +292,8 @@ mod tests {
         services::api::contract_class::{ContractClass, EntryPointType},
         utils::Address,
     };
+    use cairo_rs::felt::Felt252;
     use cairo_rs::with_std::collections::HashMap;
-    use felt::Felt252;
     use std::path::Path;
     #[test]
     fn test_execution_entrypoint() {

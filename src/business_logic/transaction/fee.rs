@@ -13,7 +13,7 @@ use crate::{
     },
     services::api::contract_class::EntryPointType,
 };
-use felt::Felt252;
+use cairo_rs::felt::Felt252;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 

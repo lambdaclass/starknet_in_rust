@@ -1,5 +1,5 @@
 use crate::types::block_info::PyBlockInfo;
-use cairo_felt::Felt252;
+use cairo_rs::felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 use starknet_rs::{

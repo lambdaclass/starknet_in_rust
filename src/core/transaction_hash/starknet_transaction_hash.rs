@@ -8,7 +8,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::Address,
 };
-use felt::{felt_str, Felt252};
+use cairo_rs::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 #[derive(Debug)]

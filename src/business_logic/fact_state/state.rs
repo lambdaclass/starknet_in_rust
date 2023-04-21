@@ -7,8 +7,8 @@ use crate::{
         Address, ClassHash,
     },
 };
+use cairo_rs::felt::Felt252;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt252;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default)]
@@ -147,7 +147,7 @@ mod test {
         },
         utils::Address,
     };
-    use felt::Felt252;
+    use cairo_rs::felt::Felt252;
 
     #[test]
     fn test_from_cached_state_without_updates() {

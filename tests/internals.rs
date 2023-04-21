@@ -1,12 +1,12 @@
 // This module tests our code against the blockifier to ensure they work in the same way.
 use assert_matches::assert_matches;
+use cairo_rs::felt::{felt_str, Felt252};
 use cairo_rs::vm::{
     errors::{
         cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError, vm_exception::VmException,
     },
     runners::cairo_runner::ExecutionResources,
 };
-use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_rs::{

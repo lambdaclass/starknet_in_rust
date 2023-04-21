@@ -22,7 +22,7 @@ use crate::{
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
-use felt::Felt252;
+use cairo_rs::felt::Felt252;
 use num_traits::Zero;
 
 #[derive(Debug)]

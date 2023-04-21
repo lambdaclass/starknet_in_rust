@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::Felt252;
+use cairo_rs::felt::Felt252;
 use num_traits::Zero;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{

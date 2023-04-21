@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
+use cairo_rs::felt::Felt252;
 use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt252;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{

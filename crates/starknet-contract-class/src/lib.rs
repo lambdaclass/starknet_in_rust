@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use cairo_felt::{Felt252, PRIME_STR};
+use cairo_vm::felt::{Felt252, PRIME_STR};
 use cairo_vm::{
     serde::deserialize_program::{
         deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
@@ -169,7 +169,7 @@ pub fn to_cairo_runner_program(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_felt::felt_str;
+    use cairo_vm::felt::felt_str;
     use std::io::Read;
 
     #[test]

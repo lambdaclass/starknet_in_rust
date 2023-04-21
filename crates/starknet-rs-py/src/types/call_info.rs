@@ -2,7 +2,7 @@ use super::{
     execution_resources::PyExecutionResources, ordered_event::PyOrderedEvent,
     ordered_l2_to_l1_message::PyOrderedL2ToL1Message,
 };
-use cairo_felt::Felt252;
+use cairo_rs::felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::prelude::*;
 use starknet_rs::{

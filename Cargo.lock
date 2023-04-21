@@ -547,7 +547,7 @@ dependencies = [
 [[package]]
 name = "cairo-felt"
 version = "0.3.0-rc1"
-source = "git+https://github.com/lambdaclass/cairo-rs?branch=perf/share_program_identifiers#68da47549a1accfbe0a0748df46ad74b33974211"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=593d9a739fe3f1734c4d19d1dd037a5e3a734a57#593d9a739fe3f1734c4d19d1dd037a5e3a734a57"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -559,7 +559,7 @@ dependencies = [
 [[package]]
 name = "cairo-take_until_unbalanced"
 version = "0.24.2-rc1"
-source = "git+https://github.com/lambdaclass/cairo-rs?branch=perf/share_program_identifiers#68da47549a1accfbe0a0748df46ad74b33974211"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=593d9a739fe3f1734c4d19d1dd037a5e3a734a57#593d9a739fe3f1734c4d19d1dd037a5e3a734a57"
 dependencies = [
  "nom",
 ]
@@ -567,7 +567,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.3.0-rc1"
-source = "git+https://github.com/lambdaclass/cairo-rs?branch=perf/share_program_identifiers#68da47549a1accfbe0a0748df46ad74b33974211"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=593d9a739fe3f1734c4d19d1dd037a5e3a734a57#593d9a739fe3f1734c4d19d1dd037a5e3a734a57"
 dependencies = [
  "anyhow",
  "bincode",
@@ -583,7 +583,9 @@ dependencies = [
  "nom",
  "num-bigint",
  "num-integer",
+ "num-prime",
  "num-traits",
+ "rand",
  "rand_core",
  "serde",
  "serde_bytes",
@@ -906,6 +908,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1044,7 +1052,6 @@ dependencies = [
 name = "fuzzer"
 version = "0.1.0"
 dependencies = [
- "cairo-felt",
  "cairo-vm",
  "honggfuzz",
  "num-traits",
@@ -1128,6 +1135,9 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+dependencies = [
+ "ahash 0.7.6",
+]
 
 [[package]]
 name = "hashbrown"
@@ -1452,6 +1462,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lru"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e999beba7b6e8345721bd280141ed958096a2e4abdf74f67ff4ce49b4b54e47a"
+dependencies = [
+ "hashbrown 0.12.3",
+]
+
+[[package]]
 name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1551,6 +1570,7 @@ dependencies = [
  "autocfg",
  "num-integer",
  "num-traits",
+ "rand",
  "serde",
 ]
 
@@ -1562,6 +1582,33 @@ checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
 dependencies = [
  "autocfg",
  "num-traits",
+]
+
+[[package]]
+name = "num-modular"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64a5fe11d4135c3bcdf3a95b18b194afa9608a5f6ff034f5d857bc9a27fb0119"
+dependencies = [
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-prime"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f4e3bc495f6e95bc15a6c0c55ac00421504a5a43d09e3cc455d1fea7015581d"
+dependencies = [
+ "bitvec",
+ "either",
+ "lru",
+ "num-bigint",
+ "num-integer",
+ "num-modular",
+ "num-traits",
+ "rand",
 ]
 
 [[package]]
@@ -2214,7 +2261,6 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 name = "starknet-contract-class"
 version = "0.1.0"
 dependencies = [
- "cairo-felt",
  "cairo-vm",
  "serde",
  "serde_json",
@@ -2337,7 +2383,6 @@ dependencies = [
  "actix-web",
  "assert_matches",
  "awc",
- "cairo-felt",
  "cairo-vm",
  "cargo-llvm-cov",
  "clap",
@@ -2363,7 +2408,6 @@ dependencies = [
 name = "starknet-rs-py"
 version = "0.1.0"
 dependencies = [
- "cairo-felt",
  "cairo-vm",
  "num-bigint",
  "pyo3",

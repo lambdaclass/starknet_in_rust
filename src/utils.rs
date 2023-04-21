@@ -15,8 +15,8 @@ use crate::{
     definitions::transaction_type::TransactionType,
     services::api::contract_class::EntryPointType,
 };
+use cairo_rs::felt::{Felt252, ParseFeltError};
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::{Felt252, ParseFeltError};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
@@ -467,8 +467,8 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use super::*;
+    use cairo_rs::felt::{felt_str, Felt252};
     use coverage_helper::test;
-    use felt::{felt_str, Felt252};
     use num_traits::{Bounded, One, Zero};
     use std::collections::HashMap;
 

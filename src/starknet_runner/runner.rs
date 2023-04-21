@@ -5,6 +5,7 @@ use crate::{
         SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
+use cairo_rs::felt::Felt252;
 use cairo_rs::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -15,7 +16,6 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt252;
 use num_traits::ToPrimitive;
 use std::{borrow::Cow, collections::HashMap};
 

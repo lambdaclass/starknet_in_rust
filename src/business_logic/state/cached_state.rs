@@ -8,7 +8,7 @@ use crate::{
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash},
 };
-use felt::Felt252;
+use cairo_rs::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::collections::HashMap;

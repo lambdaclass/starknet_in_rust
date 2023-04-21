@@ -16,6 +16,7 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::Address,
 };
+use cairo_rs::felt::Felt252;
 use cairo_rs::{
     hint_processor::{
         builtin_hint_processor::{
@@ -31,7 +32,6 @@ use cairo_rs::{
     },
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
 //* ---------------------

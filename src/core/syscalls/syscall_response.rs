@@ -4,8 +4,8 @@ use super::syscall_request::{
     GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use cairo_rs::felt::Felt252;
 use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(

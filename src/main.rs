@@ -1,6 +1,6 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer};
+use cairo_rs::felt::Felt252;
 use clap::{Args, Parser, Subcommand};
-use felt::Felt252;
 use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
 use starknet_rs::{

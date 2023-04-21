@@ -1,5 +1,5 @@
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
-use felt::Felt252;
+use cairo_rs::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
 use std::collections::HashMap;
 

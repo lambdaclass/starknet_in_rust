@@ -1,5 +1,5 @@
 use crate::utils::Address;
-use felt::Felt252;
+use cairo_rs::felt::Felt252;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
 

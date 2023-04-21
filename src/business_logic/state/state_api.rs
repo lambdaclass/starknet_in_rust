@@ -4,7 +4,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
-use felt::Felt252;
+use cairo_rs::felt::Felt252;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash.
