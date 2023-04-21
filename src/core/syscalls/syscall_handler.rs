@@ -14,8 +14,8 @@ use crate::{
 
 use super::{
     syscall_request::{
-        CallContractRequest, DeployRequest, FromPtr, LibraryCallRequest,
-        SendMessageToL1SysCallRequest, StorageWriteRequest, SyscallRequest,
+        CallContractRequest, DeployRequest, FromPtr, LibraryCallRequest, SendMessageToL1Request,
+        StorageWriteRequest, SyscallRequest,
     },
     syscall_response::{DeployResponse, FailureReason, ResponseBody, SyscallResponse},
 };
@@ -91,7 +91,7 @@ pub(crate) trait SyscallHandler {
     fn send_message_to_l1(
         &mut self,
         vm: &mut VirtualMachine,
-        request: SendMessageToL1SysCallRequest,
+        request: SendMessageToL1Request,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError>;
 
@@ -135,7 +135,7 @@ pub(crate) trait SyscallHandler {
             "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
-            "send_message_to_l1" => SendMessageToL1SysCallRequest::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),

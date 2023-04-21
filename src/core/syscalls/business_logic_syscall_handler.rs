@@ -6,7 +6,7 @@ use super::{
     syscall_handler::SyscallHandler,
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
-        CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1SysCallRequest,
+        CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
         StorageWriteRequest, SyscallRequest,
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
@@ -462,7 +462,7 @@ where
     fn send_message_to_l1(
         &mut self,
         vm: &mut VirtualMachine,
-        request: SendMessageToL1SysCallRequest,
+        request: SendMessageToL1Request,
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let payload = get_felt_range(vm, request.payload_start, request.payload_end)?;
