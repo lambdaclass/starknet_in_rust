@@ -1,4 +1,4 @@
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::Num;
 

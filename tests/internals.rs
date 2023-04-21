@@ -1,7 +1,7 @@
 // This module tests our code against the blockifier to ensure they work in the same way.
 use assert_matches::assert_matches;
-use cairo_rs::felt::{felt_str, Felt252};
-use cairo_rs::vm::{
+use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::vm::{
     errors::{
         cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError, vm_exception::VmException,
     },

@@ -1,4 +1,4 @@
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{
     exceptions::PyKeyError,

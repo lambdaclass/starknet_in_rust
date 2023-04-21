@@ -2,8 +2,8 @@ use crate::{
     core::errors::contract_address_errors::ContractAddressError,
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
 };
-use cairo_rs::felt::Felt252;
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
     serde::deserialize_program::{BuiltinName, Identifier},
     types::{program::Program, relocatable::MaybeRelocatable},
@@ -213,7 +213,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use cairo_rs::felt::Felt252;
+    use cairo_vm::felt::Felt252;
     use coverage_helper::test;
     use num_traits::Num;
 

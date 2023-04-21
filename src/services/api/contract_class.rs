@@ -3,7 +3,7 @@ pub use starknet_contract_class::ContractEntryPoint;
 pub use starknet_contract_class::EntryPointType;
 
 use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
-use cairo_rs::{
+use cairo_vm::{
     serde::deserialize_program::BuiltinName,
     types::{errors::program_errors::ProgramError, program::Program},
     utils::is_subsequence,

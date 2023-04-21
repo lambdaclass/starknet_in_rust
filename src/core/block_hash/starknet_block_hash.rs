@@ -1,7 +1,7 @@
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError, hash_utils::compute_hash_on_elements,
 };
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::iter::zip;
 

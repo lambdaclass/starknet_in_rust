@@ -9,7 +9,7 @@
 //! It also includes some small tests that assert the data returned by
 //! running some pre-compiled contracts is as expected.
 
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use starknet_rs::{
     services::api::contract_class::ContractClass,
     testing::starknet_state::StarknetState,

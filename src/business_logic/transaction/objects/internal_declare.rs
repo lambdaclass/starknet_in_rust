@@ -23,7 +23,7 @@ use crate::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_tx_resources, verify_no_calls_to_other_contracts, Address, ClassHash},
 };
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
@@ -292,7 +292,7 @@ impl InternalDeclare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_rs::felt::{felt_str, Felt252};
+    use cairo_vm::felt::{felt_str, Felt252};
     use coverage_helper::test;
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};

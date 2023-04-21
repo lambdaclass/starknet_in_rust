@@ -1,6 +1,6 @@
 use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
-use cairo_rs::felt::Felt252;
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     hint_processor::builtin_hint_processor::{
         builtin_hint_processor_definition::HintProcessorData,
         hint_utils::{get_integer_from_var_name, insert_value_from_var_name},

@@ -1,5 +1,5 @@
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};

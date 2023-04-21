@@ -4,7 +4,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::{Address, ClassHash},
 };
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -80,7 +80,7 @@ impl StateReader for InMemoryStateReader {
 mod tests {
     use super::*;
     use crate::services::api::contract_class::{ContractEntryPoint, EntryPointType};
-    use cairo_rs::types::program::Program;
+    use cairo_vm::types::program::Program;
     use coverage_helper::test;
 
     #[test]

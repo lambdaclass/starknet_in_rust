@@ -1,6 +1,6 @@
 use super::general_config::{StarknetChainId, StarknetOsConfig};
 use crate::utils::Address;
-use cairo_rs::felt::{felt_str, Felt252};
+use cairo_vm::felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
 use num_traits::Zero;
 use std::collections::HashMap;

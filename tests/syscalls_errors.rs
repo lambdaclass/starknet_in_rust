@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use starknet_rs::{
     business_logic::{
         execution::{

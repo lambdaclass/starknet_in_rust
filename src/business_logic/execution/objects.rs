@@ -8,8 +8,8 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
-use cairo_rs::felt::Felt252;
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };

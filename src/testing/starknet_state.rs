@@ -31,7 +31,7 @@ use crate::{
     },
     utils::{Address, ClassHash},
 };
-use cairo_rs::felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 use std::collections::HashMap;
 

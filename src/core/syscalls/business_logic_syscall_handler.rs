@@ -21,8 +21,8 @@ use crate::{
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
     utils::*,
 };
-use cairo_rs::felt::Felt252;
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
@@ -590,8 +590,8 @@ mod tests {
         },
         utils::{test_utils::*, Address},
     };
-    use cairo_rs::felt::Felt252;
-    use cairo_rs::{
+    use cairo_vm::felt::Felt252;
+    use cairo_vm::{
         hint_processor::{
             builtin_hint_processor::builtin_hint_processor_definition::{
                 BuiltinHintProcessor, HintProcessorData,

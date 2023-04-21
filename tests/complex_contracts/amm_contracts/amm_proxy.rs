@@ -1,6 +1,6 @@
 use crate::complex_contracts::utils::*;
-use cairo_rs::felt::Felt252;
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::felt::Felt252;
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use starknet_crypto::FieldElement;
 use starknet_rs::{
     business_logic::{
