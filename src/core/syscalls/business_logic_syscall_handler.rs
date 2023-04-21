@@ -319,17 +319,17 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 body: Some(response_body),
             }
         } else {
-            // Execute.
+            // Execute with remaining gas.
             let remaining_gas = initial_gas - required_gas;
-
-            // Write response to the syscall segment.
             self.execute_syscall(request, remaining_gas, vm)?
         };
 
+        // Write response to the syscall segment.
         self.expected_syscall_ptr = vm
             .write_arg(syscall_ptr, &response)?
             .get_relocatable()
             .ok_or(MemoryError::WriteArg)?;
+
         Ok(())
     }
 
