@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
-use super::syscall_request::{EmitEventRequest, StorageWriteRequest};
-use super::syscall_response::SyscallResponse;
+use super::syscall_request::{EmitEventRequest, GetBlockTimestampRequest, StorageWriteRequest};
+use super::syscall_response::{GetBlockTimestampResponse, SyscallResponse};
 use super::{
     syscall_handler::SyscallHandler,
     syscall_info::get_syscall_size_from_name,
@@ -13,6 +13,7 @@ use super::{
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
+use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
         execution::{
@@ -73,6 +74,7 @@ lazy_static! {
             map.insert(75202468540281_u128.into(), "deploy");
             map.insert(1280709301550335749748_u128.into(), "emit_event");
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
+            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes())), "get_block_timestamp");
 
             map
     };
@@ -100,6 +102,7 @@ lazy_static! {
         map.insert("storage_write", SYSCALL_BASE + 50 * STEP);
         map.insert("emit_event", SYSCALL_BASE + 10 * STEP);
         map.insert("send_message_to_l1", SYSCALL_BASE + 50 * STEP);
+        map.insert("get_block_timestamp", 0);
 
         map
     };
@@ -348,6 +351,9 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
             SyscallRequest::SendMessageToL1(req) => self.send_message_to_l1(vm, req, remaining_gas),
             SyscallRequest::EmitEvent(req) => self.emit_event(vm, req, remaining_gas),
+            SyscallRequest::GetBlockTimestamp(req) => {
+                self.get_block_timestamp(vm, req, remaining_gas)
+            }
         }
     }
 }
@@ -534,5 +540,19 @@ where
         );
 
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
+    }
+
+    fn get_block_timestamp(
+        &mut self,
+        _vm: &VirtualMachine,
+        _request: GetBlockTimestampRequest,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: Some(ResponseBody::GetBlockTimestamp(GetBlockTimestampResponse {
+                timestamp: self.general_config.block_info.block_timestamp.into(),
+            })),
+        })
     }
 }
