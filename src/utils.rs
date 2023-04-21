@@ -360,7 +360,7 @@ pub mod test_utils {
             $vm.insert_value(k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
-            let v: felt::Felt252 = $val.into();
+            let v: cairo_vm::felt::Felt252 = $val.into();
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(k, v).unwrap();
         };
@@ -370,7 +370,7 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            let v = felt::Felt252::from_bytes_be($val);
+            let v = cairo_vm::felt::Felt252::from_bytes_be($val);
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(k, v).unwrap();
         };
