@@ -583,6 +583,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cairo-1-hint-processor"
+version = "0.1.0"
+dependencies = [
+ "cairo-felt 0.3.0-rc1 (git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954)",
+ "cairo-lang-casm",
+ "cairo-vm",
+]
+
+[[package]]
 name = "cairo-felt"
 version = "0.3.0-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
