@@ -22,17 +22,24 @@ const HEADER_OFFSET: usize = 2;
 #[allow(unused)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
+    EmitEvent(EmitEventRequest),
     LibraryCall(LibraryCallRequest),
     CallContract(CallContractRequest),
     Deploy(DeployRequest),
+    GetBlockNumber,
     StorageRead(StorageReadRequest),
     StorageWrite(StorageWriteRequest),
-    SendMessageToL1(SendMessageToL1SysCall),
+    SendMessageToL1(SendMessageToL1Request),
+    GetBlockTimestamp(GetBlockTimestampRequest),
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  SyscallRequest variants
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#[allow(unused)]
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockTimestampRequest {}
 
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
@@ -52,6 +59,14 @@ pub(crate) struct DeployRequest {
 pub(crate) struct StorageReadRequest {
     pub(crate) key: [u8; 32],
     pub(crate) reserved: Felt252,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct EmitEventRequest {
+    pub(crate) keys_start: Relocatable,
+    pub(crate) keys_end: Relocatable,
+    pub(crate) data_start: Relocatable,
+    pub(crate) data_end: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -86,10 +101,26 @@ pub(crate) struct StorageWriteRequest {
 // payload
 // The array containing the message payload -> relocatable
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct SendMessageToL1SysCall {
+pub(crate) struct SendMessageToL1Request {
     pub(crate) to_address: Address,
     pub(crate) payload_start: Relocatable,
     pub(crate) payload_end: Relocatable,
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+//  Into<SyscallRequest> implementations
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+impl From<GetBlockTimestampRequest> for SyscallRequest {
+    fn from(get_block_timestamp: GetBlockTimestampRequest) -> SyscallRequest {
+        SyscallRequest::GetBlockTimestamp(get_block_timestamp)
+    }
+}
+
+impl From<EmitEventRequest> for SyscallRequest {
+    fn from(emit_event_struct: EmitEventRequest) -> SyscallRequest {
+        SyscallRequest::EmitEvent(emit_event_struct)
+    }
 }
 
 impl From<CallContractRequest> for SyscallRequest {
@@ -104,8 +135,8 @@ impl From<LibraryCallRequest> for SyscallRequest {
     }
 }
 
-impl From<SendMessageToL1SysCall> for SyscallRequest {
-    fn from(syscall: SendMessageToL1SysCall) -> Self {
+impl From<SendMessageToL1Request> for SyscallRequest {
+    fn from(syscall: SendMessageToL1Request) -> Self {
         SyscallRequest::SendMessageToL1(syscall)
     }
 }
@@ -130,6 +161,35 @@ pub(crate) trait FromPtr {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
+}
+
+impl FromPtr for GetBlockTimestampRequest {
+    fn from_ptr(
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        Ok(GetBlockTimestampRequest {}.into())
+    }
+}
+
+impl FromPtr for EmitEventRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let keys_start = get_relocatable(vm, syscall_ptr)?;
+        let keys_end = get_relocatable(vm, &syscall_ptr + 1)?;
+        let data_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let data_end = get_relocatable(vm, &syscall_ptr + 3)?;
+
+        Ok(EmitEventRequest {
+            keys_start,
+            keys_end,
+            data_start,
+            data_end,
+        }
+        .into())
+    }
 }
 
 impl FromPtr for StorageReadRequest {
@@ -206,7 +266,7 @@ impl FromPtr for LibraryCallRequest {
     }
 }
 
-impl FromPtr for SendMessageToL1SysCall {
+impl FromPtr for SendMessageToL1Request {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -215,7 +275,7 @@ impl FromPtr for SendMessageToL1SysCall {
         let payload_start = get_relocatable(vm, &syscall_ptr + 1)?;
         let payload_end = get_relocatable(vm, &syscall_ptr + 2)?;
 
-        Ok(SendMessageToL1SysCall {
+        Ok(SendMessageToL1Request {
             to_address,
             payload_start,
             payload_end,

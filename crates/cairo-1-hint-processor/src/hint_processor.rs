@@ -1,15 +1,16 @@
-use std::collections::HashMap;
-
 use cairo_lang_casm::{
     hints::Hint,
     operand::{CellRef, Register},
 };
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
+    hint_processor::hint_processor_definition::HintProcessor,
+    types::exec_scope::ExecutionScopes,
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
 use felt::Felt252;
+use std::collections::HashMap;
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}

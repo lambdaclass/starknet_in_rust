@@ -60,8 +60,8 @@ pub enum TransactionError {
     AttempToUseNoneCodeAddress,
     #[error("Error recovering class hash from storage")]
     FailToReadClassHash,
-    #[error("Missing contract class after fetching")]
-    MissigContractClass,
+    #[error("Missing compiled class after fetching")]
+    MissingCompiledClass,
     #[error("Contract address {0:?} is not deployed")]
     NotDeployedContract(ClassHash),
     #[error("Non-unique entry points are not possible in a ContractClass object")]

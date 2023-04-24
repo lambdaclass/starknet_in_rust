@@ -5,9 +5,11 @@ use felt::Felt252;
 #[allow(dead_code)]
 pub(crate) enum ResponseBody {
     StorageReadResponse { value: Option<Felt252> },
+    GetBlockNumber { number: Felt252 },
     Deploy(DeployResponse),
     CallContract(CallContractResponse),
     Failure(FailureReason),
+    GetBlockTimestamp(GetBlockTimestampResponse),
 }
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
@@ -20,6 +22,11 @@ pub(crate) struct SyscallResponse {
 // ----------------------
 //   Response objects
 // ----------------------
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GetBlockTimestampResponse {
+    pub timestamp: Felt252,
+}
 
 pub struct DeployResponse {
     pub contract_address: Felt252,
