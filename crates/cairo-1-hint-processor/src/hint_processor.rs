@@ -98,6 +98,21 @@ impl Cairo1HintProcessor {
         )
         .map_err(HintError::from)
     }
+
+    fn square_root(
+        &self,
+        vm: &mut VirtualMachine,
+        value: &ResOperand,
+        dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let value = res_operand_get_val(vm, value)?;
+        let result = value.sqrt();
+        vm.insert_value(
+            cell_ref_to_relocatable(dst, vm),
+            MaybeRelocatable::from(result),
+        )
+        .map_err(HintError::from)
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -118,6 +133,7 @@ impl HintProcessor for Cairo1HintProcessor {
         match hint {
             Hint::AllocSegment { dst } => self.alloc_segment(vm, dst),
             Hint::TestLessThan { lhs, rhs, dst } => self.test_less_than(vm, lhs, rhs, dst),
+            Hint::SquareRoot { value, dst } => self.square_root(vm, value, dst),
             _ => todo!(),
         }
     }
