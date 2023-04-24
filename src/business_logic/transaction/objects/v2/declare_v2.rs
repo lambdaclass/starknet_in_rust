@@ -4,7 +4,7 @@ use crate::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+            objects::{CallInfo, CallType, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
@@ -14,10 +14,7 @@ use crate::{
             objects::internal_invoke_function::verify_no_calls_to_other_contracts,
         },
     },
-    core::{
-        contract_address::v2::starknet_sierra_contract_address::compute_sierra_class_hash,
-        transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
-    },
+    core::transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
@@ -85,66 +82,25 @@ impl InternalDeclareV2 {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            if !self.max_fee.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+        if self.version == 0 {
+            if self.sender_address != Address(1.into()) {
+                return Err(TransactionError::InvalidSenderAddress);
             }
 
-            if !self.nonce.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+            if self.max_fee != 0 {
+                return Err(TransactionError::InvalidMaxFee);
+            }
+
+            if self.nonce != 0.into() {
+                return Err(TransactionError::InvalidNonce);
+            }
+
+            if self.signature.is_empty() {
+                return Err(TransactionError::InvalidSignature);
             }
         }
 
-        if !self.signature.len().is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The signature field in Declare transactions must be an empty list.".to_string(),
-            ));
-        }
         Ok(())
-    }
-
-    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
-    /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-        general_config: &StarknetGeneralConfig,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.verify_version()?;
-
-        // validate transaction
-        let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
-
-        let class_hash = compute_sierra_class_hash(&self.sierra_contract_class)?;
-
-        if class_hash != self.compiled_class_hash {
-            return Err(TransactionError::NotEqualClassHash);
-        }
-
-        let changes = state.count_actual_storage_changes();
-        let actual_resources = calculate_tx_resources(
-            resources_manager,
-            &vec![validate_info.clone()],
-            TransactionType::Declare,
-            changes,
-            None,
-        )
-        .map_err(|_| TransactionError::ResourcesCalculation)?;
-
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                validate_info,
-                None,
-                actual_resources,
-                Some(self.tx_type),
-            ),
-        )
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,42 +121,6 @@ impl InternalDeclareV2 {
     pub fn get_calldata(&self) -> Vec<Felt252> {
         let bytes = self.compiled_class_hash.clone();
         Vec::from([bytes])
-    }
-
-    pub fn run_validate_entrypoint<S: Default + State + StateReader>(
-        &self,
-        state: &mut S,
-        resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
-    ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version == 0 {
-            return Ok(None);
-        }
-
-        let calldata = self.get_calldata();
-
-        let entry_point = ExecutionEntryPoint::new(
-            self.sender_address.clone(),
-            calldata,
-            self.validate_entry_point_selector.clone(),
-            Address(Felt252::zero()),
-            EntryPointType::External,
-            None,
-            None,
-            0,
-        );
-
-        let call_info = entry_point.execute(
-            state,
-            general_config,
-            resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps),
-        )?;
-
-        verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| TransactionError::UnauthorizedActionOnValidate)?;
-
-        Ok(Some(call_info))
     }
 
     /// Calculates and charges the actual fee.
@@ -251,46 +171,80 @@ impl InternalDeclareV2 {
         Ok(())
     }
 
-    // TODO: adapt this function to accept sierra contract classes, it must be checked in cairo-lang how to do it
+    pub fn execute<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+        general_config: &StarknetGeneralConfig,
+        remaining_gas: u64,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        self.verify_version()?;
 
-    // Calculates actual fee used by the transaction using the execution
-    // info returned by apply(), then updates the transaction execution info with the data of the fee.
-    // pub fn execute<S: Default + State + StateReader + Clone>(
-    //     &self,
-    //     state: &mut S,
-    //     general_config: &StarknetGeneralConfig,
-    // ) -> Result<TransactionExecutionInfo, TransactionError> {
-    //     let concurrent_exec_info = self.apply(state, general_config)?;
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let (validate_info, _remaining_gas) = self.run_validate_entrypoint(
+            remaining_gas,
+            state,
+            &mut resources_manager,
+            general_config,
+        )?;
 
-    //     self.handle_nonce(state)?;
-    //     // Set contract class
-    //     let class_hash = felt_to_hash(&self.compiled_class_hash);
-    //     match state.get_contract_class(&class_hash) {
-    //         Err(StateError::MissingClassHash()) => {
-    //             // Class is undeclared; declare it.
-    //             state.set_sierra_contract_class(&class_hash, &self.sierra_contract_class)?;
-    //         }
-    //         Err(error) => return Err(error.into()),
-    //         Ok(_) => {
-    //             // Class is already declared; cannot redeclare.
-    //             return Err(TransactionError::ClassAlreadyDeclared(class_hash));
-    //         }
-    //     }
+        let storage_changes = state.count_actual_storage_changes();
 
-    //     let (fee_transfer_info, actual_fee) = self.charge_fee(
-    //         state,
-    //         &concurrent_exec_info.actual_resources,
-    //         general_config,
-    //     )?;
+        let actual_resources = calculate_tx_resources(
+            resources_manager,
+            &[Some(validate_info.clone())],
+            self.tx_type,
+            storage_changes,
+            None,
+        )?;
 
-    //     Ok(
-    //         TransactionExecutionInfo::from_concurrent_state_execution_info(
-    //             concurrent_exec_info,
-    //             actual_fee,
-    //             fee_transfer_info,
-    //         ),
-    //     )
-    // }
+        Ok(
+            TransactionExecutionInfo::create_concurrent_stage_execution_info(
+                Some(validate_info),
+                None,
+                actual_resources,
+                Some(self.tx_type),
+            ),
+        )
+    }
+
+    fn run_validate_entrypoint<S: Default + State + StateReader + Clone>(
+        &self,
+        mut remaining_gas: u64,
+        state: &mut S,
+        resources_manager: &mut ExecutionResourcesManager,
+        general_config: &StarknetGeneralConfig,
+    ) -> Result<(CallInfo, u64), TransactionError> {
+        let calldata = [self.compiled_class_hash.clone()].to_vec();
+
+        let entry_point = ExecutionEntryPoint {
+            contract_address: self.sender_address.clone(),
+            entry_point_selector: self.validate_entry_point_selector.clone(),
+            initial_gas: remaining_gas,
+            entry_point_type: EntryPointType::External,
+            calldata,
+            caller_address: Address(Felt252::zero()),
+            code_address: None,
+            class_hash: None,
+            call_type: CallType::Call,
+        };
+
+        let tx_execution_context = self.get_execution_context(general_config.validate_max_n_steps);
+
+        let call_info = entry_point.execute(
+            state,
+            general_config,
+            resources_manager,
+            &tx_execution_context,
+        )?;
+
+        let class_hash = *state.get_class_hash_at(&self.sender_address)?;
+        let _compiled_class_hash = state.get_compiled_class_hash(&class_hash)?;
+
+        remaining_gas -= call_info.gas_consumed;
+        verify_no_calls_to_other_contracts(&call_info)?;
+
+        Ok((call_info, remaining_gas))
+    }
 }
 
 // TODO: uncomment this tests moduloe once the sierra compiler is fully functional
