@@ -30,11 +30,16 @@ pub(crate) enum SyscallRequest {
     StorageRead(StorageReadRequest),
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1Request),
+    GetBlockTimestamp(GetBlockTimestampRequest),
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  SyscallRequest variants
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#[allow(unused)]
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockTimestampRequest {}
 
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
@@ -106,6 +111,12 @@ pub(crate) struct SendMessageToL1Request {
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+impl From<GetBlockTimestampRequest> for SyscallRequest {
+    fn from(get_block_timestamp: GetBlockTimestampRequest) -> SyscallRequest {
+        SyscallRequest::GetBlockTimestamp(get_block_timestamp)
+    }
+}
+
 impl From<EmitEventRequest> for SyscallRequest {
     fn from(emit_event_struct: EmitEventRequest) -> SyscallRequest {
         SyscallRequest::EmitEvent(emit_event_struct)
@@ -150,6 +161,15 @@ pub(crate) trait FromPtr {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
+}
+
+impl FromPtr for GetBlockTimestampRequest {
+    fn from_ptr(
+        _vm: &VirtualMachine,
+        _syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        Ok(GetBlockTimestampRequest {}.into())
+    }
 }
 
 impl FromPtr for EmitEventRequest {

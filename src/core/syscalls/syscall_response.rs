@@ -9,6 +9,7 @@ pub(crate) enum ResponseBody {
     Deploy(DeployResponse),
     CallContract(CallContractResponse),
     Failure(FailureReason),
+    GetBlockTimestamp(GetBlockTimestampResponse),
 }
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
@@ -21,6 +22,11 @@ pub(crate) struct SyscallResponse {
 // ----------------------
 //   Response objects
 // ----------------------
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GetBlockTimestampResponse {
+    pub timestamp: Felt252,
+}
 
 pub struct DeployResponse {
     pub contract_address: Felt252,
