@@ -36,6 +36,12 @@ pub(crate) trait SyscallHandler {
         remaining_gas: u64,
     ) -> Result<SyscallResponse, SyscallHandlerError>;
 
+    fn get_block_number(
+        &mut self,
+        vm: &mut VirtualMachine,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
+
     fn storage_read(
         &mut self,
         _vm: &VirtualMachine,
@@ -149,6 +155,7 @@ pub(crate) trait SyscallHandler {
             "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
             "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
+            "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),

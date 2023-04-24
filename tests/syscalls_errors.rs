@@ -184,7 +184,7 @@ fn library_call_not_declared_contract() {
         None,
         [].into_iter(),
         [],
-        "Missing contract class after fetching",
+        "Missing compiled class after fetching",
     );
 }
 

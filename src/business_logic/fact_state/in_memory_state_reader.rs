@@ -3,10 +3,11 @@ use crate::{
         cached_state::CasmClassCache, state_api::StateReader, state_cache::StorageEntry,
     },
     core::errors::state_errors::StateError,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
@@ -89,10 +90,14 @@ impl StateReader for InMemoryStateReader {
     fn get_compiled_class(
         &mut self,
         compiled_class_hash: &CompiledClassHash,
-    ) -> Result<&CasmContractClass, StateError> {
-        self.casm_contract_classes
-            .get(compiled_class_hash)
-            .ok_or(StateError::NoneCompiledClass(*compiled_class_hash))
+    ) -> Result<CompiledClass, StateError> {
+        if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
+            return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
+        }
+        if let Some(compiled_class) = self.class_hash_to_contract_class.get(compiled_class_hash) {
+            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
+        }
+        Err(StateError::NoneCompiledClass(*compiled_class_hash))
     }
 
     fn get_compiled_class_hash(
