@@ -90,6 +90,8 @@ impl StarknetState {
     }
 
     /// Invokes a contract function. Returns the execution info.
+
+    #[allow(clippy::too_many_arguments)]
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
@@ -241,6 +243,7 @@ impl StarknetState {
         self.general_config.starknet_os_config.chain_id.to_felt()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn create_invoke_function(
         &mut self,
         contract_address: Address,

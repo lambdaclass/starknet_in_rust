@@ -49,6 +49,7 @@ pub struct InternalInvokeFunction {
 }
 
 impl InternalInvokeFunction {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,

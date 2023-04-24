@@ -30,9 +30,9 @@ impl PyStarknetState {
     pub fn declare(
         &mut self,
         contract_class: &PyContractClass,
-        hash_value: Option<BigUint>,
+        hash_value: Option<[u8; 32]>,
     ) -> PyResult<([u8; 32], PyTransactionExecutionInfo)> {
-        let hash_value = hash_value.map(|f| f.into());
+        let hash_value = hash_value.map(|f| Felt252::from_bytes_be(&f));
         let (hash, exec_info) = self
             .inner
             .declare(contract_class.inner.clone(), hash_value)
@@ -41,6 +41,7 @@ impl PyStarknetState {
         Ok((hash, PyTransactionExecutionInfo::from(exec_info)))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn invoke_raw(
         &mut self,
         contract_address: BigUint,
@@ -49,11 +50,11 @@ impl PyStarknetState {
         max_fee: u64,
         signature: Option<Vec<BigUint>>,
         nonce: Option<BigUint>,
-        hash_value: Option<BigUint>,
+        hash_value: Option<[u8; 32]>,
     ) -> PyResult<PyTransactionExecutionInfo> {
         let address = Address(contract_address.into());
         let selector = selector.into();
-        let hash_value = hash_value.map(|f| f.into());
+        let hash_value = hash_value.map(|f| Felt252::from_bytes_be(&f));
 
         let calldata = calldata
             .into_iter()

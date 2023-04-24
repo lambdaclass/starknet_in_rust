@@ -51,6 +51,7 @@ pub struct InternalDeclare {
 //                        Functions
 // ------------------------------------------------------------
 impl InternalDeclare {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt252,
