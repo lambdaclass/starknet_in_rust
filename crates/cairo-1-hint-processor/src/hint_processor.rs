@@ -4,9 +4,8 @@ use cairo_lang_casm::{
 };
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
-    hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
-    types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
+    types::relocatable::Relocatable,
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
 use felt::Felt252;
