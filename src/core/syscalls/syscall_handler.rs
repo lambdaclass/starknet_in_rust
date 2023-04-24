@@ -5,7 +5,7 @@ use cairo_rs::vm::vm_core::VirtualMachine;
 use felt::Felt252;
 use num_traits::Zero;
 
-use super::syscall_request::{EmitEventRequest, StorageReadRequest};
+use super::syscall_request::{EmitEventRequest, GetBlockTimestampRequest, StorageReadRequest};
 use crate::core::errors::state_errors::StateError;
 use crate::{
     business_logic::execution::objects::CallResult,
@@ -22,6 +22,13 @@ use super::{
 
 #[allow(unused)]
 pub(crate) trait SyscallHandler {
+    fn get_block_timestamp(
+        &mut self,
+        vm: &VirtualMachine,
+        request: GetBlockTimestampRequest,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError>;
+
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
