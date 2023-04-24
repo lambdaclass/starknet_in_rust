@@ -13,7 +13,7 @@ struct Cairo1HintProcessor {}
 impl HintProcessor for Cairo1HintProcessor {
     fn execute_hint(
         &mut self,
-        //Proxy to VM, contains refrences to necessary data
+        //Proxy to VM, contains references to necessary data
         //+ MemoryProxy, which provides the necessary methods to manipulate memory
         _vm: &mut VirtualMachine,
         //Proxy to ExecutionScopes, provides the necessary methods to manipulate the scopes and
