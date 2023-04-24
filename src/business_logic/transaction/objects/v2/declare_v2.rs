@@ -53,18 +53,22 @@ impl InternalDeclareV2 {
         version: u64,
         signature: Vec<Felt252>,
         nonce: Felt252,
+        hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
-        let hash_value = calculate_declare_v2_transaction_hash(
-            sierra_contract_class,
-            compiled_class_hash.clone(),
-            chain_id,
-            &sender_address,
-            max_fee,
-            version,
-            nonce.clone(),
-        )?;
+        let hash_value = match hash_value {
+            Some(hash) => hash,
+            None => calculate_declare_v2_transaction_hash(
+                sierra_contract_class,
+                compiled_class_hash.clone(),
+                chain_id,
+                &sender_address,
+                max_fee,
+                version,
+                nonce.clone(),
+            )?,
+        };
 
         let internal_declare = InternalDeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),

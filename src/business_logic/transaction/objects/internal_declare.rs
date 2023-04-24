@@ -59,18 +59,22 @@ impl InternalDeclare {
         version: u64,
         signature: Vec<Felt252>,
         nonce: Felt252,
+        hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
-        let hash_value = calculate_declare_transaction_hash(
-            &contract_class,
-            chain_id,
-            &sender_address,
-            max_fee,
-            version,
-            nonce.clone(),
-        )?;
+        let hash_value = match hash_value {
+            Some(hash) => hash,
+            None => calculate_declare_transaction_hash(
+                &contract_class,
+                chain_id,
+                &sender_address,
+                max_fee,
+                version,
+                nonce.clone(),
+            )?,
+        };
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
@@ -368,6 +372,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -474,6 +479,7 @@ mod tests {
             version,
             Vec::new(),
             Felt252::from(max_fee),
+            None,
         );
 
         // ---------------------
@@ -537,6 +543,7 @@ mod tests {
             version,
             Vec::new(),
             nonce,
+            None,
         );
 
         // ---------------------
@@ -599,6 +606,7 @@ mod tests {
             0,
             signature,
             Felt252::zero(),
+            None,
         );
 
         // ---------------------
@@ -660,6 +668,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -671,6 +680,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::one(),
+            None,
         )
         .unwrap();
 
@@ -740,6 +750,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -784,6 +795,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -846,6 +858,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
