@@ -34,11 +34,11 @@ pub trait StateReader {
     fn get_compiled_class_by_class_hash(
         &mut self,
         class_hash: &ClassHash,
-    ) -> Result<CasmContractClass, StateError> {
+    ) -> Result<CompiledClass, StateError> {
         let compiled_class_hash = *self.get_compiled_class_hash(class_hash)?;
         if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
             let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
-            Ok(compiled_class.clone())
+            Ok(compiled_class)
         } else {
             Err(StateError::MissingCasmClass(compiled_class_hash))
         }
