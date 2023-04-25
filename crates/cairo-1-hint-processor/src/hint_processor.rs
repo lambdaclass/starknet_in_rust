@@ -121,6 +121,23 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
+    fn assert_le_if_first_arc_exclueded(
+        &self,
+        vm: &mut VirtualMachine,
+        skip_exclude_a_flag: &CellRef,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
+        let excluded_arc: i32 = exec_scopes.get("excluded_arc")?;
+        let val = if excluded_arc != 0 {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(skip_exclude_a_flag, vm), val)?;
+        Ok(())
+    }
+
     fn linear_split(
         &self,
         vm: &mut VirtualMachine,
@@ -140,6 +157,7 @@ impl Cairo1HintProcessor {
             .map_err(HintError::from)?;
         vm.insert_value(cell_ref_to_relocatable(y, vm), y_value)
             .map_err(HintError::from)?;
+
         Ok(())
     }
 
@@ -182,6 +200,9 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
+            Hint::AssertLeIsFirstArcExcluded {
+                skip_exclude_a_flag,
+            } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
             Hint::LinearSplit {
                 value,
                 scalar,
