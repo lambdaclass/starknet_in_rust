@@ -46,6 +46,8 @@ pub enum StateError {
     NoneCompiledClass(ClassHash),
     #[error("{0:?}")]
     NoneCompiledHash(ClassHash),
+    #[error("Missing casm class for hash {0:?}")]
+    MissingCasmClass(ClassHash),
     #[error("No class hash declared in class_hash_to_contract_class")]
     MissingClassHash(),
 }
