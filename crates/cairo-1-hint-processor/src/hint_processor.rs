@@ -203,6 +203,9 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+            Hint::AssertLeIsSecondArcExcluded {
+                skip_exclude_b_minus_a,
+            } => self.assert_le_is_second_excluded(vm, skip_exclude_b_minus_a, exec_scopes),
             Hint::LinearSplit {
                 value,
                 scalar,
@@ -210,9 +213,6 @@ impl HintProcessor for Cairo1HintProcessor {
                 x,
                 y,
             } => self.linear_split(vm, value, scalar, max_x, x, y),
-            Hint::AssertLeIsSecondArcExcluded {
-                skip_exclude_b_minus_a,
-            } => self.assert_le_is_second_excluded(vm, skip_exclude_b_minus_a, exec_scopes),
             _ => todo!(),
         }
     }
