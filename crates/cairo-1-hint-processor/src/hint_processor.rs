@@ -120,6 +120,28 @@ impl Cairo1HintProcessor {
         )
         .map_err(HintError::from)
     }
+
+    fn linear_split(
+        &self,
+        vm: &mut VirtualMachine,
+        value: &ResOperand,
+        scalar: &ResOperand,
+        max_x: &ResOperand,
+        x: &CellRef,
+        y: &CellRef,
+    ) -> Result<(), HintError> {
+        let value = res_operand_get_val(vm, value)?;
+        let scalar = res_operand_get_val(vm, scalar)?;
+        let max_x = res_operand_get_val(vm, max_x)?;
+        let x_value = (value.clone() / scalar.clone()).min(max_x);
+        let y_value = value - x_value.clone() * scalar;
+
+        vm.insert_value(cell_ref_to_relocatable(x, vm), x_value)
+            .map_err(HintError::from)?;
+        vm.insert_value(cell_ref_to_relocatable(y, vm), y_value)
+            .map_err(HintError::from)?;
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -143,6 +165,13 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
+            Hint::LinearSplit {
+                value,
+                scalar,
+                max_x,
+                x,
+                y,
+            } => self.linear_split(vm, value, scalar, max_x, x, y),
             _ => todo!(),
         }
     }
