@@ -12,9 +12,12 @@ use cairo_rs::{
     },
 };
 use felt::Felt252;
+<<<<<<< HEAD
 use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::identities::Zero;
+=======
+>>>>>>> c86c1655b5bb1bd9114eb6a275e9f08e33738e3c
 use std::collections::HashMap;
 
 /// HintProcessor for Cairo 1 compiler hints.
@@ -73,6 +76,7 @@ fn res_operand_get_val(
     }
 }
 
+<<<<<<< HEAD
 /// Fetches the value of `res_operand` from the vm.
 fn get_val(vm: &VirtualMachine, res_operand: &ResOperand) -> Result<Felt252, VirtualMachineError> {
     match res_operand {
@@ -93,6 +97,8 @@ fn get_val(vm: &VirtualMachine, res_operand: &ResOperand) -> Result<Felt252, Vir
     }
 }
 
+=======
+>>>>>>> c86c1655b5bb1bd9114eb6a275e9f08e33738e3c
 impl Cairo1HintProcessor {
     fn alloc_segment(&mut self, vm: &mut VirtualMachine, dst: &CellRef) -> Result<(), HintError> {
         let segment = vm.add_memory_segment();
@@ -122,6 +128,7 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
+<<<<<<< HEAD
     fn square_root(
         &self,
         vm: &mut VirtualMachine,
@@ -138,10 +145,14 @@ impl Cairo1HintProcessor {
     }
 
     fn div_mod(
+=======
+    fn test_less_than_or_equal(
+>>>>>>> c86c1655b5bb1bd9114eb6a275e9f08e33738e3c
         &self,
         vm: &mut VirtualMachine,
         lhs: &ResOperand,
         rhs: &ResOperand,
+<<<<<<< HEAD
         quotient: &CellRef,
         remainder: &CellRef,
     ) -> Result<(), HintError> {
@@ -220,6 +231,24 @@ impl Cairo1HintProcessor {
         )?;
         Ok(())
     }
+=======
+        dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let lhs_value = res_operand_get_val(vm, lhs)?;
+        let rhs_value = res_operand_get_val(vm, rhs)?;
+        let result = if lhs_value <= rhs_value {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(
+            cell_ref_to_relocatable(dst, vm),
+            MaybeRelocatable::from(result),
+        )
+        .map_err(HintError::from)
+    }
+>>>>>>> c86c1655b5bb1bd9114eb6a275e9f08e33738e3c
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -240,6 +269,7 @@ impl HintProcessor for Cairo1HintProcessor {
         match hint {
             Hint::AllocSegment { dst } => self.alloc_segment(vm, dst),
             Hint::TestLessThan { lhs, rhs, dst } => self.test_less_than(vm, lhs, rhs, dst),
+<<<<<<< HEAD
             Hint::SquareRoot { value, dst } => self.square_root(vm, value, dst),
             Hint::DivMod {
                 lhs,
@@ -275,6 +305,11 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder_low,
                 remainder_high,
             ),
+=======
+            Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
+                self.test_less_than_or_equal(vm, lhs, rhs, dst)
+            }
+>>>>>>> c86c1655b5bb1bd9114eb6a275e9f08e33738e3c
             _ => todo!(),
         }
     }

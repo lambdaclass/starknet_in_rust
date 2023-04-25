@@ -22,6 +22,12 @@ use thiserror::Error;
 pub enum TransactionError {
     #[error("Nonce is None")]
     MissingNonce,
+    #[error("The max_fee field in Declare transactions of version 0 must be 0")]
+    InvalidMaxFee,
+    #[error("The nonce field in Declare transactions of version 0 must be 0.")]
+    InvalidNonce,
+    #[error("The signature field in Declare transactions must be an empty list.")]
+    InvalidSignature,
     #[error("An InvokeFunction transaction (version != 0) must have a nonce.")]
     InvokeFunctionNonZeroMissingNonce,
     #[error("An InvokeFunction transaction (version = 0) cannot have a nonce.")]
@@ -88,6 +94,8 @@ pub enum TransactionError {
     OutOfBound,
     #[error("Call to another contract has been done")]
     InvalidContractCall,
+    #[error("The sender address field in Declare transactions of version 0")]
+    InvalidSenderAddress,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]
