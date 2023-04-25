@@ -30,16 +30,16 @@ use felt::Felt252;
 // TODO:initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
 #[derive(Debug)]
 pub struct ExecutionEntryPoint {
-    call_type: CallType,
+    pub(crate) call_type: CallType,
     pub(crate) contract_address: Address,
-    code_address: Option<Address>,
-    class_hash: Option<[u8; 32]>,
-    calldata: Vec<Felt252>,
-    caller_address: Address,
-    entry_point_selector: Felt252,
-    entry_point_type: EntryPointType,
+    pub(crate) code_address: Option<Address>,
+    pub(crate) class_hash: Option<[u8; 32]>,
+    pub(crate) calldata: Vec<Felt252>,
+    pub(crate) caller_address: Address,
+    pub(crate) entry_point_selector: Felt252,
+    pub(crate) entry_point_type: EntryPointType,
     #[allow(unused)]
-    initial_gas: u64,
+    pub(crate) initial_gas: u64,
 }
 #[allow(clippy::too_many_arguments)]
 impl ExecutionEntryPoint {

@@ -5,11 +5,10 @@ use cairo_lang_casm::{
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
-    types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::{
-        errors::{hint_errors::HintError, vm_errors::VirtualMachineError},
-        vm_core::VirtualMachine,
-    },
+    types::relocatable::MaybeRelocatable,
+    types::relocatable::Relocatable,
+    vm::errors::vm_errors::VirtualMachineError,
+    vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
 use felt::Felt252;
 use std::collections::HashMap;
