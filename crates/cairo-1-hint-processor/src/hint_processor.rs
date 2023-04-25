@@ -113,6 +113,29 @@ impl Cairo1HintProcessor {
         )
         .map_err(HintError::from)
     }
+
+    fn div_mod(
+        &self,
+        vm: &mut VirtualMachine,
+        lhs: &ResOperand,
+        rhs: &ResOperand,
+        quotient: &CellRef,
+        remainder: &CellRef,
+    ) -> Result<(), HintError> {
+        let lhs_value = res_operand_get_val(vm, lhs)?.to_biguint();
+        let rhs_value = res_operand_get_val(vm, rhs)?.to_biguint();
+        let quotient_value = Felt252::new(lhs_value.clone() / rhs_value.clone());
+        let remainder_value = Felt252::new(lhs_value % rhs_value);
+        vm.insert_value(
+            cell_ref_to_relocatable(quotient, vm),
+            MaybeRelocatable::from(quotient_value),
+        )?;
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder, vm),
+            MaybeRelocatable::from(remainder_value),
+        )
+        .map_err(HintError::from)
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -134,6 +157,12 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::AllocSegment { dst } => self.alloc_segment(vm, dst),
             Hint::TestLessThan { lhs, rhs, dst } => self.test_less_than(vm, lhs, rhs, dst),
             Hint::SquareRoot { value, dst } => self.square_root(vm, value, dst),
+            Hint::DivMod {
+                lhs,
+                rhs,
+                quotient,
+                remainder,
+            } => self.div_mod(vm, lhs, rhs, quotient, remainder),
             _ => todo!(),
         }
     }
