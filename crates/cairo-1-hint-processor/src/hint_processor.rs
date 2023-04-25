@@ -1,3 +1,6 @@
+use ark_ff::fields::{Fp256, MontBackend, MontConfig};
+use ark_ff::{Field, PrimeField};
+use ark_std::UniformRand;
 use cairo_lang_casm::{
     hints::Hint,
     operand::{CellRef, DerefOrImmediate, Operation, Register, ResOperand},
@@ -11,8 +14,21 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt252;
+use felt::{felt_str as felt252_str, Felt252};
+use num_bigint::BigUint;
 use std::collections::HashMap;
+
+#[derive(MontConfig)]
+#[modulus = "3618502788666131213697322783095070105623107215331596699973092056135872020481"]
+#[generator = "3"]
+
+/// Returns the Beta value of the Starkware elliptic curve.
+struct FqConfig;
+type Fq = Fp256<MontBackend<FqConfig, 4>>;
+
+fn get_beta() -> Felt252 {
+    felt252_str!("3141592653589793238462643383279502884197169399375105820974944592307816406665")
+}
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -160,6 +176,32 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn random_ec_point(
+        &self,
+        vm: &mut VirtualMachine,
+        x: &CellRef,
+        y: &CellRef,
+    ) -> Result<(), HintError> {
+        let beta = Fq::from(get_beta().to_biguint());
+
+        let mut rng = ark_std::test_rng();
+        let (random_x, random_y_squared) = loop {
+            let random_x = Fq::rand(&mut rng);
+            let random_y_squared = random_x * random_x * random_x + random_x + beta;
+            if random_y_squared.legendre().is_qr() {
+                break (random_x, random_y_squared);
+            }
+        };
+
+        let x_bigint: BigUint = random_x.into_bigint().into();
+        let y_bigint: BigUint = random_y_squared.sqrt().unwrap().into_bigint().into();
+
+        vm.insert_value(cell_ref_to_relocatable(x, vm), Felt252::from(x_bigint))?;
+        vm.insert_value(cell_ref_to_relocatable(y, vm), Felt252::from(y_bigint))?;
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -186,6 +228,7 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+            Hint::RandomEcPoint { x, y } => self.random_ec_point(vm, x, y),
             Hint::LinearSplit {
                 value,
                 scalar,
