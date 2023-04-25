@@ -589,6 +589,9 @@ dependencies = [
  "cairo-felt 0.3.0-rc1 (git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954)",
  "cairo-lang-casm",
  "cairo-vm",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.15",
 ]
 
 [[package]]

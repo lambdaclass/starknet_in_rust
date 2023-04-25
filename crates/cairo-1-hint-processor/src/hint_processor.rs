@@ -12,6 +12,9 @@ use cairo_rs::{
     },
 };
 use felt::Felt252;
+use num_bigint::BigUint;
+use num_integer::Integer;
+use num_traits::identities::Zero;
 use std::collections::HashMap;
 
 /// HintProcessor for Cairo 1 compiler hints.
@@ -70,6 +73,26 @@ fn res_operand_get_val(
     }
 }
 
+/// Fetches the value of `res_operand` from the vm.
+fn get_val(vm: &VirtualMachine, res_operand: &ResOperand) -> Result<Felt252, VirtualMachineError> {
+    match res_operand {
+        ResOperand::Deref(cell) => get_cell_val(vm, cell),
+        ResOperand::DoubleDeref(cell, offset) => get_double_deref_val(vm, cell, &(*offset).into()),
+        ResOperand::Immediate(x) => Ok(Felt252::from(x.value.clone())),
+        ResOperand::BinOp(op) => {
+            let a = get_cell_val(vm, &op.a)?;
+            let b = match &op.b {
+                DerefOrImmediate::Deref(cell) => get_cell_val(vm, cell)?,
+                DerefOrImmediate::Immediate(x) => Felt252::from(x.value.clone()),
+            };
+            match op.op {
+                Operation::Add => Ok(a + b),
+                Operation::Mul => Ok(a * b),
+            }
+        }
+    }
+}
+
 impl Cairo1HintProcessor {
     fn alloc_segment(&mut self, vm: &mut VirtualMachine, dst: &CellRef) -> Result<(), HintError> {
         let segment = vm.add_memory_segment();
@@ -109,7 +132,7 @@ impl Cairo1HintProcessor {
         let result = value.sqrt();
         vm.insert_value(
             cell_ref_to_relocatable(dst, vm),
-            MaybeRelocatable::from(result),
+            MaybeRelocatable::from(MaybeRelocatable::from(result)),
         )
         .map_err(HintError::from)
     }
@@ -135,6 +158,61 @@ impl Cairo1HintProcessor {
             MaybeRelocatable::from(remainder_value),
         )
         .map_err(HintError::from)
+    }
+
+    fn uint256_div_mod(
+        &self,
+        vm: &mut VirtualMachine,
+        dividend_low: &ResOperand,
+        dividend_high: &ResOperand,
+        divisor_low: &ResOperand,
+        divisor_high: &ResOperand,
+        quotient0: &CellRef,
+        quotient1: &CellRef,
+        divisor0: &CellRef,
+        divisor1: &CellRef,
+        extra0: &CellRef,
+        extra1: &CellRef,
+        remainder_low: &CellRef,
+        remainder_high: &CellRef,
+    ) -> Result<(), HintError> {
+        let pow_2_128 = BigUint::from(u128::MAX) + 1u32;
+        let pow_2_64 = BigUint::from(u64::MAX) + 1u32;
+        let dividend_low = get_val(vm, dividend_low)?.to_biguint();
+        let dividend_high = get_val(vm, dividend_high)?.to_biguint();
+        let divisor_low = get_val(vm, divisor_low)?.to_biguint();
+        let divisor_high = get_val(vm, divisor_high)?.to_biguint();
+        let dividend = dividend_low + dividend_high * pow_2_128.clone();
+        let divisor = divisor_low + divisor_high.clone() * pow_2_128.clone();
+        let quotient = dividend.clone() / divisor.clone();
+        let remainder = dividend % divisor.clone();
+
+        // Guess quotient limbs.
+        let (quotient, limb) = quotient.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(quotient0, vm), Felt252::from(limb))?;
+        let (quotient, limb) = quotient.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(quotient1, vm), Felt252::from(limb))?;
+        let (quotient, limb) = quotient.div_rem(&pow_2_64);
+        if divisor_high.is_zero() {
+            vm.insert_value(cell_ref_to_relocatable(extra0, vm), Felt252::from(limb))?;
+            vm.insert_value(cell_ref_to_relocatable(extra1, vm), Felt252::from(quotient))?;
+        }
+
+        // Guess divisor limbs.
+        let (divisor, limb) = divisor.div_rem(&pow_2_64);
+            vm.insert_value(cell_ref_to_relocatable(divisor0, vm), Felt252::from(limb))?;
+        let (divisor, limb) = divisor.div_rem(&pow_2_64);
+            vm.insert_value(cell_ref_to_relocatable(divisor1, vm), Felt252::from(limb))?;
+        let (divisor, limb) = divisor.div_rem(&pow_2_64);
+        if !divisor_high.is_zero() {
+            vm.insert_value(cell_ref_to_relocatable(extra0, vm), Felt252::from(limb))?;
+            vm.insert_value(cell_ref_to_relocatable(extra1, vm), Felt252::from(divisor))?;
+        }
+
+        // Guess remainder limbs.
+        vm.insert_value(cell_ref_to_relocatable(remainder_low, vm), Felt252::from(remainder.clone() % pow_2_128.clone()))?;
+        vm.insert_value(cell_ref_to_relocatable(remainder_high, vm), Felt252::from(remainder / pow_2_128))?;
+        Ok(())
     }
 }
 
@@ -163,6 +241,34 @@ impl HintProcessor for Cairo1HintProcessor {
                 quotient,
                 remainder,
             } => self.div_mod(vm, lhs, rhs, quotient, remainder),
+            Hint::Uint256DivMod {
+                dividend_low,
+                dividend_high,
+                divisor_low,
+                divisor_high,
+                quotient0,
+                quotient1,
+                divisor0,
+                divisor1,
+                extra0,
+                extra1,
+                remainder_low,
+                remainder_high,
+            } => self.uint256_div_mod(
+                vm,
+                dividend_low,
+                dividend_high,
+                divisor_low,
+                divisor_high,
+                quotient0,
+                quotient1,
+                divisor0,
+                divisor1,
+                extra0,
+                extra1,
+                remainder_low,
+                remainder_high,
+            ),
             _ => todo!(),
         }
     }
