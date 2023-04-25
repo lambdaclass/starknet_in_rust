@@ -98,6 +98,28 @@ impl Cairo1HintProcessor {
         )
         .map_err(HintError::from)
     }
+
+    fn test_less_than_or_equal(
+        &self,
+        vm: &mut VirtualMachine,
+        lhs: &ResOperand,
+        rhs: &ResOperand,
+        dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let lhs_value = res_operand_get_val(vm, lhs)?;
+        let rhs_value = res_operand_get_val(vm, rhs)?;
+        let result = if lhs_value <= rhs_value {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(
+            cell_ref_to_relocatable(dst, vm),
+            MaybeRelocatable::from(result),
+        )
+        .map_err(HintError::from)
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -118,6 +140,9 @@ impl HintProcessor for Cairo1HintProcessor {
         match hint {
             Hint::AllocSegment { dst } => self.alloc_segment(vm, dst),
             Hint::TestLessThan { lhs, rhs, dst } => self.test_less_than(vm, lhs, rhs, dst),
+            Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
+                self.test_less_than_or_equal(vm, lhs, rhs, dst)
+            }
             _ => todo!(),
         }
     }
