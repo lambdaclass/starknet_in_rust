@@ -286,7 +286,6 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
-            Hint::SquareRoot { value, dst } => self.square_root(vm, value, dst),
             Hint::DivMod {
                 lhs,
                 rhs,
