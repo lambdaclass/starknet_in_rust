@@ -22,7 +22,7 @@ use std::{collections::HashMap, ops::Mul};
 struct Cairo1HintProcessor {}
 
 /// Extracts a parameter assumed to be a buffer.
-fn extract_buffer(buffer: &ResOperand) -> (&CellRef, Felt252) {
+fn extract_buffer(buffer: &ResOperand) -> Result<(&CellRef, Felt252), HintError> {
     let (cell, base_offset) = match buffer {
         ResOperand::Deref(cell) => (cell, 0.into()),
         ResOperand::BinOp(BinOpOperand {
@@ -36,9 +36,13 @@ fn extract_buffer(buffer: &ResOperand) -> (&CellRef, Felt252) {
                 .value
                 .into(),
         ),
-        _ => panic!("Illegal argument for a buffer."),
+        _ => {
+            return Err(HintError::CustomHint(
+                "Illegal argument for a buffer.".to_string(),
+            ))
+        }
     };
-    (cell, base_offset)
+    Ok((cell, base_offset))
 }
 
 fn cell_ref_to_relocatable(cell_ref: &CellRef, vm: &VirtualMachine) -> Relocatable {
@@ -182,7 +186,7 @@ impl Cairo1HintProcessor {
         let prime_over_3_high = 3544607988759775765608368578435044694_u128;
         // ceil((PRIME / 2) / 2 ** 128).
         let prime_over_2_high = 5316911983139663648412552867652567041_u128;
-        let (range_check_base, range_check_offset) = extract_buffer(range_check_ptr);
+        let (range_check_base, range_check_offset) = extract_buffer(range_check_ptr)?;
         let range_check_ptr = get_ptr(vm, range_check_base, &range_check_offset)?;
         vm.insert_value(
             range_check_ptr,
@@ -233,7 +237,7 @@ impl Cairo1HintProcessor {
         dict_end_ptr: &ResOperand,
         dict_index: &CellRef,
     ) -> Result<(), HintError> {
-        let (dict_base, dict_offset) = extract_buffer(dict_end_ptr);
+        let (dict_base, dict_offset) = extract_buffer(dict_end_ptr)?;
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let dict_manager_exec_scope = exec_scopes
             .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
@@ -354,7 +358,7 @@ impl Cairo1HintProcessor {
         segment_arena_ptr: &ResOperand,
         exec_scopes: &mut ExecutionScopes,
     ) -> Result<(), HintError> {
-        let (cell, base_offset) = extract_buffer(segment_arena_ptr);
+        let (cell, base_offset) = extract_buffer(segment_arena_ptr)?;
         let dict_manager_address = get_ptr(vm, cell, &base_offset)?;
 
         let n_dicts = vm

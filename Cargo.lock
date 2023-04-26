@@ -601,6 +601,7 @@ dependencies = [
  "cairo-vm",
  "num-integer",
  "num-traits 0.2.15",
+ "thiserror",
 ]
 
 [[package]]
