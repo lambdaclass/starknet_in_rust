@@ -137,6 +137,7 @@ pub fn deploy(
     path: &str,
     calldata: &[Felt252],
     config: &StarknetGeneralConfig,
+    hash_value: Option<Felt252>,
 ) -> Result<(Address, [u8; 32]), TransactionError> {
     let path = PathBuf::from(path);
     let contract_class = ContractClass::try_from(path).unwrap();
@@ -147,6 +148,7 @@ pub fn deploy(
         calldata.to_vec(),
         0.into(),
         0,
+        hash_value,
     )?;
     let class_hash = internal_deploy.class_hash();
     state.set_contract_class(&class_hash, &contract_class)?;
