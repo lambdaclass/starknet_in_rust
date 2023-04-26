@@ -11,10 +11,9 @@ use cairo_rs::{
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
 use felt::Felt252;
-use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::identities::Zero;
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Mul};
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -50,30 +49,11 @@ fn get_double_deref_val(
     Ok(vm.get_integer(get_ptr(vm, cell, offset)?)?.as_ref().clone())
 }
 
+/// Fetches the value of `res_operand` from the vm.
 fn res_operand_get_val(
     vm: &VirtualMachine,
     res_operand: &ResOperand,
 ) -> Result<Felt252, VirtualMachineError> {
-    match res_operand {
-        ResOperand::Deref(cell) => get_cell_val(vm, cell),
-        ResOperand::DoubleDeref(cell, offset) => get_double_deref_val(vm, cell, &(*offset).into()),
-        ResOperand::Immediate(x) => Ok(Felt252::from(x.value.clone())),
-        ResOperand::BinOp(op) => {
-            let a = get_cell_val(vm, &op.a)?;
-            let b = match &op.b {
-                DerefOrImmediate::Deref(cell) => get_cell_val(vm, cell)?,
-                DerefOrImmediate::Immediate(x) => Felt252::from(x.value.clone()),
-            };
-            match op.op {
-                Operation::Add => Ok(a + b),
-                Operation::Mul => Ok(a * b),
-            }
-        }
-    }
-}
-
-/// Fetches the value of `res_operand` from the vm.
-fn get_val(vm: &VirtualMachine, res_operand: &ResOperand) -> Result<Felt252, VirtualMachineError> {
     match res_operand {
         ResOperand::Deref(cell) => get_cell_val(vm, cell),
         ResOperand::DoubleDeref(cell, offset) => get_double_deref_val(vm, cell, &(*offset).into()),
@@ -198,13 +178,13 @@ impl Cairo1HintProcessor {
         remainder_low: &CellRef,
         remainder_high: &CellRef,
     ) -> Result<(), HintError> {
-        let pow_2_128 = BigUint::from(u128::MAX) + 1u32;
-        let pow_2_64 = BigUint::from(u64::MAX) + 1u32;
-        let dividend_low = get_val(vm, dividend_low)?.to_biguint();
-        let dividend_high = get_val(vm, dividend_high)?.to_biguint();
-        let divisor_low = get_val(vm, divisor_low)?.to_biguint();
-        let divisor_high = get_val(vm, divisor_high)?.to_biguint();
-        let dividend = dividend_low + dividend_high * pow_2_128.clone();
+        let pow_2_128 = Felt252::from(u128::MAX) + 1u32;
+        let pow_2_64 = Felt252::from(u64::MAX) + 1u32;
+        let dividend_low = res_operand_get_val(vm, dividend_low)?;
+        let dividend_high = res_operand_get_val(vm, dividend_high)?;
+        let divisor_low = res_operand_get_val(vm, divisor_low)?;
+        let divisor_high = res_operand_get_val(vm, divisor_high)?;
+        let dividend = dividend_low + dividend_high.mul(pow_2_128.clone());
         let divisor = divisor_low + divisor_high.clone() * pow_2_128.clone();
         let quotient = dividend.clone() / divisor.clone();
         let remainder = dividend % divisor.clone();
