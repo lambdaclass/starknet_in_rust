@@ -1,6 +1,6 @@
 use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
-    hints::Hint,
+    hints::{CoreHint, Hint},
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
 use cairo_lang_utils::extract_matches;
@@ -234,22 +234,24 @@ impl HintProcessor for Cairo1HintProcessor {
     ) -> Result<(), HintError> {
         let hint = hint_data.downcast_ref::<Hint>().unwrap();
         match hint {
-            Hint::AllocSegment { dst } => self.alloc_segment(vm, dst),
-            Hint::TestLessThan { lhs, rhs, dst } => self.test_less_than(vm, lhs, rhs, dst),
-            Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
+            Hint::Core(CoreHint::AllocSegment { dst }) => self.alloc_segment(vm, dst),
+            Hint::Core(CoreHint::TestLessThan { lhs, rhs, dst }) => {
+                self.test_less_than(vm, lhs, rhs, dst)
+            }
+            Hint::Core(CoreHint::TestLessThanOrEqual { lhs, rhs, dst }) => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
-            Hint::AssertLeIsFirstArcExcluded {
+            Hint::Core(CoreHint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
-            } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
-            Hint::LinearSplit {
+            }) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+            Hint::Core(CoreHint::LinearSplit {
                 value,
                 scalar,
                 max_x,
                 x,
                 y,
-            } => self.linear_split(vm, value, scalar, max_x, x, y),
-            Hint::AllocFelt252Dict { segment_arena_ptr } => {
+            }) => self.linear_split(vm, value, scalar, max_x, x, y),
+            Hint::Core(CoreHint::AllocFelt252Dict { segment_arena_ptr }) => {
                 self.alloc_felt_256_dict(vm, segment_arena_ptr, exec_scopes)
             }
             _ => todo!(),
