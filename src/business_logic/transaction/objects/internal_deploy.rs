@@ -43,6 +43,7 @@ impl InternalDeploy {
         constructor_calldata: Vec<Felt252>,
         chain_id: Felt252,
         version: u64,
+        hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_deprecated_class_hash(&contract_class)
             .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
@@ -55,12 +56,15 @@ impl InternalDeploy {
             Address(Felt252::zero()),
         )?);
 
-        let hash_value = calculate_deploy_transaction_hash(
-            version,
-            &contract_address,
-            &constructor_calldata,
-            chain_id,
-        )?;
+        let hash_value = match hash_value {
+            Some(hash) => hash,
+            None => calculate_deploy_transaction_hash(
+                version,
+                &contract_address,
+                &constructor_calldata,
+                chain_id,
+            )?,
+        };
 
         Ok(InternalDeploy {
             hash_value,
@@ -245,6 +249,7 @@ mod tests {
             vec![10.into()],
             0.into(),
             0,
+            None,
         )
         .unwrap();
 
@@ -288,9 +293,15 @@ mod tests {
             .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy =
-            InternalDeploy::new(Address(0.into()), contract_class, Vec::new(), 0.into(), 0)
-                .unwrap();
+        let internal_deploy = InternalDeploy::new(
+            Address(0.into()),
+            contract_class,
+            Vec::new(),
+            0.into(),
+            0,
+            None,
+        )
+        .unwrap();
 
         let config = Default::default();
 
@@ -323,6 +334,7 @@ mod tests {
             vec![10.into()],
             0.into(),
             0,
+            None,
         )
         .unwrap();
 
@@ -353,6 +365,7 @@ mod tests {
             Vec::new(),
             0.into(),
             1,
+            None,
         );
         assert_matches!(
             internal_deploy_error.unwrap_err(),
