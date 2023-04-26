@@ -231,10 +231,10 @@ impl Cairo1HintProcessor {
 
     fn alloc_constant_size(
         &self,
-        vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         size: &ResOperand,
-        dst: CellRef,
+        dst: &CellRef,
     ) -> Result<(), HintError> {
         let object_size = res_operand_get_val(vm, size)?
             .to_usize()
@@ -254,7 +254,7 @@ impl Cairo1HintProcessor {
             };
 
         vm.insert_value(
-            cell_ref_to_relocatable(&dst, vm),
+            cell_ref_to_relocatable(dst, vm),
             memory_exec_scope.next_address,
         )?;
 
