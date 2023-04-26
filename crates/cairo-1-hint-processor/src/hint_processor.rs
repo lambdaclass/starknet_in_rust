@@ -94,6 +94,21 @@ fn extract_buffer(buffer: &ResOperand) -> (&CellRef, Felt252) {
     (cell, base_offset)
 }
 
+fn as_cairo_short_string(value: &Felt252) -> Option<String> {
+    let mut as_string = String::default();
+    let mut is_end = false;
+    for byte in value.to_bytes_be() {
+        if byte == 0 {
+            is_end = true;
+        } else if is_end || !byte.is_ascii() {
+            return None;
+        } else {
+            as_string.push(byte as char);
+        }
+    }
+    Some(as_string)
+}
+
 impl Cairo1HintProcessor {
     fn alloc_segment(&mut self, vm: &mut VirtualMachine, dst: &CellRef) -> Result<(), HintError> {
         let segment = vm.add_memory_segment();
@@ -363,6 +378,31 @@ impl Cairo1HintProcessor {
         vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
         Ok(())
     }
+
+    fn debug_print(
+        &self,
+        vm: &mut VirtualMachine,
+        start: &ResOperand,
+        end: &ResOperand,
+    ) -> Result<(), HintError> {
+        let as_relocatable = |vm, value| {
+            let (base, offset) = extract_buffer(value);
+            get_ptr(vm, base, &offset)
+        };
+        let mut curr = as_relocatable(vm, start)?;
+        let end = as_relocatable(vm, end)?;
+        while curr != end {
+            let value = vm.get_integer(curr)?;
+            if let Some(shortstring) = as_cairo_short_string(&value) {
+                println!("[DEBUG]\t{shortstring: <31}\t(raw: {value: <31})");
+            } else {
+                println!("[DEBUG]\t{0: <31}\t(raw: {value: <31}) ", ' ');
+            }
+            curr += 1;
+        }
+        println!();
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -402,6 +442,7 @@ impl HintProcessor for Cairo1HintProcessor {
                 quotient,
                 remainder,
             } => self.div_mod(vm, lhs, rhs, quotient, remainder),
+            Hint::DebugPrint { start, end } => self.debug_print(vm, start, end),
             Hint::Uint256DivMod {
                 dividend_low,
                 dividend_high,
