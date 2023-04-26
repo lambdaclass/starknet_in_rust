@@ -30,15 +30,18 @@ impl PyStarknetState {
     pub fn declare(
         &mut self,
         contract_class: &PyContractClass,
+        hash_value: Option<[u8; 32]>,
     ) -> PyResult<([u8; 32], PyTransactionExecutionInfo)> {
+        let hash_value = hash_value.map(|f| Felt252::from_bytes_be(&f));
         let (hash, exec_info) = self
             .inner
-            .declare(contract_class.inner.clone())
+            .declare(contract_class.inner.clone(), hash_value)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
         Ok((hash, PyTransactionExecutionInfo::from(exec_info)))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn invoke_raw(
         &mut self,
         contract_address: BigUint,
@@ -47,9 +50,11 @@ impl PyStarknetState {
         max_fee: u64,
         signature: Option<Vec<BigUint>>,
         nonce: Option<BigUint>,
+        hash_value: Option<[u8; 32]>,
     ) -> PyResult<PyTransactionExecutionInfo> {
         let address = Address(contract_address.into());
         let selector = selector.into();
+        let hash_value = hash_value.map(|f| Felt252::from_bytes_be(&f));
 
         let calldata = calldata
             .into_iter()
@@ -66,7 +71,9 @@ impl PyStarknetState {
 
         let exec_info = self
             .inner
-            .invoke_raw(address, selector, calldata, max_fee, signature, nonce)
+            .invoke_raw(
+                address, selector, calldata, max_fee, signature, nonce, hash_value,
+            )
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
         Ok(PyTransactionExecutionInfo::from(exec_info))
@@ -103,8 +110,10 @@ impl PyStarknetState {
         contract_class: &PyContractClass,
         constructor_calldata: Vec<BigUint>,
         contract_address_salt: BigUint,
+        hash_value: Option<BigUint>,
     ) -> PyResult<(BigUint, PyTransactionExecutionInfo)> {
         let contract_class = contract_class.inner.clone();
+        let hash_value = hash_value.map(|f| f.into());
         let constructor_calldata = constructor_calldata
             .into_iter()
             .map(Felt252::from)
@@ -113,7 +122,12 @@ impl PyStarknetState {
 
         let (address, exec_info) = self
             .inner
-            .deploy(contract_class, constructor_calldata, contract_address_salt)
+            .deploy(
+                contract_class,
+                constructor_calldata,
+                contract_address_salt,
+                hash_value,
+            )
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         Ok((
             address.0.to_biguint(),
