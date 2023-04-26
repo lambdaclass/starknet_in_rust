@@ -68,6 +68,7 @@ impl InternalDeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Address,
         chain_id: StarknetChainId,
+        hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -76,16 +77,19 @@ impl InternalDeployAccount {
             Address(Felt252::zero()),
         )?);
 
-        let hash_value = calculate_deploy_account_transaction_hash(
-            version,
-            &contract_address,
-            Felt252::from_bytes_be(&class_hash),
-            &constructor_calldata,
-            max_fee,
-            nonce.clone(),
-            contract_address_salt.0.clone(),
-            chain_id.to_felt(),
-        )?;
+        let hash_value = match hash_value {
+            Some(hash) => hash,
+            None => calculate_deploy_account_transaction_hash(
+                version,
+                &contract_address,
+                Felt252::from_bytes_be(&class_hash),
+                &constructor_calldata,
+                max_fee,
+                nonce.clone(),
+                contract_address_salt.0.clone(),
+                chain_id.to_felt(),
+            )?,
+        };
 
         Ok(Self {
             contract_address,
@@ -395,6 +399,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 
@@ -431,6 +436,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 
@@ -443,6 +449,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 
@@ -485,6 +492,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 

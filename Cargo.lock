@@ -590,6 +590,8 @@ dependencies = [
  "cairo-lang-casm",
  "cairo-lang-utils 0.1.0",
  "cairo-vm",
+ "num-integer",
+ "num-traits 0.2.15",
 ]
 
 [[package]]

@@ -6,14 +6,15 @@ use cairo_lang_utils::extract_matches;
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
-    types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::{
-        errors::{hint_errors::HintError, vm_errors::VirtualMachineError},
-        vm_core::VirtualMachine,
-    },
+    types::relocatable::MaybeRelocatable,
+    types::relocatable::Relocatable,
+    vm::errors::vm_errors::VirtualMachineError,
+    vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
 use felt::Felt252;
-use std::collections::HashMap;
+use num_integer::Integer;
+use num_traits::identities::Zero;
+use std::{collections::HashMap, ops::Mul};
 
 use crate::dict_manager::DictManagerExecScope;
 
@@ -51,6 +52,7 @@ fn get_double_deref_val(
     Ok(vm.get_integer(get_ptr(vm, cell, offset)?)?.as_ref().clone())
 }
 
+/// Fetches the value of `res_operand` from the vm.
 fn res_operand_get_val(
     vm: &VirtualMachine,
     res_operand: &ResOperand,
@@ -114,6 +116,21 @@ impl Cairo1HintProcessor {
             Felt252::from(0)
         };
 
+        vm.insert_value(
+            cell_ref_to_relocatable(dst, vm),
+            MaybeRelocatable::from(result),
+        )
+        .map_err(HintError::from)
+    }
+
+    fn square_root(
+        &self,
+        vm: &mut VirtualMachine,
+        value: &ResOperand,
+        dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let value = res_operand_get_val(vm, value)?;
+        let result = value.sqrt();
         vm.insert_value(
             cell_ref_to_relocatable(dst, vm),
             MaybeRelocatable::from(result),
@@ -185,6 +202,29 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
+    fn div_mod(
+        &self,
+        vm: &mut VirtualMachine,
+        lhs: &ResOperand,
+        rhs: &ResOperand,
+        quotient: &CellRef,
+        remainder: &CellRef,
+    ) -> Result<(), HintError> {
+        let lhs_value = res_operand_get_val(vm, lhs)?.to_biguint();
+        let rhs_value = res_operand_get_val(vm, rhs)?.to_biguint();
+        let quotient_value = Felt252::new(lhs_value.clone() / rhs_value.clone());
+        let remainder_value = Felt252::new(lhs_value % rhs_value);
+        vm.insert_value(
+            cell_ref_to_relocatable(quotient, vm),
+            MaybeRelocatable::from(quotient_value),
+        )?;
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder, vm),
+            MaybeRelocatable::from(remainder_value),
+        )
+        .map_err(HintError::from)
+    }
+
     fn get_segment_arena_index(
         &self,
         vm: &mut VirtualMachine,
@@ -203,6 +243,68 @@ impl Cairo1HintProcessor {
             Felt252::from(dict_infos_index),
         )
         .map_err(HintError::from)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn uint256_div_mod(
+        &self,
+        vm: &mut VirtualMachine,
+        dividend_low: &ResOperand,
+        dividend_high: &ResOperand,
+        divisor_low: &ResOperand,
+        divisor_high: &ResOperand,
+        quotient0: &CellRef,
+        quotient1: &CellRef,
+        divisor0: &CellRef,
+        divisor1: &CellRef,
+        extra0: &CellRef,
+        extra1: &CellRef,
+        remainder_low: &CellRef,
+        remainder_high: &CellRef,
+    ) -> Result<(), HintError> {
+        let pow_2_128 = Felt252::from(u128::MAX) + 1u32;
+        let pow_2_64 = Felt252::from(u64::MAX) + 1u32;
+        let dividend_low = res_operand_get_val(vm, dividend_low)?;
+        let dividend_high = res_operand_get_val(vm, dividend_high)?;
+        let divisor_low = res_operand_get_val(vm, divisor_low)?;
+        let divisor_high = res_operand_get_val(vm, divisor_high)?;
+        let dividend = dividend_low + dividend_high.mul(pow_2_128.clone());
+        let divisor = divisor_low + divisor_high.clone() * pow_2_128.clone();
+        let quotient = dividend.clone() / divisor.clone();
+        let remainder = dividend % divisor.clone();
+
+        // Guess quotient limbs.
+        let (quotient, limb) = quotient.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(quotient0, vm), limb)?;
+        let (quotient, limb) = quotient.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(quotient1, vm), limb)?;
+        let (quotient, limb) = quotient.div_rem(&pow_2_64);
+        if divisor_high.is_zero() {
+            vm.insert_value(cell_ref_to_relocatable(extra0, vm), limb)?;
+            vm.insert_value(cell_ref_to_relocatable(extra1, vm), quotient)?;
+        }
+
+        // Guess divisor limbs.
+        let (divisor, limb) = divisor.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(divisor0, vm), limb)?;
+        let (divisor, limb) = divisor.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(divisor1, vm), limb)?;
+        let (divisor, limb) = divisor.div_rem(&pow_2_64);
+        if !divisor_high.is_zero() {
+            vm.insert_value(cell_ref_to_relocatable(extra0, vm), limb)?;
+            vm.insert_value(cell_ref_to_relocatable(extra1, vm), divisor)?;
+        }
+
+        // Guess remainder limbs.
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder_low, vm),
+            remainder.clone() % pow_2_128.clone(),
+        )?;
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder_high, vm),
+            remainder / pow_2_128,
+        )?;
+        Ok(())
     }
 
     fn assert_le_if_first_arc_exclueded(
@@ -273,9 +375,44 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             } => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+            Hint::SquareRoot { value, dst } => self.square_root(vm, value, dst),
             Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
+            Hint::DivMod {
+                lhs,
+                rhs,
+                quotient,
+                remainder,
+            } => self.div_mod(vm, lhs, rhs, quotient, remainder),
+            Hint::Uint256DivMod {
+                dividend_low,
+                dividend_high,
+                divisor_low,
+                divisor_high,
+                quotient0,
+                quotient1,
+                divisor0,
+                divisor1,
+                extra0,
+                extra1,
+                remainder_low,
+                remainder_high,
+            } => self.uint256_div_mod(
+                vm,
+                dividend_low,
+                dividend_high,
+                divisor_low,
+                divisor_high,
+                quotient0,
+                quotient1,
+                divisor0,
+                divisor1,
+                extra0,
+                extra1,
+                remainder_low,
+                remainder_high,
+            ),
             Hint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
