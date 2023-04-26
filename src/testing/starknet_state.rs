@@ -70,6 +70,7 @@ impl StarknetState {
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
+        hash_value: Option<Felt252>,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
             contract_class,
@@ -79,6 +80,7 @@ impl StarknetState {
             0,
             Vec::new(),
             0.into(),
+            hash_value,
         )?;
 
         let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
@@ -88,6 +90,8 @@ impl StarknetState {
     }
 
     /// Invokes a contract function. Returns the execution info.
+
+    #[allow(clippy::too_many_arguments)]
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
@@ -96,6 +100,7 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt252>>,
         nonce: Option<Felt252>,
+        hash_value: Option<Felt252>,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         let tx = self.create_invoke_function(
             contract_address,
@@ -104,6 +109,7 @@ impl StarknetState {
             max_fee,
             signature,
             nonce,
+            hash_value,
         )?;
 
         let mut tx = Transaction::InvokeFunction(tx);
@@ -157,6 +163,7 @@ impl StarknetState {
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt252>,
         contract_address_salt: Address,
+        hash_value: Option<Felt252>,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
         let mut tx = Transaction::Deploy(InternalDeploy::new(
@@ -165,6 +172,7 @@ impl StarknetState {
             constructor_calldata,
             chain_id,
             TRANSACTION_VERSION,
+            hash_value,
         )?);
 
         self.state
@@ -235,6 +243,7 @@ impl StarknetState {
         self.general_config.starknet_os_config.chain_id.to_felt()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn create_invoke_function(
         &mut self,
         contract_address: Address,
@@ -243,6 +252,7 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt252>>,
         nonce: Option<Felt252>,
+        hash_value: Option<Felt252>,
     ) -> Result<InternalInvokeFunction, TransactionError> {
         let signature = match signature {
             Some(sign) => sign,
@@ -262,6 +272,7 @@ impl StarknetState {
             signature,
             self.chain_id(),
             Some(nonce),
+            hash_value,
         )
     }
 }
@@ -331,7 +342,7 @@ mod tests {
         let exec = (address, transaction_exec_info);
         assert_eq!(
             starknet_state
-                .deploy(contract_class.clone(), vec![], contract_address_salt)
+                .deploy(contract_class.clone(), vec![], contract_address_salt, None)
                 .unwrap(),
             exec
         );
@@ -423,8 +434,9 @@ mod tests {
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
 
-        let (ret_class_hash, _exec_info) =
-            starknet_state.declare(fib_contract_class.clone()).unwrap();
+        let (ret_class_hash, _exec_info) = starknet_state
+            .declare(fib_contract_class.clone(), None)
+            .unwrap();
 
         //* ---------------------------------------
         //              Expected result
@@ -468,7 +480,7 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class.clone(), vec![], contract_address_salt)
+            .deploy(contract_class.clone(), vec![], contract_address_salt, None)
             .unwrap();
 
         // fibonacci selector
@@ -493,6 +505,7 @@ mod tests {
                 0,
                 Some(Vec::new()),
                 Some(Felt252::zero()),
+                None,
             )
             .unwrap();
 
@@ -540,7 +553,7 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class, vec![], contract_address_salt)
+            .deploy(contract_class, vec![], contract_address_salt, None)
             .unwrap();
 
         // fibonacci selector
@@ -651,7 +664,7 @@ mod tests {
         let mut starknet_state = StarknetState::new(None);
 
         let err = starknet_state
-            .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None)
+            .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None, None)
             .unwrap_err();
         assert_matches!(
             err,

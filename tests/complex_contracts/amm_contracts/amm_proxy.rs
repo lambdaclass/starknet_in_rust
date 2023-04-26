@@ -30,6 +30,7 @@ fn amm_proxy_init_pool_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
     // Deploy proxy
@@ -38,6 +39,7 @@ fn amm_proxy_init_pool_test() {
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -122,6 +124,7 @@ fn amm_proxy_get_pool_token_balance_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
     // Deploy proxy
@@ -130,6 +133,7 @@ fn amm_proxy_get_pool_token_balance_test() {
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -221,6 +225,7 @@ fn amm_proxy_add_demo_token_test() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
     // Deploy proxy
@@ -229,6 +234,7 @@ fn amm_proxy_add_demo_token_test() {
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -326,6 +332,7 @@ fn amm_proxy_get_account_token_balance() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
     // Deploy proxy
@@ -334,6 +341,7 @@ fn amm_proxy_get_account_token_balance() {
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -444,6 +452,7 @@ fn amm_proxy_swap() {
         "starknet_programs/amm.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
     // Deploy proxy
@@ -452,6 +461,7 @@ fn amm_proxy_swap() {
         "starknet_programs/amm_proxy.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
 
