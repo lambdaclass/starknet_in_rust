@@ -1,7 +1,8 @@
+#![allow(dead_code)] //TODO: remove after implementing all hints
+
 use std::collections::HashMap;
 
-use cairo_rs::types::relocatable::Relocatable;
-use cairo_rs::vm::vm_core::VirtualMachine;
+use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt252;
 
 /// Stores the data of a specific dictionary.

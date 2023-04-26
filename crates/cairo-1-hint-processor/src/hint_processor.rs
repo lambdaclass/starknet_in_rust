@@ -161,6 +161,48 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
+    fn assert_le_find_small_arcs(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        range_check_ptr: &ResOperand,
+        a: &ResOperand,
+        b: &ResOperand,
+    ) -> Result<(), HintError> {
+        let a_val = res_operand_get_val(vm, a)?;
+        let b_val = res_operand_get_val(vm, b)?;
+        let mut lengths_and_indices = vec![
+            (a_val.clone(), 0),
+            (b_val.clone() - a_val, 1),
+            (Felt252::from(-1) - b_val, 2),
+        ];
+        lengths_and_indices.sort();
+        exec_scopes.assign_or_update_variable("excluded_arc", Box::new(lengths_and_indices[2].1));
+        // ceil((PRIME / 3) / 2 ** 128).
+        let prime_over_3_high = 3544607988759775765608368578435044694_u128;
+        // ceil((PRIME / 2) / 2 ** 128).
+        let prime_over_2_high = 5316911983139663648412552867652567041_u128;
+        let (range_check_base, range_check_offset) = extract_buffer(range_check_ptr);
+        let range_check_ptr = get_ptr(vm, range_check_base, &range_check_offset)?;
+        vm.insert_value(
+            range_check_ptr,
+            Felt252::from(lengths_and_indices[0].0.to_biguint() % prime_over_3_high),
+        )?;
+        vm.insert_value(
+            (range_check_ptr + 1)?,
+            Felt252::from(lengths_and_indices[0].0.to_biguint() / prime_over_3_high),
+        )?;
+        vm.insert_value(
+            (range_check_ptr + 2)?,
+            Felt252::from(lengths_and_indices[1].0.to_biguint() % prime_over_2_high),
+        )?;
+        vm.insert_value(
+            (range_check_ptr + 3)?,
+            Felt252::from(lengths_and_indices[1].0.to_biguint() / prime_over_2_high),
+        )
+        .map_err(HintError::from)
+    }
+
     fn div_mod(
         &self,
         vm: &mut VirtualMachine,
@@ -180,6 +222,26 @@ impl Cairo1HintProcessor {
         vm.insert_value(
             cell_ref_to_relocatable(remainder, vm),
             MaybeRelocatable::from(remainder_value),
+        )
+        .map_err(HintError::from)
+    }
+
+    fn get_segment_arena_index(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &ExecutionScopes,
+        dict_end_ptr: &ResOperand,
+        dict_index: &CellRef,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_end_ptr);
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let dict_manager_exec_scope = exec_scopes
+            .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
+            .expect("Trying to read from a dict while dict manager was not initialized.");
+        let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
+        vm.insert_value(
+            cell_ref_to_relocatable(dict_index, vm),
+            Felt252::from(dict_infos_index),
         )
         .map_err(HintError::from)
     }
@@ -318,6 +380,23 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn assert_le_is_second_excluded(
+        &self,
+        vm: &mut VirtualMachine,
+        skip_exclude_b_minus_a: &CellRef,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
+        let excluded_arc: i32 = exec_scopes.get("excluded_arc")?;
+        let val = if excluded_arc != 1 {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -337,18 +416,27 @@ impl HintProcessor for Cairo1HintProcessor {
         let hint = hint_data.downcast_ref::<Hint>().unwrap();
         match hint {
             Hint::Core(CoreHint::AllocSegment { dst }) => self.alloc_segment(vm, dst),
+
             Hint::Core(CoreHint::TestLessThan { lhs, rhs, dst }) => {
                 self.test_less_than(vm, lhs, rhs, dst)
             }
+
             Hint::Core(CoreHint::TestLessThanOrEqual { lhs, rhs, dst }) => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
+
+            Hint::Core(CoreHint::GetSegmentArenaIndex {
+                dict_end_ptr,
+                dict_index,
+            }) => self.get_segment_arena_index(vm, exec_scopes, dict_end_ptr, dict_index),
+
             Hint::Core(CoreHint::DivMod {
                 lhs,
                 rhs,
                 quotient,
                 remainder,
             }) => self.div_mod(vm, lhs, rhs, quotient, remainder),
+
             Hint::Core(CoreHint::Uint256DivMod {
                 dividend_low,
                 dividend_high,
@@ -380,6 +468,11 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::Core(CoreHint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             }) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+
+            Hint::Core(CoreHint::AssertLeIsSecondArcExcluded {
+                skip_exclude_b_minus_a,
+            }) => self.assert_le_is_second_excluded(vm, skip_exclude_b_minus_a, exec_scopes),
+
             Hint::Core(CoreHint::LinearSplit {
                 value,
                 scalar,
@@ -387,10 +480,18 @@ impl HintProcessor for Cairo1HintProcessor {
                 x,
                 y,
             }) => self.linear_split(vm, value, scalar, max_x, x, y),
+
             Hint::Core(CoreHint::SquareRoot { value, dst }) => self.square_root(vm, value, dst),
+
             Hint::Core(CoreHint::AllocFelt252Dict { segment_arena_ptr }) => {
                 self.alloc_felt_256_dict(vm, segment_arena_ptr, exec_scopes)
             }
+
+            Hint::Core(CoreHint::AssertLeFindSmallArcs {
+                range_check_ptr,
+                a,
+                b,
+            }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
             _ => todo!(),
         }
     }
