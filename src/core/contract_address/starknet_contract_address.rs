@@ -112,7 +112,15 @@ fn get_contract_class_struct(
         builtin_list: builtin_list
             .iter()
             .map(|builtin| {
-                Felt252::from_bytes_be(builtin.name().to_ascii_lowercase().as_bytes()).into()
+                Felt252::from_bytes_be(
+                    builtin
+                        .name()
+                        .to_ascii_lowercase()
+                        .strip_suffix("_builtin")
+                        .unwrap()
+                        .as_bytes(),
+                )
+                .into()
             })
             .collect::<Vec<MaybeRelocatable>>(),
         hinted_class_hash: compute_hinted_class_hash(contract_class).into(),
