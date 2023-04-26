@@ -32,7 +32,7 @@ assert_matches = "1.5.0"
 rusty-hook = "0.11"
 
 [workspace]
-members = ["crates/starknet-rs-py"]
+members = ["crates/starknet-rs-py", "crates/cairo-1-hint-processor"]
 
 [[bench]]
 path = "bench/internals.rs"

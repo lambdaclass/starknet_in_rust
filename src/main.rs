@@ -79,6 +79,8 @@ struct InvokeArgs {
     function: String,
     #[arg(long, num_args=1.., value_delimiter = ' ')]
     inputs: Option<Vec<i32>>,
+    #[arg(long)]
+    hash: Option<String>,
 }
 
 #[derive(Args, Serialize, Deserialize)]
@@ -160,7 +162,11 @@ fn invoke_parser(
     let class_hash = *cached_state.get_class_hash_at(&contract_address)?;
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
-
+    let transaction_hash = args.hash.clone().map(|f| {
+        Felt252::from_str_radix(&f, 16)
+            .map_err(|_| ParserError::ParseFelt(f.clone()))
+            .unwrap()
+    });
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
@@ -186,6 +192,7 @@ fn invoke_parser(
         vec![],
         Felt252::zero(),
         Some(Felt252::zero()),
+        transaction_hash,
     )?;
     let _tx_info = internal_invoke.apply(cached_state, &StarknetGeneralConfig::default())?;
 
