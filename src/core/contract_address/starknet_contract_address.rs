@@ -173,14 +173,16 @@ impl From<StructContractClass> for CairoArg {
 pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let hash_calculation_program = HASH_CALCULATION_PROGRAM.clone();
-    let api_version_identifier = contract_class
-        .program
-        .get_identifier("__main__.API_VERSION")
-        .ok_or_else(|| {
-            ContractAddressError::MissingIdentifier("__main__.API_VERSION".to_string())
-        })?;
-    let contract_class_struct =
-        &get_contract_class_struct(api_version_identifier, contract_class)?.into();
+
+    let contract_class_struct = &get_contract_class_struct(
+        hash_calculation_program
+            .get_identifier("__main__.API_VERSION")
+            .ok_or(ContractAddressError::MissingIdentifier(
+                "__main__.API_VERSION".to_string(),
+            ))?,
+        contract_class,
+    )?
+    .into();
 
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&hash_calculation_program, "all_cairo", false)?;
