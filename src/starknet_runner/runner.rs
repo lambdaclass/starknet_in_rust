@@ -70,7 +70,7 @@ where
             builtin_instance_counter: execution_resources
                 .builtin_instance_counter
                 .into_iter()
-                .map(|(name, counter)| (format!("{name}_builtin"), counter))
+                .map(|(name, counter)| (name, counter))
                 .collect(),
             ..execution_resources
         })
