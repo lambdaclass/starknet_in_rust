@@ -7,5 +7,6 @@ edition = "2021"
 cairo-rs = { git="https://github.com/lambdaclass/cairo-rs/", rev = "725c17e6b4c50ecf9fbb0113ecf172d858372954", package = "cairo-vm" }
 felt = { git="https://github.com/lambdaclass/cairo-rs/", rev = "725c17e6b4c50ecf9fbb0113ecf172d858372954", package = "cairo-felt" }
 cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo" }
+cairo-lang-utils = "0.1.0"
 num-integer = "0.1.45"
 num-traits = "0.2.15"
