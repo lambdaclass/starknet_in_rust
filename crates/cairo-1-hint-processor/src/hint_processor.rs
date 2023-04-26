@@ -18,8 +18,6 @@ use std::{collections::HashMap, ops::Mul};
 
 use crate::dict_manager::DictManagerExecScope;
 
-use crate::dict_manager::DictManagerExecScope;
-
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
 
