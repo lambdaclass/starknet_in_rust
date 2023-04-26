@@ -160,6 +160,16 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn dict_read(
+        &self,
+        vm: &mut VirtualMachine,
+        dict_ptr: &ResOperand,
+        key: &ResOperand,
+        value_dst: &CellRef,
+    ) -> Result<(), HintError> {
+        todo!()
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -194,6 +204,11 @@ impl HintProcessor for Cairo1HintProcessor {
                 y,
             } => self.linear_split(vm, value, scalar, max_x, x, y),
             _ => todo!(),
+            Hint::Felt252DictRead {
+                dict_ptr,
+                key,
+                value_dst,
+            } => self.dict_read(vm, dict_ptr, key, value_dst),
         }
     }
 }
