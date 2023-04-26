@@ -2,11 +2,11 @@ use super::state_cache::StorageEntry;
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
-        casm_contract_class::CasmContractClass, compiled_class::CompiledClass,
-        deprecated_contract_class::ContractClass,
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
 
 pub trait StateReader {

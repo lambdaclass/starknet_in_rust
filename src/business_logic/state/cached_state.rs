@@ -5,12 +5,12 @@ use super::{
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
-        casm_contract_class::CasmContractClass, compiled_class::CompiledClass,
-        deprecated_contract_class::ContractClass,
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash, CompiledClassHash},
 };
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;

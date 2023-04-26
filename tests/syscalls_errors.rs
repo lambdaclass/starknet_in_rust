@@ -146,7 +146,7 @@ fn call_contract_with_extra_arguments() {
         )]
         .into_iter(),
         [2222.into(), 2.into()],
-        "An ASSERT_EQ instruction failed: 13:1 != 13:2",
+        "An ASSERT_EQ instruction failed: 11:1 != 11:2",
     );
 }
 
