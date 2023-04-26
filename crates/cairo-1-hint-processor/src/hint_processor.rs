@@ -191,34 +191,34 @@ impl Cairo1HintProcessor {
 
         // Guess quotient limbs.
         let (quotient, limb) = quotient.div_rem(&pow_2_64);
-        vm.insert_value(cell_ref_to_relocatable(quotient0, vm), Felt252::from(limb))?;
+        vm.insert_value(cell_ref_to_relocatable(quotient0, vm), limb)?;
         let (quotient, limb) = quotient.div_rem(&pow_2_64);
-        vm.insert_value(cell_ref_to_relocatable(quotient1, vm), Felt252::from(limb))?;
+        vm.insert_value(cell_ref_to_relocatable(quotient1, vm), limb)?;
         let (quotient, limb) = quotient.div_rem(&pow_2_64);
         if divisor_high.is_zero() {
-            vm.insert_value(cell_ref_to_relocatable(extra0, vm), Felt252::from(limb))?;
-            vm.insert_value(cell_ref_to_relocatable(extra1, vm), Felt252::from(quotient))?;
+            vm.insert_value(cell_ref_to_relocatable(extra0, vm), limb)?;
+            vm.insert_value(cell_ref_to_relocatable(extra1, vm), quotient)?;
         }
 
         // Guess divisor limbs.
         let (divisor, limb) = divisor.div_rem(&pow_2_64);
-        vm.insert_value(cell_ref_to_relocatable(divisor0, vm), Felt252::from(limb))?;
+        vm.insert_value(cell_ref_to_relocatable(divisor0, vm), limb)?;
         let (divisor, limb) = divisor.div_rem(&pow_2_64);
-        vm.insert_value(cell_ref_to_relocatable(divisor1, vm), Felt252::from(limb))?;
+        vm.insert_value(cell_ref_to_relocatable(divisor1, vm), limb)?;
         let (divisor, limb) = divisor.div_rem(&pow_2_64);
         if !divisor_high.is_zero() {
-            vm.insert_value(cell_ref_to_relocatable(extra0, vm), Felt252::from(limb))?;
-            vm.insert_value(cell_ref_to_relocatable(extra1, vm), Felt252::from(divisor))?;
+            vm.insert_value(cell_ref_to_relocatable(extra0, vm), limb)?;
+            vm.insert_value(cell_ref_to_relocatable(extra1, vm), divisor)?;
         }
 
         // Guess remainder limbs.
         vm.insert_value(
             cell_ref_to_relocatable(remainder_low, vm),
-            Felt252::from(remainder.clone() % pow_2_128.clone()),
+            remainder.clone() % pow_2_128.clone(),
         )?;
         vm.insert_value(
             cell_ref_to_relocatable(remainder_high, vm),
-            Felt252::from(remainder / pow_2_128),
+            remainder / pow_2_128,
         )?;
         Ok(())
     }
