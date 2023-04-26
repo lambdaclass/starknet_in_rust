@@ -1,7 +1,8 @@
 use cairo_lang_casm::{
     hints::Hint,
-    operand::{CellRef, DerefOrImmediate, Operation, Register, ResOperand},
+    operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
+use cairo_lang_utils::extract_matches;
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
@@ -13,6 +14,8 @@ use cairo_rs::{
 };
 use felt::Felt252;
 use std::collections::HashMap;
+
+use crate::dict_manager::DictManagerExecScope;
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -70,6 +73,25 @@ fn res_operand_get_val(
     }
 }
 
+fn extract_buffer(buffer: &ResOperand) -> (&CellRef, Felt252) {
+    let (cell, base_offset) = match buffer {
+        ResOperand::Deref(cell) => (cell, 0.into()),
+        ResOperand::BinOp(BinOpOperand {
+            op: Operation::Add,
+            a,
+            b,
+        }) => (
+            a,
+            extract_matches!(b, DerefOrImmediate::Immediate)
+                .clone()
+                .value
+                .into(),
+        ),
+        _ => panic!("Illegal argument for a buffer."),
+    };
+    (cell, base_offset)
+}
+
 impl Cairo1HintProcessor {
     fn alloc_segment(&mut self, vm: &mut VirtualMachine, dst: &CellRef) -> Result<(), HintError> {
         let segment = vm.add_memory_segment();
@@ -117,6 +139,68 @@ impl Cairo1HintProcessor {
         vm.insert_value(
             cell_ref_to_relocatable(dst, vm),
             MaybeRelocatable::from(result),
+        )
+        .map_err(HintError::from)
+    }
+
+    fn assert_le_find_small_arcs(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        range_check_ptr: &ResOperand,
+        a: &ResOperand,
+        b: &ResOperand,
+    ) -> Result<(), HintError> {
+        let a_val = res_operand_get_val(vm, a)?;
+        let b_val = res_operand_get_val(vm, b)?;
+        let mut lengths_and_indices = vec![
+            (a_val.clone(), 0),
+            (b_val.clone() - a_val, 1),
+            (Felt252::from(-1) - b_val, 2),
+        ];
+        lengths_and_indices.sort();
+        exec_scopes.assign_or_update_variable("excluded_arc", Box::new(lengths_and_indices[2].1));
+        // ceil((PRIME / 3) / 2 ** 128).
+        let prime_over_3_high = 3544607988759775765608368578435044694_u128;
+        // ceil((PRIME / 2) / 2 ** 128).
+        let prime_over_2_high = 5316911983139663648412552867652567041_u128;
+        let (range_check_base, range_check_offset) = extract_buffer(range_check_ptr);
+        let range_check_ptr = get_ptr(vm, range_check_base, &range_check_offset)?;
+        vm.insert_value(
+            range_check_ptr,
+            Felt252::from(lengths_and_indices[0].0.to_biguint() % prime_over_3_high),
+        )?;
+        vm.insert_value(
+            (range_check_ptr + 1)?,
+            Felt252::from(lengths_and_indices[0].0.to_biguint() / prime_over_3_high),
+        )?;
+        vm.insert_value(
+            (range_check_ptr + 2)?,
+            Felt252::from(lengths_and_indices[1].0.to_biguint() % prime_over_2_high),
+        )?;
+        vm.insert_value(
+            (range_check_ptr + 3)?,
+            Felt252::from(lengths_and_indices[1].0.to_biguint() / prime_over_2_high),
+        )
+        .map_err(HintError::from)
+    }
+
+    fn get_segment_arena_index(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &ExecutionScopes,
+        dict_end_ptr: &ResOperand,
+        dict_index: &CellRef,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_end_ptr);
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let dict_manager_exec_scope = exec_scopes
+            .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
+            .expect("Trying to read from a dict while dict manager was not initialized.");
+        let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
+        vm.insert_value(
+            cell_ref_to_relocatable(dict_index, vm),
+            Felt252::from(dict_infos_index),
         )
         .map_err(HintError::from)
     }
@@ -188,8 +272,17 @@ impl HintProcessor for Cairo1HintProcessor {
     ) -> Result<(), HintError> {
         let hint = hint_data.downcast_ref::<Hint>().unwrap();
         match hint {
+            Hint::GetSegmentArenaIndex {
+                dict_end_ptr,
+                dict_index,
+            } => self.get_segment_arena_index(vm, exec_scopes, dict_end_ptr, dict_index),
             Hint::AllocSegment { dst } => self.alloc_segment(vm, dst),
             Hint::TestLessThan { lhs, rhs, dst } => self.test_less_than(vm, lhs, rhs, dst),
+            Hint::AssertLeFindSmallArcs {
+                range_check_ptr,
+                a,
+                b,
+            } => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
             Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
