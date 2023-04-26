@@ -262,6 +262,23 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn assert_le_is_second_excluded(
+        &self,
+        vm: &mut VirtualMachine,
+        skip_exclude_b_minus_a: &CellRef,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
+        let excluded_arc: i32 = exec_scopes.get("excluded_arc")?;
+        let val = if excluded_arc != 1 {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -323,6 +340,9 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+            Hint::AssertLeIsSecondArcExcluded {
+                skip_exclude_b_minus_a,
+            } => self.assert_le_is_second_excluded(vm, skip_exclude_b_minus_a, exec_scopes),
             Hint::LinearSplit {
                 value,
                 scalar,
