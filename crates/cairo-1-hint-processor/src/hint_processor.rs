@@ -15,7 +15,7 @@ use cairo_rs::{
 use felt::Felt252;
 use std::collections::HashMap;
 
-use crate::dict_manager::DictManagerExecScope;
+use crate::dict_manager::{DictManagerExecScope, DictSquashExecScope};
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -265,6 +265,23 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn get_next_dict_key(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        next_key: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        dict_squash_exec_scope.pop_current_key();
+        if let Some(current_key) = dict_squash_exec_scope.current_key() {
+            return vm
+                .insert_value(cell_ref_to_relocatable(next_key, vm), current_key)
+                .map_err(HintError::from);
+        }
+        Err(HintError::KeyNotFound)
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -289,6 +306,7 @@ impl HintProcessor for Cairo1HintProcessor {
             } => self.get_segment_arena_index(vm, exec_scopes, dict_end_ptr, dict_index),
             Hint::AllocSegment { dst } => self.alloc_segment(vm, dst),
             Hint::TestLessThan { lhs, rhs, dst } => self.test_less_than(vm, lhs, rhs, dst),
+            Hint::GetNextDictKey { next_key } => self.get_next_dict_key(vm, exec_scopes, next_key),
             Hint::AssertLeFindSmallArcs {
                 range_check_ptr,
                 a,
