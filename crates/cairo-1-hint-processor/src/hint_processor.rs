@@ -1,3 +1,4 @@
+use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
     hints::Hint,
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
