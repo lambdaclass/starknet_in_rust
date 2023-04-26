@@ -185,6 +185,27 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
+    fn dict_read(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dict_ptr: &ResOperand,
+        key: &ResOperand,
+        value_dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr);
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let key = res_operand_get_val(vm, key)?;
+        let dict_manager_exec_scope = exec_scopes
+            .get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")
+            .expect("Trying to read from a dict while dict manager was not initialized.");
+        let value = dict_manager_exec_scope
+            .get_from_tracker(dict_address, &key)
+            .unwrap_or_else(|| DictManagerExecScope::DICT_DEFAULT_VALUE.into());
+        vm.insert_value(cell_ref_to_relocatable(value_dst, vm), value)
+            .map_err(HintError::from)
+    }
+
     fn get_segment_arena_index(
         &self,
         vm: &mut VirtualMachine,
@@ -244,16 +265,6 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
-
-    fn dict_read(
-        &self,
-        vm: &mut VirtualMachine,
-        dict_ptr: &ResOperand,
-        key: &ResOperand,
-        value_dst: &CellRef,
-    ) -> Result<(), HintError> {
-        todo!()
-    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -286,6 +297,11 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
+            Hint::Felt252DictRead {
+                dict_ptr,
+                key,
+                value_dst,
+            } => self.dict_read(vm, exec_scopes, dict_ptr, key, value_dst),
             Hint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
@@ -297,11 +313,6 @@ impl HintProcessor for Cairo1HintProcessor {
                 y,
             } => self.linear_split(vm, value, scalar, max_x, x, y),
             _ => todo!(),
-            Hint::Felt252DictRead {
-                dict_ptr,
-                key,
-                value_dst,
-            } => self.dict_read(vm, dict_ptr, key, value_dst),
         }
     }
 }
