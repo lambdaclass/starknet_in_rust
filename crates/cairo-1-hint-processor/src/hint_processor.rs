@@ -1,7 +1,8 @@
 use cairo_lang_casm::{
     hints::Hint,
-    operand::{CellRef, DerefOrImmediate, Operation, Register, ResOperand},
+    operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
+use cairo_lang_utils::extract_matches;
 use cairo_rs::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
@@ -12,10 +13,31 @@ use cairo_rs::{
     },
 };
 use felt::Felt252;
+use num_traits::cast::ToPrimitive;
 use std::collections::HashMap;
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
+
+/// Extracts a parameter assumed to be a buffer.
+fn extract_buffer(buffer: &ResOperand) -> (&CellRef, Felt252) {
+    let (cell, base_offset) = match buffer {
+        ResOperand::Deref(cell) => (cell, 0.into()),
+        ResOperand::BinOp(BinOpOperand {
+            op: Operation::Add,
+            a,
+            b,
+        }) => (
+            a,
+            extract_matches!(b, DerefOrImmediate::Immediate)
+                .clone()
+                .value
+                .into(),
+        ),
+        _ => panic!("Illegal argument for a buffer."),
+    };
+    (cell, base_offset)
+}
 
 fn cell_ref_to_relocatable(cell_ref: &CellRef, vm: &VirtualMachine) -> Relocatable {
     let base = match cell_ref.register {
@@ -160,6 +182,39 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn alloc_felt_256_dict(
+        &self,
+        vm: &mut VirtualMachine,
+        segment_arena_ptr: &ResOperand,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
+        let (cell, base_offset) = extract_buffer(segment_arena_ptr);
+        let dict_manager_address = get_ptr(vm, cell, &base_offset)?;
+
+        let n_dicts = vm
+            .get_integer((dict_manager_address - 2)?)?
+            .into_owned()
+            .to_usize()
+            .expect("Number of dictionaries too large.");
+        let dict_infos_base = vm.get_relocatable((dict_manager_address - 3)?)?;
+
+        let dict_manager_exec_scope =
+            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
+                Ok(dict_manager_exec_scope) => dict_manager_exec_scope,
+                Err(_) => {
+                    exec_scopes.assign_or_update_variable(
+                        "dict_manager_exec_scope",
+                        Box::<DictManagerExecScope>::default(),
+                    );
+                    exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?
+                }
+            };
+        let new_dict_segment = dict_manager_exec_scope.new_default_dict(vm);
+        vm.insert_value((dict_infos_base + 3 * n_dicts)?, new_dict_segment)?;
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -193,6 +248,9 @@ impl HintProcessor for Cairo1HintProcessor {
                 x,
                 y,
             } => self.linear_split(vm, value, scalar, max_x, x, y),
+            Hint::AllocFelt252Dict { segment_arena_ptr } => {
+                self.alloc_felt_256_dict(vm, segment_arena_ptr, exec_scopes)
+            }
             _ => todo!(),
         }
     }
