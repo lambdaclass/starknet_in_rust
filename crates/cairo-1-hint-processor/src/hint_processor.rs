@@ -384,6 +384,32 @@ impl Cairo1HintProcessor {
         vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
         Ok(())
     }
+
+    fn dict_write(
+        &self,
+        exec_scopes: &mut ExecutionScopes,
+        vm: &mut VirtualMachine,
+        dict_ptr: &ResOperand,
+        key: &ResOperand,
+        value: &ResOperand,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr);
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let key = res_operand_get_val(vm, key)?;
+        let value = res_operand_get_val(vm, value)?;
+        let dict_manager_exec_scope = exec_scopes
+            .get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")
+            .expect("Trying to write to a dict while dict manager was not initialized.");
+
+        let prev_value = dict_manager_exec_scope
+            .get_from_tracker(dict_address, &key)
+            .unwrap_or_else(|| DictManagerExecScope::DICT_DEFAULT_VALUE.into());
+
+        vm.insert_value((dict_address + 1)?, prev_value)?;
+        dict_manager_exec_scope.insert_to_tracker(dict_address, key, value);
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -456,6 +482,11 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder_low,
                 remainder_high,
             ),
+            Hint::Felt252DictWrite {
+                dict_ptr,
+                key,
+                value,
+            } => self.dict_write(exec_scopes, vm, dict_ptr, key, value),
             Hint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
