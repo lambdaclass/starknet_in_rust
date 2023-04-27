@@ -448,6 +448,23 @@ impl Cairo1HintProcessor {
         vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
         Ok(())
     }
+
+    fn assert_current_access_indices_is_empty(
+        &self,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        let current_access_indices = match dict_squash_exec_scope.current_access_indices() {
+            Some(current_access_indices) => current_access_indices,
+            None => return Ok(()),
+        };
+
+        if !current_access_indices.is_empty() {
+            return Err(HintError::CurrentAccessIndicesNotEmpty);
+        }
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -553,6 +570,10 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+
+            Hint::Core(CoreHint::AssertCurrentAccessIndicesIsEmpty) => {
+                self.assert_current_access_indices_is_empty(exec_scopes)
+            }
             _ => todo!(),
         }
     }
