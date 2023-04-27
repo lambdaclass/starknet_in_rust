@@ -770,9 +770,8 @@ fn expected_transaction_execution_info() -> TransactionExecutionInfo {
         0,
         HashMap::from([
             ("pedersen_builtin".to_string(), 16),
-            ("range_check".to_string(), 2),
             ("l1_gas_usage".to_string(), 0),
-            ("range_check_builtin".to_string(), 70),
+            ("range_check_builtin".to_string(), 72),
         ]),
         Some(TransactionType::InvokeFunction),
     )
