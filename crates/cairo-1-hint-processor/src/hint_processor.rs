@@ -219,15 +219,7 @@ impl Cairo1HintProcessor {
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let key = res_operand_get_val(vm, key)?;
         let dict_manager_exec_scope =
-            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
-                Ok(exec_scope) => exec_scope,
-                _ => {
-                    return Err(HintError::CustomHint(
-                        "Trying to read from a dict while dict manager was not initialized."
-                            .to_string(),
-                    ))
-                }
-            };
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
 
         let value = dict_manager_exec_scope
             .get_from_tracker(dict_address, &key)
@@ -270,15 +262,7 @@ impl Cairo1HintProcessor {
         let (dict_base, dict_offset) = extract_buffer(dict_end_ptr)?;
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let dict_manager_exec_scope =
-            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
-                Ok(exec_scope) => exec_scope,
-                _ => {
-                    return Err(HintError::CustomHint(
-                        "Trying to read from a dict while dict manager was not initialized."
-                            .to_string(),
-                    ))
-                }
-            };
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
 
         let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
         vm.insert_value(
@@ -453,15 +437,7 @@ impl Cairo1HintProcessor {
         let key = res_operand_get_val(vm, key)?;
         let value = res_operand_get_val(vm, value)?;
         let dict_manager_exec_scope =
-            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
-                Ok(exec_scope) => exec_scope,
-                _ => {
-                    return Err(HintError::CustomHint(
-                        "Trying to read from a dict while dict manager was not initialized."
-                            .to_string(),
-                    ))
-                }
-            };
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
 
         let prev_value = dict_manager_exec_scope
             .get_from_tracker(dict_address, &key)
