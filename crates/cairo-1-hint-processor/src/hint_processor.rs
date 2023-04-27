@@ -453,10 +453,9 @@ impl Cairo1HintProcessor {
     ) -> Result<(), HintError> {
         let dict_squash_exec_scope: &mut DictSquashExecScope =
             exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
-        let current_access_indices = match dict_squash_exec_scope.current_access_indices() {
-            Some(current_access_indices) => current_access_indices,
-            None => return Err(HintError::EmptyCurrentAccessIndices),
-        };
+        let current_access_indices = dict_squash_exec_scope
+            .current_access_indices()
+            .ok_or(HintError::EmptyCurrentAccessIndices)?;
 
         let should_continue = if current_access_indices.len() > 1 {
             Felt252::from(1)
