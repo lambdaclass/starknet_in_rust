@@ -183,9 +183,9 @@ pub fn compute_deprecated_class_hash(
     let hash_calculation_program = load_program()?;
     let contract_class_struct = &get_contract_class_struct(
         hash_calculation_program
-            .get_identifier("__main__.API_VERSION")
+            .get_identifier("__main__.DEPRECATED_COMPILED_CLASS_VERSION")
             .ok_or(ContractAddressError::MissingIdentifier(
-                "__main__.API_VERSION".to_string(),
+                "__main__.DEPRECATED_COMPILED_CLASS_VERSION".to_string(),
             ))?,
         contract_class,
     )?
