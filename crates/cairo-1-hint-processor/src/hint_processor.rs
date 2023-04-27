@@ -469,6 +469,50 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn uint256_square_root(
+        &self,
+        vm: &mut VirtualMachine,
+        value_low: &ResOperand,
+        value_high: &ResOperand,
+        sqrt0: &CellRef,
+        sqrt1: &CellRef,
+        remainder_low: &CellRef,
+        remainder_high: &CellRef,
+        sqrt_mul_2_minus_remainder_ge_u128: &CellRef,
+    ) -> Result<(), HintError> {
+        let pow_2_128 = Felt252::from(u128::MAX) + 1u32;
+        let pow_2_64 = Felt252::from(u64::MAX) + 1u32;
+        let value_low = res_operand_get_val(vm, value_low)?;
+        let value_high = res_operand_get_val(vm, value_high)?;
+        let value = value_low + value_high * pow_2_128.clone();
+        let sqrt = value.sqrt();
+        let remainder = value - sqrt.clone() * sqrt.clone();
+        let sqrt_mul_2_minus_remainder_ge_u128_val =
+            sqrt.clone() * Felt252::from(2u32) - remainder.clone() >= pow_2_128;
+
+        let (sqrt1_val, sqrt0_val) = sqrt.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(sqrt0, vm), sqrt0_val)?;
+        vm.insert_value(cell_ref_to_relocatable(sqrt1, vm), sqrt1_val)?;
+
+        let (remainder_high_val, remainder_low_val) = remainder.div_rem(&pow_2_128);
+
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder_low, vm),
+            remainder_low_val,
+        )?;
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder_high, vm),
+            remainder_high_val,
+        )?;
+        vm.insert_value(
+            cell_ref_to_relocatable(sqrt_mul_2_minus_remainder_ge_u128, vm),
+            usize::from(sqrt_mul_2_minus_remainder_ge_u128_val),
+        )?;
+
+        Ok(())
+    }
+
     fn debug_print(
         &self,
         vm: &mut VirtualMachine,
@@ -529,6 +573,25 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder,
             }) => self.div_mod(vm, lhs, rhs, quotient, remainder),
             Hint::Core(CoreHint::DebugPrint { start, end }) => self.debug_print(vm, start, end),
+
+            Hint::Core(CoreHint::Uint256SquareRoot {
+                value_low,
+                value_high,
+                sqrt0,
+                sqrt1,
+                remainder_low,
+                remainder_high,
+                sqrt_mul_2_minus_remainder_ge_u128,
+            }) => self.uint256_square_root(
+                vm,
+                value_low,
+                value_high,
+                sqrt0,
+                sqrt1,
+                remainder_low,
+                remainder_high,
+                sqrt_mul_2_minus_remainder_ge_u128,
+            ),
 
             Hint::Core(CoreHint::GetNextDictKey { next_key }) => {
                 self.get_next_dict_key(vm, exec_scopes, next_key)
