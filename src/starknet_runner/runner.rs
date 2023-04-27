@@ -5,7 +5,8 @@ use crate::{
         DeprecatedSyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
         runners::{
@@ -15,7 +16,6 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt252;
 use num_traits::ToPrimitive;
 use std::{borrow::Cow, collections::HashMap};
 
@@ -234,7 +234,7 @@ mod test {
         },
         core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
     };
-    use cairo_rs::{
+    use cairo_vm::{
         types::relocatable::{MaybeRelocatable, Relocatable},
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
@@ -246,7 +246,7 @@ mod test {
 
     #[test]
     fn prepare_os_context_test() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
@@ -266,7 +266,7 @@ mod test {
 
     #[test]
     fn run_from_entrypoint_should_fail_with_no_exec_base() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
@@ -280,7 +280,7 @@ mod test {
 
     #[test]
     fn get_os_segment_ptr_range_should_fail_when_ptr_offset_is_not_zero() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
@@ -297,7 +297,7 @@ mod test {
 
     #[test]
     fn validate_segment_pointers_should_fail_when_offset_is_not_zero() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
@@ -317,7 +317,7 @@ mod test {
 
     #[test]
     fn validate_segment_pointers_should_fail_when_base_is_not_a_value() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
@@ -337,7 +337,7 @@ mod test {
 
     #[test]
     fn validate_segment_pointers_should_fail_with_invalid_segment_size() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let vm = VirtualMachine::new(true);
 
@@ -355,7 +355,7 @@ mod test {
 
     #[test]
     fn validate_segment_pointers_should_fail_when_stop_is_not_a_value() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         vm.add_memory_segment();
@@ -376,7 +376,7 @@ mod test {
 
     #[test]
     fn validate_segment_pointers_should_fail_with_invalid_stop_pointer() {
-        let program = cairo_rs::types::program::Program::default();
+        let program = cairo_vm::types::program::Program::default();
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
         vm.add_memory_segment();

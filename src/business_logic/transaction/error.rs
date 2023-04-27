@@ -9,7 +9,7 @@ use crate::{
     starkware_utils::starkware_errors::StarkwareError,
     utils::ClassHash,
 };
-use cairo_rs::{
+use cairo_vm::{
     types::{errors::math_errors::MathError, relocatable::Relocatable},
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,

@@ -5,7 +5,7 @@ use crate::{
         transaction_execution_info::PyTransactionExecutionInfo,
     },
 };
-use cairo_felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyValueError, prelude::*};
 use starknet_rs::{
