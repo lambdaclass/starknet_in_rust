@@ -41,6 +41,7 @@ fn erc721_constructor_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -87,6 +88,7 @@ fn erc721_balance_of_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -170,6 +172,7 @@ fn erc721_test_owner_of() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -245,6 +248,7 @@ fn erc721_test_get_approved() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -337,6 +341,7 @@ fn erc721_test_is_approved_for_all() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -432,6 +437,7 @@ fn erc721_test_approve() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -529,6 +535,7 @@ fn erc721_set_approval_for_all() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -620,6 +627,7 @@ fn erc721_transfer_from_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -752,6 +760,7 @@ fn erc721_transfer_from_and_get_owner_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -836,6 +845,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -844,6 +854,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
         "starknet_programs/ERC165.json",
         &[],
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -902,6 +913,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -953,6 +965,7 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
             "starknet_programs/ERC721.json",
             &calldata,
             &general_config,
+            None
         )
         .unwrap_err(),
         TransactionError::CairoRunner(..)
@@ -978,6 +991,7 @@ fn erc721_transfer_fail_to_zero_address() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 
@@ -1032,6 +1046,7 @@ fn erc721_transfer_fail_not_owner() {
         "starknet_programs/ERC721.json",
         &calldata,
         &general_config,
+        None,
     )
     .unwrap();
 

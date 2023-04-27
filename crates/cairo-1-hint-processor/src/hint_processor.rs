@@ -144,6 +144,28 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
+    fn test_less_than_or_equal(
+        &self,
+        vm: &mut VirtualMachine,
+        lhs: &ResOperand,
+        rhs: &ResOperand,
+        dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let lhs_value = res_operand_get_val(vm, lhs)?;
+        let rhs_value = res_operand_get_val(vm, rhs)?;
+        let result = if lhs_value <= rhs_value {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(
+            cell_ref_to_relocatable(dst, vm),
+            MaybeRelocatable::from(result),
+        )
+        .map_err(HintError::from)
+    }
+
     fn div_mod(
         &self,
         vm: &mut VirtualMachine,
@@ -229,6 +251,46 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn assert_le_if_first_arc_exclueded(
+        &self,
+        vm: &mut VirtualMachine,
+        skip_exclude_a_flag: &CellRef,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
+        let excluded_arc: i32 = exec_scopes.get("excluded_arc")?;
+        let val = if excluded_arc != 0 {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(skip_exclude_a_flag, vm), val)?;
+        Ok(())
+    }
+
+    fn linear_split(
+        &self,
+        vm: &mut VirtualMachine,
+        value: &ResOperand,
+        scalar: &ResOperand,
+        max_x: &ResOperand,
+        x: &CellRef,
+        y: &CellRef,
+    ) -> Result<(), HintError> {
+        let value = res_operand_get_val(vm, value)?;
+        let scalar = res_operand_get_val(vm, scalar)?;
+        let max_x = res_operand_get_val(vm, max_x)?;
+        let x_value = (value.clone() / scalar.clone()).min(max_x);
+        let y_value = value - x_value.clone() * scalar;
+
+        vm.insert_value(cell_ref_to_relocatable(x, vm), x_value)
+            .map_err(HintError::from)?;
+        vm.insert_value(cell_ref_to_relocatable(y, vm), y_value)
+            .map_err(HintError::from)?;
+
+        Ok(())
+    }
+
     fn alloc_constant_size(
         &self,
         vm: &mut VirtualMachine,
@@ -288,6 +350,9 @@ impl HintProcessor for Cairo1HintProcessor {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
             Hint::SquareRoot { value, dst } => self.square_root(vm, value, dst),
+            Hint::TestLessThanOrEqual { lhs, rhs, dst } => {
+                self.test_less_than_or_equal(vm, lhs, rhs, dst)
+            }
             Hint::DivMod {
                 lhs,
                 rhs,
@@ -322,6 +387,16 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder_low,
                 remainder_high,
             ),
+            Hint::AssertLeIsFirstArcExcluded {
+                skip_exclude_a_flag,
+            } => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+            Hint::LinearSplit {
+                value,
+                scalar,
+                max_x,
+                x,
+                y,
+            } => self.linear_split(vm, value, scalar, max_x, x, y),
             _ => todo!(),
         }
     }
