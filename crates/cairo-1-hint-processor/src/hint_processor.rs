@@ -18,7 +18,7 @@ use felt::Felt252;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
-use std::{cell::Cell, collections::HashMap, ops::Mul};
+use std::{collections::HashMap, ops::Mul};
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -445,12 +445,13 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn init_squash_data(
         &self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         dict_accesses: &ResOperand,
-        ptr_diff: &ResOperand,
+        _ptr_diff: &ResOperand,
         n_accesses: &ResOperand,
         big_keys: &CellRef,
         first_key: &CellRef,
@@ -467,9 +468,12 @@ impl Cairo1HintProcessor {
 
         let (dict_accesses_base, dict_accesses_offset) = extract_buffer(dict_accesses)?;
         let dict_accesses_address = get_ptr(vm, dict_accesses_base, &dict_accesses_offset)?;
-        let n_accesses = res_operand_get_val(vm, n_accesses)?
-            .to_usize()
-            .expect("Number of accesses is too large or negative.");
+        let n_accesses =
+            res_operand_get_val(vm, n_accesses)?
+                .to_usize()
+                .ok_or(HintError::CustomHint(
+                    "Number of accesses is too large or negative.".to_string(),
+                ))?;
 
         for i in 0..n_accesses {
             let current_key = vm.get_integer((dict_accesses_address + i * dict_access_size)?)?;
