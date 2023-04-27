@@ -469,6 +469,7 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn uint256_square_root(
         &self,
         vm: &mut VirtualMachine,
@@ -491,22 +492,22 @@ impl Cairo1HintProcessor {
             sqrt.clone() * Felt252::from(2u32) - remainder.clone() >= pow_2_128;
 
         let (sqrt1_val, sqrt0_val) = sqrt.div_rem(&pow_2_64);
-        vm.insert_value(cell_ref_to_relocatable(sqrt0, vm), Felt252::from(sqrt0_val))?;
-        vm.insert_value(cell_ref_to_relocatable(sqrt1, vm), Felt252::from(sqrt1_val))?;
+        vm.insert_value(cell_ref_to_relocatable(sqrt0, vm), sqrt0_val)?;
+        vm.insert_value(cell_ref_to_relocatable(sqrt1, vm), sqrt1_val)?;
 
         let (remainder_high_val, remainder_low_val) = remainder.div_rem(&pow_2_128);
 
         vm.insert_value(
             cell_ref_to_relocatable(remainder_low, vm),
-            Felt252::from(remainder_low_val),
+            remainder_low_val,
         )?;
         vm.insert_value(
             cell_ref_to_relocatable(remainder_high, vm),
-            Felt252::from(remainder_high_val),
+            remainder_high_val,
         )?;
         vm.insert_value(
             cell_ref_to_relocatable(sqrt_mul_2_minus_remainder_ge_u128, vm),
-            Felt252::from(usize::from(sqrt_mul_2_minus_remainder_ge_u128_val)),
+            usize::from(sqrt_mul_2_minus_remainder_ge_u128_val),
         )?;
 
         Ok(())
