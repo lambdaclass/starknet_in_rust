@@ -1,5 +1,3 @@
-use crate::dict_manager::DictSquashExecScope;
-
 use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
@@ -293,7 +291,12 @@ impl Cairo1HintProcessor {
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let dict_manager_exec_scope = exec_scopes
             .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
-            .expect("Trying to read from a dict while dict manager was not initialized.");
+            .map_err(|_| {
+                HintError::CustomHint(
+                    "Trying to read from a dict while dict manager was not initialized."
+                        .to_string(),
+                )
+            })?;
         let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
         vm.insert_value(
             cell_ref_to_relocatable(dict_index, vm),
@@ -544,7 +547,9 @@ impl Cairo1HintProcessor {
     ) -> Result<(), HintError> {
         let dict_squash_exec_scope: &mut DictSquashExecScope =
             exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
-        let prev_access_index = dict_squash_exec_scope.pop_current_access_index().unwrap();
+        let prev_access_index = dict_squash_exec_scope
+            .pop_current_access_index()
+            .ok_or(HintError::CustomHint("no accessed index".to_string()))?;
         let index_delta_minus_1_val = dict_squash_exec_scope
             .current_access_index()
             .ok_or(HintError::CustomHint("no index accessed".to_string()))?
