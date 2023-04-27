@@ -1,3 +1,5 @@
+use crate::dict_manager::DictSquashExecScope;
+
 use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
@@ -442,6 +444,30 @@ impl Cairo1HintProcessor {
         println!();
         Ok(())
     }
+
+    fn get_current_access_delta(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        index_delta_minus1: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        let prev_access_index = dict_squash_exec_scope.pop_current_access_index().unwrap();
+        let index_delta_minus_1_val = dict_squash_exec_scope
+            .current_access_index()
+            .unwrap()
+            .clone()
+            - prev_access_index
+            - 1_u32;
+
+        vm.insert_value(
+            cell_ref_to_relocatable(index_delta_minus1, vm),
+            index_delta_minus_1_val,
+        )?;
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -538,6 +564,11 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+
+            Hint::Core(CoreHint::GetCurrentAccessDelta { index_delta_minus1 }) => {
+                self.get_current_access_delta(vm, exec_scopes, index_delta_minus1)
+            }
+
             _ => todo!(),
         }
     }
