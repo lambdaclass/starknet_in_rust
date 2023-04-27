@@ -215,7 +215,7 @@ impl Cairo1HintProcessor {
         key: &ResOperand,
         value_dst: &CellRef,
     ) -> Result<(), HintError> {
-        let (dict_base, dict_offset) = extract_buffer(dict_ptr);
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr)?;
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let key = res_operand_get_val(vm, key)?;
         let dict_manager_exec_scope = exec_scopes
@@ -531,8 +531,6 @@ impl HintProcessor for Cairo1HintProcessor {
                 x,
                 y,
             }) => self.linear_split(vm, value, scalar, max_x, x, y),
-
-            Hint::Core(CoreHint::SquareRoot { value, dst }) => self.square_root(vm, value, dst),
 
             Hint::Core(CoreHint::AllocFelt252Dict { segment_arena_ptr }) => {
                 self.alloc_felt_256_dict(vm, segment_arena_ptr, exec_scopes)
