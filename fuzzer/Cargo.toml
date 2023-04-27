@@ -14,4 +14,4 @@ starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "
 ] }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 tempfile = "3.2.0"
-cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", rev = "593d9a739fe3f1734c4d19d1dd037a5e3a734a57" }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
