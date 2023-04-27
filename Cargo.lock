@@ -595,7 +595,6 @@ dependencies = [
 name = "cairo-1-hint-processor"
 version = "0.1.0"
 dependencies = [
- "cairo-felt 0.3.0-rc1 (git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954)",
  "cairo-lang-casm",
  "cairo-lang-utils 0.1.0",
  "cairo-vm",
@@ -620,7 +619,7 @@ dependencies = [
 [[package]]
 name = "cairo-felt"
 version = "0.3.0-rc1"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954#725c17e6b4c50ecf9fbb0113ecf172d858372954"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=327ee7d6778bdab9573573e6af008fcc6041f9ad#327ee7d6778bdab9573573e6af008fcc6041f9ad"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1022,7 +1021,7 @@ dependencies = [
 [[package]]
 name = "cairo-take_until_unbalanced"
 version = "0.24.2-rc1"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954#725c17e6b4c50ecf9fbb0113ecf172d858372954"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=327ee7d6778bdab9573573e6af008fcc6041f9ad#327ee7d6778bdab9573573e6af008fcc6041f9ad"
 dependencies = [
  "nom",
 ]
@@ -1030,12 +1029,12 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.3.0-rc1"
-source = "git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954#725c17e6b4c50ecf9fbb0113ecf172d858372954"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=327ee7d6778bdab9573573e6af008fcc6041f9ad#327ee7d6778bdab9573573e6af008fcc6041f9ad"
 dependencies = [
  "anyhow",
  "bincode",
  "bitvec",
- "cairo-felt 0.3.0-rc1 (git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954)",
+ "cairo-felt 0.3.0-rc1 (git+https://github.com/lambdaclass/cairo-rs?rev=327ee7d6778bdab9573573e6af008fcc6041f9ad)",
  "cairo-take_until_unbalanced",
  "generic-array",
  "hashbrown 0.13.2",
@@ -1046,7 +1045,9 @@ dependencies = [
  "nom",
  "num-bigint",
  "num-integer",
+ "num-prime",
  "num-traits 0.2.15",
+ "rand",
  "rand_core",
  "serde",
  "serde_bytes",
@@ -1756,6 +1757,9 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+dependencies = [
+ "ahash 0.7.6",
+]
 
 [[package]]
 name = "hashbrown"
@@ -2178,6 +2182,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lru"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e999beba7b6e8345721bd280141ed958096a2e4abdf74f67ff4ce49b4b54e47a"
+dependencies = [
+ "hashbrown 0.12.3",
+]
+
+[[package]]
 name = "matrixmultiply"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2306,6 +2319,7 @@ dependencies = [
  "autocfg",
  "num-integer",
  "num-traits 0.2.15",
+ "rand",
  "serde",
 ]
 
@@ -2327,6 +2341,33 @@ checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
 dependencies = [
  "autocfg",
  "num-traits 0.2.15",
+]
+
+[[package]]
+name = "num-modular"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64a5fe11d4135c3bcdf3a95b18b194afa9608a5f6ff034f5d857bc9a27fb0119"
+dependencies = [
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.15",
+]
+
+[[package]]
+name = "num-prime"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f4e3bc495f6e95bc15a6c0c55ac00421504a5a43d09e3cc455d1fea7015581d"
+dependencies = [
+ "bitvec",
+ "either",
+ "lru",
+ "num-bigint",
+ "num-integer",
+ "num-modular",
+ "num-traits 0.2.15",
+ "rand",
 ]
 
 [[package]]
@@ -3270,7 +3311,6 @@ dependencies = [
  "actix-web",
  "assert_matches",
  "awc",
- "cairo-felt 0.3.0-rc1 (git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954)",
  "cairo-lang-starknet",
  "cairo-vm",
  "cargo-llvm-cov",
@@ -3294,7 +3334,6 @@ dependencies = [
 name = "starknet-rs-py"
 version = "0.1.0"
 dependencies = [
- "cairo-felt 0.3.0-rc1 (git+https://github.com/lambdaclass/cairo-rs?rev=725c17e6b4c50ecf9fbb0113ecf172d858372954)",
  "cairo-vm",
  "num-bigint",
  "pyo3",

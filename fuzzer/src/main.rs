@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate honggfuzz;
 
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use starknet_rs::{
     business_logic::{
         execution::{

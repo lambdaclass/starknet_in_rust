@@ -15,8 +15,8 @@ use crate::{
     definitions::transaction_type::TransactionType,
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
@@ -324,12 +324,12 @@ pub mod test_utils {
         ($num: expr) => {{
             let mut references = HashMap::<
                 usize,
-                cairo_rs::hint_processor::hint_processor_definition::HintReference,
+                cairo_vm::hint_processor::hint_processor_definition::HintReference,
             >::new();
             for i in 0..$num {
                 references.insert(
                     i as usize,
-                    cairo_rs::hint_processor::hint_processor_definition::HintReference::new_simple(
+                    cairo_vm::hint_processor::hint_processor_definition::HintReference::new_simple(
                         (i as i32),
                     ),
                 );
@@ -344,7 +344,7 @@ pub mod test_utils {
             {
                 let ids_names = vec![$( $name ),*];
                 let references = $crate::utils::test_utils::references!(ids_names.len() as i32);
-                let mut ids_data = HashMap::<String, cairo_rs::hint_processor::hint_processor_definition::HintReference>::new();
+                let mut ids_data = HashMap::<String, cairo_vm::hint_processor::hint_processor_definition::HintReference>::new();
                 for (i, name) in ids_names.iter().enumerate() {
                     ids_data.insert(name.to_string(), references.get(&i).unwrap().clone());
                 }
@@ -391,7 +391,7 @@ pub mod test_utils {
             $vm.insert_value(k, &v).unwrap();
         };
         ($vm: expr, $si:expr, $off:expr, $val:expr) => {
-            let v: felt::Felt252 = $val.into();
+            let v: cairo_vm::felt::Felt252 = $val.into();
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(k, v).unwrap();
         };
@@ -401,7 +401,7 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! allocate_selector {
         ($vm: expr, (($si:expr, $off:expr), $val:expr)) => {
-            let v = felt::Felt252::from_bytes_be($val);
+            let v = cairo_vm::felt::Felt252::from_bytes_be($val);
             let k = $crate::relocatable_value!($si, $off);
             $vm.insert_value(k, v).unwrap();
         };
@@ -498,7 +498,7 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use super::*;
-    use felt::{felt_str, Felt252};
+    use cairo_vm::felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use std::collections::HashMap;
 
