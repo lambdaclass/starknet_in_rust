@@ -289,11 +289,8 @@ impl Cairo1HintProcessor {
     ) -> Result<(), HintError> {
         let (dict_base, dict_offset) = extract_buffer(dict_end_ptr)?;
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
-        let dict_manager_exec_scope = exec_scopes
-            .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
-            .ok_or(HintError::CustomHint(
-                "Trying to read from a dict while dict manager was not initialized.".to_string(),
-            ))?;
+        let dict_manager_exec_scope =
+            exec_scopes.get_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
         let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
         vm.insert_value(
             cell_ref_to_relocatable(dict_index, vm),
