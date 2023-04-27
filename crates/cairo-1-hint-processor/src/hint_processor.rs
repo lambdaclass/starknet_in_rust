@@ -1,3 +1,5 @@
+use crate::dict_manager::DictSquashExecScope;
+
 use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
@@ -16,7 +18,7 @@ use felt::Felt252;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
-use std::{collections::HashMap, ops::Mul};
+use std::{cell::Cell, collections::HashMap, ops::Mul};
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -442,6 +444,71 @@ impl Cairo1HintProcessor {
         println!();
         Ok(())
     }
+
+    fn init_squash_data(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dict_accesses: &ResOperand,
+        ptr_diff: &ResOperand,
+        n_accesses: &ResOperand,
+        big_keys: &CellRef,
+        first_key: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_access_size = 3;
+        let rangecheck_bound = Felt252::from(u128::MAX) + 1u32;
+
+        exec_scopes.assign_or_update_variable(
+            "dict_squash_exec_scope",
+            Box::<DictSquashExecScope>::default(),
+        );
+        let dict_squash_exec_scope =
+            exec_scopes.get_mut_ref::<DictSquashExecScope>("dict_squash_exec_scope")?;
+
+        let (dict_accesses_base, dict_accesses_offset) = extract_buffer(dict_accesses)?;
+        let dict_accesses_address = get_ptr(vm, dict_accesses_base, &dict_accesses_offset)?;
+        let n_accesses = res_operand_get_val(vm, n_accesses)?
+            .to_usize()
+            .expect("Number of accesses is too large or negative.");
+
+        for i in 0..n_accesses {
+            let current_key = vm.get_integer((dict_accesses_address + i * dict_access_size)?)?;
+            dict_squash_exec_scope
+                .access_indices
+                .entry(current_key.into_owned())
+                .and_modify(|indices| indices.push(Felt252::from(i)))
+                .or_insert_with(|| vec![Felt252::from(i)]);
+        }
+        // Reverse the accesses in order to pop them in order later.
+        for (_, accesses) in dict_squash_exec_scope.access_indices.iter_mut() {
+            accesses.reverse();
+        }
+
+        dict_squash_exec_scope.keys = dict_squash_exec_scope
+            .access_indices
+            .keys()
+            .cloned()
+            .collect();
+
+        dict_squash_exec_scope.keys.sort_by(|a, b| b.cmp(a));
+
+        // big_keys indicates if the keys are greater than rangecheck_bound. If they are not
+        // a simple range check is used instead of assert_le_felt252.
+
+        let val = if dict_squash_exec_scope.keys[0] < rangecheck_bound {
+            Felt252::from(0)
+        } else {
+            Felt252::from(1)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(big_keys, vm), val)?;
+
+        vm.insert_value(
+            cell_ref_to_relocatable(first_key, vm),
+            dict_squash_exec_scope.current_key().unwrap(),
+        )?;
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -538,6 +605,23 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+
+            Hint::Core(CoreHint::InitSquashData {
+                dict_accesses,
+                ptr_diff,
+                n_accesses,
+                big_keys,
+                first_key,
+            }) => self.init_squash_data(
+                vm,
+                exec_scopes,
+                dict_accesses,
+                ptr_diff,
+                n_accesses,
+                big_keys,
+                first_key,
+            ),
+
             _ => todo!(),
         }
     }
