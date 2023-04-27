@@ -8,12 +8,11 @@ edition = "2021"
 [dependencies]
 honggfuzz = "0.5.55"
 starknet-rs =  { path = "../" }
-felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
 num-traits = "0.2.15"
 starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "main", features = ["testing"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 tempfile = "3.2.0"
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
 
 [profile.release]
 strip = "debuginfo"

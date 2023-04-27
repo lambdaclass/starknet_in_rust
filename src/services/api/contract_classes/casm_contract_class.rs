@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cairo_rs::{
+use cairo_vm::{
     serde::deserialize_program::{BuiltinName, HintParams, ReferenceManager},
     types::{program::Program, relocatable::MaybeRelocatable},
 };

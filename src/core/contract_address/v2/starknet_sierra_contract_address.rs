@@ -1,7 +1,8 @@
 use cairo_lang_starknet::{
     contract::starknet_keccak, contract_class::ContractClass as SierraContractClass,
 };
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
     serde::deserialize_program::Identifier,
     types::{program::Program, relocatable::MaybeRelocatable},
@@ -13,7 +14,6 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt252;
 use std::path::Path;
 
 use crate::{

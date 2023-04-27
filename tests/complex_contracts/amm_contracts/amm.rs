@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{

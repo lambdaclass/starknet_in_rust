@@ -1,5 +1,6 @@
 use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
-use cairo_rs::{
+use cairo_vm::felt::{Felt252, PRIME_STR};
+use cairo_vm::{
     serde::deserialize_program::{
         deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
         ReferenceManager,
@@ -9,7 +10,6 @@ use cairo_rs::{
     },
     utils::is_subsequence,
 };
-use felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
 use starknet_api::deprecated_contract_class::EntryPoint;
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
@@ -212,7 +212,7 @@ pub fn to_cairo_runner_program(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use felt::felt_str;
+    use cairo_vm::felt::felt_str;
     use std::io::Read;
 
     #[test]

@@ -6,7 +6,8 @@ use crate::{
         ContractClass, ContractEntryPoint, EntryPointType,
     },
 };
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
     serde::deserialize_program::{BuiltinName, Identifier},
     types::{program::Program, relocatable::MaybeRelocatable},
@@ -18,7 +19,6 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt252;
 use sha3::{Digest, Keccak256};
 use std::path::Path;
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
@@ -231,7 +231,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
-    use felt::Felt252;
+    use cairo_vm::felt::Felt252;
     use num_traits::Num;
 
     #[test]
