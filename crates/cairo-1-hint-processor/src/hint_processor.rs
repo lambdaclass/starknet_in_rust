@@ -384,7 +384,7 @@ impl Cairo1HintProcessor {
         vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
         Ok(())
     }
-    
+
     fn dict_write(
         &self,
         exec_scopes: &mut ExecutionScopes,
