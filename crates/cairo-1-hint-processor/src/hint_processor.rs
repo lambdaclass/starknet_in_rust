@@ -1,3 +1,5 @@
+use crate::dict_manager::DictSquashExecScope;
+
 use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
@@ -442,6 +444,31 @@ impl Cairo1HintProcessor {
         println!();
         Ok(())
     }
+
+    fn should_skip_squash_loop(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        should_skip_loop: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+
+        let val = if dict_squash_exec_scope
+            .current_access_indices()
+            .unwrap()
+            .len()
+            > 1
+        {
+            Felt252::from(0)
+        } else {
+            Felt252::from(1)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(should_skip_loop, vm), val)?;
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -538,6 +565,11 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+
+            Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
+                self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
+            }
+
             _ => todo!(),
         }
     }
