@@ -129,43 +129,6 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
-    fn square_root(
-        &self,
-        vm: &mut VirtualMachine,
-        value: &ResOperand,
-        dst: &CellRef,
-    ) -> Result<(), HintError> {
-        let value = res_operand_get_val(vm, value)?;
-        let result = value.sqrt();
-        vm.insert_value(
-            cell_ref_to_relocatable(dst, vm),
-            MaybeRelocatable::from(result),
-        )
-        .map_err(HintError::from)
-    }
-
-    fn test_less_than_or_equal(
-        &self,
-        vm: &mut VirtualMachine,
-        lhs: &ResOperand,
-        rhs: &ResOperand,
-        dst: &CellRef,
-    ) -> Result<(), HintError> {
-        let lhs_value = res_operand_get_val(vm, lhs)?;
-        let rhs_value = res_operand_get_val(vm, rhs)?;
-        let result = if lhs_value <= rhs_value {
-            Felt252::from(1)
-        } else {
-            Felt252::from(0)
-        };
-
-        vm.insert_value(
-            cell_ref_to_relocatable(dst, vm),
-            MaybeRelocatable::from(result),
-        )
-        .map_err(HintError::from)
-    }
-
     fn div_mod(
         &self,
         vm: &mut VirtualMachine,
