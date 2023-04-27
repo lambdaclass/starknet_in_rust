@@ -31,4 +31,6 @@ pub enum ContractAddressError {
     CairoRun(#[from] CairoRunError),
     #[error(transparent)]
     VirtualMachine(#[from] VirtualMachineError),
+    #[error("Could not remove suffix from builtin")]
+    BuiltinSuffix,
 }

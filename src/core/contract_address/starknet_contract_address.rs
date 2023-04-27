@@ -205,7 +205,9 @@ pub fn compute_deprecated_class_hash(
 
     let entrypoint = hash_calculation_program
         .get_identifier("__main__.deprecated_compiled_class_hash")
-        .unwrap()
+        .ok_or(ContractAddressError::MissingIdentifier(
+            "__main__.deprecated_compiled_class_hash".to_string(),
+        ))?
         .pc
         .unwrap();
 

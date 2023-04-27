@@ -98,7 +98,7 @@ pub fn compute_sierra_class_hash(
     let mut hint_processor = BuiltinHintProcessor::new_empty();
     let entrypoint = program
         .get_identifier("__main__.class_hash")
-        .unwrap()
+        .ok_or_else(|| ContractAddressError::MissingIdentifier("__main__.class_hash".to_string()))?
         .pc
         .unwrap();
 

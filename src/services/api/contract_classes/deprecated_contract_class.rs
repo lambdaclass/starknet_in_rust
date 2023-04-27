@@ -77,7 +77,7 @@ impl ContractClass {
     pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
         let builtin_list: &Vec<BuiltinName> = &self.program().iter_builtins().cloned().collect();
 
-        if !is_subsequence(&builtin_list, &SUPPORTED_BUILTINS) {
+        if !is_subsequence(builtin_list, &SUPPORTED_BUILTINS) {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
