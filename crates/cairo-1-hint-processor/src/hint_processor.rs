@@ -8,7 +8,7 @@ use cairo_lang_casm::{
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
 use cairo_lang_utils::extract_matches;
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{felt_str, Felt252};
 use cairo_vm::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
@@ -17,8 +17,6 @@ use cairo_vm::{
     vm::errors::vm_errors::VirtualMachineError,
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::felt_str as felt252_str;
-use felt::Felt252;
 use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
@@ -34,7 +32,7 @@ struct FqConfig;
 type Fq = Fp256<MontBackend<FqConfig, 4>>;
 
 fn get_beta() -> Felt252 {
-    felt252_str!("3141592653589793238462643383279502884197169399375105820974944592307816406665")
+    felt_str!("3141592653589793238462643383279502884197169399375105820974944592307816406665")
 }
 
 /// HintProcessor for Cairo 1 compiler hints.
@@ -437,12 +435,33 @@ impl Cairo1HintProcessor {
         };
 
         let x_bigint: BigUint = random_x.into_bigint().into();
-        let y_bigint: BigUint = random_y_squared.sqrt().unwrap().into_bigint().into();
+        let y_bigint: BigUint = random_y_squared
+            .sqrt()
+            .ok_or(HintError::CustomHint("Failed to compute sqrt".to_string()))?
+            .into_bigint()
+            .into();
 
         vm.insert_value(cell_ref_to_relocatable(x, vm), Felt252::from(x_bigint))?;
         vm.insert_value(cell_ref_to_relocatable(y, vm), Felt252::from(y_bigint))?;
 
         Ok(())
+    }
+
+    fn get_next_dict_key(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        next_key: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        dict_squash_exec_scope.pop_current_key();
+        if let Some(current_key) = dict_squash_exec_scope.current_key() {
+            return vm
+                .insert_value(cell_ref_to_relocatable(next_key, vm), current_key)
+                .map_err(HintError::from);
+        }
+        Err(HintError::KeyNotFound)
     }
 
     fn alloc_felt_256_dict(
