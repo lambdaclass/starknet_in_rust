@@ -456,7 +456,7 @@ impl Cairo1HintProcessor {
 
         let val = if dict_squash_exec_scope
             .current_access_indices()
-            .unwrap()
+            .ok_or(HintError::CustomHint("no indices accessed".to_string()))?
             .len()
             > 1
         {
