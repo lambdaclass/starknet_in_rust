@@ -291,7 +291,9 @@ impl Cairo1HintProcessor {
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let dict_manager_exec_scope = exec_scopes
             .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
-            .expect("Trying to read from a dict while dict manager was not initialized.");
+            .ok_or(HintError::CustomHint(
+                "Trying to read from a dict while dict manager was not initialized.".to_string(),
+            ))?;
         let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
         vm.insert_value(
             cell_ref_to_relocatable(dict_index, vm),
@@ -432,7 +434,10 @@ impl Cairo1HintProcessor {
             .get_integer((dict_manager_address - 2)?)?
             .into_owned()
             .to_usize()
-            .expect("Number of dictionaries too large.");
+            .ok_or(HintError::CustomHint(
+                "Invalid number of dictionaries.".to_string(),
+            ))?;
+
         let dict_infos_base = vm.get_relocatable((dict_manager_address - 3)?)?;
 
         let dict_manager_exec_scope =
