@@ -456,7 +456,7 @@ impl Cairo1HintProcessor {
         let prev_access_index = dict_squash_exec_scope.pop_current_access_index().unwrap();
         let index_delta_minus_1_val = dict_squash_exec_scope
             .current_access_index()
-            .unwrap()
+            .ok_or(HintError::CustomHint("no index accessed".to_string()))?
             .clone()
             - prev_access_index
             - 1_u32;
