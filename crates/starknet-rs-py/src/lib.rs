@@ -34,7 +34,7 @@ use crate::{
         },
     },
 };
-use cairo_felt::{felt_str, Felt252};
+use cairo_vm::felt::{felt_str, Felt252};
 use pyo3::prelude::*;
 use starknet_rs::{
     business_logic::state::cached_state::UNINITIALIZED_CLASS_HASH,

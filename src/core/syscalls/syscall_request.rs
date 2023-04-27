@@ -1,5 +1,5 @@
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
