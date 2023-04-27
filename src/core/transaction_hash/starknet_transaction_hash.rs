@@ -10,7 +10,7 @@ use crate::{
     utils::Address,
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-use felt::{felt_str, Felt252};
+use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 #[derive(Debug)]
@@ -185,7 +185,7 @@ pub fn calculate_declare_v2_transaction_hash(
 
 #[cfg(test)]
 mod tests {
-    use felt::felt_str;
+    use cairo_vm::felt::felt_str;
 
     use super::*;
 

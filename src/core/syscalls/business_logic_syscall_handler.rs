@@ -40,14 +40,14 @@ use crate::{
     },
     utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     types::{
         errors::math_errors::MathError,
         relocatable::{MaybeRelocatable, Relocatable},
     },
     vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
 };
-use felt::Felt252;
 use lazy_static::lazy_static;
 
 use num_traits::{One, ToPrimitive, Zero};
@@ -492,7 +492,7 @@ where
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
-        data: Vec<cairo_rs::types::relocatable::MaybeRelocatable>,
+        data: Vec<cairo_vm::types::relocatable::MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_memory_segment();
         let segment_end = vm.write_arg(segment_start, &data)?;

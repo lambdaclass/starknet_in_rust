@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cairo-rs = { git="https://github.com/lambdaclass/cairo-rs/", rev = "725c17e6b4c50ecf9fbb0113ecf172d858372954", package = "cairo-vm" }
-felt = { git="https://github.com/lambdaclass/cairo-rs/", rev = "725c17e6b4c50ecf9fbb0113ecf172d858372954", package = "cairo-felt" }
+cairo-vm = { git="https://github.com/lambdaclass/cairo-rs/", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
 cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo" }
 cairo-lang-utils = "0.1.0"
 num-integer = "0.1.45"

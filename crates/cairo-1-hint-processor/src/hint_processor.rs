@@ -6,7 +6,8 @@ use cairo_lang_casm::{
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
 use cairo_lang_utils::extract_matches;
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
     types::relocatable::MaybeRelocatable,
@@ -14,11 +15,12 @@ use cairo_rs::{
     vm::errors::vm_errors::VirtualMachineError,
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::Felt252;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
 use std::{collections::HashMap, ops::Mul};
+
+use crate::dict_manager::DictSquashExecScope;
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -229,6 +231,34 @@ impl Cairo1HintProcessor {
         .map_err(HintError::from)
     }
 
+    fn dict_read(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dict_ptr: &ResOperand,
+        key: &ResOperand,
+        value_dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr)?;
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let key = res_operand_get_val(vm, key)?;
+        let dict_manager_exec_scope =
+            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
+                Ok(scope) => scope,
+                _ => {
+                    return Err(HintError::CustomHint(
+                        "Trying to read from a dict while dict manager was not initialized."
+                            .to_string(),
+                    ))
+                }
+            };
+        let value = dict_manager_exec_scope
+            .get_from_tracker(dict_address, &key)
+            .unwrap_or_else(|| DictManagerExecScope::DICT_DEFAULT_VALUE.into());
+        vm.insert_value(cell_ref_to_relocatable(value_dst, vm), value)
+            .map_err(HintError::from)
+    }
+
     fn div_mod(
         &self,
         vm: &mut VirtualMachine,
@@ -374,6 +404,23 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn get_next_dict_key(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        next_key: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        dict_squash_exec_scope.pop_current_key();
+        if let Some(current_key) = dict_squash_exec_scope.current_key() {
+            return vm
+                .insert_value(cell_ref_to_relocatable(next_key, vm), current_key)
+                .map_err(HintError::from);
+        }
+        Err(HintError::KeyNotFound)
+    }
+
     fn alloc_felt_256_dict(
         &self,
         vm: &mut VirtualMachine,
@@ -509,6 +556,16 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder,
             }) => self.div_mod(vm, lhs, rhs, quotient, remainder),
             Hint::Core(CoreHint::DebugPrint { start, end }) => self.debug_print(vm, start, end),
+
+            Hint::Core(CoreHint::GetNextDictKey { next_key }) => {
+                self.get_next_dict_key(vm, exec_scopes, next_key)
+            }
+
+            Hint::Core(CoreHint::Felt252DictRead {
+                dict_ptr,
+                key,
+                value_dst,
+            }) => self.dict_read(vm, exec_scopes, dict_ptr, key, value_dst),
 
             Hint::Core(CoreHint::Uint256DivMod {
                 dividend_low,

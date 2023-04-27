@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 
 use crate::{
     business_logic::transaction::error::TransactionError,
