@@ -1,6 +1,3 @@
-use crate::dict_manager::DictSquashExecScope;
-
-use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
@@ -20,8 +17,8 @@ use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
 use std::{collections::HashMap, ops::Mul};
 
+use crate::dict_manager::DictManagerExecScope;
 use crate::dict_manager::DictSquashExecScope;
-
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
 
