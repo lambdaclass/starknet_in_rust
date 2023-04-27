@@ -8,7 +8,7 @@ use crate::{
 };
 use cairo_rs::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
-    serde::deserialize_program::Identifier,
+    serde::deserialize_program::{BuiltinName, Identifier},
     types::{program::Program, relocatable::MaybeRelocatable},
     vm::{
         runners::{
@@ -20,7 +20,7 @@ use cairo_rs::{
 };
 use felt::Felt252;
 use sha3::{Digest, Keccak256};
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
 
@@ -35,7 +35,7 @@ fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
 ) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
-    let program_length = contract_class.program.data.len();
+    let program_length = contract_class.program().iter_data().count();
 
     let entry_points = contract_class
         .entry_points_by_type
@@ -81,23 +81,21 @@ fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt252 {
 
 /// Returns the serialization of a contract as a list of field elements.
 fn get_contract_class_struct(
-    identifiers: &HashMap<String, Identifier>,
+    api_version_identifier: &Identifier,
     contract_class: &ContractClass,
 ) -> Result<DeprecatedCompiledClass, ContractAddressError> {
-    let api_version = identifiers
-        .get("__main__.DEPRECATED_COMPILED_CLASS_VERSION")
-        .ok_or_else(|| {
-            ContractAddressError::MissingIdentifier(
-                "__main__.DEPRECATED_COMPILED_CLASS_VERSION".to_string(),
-            )
-        })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
-    let builtin_list = &contract_class.program.builtins;
+
+    let builtin_list: &Vec<BuiltinName> =
+        &contract_class.program().iter_builtins().cloned().collect();
+
+    let contract_class_data: Vec<MaybeRelocatable> =
+        contract_class.program().iter_data().cloned().collect();
 
     Ok(DeprecatedCompiledClass {
-        compiled_class_version: api_version
+        compiled_class_version: api_version_identifier
             .value
             .as_ref()
             .ok_or(ContractAddressError::NoneApiVersion)?
@@ -113,12 +111,20 @@ fn get_contract_class_struct(
         builtin_list: builtin_list
             .iter()
             .map(|builtin| {
-                Felt252::from_bytes_be(builtin.name().to_ascii_lowercase().as_bytes()).into()
+                Felt252::from_bytes_be(
+                    builtin
+                        .name()
+                        .to_ascii_lowercase()
+                        .strip_suffix("_builtin")
+                        .unwrap()
+                        .as_bytes(),
+                )
+                .into()
             })
             .collect::<Vec<MaybeRelocatable>>(),
         hinted_class_hash: compute_hinted_class_hash(contract_class).into(),
-        bytecode_length: Felt252::from(contract_class.program.data.len()).into(),
-        bytecode_ptr: contract_class.program.data.clone(),
+        bytecode_length: Felt252::from(contract_class_data.len()).into(),
+        bytecode_ptr: contract_class_data,
     })
 }
 
@@ -174,12 +180,19 @@ pub fn compute_deprecated_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
-    let program = load_program()?;
-    let contract_class_struct =
-        &get_contract_class_struct(&program.identifiers, contract_class)?.into();
+    let hash_calculation_program = load_program()?;
+    let contract_class_struct = &get_contract_class_struct(
+        hash_calculation_program
+            .get_identifier("__main__.API_VERSION")
+            .ok_or(ContractAddressError::MissingIdentifier(
+                "__main__.API_VERSION".to_string(),
+            ))?,
+        contract_class,
+    )?
+    .into();
 
     let mut vm = VirtualMachine::new(false);
-    let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
+    let mut runner = CairoRunner::new(&hash_calculation_program, "all_cairo", false)?;
     runner.initialize_function_runner(&mut vm, false)?;
     let mut hint_processor = BuiltinHintProcessor::new_empty();
 
@@ -190,9 +203,8 @@ pub fn compute_deprecated_class_hash(
         .unwrap();
     let hash_base = MaybeRelocatable::from((hash_runner.base() as isize, 0));
 
-    let entrypoint = program
-        .identifiers
-        .get("__main__.deprecated_compiled_class_hash")
+    let entrypoint = hash_calculation_program
+        .get_identifier("__main__.deprecated_compiled_class_hash")
         .unwrap()
         .pc
         .unwrap();
@@ -214,6 +226,8 @@ pub fn compute_deprecated_class_hash(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use felt::Felt252;
     use num_traits::Num;

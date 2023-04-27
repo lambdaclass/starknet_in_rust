@@ -14,7 +14,7 @@ use cairo_rs::{
     },
 };
 use felt::Felt252;
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
@@ -82,8 +82,13 @@ pub fn compute_sierra_class_hash(
 ) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
+    let contract_class_version_iden = program
+        .get_identifier("__main__.CONTRACT_CLASS_VERSION")
+        .ok_or_else(|| {
+            ContractAddressError::MissingIdentifier("__main__.CONTRACT_CLASS_VERSION".to_string())
+        })?;
     let contract_class_struct =
-        &get_sierra_contract_class_struct(&program.identifiers, contract_class)?.into();
+        &get_sierra_contract_class_struct(contract_class_version_iden, contract_class)?.into();
 
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
@@ -92,8 +97,7 @@ pub fn compute_sierra_class_hash(
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
     let entrypoint = program
-        .identifiers
-        .get("__main__.class_hash")
+        .get_identifier("__main__.class_hash")
         .unwrap()
         .pc
         .unwrap();
@@ -153,15 +157,9 @@ fn get_contract_entry_points(
 
 // Returns the serialization of a contract as a list of field elements.
 fn get_sierra_contract_class_struct(
-    identifiers: &HashMap<String, Identifier>,
+    contract_class_version_identifier: &Identifier,
     contract_class: &SierraContractClass,
 ) -> Result<SierraStructContractClass, ContractAddressError> {
-    //println!("{:?}", identifiers);
-    let contract_class_version_iden = identifiers
-        .get("__main__.CONTRACT_CLASS_VERSION")
-        .ok_or_else(|| {
-            ContractAddressError::MissingIdentifier("__main__.CONTRACT_CLASS_VERSION".to_string())
-        })?;
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
@@ -178,7 +176,7 @@ fn get_sierra_contract_class_struct(
         .map(|b| Felt252::from(b.value.clone()).into())
         .collect();
 
-    let contract_class_version_iden = contract_class_version_iden
+    let contract_class_version_iden = contract_class_version_identifier
         .value
         .as_ref()
         .ok_or(ContractAddressError::NoneApiVersion)?
