@@ -263,15 +263,23 @@ impl Cairo1HintProcessor {
     fn get_segment_arena_index(
         &self,
         vm: &mut VirtualMachine,
-        exec_scopes: &ExecutionScopes,
+        exec_scopes: &mut ExecutionScopes,
         dict_end_ptr: &ResOperand,
         dict_index: &CellRef,
     ) -> Result<(), HintError> {
         let (dict_base, dict_offset) = extract_buffer(dict_end_ptr)?;
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
-        let dict_manager_exec_scope = exec_scopes
-            .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
-            .expect("Trying to read from a dict while dict manager was not initialized.");
+        let dict_manager_exec_scope =
+            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
+                Ok(exec_scope) => exec_scope,
+                _ => {
+                    return Err(HintError::CustomHint(
+                        "Trying to read from a dict while dict manager was not initialized."
+                            .to_string(),
+                    ))
+                }
+            };
+
         let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
         vm.insert_value(
             cell_ref_to_relocatable(dict_index, vm),
@@ -444,9 +452,16 @@ impl Cairo1HintProcessor {
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let key = res_operand_get_val(vm, key)?;
         let value = res_operand_get_val(vm, value)?;
-        let dict_manager_exec_scope = exec_scopes
-            .get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")
-            .expect("Trying to write to a dict while dict manager was not initialized.");
+        let dict_manager_exec_scope =
+            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
+                Ok(exec_scope) => exec_scope,
+                _ => {
+                    return Err(HintError::CustomHint(
+                        "Trying to read from a dict while dict manager was not initialized."
+                            .to_string(),
+                    ))
+                }
+            };
 
         let prev_value = dict_manager_exec_scope
             .get_from_tracker(dict_address, &key)
