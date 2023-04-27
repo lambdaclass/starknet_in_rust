@@ -1,4 +1,4 @@
-use cairo_rs::{
+use cairo_vm::{
     types::errors::program_errors::ProgramError,
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,

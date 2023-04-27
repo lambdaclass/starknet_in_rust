@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::{felt_str, Felt252};
+use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Num;
 use starknet_rs::{
     business_logic::{

@@ -2,7 +2,7 @@ use crate::{
     core::errors::state_errors::StateError,
     utils::{Address, ClassHash},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::{HashMap, HashSet};
 

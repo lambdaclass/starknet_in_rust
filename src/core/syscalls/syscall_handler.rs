@@ -16,7 +16,8 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::Address,
 };
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     hint_processor::{
         builtin_hint_processor::{
             builtin_hint_processor_definition::{BuiltinHintProcessor, HintProcessorData},
@@ -31,7 +32,6 @@ use cairo_rs::{
     },
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
 //* ---------------------
@@ -553,7 +553,7 @@ mod tests {
             test_utils::{ids_data, vm},
         },
     };
-    use cairo_rs::relocatable;
+    use cairo_vm::relocatable;
     use coverage_helper::test;
     use num_traits::Num;
     use std::path::PathBuf;

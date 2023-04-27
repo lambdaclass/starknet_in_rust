@@ -21,11 +21,11 @@ use crate::{
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
     utils::*,
 };
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
-use felt::Felt252;
 use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
@@ -590,7 +590,8 @@ mod tests {
         },
         utils::{test_utils::*, Address},
     };
-    use cairo_rs::{
+    use cairo_vm::felt::Felt252;
+    use cairo_vm::{
         hint_processor::{
             builtin_hint_processor::builtin_hint_processor_definition::{
                 BuiltinHintProcessor, HintProcessorData,
@@ -605,7 +606,6 @@ mod tests {
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
     use coverage_helper::test;
-    use felt::Felt252;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 

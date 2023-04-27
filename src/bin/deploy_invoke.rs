@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use felt::{felt_str, Felt252};
+use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_rs::{

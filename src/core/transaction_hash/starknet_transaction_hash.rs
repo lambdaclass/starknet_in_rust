@@ -8,7 +8,7 @@ use crate::{
     services::api::contract_class::ContractClass,
     utils::Address,
 };
-use felt::{felt_str, Felt252};
+use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 #[derive(Debug)]
@@ -153,7 +153,6 @@ pub fn calculate_declare_transaction_hash(
 #[cfg(test)]
 mod tests {
     use coverage_helper::test;
-    use felt::felt_str;
 
     use super::*;
 

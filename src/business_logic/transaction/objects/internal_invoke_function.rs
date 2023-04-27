@@ -25,7 +25,7 @@ use crate::{
     services::api::contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 

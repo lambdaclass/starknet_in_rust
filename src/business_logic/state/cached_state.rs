@@ -8,7 +8,7 @@ use crate::{
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::collections::HashMap;
@@ -223,7 +223,7 @@ mod tests {
         business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
         services::api::contract_class::{ContractEntryPoint, EntryPointType},
     };
-    use cairo_rs::types::program::Program;
+    use cairo_vm::types::program::Program;
     use coverage_helper::test;
 
     #[test]

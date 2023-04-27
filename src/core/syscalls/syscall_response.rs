@@ -4,8 +4,8 @@ use super::syscall_request::{
     GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 pub(crate) trait WriteSyscallResponse {
     fn write_syscall_response(
@@ -308,7 +308,7 @@ mod tests {
         core::syscalls::syscall_handler::SyscallHandler,
         utils::{get_integer, test_utils::vm},
     };
-    use cairo_rs::relocatable;
+    use cairo_vm::relocatable;
     use coverage_helper::test;
 
     type BusinessLogicSyscallHandler<'a> =

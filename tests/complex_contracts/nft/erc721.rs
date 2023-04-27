@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use assert_matches::assert_matches;
-use cairo_rs::vm::runners::cairo_runner::ExecutionResources;
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_rs::business_logic::state::cached_state::CachedState;
