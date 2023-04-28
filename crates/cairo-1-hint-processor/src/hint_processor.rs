@@ -806,7 +806,7 @@ impl Cairo1HintProcessor {
         }
         Ok(())
     }
-    
+
     fn assert_lt_assert_valid_input(
         &self,
         vm: &VirtualMachine,
