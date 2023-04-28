@@ -10,6 +10,7 @@ use cairo_lang_casm::{
 };
 use cairo_lang_utils::extract_matches;
 use cairo_vm::felt::{felt_str, Felt252};
+
 use cairo_vm::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
@@ -862,6 +863,16 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn assert_all_keys_used(&self, exec_scopes: &mut ExecutionScopes) -> Result<(), HintError> {
+        //Check that current_access_indices is in scope
+        let keys = exec_scopes.get_mut_list_ref::<Felt252>("dict_squash_exec_scope")?;
+
+        if !keys.is_empty() {
+            return Err(HintError::KeysNotEmpty);
+        }
+        Ok(())
+    }
+
     fn assert_lt_assert_valid_input(
         &self,
         vm: &VirtualMachine,
@@ -874,7 +885,6 @@ impl Cairo1HintProcessor {
         if a_val >= b_val {
             return Err(HintError::AssertLtFelt252(a_val, b_val));
         };
-
         Ok(())
     }
 }
@@ -1006,6 +1016,8 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::Core(CoreHint::AllocFelt252Dict { segment_arena_ptr }) => {
                 self.alloc_felt_256_dict(vm, segment_arena_ptr, exec_scopes)
             }
+
+            Hint::Core(CoreHint::AssertAllKeysUsed) => self.assert_all_keys_used(exec_scopes),
 
             Hint::Core(CoreHint::AssertLeFindSmallArcs {
                 range_check_ptr,
