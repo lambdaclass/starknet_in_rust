@@ -471,7 +471,10 @@ impl Cairo1HintProcessor {
             .get_integer((dict_manager_address - 2)?)?
             .into_owned()
             .to_usize()
-            .expect("Number of dictionaries too large.");
+            .ok_or(HintError::CustomHint(
+                "Invalid number of dictionaries.".to_string(),
+            ))?;
+
         let dict_infos_base = vm.get_relocatable((dict_manager_address - 3)?)?;
 
         let dict_manager_exec_scope =
