@@ -1,4 +1,4 @@
-use cairo_rs::vm::errors::memory_errors::MemoryError;
+use cairo_vm::vm::errors::memory_errors::MemoryError;
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]

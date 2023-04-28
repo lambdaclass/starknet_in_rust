@@ -8,7 +8,7 @@ use crate::{
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -116,7 +116,7 @@ mod tests {
     use crate::services::api::contract_classes::deprecated_contract_class::{
         ContractEntryPoint, EntryPointType,
     };
-    use cairo_rs::types::program::Program;
+    use cairo_vm::types::program::Program;
 
     #[test]
     fn get_contract_state_test() {

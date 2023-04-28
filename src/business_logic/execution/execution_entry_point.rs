@@ -18,9 +18,13 @@ use crate::{
 };
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_rs::{
-    serde::deserialize_program::{ApTracking, BuiltinName, FlowTrackingData, HintParams},
+use cairo_vm::{
+    felt::Felt252,
+    serde::deserialize_program::{
+        ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceManager,
+    },
     types::{
+        errors::program_errors::ProgramError,
         program::Program,
         relocatable::{MaybeRelocatable, Relocatable},
     },
@@ -29,7 +33,6 @@ use cairo_rs::{
         vm_core::VirtualMachine,
     },
 };
-use felt::Felt252;
 use std::collections::HashMap;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
@@ -386,7 +389,8 @@ impl ExecutionEntryPoint {
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
         let mut cairo_runner = CairoRunner::new(
-            &get_runnable_program(&contract_class, entry_point.builtins),
+            &get_runnable_program(&contract_class, entry_point.builtins)
+                .map_err(TransactionError::ProgramError)?,
             "all_cairo",
             false,
         )?;
@@ -472,21 +476,26 @@ impl ExecutionEntryPoint {
 fn get_runnable_program(
     casm_contract_class: &CasmContractClass,
     entrypoint_builtins: Vec<String>,
-) -> Program {
-    Program {
-        builtins: entrypoint_builtins
+) -> Result<Program, ProgramError> {
+    Program::new(
+        entrypoint_builtins
             .iter()
             .map(|v| serde_json::from_str::<BuiltinName>(v).unwrap())
             .collect(),
-        prime: casm_contract_class.prime.to_string(),
-        data: casm_contract_class
+        casm_contract_class
             .bytecode
             .iter()
             .map(|v| MaybeRelocatable::from(Felt252::from(v.value.clone())))
             .collect(),
-        hints: collect_hints(casm_contract_class),
-        ..Default::default()
-    }
+        None,
+        collect_hints(casm_contract_class),
+        ReferenceManager {
+            references: Vec::new(),
+        },
+        Default::default(),
+        Default::default(),
+        Default::default(),
+    )
 }
 
 fn collect_hints(casm_contract_class: &CasmContractClass) -> HashMap<usize, Vec<HintParams>> {
