@@ -652,6 +652,29 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn felt_252_dict_entry_update(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dict_ptr: &ResOperand,
+        value: &ResOperand,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr)?;
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let key = get_double_deref_val(vm, dict_base, &(dict_offset + Felt252::from(-3)))?;
+        let value = res_operand_get_val(vm, value)?;
+        let dict_manager_exec_scope = exec_scopes
+            .get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")
+            .map_err(|_| {
+                HintError::CustomHint(
+                    "Trying to write to a dict while dict manager was not initialized.".to_string(),
+                )
+            })?;
+        dict_manager_exec_scope.insert_to_tracker(dict_address, key, value);
+
+        Ok(())
+    }
+
     fn get_current_access_index(
         &self,
         vm: &mut VirtualMachine,
@@ -963,6 +986,10 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+
+            Hint::Core(CoreHint::Felt252DictEntryUpdate { dict_ptr, value }) => {
+                self.felt_252_dict_entry_update(vm, exec_scopes, dict_ptr, value)
+            }
 
             Hint::Core(CoreHint::GetCurrentAccessIndex { range_check_ptr }) => {
                 self.get_current_access_index(vm, exec_scopes, range_check_ptr)
