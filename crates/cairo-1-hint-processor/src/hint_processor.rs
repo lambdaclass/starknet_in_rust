@@ -795,6 +795,22 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn assert_lt_assert_valid_input(
+        &self,
+        vm: &VirtualMachine,
+        _exec_scopes: &mut ExecutionScopes,
+        a: &ResOperand,
+        b: &ResOperand,
+    ) -> Result<(), HintError> {
+        let a_val = res_operand_get_val(vm, a)?;
+        let b_val = res_operand_get_val(vm, b)?;
+        if a_val >= b_val {
+            return Err(HintError::AssertLtFelt252(a_val, b_val));
+        };
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -946,6 +962,9 @@ impl HintProcessor for Cairo1HintProcessor {
 
             Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
                 self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
+            }
+            Hint::Core(CoreHint::AssertLtAssertValidInput { a, b }) => {
+                self.assert_lt_assert_valid_input(vm, exec_scopes, a, b)
             }
 
             _ => unimplemented!(),
