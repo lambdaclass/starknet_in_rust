@@ -1,5 +1,6 @@
-use super::dict_manager::DictManagerExecScope;
 use crate::dict_manager::DictSquashExecScope;
+
+use super::dict_manager::DictManagerExecScope;
 use ark_ff::fields::{Fp256, MontBackend, MontConfig};
 use ark_ff::{Field, PrimeField};
 use ark_std::UniformRand;
@@ -299,6 +300,7 @@ impl Cairo1HintProcessor {
     ) -> Result<(), HintError> {
         let (dict_base, dict_offset) = extract_buffer(dict_end_ptr)?;
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+
         let dict_manager_exec_scope =
             exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
 
@@ -410,6 +412,34 @@ impl Cairo1HintProcessor {
             .map_err(HintError::from)?;
 
         Ok(())
+    }
+
+    fn field_sqrt(
+        &self,
+        vm: &mut VirtualMachine,
+        val: &ResOperand,
+        sqrt: &CellRef,
+    ) -> Result<(), HintError> {
+        let value = Fq::from(res_operand_get_val(vm, val)?.to_biguint());
+
+        let three_fq = Fq::from(Felt252::new(3).to_biguint());
+        let res = if value.legendre().is_qr() {
+            value
+        } else {
+            value * three_fq
+        };
+
+        if let Some(root) = res.sqrt() {
+            let root0: BigUint = root.into_bigint().into();
+            let root1: BigUint = (-root).into_bigint().into();
+            let root = Felt252::from(std::cmp::min(root0, root1));
+            vm.insert_value(cell_ref_to_relocatable(sqrt, vm), root)
+                .map_err(HintError::from)
+        } else {
+            Err(HintError::CustomHint(
+                "Field element is not a square".to_string(),
+            ))
+        }
     }
 
     fn random_ec_point(
@@ -581,6 +611,27 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn dict_entry_init(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dict_ptr: &ResOperand,
+        key: &ResOperand,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr)?;
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let key = res_operand_get_val(vm, key)?;
+        let dict_manager_exec_scope =
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
+
+        let prev_value = dict_manager_exec_scope
+            .get_from_tracker(dict_address, &key)
+            .unwrap_or_else(|| DictManagerExecScope::DICT_DEFAULT_VALUE.into());
+
+        vm.insert_value((dict_address + 1)?, prev_value)
+            .map_err(HintError::from)
+    }
+
     fn debug_print(
         &self,
         vm: &mut VirtualMachine,
@@ -599,6 +650,98 @@ impl Cairo1HintProcessor {
             curr += 1;
         }
         println!();
+        Ok(())
+    }
+
+    fn init_squash_data(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dict_accesses: &ResOperand,
+        n_accesses: &ResOperand,
+        big_keys: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_access_size = 3;
+        let rangecheck_bound = Felt252::from(u128::MAX) + 1u32;
+
+        exec_scopes.assign_or_update_variable(
+            "dict_squash_exec_scope",
+            Box::<DictSquashExecScope>::default(),
+        );
+        let dict_squash_exec_scope =
+            exec_scopes.get_mut_ref::<DictSquashExecScope>("dict_squash_exec_scope")?;
+        let (dict_accesses_base, dict_accesses_offset) = extract_buffer(dict_accesses)?;
+        let dict_accesses_address = get_ptr(vm, dict_accesses_base, &dict_accesses_offset)?;
+        let n_accesses =
+            res_operand_get_val(vm, n_accesses)?
+                .to_usize()
+                .ok_or(HintError::CustomHint(
+                    "Number of accesses is too large or negative.".to_string(),
+                ))?;
+
+        for i in 0..n_accesses {
+            let current_key = vm.get_integer((dict_accesses_address + i * dict_access_size)?)?;
+            dict_squash_exec_scope
+                .access_indices
+                .entry(current_key.into_owned())
+                .and_modify(|indices| indices.push(Felt252::from(i)))
+                .or_insert_with(|| vec![Felt252::from(i)]);
+        }
+        // Reverse the accesses in order to pop them in order later.
+        for (_, accesses) in dict_squash_exec_scope.access_indices.iter_mut() {
+            accesses.reverse();
+        }
+
+        dict_squash_exec_scope.keys = dict_squash_exec_scope
+            .access_indices
+            .keys()
+            .cloned()
+            .collect();
+        dict_squash_exec_scope.keys.sort_by(|a, b| b.cmp(a));
+        // big_keys indicates if the keys are greater than rangecheck_bound. If they are not
+        // a simple range check is used instead of assert_le_felt252.
+
+        let val = if dict_squash_exec_scope.keys[0] < rangecheck_bound {
+            Felt252::from(0)
+        } else {
+            Felt252::from(1)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(big_keys, vm), val)?;
+
+        vm.insert_value(
+            cell_ref_to_relocatable(big_keys, vm),
+            dict_squash_exec_scope
+                .current_key()
+                .ok_or(HintError::CustomHint("No current key".to_string()))?,
+        )?;
+
+        Ok(())
+    }
+
+    fn get_current_access_delta(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        index_delta_minus1: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        let prev_access_index = dict_squash_exec_scope
+            .pop_current_access_index()
+            .ok_or(HintError::CustomHint("no accessed index".to_string()))?;
+        let index_delta_minus_1_val = dict_squash_exec_scope
+            .current_access_index()
+            .ok_or(HintError::CustomHint("no index accessed".to_string()))?
+            .clone()
+            - prev_access_index
+            - 1_u32;
+
+        vm.insert_value(
+            cell_ref_to_relocatable(index_delta_minus1, vm),
+            index_delta_minus_1_val,
+        )?;
+
         Ok(())
     }
 
@@ -649,7 +792,6 @@ impl Cairo1HintProcessor {
         } else {
             Felt252::from(1)
         };
-
         vm.insert_value(cell_ref_to_relocatable(should_skip_loop, vm), val)?;
 
         Ok(())
@@ -662,7 +804,21 @@ impl Cairo1HintProcessor {
         if !keys.is_empty() {
             return Err(HintError::KeysNotEmpty);
         }
-
+        Ok(())
+    }
+    
+    fn assert_lt_assert_valid_input(
+        &self,
+        vm: &VirtualMachine,
+        _exec_scopes: &mut ExecutionScopes,
+        a: &ResOperand,
+        b: &ResOperand,
+    ) -> Result<(), HintError> {
+        let a_val = res_operand_get_val(vm, a)?;
+        let b_val = res_operand_get_val(vm, b)?;
+        if a_val >= b_val {
+            return Err(HintError::AssertLtFelt252(a_val, b_val));
+        };
         Ok(())
     }
 }
@@ -769,6 +925,8 @@ impl HintProcessor for Cairo1HintProcessor {
                 skip_exclude_a_flag,
             }) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
 
+            Hint::Core(CoreHint::FieldSqrt { val, sqrt }) => self.field_sqrt(vm, val, sqrt),
+
             Hint::Core(CoreHint::AssertAllAccessesUsed { n_used_accesses }) => {
                 self.assert_all_accesses_used(vm, exec_scopes, n_used_accesses)
             }
@@ -797,12 +955,31 @@ impl HintProcessor for Cairo1HintProcessor {
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
 
+            Hint::Core(CoreHint::InitSquashData {
+                dict_accesses,
+                n_accesses,
+                big_keys,
+                ..
+            }) => self.init_squash_data(vm, exec_scopes, dict_accesses, n_accesses, big_keys),
+
+            Hint::Core(CoreHint::Felt252DictEntryInit { dict_ptr, key }) => {
+                self.dict_entry_init(vm, exec_scopes, dict_ptr, key)
+            }
+
+            Hint::Core(CoreHint::GetCurrentAccessDelta { index_delta_minus1 }) => {
+                self.get_current_access_delta(vm, exec_scopes, index_delta_minus1)
+            }
+
             Hint::Core(CoreHint::RandomEcPoint { x, y }) => self.random_ec_point(vm, x, y),
 
             Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
                 self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
             }
-            _ => todo!(),
+            Hint::Core(CoreHint::AssertLtAssertValidInput { a, b }) => {
+                self.assert_lt_assert_valid_input(vm, exec_scopes, a, b)
+            }
+
+            _ => unimplemented!(),
         }
     }
 }
