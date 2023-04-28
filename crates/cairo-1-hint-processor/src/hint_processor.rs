@@ -652,6 +652,28 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn should_continue_squash_loop(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        let current_access_indices = dict_squash_exec_scope
+            .current_access_indices()
+            .ok_or(HintError::EmptyCurrentAccessIndices)?;
+
+        let should_continue = if current_access_indices.len() > 1 {
+            Felt252::from(1)
+        } else {
+            Felt252::from(0)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(dst, vm), should_continue)
+            .map_err(HintError::from)
+    }
+
     fn felt_252_dict_entry_update(
         &self,
         vm: &mut VirtualMachine,
@@ -968,6 +990,10 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::Core(CoreHint::AssertLeIsSecondArcExcluded {
                 skip_exclude_b_minus_a,
             }) => self.assert_le_is_second_excluded(vm, skip_exclude_b_minus_a, exec_scopes),
+
+            Hint::Core(CoreHint::ShouldContinueSquashLoop { should_continue }) => {
+                self.should_continue_squash_loop(vm, exec_scopes, should_continue)
+            }
 
             Hint::Core(CoreHint::LinearSplit {
                 value,
