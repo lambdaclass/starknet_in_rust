@@ -1,9 +1,14 @@
+use super::dict_manager::DictManagerExecScope;
+use crate::dict_manager::DictSquashExecScope;
+use ark_ff::fields::{Fp256, MontBackend, MontConfig};
+use ark_ff::{Field, PrimeField};
+use ark_std::UniformRand;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
 use cairo_lang_utils::extract_matches;
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{felt_str, Felt252};
 use cairo_vm::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
@@ -12,13 +17,24 @@ use cairo_vm::{
     vm::errors::vm_errors::VirtualMachineError,
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
+use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
 use std::{collections::HashMap, ops::Mul};
 
-use crate::dict_manager::DictManagerExecScope;
-use crate::dict_manager::DictSquashExecScope;
+#[derive(MontConfig)]
+#[modulus = "3618502788666131213697322783095070105623107215331596699973092056135872020481"]
+#[generator = "3"]
+
+/// Returns the Beta value of the Starkware elliptic curve.
+struct FqConfig;
+type Fq = Fp256<MontBackend<FqConfig, 4>>;
+
+fn get_beta() -> Felt252 {
+    felt_str!("3141592653589793238462643383279502884197169399375105820974944592307816406665")
+}
+
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
 
@@ -395,6 +411,36 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn random_ec_point(
+        &self,
+        vm: &mut VirtualMachine,
+        x: &CellRef,
+        y: &CellRef,
+    ) -> Result<(), HintError> {
+        let beta = Fq::from(get_beta().to_biguint());
+
+        let mut rng = ark_std::test_rng();
+        let (random_x, random_y_squared) = loop {
+            let random_x = Fq::rand(&mut rng);
+            let random_y_squared = random_x * random_x * random_x + random_x + beta;
+            if random_y_squared.legendre().is_qr() {
+                break (random_x, random_y_squared);
+            }
+        };
+
+        let x_bigint: BigUint = random_x.into_bigint().into();
+        let y_bigint: BigUint = random_y_squared
+            .sqrt()
+            .ok_or(HintError::CustomHint("Failed to compute sqrt".to_string()))?
+            .into_bigint()
+            .into();
+
+        vm.insert_value(cell_ref_to_relocatable(x, vm), Felt252::from(x_bigint))?;
+        vm.insert_value(cell_ref_to_relocatable(y, vm), Felt252::from(y_bigint))?;
+
+        Ok(())
+    }
+
     fn get_next_dict_key(
         &self,
         vm: &mut VirtualMachine,
@@ -459,6 +505,7 @@ impl Cairo1HintProcessor {
         };
 
         vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
+
         Ok(())
     }
 
@@ -732,6 +779,8 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+
+            Hint::Core(CoreHint::RandomEcPoint { x, y }) => self.random_ec_point(vm, x, y),
 
             Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
                 self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
