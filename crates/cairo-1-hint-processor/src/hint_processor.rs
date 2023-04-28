@@ -636,7 +636,11 @@ impl Cairo1HintProcessor {
         let value = res_operand_get_val(vm, value)?;
         let dict_manager_exec_scope = exec_scopes
             .get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")
-            .expect("Trying to write to a dict while dict manager was not initialized.");
+            .map_err(|_| {
+                HintError::CustomHint(
+                    "Trying to write to a dict while dict manager was not initialized.".to_string(),
+                )
+            })?;
         dict_manager_exec_scope.insert_to_tracker(dict_address, key, value);
 
         Ok(())
