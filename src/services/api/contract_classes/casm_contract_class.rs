@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use cairo_rs::{
-    serde::deserialize_program::{BuiltinName, HintParams},
+use cairo_vm::{
+    serde::deserialize_program::{BuiltinName, HintParams, ReferenceManager},
     types::{program::Program, relocatable::MaybeRelocatable},
 };
 
@@ -22,12 +22,18 @@ pub struct CasmContractClass {
 impl CasmContractClass {
     #[allow(dead_code)]
     fn get_runnable_program(&self, entrypoint_builtins: Vec<BuiltinName>) -> Program {
-        Program {
-            builtins: entrypoint_builtins,
-            prime: self.prime.clone(),
-            data: self.bytecode.clone(),
-            hints: self.pythonic_hints.clone(),
-            ..Default::default()
-        }
+        Program::new(
+            entrypoint_builtins,
+            self.bytecode.clone(),
+            Default::default(),
+            self.pythonic_hints.clone(),
+            ReferenceManager {
+                references: Vec::new(),
+            },
+            Default::default(),
+            Default::default(),
+            Default::default(),
+        )
+        .unwrap()
     }
 }
