@@ -675,6 +675,27 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn get_current_access_index(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        range_check_ptr: &ResOperand,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        let (range_check_base, range_check_offset) = extract_buffer(range_check_ptr)?;
+        let range_check_ptr = get_ptr(vm, range_check_base, &range_check_offset)?;
+        let current_access_index =
+            dict_squash_exec_scope
+                .current_access_index()
+                .ok_or(HintError::CustomHint(
+                    "No current accessed index".to_string(),
+                ))?;
+        vm.insert_value(range_check_ptr, current_access_index)?;
+
+        Ok(())
+    }
+
     fn init_squash_data(
         &self,
         vm: &mut VirtualMachine,
@@ -818,6 +839,22 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn assert_lt_assert_valid_input(
+        &self,
+        vm: &VirtualMachine,
+        _exec_scopes: &mut ExecutionScopes,
+        a: &ResOperand,
+        b: &ResOperand,
+    ) -> Result<(), HintError> {
+        let a_val = res_operand_get_val(vm, a)?;
+        let b_val = res_operand_get_val(vm, b)?;
+        if a_val >= b_val {
+            return Err(HintError::AssertLtFelt252(a_val, b_val));
+        };
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -954,6 +991,10 @@ impl HintProcessor for Cairo1HintProcessor {
                 self.felt_252_dict_entry_update(vm, exec_scopes, dict_ptr, value)
             }
 
+            Hint::Core(CoreHint::GetCurrentAccessIndex { range_check_ptr }) => {
+                self.get_current_access_index(vm, exec_scopes, range_check_ptr)
+            }
+
             Hint::Core(CoreHint::InitSquashData {
                 dict_accesses,
                 n_accesses,
@@ -973,6 +1014,9 @@ impl HintProcessor for Cairo1HintProcessor {
 
             Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
                 self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
+            }
+            Hint::Core(CoreHint::AssertLtAssertValidInput { a, b }) => {
+                self.assert_lt_assert_valid_input(vm, exec_scopes, a, b)
             }
 
             _ => unimplemented!(),
