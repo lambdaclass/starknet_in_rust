@@ -23,7 +23,7 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 #[derive(Debug)]
 pub struct InternalDeclareV2 {
@@ -259,7 +259,7 @@ impl InternalDeclareV2 {
 
 //     use super::InternalDeclareV2;
 //     use crate::{definitions::general_config::StarknetChainId, utils::Address};
-//     use felt::Felt252;
+//     use cairo_vm::felt::Felt252;
 //     use num_traits::Zero;
 
 //     #[test]

@@ -1,4 +1,4 @@
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;
 use sha3::{Digest, Keccak256};
 
