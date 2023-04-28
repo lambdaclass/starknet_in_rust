@@ -413,6 +413,34 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn field_sqrt(
+        &self,
+        vm: &mut VirtualMachine,
+        val: &ResOperand,
+        sqrt: &CellRef,
+    ) -> Result<(), HintError> {
+        let value = Fq::from(res_operand_get_val(vm, val)?.to_biguint());
+
+        let three_fq = Fq::from(Felt252::new(3).to_biguint());
+        let res = if value.legendre().is_qr() {
+            value
+        } else {
+            value * three_fq
+        };
+
+        if let Some(root) = res.sqrt() {
+            let root0: BigUint = root.into_bigint().into();
+            let root1: BigUint = (-root).into_bigint().into();
+            let root = Felt252::from(std::cmp::min(root0, root1));
+            vm.insert_value(cell_ref_to_relocatable(sqrt, vm), root)
+                .map_err(HintError::from)
+        } else {
+            Err(HintError::CustomHint(
+                "Field element is not a square".to_string(),
+            ))
+        }
+    }
+
     fn random_ec_point(
         &self,
         vm: &mut VirtualMachine,
@@ -870,6 +898,8 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::Core(CoreHint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             }) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+
+            Hint::Core(CoreHint::FieldSqrt { val, sqrt }) => self.field_sqrt(vm, val, sqrt),
 
             Hint::Core(CoreHint::AssertAllAccessesUsed { n_used_accesses }) => {
                 self.assert_all_accesses_used(vm, exec_scopes, n_used_accesses)
