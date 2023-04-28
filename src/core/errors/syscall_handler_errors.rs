@@ -1,11 +1,11 @@
 use super::state_errors::StateError;
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     types::errors::math_errors::MathError,
     vm::errors::{
         hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,
     },
 };
-use felt::Felt252;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

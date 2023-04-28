@@ -28,7 +28,7 @@ use crate::{
     },
     utils::{Address, ClassHash},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 use std::collections::HashMap;
 
@@ -281,7 +281,7 @@ impl StarknetState {
 mod tests {
     use std::path::PathBuf;
 
-    use felt::felt_str;
+    use cairo_vm::felt::felt_str;
     use num_traits::Num;
 
     use super::*;

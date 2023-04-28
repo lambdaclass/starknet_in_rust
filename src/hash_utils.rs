@@ -1,5 +1,5 @@
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};
@@ -52,7 +52,7 @@ pub(crate) fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, Sysca
 #[cfg(test)]
 mod tests {
     use super::*;
-    use felt::felt_str;
+    use cairo_vm::felt::felt_str;
 
     #[test]
     fn test_compute_hash_on_elements() {
