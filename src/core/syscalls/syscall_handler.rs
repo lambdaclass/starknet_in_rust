@@ -1,8 +1,8 @@
 use std::ops::Add;
 
-use cairo_rs::types::relocatable::{MaybeRelocatable, Relocatable};
-use cairo_rs::vm::vm_core::VirtualMachine;
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_vm::vm::vm_core::VirtualMachine;
 use num_traits::Zero;
 
 use super::syscall_request::{EmitEventRequest, GetBlockTimestampRequest, StorageReadRequest};
