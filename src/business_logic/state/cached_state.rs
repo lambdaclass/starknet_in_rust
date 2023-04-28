@@ -11,7 +11,7 @@ use crate::{
     starknet_storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, Address, ClassHash, CompiledClassHash},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::collections::HashMap;
@@ -329,7 +329,7 @@ mod tests {
             ContractEntryPoint, EntryPointType,
         },
     };
-    use cairo_rs::types::program::Program;
+    use cairo_vm::types::program::Program;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {

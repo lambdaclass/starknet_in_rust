@@ -1,10 +1,10 @@
-use super::dict_manager::DictManagerExecScope;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
 use cairo_lang_utils::extract_matches;
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
     types::relocatable::MaybeRelocatable,
@@ -12,12 +12,13 @@ use cairo_rs::{
     vm::errors::vm_errors::VirtualMachineError,
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::Felt252;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
 use std::{collections::HashMap, ops::Mul};
 
+use crate::dict_manager::DictManagerExecScope;
+use crate::dict_manager::DictSquashExecScope;
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
 
@@ -68,6 +69,11 @@ fn get_ptr(
     Ok((vm.get_relocatable(cell_ref_to_relocatable(cell, vm))? + offset)?)
 }
 
+fn as_relocatable(vm: &mut VirtualMachine, value: &ResOperand) -> Result<Relocatable, HintError> {
+    let (base, offset) = extract_buffer(value)?;
+    get_ptr(vm, base, &offset).map_err(HintError::from)
+}
+
 fn get_double_deref_val(
     vm: &VirtualMachine,
     cell: &CellRef,
@@ -97,6 +103,21 @@ fn res_operand_get_val(
             }
         }
     }
+}
+
+fn as_cairo_short_string(value: &Felt252) -> Option<String> {
+    let mut as_string = String::default();
+    let mut is_end = false;
+    for byte in value.to_bytes_be() {
+        if byte == 0 {
+            is_end = true;
+        } else if is_end || !byte.is_ascii() {
+            return None;
+        } else {
+            as_string.push(byte as char);
+        }
+    }
+    Some(as_string)
 }
 
 impl Cairo1HintProcessor {
@@ -374,6 +395,23 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn get_next_dict_key(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        next_key: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+        dict_squash_exec_scope.pop_current_key();
+        if let Some(current_key) = dict_squash_exec_scope.current_key() {
+            return vm
+                .insert_value(cell_ref_to_relocatable(next_key, vm), current_key)
+                .map_err(HintError::from);
+        }
+        Err(HintError::KeyNotFound)
+    }
+
     fn alloc_felt_256_dict(
         &self,
         vm: &mut VirtualMachine,
@@ -445,6 +483,95 @@ impl Cairo1HintProcessor {
 
         vm.insert_value((dict_address + 1)?, prev_value)?;
         dict_manager_exec_scope.insert_to_tracker(dict_address, key, value);
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn uint256_square_root(
+        &self,
+        vm: &mut VirtualMachine,
+        value_low: &ResOperand,
+        value_high: &ResOperand,
+        sqrt0: &CellRef,
+        sqrt1: &CellRef,
+        remainder_low: &CellRef,
+        remainder_high: &CellRef,
+        sqrt_mul_2_minus_remainder_ge_u128: &CellRef,
+    ) -> Result<(), HintError> {
+        let pow_2_128 = Felt252::from(u128::MAX) + 1u32;
+        let pow_2_64 = Felt252::from(u64::MAX) + 1u32;
+        let value_low = res_operand_get_val(vm, value_low)?;
+        let value_high = res_operand_get_val(vm, value_high)?;
+        let value = value_low + value_high * pow_2_128.clone();
+        let sqrt = value.sqrt();
+        let remainder = value - sqrt.clone() * sqrt.clone();
+        let sqrt_mul_2_minus_remainder_ge_u128_val =
+            sqrt.clone() * Felt252::from(2u32) - remainder.clone() >= pow_2_128;
+
+        let (sqrt1_val, sqrt0_val) = sqrt.div_rem(&pow_2_64);
+        vm.insert_value(cell_ref_to_relocatable(sqrt0, vm), sqrt0_val)?;
+        vm.insert_value(cell_ref_to_relocatable(sqrt1, vm), sqrt1_val)?;
+
+        let (remainder_high_val, remainder_low_val) = remainder.div_rem(&pow_2_128);
+
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder_low, vm),
+            remainder_low_val,
+        )?;
+        vm.insert_value(
+            cell_ref_to_relocatable(remainder_high, vm),
+            remainder_high_val,
+        )?;
+        vm.insert_value(
+            cell_ref_to_relocatable(sqrt_mul_2_minus_remainder_ge_u128, vm),
+            usize::from(sqrt_mul_2_minus_remainder_ge_u128_val),
+        )?;
+
+        Ok(())
+    }
+
+    fn debug_print(
+        &self,
+        vm: &mut VirtualMachine,
+        start: &ResOperand,
+        end: &ResOperand,
+    ) -> Result<(), HintError> {
+        let mut curr = as_relocatable(vm, start)?;
+        let end = as_relocatable(vm, end)?;
+        while curr != end {
+            let value = vm.get_integer(curr)?;
+            if let Some(shortstring) = as_cairo_short_string(&value) {
+                println!("[DEBUG]\t{shortstring: <31}\t(raw: {value: <31})");
+            } else {
+                println!("[DEBUG]\t{0: <31}\t(raw: {value: <31}) ", ' ');
+            }
+            curr += 1;
+        }
+        println!();
+        Ok(())
+    }
+
+    fn should_skip_squash_loop(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        should_skip_loop: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+
+        let val = if dict_squash_exec_scope
+            .current_access_indices()
+            .ok_or(HintError::CustomHint("no indices accessed".to_string()))?
+            .len()
+            > 1
+        {
+            Felt252::from(0)
+        } else {
+            Felt252::from(1)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(should_skip_loop, vm), val)?;
 
         Ok(())
     }
@@ -483,6 +610,38 @@ impl HintProcessor for Cairo1HintProcessor {
                 dict_end_ptr,
                 dict_index,
             }) => self.get_segment_arena_index(vm, exec_scopes, dict_end_ptr, dict_index),
+
+            Hint::Core(CoreHint::DivMod {
+                lhs,
+                rhs,
+                quotient,
+                remainder,
+            }) => self.div_mod(vm, lhs, rhs, quotient, remainder),
+            Hint::Core(CoreHint::DebugPrint { start, end }) => self.debug_print(vm, start, end),
+
+            Hint::Core(CoreHint::Uint256SquareRoot {
+                value_low,
+                value_high,
+                sqrt0,
+                sqrt1,
+                remainder_low,
+                remainder_high,
+                sqrt_mul_2_minus_remainder_ge_u128,
+            }) => self.uint256_square_root(
+                vm,
+                value_low,
+                value_high,
+                sqrt0,
+                sqrt1,
+                remainder_low,
+                remainder_high,
+                sqrt_mul_2_minus_remainder_ge_u128,
+            ),
+
+            Hint::Core(CoreHint::GetNextDictKey { next_key }) => {
+                self.get_next_dict_key(vm, exec_scopes, next_key)
+            }
+
             Hint::Core(CoreHint::Uint256DivMod {
                 dividend_low,
                 dividend_high,
@@ -541,12 +700,10 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
-            Hint::Core(CoreHint::DivMod {
-                lhs,
-                rhs,
-                quotient,
-                remainder,
-            }) => self.div_mod(vm, lhs, rhs, quotient, remainder),
+
+            Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
+                self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
+            }
             _ => todo!(),
         }
     }
