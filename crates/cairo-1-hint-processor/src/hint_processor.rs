@@ -581,6 +581,27 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn dict_entry_init(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        dict_ptr: &ResOperand,
+        key: &ResOperand,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr)?;
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let key = res_operand_get_val(vm, key)?;
+        let dict_manager_exec_scope =
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
+
+        let prev_value = dict_manager_exec_scope
+            .get_from_tracker(dict_address, &key)
+            .unwrap_or_else(|| DictManagerExecScope::DICT_DEFAULT_VALUE.into());
+
+        vm.insert_value((dict_address + 1)?, prev_value)
+            .map_err(HintError::from)
+    }
+
     fn debug_print(
         &self,
         vm: &mut VirtualMachine,
@@ -810,6 +831,10 @@ impl HintProcessor for Cairo1HintProcessor {
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
 
+
+            Hint::Core(CoreHint::Felt252DictEntryInit { dict_ptr, key }) => {
+                self.dict_entry_init(vm, exec_scopes, dict_ptr, key)
+            }
             Hint::Core(CoreHint::GetCurrentAccessDelta { index_delta_minus1 }) => {
                 self.get_current_access_delta(vm, exec_scopes, index_delta_minus1)
             }
