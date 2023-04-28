@@ -1,10 +1,14 @@
 use super::dict_manager::DictManagerExecScope;
+use crate::dict_manager::DictSquashExecScope;
+use ark_ff::fields::{Fp256, MontBackend, MontConfig};
+use ark_ff::{Field, PrimeField};
+use ark_std::UniformRand;
 use cairo_lang_casm::{
     hints::{CoreHint, Hint},
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
 use cairo_lang_utils::extract_matches;
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{felt_str, Felt252};
 use cairo_vm::{
     hint_processor::hint_processor_definition::HintProcessor,
     types::exec_scope::ExecutionScopes,
@@ -13,12 +17,23 @@ use cairo_vm::{
     vm::errors::vm_errors::VirtualMachineError,
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
+use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
 use std::{collections::HashMap, ops::Mul};
 
-use crate::dict_manager::DictSquashExecScope;
+#[derive(MontConfig)]
+#[modulus = "3618502788666131213697322783095070105623107215331596699973092056135872020481"]
+#[generator = "3"]
+
+/// Returns the Beta value of the Starkware elliptic curve.
+struct FqConfig;
+type Fq = Fp256<MontBackend<FqConfig, 4>>;
+
+fn get_beta() -> Felt252 {
+    felt_str!("3141592653589793238462643383279502884197169399375105820974944592307816406665")
+}
 
 /// HintProcessor for Cairo 1 compiler hints.
 struct Cairo1HintProcessor {}
@@ -241,18 +256,12 @@ impl Cairo1HintProcessor {
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
         let key = res_operand_get_val(vm, key)?;
         let dict_manager_exec_scope =
-            match exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope") {
-                Ok(scope) => scope,
-                _ => {
-                    return Err(HintError::CustomHint(
-                        "Trying to read from a dict while dict manager was not initialized."
-                            .to_string(),
-                    ))
-                }
-            };
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
+
         let value = dict_manager_exec_scope
             .get_from_tracker(dict_address, &key)
             .unwrap_or_else(|| DictManagerExecScope::DICT_DEFAULT_VALUE.into());
+
         vm.insert_value(cell_ref_to_relocatable(value_dst, vm), value)
             .map_err(HintError::from)
     }
@@ -283,20 +292,24 @@ impl Cairo1HintProcessor {
     fn get_segment_arena_index(
         &self,
         vm: &mut VirtualMachine,
-        exec_scopes: &ExecutionScopes,
+        exec_scopes: &mut ExecutionScopes,
         dict_end_ptr: &ResOperand,
         dict_index: &CellRef,
     ) -> Result<(), HintError> {
         let (dict_base, dict_offset) = extract_buffer(dict_end_ptr)?;
         let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
-        let dict_manager_exec_scope = exec_scopes
-            .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
-            .map_err(|_| {
-                HintError::CustomHint(
-                    "Trying to read from a dict while dict manager was not initialized."
-                        .to_string(),
-                )
-            })?;
+        // let dict_manager_exec_scope = exec_scopes
+        //     .get_ref::<DictManagerExecScope>("dict_manager_exec_scope")
+        //     .map_err(|_| {
+        //         HintError::CustomHint(
+        //             "Trying to read from a dict while dict manager was not initialized."
+        //                 .to_string(),
+        //         )
+        //     })?;
+
+        let dict_manager_exec_scope =
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
+
         let dict_infos_index = dict_manager_exec_scope.get_dict_infos_index(dict_address);
         vm.insert_value(
             cell_ref_to_relocatable(dict_index, vm),
@@ -407,6 +420,36 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn random_ec_point(
+        &self,
+        vm: &mut VirtualMachine,
+        x: &CellRef,
+        y: &CellRef,
+    ) -> Result<(), HintError> {
+        let beta = Fq::from(get_beta().to_biguint());
+
+        let mut rng = ark_std::test_rng();
+        let (random_x, random_y_squared) = loop {
+            let random_x = Fq::rand(&mut rng);
+            let random_y_squared = random_x * random_x * random_x + random_x + beta;
+            if random_y_squared.legendre().is_qr() {
+                break (random_x, random_y_squared);
+            }
+        };
+
+        let x_bigint: BigUint = random_x.into_bigint().into();
+        let y_bigint: BigUint = random_y_squared
+            .sqrt()
+            .ok_or(HintError::CustomHint("Failed to compute sqrt".to_string()))?
+            .into_bigint()
+            .into();
+
+        vm.insert_value(cell_ref_to_relocatable(x, vm), Felt252::from(x_bigint))?;
+        vm.insert_value(cell_ref_to_relocatable(y, vm), Felt252::from(y_bigint))?;
+
+        Ok(())
+    }
+
     fn get_next_dict_key(
         &self,
         vm: &mut VirtualMachine,
@@ -437,7 +480,10 @@ impl Cairo1HintProcessor {
             .get_integer((dict_manager_address - 2)?)?
             .into_owned()
             .to_usize()
-            .expect("Number of dictionaries too large.");
+            .ok_or(HintError::CustomHint(
+                "Invalid number of dictionaries.".to_string(),
+            ))?;
+
         let dict_infos_base = vm.get_relocatable((dict_manager_address - 3)?)?;
 
         let dict_manager_exec_scope =
@@ -471,6 +517,31 @@ impl Cairo1HintProcessor {
         };
 
         vm.insert_value(cell_ref_to_relocatable(skip_exclude_b_minus_a, vm), val)?;
+
+        Ok(())
+    }
+
+    fn dict_write(
+        &self,
+        exec_scopes: &mut ExecutionScopes,
+        vm: &mut VirtualMachine,
+        dict_ptr: &ResOperand,
+        key: &ResOperand,
+        value: &ResOperand,
+    ) -> Result<(), HintError> {
+        let (dict_base, dict_offset) = extract_buffer(dict_ptr)?;
+        let dict_address = get_ptr(vm, dict_base, &dict_offset)?;
+        let key = res_operand_get_val(vm, key)?;
+        let value = res_operand_get_val(vm, value)?;
+        let dict_manager_exec_scope =
+            exec_scopes.get_mut_ref::<DictManagerExecScope>("dict_manager_exec_scope")?;
+
+        let prev_value = dict_manager_exec_scope
+            .get_from_tracker(dict_address, &key)
+            .unwrap_or_else(|| DictManagerExecScope::DICT_DEFAULT_VALUE.into());
+
+        vm.insert_value((dict_address + 1)?, prev_value)?;
+        dict_manager_exec_scope.insert_to_tracker(dict_address, key, value);
         Ok(())
     }
 
@@ -564,6 +635,59 @@ impl Cairo1HintProcessor {
 
         Ok(())
     }
+
+    fn assert_all_accesses_used(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        n_used_accesses: &CellRef,
+    ) -> Result<(), HintError> {
+        let key = exec_scopes.get::<Felt252>("key")?;
+        let n = get_cell_val(vm, n_used_accesses)?;
+
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+
+        let access_indices_at_key = dict_squash_exec_scope
+            .access_indices
+            .get(&key.clone())
+            .ok_or_else(|| HintError::NoKeyInAccessIndices(key.clone()))?;
+
+        if n != Felt252::new(access_indices_at_key.len()) {
+            return Err(HintError::NumUsedAccessesAssertFail(
+                n,
+                access_indices_at_key.len(),
+                key,
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn should_skip_squash_loop(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        should_skip_loop: &CellRef,
+    ) -> Result<(), HintError> {
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+
+        let val = if dict_squash_exec_scope
+            .current_access_indices()
+            .ok_or(HintError::CustomHint("no indices accessed".to_string()))?
+            .len()
+            > 1
+        {
+            Felt252::from(0)
+        } else {
+            Felt252::from(1)
+        };
+
+        vm.insert_value(cell_ref_to_relocatable(should_skip_loop, vm), val)?;
+
+        Ok(())
+    }
 }
 
 impl HintProcessor for Cairo1HintProcessor {
@@ -583,15 +707,18 @@ impl HintProcessor for Cairo1HintProcessor {
         let hint = hint_data.downcast_ref::<Hint>().unwrap();
         match hint {
             Hint::Core(CoreHint::AllocSegment { dst }) => self.alloc_segment(vm, dst),
-
             Hint::Core(CoreHint::TestLessThan { lhs, rhs, dst }) => {
                 self.test_less_than(vm, lhs, rhs, dst)
             }
-
             Hint::Core(CoreHint::TestLessThanOrEqual { lhs, rhs, dst }) => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
-
+            Hint::Core(CoreHint::Felt252DictRead {
+                dict_ptr,
+                key,
+                value_dst,
+            }) => self.dict_read(vm, exec_scopes, dict_ptr, key, value_dst),
+            Hint::Core(CoreHint::SquareRoot { value, dst }) => self.square_root(vm, value, dst),
             Hint::Core(CoreHint::GetSegmentArenaIndex {
                 dict_end_ptr,
                 dict_index,
@@ -628,12 +755,6 @@ impl HintProcessor for Cairo1HintProcessor {
                 self.get_next_dict_key(vm, exec_scopes, next_key)
             }
 
-            Hint::Core(CoreHint::Felt252DictRead {
-                dict_ptr,
-                key,
-                value_dst,
-            }) => self.dict_read(vm, exec_scopes, dict_ptr, key, value_dst),
-
             Hint::Core(CoreHint::Uint256DivMod {
                 dividend_low,
                 dividend_high,
@@ -662,9 +783,18 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder_low,
                 remainder_high,
             ),
+            Hint::Core(CoreHint::Felt252DictWrite {
+                dict_ptr,
+                key,
+                value,
+            }) => self.dict_write(exec_scopes, vm, dict_ptr, key, value),
             Hint::Core(CoreHint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             }) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+
+            Hint::Core(CoreHint::AssertAllAccessesUsed { n_used_accesses }) => {
+                self.assert_all_accesses_used(vm, exec_scopes, n_used_accesses)
+            }
 
             Hint::Core(CoreHint::AssertLeIsSecondArcExcluded {
                 skip_exclude_b_minus_a,
@@ -677,8 +807,6 @@ impl HintProcessor for Cairo1HintProcessor {
                 x,
                 y,
             }) => self.linear_split(vm, value, scalar, max_x, x, y),
-
-            Hint::Core(CoreHint::SquareRoot { value, dst }) => self.square_root(vm, value, dst),
 
             Hint::Core(CoreHint::AllocFelt252Dict { segment_arena_ptr }) => {
                 self.alloc_felt_256_dict(vm, segment_arena_ptr, exec_scopes)
@@ -694,7 +822,13 @@ impl HintProcessor for Cairo1HintProcessor {
                 self.get_current_access_delta(vm, exec_scopes, index_delta_minus1)
             }
 
-            _ => todo!(),
+            Hint::Core(CoreHint::RandomEcPoint { x, y }) => self.random_ec_point(vm, x, y),
+
+            Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
+                self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
+            }
+
+            _ => unimplemented!(),
         }
     }
 }
