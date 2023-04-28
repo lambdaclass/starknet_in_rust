@@ -408,6 +408,7 @@ impl ExecutionEntryPoint {
             _ => return Err(TransactionError::NotARelocatableValue),
         };
 
+        // TODO: This has to be refactored to the non deprecated SyscallHandler.
         let syscall_handler = DeprecatedBLSyscallHandler::new(
             tx_execution_context.clone(),
             state,
@@ -452,6 +453,8 @@ impl ExecutionEntryPoint {
 
         Ok(runner)
 
+        // TODO: Once both methods get refactored we should put all the common code in the _run function
+        //
         // self._run(
         //     state,
         //     resources_manager,
@@ -462,22 +465,6 @@ impl ExecutionEntryPoint {
         //     entry_point.offset,
         // )
     }
-
-    // fn _run<'a, T>(
-    //     &self,
-    //     state: &'a mut T,
-    //     resources_manager: &ExecutionResourcesManager,
-    //     general_config: &StarknetGeneralConfig,
-    //     tx_execution_context: &TransactionExecutionContext,
-    //     mut cairo_runner: CairoRunner,
-    //     mut vm: VirtualMachine,
-    //     entry_point_offset: usize,
-    // ) -> Result<StarknetRunner<DeprecatedBLSyscallHandler<'a, T>>, TransactionError>
-    // where
-    //     T: Default + State + StateReader,
-    // {
-    //     // TODO
-    // }
 }
 
 // Helper functions
@@ -506,12 +493,7 @@ fn collect_hints(casm_contract_class: &CasmContractClass) -> HashMap<usize, Vec<
     casm_contract_class
         .hints
         .iter()
-        .map(|(key, hints)| {
-            (
-                *key,
-                hints.iter().map(|hint| hint_to_hint_params(hint)).collect(),
-            )
-        })
+        .map(|(key, hints)| (*key, hints.iter().map(hint_to_hint_params).collect()))
         .collect()
 }
 
