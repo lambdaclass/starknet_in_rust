@@ -551,6 +551,34 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn assert_all_accesses_used(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        n_used_accesses: &CellRef,
+    ) -> Result<(), HintError> {
+        let key = exec_scopes.get::<Felt252>("key")?;
+        let n = get_cell_val(vm, n_used_accesses)?;
+
+        let dict_squash_exec_scope: &mut DictSquashExecScope =
+            exec_scopes.get_mut_ref("dict_squash_exec_scope")?;
+
+        let access_indices_at_key = dict_squash_exec_scope
+            .access_indices
+            .get(&key.clone())
+            .ok_or_else(|| HintError::NoKeyInAccessIndices(key.clone()))?;
+
+        if n != Felt252::new(access_indices_at_key.len()) {
+            return Err(HintError::NumUsedAccessesAssertFail(
+                n,
+                access_indices_at_key.len(),
+                key,
+            ));
+        }
+
+        Ok(())
+    }
+
     fn should_skip_squash_loop(
         &self,
         vm: &mut VirtualMachine,
@@ -678,6 +706,10 @@ impl HintProcessor for Cairo1HintProcessor {
             Hint::Core(CoreHint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
             }) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+
+            Hint::Core(CoreHint::AssertAllAccessesUsed { n_used_accesses }) => {
+                self.assert_all_accesses_used(vm, exec_scopes, n_used_accesses)
+            }
 
             Hint::Core(CoreHint::AssertLeIsSecondArcExcluded {
                 skip_exclude_b_minus_a,
