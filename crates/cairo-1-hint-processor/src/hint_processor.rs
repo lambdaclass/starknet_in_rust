@@ -566,6 +566,7 @@ impl HintProcessor for Cairo1HintProcessor {
                 a,
                 b,
             }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+
             _ => todo!(),
         }
     }
