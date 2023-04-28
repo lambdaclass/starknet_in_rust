@@ -1,5 +1,5 @@
 use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -116,7 +116,7 @@ impl Default for StarknetGeneralConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use felt::felt_str;
+    use cairo_vm::felt::felt_str;
 
     #[test]
     fn starknet_chain_to_felt() {

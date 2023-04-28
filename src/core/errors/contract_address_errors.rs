@@ -1,4 +1,4 @@
-use cairo_rs::{
+use cairo_vm::{
     types::errors::program_errors::ProgramError,
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
@@ -31,4 +31,6 @@ pub enum ContractAddressError {
     CairoRun(#[from] CairoRunError),
     #[error(transparent)]
     VirtualMachine(#[from] VirtualMachineError),
+    #[error("Could not remove suffix from builtin")]
+    BuiltinSuffix,
 }
