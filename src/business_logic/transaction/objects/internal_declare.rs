@@ -26,7 +26,7 @@ use crate::{
         ClassHash,
     },
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
@@ -301,7 +301,7 @@ impl InternalDeclare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use felt::{felt_str, Felt252};
+    use cairo_vm::felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 

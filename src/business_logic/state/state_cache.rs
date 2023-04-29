@@ -3,7 +3,7 @@ use crate::{
     services::api::contract_classes::compiled_class::CompiledClass,
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::{HashMap, HashSet};
 
@@ -192,7 +192,7 @@ impl StateCache {
 #[cfg(test)]
 mod tests {
 
-    use cairo_rs::types::program::Program;
+    use cairo_vm::types::program::Program;
 
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
 

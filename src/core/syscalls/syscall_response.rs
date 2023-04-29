@@ -1,5 +1,5 @@
-use cairo_rs::types::relocatable::Relocatable;
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::types::relocatable::Relocatable;
 
 // TODO: remove once used.
 #[allow(dead_code)]
