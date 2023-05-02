@@ -14,7 +14,10 @@ use crate::{
             objects::internal_invoke_function::verify_no_calls_to_other_contracts,
         },
     },
-    core::transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
+    core::{
+        errors::state_errors::StateError,
+        transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
+    },
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
@@ -38,7 +41,7 @@ pub struct InternalDeclareV2 {
     pub compiled_class_hash: Felt252,
     pub sierra_contract_class: SierraContractClass,
     pub hash_value: Felt252,
-    pub casm_class: CasmContractClass,
+    pub casm_class: Option<CasmContractClass>,
 }
 
 impl InternalDeclareV2 {
@@ -55,9 +58,6 @@ impl InternalDeclareV2 {
         hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
-        let casm_class =
-            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true)
-                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
         let hash_value = match hash_value {
             Some(hash) => hash,
@@ -83,7 +83,7 @@ impl InternalDeclareV2 {
             nonce,
             compiled_class_hash,
             hash_value,
-            casm_class,
+            casm_class: None,
         };
 
         internal_declare.verify_version()?;
@@ -182,7 +182,7 @@ impl InternalDeclareV2 {
     }
 
     pub fn execute<S: Default + State + StateReader + Clone>(
-        &self,
+        &mut self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         remaining_gas: u64,
@@ -207,6 +207,13 @@ impl InternalDeclareV2 {
             None,
         )?;
 
+        let casm_class =
+            CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
+                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
+
+        self.casm_class = Some(casm_class.clone());
+        self.store_casm_class(casm_class, state)?;
+
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 Some(validate_info),
@@ -217,8 +224,21 @@ impl InternalDeclareV2 {
         )
     }
 
+    fn store_casm_class<S: Default + State + StateReader + Clone>(
+        &mut self,
+        casm_class: CasmContractClass,
+        state: &mut S,
+    ) -> Result<(), StateError> {
+        let compiled_class_hash = self.compiled_class_hash.to_le_bytes();
+        let class_hash = self.hash_value.to_le_bytes();
+
+        state.set_compiled_class_hash(class_hash, &compiled_class_hash)?;
+        state.set_compiled_class(&compiled_class_hash, casm_class)?;
+        Ok(())
+    }
+
     fn run_validate_entrypoint<S: Default + State + StateReader + Clone>(
-        &self,
+        &mut self,
         mut remaining_gas: u64,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
