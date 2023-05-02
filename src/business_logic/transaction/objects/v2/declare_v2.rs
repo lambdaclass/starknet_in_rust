@@ -22,6 +22,7 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
@@ -37,6 +38,7 @@ pub struct InternalDeclareV2 {
     pub compiled_class_hash: Felt252,
     pub sierra_contract_class: SierraContractClass,
     pub hash_value: Felt252,
+    pub casm_class: CasmContractClass,
 }
 
 impl InternalDeclareV2 {
@@ -53,6 +55,9 @@ impl InternalDeclareV2 {
         hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true)
+                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
         let hash_value = match hash_value {
             Some(hash) => hash,
@@ -78,6 +83,7 @@ impl InternalDeclareV2 {
             nonce,
             compiled_class_hash,
             hash_value,
+            casm_class,
         };
 
         internal_declare.verify_version()?;
