@@ -25,6 +25,12 @@ use num_traits::cast::ToPrimitive;
 use num_traits::identities::Zero;
 use std::{collections::HashMap, ops::Mul};
 
+/// Execution scope for constant memory allocation.
+struct MemoryExecScope {
+    /// The first free address in the segment.
+    next_address: Relocatable,
+}
+
 #[derive(MontConfig)]
 #[modulus = "3618502788666131213697322783095070105623107215331596699973092056135872020481"]
 #[generator = "3"]
@@ -139,6 +145,39 @@ fn as_cairo_short_string(value: &Felt252) -> Option<String> {
 }
 
 impl Cairo1HintProcessor {
+    fn alloc_constant_size(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+        size: &ResOperand,
+        dst: &CellRef,
+    ) -> Result<(), HintError> {
+        let object_size = res_operand_get_val(vm, size)?
+            .to_usize()
+            .expect("Object size too large.");
+        let memory_exec_scope =
+            match exec_scopes.get_mut_ref::<MemoryExecScope>("memory_exec_scope") {
+                Ok(memory_exec_scope) => memory_exec_scope,
+                Err(_) => {
+                    exec_scopes.assign_or_update_variable(
+                        "memory_exec_scope",
+                        Box::new(MemoryExecScope {
+                            next_address: vm.add_memory_segment(),
+                        }),
+                    );
+                    exec_scopes.get_mut_ref::<MemoryExecScope>("memory_exec_scope")?
+                }
+            };
+
+        vm.insert_value(
+            cell_ref_to_relocatable(dst, vm),
+            memory_exec_scope.next_address,
+        )?;
+
+        memory_exec_scope.next_address.offset += object_size;
+        Ok(())
+    }
+
     fn assert_le_assert_third_arc_excluded(
         &self,
         _vm: &mut VirtualMachine,
@@ -938,6 +977,9 @@ impl HintProcessor for Cairo1HintProcessor {
         let hint = hint_data.downcast_ref::<Hint>().unwrap();
         match hint {
             Hint::Core(CoreHint::AllocSegment { dst }) => self.alloc_segment(vm, dst),
+            Hint::Core(CoreHint::AllocConstantSize { size, dst }) => {
+                self.alloc_constant_size(vm, exec_scopes, size, dst)
+            }
             Hint::Core(CoreHint::TestLessThan { lhs, rhs, dst }) => {
                 self.test_less_than(vm, lhs, rhs, dst)
             }
