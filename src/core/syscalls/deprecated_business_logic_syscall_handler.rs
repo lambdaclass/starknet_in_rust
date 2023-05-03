@@ -21,11 +21,11 @@ use crate::{
     services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
     utils::*,
 };
-use cairo_rs::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
-use felt::Felt252;
 use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
@@ -51,7 +51,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
 }
 
-impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -237,7 +237,7 @@ where
 
 impl<'a, T> DeprecatedSyscallHandler for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: Default + State + StateReader,
+    T: State + StateReader,
 {
     fn emit_event(
         &mut self,
@@ -555,7 +555,7 @@ where
 
 impl<'a, T> SyscallHandlerPostRun for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: Default + State + StateReader,
+    T: State + StateReader,
 {
     fn post_run(
         &self,
@@ -586,7 +586,8 @@ mod tests {
         },
         utils::{test_utils::*, Address},
     };
-    use cairo_rs::{
+    use cairo_vm::felt::Felt252;
+    use cairo_vm::{
         hint_processor::{
             builtin_hint_processor::builtin_hint_processor_definition::{
                 BuiltinHintProcessor, HintProcessorData,
@@ -601,7 +602,6 @@ mod tests {
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
     use coverage_helper::test;
-    use felt::Felt252;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 

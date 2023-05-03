@@ -23,7 +23,7 @@ use crate::{
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_tx_resources, verify_no_calls_to_other_contracts, Address, ClassHash},
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
@@ -119,7 +119,7 @@ impl InternalDeclare {
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: Default + State + StateReader + Clone>(
+    pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -166,7 +166,7 @@ impl InternalDeclare {
         )
     }
 
-    pub fn run_validate_entrypoint<S: Default + State + StateReader>(
+    pub fn run_validate_entrypoint<S: State + StateReader>(
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
@@ -202,7 +202,7 @@ impl InternalDeclare {
     }
 
     /// Calculates and charges the actual fee.
-    pub fn charge_fee<S: Default + State + StateReader + Clone>(
+    pub fn charge_fee<S: State + StateReader>(
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
@@ -225,10 +225,7 @@ impl InternalDeclare {
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
-    fn handle_nonce<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-    ) -> Result<(), TransactionError> {
+    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version == 0 {
             return Ok(());
         }
@@ -249,7 +246,7 @@ impl InternalDeclare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -292,8 +289,8 @@ impl InternalDeclare {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairo_vm::felt::{felt_str, Felt252};
     use coverage_helper::test;
-    use felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 

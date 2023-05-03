@@ -3,7 +3,7 @@ pub use starknet_contract_class::ContractEntryPoint;
 pub use starknet_contract_class::EntryPointType;
 
 use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
-use cairo_rs::{
+use cairo_vm::{
     serde::deserialize_program::BuiltinName,
     types::{errors::program_errors::ProgramError, program::Program},
     utils::is_subsequence,
@@ -60,7 +60,12 @@ impl ContractClass {
     }
 
     pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
-        if !is_subsequence(&self.program.builtins, &SUPPORTED_BUILTINS) {
+        let program_builtins = self
+            .program
+            .iter_builtins()
+            .cloned()
+            .collect::<Vec<BuiltinName>>();
+        if !is_subsequence(&program_builtins, &SUPPORTED_BUILTINS) {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
@@ -114,8 +119,8 @@ impl TryFrom<&PathBuf> for ContractClass {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cairo_vm::felt::{felt_str, PRIME_STR};
     use coverage_helper::test;
-    use felt::{felt_str, PRIME_STR};
     use std::{fs::File, io::Read};
 
     #[test]
@@ -136,8 +141,14 @@ mod tests {
         // We check only some of the attributes. Ideally we would serialize
         // and compare with original
         assert_eq!(contract_class.abi(), &None);
+
+        let program_builtins = contract_class
+            .program()
+            .iter_builtins()
+            .cloned()
+            .collect::<Vec<BuiltinName>>();
         assert_eq!(
-            contract_class.program().builtins,
+            program_builtins,
             vec![
                 BuiltinName::pedersen,
                 BuiltinName::range_check,
@@ -145,7 +156,7 @@ mod tests {
                 BuiltinName::bitwise
             ]
         );
-        assert_eq!(contract_class.program().prime, PRIME_STR);
+        assert_eq!(contract_class.program().prime(), PRIME_STR);
         assert_eq!(
             contract_class
                 .entry_points_by_type()

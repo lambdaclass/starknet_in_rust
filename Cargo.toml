@@ -8,8 +8,7 @@ default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
 
 [dependencies]
-cairo-rs = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
-felt = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-felt", rev = "eebfd612c5f969c759cb982e8fb777b2a1a1dab0" }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
@@ -21,7 +20,7 @@ sha3 = "0.10.1"
 starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "main", features = [
     "testing",
 ] }
-starknet-crypto = "0.2.0"
+starknet-crypto = "0.4.3"
 thiserror = "1.0.32"
 clap = { version = "4.1.8", features = ["derive"] }
 actix-web = "4.3.1"

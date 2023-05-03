@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -145,7 +145,7 @@ fn call_contract_with_extra_arguments() {
         )]
         .into_iter(),
         [2222.into(), 2.into()],
-        "An ASSERT_EQ instruction failed: 10:1 != 10:2",
+        "An ASSERT_EQ instruction failed: 11:1 != 11:2",
     );
 }
 

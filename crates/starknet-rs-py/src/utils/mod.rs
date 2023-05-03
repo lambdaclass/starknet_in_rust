@@ -2,7 +2,7 @@ pub mod transaction_hash;
 
 use crate::types::general_config::PyStarknetGeneralConfig;
 use crate::{cached_state::PyCachedState, types::contract_class::PyContractClass};
-use cairo_felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
 use pyo3::{exceptions::PyValueError, pyfunction, PyResult};
 use starknet_rs::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;

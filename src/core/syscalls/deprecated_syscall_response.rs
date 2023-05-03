@@ -6,8 +6,8 @@ use super::deprecated_syscall_request::{
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_rs::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 pub(crate) trait DeprecatedWriteSyscallResponse {
     fn write_syscall_response(
@@ -310,7 +310,7 @@ mod tests {
         core::syscalls::deprecated_syscall_handler::DeprecatedSyscallHandler,
         utils::{get_integer, test_utils::vm},
     };
-    use cairo_rs::relocatable;
+    use cairo_vm::relocatable;
     use coverage_helper::test;
 
     type DeprecatedBLSyscallHandler<'a> =

@@ -1,9 +1,9 @@
 use super::contract_entry_point::PyContractEntryPoint;
 use cairo_vm::types::errors::program_errors::ProgramError;
+use pyo3::prelude::*;
 use pyo3::{
     exceptions::PyValueError,
-    prelude::*,
-    types::{IntoPyDict, PyDict, PyType},
+    types::{IntoPyDict, PyDict, PyString, PyType},
 };
 use starknet_rs::services::api::contract_class::{ContractClass, EntryPointType};
 use std::collections::HashMap;
@@ -19,6 +19,15 @@ pub struct PyContractClass {
 
 #[pymethods]
 impl PyContractClass {
+    #[new]
+    pub fn new(path: &PyString) -> Self {
+        let path = path.to_str().unwrap();
+        PyContractClass {
+            inner: ContractClass::try_from(path).unwrap(),
+            abi: None,
+        }
+    }
+
     #[getter]
     pub fn entry_points_by_type(&self) -> HashMap<PyEntryPointType, Vec<PyContractEntryPoint>> {
         self.inner
@@ -88,6 +97,24 @@ mod tests {
     use super::*;
     use pyo3::PyTypeInfo;
     use std::path::PathBuf;
+
+    #[test]
+    fn test_create_py_contract_class() {
+        Python::with_gil(|py| {
+            let py_contract_cls = <PyContractClass as PyTypeInfo>::type_object(py);
+
+            let locals = [("ContractClass", py_contract_cls)].into_py_dict(py);
+
+            let code = r#"
+file = open('../../starknet_programs/fibonacci.json')
+ContractClass(file.read())
+file.close()
+"#;
+
+            let res = py.run(code, None, Some(locals));
+            assert!(res.is_ok(), "{res:?}");
+        })
+    }
 
     #[test]
     fn load_contract_smoke_test() {

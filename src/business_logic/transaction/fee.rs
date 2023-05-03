@@ -13,7 +13,7 @@ use crate::{
     },
     services::api::contract_class::EntryPointType,
 };
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
@@ -22,7 +22,7 @@ pub type FeeInfo = (Option<CallInfo>, u64);
 
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-pub(crate) fn execute_fee_transfer<S: Default + State + StateReader + Clone>(
+pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     state: &mut S,
     general_config: &StarknetGeneralConfig,
     tx_context: &TransactionExecutionContext,
