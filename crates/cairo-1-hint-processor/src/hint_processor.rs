@@ -178,6 +178,22 @@ impl Cairo1HintProcessor {
         Ok(())
     }
 
+    fn assert_le_assert_third_arc_excluded(
+        &self,
+        _vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
+        let excluded_arc: i32 = exec_scopes.get("excluded_arc")?;
+
+        if excluded_arc != 2 {
+            Ok(())
+        } else {
+            Err(HintError::AssertionFailed(
+                "AssertLeAssertThirdArcExcluded assertion failed".to_string(),
+            ))
+        }
+    }
+
     fn alloc_segment(&mut self, vm: &mut VirtualMachine, dst: &CellRef) -> Result<(), HintError> {
         let segment = vm.add_memory_segment();
         vm.insert_value(cell_ref_to_relocatable(dst, vm), segment)
@@ -1118,6 +1134,10 @@ impl HintProcessor for Cairo1HintProcessor {
 
             Hint::Core(CoreHint::AssertLtAssertValidInput { a, b }) => {
                 self.assert_lt_assert_valid_input(vm, exec_scopes, a, b)
+            }
+
+            Hint::Core(CoreHint::AssertLeAssertThirdArcExcluded) => {
+                self.assert_le_assert_third_arc_excluded(vm, exec_scopes)
             }
 
             _ => unimplemented!(),
