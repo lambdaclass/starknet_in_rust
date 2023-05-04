@@ -1,6 +1,5 @@
 use super::{
-    deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
-    deprecated_syscall_request::*,
+    deprecated_syscall_handler::DeprecatedSyscallHandler, deprecated_syscall_request::*,
     syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
@@ -581,12 +580,7 @@ where
 
         Ok(())
     }
-}
 
-impl<'a, T> SyscallHandlerPostRun for DeprecatedBLSyscallHandler<'a, T>
-where
-    T: Default + State + StateReader,
-{
     fn post_run(
         &self,
         runner: &mut VirtualMachine,

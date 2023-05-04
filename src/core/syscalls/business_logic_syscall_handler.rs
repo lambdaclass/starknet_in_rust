@@ -13,6 +13,7 @@ use super::{
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
+use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
@@ -125,7 +126,6 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) general_config: StarknetGeneralConfig,
-    pub(crate) entry_point: ExecutionEntryPoint,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) support_reverted: bool,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
@@ -143,7 +143,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         contract_address: Address,
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
-        entry_point: ExecutionEntryPoint,
     ) -> Self {
         let events = Vec::new();
         let read_only_segments = Vec::new();
@@ -153,7 +152,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         BusinessLogicSyscallHandler {
             tx_execution_context,
-            entry_point,
             events,
             read_only_segments,
             resources_manager,
@@ -164,6 +162,60 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             starknet_storage_state,
             internal_calls,
             expected_syscall_ptr: syscall_ptr,
+            support_reverted: false,
+            selector_to_syscall: &SELECTOR_TO_SYSCALL,
+        }
+    }
+    pub fn default_with(state: &'a mut T) -> Self {
+        BusinessLogicSyscallHandler::new_for_testing(
+            BlockInfo::default(),
+            Default::default(),
+            state,
+        )
+    }
+
+    pub fn new_for_testing(
+        block_info: BlockInfo,
+        _contract_address: Address,
+        state: &'a mut T,
+    ) -> Self {
+        let syscalls = Vec::from([
+            "emit_event".to_string(),
+            "deploy".to_string(),
+            "get_tx_info".to_string(),
+            "send_message_to_l1".to_string(),
+            "library_call".to_string(),
+            "get_caller_address".to_string(),
+            "get_contract_address".to_string(),
+            "get_sequencer_address".to_string(),
+            "get_block_timestamp".to_string(),
+        ]);
+        let events = Vec::new();
+        let tx_execution_context = Default::default();
+        let read_only_segments = Vec::new();
+        let resources_manager = ExecutionResourcesManager::new(syscalls, Default::default());
+        let contract_address = Address(1.into());
+        let caller_address = Address(0.into());
+        let l2_to_l1_messages = Vec::new();
+        let mut general_config = StarknetGeneralConfig::default();
+        general_config.block_info = block_info;
+        let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
+
+        let internal_calls = Vec::new();
+        let expected_syscall_ptr = Relocatable::from((0, 0));
+
+        BusinessLogicSyscallHandler {
+            tx_execution_context,
+            events,
+            read_only_segments,
+            resources_manager,
+            contract_address,
+            caller_address,
+            l2_to_l1_messages,
+            general_config,
+            starknet_storage_state,
+            internal_calls,
+            expected_syscall_ptr,
             support_reverted: false,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
@@ -236,7 +288,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
             let call_info = CallInfo::empty_constructor_call(
                 contract_address.clone(),
-                self.entry_point.contract_address.clone(),
+                self.contract_address.clone(),
                 Some(class_hash_bytes),
             );
             self.internal_calls.push(call_info.clone());
@@ -248,7 +300,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             contract_address.clone(),
             constructor_calldata,
             CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
-            self.entry_point.contract_address.clone(),
+            self.contract_address.clone(),
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
@@ -446,7 +498,7 @@ where
         let class_hash = &request.class_hash;
 
         let deployer_address = if request.deploy_from_zero.is_zero() {
-            self.entry_point.contract_address.clone()
+            self.contract_address.clone()
         } else {
             Address(0.into())
         };
@@ -531,7 +583,7 @@ where
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(
-            self.entry_point.contract_address.clone(),
+            self.contract_address.clone(),
             calldata,
             request.selector,
             self.caller_address.clone(),
