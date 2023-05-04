@@ -6,7 +6,10 @@ edition = "2021"
 [dependencies]
 cairo-vm = { git="https://github.com/lambdaclass/cairo-rs/", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
 cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo" }
+ark-ff = "0.4.2"
+ark-std = "0.3.0"
+num-bigint = "0.4"
 cairo-lang-utils = "0.1.0"
 num-integer = "0.1.45"
 num-traits = "0.2.15"
-thiserror = { version = "1.0.32" }
+
