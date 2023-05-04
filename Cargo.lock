@@ -3388,6 +3388,7 @@ dependencies = [
  "actix-web",
  "assert_matches",
  "awc",
+ "cairo-lang-casm",
  "cairo-lang-starknet",
  "cairo-vm",
  "cargo-llvm-cov",

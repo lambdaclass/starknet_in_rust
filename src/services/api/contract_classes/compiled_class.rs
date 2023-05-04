@@ -1,4 +1,5 @@
-use super::{casm_contract_class::CasmContractClass, deprecated_contract_class::ContractClass};
+use super::deprecated_contract_class::ContractClass;
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CompiledClass {

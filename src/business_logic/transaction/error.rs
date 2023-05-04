@@ -10,7 +10,10 @@ use crate::{
     utils::ClassHash,
 };
 use cairo_vm::{
-    types::{errors::math_errors::MathError, relocatable::Relocatable},
+    types::{
+        errors::{math_errors::MathError, program_errors::ProgramError},
+        relocatable::Relocatable,
+    },
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
         trace_errors::TraceError, vm_errors::VirtualMachineError,
@@ -120,4 +123,6 @@ pub enum TransactionError {
     NoneTransactionType(TransactionType, OsResources),
     #[error(transparent)]
     MathError(#[from] MathError),
+    #[error(transparent)]
+    ProgramError(#[from] ProgramError),
 }
