@@ -306,16 +306,13 @@ impl ExecutionEntryPoint {
 
         cairo_runner.initialize_function_runner(&mut vm, false)?;
 
-        let mut tmp_state = T::default();
-        let hint_processor = DeprecatedSyscallHintProcessor::new(
-            DeprecatedBLSyscallHandler::default_with(&mut tmp_state),
-        );
-        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        validate_contract_deployed(state, &self.contract_address)?;
 
         // prepare OS context
-        let os_context = runner.prepare_os_context();
-
-        validate_contract_deployed(state, &self.contract_address)?;
+        //let os_context = runner.prepare_os_context();
+        let os_context = StarknetRunner::<
+            DeprecatedSyscallHintProcessor<DeprecatedBLSyscallHandler<T>>,
+        >::prepare_os_context(&cairo_runner, &mut vm);
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -332,9 +329,8 @@ impl ExecutionEntryPoint {
             general_config.clone(),
             initial_syscall_ptr,
         );
-
-        let mut runner =
-            runner.map_hint_processor(DeprecatedSyscallHintProcessor::new(syscall_handler));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(syscall_handler);
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data: Vec<MaybeRelocatable> = self.calldata.clone().iter().map(|d| d.into()).collect();
@@ -408,15 +404,11 @@ impl ExecutionEntryPoint {
         )?;
         cairo_runner.initialize_function_runner(&mut vm, true)?;
 
-        let mut tmp_state = T::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut tmp_state));
-        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+        validate_contract_deployed(state, &self.contract_address)?;
 
         // prepare OS context
-        let os_context = runner.prepare_os_context();
-
-        validate_contract_deployed(state, &self.contract_address)?;
+        let os_context =
+            StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context(&cairo_runner, &mut vm);
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -433,8 +425,8 @@ impl ExecutionEntryPoint {
             general_config.clone(),
             initial_syscall_ptr,
         );
-
-        let mut runner = runner.map_hint_processor(SyscallHintProcessor::new(syscall_handler));
+        let hint_processor = SyscallHintProcessor::new(syscall_handler);
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data = self.calldata.clone().iter().map(|d| d.into()).collect();
@@ -484,7 +476,6 @@ impl ExecutionEntryPoint {
 }
 
 // Helper functions
-
 fn get_runnable_program(
     casm_contract_class: &CasmContractClass,
     entrypoint_builtins: Vec<String>,
