@@ -135,6 +135,7 @@ fn test_contract<'a>(
                 &general_config,
                 &mut resources_manager,
                 &tx_execution_context,
+                false,
             )
             .expect("Could not execute contract"),
         CallInfo {

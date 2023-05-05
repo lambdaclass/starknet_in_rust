@@ -143,6 +143,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         contract_address: Address,
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
+        support_reverted: bool,
     ) -> Self {
         let events = Vec::new();
         let read_only_segments = Vec::new();
@@ -162,7 +163,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             starknet_storage_state,
             internal_calls,
             expected_syscall_ptr: syscall_ptr,
-            support_reverted: false,
+            support_reverted,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
@@ -239,6 +240,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
+                self.support_reverted,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
@@ -307,11 +309,12 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             remainig_gas,
         );
 
-        // TODO: implement this function and logic once execution entry point is unlocked
         let call_info = call
-            .execute_v2(
+            .execute(
                 self.starknet_storage_state.state,
-                &mut self.general_config,
+                &self.general_config,
+                &mut self.resources_manager,
+                &self.tx_execution_context,
                 self.support_reverted,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;

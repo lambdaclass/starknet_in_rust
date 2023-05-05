@@ -118,7 +118,8 @@ fn integration_test() {
                 &mut state,
                 &general_config,
                 &mut resources_manager,
-                &tx_execution_context
+                &tx_execution_context,
+                false,
             )
             .unwrap(),
         expected_call_info

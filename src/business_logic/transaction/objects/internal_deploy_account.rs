@@ -259,6 +259,7 @@ impl InternalDeployAccount {
             general_config,
             resources_manager,
             &self.get_execution_context(general_config.validate_max_n_steps),
+            false,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
@@ -323,6 +324,7 @@ impl InternalDeployAccount {
             general_config,
             resources_manager,
             &self.get_execution_context(general_config.validate_max_n_steps),
+            false,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)

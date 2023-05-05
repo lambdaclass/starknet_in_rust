@@ -92,6 +92,7 @@ impl ExecutionEntryPoint {
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &TransactionExecutionContext,
+        support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
         T: Default + State + StateReader,
@@ -117,45 +118,9 @@ impl ExecutionEntryPoint {
                 tx_execution_context,
                 contract_class,
                 class_hash,
+                support_reverted,
             ),
         }
-    }
-
-    /// Executes the selected entry point with the given calldata in the specified contract.
-    /// The information collected from this run (number of steps required, modifications to the
-    /// contract storage, etc.) is saved on the resources manager.
-    /// Returns a CallInfo object that represents the execution.
-
-    pub fn execute_v2<S>(
-        &self,
-        _state: &mut S,
-        _general_config: &mut StarknetGeneralConfig,
-        _support_reverted: bool,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        S: Default + State + StateReader,
-    {
-        todo!()
-    }
-
-    /// Runs the selected entry point with the given calldata in the code of the contract deployed
-    /// at self.code_address.
-    /// The execution is done in the context (e.g., storage) of the contract at
-    /// self.contract_address.
-    /// Returns the corresponding CairoFunctionRunner and DeprecatedBLSyscallHandler in order to
-    /// retrieve the execution information.
-    #[allow(dead_code)]
-    fn run<'a, T>(
-        &self,
-        _state: &'a mut T,
-        _resources_manager: &ExecutionResourcesManager,
-        _general_config: &StarknetGeneralConfig,
-        _tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<StarknetRunner<SyscallHintProcessor<'a, T>>, TransactionError>
-    where
-        T: Default + State + StateReader,
-    {
-        todo!()
     }
 
     /// Returns the entry point with selector corresponding with self.entry_point_selector, or the
@@ -386,6 +351,7 @@ impl ExecutionEntryPoint {
         tx_execution_context: &TransactionExecutionContext,
         contract_class: Box<CasmContractClass>,
         class_hash: [u8; 32],
+        support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
         T: Default + State + StateReader,
@@ -424,6 +390,7 @@ impl ExecutionEntryPoint {
             self.contract_address.clone(),
             general_config.clone(),
             initial_syscall_ptr,
+            support_reverted,
         );
         let hint_processor = SyscallHintProcessor::new(syscall_handler);
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);

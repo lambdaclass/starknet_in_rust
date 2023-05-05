@@ -253,6 +253,7 @@ fn call_parser(
         &StarknetGeneralConfig::default(),
         &mut ExecutionResourcesManager::default(),
         &TransactionExecutionContext::default(),
+        false,
     )?;
     Ok(call_info.retdata)
 }

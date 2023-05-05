@@ -214,6 +214,7 @@ impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
+                false,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
@@ -412,6 +413,7 @@ where
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
+                false,
             )
             .map(|x| {
                 let retdata = x.retdata.clone();
