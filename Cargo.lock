@@ -184,7 +184,7 @@ dependencies = [
  "serde_urlencoded",
  "smallvec",
  "socket2",
- "time 0.3.20",
+ "time",
  "url",
 ]
 
@@ -251,15 +251,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94fb8275041c72129eb51b7d0322c29b8387a0386127718b096429201a5d6ece"
 dependencies = [
  "alloc-no-stdlib",
-]
-
-[[package]]
-name = "android_system_properties"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -656,20 +647,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cairo-1-hint-processor"
-version = "0.1.0"
-dependencies = [
- "ark-ff 0.4.2",
- "ark-std 0.3.0",
- "cairo-lang-casm",
- "cairo-lang-utils 0.1.0",
- "cairo-vm",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.15",
-]
-
-[[package]]
 name = "cairo-felt"
 version = "0.3.0-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -699,7 +676,7 @@ name = "cairo-lang-casm"
 version = "1.0.0-alpha.7"
 source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660698a3788e67d46"
 dependencies = [
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "indoc 2.0.1",
  "num-bigint",
  "num-traits 0.2.15",
@@ -724,7 +701,7 @@ dependencies = [
  "cairo-lang-sierra",
  "cairo-lang-sierra-generator",
  "cairo-lang-syntax",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "clap",
  "log",
  "salsa",
@@ -747,7 +724,7 @@ dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-parser",
  "cairo-lang-syntax",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "indexmap",
  "itertools",
  "salsa",
@@ -760,7 +737,7 @@ version = "1.0.0-alpha.7"
 source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660698a3788e67d46"
 dependencies = [
  "cairo-lang-filesystem",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "itertools",
  "salsa",
 ]
@@ -770,7 +747,7 @@ name = "cairo-lang-eq-solver"
 version = "1.0.0-alpha.7"
 source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660698a3788e67d46"
 dependencies = [
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "good_lp",
  "indexmap",
  "itertools",
@@ -782,7 +759,7 @@ version = "1.0.0-alpha.7"
 source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660698a3788e67d46"
 dependencies = [
  "cairo-lang-debug",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "path-clean",
  "salsa",
  "serde",
@@ -802,7 +779,7 @@ dependencies = [
  "cairo-lang-proc-macros",
  "cairo-lang-semantic",
  "cairo-lang-syntax",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "id-arena",
  "indexmap",
  "itertools",
@@ -822,7 +799,7 @@ dependencies = [
  "cairo-lang-filesystem",
  "cairo-lang-syntax",
  "cairo-lang-syntax-codegen",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "colored",
  "itertools",
  "log",
@@ -844,7 +821,7 @@ dependencies = [
  "cairo-lang-parser",
  "cairo-lang-semantic",
  "cairo-lang-syntax",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "indoc 2.0.1",
  "itertools",
  "salsa",
@@ -885,7 +862,7 @@ dependencies = [
  "cairo-lang-parser",
  "cairo-lang-proc-macros",
  "cairo-lang-syntax",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "id-arena",
  "itertools",
  "log",
@@ -900,7 +877,7 @@ name = "cairo-lang-sierra"
 version = "1.0.0-alpha.7"
 source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660698a3788e67d46"
 dependencies = [
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "const-fnv1a-hash",
  "convert_case 0.6.0",
  "derivative",
@@ -924,7 +901,7 @@ source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660
 dependencies = [
  "cairo-lang-eq-solver",
  "cairo-lang-sierra",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "itertools",
  "thiserror",
 ]
@@ -936,7 +913,7 @@ source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660
 dependencies = [
  "cairo-lang-eq-solver",
  "cairo-lang-sierra",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "itertools",
  "thiserror",
 ]
@@ -957,7 +934,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-sierra",
  "cairo-lang-syntax",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "id-arena",
  "indexmap",
  "itertools",
@@ -978,7 +955,7 @@ dependencies = [
  "cairo-lang-sierra",
  "cairo-lang-sierra-ap-change",
  "cairo-lang-sierra-gas",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "clap",
  "indoc 2.0.1",
  "itertools",
@@ -1010,7 +987,7 @@ dependencies = [
  "cairo-lang-sierra-generator",
  "cairo-lang-sierra-to-casm",
  "cairo-lang-syntax",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "clap",
  "convert_case 0.6.0",
  "genco",
@@ -1035,7 +1012,7 @@ source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660
 dependencies = [
  "cairo-lang-debug",
  "cairo-lang-filesystem",
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "num-bigint",
  "num-traits 0.2.15",
  "salsa",
@@ -1049,23 +1026,10 @@ name = "cairo-lang-syntax-codegen"
 version = "1.0.0-alpha.7"
 source = "git+https://github.com/starkware-libs/cairo#a08bedbf26b711e81cec8b7660698a3788e67d46"
 dependencies = [
- "cairo-lang-utils 1.0.0-alpha.7",
+ "cairo-lang-utils",
  "genco",
  "log",
  "xshell",
-]
-
-[[package]]
-name = "cairo-lang-utils"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7196aada3418cb09e7aa2b39f0a6bb660e09adccf565d340457bbcbeef439106"
-dependencies = [
- "chrono",
- "env_logger",
- "indexmap",
- "itertools",
- "log",
 ]
 
 [[package]]
@@ -1081,7 +1045,7 @@ dependencies = [
  "num-integer",
  "num-traits 0.2.15",
  "serde",
- "time 0.3.20",
+ "time",
 ]
 
 [[package]]
@@ -1224,21 +1188,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chrono"
-version = "0.4.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e3c5919066adf22df73762e50cffcde3a758f2a848b113b586d1f86728b673b"
-dependencies = [
- "iana-time-zone",
- "js-sys",
- "num-integer",
- "num-traits 0.2.15",
- "time 0.1.45",
- "wasm-bindgen",
- "winapi",
-]
-
-[[package]]
 name = "ci_info"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1290,16 +1239,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a2dd5a6fe8c6e3502f568a6353e5273bbb15193ad9a89e457b9970798efbea1"
 
 [[package]]
-name = "codespan-reporting"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
-dependencies = [
- "termcolor",
- "unicode-width",
-]
-
-[[package]]
 name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1344,15 +1283,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e859cd57d0710d9e06c381b550c06e76992472a8c6d527aecd2fc673dcc231fb"
 dependencies = [
  "percent-encoding",
- "time 0.3.20",
+ "time",
  "version_check",
 ]
-
-[[package]]
-name = "core-foundation-sys"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
 name = "cpufeatures"
@@ -1437,50 +1370,6 @@ checksum = "b1d1a86f49236c215f271d40892d5fc950490551400b02ef360692c29815c714"
 dependencies = [
  "generic-array",
  "subtle",
-]
-
-[[package]]
-name = "cxx"
-version = "1.0.94"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f61f1b6389c3fe1c316bf8a4dccc90a38208354b330925bce1f74a6c4756eb93"
-dependencies = [
- "cc",
- "cxxbridge-flags",
- "cxxbridge-macro",
- "link-cplusplus",
-]
-
-[[package]]
-name = "cxx-build"
-version = "1.0.94"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12cee708e8962df2aeb38f594aae5d827c022b6460ac71a7a3e2c3c2aae5a07b"
-dependencies = [
- "cc",
- "codespan-reporting",
- "once_cell",
- "proc-macro2",
- "quote",
- "scratch",
- "syn 2.0.15",
-]
-
-[[package]]
-name = "cxxbridge-flags"
-version = "1.0.94"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7944172ae7e4068c533afbb984114a56c46e9ccddda550499caa222902c7f7bb"
-
-[[package]]
-name = "cxxbridge-macro"
-version = "1.0.94"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2345488264226bf682893e25de0769f3360aac9957980ec49361b083ddaa5bc5"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.15",
 ]
 
 [[package]]
@@ -1776,7 +1665,7 @@ dependencies = [
  "cfg-if",
  "js-sys",
  "libc",
- "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasi",
  "wasm-bindgen",
 ]
 
@@ -1947,30 +1836,6 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
-
-[[package]]
-name = "iana-time-zone"
-version = "0.1.56"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0722cd7114b7de04316e7ea5456a0bbb20e4adb46fd27a3697adb812cff0f37c"
-dependencies = [
- "android_system_properties",
- "core-foundation-sys",
- "iana-time-zone-haiku",
- "js-sys",
- "wasm-bindgen",
- "windows",
-]
-
-[[package]]
-name = "iana-time-zone-haiku"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0703ae284fc167426161c2e3f1da3ea71d94b21bedbcc9494e92b28e334e3dca"
-dependencies = [
- "cxx",
- "cxx-build",
-]
 
 [[package]]
 name = "id-arena"
@@ -2204,15 +2069,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "link-cplusplus"
-version = "1.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecd207c9c713c34f95a097a5b029ac2ce6010530c7b49d7fea24d977dede04f5"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2336,7 +2192,7 @@ checksum = "5b9d9a46eff5b4ff64b45a9e316a6d1e0bc719ef429cbec4dc630684212bfdf9"
 dependencies = [
  "libc",
  "log",
- "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasi",
  "windows-sys 0.45.0",
 ]
 
@@ -3043,12 +2899,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
-name = "scratch"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1792db035ce95be60c3f8853017b3999209281c24e2ba5bc8e59bf97a0c590c1"
-
-[[package]]
 name = "semver"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3563,17 +3413,6 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b797afad3f312d1c66a56d11d0316f916356d11bd158fbc6ca6389ff6bf805a"
-dependencies = [
- "libc",
- "wasi 0.10.0+wasi-snapshot-preview1",
- "winapi",
-]
-
-[[package]]
-name = "time"
 version = "0.3.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd0cbfecb4d19b5ea75bb31ad904eb5b9fa13f21079c3b92017ebdf4999a5890"
@@ -3841,12 +3680,6 @@ dependencies = [
 
 [[package]]
 name = "wasi"
-version = "0.10.0+wasi-snapshot-preview1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
-
-[[package]]
-name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
@@ -3935,15 +3768,6 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-
-[[package]]
-name = "windows"
-version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e686886bc078bc1b0b600cac0147aadb815089b6e4da64016cbd754b6342700f"
-dependencies = [
- "windows-targets 0.48.0",
-]
 
 [[package]]
 name = "windows-sys"
