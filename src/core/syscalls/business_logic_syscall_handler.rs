@@ -540,6 +540,7 @@ where
         let sub = segment_end.sub(&segment_start.to_owned().into())?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.push(segment);
+
         Ok(segment_start)
     }
 
