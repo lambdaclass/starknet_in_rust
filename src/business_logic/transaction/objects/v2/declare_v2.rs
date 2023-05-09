@@ -275,14 +275,16 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::InternalDeclareV2;
+    use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::{cached_state::CachedState, state_api::StateReader},
         },
         definitions::general_config::StarknetChainId,
         utils::Address,
     };
+    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
     use num_traits::Zero;
 
@@ -323,5 +325,22 @@ mod tests {
         assert!(internal_declare
             .compile_and_store_casm_class(&mut state)
             .is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            internal_declare.sierra_contract_class.clone(),
+            true,
+        )
+        .unwrap();
+
+        let casm_class = match state
+            .get_compiled_class(&internal_declare.compiled_class_hash.to_le_bytes())
+            .unwrap()
+        {
+            CompiledClass::Casm(casm) => *casm,
+            _ => panic!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
     }
 }
