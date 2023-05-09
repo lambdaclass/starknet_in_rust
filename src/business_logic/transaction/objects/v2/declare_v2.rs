@@ -293,7 +293,7 @@ mod tests {
     fn create_declare_v2_test() {
         // read file to create sierra contract class
 
-        let path = PathBuf::from("starknet_programs/cairo_1_contracts/test_sierra.sierra");
+        let path = PathBuf::from("cairo_programs/cairo_1_contracts/fib.sierra");
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
@@ -323,8 +323,8 @@ mod tests {
         let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
 
         // call compile and store
-        internal_declare
+        assert!(internal_declare
             .compile_and_store_casm_class(&mut state)
-            .unwrap();
+            .is_ok());
     }
 }

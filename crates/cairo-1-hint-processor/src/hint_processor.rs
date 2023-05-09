@@ -4,8 +4,9 @@ use super::dict_manager::DictManagerExecScope;
 use ark_ff::fields::{Fp256, MontBackend, MontConfig};
 use ark_ff::{Field, PrimeField};
 use ark_std::UniformRand;
+use cairo_lang_casm::hints::{CoreHint, CoreHintBase, DeprecatedHint};
 use cairo_lang_casm::{
-    hints::{CoreHint, Hint},
+    hints::Hint,
     operand::{BinOpOperand, CellRef, DerefOrImmediate, Operation, Register, ResOperand},
 };
 use cairo_lang_utils::extract_matches;
@@ -976,36 +977,46 @@ impl HintProcessor for Cairo1HintProcessor {
     ) -> Result<(), HintError> {
         let hint = hint_data.downcast_ref::<Hint>().unwrap();
         match hint {
-            Hint::Core(CoreHint::AllocSegment { dst }) => self.alloc_segment(vm, dst),
-            Hint::Core(CoreHint::AllocConstantSize { size, dst }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::AllocSegment { dst })) => {
+                self.alloc_segment(vm, dst)
+            }
+
+            Hint::Core(CoreHintBase::Core(CoreHint::AllocConstantSize { size, dst })) => {
                 self.alloc_constant_size(vm, exec_scopes, size, dst)
             }
-            Hint::Core(CoreHint::TestLessThan { lhs, rhs, dst }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::TestLessThan { lhs, rhs, dst })) => {
                 self.test_less_than(vm, lhs, rhs, dst)
             }
-            Hint::Core(CoreHint::TestLessThanOrEqual { lhs, rhs, dst }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::TestLessThanOrEqual { lhs, rhs, dst })) => {
                 self.test_less_than_or_equal(vm, lhs, rhs, dst)
             }
-            Hint::Core(CoreHint::Felt252DictRead {
+            Hint::Core(CoreHintBase::Deprecated(DeprecatedHint::Felt252DictRead {
                 dict_ptr,
                 key,
                 value_dst,
-            }) => self.dict_read(vm, exec_scopes, dict_ptr, key, value_dst),
-            Hint::Core(CoreHint::SquareRoot { value, dst }) => self.square_root(vm, value, dst),
-            Hint::Core(CoreHint::GetSegmentArenaIndex {
+            })) => self.dict_read(vm, exec_scopes, dict_ptr, key, value_dst),
+
+            Hint::Core(CoreHintBase::Core(CoreHint::SquareRoot { value, dst })) => {
+                self.square_root(vm, value, dst)
+            }
+
+            Hint::Core(CoreHintBase::Core(CoreHint::GetSegmentArenaIndex {
                 dict_end_ptr,
                 dict_index,
-            }) => self.get_segment_arena_index(vm, exec_scopes, dict_end_ptr, dict_index),
+            })) => self.get_segment_arena_index(vm, exec_scopes, dict_end_ptr, dict_index),
 
-            Hint::Core(CoreHint::DivMod {
+            Hint::Core(CoreHintBase::Core(CoreHint::DivMod {
                 lhs,
                 rhs,
                 quotient,
                 remainder,
-            }) => self.div_mod(vm, lhs, rhs, quotient, remainder),
-            Hint::Core(CoreHint::DebugPrint { start, end }) => self.debug_print(vm, start, end),
+            })) => self.div_mod(vm, lhs, rhs, quotient, remainder),
 
-            Hint::Core(CoreHint::Uint256SquareRoot {
+            Hint::Core(CoreHintBase::Core(CoreHint::DebugPrint { start, end })) => {
+                self.debug_print(vm, start, end)
+            }
+
+            Hint::Core(CoreHintBase::Core(CoreHint::Uint256SquareRoot {
                 value_low,
                 value_high,
                 sqrt0,
@@ -1013,7 +1024,7 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder_low,
                 remainder_high,
                 sqrt_mul_2_minus_remainder_ge_u128,
-            }) => self.uint256_square_root(
+            })) => self.uint256_square_root(
                 vm,
                 value_low,
                 value_high,
@@ -1024,11 +1035,11 @@ impl HintProcessor for Cairo1HintProcessor {
                 sqrt_mul_2_minus_remainder_ge_u128,
             ),
 
-            Hint::Core(CoreHint::GetNextDictKey { next_key }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::GetNextDictKey { next_key })) => {
                 self.get_next_dict_key(vm, exec_scopes, next_key)
             }
 
-            Hint::Core(CoreHint::Uint256DivMod {
+            Hint::Core(CoreHintBase::Core(CoreHint::Uint256DivMod {
                 dividend_low,
                 dividend_high,
                 divisor_low,
@@ -1041,7 +1052,7 @@ impl HintProcessor for Cairo1HintProcessor {
                 extra1,
                 remainder_low,
                 remainder_high,
-            }) => self.uint256_div_mod(
+            })) => self.uint256_div_mod(
                 vm,
                 dividend_low,
                 dividend_high,
@@ -1056,89 +1067,98 @@ impl HintProcessor for Cairo1HintProcessor {
                 remainder_low,
                 remainder_high,
             ),
-            Hint::Core(CoreHint::Felt252DictWrite {
+            Hint::Core(CoreHintBase::Deprecated(DeprecatedHint::Felt252DictWrite {
                 dict_ptr,
                 key,
                 value,
-            }) => self.dict_write(exec_scopes, vm, dict_ptr, key, value),
-            Hint::Core(CoreHint::AssertLeIsFirstArcExcluded {
+            })) => self.dict_write(exec_scopes, vm, dict_ptr, key, value),
+
+            Hint::Core(CoreHintBase::Core(CoreHint::AssertLeIsFirstArcExcluded {
                 skip_exclude_a_flag,
-            }) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
+            })) => self.assert_le_if_first_arc_exclueded(vm, skip_exclude_a_flag, exec_scopes),
 
-            Hint::Core(CoreHint::FieldSqrt { val, sqrt }) => self.field_sqrt(vm, val, sqrt),
-
-            Hint::Core(CoreHint::AssertAllAccessesUsed { n_used_accesses }) => {
-                self.assert_all_accesses_used(vm, exec_scopes, n_used_accesses)
+            Hint::Core(CoreHintBase::Core(CoreHint::FieldSqrt { val, sqrt })) => {
+                self.field_sqrt(vm, val, sqrt)
             }
 
-            Hint::Core(CoreHint::AssertLeIsSecondArcExcluded {
+            Hint::Core(CoreHintBase::Deprecated(DeprecatedHint::AssertAllAccessesUsed {
+                n_used_accesses,
+            })) => self.assert_all_accesses_used(vm, exec_scopes, n_used_accesses),
+
+            Hint::Core(CoreHintBase::Core(CoreHint::AssertLeIsSecondArcExcluded {
                 skip_exclude_b_minus_a,
-            }) => self.assert_le_is_second_excluded(vm, skip_exclude_b_minus_a, exec_scopes),
+            })) => self.assert_le_is_second_excluded(vm, skip_exclude_b_minus_a, exec_scopes),
 
-            Hint::Core(CoreHint::ShouldContinueSquashLoop { should_continue }) => {
-                self.should_continue_squash_loop(vm, exec_scopes, should_continue)
-            }
+            Hint::Core(CoreHintBase::Core(CoreHint::ShouldContinueSquashLoop {
+                should_continue,
+            })) => self.should_continue_squash_loop(vm, exec_scopes, should_continue),
 
-            Hint::Core(CoreHint::LinearSplit {
+            Hint::Core(CoreHintBase::Core(CoreHint::LinearSplit {
                 value,
                 scalar,
                 max_x,
                 x,
                 y,
-            }) => self.linear_split(vm, value, scalar, max_x, x, y),
+            })) => self.linear_split(vm, value, scalar, max_x, x, y),
 
-            Hint::Core(CoreHint::AllocFelt252Dict { segment_arena_ptr }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::AllocFelt252Dict { segment_arena_ptr })) => {
                 self.alloc_felt_256_dict(vm, segment_arena_ptr, exec_scopes)
             }
 
-            Hint::Core(CoreHint::AssertAllKeysUsed) => self.assert_all_keys_used(exec_scopes),
+            Hint::Core(CoreHintBase::Deprecated(DeprecatedHint::AssertAllKeysUsed)) => {
+                self.assert_all_keys_used(exec_scopes)
+            }
 
-            Hint::Core(CoreHint::AssertLeFindSmallArcs {
+            Hint::Core(CoreHintBase::Core(CoreHint::AssertLeFindSmallArcs {
                 range_check_ptr,
                 a,
                 b,
-            }) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
+            })) => self.assert_le_find_small_arcs(vm, exec_scopes, range_check_ptr, a, b),
 
-            Hint::Core(CoreHint::AssertCurrentAccessIndicesIsEmpty) => {
-                self.assert_current_access_indices_is_empty(exec_scopes)
-            }
+            Hint::Core(CoreHintBase::Deprecated(
+                DeprecatedHint::AssertCurrentAccessIndicesIsEmpty,
+            )) => self.assert_current_access_indices_is_empty(exec_scopes),
 
-            Hint::Core(CoreHint::Felt252DictEntryUpdate { dict_ptr, value }) => {
-                self.felt_252_dict_entry_update(vm, exec_scopes, dict_ptr, value)
-            }
+            Hint::Core(CoreHintBase::Core(CoreHint::Felt252DictEntryUpdate {
+                dict_ptr,
+                value,
+            })) => self.felt_252_dict_entry_update(vm, exec_scopes, dict_ptr, value),
 
-            Hint::Core(CoreHint::GetCurrentAccessIndex { range_check_ptr }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::GetCurrentAccessIndex { range_check_ptr })) => {
                 self.get_current_access_index(vm, exec_scopes, range_check_ptr)
             }
 
-            Hint::Core(CoreHint::InitSquashData {
+            Hint::Core(CoreHintBase::Core(CoreHint::InitSquashData {
                 dict_accesses,
                 n_accesses,
                 big_keys,
                 ..
-            }) => self.init_squash_data(vm, exec_scopes, dict_accesses, n_accesses, big_keys),
+            })) => self.init_squash_data(vm, exec_scopes, dict_accesses, n_accesses, big_keys),
 
-            Hint::Core(CoreHint::Felt252DictEntryInit { dict_ptr, key }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::Felt252DictEntryInit { dict_ptr, key })) => {
                 self.dict_entry_init(vm, exec_scopes, dict_ptr, key)
             }
 
-            Hint::Core(CoreHint::GetCurrentAccessDelta { index_delta_minus1 }) => {
-                self.get_current_access_delta(vm, exec_scopes, index_delta_minus1)
+            Hint::Core(CoreHintBase::Core(CoreHint::GetCurrentAccessDelta {
+                index_delta_minus1,
+            })) => self.get_current_access_delta(vm, exec_scopes, index_delta_minus1),
+
+            Hint::Core(CoreHintBase::Core(CoreHint::RandomEcPoint { x, y })) => {
+                self.random_ec_point(vm, x, y)
             }
 
-            Hint::Core(CoreHint::RandomEcPoint { x, y }) => self.random_ec_point(vm, x, y),
-
-            Hint::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop }) => {
+            Hint::Core(CoreHintBase::Core(CoreHint::ShouldSkipSquashLoop { should_skip_loop })) => {
                 self.should_skip_squash_loop(vm, exec_scopes, should_skip_loop)
             }
 
-            Hint::Core(CoreHint::AssertLtAssertValidInput { a, b }) => {
-                self.assert_lt_assert_valid_input(vm, exec_scopes, a, b)
-            }
+            Hint::Core(CoreHintBase::Deprecated(DeprecatedHint::AssertLtAssertValidInput {
+                a,
+                b,
+            })) => self.assert_lt_assert_valid_input(vm, exec_scopes, a, b),
 
-            Hint::Core(CoreHint::AssertLeAssertThirdArcExcluded) => {
-                self.assert_le_assert_third_arc_excluded(vm, exec_scopes)
-            }
+            Hint::Core(CoreHintBase::Deprecated(
+                DeprecatedHint::AssertLeAssertThirdArcExcluded,
+            )) => self.assert_le_assert_third_arc_excluded(vm, exec_scopes),
 
             _ => unimplemented!(),
         }
