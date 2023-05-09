@@ -175,20 +175,6 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .increment_syscall_counter(syscall_name, 1);
     }
 
-    fn allocate_segment(
-        &mut self,
-        vm: &mut VirtualMachine,
-        data: Vec<MaybeRelocatable>,
-    ) -> Result<Relocatable, SyscallHandlerError> {
-        let segment_start = vm.add_memory_segment();
-        let segment_end = vm.write_arg(segment_start, &data)?;
-        let sub = segment_end.sub(&segment_start.to_owned().into())?;
-        let segment = (segment_start.to_owned(), sub);
-        self.read_only_segments.push(segment);
-
-        Ok(segment_start)
-    }
-
     fn call_contract_helper(
         &mut self,
         vm: &mut VirtualMachine,
@@ -492,13 +478,14 @@ where
     fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
-        data: Vec<cairo_vm::types::relocatable::MaybeRelocatable>,
+        data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_memory_segment();
         let segment_end = vm.write_arg(segment_start, &data)?;
         let sub = segment_end.sub(&segment_start.to_owned().into())?;
         let segment = (segment_start.to_owned(), sub);
         self.read_only_segments.push(segment);
+
         Ok(segment_start)
     }
 
