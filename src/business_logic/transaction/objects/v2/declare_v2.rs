@@ -224,11 +224,8 @@ impl InternalDeclareV2 {
 
         self.casm_class = Some(casm_class.clone());
 
-        let compiled_class_hash = self.compiled_class_hash.clone();
-        let class_hash = self.hash_value.clone();
-
-        state.set_compiled_class_hash(&class_hash, &compiled_class_hash)?;
-        state.set_compiled_class(&compiled_class_hash, casm_class)?;
+        state.set_compiled_class_hash(&self.hash_value, &self.compiled_class_hash)?;
+        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
 
         Ok(())
     }
