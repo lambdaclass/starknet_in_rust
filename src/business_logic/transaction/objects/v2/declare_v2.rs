@@ -338,7 +338,7 @@ mod tests {
             .unwrap()
         {
             CompiledClass::Casm(casm) => *casm,
-            _ => panic!(),
+            _ => unreachable!(),
         };
 
         assert_eq!(expected_casm_class, casm_class);
