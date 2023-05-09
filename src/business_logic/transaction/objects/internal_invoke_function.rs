@@ -345,7 +345,9 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
+        definitions::general_config::StarknetChainId,
         services::api::contract_class::ContractClass,
+        utils::calculate_sn_keccak,
     };
     use coverage_helper::test;
     use num_traits::Num;
@@ -895,5 +897,154 @@ mod tests {
             expected_error.unwrap_err(),
             TransactionError::InvokeFunctionNonZeroMissingNonce
         )
+    }
+
+    /// using https://testnet-2.starkscan.co/tx/0x07b04e4d07c08efb3b3371a41ee8c38103ca4f5f26bd78bab3c0023ce2acdce9
+    #[test]
+    fn invoke_function_hash_1() {
+        use cairo_vm::felt::felt_str;
+        let tx = InternalInvokeFunction::new(
+            Address(felt_str!(
+                "00ce88b8eaacfba3fe9bee2f97c4ffaff2aa4fdd370db5d916b32c7226f8294f",
+                16
+            )),
+            Felt252::from_bytes_be(&calculate_sn_keccak("__execute__".as_bytes())),
+            10000000000000000,
+            vec![
+                felt_str!("1"),
+                felt_str!(
+                    "5bbf6d1290ab644867b821957e9bbc9e911d9221bbb266fd783f650a455b51e",
+                    16
+                ),
+                felt_str!(
+                    "12ead94ae9d3f9d2bdb6b847cf255f1f398193a1f88884a0ae8e18f24a037b6",
+                    16
+                ),
+                felt_str!("0"),
+                felt_str!("1"),
+                felt_str!("1"),
+                felt_str!("5dbfd70f8dfcce2ecc3c14a71a3ca628838dd29a", 16),
+            ],
+            vec![
+                felt_str!(
+                    "308debfd71da6e71be6edad6c9aea7bfe97fc09f2c9ded096202527f66109bc",
+                    16
+                ),
+                felt_str!(
+                    "3207b1c060bb4df5ba05285dbb2bcef94ac0c8cb11410e6a41fcb297f315094",
+                    16
+                ),
+            ],
+            StarknetChainId::TestNet2.to_felt(),
+            Some(felt_str!("0")),
+        )
+        .unwrap();
+        assert_eq!(
+            tx.hash_value(),
+            &felt_str!(
+                "7b04e4d07c08efb3b3371a41ee8c38103ca4f5f26bd78bab3c0023ce2acdce9",
+                16
+            )
+        );
+    }
+
+    /// using https://testnet-2.starkscan.co/tx/0x044f058f30e129f3b9b700cb997b0905b3fa3f2f6bcdfdb538f2b07c1f7214cd
+    #[test]
+    fn invoke_function_hash_2() {
+        use cairo_vm::felt::felt_str;
+        let tx = InternalInvokeFunction::new(
+            Address(felt_str!(
+                "0227fa557f1b177525a7c3e48fa30533f2e503ebf87be04bfa28f1ddd4ab29e0",
+                16
+            )),
+            Felt252::from_bytes_be(&calculate_sn_keccak("__execute__".as_bytes())),
+            93000000000000,
+            vec![
+                felt_str!("1"),
+                felt_str!(
+                    "62a569cd978d181d4c56aad2a9dcedae3f1d52183a4ec18fa0da2a87f617b79",
+                    16
+                ),
+                felt_str!(
+                    "2ca3b920f95277dba1fffab23b28aa0fe612c2630cba5640bd569b608d96c65",
+                    16
+                ),
+                felt_str!("0"),
+                felt_str!("1"),
+                felt_str!("1"),
+                felt_str!(
+                    "500d61ecf16158a186d660cc069f5d66fa34fead533e2cdf386a410b0d9c10c",
+                    16
+                ),
+            ],
+            vec![
+                felt_str!(
+                    "13699eadc4e505d54811ac6dbccc9325bd19c2c2bed4748efa43a22b0658eda",
+                    16
+                ),
+                felt_str!(
+                    "423fce4921dabd1366699fadd9f582a4aae0603d5dd39442e71e1ca9006810d",
+                    16
+                ),
+            ],
+            StarknetChainId::TestNet2.to_felt(),
+            Some(felt_str!("4")),
+        )
+        .unwrap();
+        assert_eq!(
+            tx.hash_value(),
+            &felt_str!(
+                "044f058f30e129f3b9b700cb997b0905b3fa3f2f6bcdfdb538f2b07c1f7214cd",
+                16
+            )
+        );
+    }
+
+    /// using https://testnet-2.starkscan.co/tx/0x06f638138f4571bea010fe294c4d48d16f5fff9c6300d9b25e769c10b8d04b27
+    #[test]
+    fn invoke_function_hash_3() {
+        use cairo_vm::felt::felt_str;
+        let tx = InternalInvokeFunction::new(
+            Address(felt_str!(
+                "00ce88b8eaacfba3fe9bee2f97c4ffaff2aa4fdd370db5d916b32c7226f8294f",
+                16
+            )),
+            Felt252::from_bytes_be(&calculate_sn_keccak("__execute__".as_bytes())),
+            10000000000000000,
+            vec![
+                felt_str!("1"),
+                felt_str!(
+                    "6b0546424401c405ee594755dd62c48405e3622b284551d6c248f9febf16aa5",
+                    16
+                ),
+                felt_str!(
+                    "679c22735055a10db4f275395763a3752a1e3a3043c192299ab6b574fba8d6",
+                    16
+                ),
+                felt_str!("0"),
+                felt_str!("0"),
+                felt_str!("0"),
+            ],
+            vec![
+                felt_str!(
+                    "216526bd8e86c31117ffcc57a135518ebb22293eb6ed270fa6aa055dbe86c8f",
+                    16
+                ),
+                felt_str!(
+                    "50c2fae75b03d96422588a4bd9896c4293321c08d8caff1cc708793ff71951a",
+                    16
+                ),
+            ],
+            StarknetChainId::TestNet2.to_felt(),
+            Some(felt_str!("4")),
+        )
+        .unwrap();
+        assert_eq!(
+            tx.hash_value(),
+            &felt_str!(
+                "06f638138f4571bea010fe294c4d48d16f5fff9c6300d9b25e769c10b8d04b27",
+                16
+            )
+        );
     }
 }
