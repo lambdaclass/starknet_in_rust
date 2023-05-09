@@ -28,7 +28,8 @@ deps-venv:
 		typeguard==2.13.0 \
 		openzeppelin-cairo-contracts==0.6.1 \
 		maturin \
-		cairo-lang==0.11
+		cairo-lang==0.11 \
+		"urllib3 <=1.26.15"
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
