@@ -14,10 +14,7 @@ use crate::{
             objects::internal_invoke_function::verify_no_calls_to_other_contracts,
         },
     },
-    core::{
-        errors::state_errors::StateError,
-        transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
-    },
+    core::transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
@@ -198,7 +195,6 @@ impl InternalDeclareV2 {
         )?;
 
         let storage_changes = state.count_actual_storage_changes();
-
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(validate_info.clone())],
@@ -207,12 +203,7 @@ impl InternalDeclareV2 {
             None,
         )?;
 
-        let casm_class =
-            CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
-                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
-
-        self.casm_class = Some(casm_class.clone());
-        self.store_casm_class(casm_class, state)?;
+        self.compile_and_store_casm_class(state)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -224,16 +215,22 @@ impl InternalDeclareV2 {
         )
     }
 
-    fn store_casm_class<S: Default + State + StateReader + Clone>(
+    fn compile_and_store_casm_class<S: Default + State + StateReader + Clone>(
         &mut self,
-        casm_class: CasmContractClass,
         state: &mut S,
-    ) -> Result<(), StateError> {
-        let compiled_class_hash = self.compiled_class_hash.to_le_bytes();
-        let class_hash = self.hash_value.to_le_bytes();
+    ) -> Result<(), TransactionError> {
+        let casm_class =
+            CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
+                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
-        state.set_compiled_class_hash(class_hash, &compiled_class_hash)?;
+        self.casm_class = Some(casm_class.clone());
+
+        let compiled_class_hash = self.compiled_class_hash.clone();
+        let class_hash = self.hash_value.clone();
+
+        state.set_compiled_class_hash(&class_hash, &compiled_class_hash)?;
         state.set_compiled_class(&compiled_class_hash, casm_class)?;
+
         Ok(())
     }
 
