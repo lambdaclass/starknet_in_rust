@@ -392,7 +392,7 @@ impl ExecutionEntryPoint {
             initial_syscall_ptr,
             support_reverted,
         );
-        let hint_processor = SyscallHintProcessor::new(syscall_handler);
+        let hint_processor = SyscallHintProcessor::new(syscall_handler, &contract_class.hints);
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.

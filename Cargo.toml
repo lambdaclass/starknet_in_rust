@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", package = "cairo-vm", rev = "c5bd61b49bb6c581db0620b350e23a130babb3ab", features = ["cairo-1-hints"] }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
@@ -21,8 +21,8 @@ thiserror = { version = "1.0.32" }
 clap = { version = "4.1.8", features = ["derive"] }
 actix-web = "4.3.1"
 awc = "3.1.1"
-cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo" }
-cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo" }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo", rev="a08bedbf26b711e81cec8b7660698a3788e67d46"}
+cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev="a08bedbf26b711e81cec8b7660698a3788e67d46"}
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 

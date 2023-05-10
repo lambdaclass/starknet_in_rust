@@ -20,7 +20,7 @@ serde_json = "1.0.94"
 
 [dependencies.cairo-vm]
 git = "https://github.com/lambdaclass/cairo-rs.git"
-rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad"
+rev = "c5bd61b49bb6c581db0620b350e23a130babb3ab"
 
 [dependencies.pyo3]
 features = ["num-bigint"]
