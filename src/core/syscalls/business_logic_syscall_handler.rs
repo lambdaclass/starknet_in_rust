@@ -167,7 +167,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
-    pub fn default_with(state: &'a mut T) -> Self {
+    pub fn default_with_state(state: &'a mut T) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
             Default::default(),
