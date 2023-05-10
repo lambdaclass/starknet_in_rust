@@ -1,6 +1,5 @@
 use super::{
-    deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
-    deprecated_syscall_request::*,
+    deprecated_syscall_handler::DeprecatedSyscallHandler, deprecated_syscall_request::*,
     syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
@@ -215,6 +214,7 @@ impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
+                false,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
@@ -413,6 +413,7 @@ where
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
+                false,
             )
             .map(|x| {
                 let retdata = x.retdata.clone();
@@ -581,12 +582,7 @@ where
 
         Ok(())
     }
-}
 
-impl<'a, T> SyscallHandlerPostRun for DeprecatedBLSyscallHandler<'a, T>
-where
-    T: Default + State + StateReader,
-{
     fn post_run(
         &self,
         runner: &mut VirtualMachine,

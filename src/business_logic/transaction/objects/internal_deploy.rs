@@ -171,6 +171,7 @@ impl InternalDeploy {
             general_config,
             &mut resources_manager,
             &tx_execution_context,
+            false,
         )?;
 
         let changes = state.count_actual_storage_changes();

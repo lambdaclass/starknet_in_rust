@@ -145,6 +145,7 @@ impl InternalInvokeFunction {
             &self
                 .get_execution_context(general_config.validate_max_n_steps)
                 .map_err(|_| TransactionError::InvalidTxContext)?,
+            false,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
@@ -182,6 +183,7 @@ impl InternalInvokeFunction {
             &self
                 .get_execution_context(general_config.invoke_tx_max_n_steps)
                 .map_err(|_| TransactionError::InvalidTxContext)?,
+            false,
         )
     }
 

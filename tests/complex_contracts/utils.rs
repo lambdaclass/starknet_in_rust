@@ -129,6 +129,7 @@ pub fn execute_entry_point(
         call_config.general_config,
         call_config.resources_manager,
         &tx_execution_context,
+        false,
     )
 }
 

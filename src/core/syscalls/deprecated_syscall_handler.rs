@@ -9,6 +9,7 @@ use super::{
     },
     hint_code::*,
     other_syscalls,
+    syscall_handler::HintProcessorPostRun,
 };
 use crate::{
     business_logic::{
@@ -310,6 +311,12 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError>;
 
+    fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: Relocatable,
+    ) -> Result<(), TransactionError>;
+
     fn get_sequencer_address(
         &mut self,
         vm: &mut VirtualMachine,
@@ -367,32 +374,21 @@ pub(crate) trait DeprecatedSyscallHandler {
     }
 }
 
-pub(crate) trait SyscallHandlerPostRun {
-    /// Performs post run syscall related tasks (if any).
-    fn post_run(
-        &self,
-        _runner: &mut VirtualMachine,
-        _syscall_stop_ptr: Relocatable,
-    ) -> Result<(), TransactionError> {
-        Ok(())
-    }
-}
-
 //* ------------------------
 //* Structs implementations
 //* ------------------------
 
-pub(crate) struct SyscallHintProcessor<H: DeprecatedSyscallHandler> {
+pub(crate) struct DeprecatedSyscallHintProcessor<H: DeprecatedSyscallHandler> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: H,
 }
 
-impl<H> SyscallHintProcessor<H>
+impl<H> DeprecatedSyscallHintProcessor<H>
 where
     H: DeprecatedSyscallHandler,
 {
     pub fn new(syscall_handler: H) -> Self {
-        SyscallHintProcessor {
+        DeprecatedSyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler,
         }
@@ -495,7 +491,7 @@ where
     }
 }
 
-impl<H: DeprecatedSyscallHandler> HintProcessor for SyscallHintProcessor<H> {
+impl<H: DeprecatedSyscallHandler> HintProcessor for DeprecatedSyscallHintProcessor<H> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -514,6 +510,16 @@ impl<H: DeprecatedSyscallHandler> HintProcessor for SyscallHintProcessor<H> {
                 })?;
         }
         Ok(())
+    }
+}
+
+impl<H: DeprecatedSyscallHandler> HintProcessorPostRun for DeprecatedSyscallHintProcessor<H> {
+    fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: Relocatable,
+    ) -> Result<(), crate::business_logic::transaction::error::TransactionError> {
+        self.syscall_handler.post_run(runner, syscall_stop_ptr)
     }
 }
 
@@ -580,7 +586,8 @@ mod tests {
             'a,
             CachedState<InMemoryStateReader>,
         >;
-    type SyscallHintProcessor<'a> = super::SyscallHintProcessor<DeprecatedBLSyscallHandler<'a>>;
+    type SyscallHintProcessor<'a> =
+        super::DeprecatedSyscallHintProcessor<DeprecatedBLSyscallHandler<'a>>;
 
     #[test]
     fn read_send_message_to_l1_request() {

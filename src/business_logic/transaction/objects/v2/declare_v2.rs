@@ -239,6 +239,7 @@ impl InternalDeclareV2 {
             general_config,
             resources_manager,
             &tx_execution_context,
+            false,
         )?;
 
         let class_hash = *state.get_class_hash_at(&self.sender_address)?;
