@@ -15,6 +15,8 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address,
 };
 use cairo_lang_casm::hints::Hint;
+use cairo_vm::hint_processor::hint_processor_definition::HintReference;
+use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use cairo_vm::{
     felt::Felt252,
     hint_processor::{
@@ -225,6 +227,27 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
     ) -> Result<(), HintError> {
         self.cairo1_hint_processor
             .execute_hint(vm, exec_scopes, hint_data, constants)
+    }
+
+    // Ignores all data except for the code that should contain
+    fn compile_hint(
+        &self,
+        //Block of hint code as String
+        hint_code: &str,
+        //Ap Tracking Data corresponding to the Hint
+        ap_tracking_data: &cairo_vm::serde::deserialize_program::ApTracking,
+        //Map from variable name to reference id number
+        //(may contain other variables aside from those used by the hint)
+        reference_ids: &HashMap<String, usize>,
+        //List of all references (key corresponds to element of the previous dictionary)
+        references: &HashMap<usize, HintReference>,
+    ) -> Result<Box<dyn Any>, VirtualMachineError> {
+        self.cairo1_hint_processor.compile_hint(
+            hint_code,
+            ap_tracking_data,
+            reference_ids,
+            references,
+        )
     }
 }
 
