@@ -298,7 +298,7 @@ impl ExecutionEntryPoint {
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
-        let data: Vec<MaybeRelocatable> = self.calldata.clone().iter().map(|d| d.into()).collect();
+        let data: Vec<MaybeRelocatable> = self.calldata.iter().map(|d| d.into()).collect();
         let alloc_pointer = runner
             .hint_processor
             .syscall_handler
