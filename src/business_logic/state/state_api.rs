@@ -65,12 +65,12 @@ pub trait State {
     ) -> Result<(), StateError>;
     fn set_compiled_class(
         &mut self,
-        compiled_class_hash: &CompiledClassHash,
+        compiled_class_hash: &Felt252,
         casm_class: CasmContractClass,
     ) -> Result<(), StateError>;
     fn set_compiled_class_hash(
         &mut self,
-        class_hash: ClassHash,
-        compiled_class_hash: &CompiledClassHash,
+        class_hash: &Felt252,
+        compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
 }

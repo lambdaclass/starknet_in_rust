@@ -8,7 +8,7 @@ use crate::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     starknet_storage::errors::storage_errors::StorageError,
-    utils::{subtract_mappings, Address, ClassHash, CompiledClassHash},
+    utils::{subtract_mappings, Address, ClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
@@ -298,24 +298,29 @@ impl<T: StateReader + Clone> State for CachedState<T> {
 
     fn set_compiled_class(
         &mut self,
-        compiled_class_hash: &CompiledClassHash,
+        compiled_class_hash: &Felt252,
         casm_class: CasmContractClass,
     ) -> Result<(), StateError> {
+        let compiled_class_hash = compiled_class_hash.to_le_bytes();
+
         self.casm_contract_classes
             .as_mut()
             .ok_or(StateError::MissingCasmClassCache)?
-            .insert(*compiled_class_hash, casm_class);
+            .insert(compiled_class_hash, casm_class);
         Ok(())
     }
 
     fn set_compiled_class_hash(
         &mut self,
-        class_hash: ClassHash,
-        compiled_class_hash: &CompiledClassHash,
+        class_hash: &Felt252,
+        compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
+        let class_hash = class_hash.to_le_bytes();
+        let compiled_class_hash = compiled_class_hash.to_le_bytes();
+
         self.cache
             .class_hash_to_compiled_class_hash
-            .insert(class_hash, *compiled_class_hash);
+            .insert(class_hash, compiled_class_hash);
         Ok(())
     }
 }

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     business_logic::{
         execution::{
@@ -22,9 +20,11 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::collections::HashMap;
 #[derive(Debug)]
 pub struct InternalDeclareV2 {
     pub sender_address: Address,
@@ -37,6 +37,7 @@ pub struct InternalDeclareV2 {
     pub compiled_class_hash: Felt252,
     pub sierra_contract_class: SierraContractClass,
     pub hash_value: Felt252,
+    pub casm_class: Option<CasmContractClass>,
 }
 
 impl InternalDeclareV2 {
@@ -78,6 +79,7 @@ impl InternalDeclareV2 {
             nonce,
             compiled_class_hash,
             hash_value,
+            casm_class: None,
         };
 
         internal_declare.verify_version()?;
@@ -176,7 +178,7 @@ impl InternalDeclareV2 {
     }
 
     pub fn execute<S: Default + State + StateReader + Clone>(
-        &self,
+        &mut self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         remaining_gas: u64,
@@ -192,7 +194,6 @@ impl InternalDeclareV2 {
         )?;
 
         let storage_changes = state.count_actual_storage_changes();
-
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(validate_info.clone())],
@@ -200,6 +201,8 @@ impl InternalDeclareV2 {
             storage_changes,
             None,
         )?;
+
+        self.compile_and_store_casm_class(state)?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -211,8 +214,24 @@ impl InternalDeclareV2 {
         )
     }
 
+    pub(crate) fn compile_and_store_casm_class<S: Default + State + StateReader + Clone>(
+        &mut self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        let casm_class =
+            CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
+                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
+
+        self.casm_class = Some(casm_class.clone());
+
+        state.set_compiled_class_hash(&self.hash_value, &self.compiled_class_hash)?;
+        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
+
+        Ok(())
+    }
+
     fn run_validate_entrypoint<S: Default + State + StateReader + Clone>(
-        &self,
+        &mut self,
         mut remaining_gas: u64,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
@@ -252,39 +271,77 @@ impl InternalDeclareV2 {
     }
 }
 
-// TODO: uncomment this tests moduloe once the sierra compiler is fully functional
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
-// #[cfg(test)]
-// mod tests {
-//     use std::{fs::File, io::BufReader, path::PathBuf};
+    use super::InternalDeclareV2;
+    use crate::services::api::contract_classes::compiled_class::CompiledClass;
+    use crate::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::{cached_state::CachedState, state_api::StateReader},
+        },
+        definitions::general_config::StarknetChainId,
+        utils::Address,
+    };
+    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+    use cairo_vm::felt::Felt252;
+    use num_traits::Zero;
 
-//     use super::InternalDeclareV2;
-//     use crate::{definitions::general_config::StarknetChainId, utils::Address};
-//     use cairo_vm::felt::Felt252;
-//     use num_traits::Zero;
+    #[test]
+    fn create_declare_v2_test() {
+        // read file to create sierra contract class
 
-//     #[test]
-//     fn create_declare_v2_test() {
-//         let path = PathBuf::from("starknet_programs/test_sierra.json");
-//         let file = File::open(path).unwrap();
-//         let reader = BufReader::new(file);
-//         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
-//             serde_json::from_reader(reader).unwrap();
-//         let chain_id = StarknetChainId::TestNet.to_felt();
+        let path = PathBuf::from("cairo_programs/cairo_1_contracts/fib.sierra");
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let chain_id = StarknetChainId::TestNet.to_felt();
 
-//         let sender_address = Address(0.into());
+        let sender_address = Address(1.into());
 
-//         let internal_declare = InternalDeclareV2::new(
-//             &sierra_contract_class,
-//             Felt252::zero(),
-//             chain_id,
-//             sender_address,
-//             0,
-//             0,
-//             [].to_vec(),
-//             Felt252::zero(),
-//         );
+        // create internal declare v2
 
-//         assert!(internal_declare.is_ok());
-//     }
-// }
+        let mut internal_declare = InternalDeclareV2::new(
+            &sierra_contract_class,
+            Felt252::zero(),
+            chain_id,
+            sender_address,
+            0,
+            0,
+            [1.into()].to_vec(),
+            Felt252::zero(),
+            None,
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = HashMap::new();
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(internal_declare
+            .compile_and_store_casm_class(&mut state)
+            .is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            internal_declare.sierra_contract_class.clone(),
+            true,
+        )
+        .unwrap();
+
+        let casm_class = match state
+            .get_compiled_class(&internal_declare.compiled_class_hash.to_le_bytes())
+            .unwrap()
+        {
+            CompiledClass::Casm(casm) => *casm,
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+}

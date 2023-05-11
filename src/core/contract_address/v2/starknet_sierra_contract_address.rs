@@ -82,11 +82,13 @@ pub fn compute_sierra_class_hash(
 ) -> Result<Felt252, ContractAddressError> {
     // Since we are not using a cache, this function replace compute_class_hash_inner.
     let program = load_program()?;
+
     let contract_class_version_iden = program
         .get_identifier("__main__.CONTRACT_CLASS_VERSION")
         .ok_or_else(|| {
             ContractAddressError::MissingIdentifier("__main__.CONTRACT_CLASS_VERSION".to_string())
         })?;
+
     let contract_class_struct =
         &get_sierra_contract_class_struct(contract_class_version_iden, contract_class)?.into();
 

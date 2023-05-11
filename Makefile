@@ -1,6 +1,5 @@
 .PHONY: build check clean clippy compile-cairo compile-starknet coverage deps test heaptrack check-python-version compile-abi
 
-
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
 	CFLAGS  += -I/opt/homebrew/opt/gmp/include
@@ -17,6 +16,9 @@ STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
 BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
 BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
 
+STARKNET_COMPILE:=cairo/target/release/starknet-compile
+STARKNET_SIERRA_COMPILE:=cairo/target/release/starknet-sierra-compile
+
 
 #
 # VENV rules.
@@ -28,13 +30,15 @@ deps-venv:
 		typeguard==2.13.0 \
 		openzeppelin-cairo-contracts==0.6.1 \
 		maturin \
-		cairo-lang==0.11
+		cairo-lang==0.11 \
+		"urllib3 <=1.26.15"
 
 compile-cairo: $(CAIRO_TARGETS)
 compile-starknet: $(STARKNET_TARGETS)
 
 cairo_programs/%.json: cairo_programs/%.cairo
 	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+
 
 starknet_programs/%.json: starknet_programs/%.cairo
 	. starknet-venv/bin/activate && \
@@ -46,9 +50,35 @@ starknet_programs/%.json: starknet_programs/%.cairo
 	|| rm ./$*.json ./$*_abi.json
 # Compiles .cairo files into .json files. if the command fails, then it removes all of the .json files
 
-#
+
+# ======================
+# Test Cairo 1 Contracts
+# ======================
+
+CAIRO_1_CONTRACTS_TEST_DIR=cairo_programs/cairo_1_contracts
+CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
+COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
+COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
+
+$(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo
+	$(STARKNET_COMPILE) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
+
+$(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra
+	$(STARKNET_SIERRA_COMPILE) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
+
+
+cairo-repo-dir = cairo
+
+build-cairo-1-compiler: | $(cairo-repo-dir)
+
+$(cairo-repo-dir):
+	git clone --depth 1 -b v1.0.0-rc0 https://github.com/starkware-libs/cairo.git
+	cd cairo; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
+
+
+# =================
 # Normal rules.
-#
+# =================
 
 build: compile-cairo compile-starknet
 	cargo build --release --all
@@ -56,7 +86,7 @@ build: compile-cairo compile-starknet
 check: compile-cairo compile-starknet
 	cargo check --all
 
-deps: check-python-version 
+deps: check-python-version build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	python3 -m venv starknet-venv
@@ -65,19 +95,22 @@ deps: check-python-version
 clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
+	-rm -f cairo_programs/cairo_1_contracts/*.sierra
+	-rm -f cairo_programs/cairo_1_contracts/*.casm
 	-rm -f starknet_programs/*.json
 	-rm -f tests/*.json
+	-rm -rf cairo/
 
 clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet
+test: compile-cairo compile-starknet $(COMPILED_SIERRA_CONTRACTS)
 	cargo test
 
 test-py: compile-cairo compile-starknet
 	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
-coverage: compile-cairo compile-starknet compile-abi
+coverage: compile-cairo compile-starknet compile-abi $(COMPILED_SIERRA_CONTRACTS)
 	cargo llvm-cov --ignore-filename-regex 'main.rs'
 	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
