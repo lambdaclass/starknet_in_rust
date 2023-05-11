@@ -110,7 +110,7 @@ test: compile-cairo compile-starknet $(COMPILED_SIERRA_CONTRACTS)
 test-py: compile-cairo compile-starknet
 	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
 
-coverage: compile-cairo compile-starknet compile-abi
+coverage: compile-cairo compile-starknet compile-abi $(COMPILED_SIERRA_CONTRACTS)
 	cargo llvm-cov --ignore-filename-regex 'main.rs'
 	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
