@@ -328,7 +328,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         self.starknet_storage_state.write(&key.to_le_bytes(), value)
     }
 
-    fn syscall(
+    pub fn syscall(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
