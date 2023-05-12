@@ -5,7 +5,7 @@
 # will have compiled files and executables
 debug/
 target/
-
+cairo/
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 #Cargo.lock
@@ -39,6 +39,7 @@ target/
 
 starknet-venv/
 **/*.json
+cairo_programs/cairo_1_contracts/*.sierra
 default.profraw
 **.DS_Store
 /scripts/reports
