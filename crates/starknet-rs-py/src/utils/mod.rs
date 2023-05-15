@@ -12,7 +12,7 @@ use starknet_rs::hash_utils::calculate_contract_address;
 use starknet_rs::utils::Address;
 use starknet_rs::{
     business_logic::transaction::fee::calculate_tx_fee,
-    core::contract_address::starknet_contract_address::compute_class_hash,
+    core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
     utils::validate_contract_deployed,
 };
 use std::collections::HashMap;
@@ -29,9 +29,11 @@ pub(crate) fn py_calculate_tx_fee(
     }
 }
 
-#[pyfunction(name = "compute_class_hash")]
-pub(crate) fn py_compute_class_hash(contract_class: &PyContractClass) -> PyResult<BigUint> {
-    match compute_class_hash(contract_class.into()) {
+#[pyfunction(name = "compute_deprecated_class_hash")]
+pub(crate) fn py_compute_deprecated_class_hash(
+    contract_class: &PyContractClass,
+) -> PyResult<BigUint> {
+    match compute_deprecated_class_hash(contract_class.into()) {
         Ok(res) => Ok(res.to_biguint()),
         Err(err) => Err(PyValueError::new_err(err.to_string())),
     }
@@ -72,7 +74,7 @@ pub(crate) fn py_calculate_contract_address(
     deployer_address: BigUint,
 ) -> PyResult<BigUint> {
     let salt = Address(Felt252::from(salt));
-    let class_hash = Felt252::from(py_compute_class_hash(contract_class)?);
+    let class_hash = Felt252::from(py_compute_deprecated_class_hash(contract_class)?);
     let constructor_calldata: Vec<_> = constructor_calldata.into_iter().map(Into::into).collect();
     let deployer_address = Address(Felt252::from(deployer_address));
     match calculate_contract_address(&salt, &class_hash, &constructor_calldata, deployer_address) {

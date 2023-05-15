@@ -361,7 +361,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::contract_address::starknet_contract_address::compute_class_hash,
+        core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
     };
 
     #[test]
@@ -369,7 +369,7 @@ mod tests {
         let path = PathBuf::from("starknet_programs/constructor.json");
         let contract = ContractClass::try_from(path).unwrap();
 
-        let hash = compute_class_hash(&contract).unwrap();
+        let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = hash.to_be_bytes();
 
         let general_config = StarknetGeneralConfig::default();
@@ -401,7 +401,7 @@ mod tests {
         let path = PathBuf::from("starknet_programs/constructor.json");
         let contract = ContractClass::try_from(path).unwrap();
 
-        let hash = compute_class_hash(&contract).unwrap();
+        let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = hash.to_be_bytes();
 
         let general_config = StarknetGeneralConfig::default();
@@ -451,7 +451,7 @@ mod tests {
         let path = PathBuf::from("starknet_programs/constructor.json");
         let contract = ContractClass::try_from(path).unwrap();
 
-        let hash = compute_class_hash(&contract).unwrap();
+        let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = hash.to_be_bytes();
 
         let general_config = StarknetGeneralConfig::default();

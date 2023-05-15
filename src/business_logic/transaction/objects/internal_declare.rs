@@ -12,7 +12,7 @@ use crate::{
         },
     },
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::starknet_contract_address::compute_deprecated_class_hash,
         errors::state_errors::StateError,
         transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
@@ -57,7 +57,7 @@ impl InternalDeclare {
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
-        let hash = compute_class_hash(&contract_class)?;
+        let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = hash.to_be_bytes();
 
         let hash_value = calculate_declare_transaction_hash(
@@ -321,7 +321,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class.clone());
@@ -370,7 +370,7 @@ mod tests {
         // Value generated from selector _validate_declare_
         let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone());
 
-        let class_hash_felt = compute_class_hash(&contract_class).unwrap();
+        let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
         let expected_class_hash = class_hash_felt.to_be_bytes();
 
         // Calldata is the class hash represented as a Felt252
@@ -425,7 +425,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -488,7 +488,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -551,7 +551,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -613,7 +613,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -693,7 +693,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);
@@ -799,7 +799,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class);

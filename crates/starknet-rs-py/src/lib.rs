@@ -27,7 +27,7 @@ use crate::{
     },
     utils::{
         py_calculate_contract_address, py_calculate_contract_address_from_hash,
-        py_calculate_event_hash, py_calculate_tx_fee, py_compute_class_hash,
+        py_calculate_event_hash, py_calculate_tx_fee, py_compute_deprecated_class_hash,
         py_validate_contract_deployed,
         transaction_hash::{
             py_calculate_declare_transaction_hash, py_calculate_deploy_transaction_hash,
@@ -98,7 +98,7 @@ pub fn starknet_rs_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_calculate_contract_address, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_event_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_validate_contract_deployed, m)?)?;
-    m.add_function(wrap_pyfunction!(py_compute_class_hash, m)?)?;
+    m.add_function(wrap_pyfunction!(py_compute_deprecated_class_hash, m)?)?;
     m.add_function(wrap_pyfunction!(py_calculate_tx_fee, m)?)?;
 
     // This function initializes the module's reexports
