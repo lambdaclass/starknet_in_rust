@@ -1,5 +1,12 @@
 use super::{
-    deprecated_syscall_handler::DeprecatedSyscallHandler, deprecated_syscall_request::*,
+    deprecated_syscall_request::*,
+    deprecated_syscall_response::{
+        DeprecatedCallContractResponse, DeprecatedDeployResponse, DeprecatedGetBlockNumberResponse,
+        DeprecatedGetBlockTimestampResponse, DeprecatedGetCallerAddressResponse,
+        DeprecatedGetContractAddressResponse, DeprecatedGetSequencerAddressResponse,
+        DeprecatedGetTxInfoResponse, DeprecatedGetTxSignatureResponse,
+        DeprecatedStorageReadResponse, DeprecatedWriteSyscallResponse,
+    },
     syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
@@ -36,7 +43,7 @@ use std::borrow::{Borrow, BorrowMut};
 //* -----------------------------------
 /// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
-pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
+pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader + Default> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -223,7 +230,7 @@ impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
 
 impl<'a, T> Borrow<T> for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: State + StateReader,
+    T: State + StateReader + Default,
 {
     fn borrow(&self) -> &T {
         self.starknet_storage_state.state
@@ -232,18 +239,18 @@ where
 
 impl<'a, T> BorrowMut<T> for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: State + StateReader,
+    T: State + StateReader + Default,
 {
     fn borrow_mut(&mut self) -> &mut T {
         self.starknet_storage_state.state
     }
 }
 
-impl<'a, T> DeprecatedSyscallHandler for DeprecatedBLSyscallHandler<'a, T>
+impl<'a, T> DeprecatedBLSyscallHandler<'a, T>
 where
     T: Default + State + StateReader,
 {
-    fn emit_event(
+    pub(crate) fn emit_event(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -265,7 +272,7 @@ where
         Ok(())
     }
 
-    fn allocate_segment(
+    pub(crate) fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
@@ -279,7 +286,7 @@ where
         Ok(segment_start)
     }
 
-    fn syscall_deploy(
+    pub(crate) fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -336,7 +343,7 @@ where
         Ok(deploy_contract_address)
     }
 
-    fn syscall_call_contract(
+    pub(crate) fn syscall_call_contract(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
@@ -424,11 +431,11 @@ where
             .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))
     }
 
-    fn get_block_info(&self) -> &BlockInfo {
+    pub(crate) fn get_block_info(&self) -> &BlockInfo {
         &self.general_config.block_info
     }
 
-    fn syscall_get_caller_address(
+    pub(crate) fn syscall_get_caller_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -441,7 +448,7 @@ where
         Ok(self.caller_address.clone())
     }
 
-    fn syscall_get_contract_address(
+    pub(crate) fn syscall_get_contract_address(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -454,7 +461,7 @@ where
         Ok(self.contract_address.clone())
     }
 
-    fn send_message_to_l1(
+    pub(crate) fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -480,7 +487,7 @@ where
         Ok(())
     }
 
-    fn syscall_get_tx_info_ptr(
+    pub(crate) fn syscall_get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
     ) -> Result<Relocatable, SyscallHandlerError> {
@@ -506,7 +513,201 @@ where
         Ok(tx_info_ptr_temp)
     }
 
-    fn library_call(
+    pub(crate) fn storage_read(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let DeprecatedSyscallRequest::StorageRead(request) =
+            self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        let value = self.syscall_storage_read(request.address)?;
+        let response = DeprecatedStorageReadResponse::new(value);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn storage_write(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let request = if let DeprecatedSyscallRequest::StorageWrite(request) =
+            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        self.syscall_storage_write(request.address, request.value)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn deploy(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let contract_address = self.syscall_deploy(vm, syscall_ptr)?;
+
+        let response = DeprecatedDeployResponse::new(
+            contract_address.0,
+            0.into(),
+            Relocatable {
+                segment_index: 0,
+                offset: 0,
+            },
+        );
+        response.write_syscall_response(vm, syscall_ptr)?;
+
+        Ok(())
+    }
+
+    // Executes the contract call and fills the DeprecatedCallContractResponse struct.
+    pub(crate) fn call_contract_and_write_response(
+        &mut self,
+        syscall_name: &str,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let retdata = self.syscall_call_contract(syscall_name, vm, syscall_ptr)?;
+
+        let retdata_maybe_reloc = retdata
+            .clone()
+            .into_iter()
+            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
+            .collect::<Vec<MaybeRelocatable>>();
+
+        let response = DeprecatedCallContractResponse::new(
+            retdata.len(),
+            self.allocate_segment(vm, retdata_maybe_reloc)?,
+        );
+
+        self.write_syscall_response(&response, vm, syscall_ptr)
+    }
+
+    pub(crate) fn write_syscall_response<R: DeprecatedWriteSyscallResponse>(
+        &self,
+        response: &R,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn get_block_number(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self.read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
+        DeprecatedGetBlockNumberResponse::new(self.get_block_info().block_number)
+            .write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn get_tx_info(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request =
+            match self.read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
+                DeprecatedSyscallRequest::GetTxInfo(request) => request,
+                _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
+            };
+
+        let tx_info = self.syscall_get_tx_info_ptr(vm)?;
+
+        let response = DeprecatedGetTxInfoResponse::new(tx_info);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn get_tx_signature(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        match self.read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
+            DeprecatedSyscallRequest::GetTxSignature(_) => {}
+            _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
+        }
+
+        let tx_info_pr = self.syscall_get_tx_info_ptr(vm)?;
+        let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
+        let response =
+            DeprecatedGetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn get_block_timestamp(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request = if let DeprecatedSyscallRequest::GetBlockTimestamp(request) =
+            self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        };
+
+        let block_timestamp = self.get_block_info().block_timestamp;
+
+        let response = DeprecatedGetBlockTimestampResponse::new(block_timestamp);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn get_caller_address(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let caller_address = self.syscall_get_caller_address(vm, syscall_ptr)?;
+        let response = DeprecatedGetCallerAddressResponse::new(caller_address);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn get_contract_address(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let contract_address = self.syscall_get_contract_address(vm, syscall_ptr)?;
+        let response = DeprecatedGetContractAddressResponse::new(contract_address);
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn get_sequencer_address(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        let _request = if let DeprecatedSyscallRequest::GetSequencerAddress(request) =
+            self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
+        {
+            request
+        } else {
+            return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
+        };
+
+        let sequencer_address = self.get_block_info().sequencer_address.clone();
+
+        let response = DeprecatedGetSequencerAddressResponse::new(sequencer_address);
+
+        response.write_syscall_response(vm, syscall_ptr)
+    }
+
+    pub(crate) fn library_call(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
@@ -514,7 +715,7 @@ where
         self.call_contract_and_write_response("library_call", vm, syscall_ptr)
     }
 
-    fn library_call_l1_handler(
+    pub(crate) fn library_call_l1_handler(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
@@ -522,7 +723,7 @@ where
         self.call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
     }
 
-    fn call_contract(
+    pub(crate) fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
@@ -530,14 +731,17 @@ where
         self.call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
-    fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
+    pub(crate) fn syscall_storage_read(
+        &mut self,
+        address: Address,
+    ) -> Result<Felt252, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
             .read(&felt_to_hash(&address.0))
             .cloned()?)
     }
 
-    fn syscall_storage_write(
+    pub(crate) fn syscall_storage_write(
         &mut self,
         address: Address,
         value: Felt252,
@@ -548,7 +752,7 @@ where
         Ok(())
     }
 
-    fn read_and_validate_syscall_request(
+    pub(crate) fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
         vm: &VirtualMachine,
@@ -561,7 +765,44 @@ where
         Ok(syscall_request)
     }
 
-    fn replace_class(
+    pub(crate) fn read_syscall_request(
+        &self,
+        syscall_name: &str,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "emit_event" => DeprecatedEmitEventRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_info" => DeprecatedGetTxInfoRequest::from_ptr(vm, syscall_ptr),
+            "deploy" => DeprecatedDeployRequest::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => {
+                DeprecatedSendMessageToL1SysCallRequest::from_ptr(vm, syscall_ptr)
+            }
+            "library_call" | "library_call_l1_handler" => {
+                DeprecatedLibraryCallRequest::from_ptr(vm, syscall_ptr)
+            }
+            "call_contract" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
+            "get_caller_address" => DeprecatedGetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_contract_address" => {
+                DeprecatedGetContractAddressRequest::from_ptr(vm, syscall_ptr)
+            }
+            "get_sequencer_address" => {
+                DeprecatedGetSequencerAddressRequest::from_ptr(vm, syscall_ptr)
+            }
+            "get_block_number" => DeprecatedGetBlockNumberRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_signature" => DeprecatedGetTxSignatureRequest::from_ptr(vm, syscall_ptr),
+            "get_block_timestamp" => DeprecatedGetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
+            "storage_read" => DeprecatedStorageReadRequest::from_ptr(vm, syscall_ptr),
+            "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "replace_class" => DeprecatedReplaceClassRequest::from_ptr(vm, syscall_ptr),
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn replace_class(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
@@ -583,7 +824,7 @@ where
         Ok(())
     }
 
-    fn post_run(
+    pub(crate) fn post_run(
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
@@ -606,10 +847,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::{
-            errors::syscall_handler_errors::SyscallHandlerError,
-            syscalls::deprecated_syscall_handler::DeprecatedSyscallHandler,
-        },
+        core::errors::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };
     use cairo_vm::felt::Felt252;
