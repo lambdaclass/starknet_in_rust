@@ -12,7 +12,7 @@ use crate::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
         deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
-        syscall_handler::{SyscallHandler, SyscallHintProcessor},
+        syscall_handler::SyscallHintProcessor,
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_classes::{

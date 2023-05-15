@@ -3,8 +3,10 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
-use super::syscall_request::{EmitEventRequest, GetBlockTimestampRequest, StorageWriteRequest, StorageReadRequest, FromPtr};
-use super::syscall_response::{GetBlockTimestampResponse, SyscallResponse, DeployResponse};
+use super::syscall_request::{
+    EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest,
+};
+use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, SyscallResponse};
 use super::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
@@ -603,7 +605,6 @@ where
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
-            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
