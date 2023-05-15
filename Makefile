@@ -1,5 +1,7 @@
 .PHONY: build check clean clippy compile-cairo compile-starknet coverage deps test heaptrack check-python-version compile-abi
 
+export PATH:=$(shell pyenv root)/shims:$(PATH)
+export PYENV_VERSION=3.9
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
