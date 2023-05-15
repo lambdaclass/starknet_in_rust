@@ -22,15 +22,11 @@ use crate::{
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
 };
-use cairo_lang_casm::hints::Hint;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::{
     felt::Felt252,
-    serde::deserialize_program::{
-        ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceManager,
-    },
+    serde::deserialize_program::BuiltinName,
     types::{
-        errors::program_errors::ProgramError,
         program::Program,
         relocatable::{MaybeRelocatable, Relocatable},
     },
@@ -39,7 +35,6 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
-use std::collections::HashMap;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 
@@ -97,6 +92,7 @@ impl ExecutionEntryPoint {
     where
         T: Default + State + StateReader,
     {
+        // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
             .get_compiled_class(&class_hash)
@@ -268,8 +264,7 @@ impl ExecutionEntryPoint {
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
         let mut cairo_runner = CairoRunner::new(&contract_class.program, "all_cairo", false)?;
-
-        cairo_runner.initialize_function_runner(&mut vm, false)?;
+        cairo_runner.initialize_function_runner(&mut vm)?;
 
         validate_contract_deployed(state, &self.contract_address)?;
 
@@ -277,7 +272,7 @@ impl ExecutionEntryPoint {
         //let os_context = runner.prepare_os_context();
         let os_context = StarknetRunner::<
             DeprecatedSyscallHintProcessor<DeprecatedBLSyscallHandler<T>>,
-        >::prepare_os_context(&cairo_runner, &mut vm);
+        >::prepare_os_context_cairo0(&cairo_runner, &mut vm);
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -362,19 +357,26 @@ impl ExecutionEntryPoint {
 
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
-        let mut cairo_runner = CairoRunner::new(
-            &get_runnable_program(&contract_class, entry_point.builtins)
-                .map_err(TransactionError::ProgramError)?,
-            "all_cairo",
-            false,
+        // get a program from the casm contract class
+        let program: Program = contract_class.as_ref().clone().try_into().unwrap();
+        // create and initialize a cairo runner for running cairo 1 programs.
+        let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false)?;
+        cairo_runner.initialize_function_runner_cairo_1(
+            &mut vm,
+            &entry_point
+                .builtins
+                .into_iter()
+                .map(|_s| BuiltinName::range_check) // fix, read builtin correctly
+                .collect::<Vec<BuiltinName>>(),
         )?;
-        cairo_runner.initialize_function_runner(&mut vm, true)?;
-
         validate_contract_deployed(state, &self.contract_address)?;
 
         // prepare OS context
-        let os_context =
-            StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context(&cairo_runner, &mut vm);
+        let os_context = StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context_cairo1(
+            &cairo_runner,
+            &mut vm,
+            self.initial_gas.into(),
+        );
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
@@ -392,6 +394,7 @@ impl ExecutionEntryPoint {
             initial_syscall_ptr,
             support_reverted,
         );
+        // create and attach a syscall hint processor to the starknet runner.
         let hint_processor = SyscallHintProcessor::new(syscall_handler, &contract_class.hints);
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
@@ -403,27 +406,27 @@ impl ExecutionEntryPoint {
             .allocate_segment(&mut runner.vm, data)?
             .into();
 
-        let entry_point_args = [
-            &CairoArg::Single(self.entry_point_selector.clone().into()),
-            &CairoArg::Array(os_context.clone()),
-            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
-            &CairoArg::Single(alloc_pointer),
-        ];
+        let mut entrypoint_args: Vec<MaybeRelocatable> =
+            vec![self.entry_point_selector.clone().into()];
+        entrypoint_args.extend(os_context.clone());
+        entrypoint_args.push(MaybeRelocatable::Int(self.calldata.len().into()));
+        entrypoint_args.push(alloc_pointer);
 
-        // cairo runner entry point
-        runner.run_from_entrypoint(entry_point.offset, &entry_point_args)?;
+        // run the Cairo1 entrypoint
+        runner.run_from_cairo1_entrypoint(&contract_class, entry_point.offset, &entrypoint_args)?;
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
-        let args_ptr = (runner
+        let initial_fp = runner
             .cairo_runner
             .get_initial_fp()
-            .ok_or(TransactionError::MissingInitialFp)?
-            - (entry_point_args.len() + 2))?;
+            .ok_or(TransactionError::MissingInitialFp)?;
+
+        let args_ptr = initial_fp - (entrypoint_args.len() + 2);
 
         runner
             .vm
-            .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
+            .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
@@ -439,50 +442,5 @@ impl ExecutionEntryPoint {
             runner.hint_processor.syscall_handler.internal_calls,
             retdata,
         )
-    }
-}
-
-// Helper functions
-fn get_runnable_program(
-    casm_contract_class: &CasmContractClass,
-    entrypoint_builtins: Vec<String>,
-) -> Result<Program, ProgramError> {
-    Program::new(
-        entrypoint_builtins
-            .iter()
-            .map(|v| serde_json::from_str::<BuiltinName>(v).unwrap())
-            .collect(),
-        casm_contract_class
-            .bytecode
-            .iter()
-            .map(|v| MaybeRelocatable::from(Felt252::from(v.value.clone())))
-            .collect(),
-        None,
-        collect_hints(casm_contract_class),
-        ReferenceManager {
-            references: Vec::new(),
-        },
-        Default::default(),
-        Default::default(),
-        Default::default(),
-    )
-}
-
-fn collect_hints(casm_contract_class: &CasmContractClass) -> HashMap<usize, Vec<HintParams>> {
-    casm_contract_class
-        .hints
-        .iter()
-        .map(|(key, hints)| (*key, hints.iter().map(hint_to_hint_params).collect()))
-        .collect()
-}
-
-fn hint_to_hint_params(hint: &Hint) -> HintParams {
-    HintParams {
-        code: hint.to_string(),
-        accessible_scopes: vec![],
-        flow_tracking_data: FlowTrackingData {
-            ap_tracking: ApTracking::new(),
-            reference_ids: HashMap::new(),
-        },
     }
 }
