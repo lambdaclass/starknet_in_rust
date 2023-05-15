@@ -14,8 +14,10 @@ use crate::{
     business_logic::execution::objects::CallResult,
     core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address,
 };
-use cairo_lang_casm::hints::Hint;
+use cairo_lang_casm::hints::{Hint, StarknetHint};
+use cairo_lang_casm::operand::{CellRef, DerefOrImmediate, Register, ResOperand};
 use cairo_vm::hint_processor::hint_processor_definition::HintReference;
+use cairo_vm::types::errors::math_errors::MathError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use cairo_vm::{
     felt::Felt252,
@@ -217,16 +219,36 @@ impl<'a, T: State + StateReader> SyscallHintProcessor<'a, T> {
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
+impl<'a, T: Default + State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        constants: &HashMap<String, Felt252>,
+        _constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
-        self.cairo1_hint_processor
-            .execute_hint(vm, exec_scopes, hint_data, constants)
+        let hints: &Vec<Hint> = hint_data.downcast_ref().ok_or(HintError::WrongHintData)?;
+        for hint in hints {
+            match hint {
+                Hint::Core(_core_hint) => {
+                    self.cairo1_hint_processor.execute(vm, exec_scopes, hint)?
+                }
+                Hint::Starknet(starknet_hint) => match starknet_hint {
+                    StarknetHint::SystemCall { system } => {
+                        let syscall_ptr = as_relocatable(vm, system)?;
+                        self.syscall_handler
+                            .syscall(vm, syscall_ptr)
+                            .map_err(|err| {
+                                HintError::CustomHint(format!(
+                                    "Syscall handler invocation error: {err}"
+                                ))
+                            })?;
+                    }
+                    other => return Err(HintError::UnknownHint(other.to_string())),
+                },
+            };
+        }
+        Ok(())
     }
 
     // Ignores all data except for the code that should contain
@@ -259,4 +281,50 @@ impl<'a, T: State + StateReader> HintProcessorPostRun for SyscallHintProcessor<'
     ) -> Result<(), TransactionError> {
         Ok(())
     }
+}
+
+// TODO: These four functions were copied from cairo-rs in
+// hint_processor/cairo-1-hint-processor/hint_processor_utils.rs as these functions are private.
+// They will became public soon and then we have to remove this ones and use the ones in cairo-rs instead
+fn as_relocatable(vm: &mut VirtualMachine, value: &ResOperand) -> Result<Relocatable, HintError> {
+    let (base, offset) = extract_buffer(value)?;
+    get_ptr(vm, base, &offset).map_err(HintError::from)
+}
+
+fn extract_buffer(buffer: &ResOperand) -> Result<(&CellRef, Felt252), HintError> {
+    let (cell, base_offset) = match buffer {
+        ResOperand::Deref(cell) => (cell, 0.into()),
+        ResOperand::BinOp(bin_op) => {
+            if let DerefOrImmediate::Immediate(val) = &bin_op.b {
+                (&bin_op.a, val.clone().value.into())
+            } else {
+                return Err(HintError::CustomHint("Failed to extract buffer, expected ResOperand of BinOp type to have Inmediate b value".to_owned()));
+            }
+        }
+        _ => {
+            return Err(HintError::CustomHint(
+                "Illegal argument for a buffer.".to_string(),
+            ))
+        }
+    };
+    Ok((cell, base_offset))
+}
+
+fn get_ptr(
+    vm: &VirtualMachine,
+    cell: &CellRef,
+    offset: &Felt252,
+) -> Result<Relocatable, VirtualMachineError> {
+    Ok((vm.get_relocatable(cell_ref_to_relocatable(cell, vm)?)? + offset)?)
+}
+
+fn cell_ref_to_relocatable(
+    cell_ref: &CellRef,
+    vm: &VirtualMachine,
+) -> Result<Relocatable, MathError> {
+    let base = match cell_ref.register {
+        Register::AP => vm.get_ap(),
+        Register::FP => vm.get_fp(),
+    };
+    base + (cell_ref.offset as i32)
 }
