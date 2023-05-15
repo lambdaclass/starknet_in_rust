@@ -11,7 +11,7 @@ use crate::{
     core::syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
-        deprecated_syscall_handler::{DeprecatedSyscallHandler, DeprecatedSyscallHintProcessor},
+        deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
         syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
@@ -275,9 +275,10 @@ impl ExecutionEntryPoint {
 
         // prepare OS context
         //let os_context = runner.prepare_os_context();
-        let os_context = StarknetRunner::<
-            DeprecatedSyscallHintProcessor<DeprecatedBLSyscallHandler<T>>,
-        >::prepare_os_context(&cairo_runner, &mut vm);
+        let os_context = StarknetRunner::<DeprecatedSyscallHintProcessor<T>>::prepare_os_context(
+            &cairo_runner,
+            &mut vm,
+        );
 
         // fetch syscall_ptr
         let initial_syscall_ptr: Relocatable = match os_context.get(0) {
