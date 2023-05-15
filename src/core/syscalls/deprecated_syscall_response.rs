@@ -1,4 +1,4 @@
-use super::syscall_request::{
+use super::deprecated_syscall_request::{
     CallContractRequest, CountFields, DeployRequestStruct, GetBlockNumberRequest,
     GetBlockTimestampRequest, GetCallerAddressRequest, GetContractAddressRequest,
     GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
@@ -305,14 +305,14 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::syscalls::syscall_handler::SyscallHandler,
+        core::syscalls::deprecated_syscall_handler::SyscallHandler,
         utils::{get_integer, test_utils::vm},
     };
     use cairo_vm::relocatable;
     use coverage_helper::test;
 
     type BusinessLogicSyscallHandler<'a> =
-        crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+        crate::core::syscalls::deprecated_business_logic_syscall_handler::BusinessLogicSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;

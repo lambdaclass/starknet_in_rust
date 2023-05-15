@@ -1,12 +1,12 @@
 use super::{
-    hint_code::*,
-    other_syscalls,
-    syscall_request::*,
-    syscall_response::{
+    deprecated_syscall_request::*,
+    deprecated_syscall_response::{
         CallContractResponse, DeployResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
         GetCallerAddressResponse, GetContractAddressResponse, GetSequencerAddressResponse,
         GetTxInfoResponse, GetTxSignatureResponse, StorageReadResponse, WriteSyscallResponse,
     },
+    hint_code::*,
+    other_syscalls,
 };
 use crate::{
     business_logic::{
@@ -559,7 +559,7 @@ mod tests {
     use std::path::PathBuf;
 
     type BusinessLogicSyscallHandler<'a> =
-        crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler<
+        crate::core::syscalls::deprecated_business_logic_syscall_handler::BusinessLogicSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;

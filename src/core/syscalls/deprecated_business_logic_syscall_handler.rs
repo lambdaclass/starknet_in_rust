@@ -1,7 +1,7 @@
 use super::{
-    syscall_handler::{SyscallHandler, SyscallHandlerPostRun},
+    deprecated_syscall_handler::{SyscallHandler, SyscallHandlerPostRun},
+    deprecated_syscall_request::*,
     syscall_info::get_syscall_size_from_name,
-    syscall_request::*,
 };
 use crate::{
     business_logic::{
@@ -586,7 +586,7 @@ mod tests {
         },
         core::{
             errors::syscall_handler_errors::SyscallHandlerError,
-            syscalls::syscall_handler::SyscallHandler,
+            syscalls::deprecated_syscall_handler::SyscallHandler,
         },
         utils::{test_utils::*, Address},
     };

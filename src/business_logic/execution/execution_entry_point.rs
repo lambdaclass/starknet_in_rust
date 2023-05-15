@@ -7,8 +7,8 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        syscall_handler::{SyscallHandler, SyscallHintProcessor},
+        deprecated_business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        deprecated_syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
