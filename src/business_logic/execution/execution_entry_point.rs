@@ -378,8 +378,8 @@ impl ExecutionEntryPoint {
             self.initial_gas.into(),
         );
 
-        // fetch syscall_ptr
-        let initial_syscall_ptr: Relocatable = match os_context.get(0) {
+        // fetch syscall_ptr (it is the last element of the os_context)
+        let initial_syscall_ptr: Relocatable = match os_context.last() {
             Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
             _ => return Err(TransactionError::NotARelocatableValue),
         };
@@ -400,17 +400,16 @@ impl ExecutionEntryPoint {
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data = self.calldata.iter().map(|d| d.into()).collect();
-        let alloc_pointer = runner
+        let alloc_pointer: MaybeRelocatable = runner
             .hint_processor
             .syscall_handler
             .allocate_segment(&mut runner.vm, data)?
             .into();
 
-        let mut entrypoint_args: Vec<MaybeRelocatable> =
-            vec![self.entry_point_selector.clone().into()];
-        entrypoint_args.extend(os_context.clone());
-        entrypoint_args.push(MaybeRelocatable::Int(self.calldata.len().into()));
-        entrypoint_args.push(alloc_pointer);
+        // TODO: we should add this data only once, it is added again in runner.rs
+        let mut entrypoint_args: Vec<MaybeRelocatable> = os_context.clone(); // add os_context
+        entrypoint_args.push(alloc_pointer.clone()); // add call_data start
+        entrypoint_args.push(alloc_pointer.add_usize(self.calldata.len()).unwrap()); // add calldata_end
 
         // run the Cairo1 entrypoint
         runner.run_from_cairo1_entrypoint(&contract_class, entry_point.offset, &entrypoint_args)?;

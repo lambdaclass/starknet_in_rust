@@ -100,6 +100,7 @@ where
         args: &[MaybeRelocatable],
     ) -> Result<(), TransactionError> {
         let program_builtins = get_casm_contract_builtins(contract_class, entrypoint_offset);
+        // TODO: investigate this line (cairo runner must be initialized once)
         self.cairo_runner
             .initialize_function_runner_cairo_1(&mut self.vm, &program_builtins)
             .unwrap();
