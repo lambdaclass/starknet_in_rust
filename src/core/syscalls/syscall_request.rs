@@ -109,7 +109,7 @@ pub(crate) struct SendMessageToL1Request {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockHashRequest {
-    pub(crate) block_number: u64
+    pub(crate) block_number: u64,
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~

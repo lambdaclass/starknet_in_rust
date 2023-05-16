@@ -10,6 +10,7 @@ pub(crate) enum ResponseBody {
     CallContract(CallContractResponse),
     Failure(FailureReason),
     GetBlockTimestamp(GetBlockTimestampResponse),
+    GetBlockHash(GetBlockHashResponse),
 }
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
@@ -81,4 +82,9 @@ pub struct FailureReason {
 pub struct CallContractResponse {
     pub retdata_start: Relocatable,
     pub retdata_end: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GetBlockHashResponse {
+    pub block_hash: Felt252,
 }
