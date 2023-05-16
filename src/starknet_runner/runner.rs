@@ -2,7 +2,7 @@ use super::starknet_runner_error::StarknetRunnerError;
 use crate::{
     business_logic::transaction::error::TransactionError,
     core::syscalls::deprecated_syscall_handler::{
-        SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
+        DeprecatedSyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
     },
 };
 use cairo_vm::felt::Felt252;
@@ -21,7 +21,7 @@ use std::{borrow::Cow, collections::HashMap};
 
 pub(crate) struct StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
@@ -30,7 +30,7 @@ where
 
 impl<H> StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub fn new(
         cairo_runner: CairoRunner,

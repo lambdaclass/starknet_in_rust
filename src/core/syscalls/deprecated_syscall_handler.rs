@@ -38,7 +38,7 @@ use std::{any::Any, collections::HashMap};
 //* SyscallHandler Trait
 //* ---------------------
 
-pub(crate) trait SyscallHandler {
+pub(crate) trait DeprecatedSyscallHandler {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -373,14 +373,14 @@ pub(crate) trait SyscallHandlerPostRun {
 //* Structs implementations
 //* ------------------------
 
-pub(crate) struct SyscallHintProcessor<H: SyscallHandler> {
+pub(crate) struct SyscallHintProcessor<H: DeprecatedSyscallHandler> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: H,
 }
 
 impl<H> SyscallHintProcessor<H>
 where
-    H: SyscallHandler,
+    H: DeprecatedSyscallHandler,
 {
     pub fn new(syscall_handler: H) -> Self {
         SyscallHintProcessor {
@@ -486,7 +486,7 @@ where
     }
 }
 
-impl<H: SyscallHandler> HintProcessor for SyscallHintProcessor<H> {
+impl<H: DeprecatedSyscallHandler> HintProcessor for SyscallHintProcessor<H> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
