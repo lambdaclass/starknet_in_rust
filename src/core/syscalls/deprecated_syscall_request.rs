@@ -21,6 +21,7 @@ pub(crate) enum SyscallRequest {
     GetTxSignature(GetTxSignatureRequest),
     StorageRead(StorageReadRequest),
     StorageWrite(StorageWriteRequest),
+    ReplaceClass(ReplaceClassRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -30,6 +31,11 @@ pub(crate) struct CallContractRequest {
     pub(crate) function_selector: Felt252,
     pub(crate) calldata_size: usize,
     pub(crate) calldata: Relocatable,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct ReplaceClassRequest {
+    pub(crate) class_hash: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -123,6 +129,12 @@ pub(crate) struct StorageWriteRequest {
     pub(crate) value: Felt252,
 }
 
+impl From<ReplaceClassRequest> for SyscallRequest {
+    fn from(replace_class: ReplaceClassRequest) -> SyscallRequest {
+        SyscallRequest::ReplaceClass(replace_class)
+    }
+}
+
 impl From<EmitEventStruct> for SyscallRequest {
     fn from(emit_event_struct: EmitEventStruct) -> SyscallRequest {
         SyscallRequest::EmitEvent(emit_event_struct)
@@ -204,6 +216,19 @@ pub(crate) trait FromPtr {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
+}
+
+impl FromPtr for ReplaceClassRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let class_hash = get_big_int(vm, syscall_ptr)?;
+
+        Ok(SyscallRequest::ReplaceClass(ReplaceClassRequest {
+            class_hash,
+        }))
+    }
 }
 
 impl FromPtr for EmitEventStruct {
