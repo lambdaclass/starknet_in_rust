@@ -87,7 +87,7 @@ export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/li
 
 ### Running simple contracts
 
-You can find a tutorial on running contracts [here](/contract_execution_examples).
+You can find a tutorial on running contracts [here](/examples/contract_execution/README.md).
 
 ### Using the Cli
 You can find an example on how to use the cli [here](/docs/CLI_USAGE_EXAMPLE.md)
