@@ -92,6 +92,23 @@ pub fn string_to_hash(class_string: &String) -> Result<ClassHash, ParseFeltError
     Ok(parsed_felt)
 }
 
+pub fn get_felt_range(
+    vm: &VirtualMachine,
+    start_addr: Relocatable,
+    end_addr: Relocatable,
+) -> Result<Vec<Felt252>, SyscallHandlerError> {
+    if start_addr.segment_index != end_addr.segment_index {
+        return Err(SyscallHandlerError::InconsistentSegmentIndices);
+    }
+
+    if start_addr.offset > end_addr.offset {
+        return Err(SyscallHandlerError::StartOffsetGreaterThanEndOffset);
+    }
+
+    let size = end_addr.offset - start_addr.offset;
+    get_integer_range(vm, start_addr, size)
+}
+
 // -------------------
 //    STATE UTILS
 // -------------------
