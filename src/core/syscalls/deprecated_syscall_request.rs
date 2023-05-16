@@ -2,30 +2,30 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
-use cairo_vm::felt::Felt252;
-use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::Felt252;
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum SyscallRequest {
-    EmitEvent(EmitEventStruct),
-    GetTxInfo(GetTxInfoRequest),
-    Deploy(DeployRequestStruct),
-    SendMessageToL1(SendMessageToL1SysCall),
-    LibraryCall(LibraryCallStruct),
-    GetCallerAddress(GetCallerAddressRequest),
-    GetContractAddress(GetContractAddressRequest),
-    GetSequencerAddress(GetSequencerAddressRequest),
-    GetBlockNumber(GetBlockNumberRequest),
-    GetBlockTimestamp(GetBlockTimestampRequest),
-    CallContract(CallContractRequest),
-    GetTxSignature(GetTxSignatureRequest),
-    StorageRead(StorageReadRequest),
-    StorageWrite(StorageWriteRequest),
-    ReplaceClass(ReplaceClassRequest),
+pub(crate) enum DeprecatedSyscallRequest {
+    EmitEvent(DeprecatedEmitEventRequest),
+    GetTxInfo(DeprecatedGetTxInfoRequest),
+    Deploy(DeprecatedDeployRequest),
+    SendMessageToL1(DeprecatedSendMessageToL1SysCallRequest),
+    LibraryCall(DeprecatedLibraryCallRequest),
+    GetCallerAddress(DeprecatedGetCallerAddressRequest),
+    GetContractAddress(DeprecatedGetContractAddressRequest),
+    GetSequencerAddress(DeprecatedGetSequencerAddressRequest),
+    GetBlockNumber(DeprecatedGetBlockNumberRequest),
+    GetBlockTimestamp(DeprecatedGetBlockTimestampRequest),
+    CallContract(DeprecatedCallContractRequest),
+    GetTxSignature(DeprecatedGetTxSignatureRequest),
+    StorageRead(DeprecatedStorageReadRequest),
+    StorageWrite(DeprecatedStorageWriteRequest),
+    ReplaceClass(DeprecatedReplaceClassRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct CallContractRequest {
+pub(crate) struct DeprecatedCallContractRequest {
     pub(crate) selector: Felt252,
     pub(crate) contract_address: Address,
     pub(crate) function_selector: Felt252,
@@ -34,17 +34,12 @@ pub(crate) struct CallContractRequest {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ReplaceClassRequest {
-    pub(crate) class_hash: Felt252,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetSequencerAddressRequest {
+pub(crate) struct DeprecatedGetSequencerAddressRequest {
     _selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct EmitEventStruct {
+pub(crate) struct DeprecatedEmitEventRequest {
     pub(crate) selector: Felt252,
     pub(crate) keys_len: usize,
     pub(crate) keys: Relocatable,
@@ -53,7 +48,7 @@ pub(crate) struct EmitEventStruct {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct DeployRequestStruct {
+pub(crate) struct DeprecatedDeployRequest {
     // The system call selector (= DEPLOY_SELECTOR).
     pub(crate) _selector: Felt252,
     // The hash of the class to deploy.
@@ -69,7 +64,7 @@ pub(crate) struct DeployRequestStruct {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct SendMessageToL1SysCall {
+pub(crate) struct DeprecatedSendMessageToL1SysCallRequest {
     pub(crate) _selector: Felt252,
     pub(crate) to_address: Address,
     pub(crate) payload_size: usize,
@@ -77,7 +72,7 @@ pub(crate) struct SendMessageToL1SysCall {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct LibraryCallStruct {
+pub(crate) struct DeprecatedLibraryCallRequest {
     pub(crate) selector: Felt252,
     pub(crate) class_hash: Felt252,
     pub(crate) function_selector: Felt252,
@@ -86,124 +81,137 @@ pub(crate) struct LibraryCallStruct {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetBlockTimestampRequest {
+pub(crate) struct DeprecatedGetBlockTimestampRequest {
     pub(crate) selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetCallerAddressRequest {
+pub(crate) struct DeprecatedGetCallerAddressRequest {
     pub(crate) _selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetTxSignatureRequest {
+pub(crate) struct DeprecatedGetTxSignatureRequest {
     pub(crate) _selector: Felt252,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct GetTxInfoRequest {
+pub(crate) struct DeprecatedGetTxInfoRequest {
     pub(crate) selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetContractAddressRequest {
+pub(crate) struct DeprecatedGetContractAddressRequest {
     pub(crate) _selector: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetBlockNumberRequest {
+pub(crate) struct DeprecatedGetBlockNumberRequest {
     pub(crate) _selector: Felt252,
 }
 
 /// Describes the StorageRead system call format.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct StorageReadRequest {
+pub(crate) struct DeprecatedStorageReadRequest {
     pub(crate) selector: Felt252,
     pub(crate) address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct StorageWriteRequest {
+pub(crate) struct DeprecatedStorageWriteRequest {
     pub(crate) selector: Felt252,
     pub(crate) address: Address,
     pub(crate) value: Felt252,
 }
 
-impl From<ReplaceClassRequest> for SyscallRequest {
-    fn from(replace_class: ReplaceClassRequest) -> SyscallRequest {
-        SyscallRequest::ReplaceClass(replace_class)
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeprecatedReplaceClassRequest {
+    pub(crate) class_hash: Felt252,
+}
+
+impl From<DeprecatedEmitEventRequest> for DeprecatedSyscallRequest {
+    fn from(emit_event_struct: DeprecatedEmitEventRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::EmitEvent(emit_event_struct)
     }
 }
 
-impl From<EmitEventStruct> for SyscallRequest {
-    fn from(emit_event_struct: EmitEventStruct) -> SyscallRequest {
-        SyscallRequest::EmitEvent(emit_event_struct)
+impl From<DeprecatedDeployRequest> for DeprecatedSyscallRequest {
+    fn from(deploy_request_struct: DeprecatedDeployRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::Deploy(deploy_request_struct)
     }
 }
 
-impl From<DeployRequestStruct> for SyscallRequest {
-    fn from(deploy_request_struct: DeployRequestStruct) -> SyscallRequest {
-        SyscallRequest::Deploy(deploy_request_struct)
+impl From<DeprecatedSendMessageToL1SysCallRequest> for DeprecatedSyscallRequest {
+    fn from(
+        send_message_to_l1_sys_call: DeprecatedSendMessageToL1SysCallRequest,
+    ) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::SendMessageToL1(send_message_to_l1_sys_call)
     }
 }
 
-impl From<SendMessageToL1SysCall> for SyscallRequest {
-    fn from(send_message_to_l1_sys_call: SendMessageToL1SysCall) -> SyscallRequest {
-        SyscallRequest::SendMessageToL1(send_message_to_l1_sys_call)
+impl From<DeprecatedLibraryCallRequest> for DeprecatedSyscallRequest {
+    fn from(library_call_struct: DeprecatedLibraryCallRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::LibraryCall(library_call_struct)
     }
 }
 
-impl From<LibraryCallStruct> for SyscallRequest {
-    fn from(library_call_struct: LibraryCallStruct) -> SyscallRequest {
-        SyscallRequest::LibraryCall(library_call_struct)
+impl From<DeprecatedCallContractRequest> for DeprecatedSyscallRequest {
+    fn from(call_contract_request: DeprecatedCallContractRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::CallContract(call_contract_request)
     }
 }
 
-impl From<CallContractRequest> for SyscallRequest {
-    fn from(call_contract_request: CallContractRequest) -> SyscallRequest {
-        SyscallRequest::CallContract(call_contract_request)
+impl From<DeprecatedGetCallerAddressRequest> for DeprecatedSyscallRequest {
+    fn from(
+        get_caller_address_request: DeprecatedGetCallerAddressRequest,
+    ) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::GetCallerAddress(get_caller_address_request)
     }
 }
 
-impl From<GetCallerAddressRequest> for SyscallRequest {
-    fn from(get_caller_address_request: GetCallerAddressRequest) -> SyscallRequest {
-        SyscallRequest::GetCallerAddress(get_caller_address_request)
+impl From<DeprecatedGetSequencerAddressRequest> for DeprecatedSyscallRequest {
+    fn from(
+        get_sequencer_address_request: DeprecatedGetSequencerAddressRequest,
+    ) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::GetSequencerAddress(get_sequencer_address_request)
     }
 }
 
-impl From<GetSequencerAddressRequest> for SyscallRequest {
-    fn from(get_sequencer_address_request: GetSequencerAddressRequest) -> SyscallRequest {
-        SyscallRequest::GetSequencerAddress(get_sequencer_address_request)
+impl From<DeprecatedGetBlockTimestampRequest> for DeprecatedSyscallRequest {
+    fn from(
+        get_block_timestamp_request: DeprecatedGetBlockTimestampRequest,
+    ) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::GetBlockTimestamp(get_block_timestamp_request)
     }
 }
 
-impl From<GetBlockTimestampRequest> for SyscallRequest {
-    fn from(get_block_timestamp_request: GetBlockTimestampRequest) -> SyscallRequest {
-        SyscallRequest::GetBlockTimestamp(get_block_timestamp_request)
+impl From<DeprecatedGetTxSignatureRequest> for DeprecatedSyscallRequest {
+    fn from(get_tx_signature_request: DeprecatedGetTxSignatureRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::GetTxSignature(get_tx_signature_request)
     }
 }
 
-impl From<GetTxSignatureRequest> for SyscallRequest {
-    fn from(get_tx_signature_request: GetTxSignatureRequest) -> SyscallRequest {
-        SyscallRequest::GetTxSignature(get_tx_signature_request)
+impl From<DeprecatedGetTxInfoRequest> for DeprecatedSyscallRequest {
+    fn from(get_tx_info_request: DeprecatedGetTxInfoRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::GetTxInfo(get_tx_info_request)
     }
 }
 
-impl From<GetTxInfoRequest> for SyscallRequest {
-    fn from(get_tx_info_request: GetTxInfoRequest) -> SyscallRequest {
-        SyscallRequest::GetTxInfo(get_tx_info_request)
+impl From<DeprecatedStorageReadRequest> for DeprecatedSyscallRequest {
+    fn from(storage_read: DeprecatedStorageReadRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::StorageRead(storage_read)
     }
 }
 
-impl From<StorageReadRequest> for SyscallRequest {
-    fn from(storage_read: StorageReadRequest) -> SyscallRequest {
-        SyscallRequest::StorageRead(storage_read)
+impl From<DeprecatedStorageWriteRequest> for DeprecatedSyscallRequest {
+    fn from(storage_write: DeprecatedStorageWriteRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::StorageWrite(storage_write)
     }
 }
 
-impl From<StorageWriteRequest> for SyscallRequest {
-    fn from(storage_write: StorageWriteRequest) -> SyscallRequest {
-        SyscallRequest::StorageWrite(storage_write)
+impl From<DeprecatedReplaceClassRequest> for DeprecatedSyscallRequest {
+    fn from(replace_class: DeprecatedReplaceClassRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::ReplaceClass(replace_class)
     }
 }
 
@@ -215,34 +223,21 @@ pub(crate) trait FromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError>;
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError>;
 }
 
-impl FromPtr for ReplaceClassRequest {
+impl FromPtr for DeprecatedEmitEventRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let class_hash = get_big_int(vm, syscall_ptr)?;
-
-        Ok(SyscallRequest::ReplaceClass(ReplaceClassRequest {
-            class_hash,
-        }))
-    }
-}
-
-impl FromPtr for EmitEventStruct {
-    fn from_ptr(
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let keys_len = get_integer(vm, &syscall_ptr + 1)?;
         let keys = get_relocatable(vm, &syscall_ptr + 2)?;
         let data_len = get_integer(vm, &syscall_ptr + 3)?;
         let data = get_relocatable(vm, &syscall_ptr + 4)?;
 
-        Ok(EmitEventStruct {
+        Ok(DeprecatedEmitEventRequest {
             selector,
             keys_len,
             keys,
@@ -253,28 +248,28 @@ impl FromPtr for EmitEventStruct {
     }
 }
 
-impl FromPtr for GetTxInfoRequest {
+impl FromPtr for DeprecatedGetTxInfoRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
 
-        Ok(GetTxInfoRequest { selector }.into())
+        Ok(DeprecatedGetTxInfoRequest { selector }.into())
     }
 }
 
-impl FromPtr for LibraryCallStruct {
+impl FromPtr for DeprecatedLibraryCallRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let class_hash = get_big_int(vm, &syscall_ptr + 1)?;
         let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
         let calldata_size = get_integer(vm, &syscall_ptr + 3)?;
         let calldata = get_relocatable(vm, &syscall_ptr + 4)?;
-        Ok(LibraryCallStruct {
+        Ok(DeprecatedLibraryCallRequest {
             selector,
             class_hash,
             function_selector,
@@ -285,17 +280,17 @@ impl FromPtr for LibraryCallStruct {
     }
 }
 
-impl FromPtr for CallContractRequest {
+impl FromPtr for DeprecatedCallContractRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let contract_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
         let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
         let calldata_size = get_integer(vm, &syscall_ptr + 3)?;
         let calldata = get_relocatable(vm, &syscall_ptr + 4)?;
-        Ok(CallContractRequest {
+        Ok(DeprecatedCallContractRequest {
             selector,
             contract_address,
             function_selector,
@@ -306,11 +301,11 @@ impl FromPtr for CallContractRequest {
     }
 }
 
-impl FromPtr for DeployRequestStruct {
+impl FromPtr for DeprecatedDeployRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, syscall_ptr)?;
         let class_hash = get_big_int(vm, &syscall_ptr + 1)?;
         let contract_address_salt = get_big_int(vm, &syscall_ptr + 2)?;
@@ -318,7 +313,7 @@ impl FromPtr for DeployRequestStruct {
         let constructor_calldata = get_relocatable(vm, &syscall_ptr + 4)?;
         let deploy_from_zero = get_integer(vm, &syscall_ptr + 5)?;
 
-        Ok(SyscallRequest::Deploy(DeployRequestStruct {
+        Ok(DeprecatedSyscallRequest::Deploy(DeprecatedDeployRequest {
             _selector,
             class_hash,
             contract_address_salt,
@@ -329,129 +324,145 @@ impl FromPtr for DeployRequestStruct {
     }
 }
 
-impl FromPtr for SendMessageToL1SysCall {
+impl FromPtr for DeprecatedSendMessageToL1SysCallRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, syscall_ptr)?;
         let to_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
         let payload_size = get_integer(vm, &syscall_ptr + 2)?;
         let payload_ptr = get_relocatable(vm, &syscall_ptr + 3)?;
 
-        Ok(SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
-            _selector,
-            to_address,
-            payload_size,
-            payload_ptr,
-        }))
+        Ok(DeprecatedSyscallRequest::SendMessageToL1(
+            DeprecatedSendMessageToL1SysCallRequest {
+                _selector,
+                to_address,
+                payload_size,
+                payload_ptr,
+            },
+        ))
     }
 }
 
-impl FromPtr for GetCallerAddressRequest {
+impl FromPtr for DeprecatedGetCallerAddressRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, syscall_ptr)?;
 
-        Ok(SyscallRequest::GetCallerAddress(GetCallerAddressRequest {
-            _selector,
-        }))
+        Ok(DeprecatedSyscallRequest::GetCallerAddress(
+            DeprecatedGetCallerAddressRequest { _selector },
+        ))
     }
 }
 
-impl FromPtr for GetBlockTimestampRequest {
+impl FromPtr for DeprecatedGetBlockTimestampRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
-        Ok(SyscallRequest::GetBlockTimestamp(
-            GetBlockTimestampRequest { selector },
+        Ok(DeprecatedSyscallRequest::GetBlockTimestamp(
+            DeprecatedGetBlockTimestampRequest { selector },
         ))
     }
 }
 
-impl FromPtr for GetSequencerAddressRequest {
+impl FromPtr for DeprecatedGetSequencerAddressRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, syscall_ptr)?;
-        Ok(SyscallRequest::GetSequencerAddress(
-            GetSequencerAddressRequest { _selector },
+        Ok(DeprecatedSyscallRequest::GetSequencerAddress(
+            DeprecatedGetSequencerAddressRequest { _selector },
         ))
     }
 }
 
-impl FromPtr for GetTxSignatureRequest {
+impl FromPtr for DeprecatedGetTxSignatureRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let _selector = get_big_int(vm, syscall_ptr)?;
-        Ok(SyscallRequest::GetTxSignature(GetTxSignatureRequest {
-            _selector,
-        }))
-    }
-}
-
-impl FromPtr for GetBlockNumberRequest {
-    fn from_ptr(
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, syscall_ptr)?;
-
-        Ok(SyscallRequest::GetBlockNumber(GetBlockNumberRequest {
-            _selector,
-        }))
-    }
-}
-
-impl FromPtr for GetContractAddressRequest {
-    fn from_ptr(
-        vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let _selector = get_big_int(vm, syscall_ptr)?;
-
-        Ok(SyscallRequest::GetContractAddress(
-            GetContractAddressRequest { _selector },
+        Ok(DeprecatedSyscallRequest::GetTxSignature(
+            DeprecatedGetTxSignatureRequest { _selector },
         ))
     }
 }
 
-impl FromPtr for StorageReadRequest {
+impl FromPtr for DeprecatedGetBlockNumberRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, syscall_ptr)?;
+
+        Ok(DeprecatedSyscallRequest::GetBlockNumber(
+            DeprecatedGetBlockNumberRequest { _selector },
+        ))
+    }
+}
+
+impl FromPtr for DeprecatedGetContractAddressRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
+        let _selector = get_big_int(vm, syscall_ptr)?;
+
+        Ok(DeprecatedSyscallRequest::GetContractAddress(
+            DeprecatedGetContractAddressRequest { _selector },
+        ))
+    }
+}
+
+impl FromPtr for DeprecatedStorageReadRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let address = Address(get_big_int(vm, (syscall_ptr + 1)?)?);
 
-        Ok(SyscallRequest::StorageRead(StorageReadRequest {
-            selector,
-            address,
-        }))
+        Ok(DeprecatedSyscallRequest::StorageRead(
+            DeprecatedStorageReadRequest { selector, address },
+        ))
     }
 }
 
-impl FromPtr for StorageWriteRequest {
+impl FromPtr for DeprecatedStorageWriteRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let address = Address(get_big_int(vm, (syscall_ptr + 1)?)?);
         let value = get_big_int(vm, (syscall_ptr + 2)?)?;
 
-        Ok(SyscallRequest::StorageWrite(StorageWriteRequest {
-            selector,
-            address,
-            value,
-        }))
+        Ok(DeprecatedSyscallRequest::StorageWrite(
+            DeprecatedStorageWriteRequest {
+                selector,
+                address,
+                value,
+            },
+        ))
+    }
+}
+
+impl FromPtr for DeprecatedReplaceClassRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
+        let class_hash = get_big_int(vm, syscall_ptr)?;
+
+        Ok(DeprecatedSyscallRequest::ReplaceClass(
+            DeprecatedReplaceClassRequest { class_hash },
+        ))
     }
 }
 
@@ -464,59 +475,59 @@ pub(crate) trait CountFields {
     fn count_fields() -> usize;
 }
 
-impl CountFields for GetCallerAddressRequest {
+impl CountFields for DeprecatedGetCallerAddressRequest {
     fn count_fields() -> usize {
         1
     }
 }
 
-impl CountFields for GetSequencerAddressRequest {
+impl CountFields for DeprecatedGetSequencerAddressRequest {
     fn count_fields() -> usize {
         1
     }
 }
 
-impl CountFields for GetBlockTimestampRequest {
+impl CountFields for DeprecatedGetBlockTimestampRequest {
     fn count_fields() -> usize {
         1
     }
 }
-impl CountFields for GetTxSignatureRequest {
-    fn count_fields() -> usize {
-        1
-    }
-}
-
-impl CountFields for GetBlockNumberRequest {
+impl CountFields for DeprecatedGetTxSignatureRequest {
     fn count_fields() -> usize {
         1
     }
 }
 
-impl CountFields for GetContractAddressRequest {
+impl CountFields for DeprecatedGetBlockNumberRequest {
     fn count_fields() -> usize {
         1
     }
 }
 
-impl CountFields for GetTxInfoRequest {
+impl CountFields for DeprecatedGetContractAddressRequest {
     fn count_fields() -> usize {
         1
     }
 }
 
-impl CountFields for StorageReadRequest {
+impl CountFields for DeprecatedGetTxInfoRequest {
+    fn count_fields() -> usize {
+        1
+    }
+}
+
+impl CountFields for DeprecatedStorageReadRequest {
     fn count_fields() -> usize {
         2
     }
 }
 
-impl CountFields for CallContractRequest {
+impl CountFields for DeprecatedCallContractRequest {
     fn count_fields() -> usize {
         5
     }
 }
-impl CountFields for DeployRequestStruct {
+impl CountFields for DeprecatedDeployRequest {
     fn count_fields() -> usize {
         6
     }

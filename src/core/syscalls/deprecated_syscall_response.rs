@@ -1,13 +1,15 @@
 use super::deprecated_syscall_request::{
-    CallContractRequest, CountFields, DeployRequestStruct, GetBlockNumberRequest,
-    GetBlockTimestampRequest, GetCallerAddressRequest, GetContractAddressRequest,
-    GetSequencerAddressRequest, GetTxInfoRequest, GetTxSignatureRequest, StorageReadRequest,
+    CountFields, DeprecatedCallContractRequest, DeprecatedDeployRequest,
+    DeprecatedGetBlockNumberRequest, DeprecatedGetBlockTimestampRequest,
+    DeprecatedGetCallerAddressRequest, DeprecatedGetContractAddressRequest,
+    DeprecatedGetSequencerAddressRequest, DeprecatedGetTxInfoRequest,
+    DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_vm::felt::Felt252;
-use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::Felt252;
 
-pub(crate) trait WriteSyscallResponse {
+pub(crate) trait DeprecatedWriteSyscallResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
@@ -16,42 +18,42 @@ pub(crate) trait WriteSyscallResponse {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct CallContractResponse {
+pub(crate) struct DeprecatedCallContractResponse {
     retdata_size: usize,
     retdata: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetCallerAddressResponse {
+pub(crate) struct DeprecatedGetCallerAddressResponse {
     caller_address: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetContractAddressResponse {
+pub(crate) struct DeprecatedGetContractAddressResponse {
     contract_address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetSequencerAddressResponse {
+pub(crate) struct DeprecatedGetSequencerAddressResponse {
     sequencer_address: Address,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetBlockTimestampResponse {
+pub(crate) struct DeprecatedGetBlockTimestampResponse {
     block_timestamp: u64,
 }
 
-pub(crate) struct GetTxSignatureResponse {
+pub(crate) struct DeprecatedGetTxSignatureResponse {
     signature_len: usize,
     signature: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetBlockNumberResponse {
+pub(crate) struct DeprecatedGetBlockNumberResponse {
     block_number: u64,
 }
 
-impl CallContractResponse {
+impl DeprecatedCallContractResponse {
     pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
         Self {
             retdata_size,
@@ -61,73 +63,73 @@ impl CallContractResponse {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct GetTxInfoResponse {
+pub(crate) struct DeprecatedGetTxInfoResponse {
     tx_info: Relocatable,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct StorageReadResponse {
+pub(crate) struct DeprecatedStorageReadResponse {
     value: Felt252,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct DeployResponse {
+pub(crate) struct DeprecatedDeployResponse {
     contract_address: Felt252,
     constructor_retdata_size: Felt252,
     constructor_retdata: Relocatable,
 }
 
-impl GetTxInfoResponse {
+impl DeprecatedGetTxInfoResponse {
     pub fn new(tx_info: Relocatable) -> Self {
-        GetTxInfoResponse { tx_info }
+        DeprecatedGetTxInfoResponse { tx_info }
     }
 }
 
-impl GetBlockTimestampResponse {
+impl DeprecatedGetBlockTimestampResponse {
     pub(crate) fn new(block_timestamp: u64) -> Self {
-        GetBlockTimestampResponse { block_timestamp }
+        DeprecatedGetBlockTimestampResponse { block_timestamp }
     }
 }
 
-impl GetSequencerAddressResponse {
+impl DeprecatedGetSequencerAddressResponse {
     pub(crate) fn new(sequencer_address: Address) -> Self {
         Self { sequencer_address }
     }
 }
 
-impl GetCallerAddressResponse {
+impl DeprecatedGetCallerAddressResponse {
     pub fn new(caller_addr: Address) -> Self {
         let caller_address = caller_addr.0;
-        GetCallerAddressResponse { caller_address }
+        DeprecatedGetCallerAddressResponse { caller_address }
     }
 }
 
-impl GetTxSignatureResponse {
+impl DeprecatedGetTxSignatureResponse {
     pub fn new(signature: Relocatable, signature_len: usize) -> Self {
-        GetTxSignatureResponse {
+        DeprecatedGetTxSignatureResponse {
             signature,
             signature_len,
         }
     }
 }
-impl GetContractAddressResponse {
+impl DeprecatedGetContractAddressResponse {
     pub fn new(contract_address: Address) -> Self {
-        GetContractAddressResponse { contract_address }
+        DeprecatedGetContractAddressResponse { contract_address }
     }
 }
 
-impl StorageReadResponse {
+impl DeprecatedStorageReadResponse {
     pub fn new(value: Felt252) -> Self {
-        StorageReadResponse { value }
+        DeprecatedStorageReadResponse { value }
     }
 }
 
-impl GetBlockNumberResponse {
+impl DeprecatedGetBlockNumberResponse {
     pub(crate) fn new(block_number: u64) -> Self {
         Self { block_number }
     }
 }
-impl DeployResponse {
+impl DeprecatedDeployResponse {
     pub(crate) fn new(
         contract_address: Felt252,
         constructor_retdata_size: Felt252,
@@ -141,155 +143,155 @@ impl DeployResponse {
     }
 }
 
-impl WriteSyscallResponse for CallContractResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedCallContractResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
-            (syscall_ptr + CallContractRequest::count_fields())?,
+            (syscall_ptr + DeprecatedCallContractRequest::count_fields())?,
             self.retdata_size.into(),
         )?;
         vm.insert_value(
-            (syscall_ptr + (CallContractRequest::count_fields() + 1))?,
+            (syscall_ptr + (DeprecatedCallContractRequest::count_fields() + 1))?,
             self.retdata,
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for GetCallerAddressResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedGetCallerAddressResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            (syscall_ptr + GetCallerAddressRequest::count_fields())?,
+            (syscall_ptr + DeprecatedGetCallerAddressRequest::count_fields())?,
             &self.caller_address,
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for GetBlockTimestampResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedGetBlockTimestampResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
-            (syscall_ptr + GetBlockTimestampRequest::count_fields())?,
+            (syscall_ptr + DeprecatedGetBlockTimestampRequest::count_fields())?,
             self.block_timestamp.into(),
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for GetSequencerAddressResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedGetSequencerAddressResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
-            (syscall_ptr + GetSequencerAddressRequest::count_fields())?,
+            (syscall_ptr + DeprecatedGetSequencerAddressRequest::count_fields())?,
             self.sequencer_address.0.clone(),
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for GetBlockNumberResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedGetBlockNumberResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
-            (syscall_ptr + GetBlockNumberRequest::count_fields())?,
+            (syscall_ptr + DeprecatedGetBlockNumberRequest::count_fields())?,
             self.block_number.into(),
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for GetContractAddressResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedGetContractAddressResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
-            (syscall_ptr + GetContractAddressRequest::count_fields())?,
+            (syscall_ptr + DeprecatedGetContractAddressRequest::count_fields())?,
             self.contract_address.0.clone(),
         )?;
         Ok(())
     }
 }
-impl WriteSyscallResponse for GetTxSignatureResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedGetTxSignatureResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
-            (syscall_ptr + GetTxSignatureRequest::count_fields())?,
+            (syscall_ptr + DeprecatedGetTxSignatureRequest::count_fields())?,
             self.signature_len.into(),
         )?;
         vm.insert_value(
-            (syscall_ptr + (GetTxSignatureRequest::count_fields() + 1))?,
+            (syscall_ptr + (DeprecatedGetTxSignatureRequest::count_fields() + 1))?,
             self.signature,
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for GetTxInfoResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedGetTxInfoResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            (syscall_ptr + GetTxInfoRequest::count_fields())?,
+            (syscall_ptr + DeprecatedGetTxInfoRequest::count_fields())?,
             self.tx_info,
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for DeployResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedDeployResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            (syscall_ptr + DeployRequestStruct::count_fields())?,
+            (syscall_ptr + DeprecatedDeployRequest::count_fields())?,
             self.contract_address.clone(),
         )?;
         vm.insert_value(
-            (syscall_ptr + (DeployRequestStruct::count_fields() + 1))?,
+            (syscall_ptr + (DeprecatedDeployRequest::count_fields() + 1))?,
             self.constructor_retdata_size.clone(),
         )?;
         vm.insert_value(
-            (syscall_ptr + (DeployRequestStruct::count_fields() + 2))?,
+            (syscall_ptr + (DeprecatedDeployRequest::count_fields() + 2))?,
             self.constructor_retdata,
         )?;
         Ok(())
     }
 }
 
-impl WriteSyscallResponse for StorageReadResponse {
+impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
     fn write_syscall_response(
         &self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
-            (syscall_ptr + StorageReadRequest::count_fields())?,
+            (syscall_ptr + DeprecatedStorageReadRequest::count_fields())?,
             self.value.clone(),
         )?;
         Ok(())
@@ -309,7 +311,6 @@ mod tests {
         utils::{get_integer, test_utils::vm},
     };
     use cairo_vm::relocatable;
-    use coverage_helper::test;
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
@@ -326,7 +327,7 @@ mod tests {
         add_segments!(vm, 2);
 
         let caller_address = 3;
-        let response = GetCallerAddressResponse {
+        let response = DeprecatedGetCallerAddressResponse {
             caller_address: caller_address.into(),
         };
 

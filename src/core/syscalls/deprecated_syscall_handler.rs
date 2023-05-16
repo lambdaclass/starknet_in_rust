@@ -1,9 +1,11 @@
 use super::{
     deprecated_syscall_request::*,
     deprecated_syscall_response::{
-        CallContractResponse, DeployResponse, GetBlockNumberResponse, GetBlockTimestampResponse,
-        GetCallerAddressResponse, GetContractAddressResponse, GetSequencerAddressResponse,
-        GetTxInfoResponse, GetTxSignatureResponse, StorageReadResponse, WriteSyscallResponse,
+        DeprecatedCallContractResponse, DeprecatedDeployResponse, DeprecatedGetBlockNumberResponse,
+        DeprecatedGetBlockTimestampResponse, DeprecatedGetCallerAddressResponse,
+        DeprecatedGetContractAddressResponse, DeprecatedGetSequencerAddressResponse,
+        DeprecatedGetTxInfoResponse, DeprecatedGetTxSignatureResponse,
+        DeprecatedStorageReadResponse, DeprecatedWriteSyscallResponse,
     },
     hint_code::*,
     other_syscalls,
@@ -16,8 +18,8 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::Address,
 };
-use cairo_vm::felt::Felt252;
 use cairo_vm::{
+    felt,
     hint_processor::{
         builtin_hint_processor::{
             builtin_hint_processor_definition::{BuiltinHintProcessor, HintProcessorData},
@@ -32,10 +34,13 @@ use cairo_vm::{
     },
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
+use felt::Felt252;
 use std::{any::Any, collections::HashMap};
 
+pub trait SyscallHandler {}
+
 //* ---------------------
-//* SyscallHandler Trait
+//* DeprecatedSyscallHandler Trait
 //* ---------------------
 
 pub(crate) trait DeprecatedSyscallHandler {
@@ -81,7 +86,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::StorageRead(request) =
+        let request = if let DeprecatedSyscallRequest::StorageRead(request) =
             self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
         {
             request
@@ -90,7 +95,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         };
 
         let value = self.syscall_storage_read(request.address)?;
-        let response = StorageReadResponse::new(value);
+        let response = DeprecatedStorageReadResponse::new(value);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -102,7 +107,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let SyscallRequest::StorageWrite(request) =
+        let request = if let DeprecatedSyscallRequest::StorageWrite(request) =
             self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
         {
             request
@@ -134,7 +139,7 @@ pub(crate) trait DeprecatedSyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         let contract_address = self.syscall_deploy(vm, syscall_ptr)?;
 
-        let response = DeployResponse::new(
+        let response = DeprecatedDeployResponse::new(
             contract_address.0,
             0.into(),
             Relocatable {
@@ -152,9 +157,9 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError>;
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError>;
 
-    // Executes the contract call and fills the CallContractResponse struct.
+    // Executes the contract call and fills the DeprecatedCallContractResponse struct.
     fn call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
@@ -169,7 +174,7 @@ pub(crate) trait DeprecatedSyscallHandler {
             .map(|item| MaybeRelocatable::from(Felt252::new(item)))
             .collect::<Vec<MaybeRelocatable>>();
 
-        let response = CallContractResponse::new(
+        let response = DeprecatedCallContractResponse::new(
             retdata.len(),
             self.allocate_segment(vm, retdata_maybe_reloc)?,
         );
@@ -183,7 +188,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError>;
 
-    fn write_syscall_response<T: WriteSyscallResponse>(
+    fn write_syscall_response<T: DeprecatedWriteSyscallResponse>(
         &self,
         response: &T,
         vm: &mut VirtualMachine,
@@ -200,7 +205,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         self.read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
-        GetBlockNumberResponse::new(self.get_block_info().block_number)
+        DeprecatedGetBlockNumberResponse::new(self.get_block_info().block_number)
             .write_syscall_response(vm, syscall_ptr)
     }
 
@@ -223,13 +228,13 @@ pub(crate) trait DeprecatedSyscallHandler {
     ) -> Result<(), SyscallHandlerError> {
         let _request =
             match self.read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
-                SyscallRequest::GetTxInfo(request) => request,
+                DeprecatedSyscallRequest::GetTxInfo(request) => request,
                 _ => Err(SyscallHandlerError::InvalidSyscallReadRequest)?,
             };
 
         let tx_info = self.syscall_get_tx_info_ptr(vm)?;
 
-        let response = GetTxInfoResponse::new(tx_info);
+        let response = DeprecatedGetTxInfoResponse::new(tx_info);
         response.write_syscall_response(vm, syscall_ptr)
     }
 
@@ -244,13 +249,14 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
-            SyscallRequest::GetTxSignature(_) => {}
+            DeprecatedSyscallRequest::GetTxSignature(_) => {}
             _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
         }
 
         let tx_info_pr = self.syscall_get_tx_info_ptr(vm)?;
         let tx_info = TxInfoStruct::from_ptr(vm, tx_info_pr)?;
-        let response = GetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
+        let response =
+            DeprecatedGetTxSignatureResponse::new(tx_info.signature, tx_info.signature_len);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -260,7 +266,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let _request = if let SyscallRequest::GetBlockTimestamp(request) =
+        let _request = if let DeprecatedSyscallRequest::GetBlockTimestamp(request) =
             self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
         {
             request
@@ -270,7 +276,7 @@ pub(crate) trait DeprecatedSyscallHandler {
 
         let block_timestamp = self.get_block_info().block_timestamp;
 
-        let response = GetBlockTimestampResponse::new(block_timestamp);
+        let response = DeprecatedGetBlockTimestampResponse::new(block_timestamp);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -281,7 +287,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let caller_address = self.syscall_get_caller_address(vm, syscall_ptr)?;
-        let response = GetCallerAddressResponse::new(caller_address);
+        let response = DeprecatedGetCallerAddressResponse::new(caller_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
 
@@ -297,7 +303,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let contract_address = self.syscall_get_contract_address(vm, syscall_ptr)?;
-        let response = GetContractAddressResponse::new(contract_address);
+        let response = DeprecatedGetContractAddressResponse::new(contract_address);
         response.write_syscall_response(vm, syscall_ptr)
     }
 
@@ -312,7 +318,7 @@ pub(crate) trait DeprecatedSyscallHandler {
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let _request = if let SyscallRequest::GetSequencerAddress(request) =
+        let _request = if let DeprecatedSyscallRequest::GetSequencerAddress(request) =
             self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
         {
             request
@@ -322,7 +328,7 @@ pub(crate) trait DeprecatedSyscallHandler {
 
         let sequencer_address = self.get_block_info().sequencer_address.clone();
 
-        let response = GetSequencerAddressResponse::new(sequencer_address);
+        let response = DeprecatedGetSequencerAddressResponse::new(sequencer_address);
 
         response.write_syscall_response(vm, syscall_ptr)
     }
@@ -332,25 +338,31 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
-    ) -> Result<SyscallRequest, SyscallHandlerError> {
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
         match syscall_name {
-            "emit_event" => EmitEventStruct::from_ptr(vm, syscall_ptr),
-            "get_tx_info" => GetTxInfoRequest::from_ptr(vm, syscall_ptr),
-            "deploy" => DeployRequestStruct::from_ptr(vm, syscall_ptr),
-            "send_message_to_l1" => SendMessageToL1SysCall::from_ptr(vm, syscall_ptr),
-            "library_call" | "library_call_l1_handler" => {
-                LibraryCallStruct::from_ptr(vm, syscall_ptr)
+            "emit_event" => DeprecatedEmitEventRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_info" => DeprecatedGetTxInfoRequest::from_ptr(vm, syscall_ptr),
+            "deploy" => DeprecatedDeployRequest::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => {
+                DeprecatedSendMessageToL1SysCallRequest::from_ptr(vm, syscall_ptr)
             }
-            "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
-            "get_caller_address" => GetCallerAddressRequest::from_ptr(vm, syscall_ptr),
-            "get_contract_address" => GetContractAddressRequest::from_ptr(vm, syscall_ptr),
-            "get_sequencer_address" => GetSequencerAddressRequest::from_ptr(vm, syscall_ptr),
-            "get_block_number" => GetBlockNumberRequest::from_ptr(vm, syscall_ptr),
-            "get_tx_signature" => GetTxSignatureRequest::from_ptr(vm, syscall_ptr),
-            "get_block_timestamp" => GetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
-            "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
-            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
-            "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
+            "library_call" | "library_call_l1_handler" => {
+                DeprecatedLibraryCallRequest::from_ptr(vm, syscall_ptr)
+            }
+            "call_contract" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
+            "get_caller_address" => DeprecatedGetCallerAddressRequest::from_ptr(vm, syscall_ptr),
+            "get_contract_address" => {
+                DeprecatedGetContractAddressRequest::from_ptr(vm, syscall_ptr)
+            }
+            "get_sequencer_address" => {
+                DeprecatedGetSequencerAddressRequest::from_ptr(vm, syscall_ptr)
+            }
+            "get_block_number" => DeprecatedGetBlockNumberRequest::from_ptr(vm, syscall_ptr),
+            "get_tx_signature" => DeprecatedGetTxSignatureRequest::from_ptr(vm, syscall_ptr),
+            "get_block_timestamp" => DeprecatedGetBlockTimestampRequest::from_ptr(vm, syscall_ptr),
+            "storage_read" => DeprecatedStorageReadRequest::from_ptr(vm, syscall_ptr),
+            "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "replace_class" => DeprecatedReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -561,7 +573,6 @@ mod tests {
         },
     };
     use cairo_vm::relocatable;
-    use coverage_helper::test;
     use num_traits::Num;
     use std::path::PathBuf;
 
@@ -585,7 +596,7 @@ mod tests {
         );
         assert_matches!(
             syscall.read_syscall_request("send_message_to_l1", &vm, relocatable!(1, 0)),
-            Ok(request) if request == SyscallRequest::SendMessageToL1(SendMessageToL1SysCall {
+            Ok(request) if request == DeprecatedSyscallRequest::SendMessageToL1(DeprecatedSendMessageToL1SysCallRequest {
                 _selector: 0.into(),
                 to_address: Address(1.into()),
                 payload_size: 2,
@@ -615,7 +626,7 @@ mod tests {
 
         assert_matches!(
             syscall.read_syscall_request("deploy", &vm, relocatable!(1, 0)),
-            Ok(request) if request == SyscallRequest::Deploy(DeployRequestStruct {
+            Ok(request) if request == DeprecatedSyscallRequest::Deploy(DeprecatedDeployRequest {
                 _selector: 0.into(),
                 class_hash: 1.into(),
                 contract_address_salt: 2.into(),
@@ -863,7 +874,7 @@ mod tests {
             Ok(field) if field == tx_execution_context.nonce
         );
 
-        // GetTxInfoResponse
+        // DeprecatedGetTxInfoResponse
         assert_eq!(
             vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(4, 0))
@@ -906,7 +917,7 @@ mod tests {
 
         assert_matches!(result, Ok(()));
 
-        // GetTxInfoResponse
+        // DeprecatedGetTxInfoResponse
         assert_matches!(
             vm.get_relocatable(relocatable!(2, 1)),
             Ok(relocatable!(7, 0))
@@ -1185,7 +1196,7 @@ mod tests {
             )
             .is_ok());
 
-        // Check StorageReadResponse insert
+        // Check DeprecatedStorageReadResponse insert
         assert_matches!(get_big_int(&vm, relocatable!(2, 2)), Ok(response) if response == storage_value );
     }
 
@@ -1321,11 +1332,11 @@ mod tests {
         );
 
         // Check VM inserts
-        // DeployResponse.contract_address
+        // DeprecatedDeployResponse.contract_address
         let deployed_address = get_big_int(&vm, relocatable!(2, 6)).unwrap();
-        // DeployResponse.constructor_retdata_size
+        // DeprecatedDeployResponse.constructor_retdata_size
         assert_matches!(get_big_int(&vm, relocatable!(2, 7)), Ok(constructor_retdata_size) if constructor_retdata_size == 0.into());
-        // DeployResponse.constructor_retdata
+        // DeprecatedDeployResponse.constructor_retdata
         assert_matches!(
             get_relocatable(&vm, relocatable!(2, 8)),
             Ok(relocatable!(0, 0))
@@ -1418,11 +1429,11 @@ mod tests {
         );
 
         // Check VM inserts
-        // DeployResponse.contract_address
+        // DeprecatedDeployResponse.contract_address
         let deployed_address = get_big_int(&vm, relocatable!(2, 6)).unwrap();
-        // DeployResponse.constructor_retdata_size
+        // DeprecatedDeployResponse.constructor_retdata_size
         assert_matches!(get_big_int(&vm, relocatable!(2, 7)), Ok(constructor_retdata_size) if constructor_retdata_size == 0.into());
-        // DeployResponse.constructor_retdata
+        // DeprecatedDeployResponse.constructor_retdata
         assert_matches!(
             get_relocatable(&vm, relocatable!(2, 8)),
             Ok(relocatable!(0, 0))
@@ -1473,24 +1484,5 @@ mod tests {
         assert_eq!(result_call_info.calldata, vec![10.into()]);
         assert_eq!(result_call_info.retdata, vec![260.into()]);
         assert_eq!(result_call_info.storage_read_values, vec![250.into()]);
-    }
-
-    #[test]
-    fn test_get_ids_data() {
-        let mut reference_ids = HashMap::new();
-        let mut references = HashMap::new();
-        let reference_1 = HintReference::new(0, 1, true, false);
-        let reference_2 = HintReference::new(1, 2, false, true);
-        reference_ids.insert("reference_1".to_string(), 1);
-        reference_ids.insert("reference_2".to_string(), 2);
-        references.insert(1, reference_1.clone());
-        references.insert(2, reference_2.clone());
-
-        let ids_data = get_ids_data(&reference_ids, &references).unwrap();
-        let expecter_ids_data = HashMap::from_iter(vec![
-            ("reference_1".to_string(), reference_1),
-            ("reference_2".to_string(), reference_2),
-        ]);
-        assert_eq!(ids_data, expecter_ids_data);
     }
 }
