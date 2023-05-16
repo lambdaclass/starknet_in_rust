@@ -67,6 +67,10 @@ pub enum SyscallHandlerError {
     InvalidFeltConversion,
     #[error("Could not compute hash")]
     ErrorComputingHash,
+    #[error("Inconsistent start and end segment indices")]
+    InconsistentSegmentIndices,
+    #[error("Start offset greater than end offset")]
+    StartOffsetGreaterThanEndOffset,
     #[error(transparent)]
     State(#[from] StateError),
     #[error(transparent)]
