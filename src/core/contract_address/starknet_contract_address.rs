@@ -2,7 +2,9 @@
 /// (ie, declarations that do not correspond to Cairo 1 contracts)
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
-    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{
+        ContractClass, ContractEntryPoint, EntryPointType,
+    },
 };
 use cairo_vm::felt::Felt252;
 use cairo_vm::{

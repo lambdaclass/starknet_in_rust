@@ -16,7 +16,7 @@ use starknet_rs::{
     core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
     definitions::general_config::StarknetChainId,
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };
 use std::{hint::black_box, path::PathBuf};
@@ -63,7 +63,7 @@ fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
@@ -89,6 +89,7 @@ fn deploy_account() {
                 signature,
                 salt,
                 StarknetChainId::TestNet,
+                None,
             )
             .unwrap();
             internal_deploy_account.execute(&mut state_copy, config)
@@ -102,7 +103,7 @@ fn declare() {
     const RUNS: usize = 5;
 
     let state_reader = InMemoryStateReader::default();
-    let state = CachedState::new(state_reader, Some(Default::default()));
+    let state = CachedState::new(state_reader, Some(Default::default()), None);
 
     let config = &Default::default();
 
@@ -120,6 +121,7 @@ fn declare() {
                 0,
                 vec![],
                 Felt252::zero(),
+                None,
             )
             .expect("couldn't create transaction");
 
@@ -134,7 +136,7 @@ fn deploy() {
     const RUNS: usize = 8;
 
     let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
@@ -150,9 +152,15 @@ fn deploy() {
         let class = CONTRACT_CLASS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let internal_deploy =
-                InternalDeploy::new(salt, class, vec![], StarknetChainId::TestNet.to_felt(), 0)
-                    .unwrap();
+            let internal_deploy = InternalDeploy::new(
+                salt,
+                class,
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                0,
+                None,
+            )
+            .unwrap();
             internal_deploy.execute(&mut state_copy, config)
         })
         .unwrap();
@@ -164,7 +172,7 @@ fn invoke() {
     const RUNS: usize = 100;
 
     let state_reader = InMemoryStateReader::default();
-    let mut state = CachedState::new(state_reader, Some(Default::default()));
+    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
@@ -174,8 +182,15 @@ fn invoke() {
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     ));
     let class = CONTRACT_CLASS.clone();
-    let internal_deploy =
-        InternalDeploy::new(salt, class, vec![], StarknetChainId::TestNet.to_felt(), 0).unwrap();
+    let internal_deploy = InternalDeploy::new(
+        salt,
+        class,
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        0,
+        None,
+    )
+    .unwrap();
     internal_deploy.execute(&mut state, config).unwrap();
 
     for _ in 0..RUNS {
@@ -194,6 +209,7 @@ fn invoke() {
                 signature,
                 StarknetChainId::TestNet.to_felt(),
                 Some(Felt252::zero()),
+                None,
             )
             .unwrap();
             internal_invoke.execute(&mut state_copy, config)

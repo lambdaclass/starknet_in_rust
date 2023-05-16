@@ -5,7 +5,7 @@ use crate::{
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };
 use cairo_vm::felt::{felt_str, Felt252};

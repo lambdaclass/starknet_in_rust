@@ -32,7 +32,7 @@ impl Transaction {
         }
     }
 
-    pub fn execute<S: Clone + State + StateReader>(
+    pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,

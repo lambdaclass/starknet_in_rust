@@ -1,12 +1,9 @@
-use super::starknet_state_error::StarknetStateError;
+use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{
-                CallInfo, Event, L2toL1MessageInfo, TransactionExecutionContext,
-                TransactionExecutionInfo,
-            },
+            objects::{CallInfo, Event, TransactionExecutionContext, TransactionExecutionInfo},
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
@@ -26,7 +23,7 @@ use crate::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
-        contract_class::{ContractClass, EntryPointType},
+        contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
         messages::StarknetMessageToL1,
     },
     utils::{Address, ClassHash},
@@ -37,10 +34,9 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-#[derive(Clone, Debug, Default)]
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
-    pub general_config: StarknetGeneralConfig,
+    pub(crate) general_config: StarknetGeneralConfig,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
@@ -51,7 +47,7 @@ impl StarknetState {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
-        let state = CachedState::new(state_reader, Some(HashMap::new()));
+        let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -92,6 +88,7 @@ impl StarknetState {
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
+        hash_value: Option<Felt252>,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = InternalDeclare::new(
             contract_class,
@@ -101,6 +98,7 @@ impl StarknetState {
             0,
             Vec::new(),
             0.into(),
+            hash_value,
         )?;
 
         let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
@@ -110,6 +108,8 @@ impl StarknetState {
     }
 
     /// Invokes a contract function. Returns the execution info.
+
+    #[allow(clippy::too_many_arguments)]
     pub fn invoke_raw(
         &mut self,
         contract_address: Address,
@@ -118,6 +118,7 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt252>>,
         nonce: Option<Felt252>,
+        hash_value: Option<Felt252>,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         let tx = self.create_invoke_function(
             contract_address,
@@ -126,6 +127,7 @@ impl StarknetState {
             max_fee,
             signature,
             nonce,
+            hash_value,
         )?;
 
         let mut tx = Transaction::InvokeFunction(tx);
@@ -149,6 +151,7 @@ impl StarknetState {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let mut state_copy = self.state.apply_to_copy();
@@ -160,12 +163,11 @@ impl StarknetState {
             &self.general_config,
             &mut resources_manager,
             &tx_execution_context,
+            false,
         )?;
 
-        self.add_messages_and_events(
-            &call_info.get_sorted_events()?,
-            &call_info.get_sorted_l2_to_l1_messages()?,
-        )?;
+        let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));
+        self.add_messages_and_events(&exec_info)?;
 
         Ok(call_info)
     }
@@ -180,6 +182,7 @@ impl StarknetState {
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt252>,
         contract_address_salt: Address,
+        hash_value: Option<Felt252>,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
         let mut tx = Transaction::Deploy(InternalDeploy::new(
@@ -188,6 +191,7 @@ impl StarknetState {
             constructor_calldata,
             chain_id,
             TRANSACTION_VERSION,
+            hash_value,
         )?);
 
         self.state
@@ -201,25 +205,20 @@ impl StarknetState {
         &mut self,
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
+        self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
-        self.add_messages_and_events(
-            &tx.get_sorted_events()?,
-            &tx.get_sorted_l2_to_l1_messages()?,
-        )?;
+        let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
+        self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
     }
 
     pub fn add_messages_and_events(
         &mut self,
-        events: &[Event],
-        l2_to_l1_messages: &[L2toL1MessageInfo],
+        exec_info: &ExecutionInfo,
     ) -> Result<(), StarknetStateError> {
-        for msg in l2_to_l1_messages {
-            let starknet_message = StarknetMessageToL1::new(
-                msg.from_address.clone(),
-                msg.to_address.clone(),
-                msg.payload.clone(),
-            );
+        for msg in exec_info.get_sorted_l2_to_l1_messages()? {
+            let starknet_message =
+                StarknetMessageToL1::new(msg.from_address, msg.to_address, msg.payload);
 
             self.l2_to_l1_messages_log.push(starknet_message.clone());
             let message_hash = starknet_message.get_hash();
@@ -232,7 +231,7 @@ impl StarknetState {
             }
         }
 
-        let mut events = events.to_owned();
+        let mut events = exec_info.get_sorted_events()?;
         self.events.append(&mut events);
         Ok(())
     }
@@ -263,6 +262,7 @@ impl StarknetState {
         self.general_config.starknet_os_config.chain_id.to_felt()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn create_invoke_function(
         &mut self,
         contract_address: Address,
@@ -271,6 +271,7 @@ impl StarknetState {
         max_fee: u64,
         signature: Option<Vec<Felt252>>,
         nonce: Option<Felt252>,
+        hash_value: Option<Felt252>,
     ) -> Result<InternalInvokeFunction, TransactionError> {
         let signature = match signature {
             Some(sign) => sign,
@@ -279,7 +280,7 @@ impl StarknetState {
 
         let nonce = match nonce {
             Some(n) => n,
-            None => self.state.get_nonce_at(&contract_address)?,
+            None => self.state.get_nonce_at(&contract_address)?.to_owned(),
         };
 
         InternalInvokeFunction::new(
@@ -290,16 +291,16 @@ impl StarknetState {
             signature,
             self.chain_id(),
             Some(nonce),
+            hash_value,
         )
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::felt::felt_str;
-    use coverage_helper::test;
     use std::path::PathBuf;
 
+    use cairo_vm::felt::felt_str;
     use num_traits::Num;
 
     use super::*;
@@ -315,8 +316,7 @@ mod tests {
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
-        testing::type_utils::ExecutionInfo,
-        utils::calculate_sn_keccak,
+        utils::{calculate_sn_keccak, felt_to_hash},
     };
 
     #[test]
@@ -330,7 +330,7 @@ mod tests {
 
         // ----- calculate fib class hash ---------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash = felt_to_hash(&hash);
 
         let address = Address(felt_str!(
             "2066790681318687707025847340457605657642478884993868155391041767964612021885"
@@ -361,7 +361,7 @@ mod tests {
         let exec = (address, transaction_exec_info);
         assert_eq!(
             starknet_state
-                .deploy(contract_class.clone(), vec![], contract_address_salt)
+                .deploy(contract_class.clone(), vec![], contract_address_salt, None)
                 .unwrap(),
             exec
         );
@@ -390,7 +390,7 @@ mod tests {
         //  ------------ contract data --------------------
         // hack store account contract
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash = felt_to_hash(&hash);
         contract_class_cache.insert(class_hash, contract_class.clone());
 
         // store sender_address
@@ -416,7 +416,7 @@ mod tests {
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class.clone());
 
-        let state = CachedState::new(state_reader, Some(contract_class_cache));
+        let state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* --------------------------------------------
         //*    Create starknet state with previous data
@@ -453,8 +453,9 @@ mod tests {
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
         let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
 
-        let (ret_class_hash, _exec_info) =
-            starknet_state.declare(fib_contract_class.clone()).unwrap();
+        let (ret_class_hash, _exec_info) = starknet_state
+            .declare(fib_contract_class.clone(), None)
+            .unwrap();
 
         //* ---------------------------------------
         //              Expected result
@@ -462,7 +463,7 @@ mod tests {
 
         // ----- calculate fib class hash ---------
         let hash = compute_deprecated_class_hash(&fib_contract_class).unwrap();
-        let fib_class_hash = hash.to_be_bytes();
+        let fib_class_hash = felt_to_hash(&hash);
 
         // check that it return the correct clash hash
         assert_eq!(ret_class_hash, fib_class_hash);
@@ -498,7 +499,7 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class.clone(), vec![], contract_address_salt)
+            .deploy(contract_class.clone(), vec![], contract_address_salt, None)
             .unwrap();
 
         // fibonacci selector
@@ -523,13 +524,14 @@ mod tests {
                 0,
                 Some(Vec::new()),
                 Some(Felt252::zero()),
+                None,
             )
             .unwrap();
 
         // expected result
         // ----- calculate fib class hash ---------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let fib_class_hash = hash.to_be_bytes();
+        let fib_class_hash = felt_to_hash(&hash);
 
         let address = felt_str!(
             "2066790681318687707025847340457605657642478884993868155391041767964612021885"
@@ -570,7 +572,7 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class, vec![], contract_address_salt)
+            .deploy(contract_class, vec![], contract_address_salt, None)
             .unwrap();
 
         // fibonacci selector
@@ -606,12 +608,7 @@ mod tests {
             ..Default::default()
         }));
 
-        starknet_state
-            .add_messages_and_events(
-                &exec_info.get_sorted_events().unwrap(),
-                &exec_info.get_sorted_l2_to_l1_messages().unwrap(),
-            )
-            .unwrap();
+        starknet_state.add_messages_and_events(&exec_info).unwrap();
         let msg_hash =
             StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
                 .get_hash();
@@ -641,12 +638,7 @@ mod tests {
             ..Default::default()
         }));
 
-        starknet_state
-            .add_messages_and_events(
-                &exec_info.get_sorted_events().unwrap(),
-                &exec_info.get_sorted_l2_to_l1_messages().unwrap(),
-            )
-            .unwrap();
+        starknet_state.add_messages_and_events(&exec_info).unwrap();
         let msg_hash =
             StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
                 .get_hash();
@@ -674,12 +666,7 @@ mod tests {
             ..Default::default()
         }));
 
-        starknet_state
-            .add_messages_and_events(
-                &exec_info.get_sorted_events().unwrap(),
-                &exec_info.get_sorted_l2_to_l1_messages().unwrap(),
-            )
-            .unwrap();
+        starknet_state.add_messages_and_events(&exec_info).unwrap();
         let msg_hash =
             StarknetMessageToL1::new(Address(0.into()), Address(0.into()), vec![0.into()])
                 .get_hash();
@@ -696,7 +683,7 @@ mod tests {
         let mut starknet_state = StarknetState::new(None);
 
         let err = starknet_state
-            .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None)
+            .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None, None)
             .unwrap_err();
         assert_matches!(
             err,

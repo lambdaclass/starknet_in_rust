@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use lazy_static::lazy_static;
 use starknet_rs::{
-    services::api::contract_class::ContractClass, testing::starknet_state::StarknetState,
-    utils::Address,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    testing::starknet_state::StarknetState, utils::Address,
 };
 
 #[cfg(feature = "with_mimalloc")]
@@ -28,7 +28,7 @@ fn main() {
         let contract_address_salt = Address(n.into());
 
         starknet_state
-            .deploy(CONTRACT_CLASS.clone(), vec![], contract_address_salt)
+            .deploy(CONTRACT_CLASS.clone(), vec![], contract_address_salt, None)
             .unwrap();
     }
 }

@@ -11,7 +11,7 @@
 
 use cairo_vm::felt::Felt252;
 use starknet_rs::{
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     testing::starknet_state::StarknetState,
     utils::{calculate_sn_keccak, Address},
 };
@@ -59,14 +59,14 @@ fn test_contract(
     //*        Declare new contract class
     //* --------------------------------------------
     state
-        .declare(contract_class.clone())
+        .declare(contract_class.clone(), None)
         .expect("Could not declare the contract class");
 
     //* --------------------------------------------
     //*     Deploy new contract class instance
     //* --------------------------------------------
     let (contract_address, _) = state
-        .deploy(contract_class, vec![], Default::default())
+        .deploy(contract_class, vec![], Default::default(), None)
         .expect("Could not deploy contract");
 
     //* --------------------------------------------

@@ -1,5 +1,13 @@
 pub fn get_syscall_size_from_name(syscall_name: &str) -> usize {
     match syscall_name {
+        "emit_event" => 4,
+        "deploy" => 9,
+        _ => unreachable!(),
+    }
+}
+
+pub fn get_deprecated_syscall_size_from_name(syscall_name: &str) -> usize {
+    match syscall_name {
         "call_contract" => 7,
         "deploy" => 9,
         "emit_event" => 5,

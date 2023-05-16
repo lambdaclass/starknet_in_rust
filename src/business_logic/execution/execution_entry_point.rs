@@ -1,43 +1,63 @@
-use crate::starknet_runner::runner::prepare_os_context;
+use super::objects::{
+    CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+};
 use crate::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, TransactionExecutionContext},
         fact_state::state::ExecutionResourcesManager,
         state::state_api::State,
-        state::state_api::StateReader,
+        state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },
     core::syscalls::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
-        deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHintProcessor},
+        deprecated_syscall_handler::{DeprecatedSyscallHandler, DeprecatedSyscallHintProcessor},
+        syscall_handler::{SyscallHandler, SyscallHintProcessor},
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass,
+        deprecated_contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
+    },
     starknet_runner::runner::StarknetRunner,
     utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
 };
-use cairo_vm::felt::Felt252;
+use cairo_lang_casm::hints::Hint;
+use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::{
-    types::relocatable::{MaybeRelocatable, Relocatable},
+    felt::Felt252,
+    serde::deserialize_program::{
+        ApTracking, BuiltinName, FlowTrackingData, HintParams, ReferenceManager,
+    },
+    types::{
+        errors::program_errors::ProgramError,
+        program::Program,
+        relocatable::{MaybeRelocatable, Relocatable},
+    },
     vm::{
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
         vm_core::VirtualMachine,
     },
 };
+use std::collections::HashMap;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
-#[derive(Debug)]
-pub struct ExecutionEntryPoint {
-    call_type: CallType,
-    contract_address: Address,
-    code_address: Option<Address>,
-    class_hash: Option<[u8; 32]>,
-    calldata: Vec<Felt252>,
-    caller_address: Address,
-    entry_point_selector: Felt252,
-    entry_point_type: EntryPointType,
-}
 
+// TODO:initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
+#[derive(Debug, Clone)]
+pub struct ExecutionEntryPoint {
+    pub(crate) call_type: CallType,
+    pub(crate) contract_address: Address,
+    pub(crate) code_address: Option<Address>,
+    pub(crate) class_hash: Option<[u8; 32]>,
+    pub(crate) calldata: Vec<Felt252>,
+    pub(crate) caller_address: Address,
+    pub(crate) entry_point_selector: Felt252,
+    pub(crate) entry_point_type: EntryPointType,
+    #[allow(unused)]
+    pub(crate) initial_gas: u64,
+}
+#[allow(clippy::too_many_arguments)]
 impl ExecutionEntryPoint {
     pub fn new(
         contract_address: Address,
@@ -47,6 +67,7 @@ impl ExecutionEntryPoint {
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
         class_hash: Option<[u8; 32]>,
+        initial_gas: u64,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
@@ -57,6 +78,7 @@ impl ExecutionEntryPoint {
             caller_address,
             entry_point_selector,
             entry_point_type,
+            initial_gas,
         }
     }
 
@@ -70,129 +92,46 @@ impl ExecutionEntryPoint {
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &TransactionExecutionContext,
+        support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader,
+        T: Default + State + StateReader,
     {
-        let previous_cairo_usage = resources_manager.cairo_usage.clone();
-
-        let runner = self.run(
-            state,
-            resources_manager,
-            general_config,
-            tx_execution_context,
-        )?;
-
-        // Update resources usage (for bouncer).
-        resources_manager.cairo_usage =
-            &resources_manager.cairo_usage + &runner.get_execution_resources()?;
-
-        let retdata = runner.get_return_values()?;
-        self.build_call_info::<T>(
-            previous_cairo_usage,
-            runner.hint_processor.syscall_handler,
-            retdata,
-        )
-    }
-
-    /// Runs the selected entry point with the given calldata in the code of the contract deployed
-    /// at self.code_address.
-    /// The execution is done in the context (e.g., storage) of the contract at
-    /// self.contract_address.
-    /// Returns the corresponding CairoFunctionRunner and DeprecatedBLSyscallHandler in order to
-    /// retrieve the execution information.
-    fn run<'a, T>(
-        &self,
-        state: &'a mut T,
-        resources_manager: &ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
-        tx_execution_context: &TransactionExecutionContext,
-    ) -> Result<StarknetRunner<DeprecatedBLSyscallHandler<'a, T>>, TransactionError>
-    where
-        T: State + StateReader,
-    {
-        // Prepare input for Starknet runner.
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
-            .get_contract_class(&class_hash)
-            .map_err(|_| TransactionError::MissigContractClass)?;
+            .get_compiled_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
 
-        // fetch selected entry point
-        let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
-
-        // create starknet runner
-        let mut vm = VirtualMachine::new(false);
-        let mut cairo_runner = CairoRunner::new(contract_class.program(), "all_cairo", false)?;
-        cairo_runner.initialize_function_runner(&mut vm, true)?;
-
-        validate_contract_deployed(state, &self.contract_address)?;
-
-        // prepare OS context
-        let os_context = prepare_os_context(&mut vm, &mut cairo_runner);
-
-        // fetch syscall_ptr
-        let initial_syscall_ptr: Relocatable = match os_context.get(0) {
-            Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
-            _ => return Err(TransactionError::NotARelocatableValue),
-        };
-
-        let syscall_handler = DeprecatedBLSyscallHandler::new(
-            tx_execution_context.clone(),
-            state,
-            resources_manager.clone(),
-            self.caller_address.clone(),
-            self.contract_address.clone(),
-            general_config.clone(),
-            initial_syscall_ptr,
-        );
-
-        let mut runner =
-            StarknetRunner::new(cairo_runner, vm, SyscallHintProcessor::new(syscall_handler));
-
-        // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
-        let data = self.calldata.clone().iter().map(|d| d.into()).collect();
-        let alloc_pointer = runner
-            .hint_processor
-            .syscall_handler
-            .allocate_segment(&mut runner.vm, data)?
-            .into();
-
-        let entry_point_args = [
-            &CairoArg::Single(self.entry_point_selector.clone().into()),
-            &CairoArg::Array(os_context.clone()),
-            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
-            &CairoArg::Single(alloc_pointer),
-        ];
-
-        let entrypoint = entry_point.offset;
-
-        // cairo runner entry point
-        runner.run_from_entrypoint(entrypoint, &entry_point_args)?;
-        runner.validate_and_process_os_context(os_context)?;
-
-        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
-        let args_ptr = (runner
-            .cairo_runner
-            .get_initial_fp()
-            .ok_or(TransactionError::MissingInitialFp)?
-            - (entry_point_args.len() + 2))?;
-
-        runner
-            .vm
-            .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
-
-        Ok(runner)
+        match contract_class {
+            CompiledClass::Deprecated(contract_class) => self._execute_version0_class(
+                state,
+                resources_manager,
+                general_config,
+                tx_execution_context,
+                contract_class,
+                class_hash,
+            ),
+            CompiledClass::Casm(contract_class) => self._execute(
+                state,
+                resources_manager,
+                general_config,
+                tx_execution_context,
+                contract_class,
+                class_hash,
+                support_reverted,
+            ),
+        }
     }
 
     /// Returns the entry point with selector corresponding with self.entry_point_selector, or the
     /// default if there is one and the requested one is not found.
-    fn get_selected_entry_point(
+    fn get_selected_entry_point_v0(
         &self,
         contract_class: &ContractClass,
         _class_hash: [u8; 32],
     ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class
-            .entry_points_by_type()
+            .entry_points_by_type
             .get(&self.entry_point_type)
             .ok_or(TransactionError::InvalidEntryPoints)?;
 
@@ -217,36 +156,70 @@ impl ExecutionEntryPoint {
             .ok_or(TransactionError::EntryPointNotFound)
     }
 
+    fn get_selected_entry_point(
+        &self,
+        contract_class: &CasmContractClass,
+        _class_hash: [u8; 32],
+    ) -> Result<CasmContractEntryPoint, TransactionError> {
+        let entry_points = match self.entry_point_type {
+            EntryPointType::External => &contract_class.entry_points_by_type.external,
+            EntryPointType::Constructor => &contract_class.entry_points_by_type.constructor,
+            EntryPointType::L1Handler => &contract_class.entry_points_by_type.l1_handler,
+        };
+
+        let mut default_entry_point = None;
+        let entry_point = entry_points
+            .iter()
+            .filter_map(|x| {
+                if x.selector == DEFAULT_ENTRY_POINT_SELECTOR.to_biguint() {
+                    default_entry_point = Some(x);
+                }
+
+                (x.selector == self.entry_point_selector.to_biguint()).then_some(x)
+            })
+            .fold(Ok(None), |acc, x| match acc {
+                Ok(None) => Ok(Some(x)),
+                _ => Err(TransactionError::NonUniqueEntryPoint),
+            })?;
+        entry_point
+            .or(default_entry_point)
+            .cloned()
+            .ok_or(TransactionError::EntryPointNotFound)
+    }
+
     fn build_call_info<S>(
         &self,
         previous_cairo_usage: ExecutionResources,
-        syscall_handler: DeprecatedBLSyscallHandler<S>,
+        resources_manager: ExecutionResourcesManager,
+        starknet_storage_state: ContractStorageState<S>,
+        events: Vec<OrderedEvent>,
+        l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+        internal_calls: Vec<CallInfo>,
         retdata: Vec<Felt252>,
     ) -> Result<CallInfo, TransactionError>
     where
         S: State + StateReader,
     {
-        let execution_resources =
-            &syscall_handler.resources_manager.cairo_usage - &previous_cairo_usage;
+        let execution_resources = &resources_manager.cairo_usage - &previous_cairo_usage;
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
             call_type: Some(self.call_type.clone()),
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
-            class_hash: Some(
-                self.get_code_class_hash(syscall_handler.starknet_storage_state.state)?,
-            ),
+            class_hash: Some(self.get_code_class_hash(starknet_storage_state.state)?),
             entry_point_selector: Some(self.entry_point_selector.clone()),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata,
             execution_resources: execution_resources.filter_unused_builtins(),
-            events: syscall_handler.events,
-            l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
-            storage_read_values: syscall_handler.starknet_storage_state.read_values,
-            accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
-            internal_calls: syscall_handler.internal_calls,
+            events,
+            l2_to_l1_messages,
+            storage_read_values: starknet_storage_state.read_values,
+            accessed_storage_keys: starknet_storage_state.accessed_keys,
+            internal_calls,
+            failure_flag: false,
+            gas_consumed: 0,
         })
     }
 
@@ -274,126 +247,242 @@ impl ExecutionEntryPoint {
 
         get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
     }
+
+    fn _execute_version0_class<T>(
+        &self,
+        state: &mut T,
+        resources_manager: &mut ExecutionResourcesManager,
+        general_config: &StarknetGeneralConfig,
+        tx_execution_context: &TransactionExecutionContext,
+        contract_class: Box<ContractClass>,
+        class_hash: [u8; 32],
+    ) -> Result<CallInfo, TransactionError>
+    where
+        T: Default + State + StateReader,
+    {
+        let previous_cairo_usage = resources_manager.cairo_usage.clone();
+
+        // fetch selected entry point
+        let entry_point = self.get_selected_entry_point_v0(&contract_class, class_hash)?;
+
+        // create starknet runner
+        let mut vm = VirtualMachine::new(false);
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all_cairo", false)?;
+
+        cairo_runner.initialize_function_runner(&mut vm, false)?;
+
+        validate_contract_deployed(state, &self.contract_address)?;
+
+        // prepare OS context
+        //let os_context = runner.prepare_os_context();
+        let os_context = StarknetRunner::<
+            DeprecatedSyscallHintProcessor<DeprecatedBLSyscallHandler<T>>,
+        >::prepare_os_context(&cairo_runner, &mut vm);
+
+        // fetch syscall_ptr
+        let initial_syscall_ptr: Relocatable = match os_context.get(0) {
+            Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
+            _ => return Err(TransactionError::NotARelocatableValue),
+        };
+
+        let syscall_handler = DeprecatedBLSyscallHandler::new(
+            tx_execution_context.clone(),
+            state,
+            resources_manager.clone(),
+            self.caller_address.clone(),
+            self.contract_address.clone(),
+            general_config.clone(),
+            initial_syscall_ptr,
+        );
+        let hint_processor = DeprecatedSyscallHintProcessor::new(syscall_handler);
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+
+        // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
+        let data: Vec<MaybeRelocatable> = self.calldata.iter().map(|d| d.into()).collect();
+        let alloc_pointer = runner
+            .hint_processor
+            .syscall_handler
+            .allocate_segment(&mut runner.vm, data)?
+            .into();
+
+        let entry_point_args = [
+            &CairoArg::Single(self.entry_point_selector.clone().into()),
+            &CairoArg::Array(os_context.clone()),
+            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
+            &CairoArg::Single(alloc_pointer),
+        ];
+
+        // cairo runner entry point
+        runner.run_from_entrypoint(entry_point.offset, &entry_point_args)?;
+        runner.validate_and_process_os_context(os_context)?;
+
+        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        let args_ptr = (runner
+            .cairo_runner
+            .get_initial_fp()
+            .ok_or(TransactionError::MissingInitialFp)?
+            - (entry_point_args.len() + 2))?;
+
+        runner
+            .vm
+            .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
+
+        // Update resources usage (for bouncer).
+        resources_manager.cairo_usage =
+            &resources_manager.cairo_usage + &runner.get_execution_resources()?;
+
+        let retdata = runner.get_return_values()?;
+        self.build_call_info::<T>(
+            previous_cairo_usage,
+            runner.hint_processor.syscall_handler.resources_manager,
+            runner.hint_processor.syscall_handler.starknet_storage_state,
+            runner.hint_processor.syscall_handler.events,
+            runner.hint_processor.syscall_handler.l2_to_l1_messages,
+            runner.hint_processor.syscall_handler.internal_calls,
+            retdata,
+        )
+    }
+
+    fn _execute<T>(
+        &self,
+        state: &mut T,
+        resources_manager: &mut ExecutionResourcesManager,
+        general_config: &StarknetGeneralConfig,
+        tx_execution_context: &TransactionExecutionContext,
+        contract_class: Box<CasmContractClass>,
+        class_hash: [u8; 32],
+        support_reverted: bool,
+    ) -> Result<CallInfo, TransactionError>
+    where
+        T: Default + State + StateReader,
+    {
+        let previous_cairo_usage = resources_manager.cairo_usage.clone();
+        // fetch selected entry point
+        let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
+
+        // create starknet runner
+        let mut vm = VirtualMachine::new(false);
+        let mut cairo_runner = CairoRunner::new(
+            &get_runnable_program(&contract_class, entry_point.builtins)
+                .map_err(TransactionError::ProgramError)?,
+            "all_cairo",
+            false,
+        )?;
+        cairo_runner.initialize_function_runner(&mut vm, true)?;
+
+        validate_contract_deployed(state, &self.contract_address)?;
+
+        // prepare OS context
+        let os_context =
+            StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context(&cairo_runner, &mut vm);
+
+        // fetch syscall_ptr
+        let initial_syscall_ptr: Relocatable = match os_context.get(0) {
+            Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
+            _ => return Err(TransactionError::NotARelocatableValue),
+        };
+
+        let syscall_handler = BusinessLogicSyscallHandler::new(
+            tx_execution_context.clone(),
+            state,
+            resources_manager.clone(),
+            self.caller_address.clone(),
+            self.contract_address.clone(),
+            general_config.clone(),
+            initial_syscall_ptr,
+            support_reverted,
+        );
+        let hint_processor = SyscallHintProcessor::new(syscall_handler);
+        let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
+
+        // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
+        let data = self.calldata.iter().map(|d| d.into()).collect();
+        let alloc_pointer = runner
+            .hint_processor
+            .syscall_handler
+            .allocate_segment(&mut runner.vm, data)?
+            .into();
+
+        let entry_point_args = [
+            &CairoArg::Single(self.entry_point_selector.clone().into()),
+            &CairoArg::Array(os_context.clone()),
+            &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
+            &CairoArg::Single(alloc_pointer),
+        ];
+
+        // cairo runner entry point
+        runner.run_from_entrypoint(entry_point.offset, &entry_point_args)?;
+        runner.validate_and_process_os_context(os_context)?;
+
+        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        let args_ptr = (runner
+            .cairo_runner
+            .get_initial_fp()
+            .ok_or(TransactionError::MissingInitialFp)?
+            - (entry_point_args.len() + 2))?;
+
+        runner
+            .vm
+            .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
+
+        // Update resources usage (for bouncer).
+        resources_manager.cairo_usage =
+            &resources_manager.cairo_usage + &runner.get_execution_resources()?;
+
+        let retdata = runner.get_return_values()?;
+        self.build_call_info::<T>(
+            previous_cairo_usage,
+            runner.hint_processor.syscall_handler.resources_manager,
+            runner.hint_processor.syscall_handler.starknet_storage_state,
+            runner.hint_processor.syscall_handler.events,
+            runner.hint_processor.syscall_handler.l2_to_l1_messages,
+            runner.hint_processor.syscall_handler.internal_calls,
+            retdata,
+        )
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
-    use crate::business_logic::{
-        execution::execution_entry_point::ExecutionEntryPoint, state::cached_state::CachedState,
-    };
-    use crate::definitions::constants::TRANSACTION_VERSION;
-    use crate::utils::calculate_sn_keccak;
-    use crate::{
-        business_logic::{
-            execution::objects::{CallInfo, CallType, TransactionExecutionContext},
-            fact_state::state::ExecutionResourcesManager,
+// Helper functions
+fn get_runnable_program(
+    casm_contract_class: &CasmContractClass,
+    entrypoint_builtins: Vec<String>,
+) -> Result<Program, ProgramError> {
+    Program::new(
+        entrypoint_builtins
+            .iter()
+            .map(|v| serde_json::from_str::<BuiltinName>(v).unwrap())
+            .collect(),
+        casm_contract_class
+            .bytecode
+            .iter()
+            .map(|v| MaybeRelocatable::from(Felt252::from(v.value.clone())))
+            .collect(),
+        None,
+        collect_hints(casm_contract_class),
+        ReferenceManager {
+            references: Vec::new(),
         },
-        definitions::general_config::StarknetGeneralConfig,
-        services::api::contract_class::{ContractClass, EntryPointType},
-        utils::Address,
-    };
-    use cairo_vm::felt::Felt252;
-    use cairo_vm::with_std::collections::HashMap;
-    use std::path::Path;
-    #[test]
-    fn test_execution_entrypoint() {
-        let contract_path = "starknet_programs/fibonacci.json";
-        let entry_point = "fib";
-        let call_data = [1.into(), 1.into(), 10.into()].to_vec();
-        let return_data = [144.into()].to_vec();
+        Default::default(),
+        Default::default(),
+        Default::default(),
+    )
+}
 
-        let contract_class =
-            ContractClass::try_from(<str as AsRef<Path>>::as_ref(contract_path).to_path_buf())
-                .expect("Could not load contract from JSON");
+fn collect_hints(casm_contract_class: &CasmContractClass) -> HashMap<usize, Vec<HintParams>> {
+    casm_contract_class
+        .hints
+        .iter()
+        .map(|(key, hints)| (*key, hints.iter().map(hint_to_hint_params).collect()))
+        .collect()
+}
 
-        //* --------------------------------------------
-        //*       Create a default contract data
-        //* --------------------------------------------
-
-        let contract_address = Address(1111.into());
-        let class_hash = [1; 32];
-
-        //* --------------------------------------------
-        //*          Create default context
-        //* --------------------------------------------
-
-        let general_config = StarknetGeneralConfig::default();
-
-        let tx_execution_context = TransactionExecutionContext::create_for_testing(
-            Address(0.into()),
-            10,
-            0.into(),
-            general_config.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION,
-        );
-
-        //* --------------------------------------------
-        //*  Create starknet state with the contract
-        //*  (This would be the equivalent of
-        //*  declaring and deploying the contract)
-        //* -------------------------------------------
-
-        let mut state_reader = InMemoryStateReader::default();
-
-        state_reader
-            .address_to_class_hash
-            .insert(contract_address.clone(), class_hash);
-
-        state_reader.address_to_nonce.insert(
-            contract_address.clone(),
-            tx_execution_context.nonce().clone(),
-        );
-
-        state_reader
-            .address_to_storage
-            .insert((contract_address.clone(), [0; 32]), Felt252::new(1));
-
-        let mut contract_class_cache = HashMap::new();
-        contract_class_cache.insert(class_hash, contract_class);
-
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
-
-        //* ------------------------------------
-        //*    Create execution entry point
-        //* ------------------------------------
-
-        let caller_address = Address(0.into());
-
-        let entry_point_selector =
-            Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
-        let entry_point = ExecutionEntryPoint::new(
-            contract_address.clone(),
-            call_data.clone(),
-            entry_point_selector.clone(),
-            caller_address.clone(),
-            EntryPointType::External,
-            CallType::Delegate.into(),
-            class_hash.into(),
-        );
-
-        let mut resources_manager = ExecutionResourcesManager::default();
-
-        assert_eq!(
-            entry_point
-                .execute(
-                    &mut state,
-                    &general_config,
-                    &mut resources_manager,
-                    &tx_execution_context,
-                )
-                .expect("Could not execute contract"),
-            CallInfo {
-                contract_address,
-                caller_address,
-                entry_point_type: EntryPointType::External.into(),
-                call_type: CallType::Delegate.into(),
-                class_hash: class_hash.into(),
-                entry_point_selector: Some(entry_point_selector),
-                calldata: call_data,
-                retdata: return_data,
-                ..Default::default()
-            },
-        );
+fn hint_to_hint_params(hint: &Hint) -> HintParams {
+    HintParams {
+        code: hint.to_string(),
+        accessible_scopes: vec![],
+        flow_tracking_data: FlowTrackingData {
+            ap_tracking: ApTracking::new(),
+            reference_ids: HashMap::new(),
+        },
     }
 }

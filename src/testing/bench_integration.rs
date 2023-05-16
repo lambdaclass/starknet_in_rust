@@ -7,7 +7,7 @@ use crate::{
     business_logic::{
         fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     },
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address, testing::starknet_state::StarknetState,
 };
 

@@ -9,6 +9,7 @@ use super::{
     },
     hint_code::*,
     other_syscalls,
+    syscall_handler::HintProcessorPostRun,
 };
 use crate::{
     business_logic::{
@@ -18,8 +19,8 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::Address,
 };
+use cairo_vm::felt::Felt252;
 use cairo_vm::{
-    felt,
     hint_processor::{
         builtin_hint_processor::{
             builtin_hint_processor_definition::{BuiltinHintProcessor, HintProcessorData},
@@ -34,10 +35,7 @@ use cairo_vm::{
     },
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use felt::Felt252;
 use std::{any::Any, collections::HashMap};
-
-pub trait SyscallHandler {}
 
 //* ---------------------
 //* DeprecatedSyscallHandler Trait
@@ -313,6 +311,12 @@ pub(crate) trait DeprecatedSyscallHandler {
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError>;
 
+    fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: Relocatable,
+    ) -> Result<(), TransactionError>;
+
     fn get_sequencer_address(
         &mut self,
         vm: &mut VirtualMachine,
@@ -370,32 +374,21 @@ pub(crate) trait DeprecatedSyscallHandler {
     }
 }
 
-pub(crate) trait SyscallHandlerPostRun {
-    /// Performs post run syscall related tasks (if any).
-    fn post_run(
-        &self,
-        _runner: &mut VirtualMachine,
-        _syscall_stop_ptr: Relocatable,
-    ) -> Result<(), TransactionError> {
-        Ok(())
-    }
-}
-
 //* ------------------------
 //* Structs implementations
 //* ------------------------
 
-pub(crate) struct SyscallHintProcessor<H: DeprecatedSyscallHandler> {
+pub(crate) struct DeprecatedSyscallHintProcessor<H: DeprecatedSyscallHandler> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: H,
 }
 
-impl<H> SyscallHintProcessor<H>
+impl<H> DeprecatedSyscallHintProcessor<H>
 where
     H: DeprecatedSyscallHandler,
 {
     pub fn new(syscall_handler: H) -> Self {
-        SyscallHintProcessor {
+        DeprecatedSyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler,
         }
@@ -498,7 +491,7 @@ where
     }
 }
 
-impl<H: DeprecatedSyscallHandler> HintProcessor for SyscallHintProcessor<H> {
+impl<H: DeprecatedSyscallHandler> HintProcessor for DeprecatedSyscallHintProcessor<H> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -517,6 +510,16 @@ impl<H: DeprecatedSyscallHandler> HintProcessor for SyscallHintProcessor<H> {
                 })?;
         }
         Ok(())
+    }
+}
+
+impl<H: DeprecatedSyscallHandler> HintProcessorPostRun for DeprecatedSyscallHintProcessor<H> {
+    fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: Relocatable,
+    ) -> Result<(), crate::business_logic::transaction::error::TransactionError> {
+        self.syscall_handler.post_run(runner, syscall_stop_ptr)
     }
 }
 
@@ -566,9 +569,11 @@ mod tests {
         },
         definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         memory_insert,
-        services::api::contract_class::{ContractClass, EntryPointType},
+        services::api::contract_classes::deprecated_contract_class::{
+            ContractClass, EntryPointType,
+        },
         utils::{
-            get_big_int, get_integer, get_relocatable,
+            felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
         },
     };
@@ -581,7 +586,8 @@ mod tests {
             'a,
             CachedState<InMemoryStateReader>,
         >;
-    type SyscallHintProcessor<'a> = super::SyscallHintProcessor<DeprecatedBLSyscallHandler<'a>>;
+    type SyscallHintProcessor<'a> =
+        super::DeprecatedSyscallHintProcessor<DeprecatedBLSyscallHandler<'a>>;
 
     #[test]
     fn read_send_message_to_l1_request() {
@@ -1260,9 +1266,9 @@ mod tests {
         let write = syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
-            .read(&address.to_be_bytes());
+            .read(&felt_to_hash(&address));
 
-        assert_eq!(write, Ok(Felt252::new(45)));
+        assert_eq!(write, Ok(&Felt252::new(45)));
     }
 
     #[test]
@@ -1349,7 +1355,7 @@ mod tests {
                 .starknet_storage_state
                 .state
                 .get_class_hash_at(&Address(deployed_address)),
-            Ok(class_hash)
+            Ok(&class_hash)
         );
     }
 
@@ -1446,7 +1452,7 @@ mod tests {
                 .starknet_storage_state
                 .state
                 .get_class_hash_at(&Address(deployed_address.clone())),
-            Ok(class_hash)
+            Ok(&class_hash)
         );
 
         /*
@@ -1464,6 +1470,7 @@ mod tests {
             Vec::new(),
             0.into(),
             Some(0.into()),
+            None,
         )
         .unwrap();
 

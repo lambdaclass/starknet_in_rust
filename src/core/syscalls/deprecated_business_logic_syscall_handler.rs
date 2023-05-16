@@ -1,7 +1,6 @@
 use super::{
-    deprecated_syscall_handler::{DeprecatedSyscallHandler, SyscallHandlerPostRun},
-    deprecated_syscall_request::*,
-    syscall_info::get_syscall_size_from_name,
+    deprecated_syscall_handler::DeprecatedSyscallHandler, deprecated_syscall_request::*,
+    syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
     business_logic::{
@@ -18,7 +17,10 @@ use crate::{
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    services::api::{contract_class::EntryPointType, contract_class_errors::ContractClassError},
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::deprecated_contract_class::EntryPointType,
+    },
     utils::*,
 };
 use cairo_vm::felt::Felt252;
@@ -51,7 +53,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
+impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -177,7 +179,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             .state
             .get_contract_class(&class_hash_bytes)?;
         let constructor_entry_points = contract_class
-            .entry_points_by_type()
+            .entry_points_by_type
             .get(&EntryPointType::Constructor)
             .ok_or(ContractClassError::NoneEntryPointType)?;
         if constructor_entry_points.is_empty() {
@@ -203,6 +205,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
+            0,
         );
 
         let _call_info = call
@@ -211,6 +214,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
+                false,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
@@ -237,7 +241,7 @@ where
 
 impl<'a, T> DeprecatedSyscallHandler for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: State + StateReader,
+    T: Default + State + StateReader,
 {
     fn emit_event(
         &mut self,
@@ -319,7 +323,7 @@ where
         )?);
 
         // Initialize the contract.
-        let class_hash_bytes: ClassHash = request.class_hash.to_be_bytes();
+        let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
         self.starknet_storage_state
             .state
@@ -363,7 +367,7 @@ where
                     }
                 };
                 function_selector = request.function_selector;
-                class_hash = Some(request.class_hash.to_be_bytes());
+                class_hash = Some(felt_to_hash(&request.class_hash));
                 contract_address = self.contract_address.clone();
                 caller_address = self.caller_address.clone();
                 call_type = CallType::Delegate;
@@ -400,6 +404,7 @@ where
             entry_point_type,
             Some(call_type),
             class_hash,
+            0,
         );
 
         entry_point
@@ -408,6 +413,7 @@ where
                 &self.general_config,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
+                false,
             )
             .map(|x| {
                 let retdata = x.retdata.clone();
@@ -525,7 +531,10 @@ where
     }
 
     fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
-        Ok(self.starknet_storage_state.read(&address.0.to_be_bytes())?)
+        Ok(self
+            .starknet_storage_state
+            .read(&felt_to_hash(&address.0))
+            .cloned()?)
     }
 
     fn syscall_storage_write(
@@ -534,7 +543,7 @@ where
         value: Felt252,
     ) -> Result<(), SyscallHandlerError> {
         self.starknet_storage_state
-            .write(&address.0.to_be_bytes(), value);
+            .write(&felt_to_hash(&address.0), value);
 
         Ok(())
     }
@@ -548,7 +557,7 @@ where
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(syscall_name, vm, syscall_ptr)?;
 
-        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        self.expected_syscall_ptr.offset += get_deprecated_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 
@@ -568,17 +577,12 @@ where
         let address = self.contract_address.clone();
         self.starknet_storage_state
             .state
-            .set_class_hash_at(address, request.class_hash.to_be_bytes())
+            .set_class_hash_at(address, felt_to_hash(&request.class_hash))
             .unwrap();
 
         Ok(())
     }
-}
 
-impl<'a, T> SyscallHandlerPostRun for DeprecatedBLSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
     fn post_run(
         &self,
         runner: &mut VirtualMachine,
@@ -623,7 +627,6 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
-    use coverage_helper::test;
     use num_traits::Zero;
     use std::{any::Any, borrow::Cow, collections::HashMap};
 

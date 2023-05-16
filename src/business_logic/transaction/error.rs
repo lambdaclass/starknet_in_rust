@@ -10,7 +10,10 @@ use crate::{
     utils::ClassHash,
 };
 use cairo_vm::{
-    types::{errors::math_errors::MathError, relocatable::Relocatable},
+    types::{
+        errors::{math_errors::MathError, program_errors::ProgramError},
+        relocatable::Relocatable,
+    },
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
         trace_errors::TraceError, vm_errors::VirtualMachineError,
@@ -22,6 +25,12 @@ use thiserror::Error;
 pub enum TransactionError {
     #[error("Nonce is None")]
     MissingNonce,
+    #[error("The max_fee field in Declare transactions of version 0 must be 0")]
+    InvalidMaxFee,
+    #[error("The nonce field in Declare transactions of version 0 must be 0.")]
+    InvalidNonce,
+    #[error("The signature field in Declare transactions must be an empty list.")]
+    InvalidSignature,
     #[error("An InvokeFunction transaction (version != 0) must have a nonce.")]
     InvokeFunctionNonZeroMissingNonce,
     #[error("An InvokeFunction transaction (version = 0) cannot have a nonce.")]
@@ -60,8 +69,8 @@ pub enum TransactionError {
     AttempToUseNoneCodeAddress,
     #[error("Error recovering class hash from storage")]
     FailToReadClassHash,
-    #[error("Missing contract class after fetching")]
-    MissigContractClass,
+    #[error("Missing compiled class after fetching")]
+    MissingCompiledClass,
     #[error("Contract address {0:?} is not deployed")]
     NotDeployedContract(ClassHash),
     #[error("Non-unique entry points are not possible in a ContractClass object")]
@@ -88,6 +97,8 @@ pub enum TransactionError {
     OutOfBound,
     #[error("Call to another contract has been done")]
     InvalidContractCall,
+    #[error("The sender address field in Declare transactions of version 0")]
+    InvalidSenderAddress,
     #[error(transparent)]
     TraceException(#[from] TraceError),
     #[error(transparent)]
@@ -96,6 +107,10 @@ pub enum TransactionError {
     MissingInitialFp,
     #[error("Transaction context is invalid")]
     InvalidTxContext,
+    #[error("{0:?}")]
+    SierraCompileError(String),
+    #[error("The hash of sierra contract classs is not equal to compiled class hash")]
+    NotEqualClassHash,
     #[error(transparent)]
     Vm(#[from] VirtualMachineError),
     #[error(transparent)]
@@ -108,4 +123,6 @@ pub enum TransactionError {
     NoneTransactionType(TransactionType, OsResources),
     #[error(transparent)]
     MathError(#[from] MathError),
+    #[error(transparent)]
+    ProgramError(#[from] ProgramError),
 }

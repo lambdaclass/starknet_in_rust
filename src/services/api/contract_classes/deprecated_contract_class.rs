@@ -1,5 +1,5 @@
-use super::contract_class_errors::ContractClassError;
-use crate::public::abi::AbiType;
+use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
+use cairo_vm::felt::{Felt252, PRIME_STR};
 use cairo_vm::{
     serde::deserialize_program::{
         deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
@@ -10,9 +10,8 @@ use cairo_vm::{
     },
     utils::is_subsequence,
 };
-use cairo_vm::felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
-use starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPoint;
+use starknet_api::state::EntryPoint;
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
@@ -76,7 +75,9 @@ impl ContractClass {
     }
 
     pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
-        if !is_subsequence(&self.program.builtins, &SUPPORTED_BUILTINS) {
+        let builtin_list: &Vec<BuiltinName> = &self.program().iter_builtins().cloned().collect();
+
+        if !is_subsequence(builtin_list, &SUPPORTED_BUILTINS) {
             return Err(ContractClassError::DisorderedBuiltins);
         };
 
@@ -97,10 +98,11 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
     }
 }
 
-impl From<starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType> for EntryPointType {
-    fn from(entry_type: starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType) -> Self {
-        type ApiEPT = starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType;
-        type StarknetEPT = crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+impl From<starknet_api::state::EntryPointType> for EntryPointType {
+    fn from(entry_type: starknet_api::state::EntryPointType) -> Self {
+        type ApiEPT = starknet_api::state::EntryPointType;
+        type StarknetEPT =
+            crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
         match entry_type {
             ApiEPT::Constructor => StarknetEPT::Constructor,
@@ -110,12 +112,10 @@ impl From<starknet_api::deprecated_contract_classes::deprecated_contract_class::
     }
 }
 
-impl TryFrom<starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass> for ContractClass {
+impl TryFrom<starknet_api::state::ContractClass> for ContractClass {
     type Error = ProgramError;
 
-    fn try_from(
-        contract_class: starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(contract_class: starknet_api::state::ContractClass) -> Result<Self, Self::Error> {
         let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
 
@@ -135,8 +135,7 @@ impl TryFrom<&str> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(s: &str) -> Result<Self, ProgramError> {
-        let raw_contract_class: starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass =
-            serde_json::from_str(s)?;
+        let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
         ContractClass::try_from(raw_contract_class)
     }
 }
@@ -155,14 +154,14 @@ impl TryFrom<&PathBuf> for ContractClass {
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let raw_contract_class: starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass =
+        let raw_contract_class: starknet_api::state::ContractClass =
             serde_json::from_reader(reader)?;
         ContractClass::try_from(raw_contract_class)
     }
 }
 
 fn convert_entry_points(
-    entry_points: HashMap<starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
+    entry_points: HashMap<starknet_api::state::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
     for (entry_type, vec) in entry_points {
@@ -183,54 +182,28 @@ fn convert_entry_points(
     converted_entries
 }
 
-fn to_cairo_runner_program(
-    program: &starknet_api::deprecated_contract_classes::deprecated_contract_class::Program,
+pub fn to_cairo_runner_program(
+    program: &starknet_api::state::Program,
 ) -> Result<Program, ProgramError> {
     let program = program.clone();
     let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
-
-    let start = match identifiers.get("__main__.__start__") {
-        Some(identifier) => identifier.pc,
-        None => None,
-    };
-    let end = match identifiers.get("__main__.__end__") {
-        Some(identifier) => identifier.pc,
-        None => None,
-    };
     if program.prime != *PRIME_STR {
         return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
     };
 
-    Ok(Program {
-        builtins: serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
-        prime: PRIME_STR.to_string(),
-        data: deserialize_array_of_bigint_hex(program.data)?,
-        constants: {
-            let mut constants = HashMap::new();
-            for (key, value) in identifiers.iter() {
-                if value.type_.as_deref() == Some("const") {
-                    let value = value
-                        .value
-                        .clone()
-                        .ok_or_else(|| ProgramError::ConstWithoutValue(key.to_owned()))?;
-                    constants.insert(key.to_owned(), value);
-                }
-            }
-
-            constants
-        },
-        main: None,
-        start,
-        end,
-        hints: serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
-        reference_manager: serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
+    Program::new(
+        serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
+        deserialize_array_of_bigint_hex(program.data)?,
+        None,
+        serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
+        serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
         identifiers,
-        error_message_attributes: serde_json::from_value::<Vec<Attribute>>(program.attributes)?
+        serde_json::from_value::<Vec<Attribute>>(program.attributes)?
             .into_iter()
             .filter(|attr| attr.name == "error_message")
             .collect(),
-        instruction_locations: None,
-    })
+        None,
+    )
 }
 
 #[cfg(test)]
@@ -258,15 +231,19 @@ mod tests {
         // and compare with original
         assert_eq!(contract_class.abi(), &None);
         assert_eq!(
-            contract_class.program().builtins,
-            vec![
+            contract_class
+                .program()
+                .iter_builtins()
+                .cloned()
+                .collect::<Vec<BuiltinName>>(),
+            [
                 BuiltinName::pedersen,
                 BuiltinName::range_check,
                 BuiltinName::ecdsa,
                 BuiltinName::bitwise
             ]
         );
-        assert_eq!(contract_class.program().prime, PRIME_STR);
+        assert_eq!(contract_class.program().prime(), PRIME_STR);
         assert_eq!(
             contract_class
                 .entry_points_by_type()

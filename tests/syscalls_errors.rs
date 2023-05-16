@@ -16,7 +16,7 @@ use starknet_rs::{
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;
@@ -98,7 +98,7 @@ fn test_contract<'a>(
 
         Some(contract_class_cache)
     };
-    let mut state = CachedState::new(state_reader, contract_class_cache);
+    let mut state = CachedState::new(state_reader, contract_class_cache, None);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
@@ -114,6 +114,7 @@ fn test_contract<'a>(
         EntryPointType::External,
         CallType::Delegate.into(),
         Some(class_hash),
+        0,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -123,6 +124,7 @@ fn test_contract<'a>(
         &general_config,
         &mut resources_manager,
         &tx_execution_context,
+        false,
     );
 
     assert_matches!(result, Err(e) if e.to_string().contains(error_msg));
@@ -145,7 +147,7 @@ fn call_contract_with_extra_arguments() {
         )]
         .into_iter(),
         [2222.into(), 2.into()],
-        "An ASSERT_EQ instruction failed: 13:1 != 13:2",
+        "An ASSERT_EQ instruction failed: 11:1 != 11:2",
     );
 }
 
@@ -183,7 +185,7 @@ fn library_call_not_declared_contract() {
         None,
         [].into_iter(),
         [],
-        "Missing contract class after fetching",
+        "Missing compiled class after fetching",
     );
 }
 

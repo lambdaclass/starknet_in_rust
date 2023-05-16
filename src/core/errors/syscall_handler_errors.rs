@@ -1,4 +1,5 @@
 use super::state_errors::StateError;
+use cairo_vm::felt::Felt252;
 use cairo_vm::{
     types::errors::math_errors::MathError,
     vm::errors::{
@@ -11,6 +12,10 @@ use thiserror::Error;
 pub enum SyscallHandlerError {
     #[error("Unknown syscall: {0}")]
     UnknownSyscall(String),
+    #[error("The selector '{0}' is not in the syscall handler's selector to syscall map")]
+    SelectorNotInHandlerMap(String),
+    #[error("The selector '{0}' does not have an associated cost")]
+    SelectorDoesNotHaveAssociatedGas(String),
     #[error("Couldn't execute syscall: {0}")]
     ExecutionError(String),
     #[error("Couldn't convert Felt to usize")]
@@ -21,6 +26,10 @@ pub enum SyscallHandlerError {
     FailToComputeHash,
     #[error("Expected DesployRequestStruct")]
     ExpectedDeployRequestStruct,
+    #[error("Expected StorageWriteSyscall")]
+    ExpectedStorageWriteSyscall,
+    #[error("Unsopported address domain: {0}")]
+    UnsopportedAddressDomain(Felt252),
     #[error("Expected GetCallerAddressRequest")]
     ExpectedGetCallerAddressRequest,
     #[error("Expected SendMessageToL1")]
@@ -55,6 +64,10 @@ pub enum SyscallHandlerError {
     VirtualMachine(#[from] VirtualMachineError),
     #[error("Expected GetContractAddressRequest")]
     ExpectedGetContractAddressRequest,
+    #[error("Expected CallContractRequest")]
+    ExpectedCallContractRequest,
+    #[error("Expected a LibraryCallRequest")]
+    ExpectedLibraryCallRequest,
     #[error("Expected GetSequencerAddressRequest")]
     ExpectedGetSequencerAddressRequest,
     #[error("Memory error: {0}")]
@@ -71,10 +84,14 @@ pub enum SyscallHandlerError {
     InconsistentSegmentIndices,
     #[error("Start offset greater than end offset")]
     StartOffsetGreaterThanEndOffset,
+    #[error("Incorrect request in syscall {0}")]
+    IncorrectSyscall(String),
     #[error(transparent)]
     State(#[from] StateError),
     #[error(transparent)]
     MathError(#[from] MathError),
     #[error(transparent)]
     Hint(#[from] HintError),
+    #[error("Unsupported address domain: {0}")]
+    UnsupportedAddressDomain(String),
 }
