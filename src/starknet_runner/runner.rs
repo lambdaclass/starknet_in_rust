@@ -30,10 +30,7 @@ pub fn get_casm_contract_builtins(
         .unwrap()
         .builtins
         .iter()
-        .map(|n| {
-            dbg!(n);
-            format!("{}_builtin", n)
-        })
+        .map(|n| format!("{n}_builtin"))
         .map(|s| match &*s {
             cairo_vm::vm::runners::builtin_runner::OUTPUT_BUILTIN_NAME => BuiltinName::output,
             cairo_vm::vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME => {
@@ -48,7 +45,7 @@ pub fn get_casm_contract_builtins(
             cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME => {
                 BuiltinName::segment_arena
             }
-            _ => panic!("Invalid builtin {}", s),
+            _ => panic!("Invalid builtin {s}"),
         })
         .collect()
 }
@@ -78,6 +75,7 @@ where
         &mut self,
         entrypoint: usize,
         args: &[&CairoArg],
+        program_extra_data_len: Option<usize>,
     ) -> Result<(), TransactionError> {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
@@ -86,13 +84,14 @@ where
             entrypoint,
             &args,
             verify_secure,
-            None,
+            Some(self.cairo_runner.get_program().data_len() + program_extra_data_len.unwrap_or(0)),
             &mut self.vm,
             &mut self.hint_processor,
         )?;
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn run_from_cairo1_entrypoint(
         &mut self,
         contract_class: &CasmContractClass,
@@ -187,6 +186,7 @@ where
         let n_rets = ret_data[0]
             .get_int_ref()
             .ok_or(StarknetRunnerError::NotAFelt)?;
+
         let ret_ptr = ret_data[1]
             .get_relocatable()
             .ok_or(StarknetRunnerError::NotARelocatable)?;
@@ -201,6 +201,21 @@ where
             )
             .map_err(|_| StarknetRunnerError::NotAFelt)?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
+    }
+
+    pub fn get_return_values_cairo_1(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
+        // TODO: convert unwraps in proper errors
+        let return_values = self.vm.get_return_values(5).unwrap();
+        let retdata_start = return_values[3].get_relocatable().unwrap();
+        let retdata_end = return_values[4].get_relocatable().unwrap();
+        let retdata: Vec<Felt252> = self
+            .vm
+            .get_integer_range(retdata_start, (retdata_end - retdata_start).unwrap())
+            .unwrap()
+            .iter()
+            .map(|c| c.clone().into_owned())
+            .collect();
+        Ok(retdata)
     }
 
     pub fn prepare_os_context_cairo1(
@@ -400,7 +415,7 @@ mod test {
         );
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
-        assert!(runner.run_from_entrypoint(1, &[]).is_err())
+        assert!(runner.run_from_entrypoint(1, &[], None).is_err())
     }
 
     #[test]

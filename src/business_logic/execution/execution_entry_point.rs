@@ -308,7 +308,7 @@ impl ExecutionEntryPoint {
         ];
 
         // cairo runner entry point
-        runner.run_from_entrypoint(entry_point.offset, &entry_point_args)?;
+        runner.run_from_entrypoint(entry_point.offset, &entry_point_args, None)?;
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
@@ -358,7 +358,7 @@ impl ExecutionEntryPoint {
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
         // get a program from the casm contract class
-        let program: Program = contract_class.as_ref().clone().try_into().unwrap();
+        let program: Program = contract_class.as_ref().clone().try_into()?;
         // create and initialize a cairo runner for running cairo 1 programs.
         let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false)?;
         cairo_runner.initialize_function_runner_cairo_1(
@@ -366,7 +366,8 @@ impl ExecutionEntryPoint {
             &entry_point
                 .builtins
                 .into_iter()
-                .map(|_s| BuiltinName::range_check) // fix, read builtin correctly
+                // TODO: read builtin correctly
+                .map(|_s| BuiltinName::range_check)
                 .collect::<Vec<BuiltinName>>(),
         )?;
         validate_contract_deployed(state, &self.contract_address)?;
@@ -398,6 +399,26 @@ impl ExecutionEntryPoint {
         let hint_processor = SyscallHintProcessor::new(syscall_handler, &contract_class.hints);
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
+        // TODO: handle error cases
+        // Load builtin costs
+        let builtin_costs: Vec<MaybeRelocatable> =
+            vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
+        let builtin_costs_ptr = runner.vm.add_memory_segment();
+        runner
+            .vm
+            .load_data(builtin_costs_ptr, &builtin_costs)
+            .unwrap();
+
+        // Load extra data
+        let core_program_end_ptr =
+            (runner.cairo_runner.program_base.unwrap() + program.data_len()).unwrap();
+        let program_extra_data: Vec<MaybeRelocatable> =
+            vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
+        runner
+            .vm
+            .load_data(core_program_end_ptr, &program_extra_data)
+            .unwrap();
+
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data = self.calldata.iter().map(|d| d.into()).collect();
         let alloc_pointer: MaybeRelocatable = runner
@@ -406,32 +427,43 @@ impl ExecutionEntryPoint {
             .allocate_segment(&mut runner.vm, data)?
             .into();
 
-        // TODO: we should add this data only once, it is added again in runner.rs
-        let mut entrypoint_args: Vec<MaybeRelocatable> = os_context.clone(); // add os_context
-        entrypoint_args.push(alloc_pointer.clone()); // add call_data start
-        entrypoint_args.push(alloc_pointer.add_usize(self.calldata.len()).unwrap()); // add calldata_end
+        // TODO: iterate os_context values properly and convert each one to CairoArg::Single()
+        let entrypoint_args = [
+            &CairoArg::Single(os_context.get(0).unwrap().clone()),
+            &CairoArg::Single(os_context.get(1).unwrap().clone()),
+            &CairoArg::Single(os_context.get(2).unwrap().clone()),
+            &CairoArg::Single(alloc_pointer.clone()), // add call_data start
+            &CairoArg::Single(alloc_pointer.add_usize(self.calldata.len()).unwrap()), // add calldata_end
+        ];
 
         // run the Cairo1 entrypoint
-        runner.run_from_cairo1_entrypoint(&contract_class, entry_point.offset, &entrypoint_args)?;
-        runner.validate_and_process_os_context(os_context)?;
+        runner.run_from_entrypoint(
+            entry_point.offset,
+            &entrypoint_args,
+            Some(program_extra_data.len()),
+        )?;
 
-        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
-        let initial_fp = runner
-            .cairo_runner
-            .get_initial_fp()
-            .ok_or(TransactionError::MissingInitialFp)?;
+        // TODO: Fix these validations to work with cairo_1 os_context structure
+        //
+        // runner.validate_and_process_os_context(os_context)?;
 
-        let args_ptr = initial_fp - (entrypoint_args.len() + 2);
+        // // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        // let initial_fp = runner
+        //     .cairo_runner
+        //     .get_initial_fp()
+        //     .ok_or(TransactionError::MissingInitialFp)?;
 
-        runner
-            .vm
-            .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
+        // let args_ptr = initial_fp - (entrypoint_args.len() + 2);
+
+        // runner
+        //     .vm
+        //     .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             &resources_manager.cairo_usage + &runner.get_execution_resources()?;
 
-        let retdata = runner.get_return_values()?;
+        let retdata = runner.get_return_values_cairo_1()?;
         self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler.resources_manager,

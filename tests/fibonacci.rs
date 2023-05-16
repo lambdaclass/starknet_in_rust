@@ -155,7 +155,7 @@ fn integration_test_cairo1() {
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
     // Create an execution entry point
-    let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+    let calldata = [0.into(), 1.into(), 12.into()].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
