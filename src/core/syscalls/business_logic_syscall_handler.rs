@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use super::syscall_request::{
-    EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest,
+    EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest, GetBlockHashRequest,
 };
-use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, SyscallResponse};
+use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, SyscallResponse, GetBlockHashResponse};
 use super::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
@@ -405,20 +405,32 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::GetBlockTimestamp(req) => {
                 self.get_block_timestamp(vm, req, remaining_gas)
             }
+            SyscallRequest::GetBlockHash(req) => Ok(self.get_block_hash(req, remaining_gas)),
         }
     }
 
-    fn get_block_hash(&self, block_number: u64) -> Felt252 {
+    fn get_block_hash(&self, request: GetBlockHashRequest, remaining_gas: u128) -> SyscallResponse {
+        let block_number = request.block_number;
         let current_block_number = self.general_config.block_info.block_number;
-        if block_number < current_block_number - 1024 || block_number > current_block_number - 10 {
-            return Felt252::zero();
+        let block_hash = if block_number < current_block_number - 1024
+            || block_number > current_block_number - 10
+        {
+            Felt252::zero()
+        } else {
+            // Fetch hash from block header
+            self.general_config
+                .blocks()
+                .get(&block_number)
+                .map(|block| Felt252::from_bytes_be(block.header.block_hash.0.bytes()))
+                .unwrap_or_default()
+        };
+
+        SyscallResponse {
+            gas: remaining_gas,
+            body: Some(ResponseBody::GetBlockHash(GetBlockHashResponse {
+                block_hash,
+            })),
         }
-        // Fetch hash from block header
-        self.general_config
-            .blocks()
-            .get(&block_number)
-            .map(|block| Felt252::from_bytes_be(block.header.block_hash.0.bytes()))
-            .unwrap_or_default()
     }
 }
 
