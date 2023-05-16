@@ -77,10 +77,7 @@ clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet
-	cargo test --all --all-targets --exclude starknet-rs-py
-
-test-py: compile-cairo compile-starknet
-	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
+	cargo test --all --all-targets
 
 coverage: compile-cairo compile-starknet compile-abi
 	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs'
