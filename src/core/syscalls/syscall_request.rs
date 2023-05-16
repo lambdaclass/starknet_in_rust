@@ -31,6 +31,7 @@ pub(crate) enum SyscallRequest {
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1Request),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    GetBlockHash(GetBlockHashRequest),
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,6 +107,11 @@ pub(crate) struct SendMessageToL1Request {
     pub(crate) payload_end: Relocatable,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockHashRequest {
+    pub(crate) block_number: u64
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,9 +151,16 @@ impl From<StorageWriteRequest> for SyscallRequest {
         SyscallRequest::StorageWrite(storage_write_request)
     }
 }
+
 impl From<StorageReadRequest> for SyscallRequest {
     fn from(storage_read_request: StorageReadRequest) -> SyscallRequest {
         SyscallRequest::StorageRead(storage_read_request)
+    }
+}
+
+impl From<GetBlockHashRequest> for SyscallRequest {
+    fn from(get_block_hash_request: GetBlockHashRequest) -> SyscallRequest {
+        SyscallRequest::GetBlockHash(get_block_hash_request)
     }
 }
 
