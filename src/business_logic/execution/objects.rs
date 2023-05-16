@@ -602,7 +602,10 @@ impl L2toL1MessageInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{business_logic::execution::objects::CallInfo, utils::Address};
+    use crate::{
+        business_logic::execution::objects::CallInfo,
+        utils::{string_to_hash, Address},
+    };
 
     #[test]
     fn non_optional_calls_test() {
@@ -815,5 +818,107 @@ mod tests {
         call_root.internal_calls = [child1, child2].to_vec();
 
         assert!(call_root.get_sorted_l2_to_l1_messages().is_err())
+    }
+
+    #[test]
+    fn callinfo_get_visited_storage_entries_test() {
+        // root
+        let mut call_root = CallInfo::default();
+        let addr1 = Address(1.into());
+        let addr2 = Address(2.into());
+
+        // level 1 children
+        let mut child1 = CallInfo {
+            contract_address: addr1.clone(),
+            ..Default::default()
+        };
+        let mut child2 = CallInfo {
+            contract_address: addr2.clone(),
+            ..Default::default()
+        };
+
+        let hash1 = ClassHash::default();
+        let hash2 = ClassHash::default();
+        let hash3 = ClassHash::default();
+        let hash4 = string_to_hash(&"0x3".to_string());
+
+        child1.accessed_storage_keys = HashSet::new();
+        child1.accessed_storage_keys.insert(hash1);
+        child1.accessed_storage_keys.insert(hash2);
+        child2.accessed_storage_keys = HashSet::new();
+        child2.accessed_storage_keys.insert(hash3);
+        child2.accessed_storage_keys.insert(hash4);
+
+        call_root.internal_calls = [child1.clone(), child2.clone()].to_vec();
+
+        assert_eq!(
+            call_root.get_visited_storage_entries(),
+            HashSet::from([(addr1, hash1), (addr2.clone(), hash3), (addr2, hash4)])
+        )
+    }
+
+    #[test]
+    fn txexecinfo_from_calls_info() {
+        let callinfo = CallInfo {
+            contract_address: Address(2.into()),
+            ..Default::default()
+        };
+
+        let txexecinfo =
+            TransactionExecutionInfo::from_calls_info(Some(callinfo), None, None, None);
+        assert_eq!(
+            txexecinfo.call_info.unwrap().contract_address,
+            Address(2.into())
+        );
+    }
+
+    #[test]
+    fn txexecinfo_get_visited_storage_entries_test() {
+        let mut call_info = CallInfo::default();
+        let addr1 = Address(1.into());
+        let addr2 = Address(2.into());
+
+        // level 1 children
+        let mut validate_info = CallInfo {
+            contract_address: addr1.clone(),
+            ..Default::default()
+        };
+        let mut fee_transfer_info = CallInfo {
+            contract_address: addr2.clone(),
+            ..Default::default()
+        };
+
+        let hash1 = string_to_hash(&"0x0".to_string());
+        let hash2 = string_to_hash(&"0x1".to_string());
+        let hash3 = string_to_hash(&"0x2".to_string());
+        let hash4 = string_to_hash(&"0x3".to_string());
+
+        validate_info.accessed_storage_keys = HashSet::new();
+        validate_info.accessed_storage_keys.insert(hash1);
+        validate_info.accessed_storage_keys.insert(hash2);
+        fee_transfer_info.accessed_storage_keys = HashSet::new();
+        fee_transfer_info.accessed_storage_keys.insert(hash3);
+        fee_transfer_info.accessed_storage_keys.insert(hash4);
+
+        let hash5 = string_to_hash(&"0x5".to_string());
+        call_info.accessed_storage_keys.insert(hash5);
+
+        let txexecinfo = TransactionExecutionInfo::from_calls_info(
+            Some(call_info),
+            Some(TransactionType::Deploy),
+            Some(validate_info),
+            Some(fee_transfer_info),
+        );
+
+        assert_eq!(
+            txexecinfo.get_visited_storage_entries(),
+            HashSet::from([
+                (addr1.clone(), hash1),
+                (addr1, hash2),
+                (addr2.clone(), hash3),
+                (addr2, hash4),
+                (Address(0.into()), hash5)
+            ])
+        )
     }
 }
