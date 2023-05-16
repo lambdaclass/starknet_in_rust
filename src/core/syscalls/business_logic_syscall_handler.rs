@@ -411,10 +411,14 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     fn get_block_hash(&self, block_number: u64) -> Felt252 {
         let current_block_number = self.general_config.block_info.block_number;
         if block_number < current_block_number - 1024 || block_number > current_block_number - 10 {
-            return Felt252::zero()
+            return Felt252::zero();
         }
         // Fetch hash from block header
-        block_number.into()
+        self.general_config
+            .blocks()
+            .get(&block_number)
+            .map(|block| Felt252::from_bytes_be(block.header.block_hash.0.bytes()))
+            .unwrap_or_default()
     }
 }
 
