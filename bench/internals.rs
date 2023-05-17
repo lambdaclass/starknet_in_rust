@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::felt;
+use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_rs::{
@@ -45,6 +46,7 @@ lazy_static! {
 fn scope<T>(f: impl FnOnce() -> T) -> T {
     f()
 }
+
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
@@ -177,7 +179,9 @@ fn invoke() {
     state
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
         .unwrap();
+
     let config = &Default::default();
+
     let salt = Address(felt_str!(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     ));
