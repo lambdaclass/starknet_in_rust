@@ -74,4 +74,5 @@ pub trait State {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
+    fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
 }

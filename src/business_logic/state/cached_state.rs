@@ -9,7 +9,7 @@ use crate::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     starknet_storage::errors::storage_errors::StorageError,
-    utils::{subtract_mappings, Address, ClassHash},
+    utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
@@ -317,19 +317,8 @@ impl<T: StateReader> State for CachedState<T> {
     }
 
     fn apply_state_update(&mut self, state_updates: &StateDiff) -> Result<(), StateError> {
-        let storage_updates: HashMap<(Address, [u8; 32]), Felt252> = state_updates
-            .storage_updates
-            .iter()
-            .map(|(k, v)| {
-                (
-                    v.iter()
-                        .last()
-                        .map(|(v, a)| (a.clone(), v.clone()))
-                        .unwrap(),
-                    k.clone(),
-                )
-            })
-            .collect();
+        let storage_updates = to_cache_state_storage_mapping(&state_updates.storage_updates);
+
         self.cache.update_writes(
             &state_updates.address_to_class_hash,
             &state_updates.class_hash_to_compiled_class,

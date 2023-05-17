@@ -93,7 +93,7 @@ impl StateDiff {
         T: StateReader + Clone,
     {
         let mut cache_state = CachedState::new(state_reader, None, None);
-        let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
+        let cache_storage_mapping = to_cache_state_storage_mapping(&self.storage_updates);
 
         cache_state.cache_mut().set_initial_values(
             &self.address_to_class_hash,

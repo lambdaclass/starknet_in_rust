@@ -231,12 +231,12 @@ where
 /// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
 /// storage mapping (Tuple of address and key map to the associated value).
 pub fn to_cache_state_storage_mapping(
-    map: HashMap<Address, HashMap<Felt252, Felt252>>,
+    map: &HashMap<Address, HashMap<Felt252, Felt252>>,
 ) -> HashMap<StorageEntry, Felt252> {
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
         for (key, value) in contract_storage {
-            storage_writes.insert((address.clone(), felt_to_hash(&key)), value);
+            storage_writes.insert((address.clone(), felt_to_hash(key)), value.clone());
         }
     }
     storage_writes
@@ -619,7 +619,7 @@ mod test {
         storage.insert((address2.clone(), key2), value2.clone());
 
         let state_dff = to_state_diff_storage_mapping(storage);
-        let cache_storage = to_cache_state_storage_mapping(state_dff);
+        let cache_storage = to_cache_state_storage_mapping(&state_dff);
 
         let mut expected_res = HashMap::new();
 
