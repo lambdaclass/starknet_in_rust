@@ -413,7 +413,7 @@ impl ExecutionEntryPoint {
         let core_program_end_ptr =
             (runner.cairo_runner.program_base.unwrap() + program.data_len()).unwrap();
         let program_extra_data: Vec<MaybeRelocatable> =
-            vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
+            vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr];
         runner
             .vm
             .load_data(core_program_end_ptr, &program_extra_data)
