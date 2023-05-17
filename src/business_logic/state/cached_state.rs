@@ -3,6 +3,7 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
+    business_logic::fact_state::state::StateDiff,
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
@@ -312,6 +313,29 @@ impl<T: StateReader> State for CachedState<T> {
         self.cache
             .class_hash_to_compiled_class_hash
             .insert(class_hash, compiled_class_hash);
+        Ok(())
+    }
+
+    fn apply_state_update(&mut self, state_updates: &StateDiff) -> Result<(), StateError> {
+        let storage_updates: HashMap<(Address, [u8; 32]), Felt252> = state_updates
+            .storage_updates
+            .iter()
+            .map(|(k, v)| {
+                (
+                    v.iter()
+                        .last()
+                        .map(|(v, a)| (a.clone(), v.clone()))
+                        .unwrap(),
+                    k.clone(),
+                )
+            })
+            .collect();
+        self.cache.update_writes(
+            &state_updates.address_to_class_hash,
+            &state_updates.class_hash_to_compiled_class,
+            &state_updates.address_to_nonce,
+            &storage_updates,
+        );
         Ok(())
     }
 }
