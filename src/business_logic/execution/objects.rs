@@ -8,7 +8,6 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
-
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},

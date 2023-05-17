@@ -1,0 +1,1 @@
+pub mod starknet_sierra_contract_address;

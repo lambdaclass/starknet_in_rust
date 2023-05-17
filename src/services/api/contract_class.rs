@@ -12,7 +12,7 @@ use cairo_vm::{
 };
 use cairo_vm::felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
-use starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPoint;
+use starknet_api::deprecated_contract_class::EntryPoint;
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
@@ -97,10 +97,10 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
     }
 }
 
-impl From<starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType> for EntryPointType {
-    fn from(entry_type: starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType) -> Self {
-        type ApiEPT = starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType;
-        type StarknetEPT = crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+impl From<starknet_api::deprecated_contract_class::EntryPointType> for EntryPointType {
+    fn from(entry_type: starknet_api::deprecated_contract_class::EntryPointType) -> Self {
+        type ApiEPT = starknet_api::deprecated_contract_class::EntryPointType;
+        type StarknetEPT = crate::services::api::contract_class::EntryPointType;
 
         match entry_type {
             ApiEPT::Constructor => StarknetEPT::Constructor,
@@ -110,11 +110,11 @@ impl From<starknet_api::deprecated_contract_classes::deprecated_contract_class::
     }
 }
 
-impl TryFrom<starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass> for ContractClass {
+impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(
-        contract_class: starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass,
+        contract_class: starknet_api::deprecated_contract_class::ContractClass,
     ) -> Result<Self, Self::Error> {
         let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
@@ -135,7 +135,7 @@ impl TryFrom<&str> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(s: &str) -> Result<Self, ProgramError> {
-        let raw_contract_class: starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass =
+        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_str(s)?;
         ContractClass::try_from(raw_contract_class)
     }
@@ -155,14 +155,14 @@ impl TryFrom<&PathBuf> for ContractClass {
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let raw_contract_class: starknet_api::deprecated_contract_classes::deprecated_contract_class::ContractClass =
+        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_reader(reader)?;
         ContractClass::try_from(raw_contract_class)
     }
 }
 
 fn convert_entry_points(
-    entry_points: HashMap<starknet_api::deprecated_contract_classes::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
+    entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
     for (entry_type, vec) in entry_points {
@@ -184,7 +184,7 @@ fn convert_entry_points(
 }
 
 fn to_cairo_runner_program(
-    program: &starknet_api::deprecated_contract_classes::deprecated_contract_class::Program,
+    program: &starknet_api::deprecated_contract_class::Program,
 ) -> Result<Program, ProgramError> {
     let program = program.clone();
     let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;

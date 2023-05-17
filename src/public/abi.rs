@@ -1,7 +1,7 @@
 use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::Num;
-use starknet_api::state::ContractClassAbiEntry;
+use starknet_api::deprecated_contract_class::ContractClassAbiEntry;
 use std::collections::HashMap;
 
 pub type AbiType = Vec<HashMap<String, ContractClassAbiEntry>>;

@@ -2,8 +2,8 @@ use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
-use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum DeprecatedSyscallRequest {
@@ -219,14 +219,14 @@ impl From<DeprecatedReplaceClassRequest> for DeprecatedSyscallRequest {
 //  FromPtr implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-pub(crate) trait FromPtr {
+pub(crate) trait DeprecatedFromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError>;
 }
 
-impl FromPtr for DeprecatedEmitEventRequest {
+impl DeprecatedFromPtr for DeprecatedEmitEventRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -248,7 +248,7 @@ impl FromPtr for DeprecatedEmitEventRequest {
     }
 }
 
-impl FromPtr for DeprecatedGetTxInfoRequest {
+impl DeprecatedFromPtr for DeprecatedGetTxInfoRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -259,7 +259,7 @@ impl FromPtr for DeprecatedGetTxInfoRequest {
     }
 }
 
-impl FromPtr for DeprecatedLibraryCallRequest {
+impl DeprecatedFromPtr for DeprecatedLibraryCallRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -280,7 +280,7 @@ impl FromPtr for DeprecatedLibraryCallRequest {
     }
 }
 
-impl FromPtr for DeprecatedCallContractRequest {
+impl DeprecatedFromPtr for DeprecatedCallContractRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -301,7 +301,7 @@ impl FromPtr for DeprecatedCallContractRequest {
     }
 }
 
-impl FromPtr for DeprecatedDeployRequest {
+impl DeprecatedFromPtr for DeprecatedDeployRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -324,7 +324,7 @@ impl FromPtr for DeprecatedDeployRequest {
     }
 }
 
-impl FromPtr for DeprecatedSendMessageToL1SysCallRequest {
+impl DeprecatedFromPtr for DeprecatedSendMessageToL1SysCallRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -345,7 +345,7 @@ impl FromPtr for DeprecatedSendMessageToL1SysCallRequest {
     }
 }
 
-impl FromPtr for DeprecatedGetCallerAddressRequest {
+impl DeprecatedFromPtr for DeprecatedGetCallerAddressRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -358,7 +358,7 @@ impl FromPtr for DeprecatedGetCallerAddressRequest {
     }
 }
 
-impl FromPtr for DeprecatedGetBlockTimestampRequest {
+impl DeprecatedFromPtr for DeprecatedGetBlockTimestampRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -370,7 +370,7 @@ impl FromPtr for DeprecatedGetBlockTimestampRequest {
     }
 }
 
-impl FromPtr for DeprecatedGetSequencerAddressRequest {
+impl DeprecatedFromPtr for DeprecatedGetSequencerAddressRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -382,7 +382,7 @@ impl FromPtr for DeprecatedGetSequencerAddressRequest {
     }
 }
 
-impl FromPtr for DeprecatedGetTxSignatureRequest {
+impl DeprecatedFromPtr for DeprecatedGetTxSignatureRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -394,7 +394,7 @@ impl FromPtr for DeprecatedGetTxSignatureRequest {
     }
 }
 
-impl FromPtr for DeprecatedGetBlockNumberRequest {
+impl DeprecatedFromPtr for DeprecatedGetBlockNumberRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -407,7 +407,7 @@ impl FromPtr for DeprecatedGetBlockNumberRequest {
     }
 }
 
-impl FromPtr for DeprecatedGetContractAddressRequest {
+impl DeprecatedFromPtr for DeprecatedGetContractAddressRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -420,7 +420,7 @@ impl FromPtr for DeprecatedGetContractAddressRequest {
     }
 }
 
-impl FromPtr for DeprecatedStorageReadRequest {
+impl DeprecatedFromPtr for DeprecatedStorageReadRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -434,7 +434,7 @@ impl FromPtr for DeprecatedStorageReadRequest {
     }
 }
 
-impl FromPtr for DeprecatedStorageWriteRequest {
+impl DeprecatedFromPtr for DeprecatedStorageWriteRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
@@ -453,7 +453,7 @@ impl FromPtr for DeprecatedStorageWriteRequest {
     }
 }
 
-impl FromPtr for DeprecatedReplaceClassRequest {
+impl DeprecatedFromPtr for DeprecatedReplaceClassRequest {
     fn from_ptr(
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
