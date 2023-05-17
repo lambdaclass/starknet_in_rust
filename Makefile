@@ -57,8 +57,8 @@ starknet_programs/%.json: starknet_programs/%.cairo
 
 CAIRO_1_CONTRACTS_TEST_DIR=starknet_programs/cairo1
 CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
-COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
-COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
+COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.json, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
+COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.json, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
 
 $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo
 	$(STARKNET_COMPILE) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
@@ -95,13 +95,13 @@ deps: check-python-version build-cairo-1-compiler
 clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
-	-rm -f cairo_programs/cairo_1_contracts/*.sierra
+	-rm -f cairo_programs/cairo_1_contracts/*.json
 	-rm -f cairo_programs/cairo_1_contracts/*.casm
 	-rm -f starknet_programs/*.json
 	-rm -f tests/*.json
 	-rm -rf cairo/
 
-clippy: compile-cairo compile-starknet
+clippy: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
 	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
