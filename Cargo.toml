@@ -30,8 +30,6 @@ cargo-llvm-cov = "0.5.14"
 assert_matches = "1.5.0"
 rusty-hook = "0.11"
 
-[workspace]
-members = ["crates/starknet-rs-py"]
 
 [[bench]]
 path = "bench/internals.rs"

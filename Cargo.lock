@@ -677,7 +677,7 @@ version = "1.0.0-rc0"
 source = "git+https://github.com/starkware-libs/cairo?rev=44fdeb26231f5022f2441bf89018272460c4e326#44fdeb26231f5022f2441bf89018272460c4e326"
 dependencies = [
  "cairo-lang-utils",
- "indoc 2.0.1",
+ "indoc",
  "num-bigint",
  "num-traits 0.2.15",
  "serde",
@@ -822,7 +822,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "indoc 2.0.1",
+ "indoc",
  "itertools",
  "salsa",
  "smol_str",
@@ -957,7 +957,7 @@ dependencies = [
  "cairo-lang-sierra-gas",
  "cairo-lang-utils",
  "clap",
- "indoc 2.0.1",
+ "indoc",
  "itertools",
  "log",
  "num-bigint",
@@ -991,7 +991,7 @@ dependencies = [
  "clap",
  "convert_case 0.6.0",
  "genco",
- "indoc 2.0.1",
+ "indoc",
  "itertools",
  "log",
  "num-bigint",
@@ -1890,12 +1890,6 @@ dependencies = [
 
 [[package]]
 name = "indoc"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
-
-[[package]]
-name = "indoc"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f2cb48b81b1dc9f39676bf99f5499babfec7cd8fe14307f7b3d747208fb5690"
@@ -2129,15 +2123,6 @@ name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
-
-[[package]]
-name = "memoffset"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d61c719bcfbcf5d62b3a09efa6088de8c54bc0bfcd3ea7ae39fcc186108b8de1"
-dependencies = [
- "autocfg",
-]
 
 [[package]]
 name = "mimalloc"
@@ -2575,67 +2560,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b63bdb0cd06f1f4dedf69b254734f9b45af66e4a031e42a7480257d9898b435"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "pyo3"
-version = "0.18.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3b1ac5b3731ba34fdaa9785f8d74d17448cd18f30cf19e0c7e7b1fdb5272109"
-dependencies = [
- "cfg-if",
- "indoc 1.0.9",
- "libc",
- "memoffset",
- "num-bigint",
- "parking_lot 0.12.1",
- "pyo3-build-config",
- "pyo3-ffi",
- "pyo3-macros",
- "unindent",
-]
-
-[[package]]
-name = "pyo3-build-config"
-version = "0.18.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cb946f5ac61bb61a5014924910d936ebd2b23b705f7a4a3c40b05c720b079a3"
-dependencies = [
- "once_cell",
- "target-lexicon",
-]
-
-[[package]]
-name = "pyo3-ffi"
-version = "0.18.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd4d7c5337821916ea2a1d21d1092e8443cf34879e53a0ac653fbb98f44ff65c"
-dependencies = [
- "libc",
- "pyo3-build-config",
-]
-
-[[package]]
-name = "pyo3-macros"
-version = "0.18.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9d39c55dab3fc5a4b25bbd1ac10a2da452c4aca13bb450f22818a002e29648d"
-dependencies = [
- "proc-macro2",
- "pyo3-macros-backend",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "pyo3-macros-backend"
-version = "0.18.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97daff08a4c48320587b5224cc98d609e3c27b6d437315bd40b605c98eeb5918"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -3244,18 +3168,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-rs-py"
-version = "0.1.0"
-dependencies = [
- "cairo-vm",
- "num-bigint",
- "pyo3",
- "serde",
- "serde_json",
- "starknet-rs",
-]
-
-[[package]]
 name = "starknet_api"
 version = "0.1.0"
 source = "git+https://github.com/lambdaclass/starknet-api?rev=00e765267bc343269d28e38abfbf93014be6ce15#00e765267bc343269d28e38abfbf93014be6ce15"
@@ -3329,12 +3241,6 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
-
-[[package]]
-name = "target-lexicon"
-version = "0.12.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd1ba337640d60c3e96bc6f0638a939b9c9a7f2c316a1598c279828b3d1dc8c5"
 
 [[package]]
 name = "term"
@@ -3624,12 +3530,6 @@ name = "unicode-xid"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
-
-[[package]]
-name = "unindent"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"
 
 [[package]]
 name = "url"
