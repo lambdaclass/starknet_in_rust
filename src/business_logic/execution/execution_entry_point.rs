@@ -403,11 +403,11 @@ impl ExecutionEntryPoint {
         // Load builtin costs
         let builtin_costs: Vec<MaybeRelocatable> =
             vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
-        let builtin_costs_ptr = runner.vm.add_memory_segment();
-        runner
-            .vm
-            .load_data(builtin_costs_ptr, &builtin_costs)
-            .unwrap();
+        let builtin_costs_ptr: MaybeRelocatable = runner
+            .hint_processor
+            .syscall_handler
+            .allocate_segment(&mut runner.vm, builtin_costs)?
+            .into();
 
         // Load extra data
         let core_program_end_ptr =
@@ -440,7 +440,7 @@ impl ExecutionEntryPoint {
         runner.run_from_entrypoint(
             entry_point.offset,
             &entrypoint_args,
-            Some(program_extra_data.len()),
+            Some(program.data_len() + program_extra_data.len()),
         )?;
 
         // TODO: Fix these validations to work with cairo_1 os_context structure

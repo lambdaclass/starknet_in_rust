@@ -75,7 +75,7 @@ where
         &mut self,
         entrypoint: usize,
         args: &[&CairoArg],
-        program_extra_data_len: Option<usize>,
+        program_segment_size: Option<usize>,
     ) -> Result<(), TransactionError> {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
@@ -84,7 +84,7 @@ where
             entrypoint,
             &args,
             verify_secure,
-            Some(self.cairo_runner.get_program().data_len() + program_extra_data_len.unwrap_or(0)),
+            program_segment_size,
             &mut self.vm,
             &mut self.hint_processor,
         )?;
