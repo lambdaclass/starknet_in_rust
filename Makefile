@@ -55,7 +55,7 @@ starknet_programs/%.json: starknet_programs/%.cairo
 # Test Cairo 1 Contracts
 # ======================
 
-CAIRO_1_CONTRACTS_TEST_DIR=cairo_programs/cairo_1_contracts
+CAIRO_1_CONTRACTS_TEST_DIR=starknet_programs/cairo1
 CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
 COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
 COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
@@ -104,10 +104,10 @@ clean:
 clippy: compile-cairo compile-starknet
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet $(COMPILED_SIERRA_CONTRACTS)
+test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
 	cargo test
 
-coverage: compile-cairo compile-starknet compile-abi $(COMPILED_SIERRA_CONTRACTS)
+coverage: compile-cairo compile-starknet compile-abi $(COMPILED_CASM_CONTRACTS)
 	cargo llvm-cov --ignore-filename-regex 'main.rs'
 	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
