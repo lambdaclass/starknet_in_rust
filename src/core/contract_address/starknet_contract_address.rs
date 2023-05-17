@@ -13,8 +13,8 @@ use cairo_vm::{
     },
 };
 use sha3::{Digest, Keccak256};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
@@ -175,7 +175,7 @@ pub fn compute_class_hash(contract_class: &ContractClass) -> Result<Felt252, Con
     let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
 
     let hash_calculation_program: Program =
-            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+        Program::from_bytes(contract_str.as_bytes(), None).unwrap();
 
     let contract_class_struct = &get_contract_class_struct(
         hash_calculation_program
