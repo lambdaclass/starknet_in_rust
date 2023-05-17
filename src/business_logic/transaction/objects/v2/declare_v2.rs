@@ -293,7 +293,7 @@ mod tests {
     fn create_declare_v2_test() {
         // read file to create sierra contract class
 
-        let path = PathBuf::from("starknet_programs/cairo1/fibonacci.json");
+        let path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
