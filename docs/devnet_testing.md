@@ -26,13 +26,3 @@ cd starknet-devnet
 poetry run pytest -s -v test # To run all tests with verbose mode
 poetry run pytest test/<TEST_FILE> # To run a single test
 ```
-
-# Workflow
-In order to test how changes in the starknet codebase affect the `starknet-devnet`, you can install `starknet-rs-py` with
-```
-maturin develop
-```
-and then run the script `scripts/patch-devnet.sh` while in the devnet repo.
-This will replace all uses of `starkware.starknet` with `starknet_rs_py`.
-
-**Note**: this assumes a devnet version of v0.4.6, as specified in _Installing dev dependencies_
