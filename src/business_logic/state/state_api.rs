@@ -73,4 +73,9 @@ pub trait State {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
+    fn set_casm_contract_class(
+        &mut self,
+        class_hash: &ClassHash,
+        contract_class: &CasmContractClass,
+    ) -> Result<(), StateError>;
 }
