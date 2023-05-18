@@ -323,6 +323,19 @@ impl<T: StateReader + Clone> State for CachedState<T> {
             .insert(class_hash, compiled_class_hash);
         Ok(())
     }
+
+    fn set_casm_contract_class(
+        &mut self,
+        class_hash: &ClassHash,
+        contract_class: &CasmContractClass,
+    ) -> Result<(), StateError> {
+        self.casm_contract_classes
+            .as_mut()
+            .ok_or(StateError::MissingCasmClassCache)?
+            .insert(*class_hash, contract_class.clone());
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
