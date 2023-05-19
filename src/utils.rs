@@ -314,7 +314,7 @@ pub(crate) fn parse_builtin_names(
 ) -> Result<Vec<BuiltinName>, TransactionError> {
     builtin_strings
         .iter()
-        .map(|n| format!("{}_builtin", n))
+        .map(|n| format!("{n}_builtin"))
         .map(|s| match &*s {
             builtin_runner::OUTPUT_BUILTIN_NAME => Ok(BuiltinName::output),
             builtin_runner::RANGE_CHECK_BUILTIN_NAME => Ok(BuiltinName::range_check),
