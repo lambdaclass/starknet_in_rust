@@ -13,11 +13,11 @@ pub trait StateReader {
     /// Returns the contract class of the given class hash.
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError>;
     /// Returns the class hash of the contract class at the given address.
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError>;
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError>;
     /// Returns the nonce of the given contract instance.
-    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt252, StateError>;
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError>;
     /// Returns the storage value under the given key in the given contract instance.
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt252, StateError>;
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError>;
     /// Counts the amount of modified contracts and the updates to the storage
     fn count_actual_storage_changes(&mut self) -> (usize, usize);
     /// Return de casm contract class of the given class hash.
@@ -29,13 +29,13 @@ pub trait StateReader {
     fn get_compiled_class_hash(
         &mut self,
         class_hash: &ClassHash,
-    ) -> Result<&CompiledClassHash, StateError>;
+    ) -> Result<CompiledClassHash, StateError>;
 
     fn get_compiled_class_by_class_hash(
         &mut self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClass, StateError> {
-        let compiled_class_hash = *self.get_compiled_class_hash(class_hash)?;
+        let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
         if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
             let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
             Ok(compiled_class)

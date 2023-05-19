@@ -25,7 +25,7 @@ impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
         }
     }
 
-    pub(crate) fn read(&mut self, address: &ClassHash) -> Result<&Felt252, StateError> {
+    pub(crate) fn read(&mut self, address: &ClassHash) -> Result<Felt252, StateError> {
         self.accessed_keys.insert(*address);
         let value = self
             .state
