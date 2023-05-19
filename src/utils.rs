@@ -15,7 +15,9 @@ use crate::{
     definitions::transaction_type::TransactionType,
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::{
+    felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
+};
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -301,6 +303,31 @@ pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result
+}
+
+//* ------------------------
+//*      Other utils
+//* ------------------------
+
+fn get_builtin_names_from_strings(
+    builtin_strings: &[String],
+) -> Result<Vec<BuiltinName>, TransactionError> {
+    builtin_strings
+        .iter()
+        .map(|n| format!("{}_builtin", n))
+        .map(|s| match &*s {
+            builtin_runner::OUTPUT_BUILTIN_NAME => Ok(BuiltinName::output),
+            builtin_runner::RANGE_CHECK_BUILTIN_NAME => Ok(BuiltinName::range_check),
+            builtin_runner::HASH_BUILTIN_NAME => Ok(BuiltinName::pedersen),
+            builtin_runner::SIGNATURE_BUILTIN_NAME => Ok(BuiltinName::ecdsa),
+            builtin_runner::KECCAK_BUILTIN_NAME => Ok(BuiltinName::keccak),
+            builtin_runner::BITWISE_BUILTIN_NAME => Ok(BuiltinName::bitwise),
+            builtin_runner::EC_OP_BUILTIN_NAME => Ok(BuiltinName::ec_op),
+            builtin_runner::POSEIDON_BUILTIN_NAME => Ok(BuiltinName::poseidon),
+            builtin_runner::SEGMENT_ARENA_BUILTIN_NAME => Ok(BuiltinName::segment_arena),
+            s => Err(TransactionError::InvalidBuiltinContractClass(s.to_string())),
+        })
+        .collect()
 }
 
 //* -------------------
