@@ -24,7 +24,7 @@ impl SyscallResponse {
         let mut cairo_args = Vec::<MaybeRelocatable>::with_capacity(7);
         cairo_args.push(Felt252::from(self.gas).into());
         cairo_args
-            .push(Felt252::from(!matches!(self.body, Some(ResponseBody::Failure(_))) as u8).into());
+            .push(Felt252::from(matches!(self.body, Some(ResponseBody::Failure(_))) as u8).into());
         match self.body.as_ref() {
             Some(ResponseBody::StorageReadResponse { value }) => {
                 if let Some(v) = value.as_ref() {
