@@ -309,7 +309,7 @@ pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
 //*      Other utils
 //* ------------------------
 
-fn get_builtin_names_from_strings(
+pub(crate) fn parse_builtin_names(
     builtin_strings: &[String],
 ) -> Result<Vec<BuiltinName>, TransactionError> {
     builtin_strings

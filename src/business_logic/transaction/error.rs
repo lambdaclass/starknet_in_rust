@@ -109,7 +109,7 @@ pub enum TransactionError {
     InvalidTxContext,
     #[error("{0:?}")]
     SierraCompileError(String),
-    #[error("Invalid builtin found in contract class: {}")]
+    #[error("Invalid builtin found in contract class: {0}")]
     InvalidBuiltinContractClass(String),
     #[error("The hash of sierra contract classs is not equal to compiled class hash")]
     NotEqualClassHash,

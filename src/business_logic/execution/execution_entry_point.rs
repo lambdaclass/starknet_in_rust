@@ -20,12 +20,14 @@ use crate::{
         deprecated_contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     },
     starknet_runner::runner::StarknetRunner,
-    utils::{get_deployed_address_class_hash_at_address, validate_contract_deployed, Address},
+    utils::{
+        get_deployed_address_class_hash_at_address, parse_builtin_names,
+        validate_contract_deployed, Address,
+    },
 };
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::{
     felt::Felt252,
-    serde::deserialize_program::BuiltinName,
     types::{
         program::Program,
         relocatable::{MaybeRelocatable, Relocatable},
@@ -363,12 +365,7 @@ impl ExecutionEntryPoint {
         let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false)?;
         cairo_runner.initialize_function_runner_cairo_1(
             &mut vm,
-            &entry_point
-                .builtins
-                .into_iter()
-                // TODO: read builtin correctly
-                .map(|_s| BuiltinName::range_check)
-                .collect::<Vec<BuiltinName>>(),
+            &parse_builtin_names(&entry_point.builtins)?,
         )?;
         validate_contract_deployed(state, &self.contract_address)?;
 
