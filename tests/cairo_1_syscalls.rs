@@ -58,7 +58,7 @@ fn library_call() {
         .insert(lib_address.clone(), lib_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(lib_address.clone(), lib_nonce);
+        .insert(lib_address, lib_nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));

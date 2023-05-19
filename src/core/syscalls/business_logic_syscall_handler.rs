@@ -349,6 +349,8 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
 
+        let syscall_ptr = (syscall_ptr + get_syscall_size_from_name(syscall_name)).unwrap(); //checked before
+
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
             .get(syscall_name)
@@ -375,10 +377,9 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             let remaining_gas = initial_gas - required_gas;
             self.execute_syscall(request, remaining_gas, vm)?
         };
-
         // Write response to the syscall segment.
         self.expected_syscall_ptr = vm
-            .write_arg(syscall_ptr, &response)?
+            .write_arg(syscall_ptr, &response.to_cairo_compatible_args())?
             .get_relocatable()
             .ok_or(MemoryError::WriteArg)?;
 
@@ -580,7 +581,7 @@ where
         self.increment_syscall_count(syscall_name);
         let syscall_request = self.read_syscall_request(vm, syscall_ptr, syscall_name)?;
 
-        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        self.expected_syscall_ptr += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 
@@ -598,7 +599,7 @@ where
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            None,
+            Some(request.class_hash.to_be_bytes()),
             0,
         );
 
