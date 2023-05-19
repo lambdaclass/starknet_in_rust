@@ -338,11 +338,16 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallHandlerError::SelectorNotInHandlerMap(selector.to_string()),
         )?;
 
-        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
         let initial_gas: Felt252 = get_big_int(vm, (syscall_ptr + 1)?)?;
         let initial_gas: u64 = initial_gas
             .to_u64()
             .ok_or(MathError::Felt252ToU64Conversion(initial_gas))?;
+
+        // Advance SyscallPointer as the first two cells contain the selector & gas
+        let syscall_ptr: Relocatable =
+            (syscall_ptr + 2_usize).map_err(SyscallHandlerError::from)?;
+
+        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
 
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
