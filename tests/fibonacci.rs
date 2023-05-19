@@ -126,7 +126,7 @@ fn integration_test() {
 }
 
 #[test]
-fn test_cairo_1_external_entrypoint() {
+fn integration_test_cairo1() {
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
     starknet_rs::utils::integration_test_utils::test_cairo_1_external_entrypoint(
         program_data,
