@@ -425,18 +425,19 @@ impl ExecutionEntryPoint {
             .into();
 
         // TODO: iterate os_context values properly and convert each one to CairoArg::Single()
-        let entrypoint_args = [
-            &CairoArg::Single(os_context.get(0).unwrap().clone()),
-            &CairoArg::Single(os_context.get(1).unwrap().clone()),
-            &CairoArg::Single(os_context.get(2).unwrap().clone()),
-            &CairoArg::Single(alloc_pointer.clone()), // add call_data start
-            &CairoArg::Single(alloc_pointer.add_usize(self.calldata.len()).unwrap()), // add calldata_end
-        ];
+        let mut entrypoint_args: Vec<CairoArg> =
+            os_context.into_iter().map(CairoArg::Single).collect();
+        entrypoint_args.push(CairoArg::Single(alloc_pointer.clone()));
+        entrypoint_args.push(CairoArg::Single(
+            alloc_pointer.add_usize(self.calldata.len()).unwrap(),
+        ));
+
+        let ref_vec: Vec<&CairoArg> = entrypoint_args.iter().collect();
 
         // run the Cairo1 entrypoint
         runner.run_from_entrypoint(
             entry_point.offset,
-            &entrypoint_args,
+            &ref_vec,
             Some(program.data_len() + program_extra_data.len()),
         )?;
 
