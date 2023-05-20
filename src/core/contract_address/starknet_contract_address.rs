@@ -19,19 +19,11 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
-use lazy_static::lazy_static;
 use sha3::{Digest, Keccak256};
+use std::fs;
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
-pub const CONTRACT_STR: &str =
-    include_str!("../../../cairo_programs/deprecated_compiled_class.json");
-
-lazy_static! {
-    // static ref PATH_BUF_CONTRACTS = BufReader::from(CONTRACT_STR);
-    static ref HASH_CALCULATION_PROGRAM: Program =
-        Program::from_bytes(CONTRACT_STR.as_bytes(), None).unwrap();
-}
 
 fn get_contract_entry_points(
     contract_class: &ContractClass,
@@ -180,8 +172,10 @@ impl From<DeprecatedCompiledClass> for CairoArg {
 pub fn compute_deprecated_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {
-    // Since we are not using a cache, this function replace compute_class_hash_inner.
-    let hash_calculation_program = HASH_CALCULATION_PROGRAM.clone();
+    let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+
+    let hash_calculation_program: Program =
+        Program::from_bytes(contract_str.as_bytes(), None).unwrap();
 
     let contract_class_struct = &get_contract_class_struct(
         hash_calculation_program
@@ -263,8 +257,13 @@ mod tests {
                 offset: 2,
             }],
         );
+        let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+
+        let hash_calculation_program: Program =
+            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+
         let contract_class = ContractClass {
-            program: HASH_CALCULATION_PROGRAM.clone(),
+            program: hash_calculation_program,
             entry_points_by_type,
             abi: None,
         };
@@ -306,8 +305,13 @@ mod tests {
                 offset: 2,
             }],
         );
+        let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+
+        let hash_calculation_program: Program =
+            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+
         let contract_class = ContractClass {
-            program: HASH_CALCULATION_PROGRAM.clone(),
+            program: hash_calculation_program,
             entry_points_by_type,
             abi: None,
         };
@@ -345,8 +349,13 @@ mod tests {
                 offset: 12,
             }],
         );
+        let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+
+        let hash_calculation_program: Program =
+            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+
         let contract_class = ContractClass {
-            program: HASH_CALCULATION_PROGRAM.clone(),
+            program: hash_calculation_program,
             entry_points_by_type,
             abi: None,
         };
