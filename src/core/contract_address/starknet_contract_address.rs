@@ -24,6 +24,7 @@ use std::fs;
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
+const DEPRECATED_COMPILED_CLASS_CONTRACT: &str = "cairo_programs/deprecated_compiled_class.json";
 
 fn get_contract_entry_points(
     contract_class: &ContractClass,
@@ -172,7 +173,7 @@ impl From<DeprecatedCompiledClass> for CairoArg {
 pub fn compute_deprecated_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {
-    let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+    let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
 
     let hash_calculation_program: Program =
         Program::from_bytes(contract_str.as_bytes(), None).unwrap();
@@ -257,7 +258,7 @@ mod tests {
                 offset: 2,
             }],
         );
-        let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
 
         let hash_calculation_program: Program =
             Program::from_bytes(contract_str.as_bytes(), None).unwrap();
@@ -305,7 +306,7 @@ mod tests {
                 offset: 2,
             }],
         );
-        let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
 
         let hash_calculation_program: Program =
             Program::from_bytes(contract_str.as_bytes(), None).unwrap();
@@ -349,7 +350,7 @@ mod tests {
                 offset: 12,
             }],
         );
-        let contract_str = fs::read_to_string("cairo_programs/contracts.json").unwrap();
+        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
 
         let hash_calculation_program: Program =
             Program::from_bytes(contract_str.as_bytes(), None).unwrap();
