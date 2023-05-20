@@ -22,7 +22,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
@@ -68,6 +68,7 @@ impl InternalDeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Address,
         chain_id: StarknetChainId,
+        hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -76,16 +77,19 @@ impl InternalDeployAccount {
             Address(Felt252::zero()),
         )?);
 
-        let hash_value = calculate_deploy_account_transaction_hash(
-            version,
-            &contract_address,
-            Felt252::from_bytes_be(&class_hash),
-            &constructor_calldata,
-            max_fee,
-            nonce.clone(),
-            contract_address_salt.0.clone(),
-            chain_id.to_felt(),
-        )?;
+        let hash_value = match hash_value {
+            Some(hash) => hash,
+            None => calculate_deploy_account_transaction_hash(
+                version,
+                &contract_address,
+                Felt252::from_bytes_be(&class_hash),
+                &constructor_calldata,
+                max_fee,
+                nonce.clone(),
+                contract_address_salt.0.clone(),
+                chain_id.to_felt(),
+            )?,
+        };
 
         Ok(Self {
             contract_address,
@@ -186,7 +190,7 @@ impl InternalDeployAccount {
         S: State + StateReader,
     {
         let num_constructors = contract_class
-            .entry_points_by_type()
+            .entry_points_by_type
             .get(&EntryPointType::Constructor)
             .map(Vec::len)
             .unwrap_or(0);
@@ -244,6 +248,7 @@ impl InternalDeployAccount {
             EntryPointType::Constructor,
             None,
             None,
+            0,
         );
 
         let call_info = entry_point.execute(
@@ -251,6 +256,7 @@ impl InternalDeployAccount {
             general_config,
             resources_manager,
             &self.get_execution_context(general_config.validate_max_n_steps),
+            false,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
@@ -307,6 +313,7 @@ impl InternalDeployAccount {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = call.execute(
@@ -314,6 +321,7 @@ impl InternalDeployAccount {
             general_config,
             resources_manager,
             &self.get_execution_context(general_config.validate_max_n_steps),
+            false,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
@@ -351,8 +359,6 @@ impl InternalDeployAccount {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::errors::state_errors::StateError;
-    use coverage_helper::test;
     use std::path::PathBuf;
 
     use super::*;
@@ -361,7 +367,11 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::contract_address::starknet_contract_address::compute_class_hash,
+        core::{
+            contract_address::starknet_contract_address::compute_deprecated_class_hash,
+            errors::state_errors::StateError,
+        },
+        utils::felt_to_hash,
     };
 
     #[test]
@@ -369,11 +379,15 @@ mod tests {
         let path = PathBuf::from("starknet_programs/constructor.json");
         let contract = ContractClass::try_from(path).unwrap();
 
-        let hash = compute_class_hash(&contract).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut _state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut _state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
@@ -384,6 +398,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 
@@ -401,11 +416,15 @@ mod tests {
         let path = PathBuf::from("starknet_programs/constructor.json");
         let contract = ContractClass::try_from(path).unwrap();
 
-        let hash = compute_class_hash(&contract).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
@@ -416,6 +435,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 
@@ -428,6 +448,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 
@@ -451,11 +472,15 @@ mod tests {
         let path = PathBuf::from("starknet_programs/constructor.json");
         let contract = ContractClass::try_from(path).unwrap();
 
-        let hash = compute_class_hash(&contract).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         let general_config = StarknetGeneralConfig::default();
-        let mut state = CachedState::new(InMemoryStateReader::default(), Some(Default::default()));
+        let mut state = CachedState::new(
+            InMemoryStateReader::default(),
+            Some(Default::default()),
+            None,
+        );
 
         let internal_deploy = InternalDeployAccount::new(
             class_hash,
@@ -466,6 +491,7 @@ mod tests {
             Vec::new(),
             Address(0.into()),
             StarknetChainId::TestNet2,
+            None,
         )
         .unwrap();
 

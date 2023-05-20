@@ -1,4 +1,4 @@
-use starknet_contract_class::ContractEntryPoint;
+use super::contract_classes::deprecated_contract_class::ContractEntryPoint;
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Eq, Error)]

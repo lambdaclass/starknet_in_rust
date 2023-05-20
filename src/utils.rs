@@ -13,9 +13,9 @@ use crate::{
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
-use cairo_vm::felt::{Felt252, ParseFeltError};
+use cairo_vm::felt::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -27,6 +27,7 @@ use std::{
 };
 
 pub type ClassHash = [u8; 32];
+pub type CompiledClassHash = [u8; 32];
 
 //* -------------------
 //*      Address
@@ -75,6 +76,23 @@ pub fn get_integer_range(
         .collect::<Vec<Felt252>>())
 }
 
+pub fn get_felt_range(
+    vm: &VirtualMachine,
+    start_addr: Relocatable,
+    end_addr: Relocatable,
+) -> Result<Vec<Felt252>, SyscallHandlerError> {
+    if start_addr.segment_index != end_addr.segment_index {
+        return Err(SyscallHandlerError::InconsistentSegmentIndices);
+    }
+
+    if start_addr.offset > end_addr.offset {
+        return Err(SyscallHandlerError::StartOffsetGreaterThanEndOffset);
+    }
+
+    let size = end_addr.offset - start_addr.offset;
+    get_integer_range(vm, start_addr, size)
+}
+
 pub fn felt_to_field_element(value: &Felt252) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
         .map_err(|_| SyscallHandlerError::FailToComputeHash)
@@ -84,12 +102,25 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
     Felt252::from_bytes_be(&felt.to_bytes_be())
 }
 
-pub fn string_to_hash(class_string: &String) -> Result<ClassHash, ParseFeltError> {
-    let parsed_felt =
-        Felt252::from_str_radix(class_string.strip_prefix("0x").unwrap_or(class_string), 16)?
-            .to_be_bytes();
+pub fn felt_to_hash(value: &Felt252) -> ClassHash {
+    let mut output = [0; 32];
 
-    Ok(parsed_felt)
+    let bytes = value.to_bytes_be();
+    output[32 - bytes.len()..].copy_from_slice(&bytes);
+
+    output
+}
+
+pub fn string_to_hash(class_string: &String) -> ClassHash {
+    let parsed_felt = Felt252::from_str_radix(
+        if &class_string[..2] == "0x" {
+            &class_string[2..]
+        } else {
+            class_string
+        },
+        16,
+    );
+    felt_to_hash(&parsed_felt.unwrap())
 }
 
 // -------------------
@@ -447,12 +478,12 @@ pub mod test_utils {
             let hint_data = HintProcessorData::new_default($hint_code.to_string(), $ids_data);
             let mut state = CachedState::<InMemoryStateReader>::default();
             let mut hint_processor = $crate::core::syscalls::syscall_handler::SyscallHintProcessor::<
-                $crate::core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler::<
+                $crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler::<
                     $crate::business_logic::state::cached_state::CachedState<
                         $crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
                     >,
                 >,
-            >::new(BusinessLogicSyscallHandler::default_with(&mut state));
+            >::new(DeprecatedBLSyscallHandler::default_with(&mut state));
             hint_processor.execute_hint(
                 &mut $vm,
                 exec_scopes_ref!(),
@@ -468,8 +499,7 @@ pub mod test_utils {
 mod test {
     use super::*;
     use cairo_vm::felt::{felt_str, Felt252};
-    use coverage_helper::test;
-    use num_traits::{Bounded, One, Zero};
+    use num_traits::{One, Zero};
     use std::collections::HashMap;
 
     #[test]
@@ -576,17 +606,17 @@ mod test {
     }
 
     #[test]
-    fn test_to_be_bytes() {
-        assert_eq!(&Felt252::zero().to_be_bytes(), &[0u8; 32]);
+    fn test_felt_to_hash() {
+        assert_eq!(felt_to_hash(&Felt252::zero()), [0; 32]);
         assert_eq!(
-            Felt252::one().to_be_bytes(),
+            felt_to_hash(&Felt252::one()),
             [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1
             ],
         );
         assert_eq!(
-            Felt252::new(257).to_be_bytes(),
+            felt_to_hash(&257.into()),
             [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 1, 1
@@ -594,112 +624,13 @@ mod test {
         );
 
         assert_eq!(
-            felt_str!(
+            felt_to_hash(&felt_str!(
                 "2151680050850558576753658069693146429350618838199373217695410689374331200218"
-            )
-            .to_be_bytes(),
+            )),
             [
                 4, 193, 206, 200, 202, 13, 38, 110, 16, 37, 89, 67, 39, 3, 185, 128, 123, 117, 218,
                 224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
             ],
-        );
-    }
-
-    #[test]
-    fn test_felt_to_field_element() {
-        // test with a negative number
-        let w = Felt252::new(-10);
-        let w_bytes = w.to_be_bytes();
-        let v = FieldElement::from_bytes_be(&w_bytes).unwrap();
-
-        assert_eq!(felt_to_field_element(&w).unwrap(), v);
-
-        // test with zero
-        let x = Felt252::zero();
-        assert_eq!(felt_to_field_element(&x).unwrap(), FieldElement::ZERO);
-
-        // test with 1
-        let y = Felt252::new(1);
-        assert_eq!(felt_to_field_element(&y).unwrap(), FieldElement::ONE);
-
-        // test with the largest possible number
-        let z = Felt252::max_value();
-        assert_eq!(felt_to_field_element(&z).unwrap(), FieldElement::MAX);
-    }
-
-    #[test]
-    fn test_field_element_to_felt() {
-        // test with a negative number
-        let w = Felt252::new(-10);
-        let w_bytes = w.to_be_bytes();
-        let v = FieldElement::from_bytes_be(&w_bytes).unwrap();
-
-        assert_eq!(field_element_to_felt(&v), w);
-
-        // test with zero
-        assert_eq!(field_element_to_felt(&FieldElement::ZERO), Felt252::zero());
-
-        // test with 1
-        assert_eq!(field_element_to_felt(&FieldElement::ONE), Felt252::new(1));
-
-        // test with the largest possible number
-        assert_eq!(
-            field_element_to_felt(&FieldElement::MAX),
-            Felt252::max_value()
-        );
-    }
-
-    pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
-        Felt252::from_bytes_be(&felt.to_bytes_be())
-    }
-
-    #[test]
-    fn test_get_keys() {
-        let hashmap_one = HashMap::from([("one", 1), ("two", 2)]);
-        let hashmap_two = HashMap::from([("three", 3), ("four", 4)]);
-
-        assert_eq!(
-            get_keys(hashmap_one, hashmap_two)
-                .iter()
-                .collect::<HashSet<_>>(),
-            Vec::from(["one", "two", "three", "four"])
-                .iter()
-                .collect::<HashSet<_>>()
-        );
-    }
-
-    #[test]
-    fn test_string_to_hash() {
-        assert_eq!(
-            string_to_hash(&String::from("0x0")).unwrap(),
-            [
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0
-            ]
-        );
-
-        // testing with max value: 3618502788666131213697322783095070105623107215331596699973092056135872020480
-        assert_eq!(
-            string_to_hash(&String::from(
-                "0x800000000000011000000000000000000000000000000000000000000000000"
-            ))
-            .unwrap(),
-            [
-                8, 0, 0, 0, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0
-            ]
-        );
-
-        // testing with number above max value: 4000000000000000000000000000000000000000000000000000000000000000000000000000
-        assert_eq!(
-            string_to_hash(&String::from(
-                "0x8D7EB76070A08AECFC1E1DE5CF543CA2FC8A8C6FA3BA0000000000000000000"
-            ))
-            .unwrap(),
-            [
-                0, 215, 235, 118, 7, 10, 8, 157, 207, 193, 225, 222, 92, 245, 67, 202, 47, 200,
-                168, 198, 250, 59, 159, 255, 255, 255, 255, 255, 255, 255, 255, 255
-            ]
         );
     }
 }

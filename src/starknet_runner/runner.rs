@@ -1,11 +1,8 @@
 use super::starknet_runner_error::StarknetRunnerError;
-use crate::{
-    business_logic::transaction::error::TransactionError,
-    core::syscalls::syscall_handler::{
-        SyscallHandler, SyscallHandlerPostRun, SyscallHintProcessor,
-    },
-};
+use crate::business_logic::transaction::error::TransactionError;
+use crate::core::syscalls::syscall_handler::HintProcessorPostRun;
 use cairo_vm::felt::Felt252;
+use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -21,22 +18,18 @@ use std::{borrow::Cow, collections::HashMap};
 
 pub(crate) struct StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: HintProcessor + HintProcessorPostRun,
 {
     pub(crate) cairo_runner: CairoRunner,
     pub(crate) vm: VirtualMachine,
-    pub(crate) hint_processor: SyscallHintProcessor<H>,
+    pub(crate) hint_processor: H,
 }
 
 impl<H> StarknetRunner<H>
 where
-    H: SyscallHandler,
+    H: HintProcessor + HintProcessorPostRun,
 {
-    pub fn new(
-        cairo_runner: CairoRunner,
-        vm: VirtualMachine,
-        hint_processor: SyscallHintProcessor<H>,
-    ) -> Self {
+    pub fn new(cairo_runner: CairoRunner, vm: VirtualMachine, hint_processor: H) -> Self {
         StarknetRunner {
             cairo_runner,
             vm,
@@ -64,16 +57,7 @@ where
     }
 
     pub fn get_execution_resources(&self) -> Result<ExecutionResources, TransactionError> {
-        let execution_resources = self.cairo_runner.get_execution_resources(&self.vm)?;
-
-        Ok(ExecutionResources {
-            builtin_instance_counter: execution_resources
-                .builtin_instance_counter
-                .into_iter()
-                .map(|(name, counter)| (name, counter))
-                .collect(),
-            ..execution_resources
-        })
+        Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
     pub fn get_return_values(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
@@ -96,6 +80,31 @@ where
             )
             .map_err(|_| StarknetRunnerError::NotAFelt)?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
+    }
+
+    pub fn prepare_os_context(
+        cairo_runner: &CairoRunner,
+        vm: &mut VirtualMachine,
+    ) -> Vec<MaybeRelocatable> {
+        let syscall_segment = vm.add_memory_segment();
+        let mut os_context = [syscall_segment.into()].to_vec();
+        let builtin_runners = vm
+            .get_builtin_runners()
+            .iter()
+            .map(|runner| (runner.name(), runner))
+            .collect::<HashMap<&str, &BuiltinRunner>>();
+
+        cairo_runner
+            .get_program_builtins()
+            .iter()
+            .for_each(|builtin| {
+                if builtin_runners.contains_key(builtin.name()) {
+                    let b_runner = builtin_runners.get(builtin.name()).unwrap();
+                    let stack = b_runner.initial_stack();
+                    os_context.extend(stack);
+                }
+            });
+        os_context
     }
 
     /// Returns the base and stop ptr of the OS-designated segment that starts at ptr_offset.
@@ -164,10 +173,7 @@ where
     pub(crate) fn validate_and_process_os_context(
         &mut self,
         initial_os_context: Vec<MaybeRelocatable>,
-    ) -> Result<(), TransactionError>
-    where
-        H: SyscallHandlerPostRun,
-    {
+    ) -> Result<(), TransactionError> {
         // The returned values are os_context, retdata_size, retdata_ptr.
         let os_context_end = (self.vm.get_ap() - 2)?;
         let stack_pointer = os_context_end;
@@ -189,64 +195,38 @@ where
         self.validate_segment_pointers(&syscall_base_ptr, &syscall_stop_ptr)?;
 
         self.hint_processor
-            .syscall_handler
             .post_run(&mut self.vm, syscall_stop_ptr.try_into()?)?;
 
         Ok(())
     }
 }
 
-pub(crate) fn prepare_os_context(
-    vm: &mut VirtualMachine,
-    cairo_runner: &mut CairoRunner,
-) -> Vec<MaybeRelocatable> {
-    let syscall_segment = vm.add_memory_segment();
-    let mut os_context = [syscall_segment.into()].to_vec();
-    let builtin_runners = vm
-        .get_builtin_runners()
-        .clone()
-        .into_iter()
-        .map(|runner| (runner.name(), runner))
-        .collect::<HashMap<&str, BuiltinRunner>>();
-    cairo_runner
-        .get_program_builtins()
-        .iter()
-        .for_each(|builtin| {
-            if let Some(b_runner) = builtin_runners.get(builtin.name()) {
-                let stack = b_runner.initial_stack();
-                os_context.extend(stack);
-            }
-        });
-    os_context
-}
-
 #[cfg(test)]
 mod test {
-    use super::{prepare_os_context, StarknetRunner};
+    use super::StarknetRunner;
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState, transaction::error::TransactionError,
         },
-        core::syscalls::business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        core::syscalls::{
+            deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
+            deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
+            syscall_handler::SyscallHintProcessor,
+        },
     };
     use cairo_vm::{
         types::relocatable::{MaybeRelocatable, Relocatable},
         vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
     };
-    use coverage_helper::test;
-
-    type SyscallHintProcessor<'a> = crate::core::syscalls::syscall_handler::SyscallHintProcessor<
-        BusinessLogicSyscallHandler<'a, CachedState<InMemoryStateReader>>,
-    >;
 
     #[test]
     fn prepare_os_context_test() {
         let program = cairo_vm::types::program::Program::default();
-        let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
+        let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
 
-        let os_context = prepare_os_context(&mut vm, &mut cairo_runner);
+        let os_context = StarknetRunner::<SyscallHintProcessor<CachedState::<InMemoryStateReader>>>::prepare_os_context(&cairo_runner, &mut vm);
 
         // is expected to return a pointer to the first segment as there is nothing more in the vm
         let expected = Vec::from([MaybeRelocatable::from((0, 0))]);
@@ -261,8 +241,9 @@ mod test {
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            DeprecatedBLSyscallHandler::default_with(&mut state),
+        );
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert!(runner.run_from_entrypoint(1, &[]).is_err())
@@ -275,8 +256,9 @@ mod test {
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            DeprecatedBLSyscallHandler::default_with(&mut state),
+        );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert_matches!(
@@ -292,8 +274,9 @@ mod test {
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            DeprecatedBLSyscallHandler::default_with(&mut state),
+        );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::RelocatableValue((0, 1).into());
@@ -312,8 +295,9 @@ mod test {
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            DeprecatedBLSyscallHandler::default_with(&mut state),
+        );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::Int((1).into());
@@ -332,8 +316,9 @@ mod test {
         let vm = VirtualMachine::new(true);
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            DeprecatedBLSyscallHandler::default_with(&mut state),
+        );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
@@ -352,8 +337,9 @@ mod test {
         vm.compute_segments_effective_sizes();
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            DeprecatedBLSyscallHandler::default_with(&mut state),
+        );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
@@ -373,8 +359,9 @@ mod test {
         vm.compute_segments_effective_sizes();
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor =
-            SyscallHintProcessor::new(BusinessLogicSyscallHandler::default_with(&mut state));
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            DeprecatedBLSyscallHandler::default_with(&mut state),
+        );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());

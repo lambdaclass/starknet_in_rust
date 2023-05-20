@@ -8,6 +8,8 @@ default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
 
 [dependencies]
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo" }
+cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo" }
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad" }
 getset = "0.1.2"
 lazy_static = "1.4.0"
@@ -17,7 +19,7 @@ num-traits = "0.2.15"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 sha3 = "0.10.1"
-starknet_api = { git = "https://github.com/lambdaclass/starknet-api", branch = "main", features = [
+starknet_api = { git = "https://github.com/lambdaclass/starknet-api", rev="b29d881", features = [
     "testing",
 ] }
 starknet-crypto = "0.4.3"
@@ -37,7 +39,7 @@ rusty-hook = "0.11"
 coverage-helper = "0.1.0"
 
 [workspace]
-members = ["crates/starknet-rs-py", "crates/starknet-contract-class", "fuzzer"]
+members = ["crates/starknet-contract-class", "fuzzer"]
 
 [[bench]]
 path = "bench/internals.rs"

@@ -10,7 +10,7 @@ use starknet_rs::{
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     definitions::general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };
 
@@ -60,6 +60,7 @@ fn main() {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(Felt252::from(i * 2)),
+            None,
         )
         .unwrap()
         .execute(&mut cached_state, &general_config)
@@ -73,6 +74,7 @@ fn main() {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(Felt252::from((i * 2) + 1)),
+            None,
         )
         .unwrap()
         .execute(&mut cached_state, &general_config)
@@ -106,6 +108,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
             state_reader
         },
         Some(HashMap::new()),
+        None,
     );
 
     cached_state

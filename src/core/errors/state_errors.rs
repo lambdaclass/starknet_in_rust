@@ -36,10 +36,18 @@ pub enum StateError {
     Storage(#[from] StorageError),
     #[error(transparent)]
     ContractClass(#[from] ContractClassError),
+    #[error("Missing CasmClassCache")]
+    MissingCasmClassCache,
     #[error("Constructor calldata is empty")]
     ConstructorCalldataEmpty(),
     #[error("Error in ExecutionEntryPoint")]
     ExecutionEntryPoint(),
+    #[error("{0:?}")]
+    NoneCompiledClass(ClassHash),
+    #[error("{0:?}")]
+    NoneCompiledHash(ClassHash),
+    #[error("Missing casm class for hash {0:?}")]
+    MissingCasmClass(ClassHash),
     #[error("No class hash declared in class_hash_to_contract_class")]
     MissingClassHash(),
 }

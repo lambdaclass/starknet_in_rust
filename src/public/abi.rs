@@ -1,8 +1,10 @@
 use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::Num;
+use starknet_api::deprecated_contract_class::ContractClassAbiEntry;
+use std::collections::HashMap;
 
-pub use starknet_contract_class::AbiType;
+pub type AbiType = Vec<HashMap<String, ContractClassAbiEntry>>;
 
 lazy_static! {
     pub static ref VALIDATE_ENTRY_POINT_SELECTOR: Felt252 = Felt252::from_str_radix(

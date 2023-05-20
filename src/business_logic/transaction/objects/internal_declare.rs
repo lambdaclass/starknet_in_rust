@@ -12,7 +12,7 @@ use crate::{
         },
     },
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::starknet_contract_address::compute_deprecated_class_hash,
         errors::state_errors::StateError,
         transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
     },
@@ -20,8 +20,11 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_class::{ContractClass, EntryPointType},
-    utils::{calculate_tx_resources, verify_no_calls_to_other_contracts, Address, ClassHash},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    utils::{
+        calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
+        ClassHash,
+    },
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
@@ -48,6 +51,7 @@ pub struct InternalDeclare {
 //                        Functions
 // ------------------------------------------------------------
 impl InternalDeclare {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt252,
@@ -56,18 +60,22 @@ impl InternalDeclare {
         version: u64,
         signature: Vec<Felt252>,
         nonce: Felt252,
+        hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        let hash = compute_class_hash(&contract_class)?;
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class)?;
+        let class_hash = felt_to_hash(&hash);
 
-        let hash_value = calculate_declare_transaction_hash(
-            &contract_class,
-            chain_id,
-            &sender_address,
-            max_fee,
-            version,
-            nonce.clone(),
-        )?;
+        let hash_value = match hash_value {
+            Some(hash) => hash,
+            None => calculate_declare_transaction_hash(
+                &contract_class,
+                chain_id,
+                &sender_address,
+                max_fee,
+                version,
+                nonce.clone(),
+            )?,
+        };
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
@@ -119,7 +127,7 @@ impl InternalDeclare {
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: State + StateReader>(
+    pub fn apply<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -166,7 +174,7 @@ impl InternalDeclare {
         )
     }
 
-    pub fn run_validate_entrypoint<S: State + StateReader>(
+    pub fn run_validate_entrypoint<S: Default + State + StateReader>(
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
@@ -186,6 +194,7 @@ impl InternalDeclare {
             EntryPointType::External,
             None,
             None,
+            0,
         );
 
         let call_info = entry_point.execute(
@@ -193,6 +202,7 @@ impl InternalDeclare {
             general_config,
             resources_manager,
             &self.get_execution_context(general_config.invoke_tx_max_n_steps),
+            false,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)
@@ -202,7 +212,7 @@ impl InternalDeclare {
     }
 
     /// Calculates and charges the actual fee.
-    pub fn charge_fee<S: State + StateReader>(
+    pub fn charge_fee<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
@@ -225,7 +235,10 @@ impl InternalDeclare {
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
-    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
+    fn handle_nonce<S: Default + State + StateReader + Clone>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
         if self.version == 0 {
             return Ok(());
         }
@@ -246,7 +259,7 @@ impl InternalDeclare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: Default + State + StateReader + Clone>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -290,7 +303,6 @@ impl InternalDeclare {
 mod tests {
     use super::*;
     use cairo_vm::felt::{felt_str, Felt252};
-    use coverage_helper::test;
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 
@@ -305,8 +317,10 @@ mod tests {
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
-        services::api::contract_class::{ContractClass, EntryPointType},
-        utils::Address,
+        services::api::contract_classes::deprecated_contract_class::{
+            ContractClass, EntryPointType,
+        },
+        utils::{felt_to_hash, Address},
     };
 
     use super::InternalDeclare;
@@ -321,8 +335,8 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class.clone());
 
@@ -340,7 +354,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -360,6 +374,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -370,8 +385,8 @@ mod tests {
         // Value generated from selector _validate_declare_
         let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone());
 
-        let class_hash_felt = compute_class_hash(&contract_class).unwrap();
-        let expected_class_hash = class_hash_felt.to_be_bytes();
+        let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
+        let expected_class_hash = felt_to_hash(&class_hash_felt);
 
         // Calldata is the class hash represented as a Felt252
         let calldata = [felt_str!(
@@ -425,8 +440,8 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -444,7 +459,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -466,6 +481,7 @@ mod tests {
             version,
             Vec::new(),
             Felt252::from(max_fee),
+            None,
         );
 
         // ---------------------
@@ -488,8 +504,8 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -507,7 +523,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -529,6 +545,7 @@ mod tests {
             version,
             Vec::new(),
             nonce,
+            None,
         );
 
         // ---------------------
@@ -551,8 +568,8 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -570,7 +587,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache));
+        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -591,6 +608,7 @@ mod tests {
             0,
             signature,
             Felt252::zero(),
+            None,
         );
 
         // ---------------------
@@ -613,8 +631,8 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -632,7 +650,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -652,6 +670,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -663,6 +682,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::one(),
+            None,
         )
         .unwrap();
 
@@ -693,8 +713,8 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -712,7 +732,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -732,6 +752,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -760,7 +781,7 @@ mod tests {
 
         let state_reader = InMemoryStateReader::default();
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         // There are no account contracts in the state, so the transaction should fail
         let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
@@ -776,6 +797,7 @@ mod tests {
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
@@ -799,8 +821,8 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
 
@@ -818,7 +840,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -829,22 +851,22 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        // Use non-zero value so that the actual fee calculation is done
+        // Use max_fee with certain value to make sure that the transaction fails due to weight resources
         let internal_declare = InternalDeclare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
-            10,
+            1000,
             1,
             Vec::new(),
             Felt252::zero(),
+            None,
         )
         .unwrap();
 
-        // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
             internal_declare.execute(&mut state, &StarknetGeneralConfig::default()),
-            Err(TransactionError::FeeError(e)) if e == "Fee transfer failure"
+            Err(TransactionError::ResourcesError { .. })
         );
     }
 }

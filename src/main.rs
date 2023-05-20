@@ -18,7 +18,7 @@ use starknet_rs::{
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     core::{
-        contract_address::starknet_contract_address::compute_class_hash,
+        contract_address::starknet_contract_address::compute_deprecated_class_hash,
         errors::contract_address_errors::ContractAddressError,
         transaction_hash::starknet_transaction_hash::{
             calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
@@ -32,17 +32,10 @@ use starknet_rs::{
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::contract_abi::read_abi,
-    services::api::contract_class::ContractClass,
-    utils::{string_to_hash, Address},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    utils::{felt_to_hash, string_to_hash, Address},
 };
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
-
-#[cfg(feature = "with_mimalloc")]
-use mimalloc::MiMalloc;
-
-#[cfg(feature = "with_mimalloc")]
-#[global_allocator]
-static ALLOC: MiMalloc = MiMalloc;
 
 #[derive(Parser)]
 struct Cli {
@@ -86,6 +79,8 @@ struct InvokeArgs {
     function: String,
     #[arg(long, num_args=1.., value_delimiter = ' ')]
     inputs: Option<Vec<i32>>,
+    #[arg(long)]
+    hash: Option<String>,
 }
 
 #[derive(Args, Serialize, Deserialize)]
@@ -116,8 +111,8 @@ fn declare_parser(
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_class =
         ContractClass::try_from(&args.contract).map_err(ContractAddressError::Program)?;
-    let class_hash = compute_class_hash(&contract_class)?;
-    cached_state.set_contract_class(&class_hash.to_be_bytes(), &contract_class)?;
+    let class_hash = compute_deprecated_class_hash(&contract_class)?;
+    cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
 
     let tx_hash = calculate_declare_transaction_hash(
         &contract_class,
@@ -146,11 +141,7 @@ fn deploy_parser(
         Address(0.into()),
     )?;
 
-    cached_state.deploy_contract(
-        Address(address.clone()),
-        string_to_hash(&args.class_hash)
-            .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
-    )?;
+    cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
     let tx_hash = calculate_deploy_transaction_hash(
         0,
         &Address(address.clone()),
@@ -171,8 +162,12 @@ fn invoke_parser(
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
-
-    let entry_points_by_type = contract_class.entry_points_by_type();
+    let transaction_hash = args.hash.clone().map(|f| {
+        Felt252::from_str_radix(&f, 16)
+            .map_err(|_| ParserError::ParseFelt(f.clone()))
+            .unwrap()
+    });
+    let entry_points_by_type = contract_class.entry_points_by_type().clone();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
         .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;
@@ -182,7 +177,7 @@ fn invoke_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector
+        .selector()
         .clone();
 
     let calldata = match &args.inputs {
@@ -197,6 +192,7 @@ fn invoke_parser(
         vec![],
         Felt252::zero(),
         Some(Felt252::zero()),
+        transaction_hash,
     )?;
     let _tx_info = internal_invoke.apply(cached_state, &StarknetGeneralConfig::default())?;
 
@@ -225,7 +221,7 @@ fn call_parser(
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
     let contract_class = cached_state.get_contract_class(&class_hash)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
-    let entry_points_by_type = contract_class.entry_points_by_type();
+    let entry_points_by_type = contract_class.entry_points_by_type().clone();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes
         .get(&args.function)
         .ok_or_else(|| ParserError::FunctionEntryPoint(args.function.clone()))?;
@@ -235,7 +231,7 @@ fn call_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector
+        .selector()
         .clone();
     let caller_address = Address(0.into());
     let calldata = match &args.inputs {
@@ -250,12 +246,14 @@ fn call_parser(
         *entry_point_type,
         None,
         None,
+        0,
     );
     let call_info = execution_entry_point.execute(
         cached_state,
         &StarknetGeneralConfig::default(),
         &mut ExecutionResourcesManager::default(),
         &TransactionExecutionContext::default(),
+        false,
     )?;
     Ok(call_info.retdata)
 }
@@ -307,6 +305,7 @@ pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
             InMemoryStateReader::default(),
             Some(HashMap::new()),
+            None,
         )),
     });
 

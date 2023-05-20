@@ -8,7 +8,7 @@ use starknet_rs::{
     business_logic::{
         fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     },
-    services::api::contract_class::ContractClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     testing::starknet_state::StarknetState,
     utils::Address,
 };
@@ -58,6 +58,7 @@ fn main() {
                 0,
                 Some(Vec::new()),
                 Some(Felt252::from(i)),
+                None,
             )
             .unwrap();
 
@@ -89,6 +90,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
             state_reader
         },
         Some(HashMap::new()),
+        None,
     );
 
     cached_state

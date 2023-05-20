@@ -4,8 +4,8 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_rs::{
-    services::api::contract_class::ContractClass, testing::starknet_state::StarknetState,
-    utils::Address,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    testing::starknet_state::StarknetState, utils::Address,
 };
 
 use lazy_static::lazy_static;
@@ -40,7 +40,12 @@ fn main() {
     let contract_address_salt = Address(1.into());
 
     let (contract_address, _exec_info) = starknet_state
-        .deploy(CONTRACT_CLASS.to_owned(), vec![], contract_address_salt)
+        .deploy(
+            CONTRACT_CLASS.to_owned(),
+            vec![],
+            contract_address_salt,
+            None,
+        )
         .unwrap();
 
     // Statement **not** in blockifier.
@@ -59,6 +64,7 @@ fn main() {
                 0,
                 Some(Vec::new()),
                 Some(Felt252::from(i * 2)),
+                None,
             )
             .unwrap();
 
@@ -70,6 +76,7 @@ fn main() {
                 0,
                 Some(Vec::new()),
                 Some(Felt252::from((i * 2) + 1)),
+                None,
             )
             .unwrap();
 

@@ -11,7 +11,7 @@ use crate::{
     definitions::{
         constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
-    services::api::contract_class::EntryPointType,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
 use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;
@@ -51,11 +51,18 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         EntryPointType::External,
         None,
         None,
+        0,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
     fee_transfer_call
-        .execute(state, general_config, &mut resources_manager, tx_context)
+        .execute(
+            state,
+            general_config,
+            &mut resources_manager,
+            tx_context,
+            false,
+        )
         .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
 }
 
@@ -89,9 +96,12 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     general_config: &StarknetGeneralConfig,
     cairo_resource_usage: &HashMap<String, usize>,
 ) -> Result<f64, TransactionError> {
-    if !cairo_resource_usage
+    // Ensure that every key in `general_config.cairo_resource_fee_weights` is present in
+    // `cairo_resource_usage`.
+    if !general_config
+        .cairo_resource_fee_weights
         .keys()
-        .all(|k| k == "l1_gas_usage" || general_config.cairo_resource_fee_weights.contains_key(k))
+        .all(|k| cairo_resource_usage.contains_key(k))
     {
         return Err(TransactionError::ResourcesError);
     }

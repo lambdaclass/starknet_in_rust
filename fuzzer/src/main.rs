@@ -18,7 +18,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
 };
 
@@ -100,7 +100,7 @@ fn main() {
                 .unwrap()
                 .get(0)
                 .unwrap()
-                .selector
+                .selector()
                 .clone();
 
             fs::remove_file(cairo_file_name).expect("Failed to remove generated cairo source");
@@ -128,7 +128,7 @@ fn main() {
             //*    Create state with previous data
             //* ---------------------------------------
 
-            let mut state = CachedState::new(state_reader, Some(contract_class_cache));
+            let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
             //* ------------------------------------
             //*    Create execution entry point
@@ -146,6 +146,7 @@ fn main() {
                 entry_point_type,
                 Some(CallType::Delegate),
                 Some(class_hash),
+                0,
             );
 
             //* --------------------
@@ -189,7 +190,8 @@ fn main() {
                         &mut state,
                         &general_config,
                         &mut resources_manager,
-                        &tx_execution_context
+                        &tx_execution_context,
+                        false,
                     )
                     .unwrap(),
                 expected_call_info
