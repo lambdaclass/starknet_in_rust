@@ -13,5 +13,5 @@ rev = "327ee7d6778bdab9573573e6af008fcc6041f9ad"
 
 [dependencies.starknet_api]
 git = "https://github.com/lambdaclass/starknet-api"
-branch = "main"
+rev = "b29d881"
 features = ["testing"]

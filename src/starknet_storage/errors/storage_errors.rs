@@ -22,8 +22,10 @@ impl From<serde_json::Error> for StorageError {
 
 #[test]
 fn test_from_serde_json_error_for_storage_error() {
-    let bugged_json: Result<starknet_api::state::ContractClass, serde_json::Error> =
-        serde_json::from_str("{");
+    let bugged_json: Result<
+        starknet_api::deprecated_contract_class::ContractClass,
+        serde_json::Error,
+    > = serde_json::from_str("{");
     let json_error = bugged_json.unwrap_err();
     let storage_error = StorageError::from(json_error);
 

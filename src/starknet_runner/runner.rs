@@ -91,8 +91,8 @@ where
         let builtin_runners = vm
             .get_builtin_runners()
             .iter()
-            .map(|runner| (runner.name(), runner.clone()))
-            .collect::<HashMap<&str, BuiltinRunner>>();
+            .map(|runner| (runner.name(), runner))
+            .collect::<HashMap<&str, &BuiltinRunner>>();
 
         cairo_runner
             .get_program_builtins()

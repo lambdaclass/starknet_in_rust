@@ -262,7 +262,7 @@ mod tests {
             state
                 .get_class_hash_at(&internal_deploy.contract_address)
                 .unwrap(),
-            &class_hash_bytes
+            class_hash_bytes
         );
 
         let storage_key = calculate_sn_keccak("owner".as_bytes());
@@ -271,7 +271,7 @@ mod tests {
             state
                 .get_storage_at(&(internal_deploy.contract_address, storage_key))
                 .unwrap(),
-            &Felt252::from(10)
+            Felt252::from(10)
         );
     }
 

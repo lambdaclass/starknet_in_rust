@@ -11,7 +11,7 @@ use cairo_vm::{
     },
 };
 use serde::Deserialize;
-use starknet_api::state::{ContractClassAbiEntry, EntryPoint};
+use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -34,7 +34,7 @@ pub type AbiType = Vec<HashMap<String, ContractClassAbiEntry>>;
 // -------------------------------
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
-#[serde(try_from = "starknet_api::state::ContractClass")]
+#[serde(try_from = "starknet_api::deprecated_contract_class::ContractClass")]
 pub struct ParsedContractClass {
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
@@ -54,9 +54,9 @@ impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
     }
 }
 
-impl From<starknet_api::state::EntryPointType> for EntryPointType {
-    fn from(entry_type: starknet_api::state::EntryPointType) -> Self {
-        type ApiEPT = starknet_api::state::EntryPointType;
+impl From<starknet_api::deprecated_contract_class::EntryPointType> for EntryPointType {
+    fn from(entry_type: starknet_api::deprecated_contract_class::EntryPointType) -> Self {
+        type ApiEPT = starknet_api::deprecated_contract_class::EntryPointType;
         type StarknetEPT = EntryPointType;
 
         match entry_type {
@@ -67,13 +67,14 @@ impl From<starknet_api::state::EntryPointType> for EntryPointType {
     }
 }
 
-impl TryFrom<starknet_api::state::ContractClass> for ParsedContractClass {
+impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for ParsedContractClass {
     type Error = ProgramError;
 
-    fn try_from(contract_class: starknet_api::state::ContractClass) -> Result<Self, Self::Error> {
+    fn try_from(
+        contract_class: starknet_api::deprecated_contract_class::ContractClass,
+    ) -> Result<Self, Self::Error> {
         let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
-
         Ok(Self {
             program,
             entry_points_by_type,
@@ -90,7 +91,9 @@ impl TryFrom<&str> for ParsedContractClass {
     type Error = ProgramError;
 
     fn try_from(s: &str) -> Result<Self, ProgramError> {
-        let raw_contract_class: starknet_api::state::ContractClass = serde_json::from_str(s)?;
+        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
+            serde_json::from_str(s)?;
+
         Self::try_from(raw_contract_class)
     }
 }
@@ -109,14 +112,14 @@ impl TryFrom<&PathBuf> for ParsedContractClass {
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let raw_contract_class: starknet_api::state::ContractClass =
+        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_reader(reader)?;
         Self::try_from(raw_contract_class)
     }
 }
 
 fn convert_entry_points(
-    entry_points: HashMap<starknet_api::state::EntryPointType, Vec<EntryPoint>>,
+    entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
     for (entry_type, vec) in entry_points {
@@ -138,7 +141,7 @@ fn convert_entry_points(
 }
 
 pub fn to_cairo_runner_program(
-    program: &starknet_api::state::Program,
+    program: &starknet_api::deprecated_contract_class::Program,
 ) -> Result<Program, ProgramError> {
     let program = program.clone();
     let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
@@ -182,8 +185,6 @@ mod tests {
             .expect("should be able to read file");
 
         let res = ParsedContractClass::try_from(serialized.as_str());
-
-        assert!(res.is_ok());
 
         let contract_class = res.unwrap();
 
@@ -232,12 +233,9 @@ mod tests {
             .and_then(|mut f| f.read_to_string(&mut serialized))
             .expect("should be able to read file");
 
-        let result_try_from = ParsedContractClass::try_from(serialized.as_str());
-        let result_deserialize = serde_json::from_str(&serialized);
+        let result_try_from = ParsedContractClass::try_from(serialized.as_str()).unwrap();
+        let result_deserialize = serde_json::from_str(&serialized).unwrap();
 
-        assert!(result_try_from.is_ok());
-        assert!(result_deserialize.is_ok());
-
-        assert_eq!(result_try_from.unwrap(), result_deserialize.unwrap());
+        assert_eq!(result_try_from, result_deserialize);
     }
 }
