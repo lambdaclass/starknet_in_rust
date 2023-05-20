@@ -43,6 +43,7 @@ cairo_programs/cairo_1_contracts/*.sierra
 default.profraw
 **.DS_Store
 /scripts/reports
-
+__pycache__/
+.pytest_cache/
 # codecov report
 lcov.info

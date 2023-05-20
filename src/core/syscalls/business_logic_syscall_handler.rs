@@ -133,7 +133,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
@@ -409,7 +409,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
 impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
 where
-    T: Default + State + StateReader,
+    T: State + StateReader + Default,
 {
     fn emit_event(
         &mut self,
@@ -444,7 +444,7 @@ where
     }
 
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.starknet_storage_state.read(&key).cloned()
+        self.starknet_storage_state.read(&key)
     }
 
     fn storage_write(

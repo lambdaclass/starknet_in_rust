@@ -1,6 +1,6 @@
 %lang starknet
 
-func main() {
+func main{range_check_ptr: felt*}() {
     // Call fib(1, 1, 10).
     let result: felt = fib(1, 1, 10);
 

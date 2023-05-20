@@ -186,6 +186,7 @@ pub fn calculate_declare_v2_transaction_hash(
 #[cfg(test)]
 mod tests {
     use cairo_vm::felt::felt_str;
+    use coverage_helper::test;
 
     use super::*;
 

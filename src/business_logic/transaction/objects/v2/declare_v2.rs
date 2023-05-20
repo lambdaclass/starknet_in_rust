@@ -164,7 +164,7 @@ impl InternalDeclareV2 {
         }
 
         let contract_address = &self.sender_address;
-        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
+        let current_nonce = state.get_nonce_at(contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -261,7 +261,7 @@ impl InternalDeclareV2 {
             false,
         )?;
 
-        let class_hash = *state.get_class_hash_at(&self.sender_address)?;
+        let class_hash = state.get_class_hash_at(&self.sender_address)?;
         let _compiled_class_hash = state.get_compiled_class_hash(&class_hash)?;
 
         remaining_gas -= call_info.gas_consumed;

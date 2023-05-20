@@ -244,7 +244,7 @@ impl InternalDeclare {
         }
 
         let contract_address = &self.sender_address;
-        let current_nonce = state.get_nonce_at(contract_address)?.to_owned();
+        let current_nonce = state.get_nonce_at(contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),

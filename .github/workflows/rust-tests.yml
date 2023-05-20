@@ -26,6 +26,9 @@ jobs:
         cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
     - name: Deps
       run: make deps
     - name: Build
@@ -45,6 +48,9 @@ jobs:
         cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
     - name: Deps
       run: make deps
     - name: Format
@@ -66,11 +72,14 @@ jobs:
         cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
     - name: Deps
       run: make deps
     - name: Run tests
       run: make test
-  
+
   coverage:
     runs-on: ubuntu-20.04
     steps:
@@ -85,6 +94,9 @@ jobs:
         cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
     - name: Deps
       run: make deps
     - name: Coverage

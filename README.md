@@ -19,19 +19,24 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 </div>
 
 ## Table of Contents
-- [Disclaimer](#%EF%B8%8F-disclaimer)
-- [About](#-about)
-- [Getting Started](#-getting-started)
-  * [Dependencies](#dependencies)
-  * [Installation](#installation)
-- [Usage](#-usage)
-  * [Running simple contracts](#running-simple-contracts)
-  * [Testing](#testing)
-- [Contributing](#-contributing)
-- [Related Projects](#-related-projects)
-- [Documentation](#-documentation)
-  * [StarkNet](#starknet)
-- [License](#%EF%B8%8F-license)
+- [Table of Contents](#table-of-contents)
+- [⚠️ Disclaimer](#️-disclaimer)
+- [📖 About](#-about)
+- [🌅 Getting Started](#-getting-started)
+  - [Dependencies](#dependencies)
+  - [Installation](#installation)
+    - [How to manually install the script dependencies](#how-to-manually-install-the-script-dependencies)
+- [🚀 Usage](#-usage)
+  - [Running simple contracts](#running-simple-contracts)
+  - [Using the Cli](#using-the-cli)
+  - [Testing](#testing)
+  - [Profiling](#profiling)
+  - [Benchmarking](#benchmarking)
+- [🛠 Contributing](#-contributing)
+- [🌞 Related Projects](#-related-projects)
+- [📚 Documentation](#-documentation)
+  - [StarkNet](#starknet)
+- [⚖️ License](#️-license)
 
 ## ⚠️ Disclaimer
 
@@ -54,9 +59,6 @@ It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust im
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 ```bash
 $ make deps
-$ source starknet-venv/bin/activate
-$ make compile-cairo
-$ deactivate
 $ make build
 ```
 Check the [Makefile](/Makefile) for additional targets.
@@ -85,7 +87,7 @@ export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/li
 
 ### Running simple contracts
 
-You can find a tutorial on running contracts [here](/contract_execution_examples).
+You can find a tutorial on running contracts [here](/examples/contract_execution/README.md).
 
 ### Using the Cli
 You can find an example on how to use the cli [here](/docs/CLI_USAGE_EXAMPLE.md)
@@ -106,6 +108,14 @@ $ make flamegraph
 ```
 
 to generate a flamegraph with info of the execution of the main operations.
+
+### Benchmarking
+
+Read the 'bench_integration.py' file to identify which lines need to be commented out for accurate results. Comment out those lines and then run the following command:
+
+```bash
+$ make benchmark
+```
 
 ## 🛠 Contributing
 

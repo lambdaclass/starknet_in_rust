@@ -53,7 +53,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: Default + State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader + Default> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -241,7 +241,7 @@ where
 
 impl<'a, T> DeprecatedSyscallHandler for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: Default + State + StateReader,
+    T: State + StateReader + Default,
 {
     fn emit_event(
         &mut self,
@@ -533,8 +533,7 @@ where
     fn syscall_storage_read(&mut self, address: Address) -> Result<Felt252, SyscallHandlerError> {
         Ok(self
             .starknet_storage_state
-            .read(&felt_to_hash(&address.0))
-            .cloned()?)
+            .read(&felt_to_hash(&address.0))?)
     }
 
     fn syscall_storage_write(

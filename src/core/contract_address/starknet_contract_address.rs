@@ -20,16 +20,11 @@ use cairo_vm::{
     },
 };
 use sha3::{Digest, Keccak256};
-use std::path::Path;
+use std::fs;
+
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
-
-fn load_program() -> Result<Program, ContractAddressError> {
-    Ok(Program::from_file(
-        Path::new("cairo_programs/deprecated_compiled_class.json"),
-        None,
-    )?)
-}
+const DEPRECATED_COMPILED_CLASS_CONTRACT: &str = "cairo_programs/deprecated_compiled_class.json";
 
 fn get_contract_entry_points(
     contract_class: &ContractClass,
@@ -38,7 +33,7 @@ fn get_contract_entry_points(
     let program_length = contract_class.program().iter_data().count();
 
     let entry_points = contract_class
-        .entry_points_by_type
+        .entry_points_by_type()
         .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
@@ -87,7 +82,6 @@ fn get_contract_class_struct(
     let external_functions = get_contract_entry_points(contract_class, &EntryPointType::External)?;
     let l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?;
     let constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?;
-
     let builtin_list: &Vec<BuiltinName> =
         &contract_class.program().iter_builtins().cloned().collect();
 
@@ -179,8 +173,11 @@ impl From<DeprecatedCompiledClass> for CairoArg {
 pub fn compute_deprecated_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {
-    // Since we are not using a cache, this function replace compute_class_hash_inner.
-    let hash_calculation_program = load_program()?;
+    let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
+
+    let hash_calculation_program: Program =
+        Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+
     let contract_class_struct = &get_contract_class_struct(
         hash_calculation_program
             .get_identifier("__main__.DEPRECATED_COMPILED_CLASS_VERSION")
@@ -232,6 +229,7 @@ mod tests {
 
     use super::*;
     use cairo_vm::felt::Felt252;
+    use coverage_helper::test;
     use num_traits::Num;
 
     #[test]
@@ -260,8 +258,13 @@ mod tests {
                 offset: 2,
             }],
         );
+        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
+
+        let hash_calculation_program: Program =
+            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+
         let contract_class = ContractClass {
-            program: load_program().unwrap(),
+            program: hash_calculation_program,
             entry_points_by_type,
             abi: None,
         };
@@ -303,8 +306,13 @@ mod tests {
                 offset: 2,
             }],
         );
+        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
+
+        let hash_calculation_program: Program =
+            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+
         let contract_class = ContractClass {
-            program: load_program().unwrap(),
+            program: hash_calculation_program,
             entry_points_by_type,
             abi: None,
         };
@@ -342,8 +350,13 @@ mod tests {
                 offset: 12,
             }],
         );
+        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
+
+        let hash_calculation_program: Program =
+            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
+
         let contract_class = ContractClass {
-            program: load_program().unwrap(),
+            program: hash_calculation_program,
             entry_points_by_type,
             abi: None,
         };
