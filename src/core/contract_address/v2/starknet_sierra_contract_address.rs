@@ -2,6 +2,7 @@ use cairo_lang_starknet::{
     contract::starknet_keccak, contract_class::ContractClass as SierraContractClass,
 };
 use cairo_vm::felt::Felt252;
+use cairo_vm::serde::deserialize_program::BuiltinName;
 use cairo_vm::{
     hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor,
     serde::deserialize_program::Identifier,
@@ -95,7 +96,13 @@ pub fn compute_sierra_class_hash(
     let mut vm = VirtualMachine::new(false);
     let mut runner = CairoRunner::new(&program, "all_cairo", false)?;
 
-    runner.initialize_function_runner(&mut vm, true)?;
+    runner.initialize_function_runner_cairo_1(
+        &mut vm,
+        &program
+            .iter_builtins()
+            .cloned()
+            .collect::<Vec<BuiltinName>>(),
+    )?;
 
     let mut hint_processor = BuiltinHintProcessor::new_empty();
     let entrypoint = program

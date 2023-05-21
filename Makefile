@@ -59,7 +59,7 @@ starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 # Test Cairo 1 Contracts
 # ======================
 
-CAIRO_1_CONTRACTS_TEST_DIR=cairo_programs/cairo_1_contracts
+CAIRO_1_CONTRACTS_TEST_DIR=starknet_programs/cairo1
 CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
 COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
 COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
@@ -100,19 +100,19 @@ deps: check-python-version build-cairo-1-compiler
 clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
-	-rm -f cairo_programs/cairo_1_contracts/*.sierra
+	-rm -f cairo_programs/cairo_1_contracts/*.json
 	-rm -f cairo_programs/cairo_1_contracts/*.casm
 	-rm -f starknet_programs/*.json
 	-rm -f tests/*.json
 	-rm -rf cairo/
 
-clippy: compile-cairo compile-starknet
+clippy: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet $(COMPILED_SIERRA_CONTRACTS)
+test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
 	cargo test --all --all-targets
 
-coverage: compile-cairo compile-starknet compile-abi $(COMPILED_SIERRA_CONTRACTS)
+coverage: compile-cairo compile-starknet compile-abi $(COMPILED_CASM_CONTRACTS)
 	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs'
 	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 

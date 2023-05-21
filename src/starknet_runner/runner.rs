@@ -1,8 +1,10 @@
 use super::starknet_runner_error::StarknetRunnerError;
 use crate::business_logic::transaction::error::TransactionError;
 use crate::core::syscalls::syscall_handler::HintProcessorPostRun;
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
+use cairo_vm::serde::deserialize_program::BuiltinName;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -15,6 +17,38 @@ use cairo_vm::{
 };
 use num_traits::ToPrimitive;
 use std::{borrow::Cow, collections::HashMap};
+
+pub fn get_casm_contract_builtins(
+    contract_class: &CasmContractClass,
+    entrypoint_offset: usize,
+) -> Vec<BuiltinName> {
+    contract_class
+        .entry_points_by_type
+        .external
+        .iter()
+        .find(|e| e.offset == entrypoint_offset)
+        .unwrap()
+        .builtins
+        .iter()
+        .map(|n| format!("{n}_builtin"))
+        .map(|s| match &*s {
+            cairo_vm::vm::runners::builtin_runner::OUTPUT_BUILTIN_NAME => BuiltinName::output,
+            cairo_vm::vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME => {
+                BuiltinName::range_check
+            }
+            cairo_vm::vm::runners::builtin_runner::HASH_BUILTIN_NAME => BuiltinName::pedersen,
+            cairo_vm::vm::runners::builtin_runner::SIGNATURE_BUILTIN_NAME => BuiltinName::ecdsa,
+            cairo_vm::vm::runners::builtin_runner::KECCAK_BUILTIN_NAME => BuiltinName::keccak,
+            cairo_vm::vm::runners::builtin_runner::BITWISE_BUILTIN_NAME => BuiltinName::bitwise,
+            cairo_vm::vm::runners::builtin_runner::EC_OP_BUILTIN_NAME => BuiltinName::ec_op,
+            cairo_vm::vm::runners::builtin_runner::POSEIDON_BUILTIN_NAME => BuiltinName::poseidon,
+            cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME => {
+                BuiltinName::segment_arena
+            }
+            _ => panic!("Invalid builtin {s}"),
+        })
+        .collect()
+}
 
 pub(crate) struct StarknetRunner<H>
 where
@@ -41,6 +75,7 @@ where
         &mut self,
         entrypoint: usize,
         args: &[&CairoArg],
+        program_segment_size: Option<usize>,
     ) -> Result<(), TransactionError> {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
@@ -49,10 +84,95 @@ where
             entrypoint,
             &args,
             verify_secure,
-            None,
+            program_segment_size,
             &mut self.vm,
             &mut self.hint_processor,
         )?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub fn run_from_cairo1_entrypoint(
+        &mut self,
+        contract_class: &CasmContractClass,
+        entrypoint_offset: usize,
+        args: &[MaybeRelocatable],
+    ) -> Result<(), TransactionError> {
+        let program_builtins = get_casm_contract_builtins(contract_class, entrypoint_offset);
+        // TODO: investigate this line (cairo runner must be initialized once)
+        self.cairo_runner
+            .initialize_function_runner_cairo_1(&mut self.vm, &program_builtins)
+            .unwrap();
+
+        // Implicit Args
+        // let syscall_segment = MaybeRelocatable::from(self.vm.add_memory_segment());
+
+        // let builtins: Vec<&'static str> = self
+        //     .cairo_runner
+        //     .get_program_builtins()
+        //     .iter()
+        //     .map(|b| b.name())
+        //     .collect();
+
+        // let builtin_segment: Vec<MaybeRelocatable> = self
+        //     .vm
+        //     .get_builtin_runners()
+        //     .iter()
+        //     .filter(|b| builtins.contains(&b.name()))
+        //     .flat_map(|b| b.initial_stack())
+        //     .collect();
+
+        // let initial_gas = MaybeRelocatable::from(usize::MAX);
+
+        // let mut implicit_args = builtin_segment;
+        // implicit_args.extend([initial_gas]);
+        // implicit_args.extend([syscall_segment]);
+
+        // Other args
+
+        // Load builtin costs
+        let builtin_costs: Vec<MaybeRelocatable> =
+            vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
+        let builtin_costs_ptr = self.vm.add_memory_segment();
+        self.vm
+            .load_data(builtin_costs_ptr, &builtin_costs)
+            .unwrap();
+
+        // Load extra data
+        let core_program_end_ptr = (self.cairo_runner.program_base.unwrap()
+            + self.cairo_runner.get_program().data_len())
+        .unwrap();
+        let program_extra_data: Vec<MaybeRelocatable> =
+            vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
+        self.vm
+            .load_data(core_program_end_ptr, &program_extra_data)
+            .unwrap();
+
+        // Load calldata
+        let calldata_start = self.vm.add_memory_segment();
+        let calldata_end = self.vm.load_data(calldata_start, &args.to_vec()).unwrap();
+
+        // Create entrypoint_args
+        let mut entrypoint_args: Vec<CairoArg> =
+            args.iter().map(|m| CairoArg::from(m.clone())).collect();
+        entrypoint_args.extend([
+            MaybeRelocatable::from(calldata_start).into(),
+            MaybeRelocatable::from(calldata_end).into(),
+        ]);
+        let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
+
+        // Once we have all the entrypoint args in place we can run it
+        self.cairo_runner
+            .run_from_entrypoint(
+                entrypoint_offset,
+                &entrypoint_args,
+                true,
+                Some(self.cairo_runner.get_program().data_len() + program_extra_data.len()),
+                &mut self.vm,
+                &mut self.hint_processor,
+            )
+            .unwrap();
+
         Ok(())
     }
 
@@ -66,6 +186,7 @@ where
         let n_rets = ret_data[0]
             .get_int_ref()
             .ok_or(StarknetRunnerError::NotAFelt)?;
+
         let ret_ptr = ret_data[1]
             .get_relocatable()
             .ok_or(StarknetRunnerError::NotARelocatable)?;
@@ -82,7 +203,55 @@ where
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
-    pub fn prepare_os_context(
+    pub fn get_return_values_cairo_1(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
+        // TODO: convert unwraps in proper errors
+        let return_values = self.vm.get_return_values(5).unwrap();
+        let retdata_start = return_values[3].get_relocatable().unwrap();
+        let retdata_end = return_values[4].get_relocatable().unwrap();
+        let retdata: Vec<Felt252> = self
+            .vm
+            .get_integer_range(retdata_start, (retdata_end - retdata_start).unwrap())
+            .unwrap()
+            .iter()
+            .map(|c| c.clone().into_owned())
+            .collect();
+        Ok(retdata)
+    }
+
+    pub fn prepare_os_context_cairo1(
+        cairo_runner: &CairoRunner,
+        vm: &mut VirtualMachine,
+        gas: Felt252,
+    ) -> Vec<MaybeRelocatable> {
+        let mut os_context = vec![];
+        // first, add for each builtin, its initial stack to the os_context
+        let builtin_runners = vm
+            .get_builtin_runners()
+            .iter()
+            .map(|runner| (runner.name(), runner.clone()))
+            .collect::<HashMap<&str, BuiltinRunner>>();
+
+        cairo_runner
+            .get_program_builtins()
+            .iter()
+            .for_each(|builtin| {
+                if builtin_runners.contains_key(builtin.name()) {
+                    let b_runner = builtin_runners.get(builtin.name()).unwrap();
+                    let stack = b_runner.initial_stack();
+                    os_context.extend(stack);
+                }
+            });
+
+        // add the gas
+        os_context.push(gas.into());
+
+        // finally add the syscall segment
+        let syscall_segment = vm.add_memory_segment();
+        os_context.push(syscall_segment.into());
+        os_context
+    }
+
+    pub fn prepare_os_context_cairo0(
         cairo_runner: &CairoRunner,
         vm: &mut VirtualMachine,
     ) -> Vec<MaybeRelocatable> {
@@ -226,7 +395,7 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "all_cairo", false).unwrap();
         let mut vm = VirtualMachine::new(true);
 
-        let os_context = StarknetRunner::<SyscallHintProcessor<CachedState::<InMemoryStateReader>>>::prepare_os_context(&cairo_runner, &mut vm);
+        let os_context = StarknetRunner::<SyscallHintProcessor<CachedState::<InMemoryStateReader>>>::prepare_os_context_cairo0(&cairo_runner, &mut vm);
 
         // is expected to return a pointer to the first segment as there is nothing more in the vm
         let expected = Vec::from([MaybeRelocatable::from((0, 0))]);
@@ -246,7 +415,7 @@ mod test {
         );
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
-        assert!(runner.run_from_entrypoint(1, &[]).is_err())
+        assert!(runner.run_from_entrypoint(1, &[], None).is_err())
     }
 
     #[test]

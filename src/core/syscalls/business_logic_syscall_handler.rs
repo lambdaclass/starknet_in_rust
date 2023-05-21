@@ -1,11 +1,13 @@
 #![allow(dead_code)] // TODO: Remove this!
 
 use std::collections::HashMap;
+use std::ops::Add;
 
-use super::syscall_request::{EmitEventRequest, GetBlockTimestampRequest, StorageWriteRequest};
-use super::syscall_response::{GetBlockTimestampResponse, SyscallResponse};
+use super::syscall_request::{
+    EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest,
+};
+use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, SyscallResponse};
 use super::{
-    syscall_handler::SyscallHandler,
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
         CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
@@ -133,7 +135,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
@@ -328,7 +330,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         self.starknet_storage_state.write(&key.to_le_bytes(), value)
     }
 
-    fn syscall(
+    pub fn syscall(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
@@ -338,11 +340,16 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallHandlerError::SelectorNotInHandlerMap(selector.to_string()),
         )?;
 
-        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
         let initial_gas: Felt252 = get_big_int(vm, (syscall_ptr + 1)?)?;
         let initial_gas: u64 = initial_gas
             .to_u64()
             .ok_or(MathError::Felt252ToU64Conversion(initial_gas))?;
+
+        // Advance SyscallPointer as the first two cells contain the selector & gas
+        let syscall_ptr: Relocatable =
+            (syscall_ptr + 2_usize).map_err(SyscallHandlerError::from)?;
+
+        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
 
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
@@ -402,9 +409,9 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T> SyscallHandler for BusinessLogicSyscallHandler<'a, T>
+impl<'a, T> BusinessLogicSyscallHandler<'a, T>
 where
-    T: State + StateReader,
+    T: State + StateReader + Default,
 {
     fn emit_event(
         &mut self,
@@ -483,6 +490,26 @@ where
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
     }
 
+    fn storage_read(
+        &mut self,
+        _vm: &VirtualMachine,
+        request: StorageReadRequest,
+        remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        if request.reserved != Felt252::zero() {
+            return Err(SyscallHandlerError::UnsupportedAddressDomain(
+                request.reserved.to_string(),
+            ));
+        }
+
+        let value = self._storage_read(request.key)?;
+
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: Some(ResponseBody::StorageReadResponse { value: Some(value) }),
+        })
+    }
+
     fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
@@ -530,7 +557,66 @@ where
         Ok((contract_address, result))
     }
 
-    fn allocate_segment(
+    fn deploy(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_request: DeployRequest,
+        mut remaining_gas: u64,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let (contract_address, result) = self.syscall_deploy(vm, syscall_request, remaining_gas)?;
+
+        remaining_gas -= result.gas_consumed;
+
+        let retdata_len = result.retdata.len();
+
+        let retdata_start = self.allocate_segment(vm, result.retdata)?;
+        let retdata_end = retdata_start.add(retdata_len)?;
+
+        let ok = result.is_success;
+
+        let body: ResponseBody = if ok {
+            let contract_address = contract_address.0;
+            ResponseBody::Deploy(DeployResponse {
+                contract_address,
+                retdata_start,
+                retdata_end,
+            })
+        } else {
+            ResponseBody::Failure(FailureReason {
+                retdata_start,
+                retdata_end,
+            })
+        };
+        let response = SyscallResponse {
+            gas: remaining_gas,
+            body: Some(body),
+        };
+
+        Ok(response)
+    }
+
+    fn read_syscall_request(
+        &self,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+        syscall_name: &str,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        match syscall_name {
+            "emit_event" => EmitEventRequest::from_ptr(vm, syscall_ptr),
+            "storage_read" => StorageReadRequest::from_ptr(vm, syscall_ptr),
+            "call_contract" => CallContractRequest::from_ptr(vm, syscall_ptr),
+            "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
+            "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
+            "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
+            "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
+            _ => Err(SyscallHandlerError::UnknownSyscall(
+                syscall_name.to_string(),
+            )),
+        }
+    }
+
+    pub(crate) fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
         data: Vec<MaybeRelocatable>,
