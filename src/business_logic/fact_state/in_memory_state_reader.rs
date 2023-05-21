@@ -59,28 +59,28 @@ impl StateReader for InMemoryStateReader {
         Ok(contract_class)
     }
 
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<&ClassHash, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let class_hash = self
             .address_to_class_hash
             .get(contract_address)
             .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
-        class_hash
+        class_hash.cloned()
     }
 
-    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<&Felt252, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         let nonce = self
             .address_to_nonce
             .get(contract_address)
             .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
-        nonce
+        nonce.cloned()
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<&Felt252, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         let storage = self
             .address_to_storage
             .get(storage_entry)
             .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()));
-        storage
+        storage.cloned()
     }
 
     fn count_actual_storage_changes(&mut self) -> (usize, usize) {
@@ -103,10 +103,11 @@ impl StateReader for InMemoryStateReader {
     fn get_compiled_class_hash(
         &mut self,
         class_hash: &ClassHash,
-    ) -> Result<&CompiledClassHash, StateError> {
+    ) -> Result<CompiledClassHash, StateError> {
         self.class_hash_to_compiled_class_hash
             .get(class_hash)
             .ok_or(StateError::NoneCompiledHash(*class_hash))
+            .copied()
     }
 }
 
@@ -147,12 +148,12 @@ mod tests {
 
         assert_eq!(
             state_reader.get_class_hash_at(&contract_address),
-            Ok(&class_hash)
+            Ok(class_hash)
         );
-        assert_eq!(state_reader.get_nonce_at(&contract_address), Ok(&nonce));
+        assert_eq!(state_reader.get_nonce_at(&contract_address), Ok(nonce));
         assert_eq!(
             state_reader.get_storage_at(&storage_entry),
-            Ok(&storage_value)
+            Ok(storage_value)
         );
     }
 

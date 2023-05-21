@@ -6,8 +6,8 @@ use super::deprecated_syscall_request::{
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
 use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_vm::felt::Felt252;
-use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use felt::Felt252;
 
 pub(crate) trait DeprecatedWriteSyscallResponse {
     fn write_syscall_response(

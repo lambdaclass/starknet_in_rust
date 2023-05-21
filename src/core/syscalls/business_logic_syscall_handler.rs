@@ -135,7 +135,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
@@ -330,7 +330,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         self.starknet_storage_state.write(&key.to_le_bytes(), value)
     }
 
-    fn syscall(
+    pub fn syscall(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
@@ -340,11 +340,16 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallHandlerError::SelectorNotInHandlerMap(selector.to_string()),
         )?;
 
-        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
         let initial_gas: Felt252 = get_big_int(vm, (syscall_ptr + 1)?)?;
         let initial_gas: u64 = initial_gas
             .to_u64()
             .ok_or(MathError::Felt252ToU64Conversion(initial_gas))?;
+
+        // Advance SyscallPointer as the first two cells contain the selector & gas
+        let syscall_ptr: Relocatable =
+            (syscall_ptr + 2_usize).map_err(SyscallHandlerError::from)?;
+
+        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
 
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
@@ -406,7 +411,7 @@ impl<'a, T: Default + State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
 impl<'a, T> BusinessLogicSyscallHandler<'a, T>
 where
-    T: Default + State + StateReader,
+    T: State + StateReader + Default,
 {
     fn emit_event(
         &mut self,
@@ -441,7 +446,7 @@ where
     }
 
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.starknet_storage_state.read(&key).cloned()
+        self.starknet_storage_state.read(&key)
     }
 
     fn storage_write(

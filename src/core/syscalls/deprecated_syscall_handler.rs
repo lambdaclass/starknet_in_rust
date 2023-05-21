@@ -165,26 +165,6 @@ impl<'a, T: State + StateReader + Default> HintProcessorPostRun
     }
 }
 
-// TODO: Remove warning inhibitor when finally used.
-#[allow(dead_code)]
-fn get_ids_data(
-    reference_ids: &HashMap<String, usize>,
-    references: &HashMap<usize, HintReference>,
-) -> Result<HashMap<String, HintReference>, HintError> {
-    let mut ids_data = HashMap::<String, HintReference>::new();
-    for (path, ref_id) in reference_ids {
-        let name = path.rsplit('.').next().ok_or(HintError::WrongHintData)?;
-        ids_data.insert(
-            name.to_string(),
-            references
-                .get(ref_id)
-                .ok_or(HintError::WrongHintData)?
-                .clone(),
-        );
-    }
-    Ok(ids_data)
-}
-
 fn get_syscall_ptr(
     vm: &VirtualMachine,
     ids_data: &HashMap<String, HintReference>,
@@ -914,7 +894,7 @@ mod tests {
             .starknet_storage_state
             .read(&felt_to_hash(&address));
 
-        assert_eq!(write, Ok(&Felt252::new(45)));
+        assert_eq!(write, Ok(Felt252::new(45)));
     }
 
     #[test]
@@ -1001,7 +981,7 @@ mod tests {
                 .starknet_storage_state
                 .state
                 .get_class_hash_at(&Address(deployed_address)),
-            Ok(&class_hash)
+            Ok(class_hash)
         );
     }
 
@@ -1098,7 +1078,7 @@ mod tests {
                 .starknet_storage_state
                 .state
                 .get_class_hash_at(&Address(deployed_address.clone())),
-            Ok(&class_hash)
+            Ok(class_hash)
         );
 
         /*

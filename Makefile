@@ -1,17 +1,22 @@
 .PHONY: build check clean clippy compile-cairo compile-starknet coverage deps test heaptrack check-python-version compile-abi
 
+export PATH:=$(shell pyenv root)/shims:$(PATH)
+export PYENV_VERSION=3.9
+
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
-	CFLAGS  += -I/opt/homebrew/opt/gmp/include
-	LDFLAGS += -L/opt/homebrew/opt/gmp/lib
+	export CFLAGS  += -I/opt/homebrew/opt/gmp/include
+	export LDFLAGS += -L/opt/homebrew/opt/gmp/lib
 endif
 
 
 CAIRO_SOURCES=$(wildcard cairo_programs/*.cairo)
 CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
+CAIRO_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(CAIRO_SOURCES))
 
 STARKNET_SOURCES=$(wildcard starknet_programs/*.cairo)
 STARKNET_TARGETS=$(patsubst %.cairo,%.json,$(STARKNET_SOURCES))
+STARKNET_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(STARKNET_SOURCES))
 
 BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
 BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
@@ -33,14 +38,13 @@ deps-venv:
 		cairo-lang==0.11 \
 		"urllib3 <=1.26.15"
 
-compile-cairo: $(CAIRO_TARGETS)
-compile-starknet: $(STARKNET_TARGETS)
+compile-cairo: $(CAIRO_TARGETS) $(CAIRO_ABI_TARGETS)
+compile-starknet: $(STARKNET_TARGETS) $(STARKNET_ABI_TARGETS)
 
-cairo_programs/%.json: cairo_programs/%.cairo
+cairo_programs/%.json cairo_programs/%_abi.json: cairo_programs/%.cairo
 	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
-
-starknet_programs/%.json: starknet_programs/%.cairo
+starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 	. starknet-venv/bin/activate && \
 	cd starknet_programs/ && \
 	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
@@ -55,7 +59,7 @@ starknet_programs/%.json: starknet_programs/%.cairo
 # Test Cairo 1 Contracts
 # ======================
 
-CAIRO_1_CONTRACTS_TEST_DIR=cairo_programs/cairo_1_contracts
+CAIRO_1_CONTRACTS_TEST_DIR=starknet_programs/cairo1
 CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
 COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
 COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
@@ -84,35 +88,33 @@ build: compile-cairo compile-starknet
 	cargo build --release --all
 
 check: compile-cairo compile-starknet
-	cargo check --all
+	cargo check --all --all-targets
 
 deps: check-python-version build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
-	python3 -m venv starknet-venv
+	rustup toolchain install nightly
+	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
 clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
-	-rm -f cairo_programs/cairo_1_contracts/*.sierra
+	-rm -f cairo_programs/cairo_1_contracts/*.json
 	-rm -f cairo_programs/cairo_1_contracts/*.casm
 	-rm -f starknet_programs/*.json
 	-rm -f tests/*.json
 	-rm -rf cairo/
 
-clippy: compile-cairo compile-starknet
+clippy: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet $(COMPILED_SIERRA_CONTRACTS)
-	cargo test
+test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
+	cargo test --all --all-targets
 
-test-py: compile-cairo compile-starknet
-	. starknet-venv/bin/activate && cargo test -p starknet-rs-py --no-default-features --features embedded-python
-
-coverage: compile-cairo compile-starknet compile-abi $(COMPILED_SIERRA_CONTRACTS)
-	cargo llvm-cov --ignore-filename-regex 'main.rs'
-	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
+coverage: compile-cairo compile-starknet compile-abi $(COMPILED_CASM_CONTRACTS)
+	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs'
+	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh
@@ -120,3 +122,9 @@ heaptrack:
 flamegraph: compile-cairo compile-starknet
 	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --root --bench internals
 
+benchmark: compile-cairo compile-starknet
+	cargo build --release --all-targets
+	./scripts/bench-invoke.sh
+	./scripts/bench-deploy-invoke.sh
+	./scripts/bench-fibonacci.sh
+	./scripts/bench-deploy.sh

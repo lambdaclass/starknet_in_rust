@@ -55,6 +55,7 @@ pub fn calculate_event_hash(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use coverage_helper::test;
 
     #[test]
     fn calculate_event_hash_test() {

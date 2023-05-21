@@ -62,6 +62,24 @@ impl StarknetState {
         }
     }
 
+    pub fn new_with_states(
+        config: Option<StarknetGeneralConfig>,
+        state: CachedState<InMemoryStateReader>,
+    ) -> Self {
+        let general_config = config.unwrap_or_default();
+        let l2_to_l1_messages = HashMap::new();
+        let l2_to_l1_messages_log = Vec::new();
+
+        let events = Vec::new();
+        StarknetState {
+            state,
+            general_config,
+            l2_to_l1_messages,
+            l2_to_l1_messages_log,
+            events,
+        }
+    }
+
     // ------------------------------------------------------------------------------------
     /// Declares a contract class.
     /// Returns the class hash and the execution info.
@@ -262,7 +280,7 @@ impl StarknetState {
 
         let nonce = match nonce {
             Some(n) => n,
-            None => self.state.get_nonce_at(&contract_address)?.to_owned(),
+            None => self.state.get_nonce_at(&contract_address)?,
         };
 
         InternalInvokeFunction::new(

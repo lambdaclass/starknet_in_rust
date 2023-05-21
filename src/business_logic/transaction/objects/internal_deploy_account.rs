@@ -118,7 +118,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        S: Clone + Default + State + StateReader,
+        S: State + StateReader + Default,
     {
         let tx_info = self.apply(state, general_config)?;
 
@@ -143,7 +143,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        S: Default + State + StateReader,
+        S: State + StateReader + Default,
     {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
@@ -187,7 +187,7 @@ impl InternalDeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        S: Default + State + StateReader,
+        S: State + StateReader + Default,
     {
         let num_constructors = contract_class
             .entry_points_by_type
@@ -213,15 +213,12 @@ impl InternalDeployAccount {
         }
     }
 
-    fn handle_nonce<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-    ) -> Result<(), TransactionError> {
+    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version == 0 {
             return Ok(());
         }
 
-        let current_nonce = state.get_nonce_at(&self.contract_address)?.to_owned();
+        let current_nonce = state.get_nonce_at(&self.contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -241,7 +238,7 @@ impl InternalDeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        S: Default + State + StateReader,
+        S: State + StateReader + Default,
     {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -296,7 +293,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
-        S: Default + State + StateReader,
+        S: State + StateReader + Default,
     {
         if self.version == 0 {
             return Ok(None);
@@ -340,7 +337,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<FeeInfo, TransactionError>
     where
-        S: Clone + Default + State + StateReader,
+        S: State + StateReader + Default,
     {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
