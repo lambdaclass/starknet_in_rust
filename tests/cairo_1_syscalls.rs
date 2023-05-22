@@ -33,6 +33,7 @@ fn storage_write_read() {
     let entrypoints = contract_class.clone().entry_points_by_type;
     let constructor_entrypoint_selector = &entrypoints.constructor.get(0).unwrap().selector;
     let view_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
+    let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -101,6 +102,65 @@ fn storage_write_read() {
     let entry_point_type = EntryPointType::External;
 
     let view_exec_entry_point = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata,
+        Felt252::new(view_entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100000,
+    );
+
+    // Run get_balance entrypoint
+    let call_info = view_exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(call_info.retdata, [25.into()]);
+
+    // RUN INCREASE_BALANCE
+    // Create an execution entry point
+    let calldata = [100.into()].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let external_exec_entry_point = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata,
+        Felt252::new(external_entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100000,
+    );
+
+    // Run get_balance entrypoint
+    let call_info = external_exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(call_info.retdata, [125.into()]);
+
+
+    // RUN GET_BALANCE
+    // Create an execution entry point
+    let calldata = [].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let view_exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
         Felt252::new(view_entrypoint_selector.clone()),
@@ -121,7 +181,7 @@ fn storage_write_read() {
             false,
         )
         .unwrap();
-    assert_eq!(call_info.retdata, [25.into()])
+    assert_eq!(call_info.retdata, [125.into()])
 }
 
 #[test]
