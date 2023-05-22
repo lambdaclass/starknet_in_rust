@@ -44,7 +44,7 @@ pub struct InternalInvokeFunction {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
-    max_fee: u64,
+    max_fee: u128,
     nonce: Option<Felt252>,
 }
 
@@ -53,7 +53,7 @@ impl InternalInvokeFunction {
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,
-        max_fee: u64,
+        max_fee: u128,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         chain_id: Felt252,

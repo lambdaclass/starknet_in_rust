@@ -52,7 +52,7 @@ pub struct ExecutionEntryPoint {
     pub(crate) entry_point_selector: Felt252,
     pub(crate) entry_point_type: EntryPointType,
     #[allow(unused)]
-    pub(crate) initial_gas: u64,
+    pub(crate) initial_gas: u128,
 }
 #[allow(clippy::too_many_arguments)]
 impl ExecutionEntryPoint {
@@ -64,7 +64,7 @@ impl ExecutionEntryPoint {
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
         class_hash: Option<[u8; 32]>,
-        initial_gas: u64,
+        initial_gas: u128,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
