@@ -346,10 +346,10 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
             .ok_or(MathError::Felt252ToU64Conversion(initial_gas))?;
 
         // Advance SyscallPointer as the first two cells contain the selector & gas
-        let syscall_ptr: Relocatable =
+        let mut syscall_ptr: Relocatable =
             (syscall_ptr + 2_usize).map_err(SyscallHandlerError::from)?;
 
-        let request = self.read_and_validate_syscall_request(vm, syscall_ptr, syscall_name)?;
+        let request = self.read_and_validate_syscall_request(vm, &mut syscall_ptr, syscall_name)?;
 
         let syscall_ptr = (syscall_ptr + get_syscall_size_from_name(syscall_name)).unwrap(); //checked before
 
@@ -657,13 +657,13 @@ where
     fn read_and_validate_syscall_request(
         &mut self,
         vm: &VirtualMachine,
-        syscall_ptr: Relocatable,
+        syscall_ptr: &mut Relocatable,
         syscall_name: &str,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         self.increment_syscall_count(syscall_name);
-        let syscall_request = self.read_syscall_request(vm, syscall_ptr, syscall_name)?;
+        let syscall_request = self.read_syscall_request(vm, *syscall_ptr, syscall_name)?;
 
-        self.expected_syscall_ptr.offset += get_syscall_size_from_name(syscall_name);
+        *syscall_ptr += get_syscall_size_from_name(syscall_name);
         Ok(syscall_request)
     }
 
