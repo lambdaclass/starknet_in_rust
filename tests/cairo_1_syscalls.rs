@@ -53,18 +53,18 @@ fn storage_write_read() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-        let general_config = StarknetGeneralConfig::default();
-        let tx_execution_context = TransactionExecutionContext::new(
-            Address(0.into()),
-            Felt252::zero(),
-            Vec::new(),
-            0,
-            10.into(),
-            general_config.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION,
-        );
+    let general_config = StarknetGeneralConfig::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
 
-        let mut resources_manager = ExecutionResourcesManager::default();
+    let mut resources_manager = ExecutionResourcesManager::default();
 
     // RUN CONSTRUCTOR
     // Create an execution entry point
@@ -74,7 +74,7 @@ fn storage_write_read() {
 
     let constructor_exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
-        calldata.clone(),
+        calldata,
         Felt252::new(constructor_entrypoint_selector.clone()),
         caller_address,
         entry_point_type,
@@ -84,7 +84,15 @@ fn storage_write_read() {
     );
 
     // Run constructor entrypoint
-    constructor_exec_entry_point.execute(&mut state, &general_config, &mut resources_manager, &tx_execution_context, false).unwrap();
+    constructor_exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
 
     // RUN GET_BALANCE
     // Create an execution entry point
@@ -94,7 +102,7 @@ fn storage_write_read() {
 
     let view_exec_entry_point = ExecutionEntryPoint::new(
         address,
-        calldata.clone(),
+        calldata,
         Felt252::new(view_entrypoint_selector.clone()),
         caller_address,
         entry_point_type,
@@ -104,11 +112,16 @@ fn storage_write_read() {
     );
 
     // Run get_balance entrypoint
-    let call_info = view_exec_entry_point.execute(&mut state, &general_config, &mut resources_manager, &tx_execution_context, false).unwrap();
+    let call_info = view_exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
     assert_eq!(call_info.retdata, [25.into()])
-
-
-
 }
 
 #[test]
