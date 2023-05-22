@@ -353,7 +353,6 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
 
         let syscall_ptr = (syscall_ptr + get_syscall_size_from_name(syscall_name)).unwrap(); //checked before
 
-
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
             .get(syscall_name)
