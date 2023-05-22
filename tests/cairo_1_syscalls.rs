@@ -64,7 +64,7 @@ fn library_call() {
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
     // Create an execution entry point
-    let calldata = [4.into(), Felt252::from_bytes_be(&lib_class_hash)].to_vec();
+    let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash)].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -100,7 +100,7 @@ fn library_call() {
         entry_point_selector: Some(Felt252::new(entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         calldata,
-        retdata: [4.into()].to_vec(),
+        retdata: [5.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         ..Default::default()
