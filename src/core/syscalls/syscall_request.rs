@@ -229,8 +229,8 @@ impl FromPtr for CallContractRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, syscall_ptr)?;
-        let contract_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
+        let contract_address = Address(get_big_int(vm, syscall_ptr)?);
+        let selector = get_big_int(vm, &syscall_ptr + 1)?;
         let calldata_start = get_relocatable(vm, &syscall_ptr + 2)?;
         let calldata_end = get_relocatable(vm, &syscall_ptr + 3)?;
         Ok(CallContractRequest {
