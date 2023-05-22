@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 // TODO: Change [u8; 32] to Felt252.
 pub type StorageEntry = (Address, [u8; 32]);
 
-#[derive(Debug, Default, Clone, Eq, Getters, MutGetters, PartialEq)]
+#[derive(Debug, Eq, Getters, MutGetters, PartialEq)]
 pub struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
     #[get_mut = "pub"]
