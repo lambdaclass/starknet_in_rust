@@ -327,7 +327,7 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
     }
 
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
-        self.starknet_storage_state.write(&key.to_le_bytes(), value)
+        self.starknet_storage_state.write(&key.to_be_bytes(), value)
     }
 
     pub fn syscall(
