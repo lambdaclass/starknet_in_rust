@@ -100,7 +100,7 @@ fn library_call() {
         entry_point_selector: Some(Felt252::new(entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         calldata,
-        retdata: [144.into()].to_vec(),
+        retdata: [4.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         ..Default::default()
