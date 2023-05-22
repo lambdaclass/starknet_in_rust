@@ -19,4 +19,9 @@ mod SimpleWallet {
         let current_balance = balance::read();
         balance::write(current_balance + amount)
     }
+
+    #[external]
+    fn overwrite_balance(balance: felt252) {
+        balance::write(balance)
+    }
 }

@@ -1,13 +1,13 @@
 #[abi]
 trait SimpleWallet {
-    #[constructor]
-    fn constructor(initial_balance: felt252);
-
     #[view]
     fn get_balance() -> felt252;
 
     #[external]
     fn increase_balance(amount: felt252);
+
+    #[external]
+    fn overwrite_balance(amount: felt252);
 }
 
 #[contract]
@@ -19,7 +19,7 @@ mod WalletWrapper {
 
     #[constructor]
     fn constructor(initial_balance: felt252, simple_wallet_contract_address: ContractAddress) {
-        SimpleWalletDispatcher {contract_address: simple_wallet_contract_address}.constructor(initial_balance)
+        SimpleWalletDispatcher {contract_address: simple_wallet_contract_address}.overwrite_balance(initial_balance)
     }
 
     #[view]
