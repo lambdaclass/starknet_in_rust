@@ -8,6 +8,7 @@ use cairo_vm::{
     felt::Felt252,
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
 };
+use num_bigint::BigUint;
 use num_traits::{Num, Zero};
 use starknet_rs::{
     business_logic::{
@@ -67,21 +68,29 @@ fn storage_write_read() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
+    let create_execute_extrypoint = |selector: &BigUint,
+                                     calldata: Vec<Felt252>,
+                                     entry_point_type: EntryPointType|
+     -> ExecutionEntryPoint {
+        ExecutionEntryPoint::new(
+            address.clone(),
+            calldata,
+            Felt252::new(selector.clone()),
+            Address(0000.into()),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        )
+    };
+
     // RUN CONSTRUCTOR
     // Create an execution entry point
     let calldata = [25.into()].to_vec();
-    let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::Constructor;
-
-    let constructor_exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
+    let constructor_exec_entry_point = create_execute_extrypoint(
+        constructor_entrypoint_selector,
         calldata,
-        Felt252::new(constructor_entrypoint_selector.clone()),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        100000,
+        EntryPointType::Constructor,
     );
 
     // Run constructor entrypoint
@@ -98,19 +107,8 @@ fn storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
-
-    let view_exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata,
-        Felt252::new(view_entrypoint_selector.clone()),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        100000,
-    );
+    let view_exec_entry_point =
+        create_execute_extrypoint(view_entrypoint_selector, calldata, EntryPointType::External);
 
     // Run get_balance entrypoint
     let call_info = view_exec_entry_point
@@ -127,22 +125,14 @@ fn storage_write_read() {
     // RUN INCREASE_BALANCE
     // Create an execution entry point
     let calldata = [100.into()].to_vec();
-    let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
-
-    let external_exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
+    let external_exec_entry_point = create_execute_extrypoint(
+        external_entrypoint_selector,
         calldata,
-        Felt252::new(external_entrypoint_selector.clone()),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        100000,
+        EntryPointType::External,
     );
 
-    // Run get_balance entrypoint
-    let call_info = external_exec_entry_point
+    // Run increase_balance entrypoint
+    external_exec_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -151,25 +141,12 @@ fn storage_write_read() {
             false,
         )
         .unwrap();
-    assert_eq!(call_info.retdata, [125.into()]);
-
 
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
-
-    let view_exec_entry_point = ExecutionEntryPoint::new(
-        address,
-        calldata,
-        Felt252::new(view_entrypoint_selector.clone()),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        100000,
-    );
+    let view_exec_entry_point =
+        create_execute_extrypoint(view_entrypoint_selector, calldata, EntryPointType::External);
 
     // Run get_balance entrypoint
     let call_info = view_exec_entry_point
