@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::{HashMap, HashSet}, vec};
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
-use num_traits::Zero;
+use cairo_vm::{felt::Felt252, vm::runners::{cairo_runner::ExecutionResources, builtin_runner::RANGE_CHECK_BUILTIN_NAME}};
+use num_traits::{Zero, Num};
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -91,6 +91,10 @@ fn library_call() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
+    let mut expected_execution_resources = ExecutionResources::default();
+    expected_execution_resources.builtin_instance_counter.insert(RANGE_CHECK_BUILTIN_NAME.to_string(), 7);
+    expected_execution_resources.n_memory_holes = 6;
+
 
     // expected results
     let expected_call_info = CallInfo {
@@ -101,8 +105,24 @@ fn library_call() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: expected_execution_resources,
         class_hash: Some(class_hash),
+        internal_calls: vec![CallInfo {
+            caller_address: Address(0.into()),
+            call_type: Some(CallType::Delegate),
+            contract_address: Address(1111.into()),
+            entry_point_selector: Some(Felt252::from_str_radix("544923964202674311881044083303061611121949089655923191939299897061511784662", 10).unwrap()),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![25.into()],
+            retdata: [5.into()].to_vec(),
+            execution_resources: ExecutionResources::default(),
+            class_hash: Some(lib_class_hash),
+            ..Default::default()}],
+        code_address: None,
+        events: vec![],
+        l2_to_l1_messages: vec![],
+        storage_read_values: vec![],
+        accessed_storage_keys: HashSet::new(),
         ..Default::default()
     };
 
