@@ -12,7 +12,7 @@ use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
-#[derive(Debug, MutGetters, Getters, PartialEq)]
+#[derive(Debug, MutGetters, Getters, PartialEq, Clone, Default)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_class_hash: HashMap<Address, ClassHash>,

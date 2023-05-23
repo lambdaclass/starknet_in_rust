@@ -92,7 +92,7 @@ impl ExecutionEntryPoint {
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader + Default,
+        T: State + StateReader,
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
@@ -256,7 +256,7 @@ impl ExecutionEntryPoint {
         class_hash: [u8; 32],
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader + Default,
+        T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
@@ -353,7 +353,7 @@ impl ExecutionEntryPoint {
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader + Default,
+        T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
         // fetch selected entry point

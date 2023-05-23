@@ -43,7 +43,7 @@ use std::borrow::{Borrow, BorrowMut};
 //* -----------------------------------
 /// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
-pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader + Default> {
+pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -60,7 +60,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader + Default> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: State + StateReader + Default> DeprecatedBLSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut T,
@@ -230,7 +230,7 @@ impl<'a, T: State + StateReader + Default> DeprecatedBLSyscallHandler<'a, T> {
 
 impl<'a, T> Borrow<T> for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: State + StateReader + Default,
+    T: State + StateReader,
 {
     fn borrow(&self) -> &T {
         self.starknet_storage_state.state
@@ -239,7 +239,7 @@ where
 
 impl<'a, T> BorrowMut<T> for DeprecatedBLSyscallHandler<'a, T>
 where
-    T: State + StateReader + Default,
+    T: State + StateReader,
 {
     fn borrow_mut(&mut self) -> &mut T {
         self.starknet_storage_state.state
@@ -248,7 +248,7 @@ where
 
 impl<'a, T> DeprecatedBLSyscallHandler<'a, T>
 where
-    T: State + StateReader + Default,
+    T: State + StateReader,
 {
     pub(crate) fn emit_event(
         &mut self,

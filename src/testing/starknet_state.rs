@@ -102,7 +102,6 @@ impl StarknetState {
         )?;
 
         let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
-        self.state = self.state.apply_to_copy();
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -154,12 +153,11 @@ impl StarknetState {
             0,
         );
 
-        let mut state_copy = self.state.apply_to_copy();
         let mut resources_manager = ExecutionResourcesManager::default();
 
         let tx_execution_context = TransactionExecutionContext::default();
         let call_info = call.execute(
-            &mut state_copy,
+            &mut self.state,
             &self.general_config,
             &mut resources_manager,
             &tx_execution_context,
@@ -205,7 +203,6 @@ impl StarknetState {
         &mut self,
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
-        self.state = self.state.apply_to_copy();
         let tx = tx.execute(&mut self.state, &self.general_config)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info)?;
