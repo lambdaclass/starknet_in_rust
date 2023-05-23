@@ -13,7 +13,7 @@ use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
+            objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionContext},
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
@@ -152,4 +152,102 @@ fn library_call() {
             .unwrap(),
         expected_call_info
     );
+}
+
+#[test]
+fn emit_event() {
+    //  Create program and entry point types for contract class
+    let program_data = include_bytes!("../starknet_programs/cairo1/emit_event.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(class_hash, contract_class);
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+
+    // Create an execution entry point
+    let calldata = [].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata,
+        Felt252::new(entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100000,
+    );
+
+    // Execute the entrypoint
+    let general_config = StarknetGeneralConfig::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(
+        call_info.events,
+        vec![
+            OrderedEvent {
+                order: 0,
+                keys: vec![Felt252::from_str_radix(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
+                    10
+                )
+                .unwrap()],
+                data: vec![1.into()]
+            },
+            OrderedEvent {
+                order: 1,
+                keys: vec![Felt252::from_str_radix(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
+                    10
+                )
+                .unwrap()],
+                data: vec![2.into()]
+            },
+            OrderedEvent {
+                order: 2,
+                keys: vec![Felt252::from_str_radix(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
+                    10
+                )
+                .unwrap()],
+                data: vec![3.into()]
+            }
+        ]
+    )
 }
