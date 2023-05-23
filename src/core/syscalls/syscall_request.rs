@@ -197,8 +197,8 @@ impl FromPtr for StorageReadRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let key = get_big_int(vm, syscall_ptr)?.to_be_bytes();
-        let reserved = get_big_int(vm, &syscall_ptr + 1)?;
+        let reserved = get_big_int(vm, syscall_ptr)?;
+        let key = get_big_int(vm, &syscall_ptr + 1)?.to_be_bytes();
         Ok(StorageReadRequest { key, reserved }.into())
     }
 }
