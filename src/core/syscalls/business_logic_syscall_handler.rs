@@ -679,7 +679,7 @@ where
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            None,
+            Some(request.class_hash.to_be_bytes()),
             0,
         );
 
