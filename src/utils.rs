@@ -1,8 +1,7 @@
 use crate::{
     business_logic::{
         execution::{
-            gas_usage::calculate_tx_gas_usage, objects::CallInfo,
-            os_usage::get_additional_os_resources,
+            gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
         },
         fact_state::state::ExecutionResourcesManager,
         state::{

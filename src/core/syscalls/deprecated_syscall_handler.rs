@@ -181,7 +181,7 @@ mod tests {
     use crate::{
         add_segments, allocate_selector, any_box,
         business_logic::{
-            execution::objects::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
+            execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::{
                 cached_state::CachedState,

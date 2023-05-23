@@ -12,7 +12,7 @@ use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
+        execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::{CachedState, ContractClassCache},

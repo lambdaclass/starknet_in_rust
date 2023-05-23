@@ -1,6 +1,3 @@
-use super::objects::{
-    CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
-};
 use crate::{
     business_logic::{
         fact_state::state::ExecutionResourcesManager,
@@ -37,6 +34,8 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
+
+use super::*;
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 

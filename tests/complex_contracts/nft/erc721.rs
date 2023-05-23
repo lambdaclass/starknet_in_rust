@@ -9,7 +9,7 @@ use starknet_rs::business_logic::state::cached_state::CachedState;
 use starknet_rs::business_logic::transaction::error::TransactionError;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent},
+        execution::{CallInfo, CallType, OrderedEvent},
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
