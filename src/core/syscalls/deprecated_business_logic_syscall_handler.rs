@@ -887,8 +887,7 @@ mod tests {
         );
     }
 
-    // TODO: Remove warning inhibitor when finally used.
-    #[allow(dead_code)]
+    #[test]
     fn deploy_from_zero_error() {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
