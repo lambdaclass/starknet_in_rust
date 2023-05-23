@@ -5,9 +5,6 @@ trait SimpleWallet {
 
     #[external]
     fn increase_balance(amount: felt252);
-
-    #[external]
-    fn overwrite_balance(amount: felt252);
 }
 
 #[contract]
@@ -15,12 +12,6 @@ mod WalletWrapper {
     use super::SimpleWalletDispatcherTrait; 
     use super::SimpleWalletDispatcher;
     use starknet::ContractAddress;
-
-
-    #[constructor]
-    fn constructor(initial_balance: felt252, simple_wallet_contract_address: ContractAddress) {
-        SimpleWalletDispatcher {contract_address: simple_wallet_contract_address}.overwrite_balance(initial_balance)
-    }
 
     #[view]
     fn get_balance(simple_wallet_contract_address: ContractAddress) -> felt252 {
