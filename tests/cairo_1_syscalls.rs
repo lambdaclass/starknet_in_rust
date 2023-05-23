@@ -302,9 +302,8 @@ fn call_contract_storage_write_read() {
     let program_data = include_bytes!("../starknet_programs/cairo1/wallet_wrapper.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let constructor_entrypoint_selector = &entrypoints.constructor.get(0).unwrap().selector;
-    let _get_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
-    let _increase_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
+    let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
+    let _increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -328,6 +327,13 @@ fn call_contract_storage_write_read() {
         include_bytes!("../starknet_programs/cairo1/simple_wallet.casm");
     let simple_wallet_contract_class: CasmContractClass =
         serde_json::from_slice(simple_wallet_program_data).unwrap();
+    let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
+        .entry_points_by_type
+        .constructor
+        .get(0)
+        .unwrap()
+        .selector
+        .clone();
 
     let simple_wallet_address = Address(1112.into());
     let simple_wallet_class_hash: ClassHash = [2; 32];
@@ -373,11 +379,11 @@ fn call_contract_storage_write_read() {
         )
     };
 
-    // RUN CONSTRUCTOR
+    // RUN SIMPLE_WALLET CONSTRUCTOR
     // Create an execution entry point
     let calldata = [25.into(), simple_wallet_address.clone().0.clone()].to_vec();
     let constructor_exec_entry_point = create_execute_extrypoint(
-        constructor_entrypoint_selector,
+        &simple_wallet_constructor_entrypoint_selector,
         calldata,
         EntryPointType::Constructor,
     );
@@ -393,23 +399,26 @@ fn call_contract_storage_write_read() {
         )
         .unwrap();
 
-    // // RUN GET_BALANCE
-    // // Create an execution entry point
-    // let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
-    // let view_exec_entry_point =
-    //     create_execute_extrypoint(get_balance_entrypoint_selector, calldata, EntryPointType::External);
+    // RUN GET_BALANCE
+    // Create an execution entry point
+    let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
+    let view_exec_entry_point = create_execute_extrypoint(
+        get_balance_entrypoint_selector,
+        calldata,
+        EntryPointType::External,
+    );
 
-    // // Run get_balance entrypoint
-    // let call_info = view_exec_entry_point
-    //     .execute(
-    //         &mut state,
-    //         &general_config,
-    //         &mut resources_manager,
-    //         &tx_execution_context,
-    //         false,
-    //     )
-    //     .unwrap();
-    // assert_eq!(call_info.retdata, [25.into()]);
+    // Run get_balance entrypoint
+    let call_info = view_exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(call_info.retdata, [25.into()]);
 
     // // RUN INCREASE_BALANCE
     // // Create an execution entry point
