@@ -44,7 +44,7 @@ pub struct InternalInvokeFunction {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
-    max_fee: u64,
+    max_fee: u128,
     nonce: Option<Felt252>,
 }
 
@@ -53,7 +53,7 @@ impl InternalInvokeFunction {
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,
-        max_fee: u64,
+        max_fee: u128,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         chain_id: Felt252,
@@ -118,7 +118,7 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
-        T: Default + State + StateReader,
+        T: State + StateReader,
     {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
@@ -163,7 +163,7 @@ impl InternalInvokeFunction {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: Default + State + StateReader,
+        T: State + StateReader,
     {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -189,13 +189,13 @@ impl InternalInvokeFunction {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<T>(
+    pub fn apply<S>(
         &self,
-        state: &mut T,
+        state: &mut S,
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        T: Default + State + StateReader + Clone,
+        S: State + StateReader,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -230,7 +230,7 @@ impl InternalInvokeFunction {
         general_config: &StarknetGeneralConfig,
     ) -> Result<FeeInfo, TransactionError>
     where
-        S: Clone + Default + State + StateReader,
+        S: State + StateReader,
     {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -251,7 +251,7 @@ impl InternalInvokeFunction {
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
     /// then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -274,10 +274,7 @@ impl InternalInvokeFunction {
         )
     }
 
-    fn handle_nonce<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-    ) -> Result<(), TransactionError> {
+    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version == 0 {
             return Ok(());
         }

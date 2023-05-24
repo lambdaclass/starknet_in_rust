@@ -52,7 +52,7 @@ pub struct ExecutionEntryPoint {
     pub(crate) entry_point_selector: Felt252,
     pub(crate) entry_point_type: EntryPointType,
     #[allow(unused)]
-    pub(crate) initial_gas: u64,
+    pub(crate) initial_gas: u128,
 }
 #[allow(clippy::too_many_arguments)]
 impl ExecutionEntryPoint {
@@ -64,7 +64,7 @@ impl ExecutionEntryPoint {
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
         class_hash: Option<[u8; 32]>,
-        initial_gas: u64,
+        initial_gas: u128,
     ) -> Self {
         ExecutionEntryPoint {
             call_type: call_type.unwrap_or(CallType::Call),
@@ -92,7 +92,7 @@ impl ExecutionEntryPoint {
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader + Default,
+        T: State + StateReader,
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
@@ -262,7 +262,7 @@ impl ExecutionEntryPoint {
         class_hash: [u8; 32],
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader + Default,
+        T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
@@ -372,7 +372,7 @@ impl ExecutionEntryPoint {
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader + Default,
+        T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
         // fetch selected entry point

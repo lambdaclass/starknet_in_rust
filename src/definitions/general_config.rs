@@ -39,11 +39,11 @@ pub struct StarknetOsConfig {
     pub(crate) chain_id: StarknetChainId,
     #[get = "pub"]
     pub(crate) fee_token_address: Address,
-    pub(crate) gas_price: u64,
+    pub(crate) gas_price: u128,
 }
 
 impl StarknetOsConfig {
-    pub fn new(chain_id: StarknetChainId, fee_token_address: Address, gas_price: u64) -> Self {
+    pub fn new(chain_id: StarknetChainId, fee_token_address: Address, gas_price: u128) -> Self {
         StarknetOsConfig {
             chain_id,
             fee_token_address,

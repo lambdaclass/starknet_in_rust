@@ -22,8 +22,8 @@ pub type CasmClassCache = HashMap<ClassHash, CasmContractClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
-#[derive(Debug, Clone, Default, Eq, Getters, MutGetters, PartialEq)]
-pub struct CachedState<T: StateReader + Clone> {
+#[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
+pub struct CachedState<T: StateReader> {
     #[get = "pub"]
     pub(crate) state_reader: T,
     #[getset(get = "pub", get_mut = "pub")]
@@ -34,7 +34,7 @@ pub struct CachedState<T: StateReader + Clone> {
     pub(crate) casm_contract_classes: Option<CasmClassCache>,
 }
 
-impl<T: StateReader + Clone> CachedState<T> {
+impl<T: StateReader> CachedState<T> {
     pub fn new(
         state_reader: T,
         contract_class_cache: Option<ContractClassCache>,
@@ -85,21 +85,9 @@ impl<T: StateReader + Clone> CachedState<T> {
             .as_ref()
             .ok_or(StateError::MissingCasmClassCache)
     }
-
-    /// Apply updates to parent state.
-    pub(crate) fn apply(&self, parent: &mut CachedState<T>) {
-        // TODO assert: if self.state_reader == parent
-        parent.cache.update_writes_from_other(&self.cache);
-    }
-
-    pub(crate) fn apply_to_copy(&mut self) -> Self {
-        let copied_state = self.clone();
-        copied_state.apply(self);
-        copied_state
-    }
 }
 
-impl<T: StateReader + Clone> StateReader for CachedState<T> {
+impl<T: StateReader> StateReader for CachedState<T> {
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
         if !self.get_contract_classes()?.contains_key(class_hash) {
             let contract_class = self.state_reader.get_contract_class(class_hash)?;
@@ -224,7 +212,7 @@ impl<T: StateReader + Clone> StateReader for CachedState<T> {
     }
 }
 
-impl<T: StateReader + Clone> State for CachedState<T> {
+impl<T: StateReader> State for CachedState<T> {
     fn set_contract_class(
         &mut self,
         class_hash: &ClassHash,
