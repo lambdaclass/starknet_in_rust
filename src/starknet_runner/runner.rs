@@ -177,16 +177,7 @@ where
     }
 
     pub fn get_execution_resources(&self) -> Result<ExecutionResources, TransactionError> {
-        let execution_resources = self.cairo_runner.get_execution_resources(&self.vm)?;
-
-        Ok(ExecutionResources {
-            builtin_instance_counter: execution_resources
-                .builtin_instance_counter
-                .into_iter()
-                .map(|(name, counter)| (name, counter))
-                .collect(),
-            ..execution_resources
-        })
+        Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
     pub fn get_return_values(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
