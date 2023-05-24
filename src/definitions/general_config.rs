@@ -1,4 +1,4 @@
-use crate::{business_logic::state::state_api_objects::BlockInfo, utils::Address};
+use crate::{business_logic::state::BlockInfo, utils::Address};
 use cairo_vm::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
 use std::collections::HashMap;
