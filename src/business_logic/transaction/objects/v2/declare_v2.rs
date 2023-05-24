@@ -130,7 +130,7 @@ impl InternalDeclareV2 {
     }
 
     /// Calculates and charges the actual fee.
-    pub fn charge_fee<S: Default + State + StateReader + Clone>(
+    pub fn charge_fee<S: State + StateReader>(
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
@@ -155,10 +155,7 @@ impl InternalDeclareV2 {
 
     // TODO: delete once used
     #[allow(dead_code)]
-    fn handle_nonce<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-    ) -> Result<(), TransactionError> {
+    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version == 0 {
             return Ok(());
         }
@@ -177,7 +174,7 @@ impl InternalDeclareV2 {
         Ok(())
     }
 
-    pub fn execute<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: State + StateReader>(
         &mut self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
@@ -214,7 +211,7 @@ impl InternalDeclareV2 {
         )
     }
 
-    pub(crate) fn compile_and_store_casm_class<S: Default + State + StateReader + Clone>(
+    pub(crate) fn compile_and_store_casm_class<S: State + StateReader>(
         &mut self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
@@ -230,7 +227,7 @@ impl InternalDeclareV2 {
         Ok(())
     }
 
-    fn run_validate_entrypoint<S: Default + State + StateReader + Clone>(
+    fn run_validate_entrypoint<S: State + StateReader>(
         &mut self,
         mut remaining_gas: u64,
         state: &mut S,
