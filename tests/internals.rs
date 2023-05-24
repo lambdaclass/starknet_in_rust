@@ -900,7 +900,7 @@ fn test_deploy_account() {
         expected_validate_call_info.into(),
         expected_execute_call_info.into(),
         expected_fee_transfer_call_info.into(),
-        ACTUAL_FEE.to_u64().unwrap(),
+        ACTUAL_FEE.to_u128().unwrap(),
         // Entry **not** in blockifier.
         // Default::default(),
         [
