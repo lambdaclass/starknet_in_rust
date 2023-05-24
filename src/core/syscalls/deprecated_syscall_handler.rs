@@ -140,7 +140,6 @@ impl<'a, T: State + StateReader + Default> HintProcessor for DeprecatedSyscallHi
         constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
-            dbg!("is a hint of starknet");
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
                     SyscallHandlerError::NotImplemented(hint_code) => {

@@ -100,20 +100,15 @@ impl ExecutionEntryPoint {
             .get_compiled_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
 
-        println!("run resources: {:?}", tx_execution_context.run_resources);
-
         match contract_class {
-            CompiledClass::Deprecated(contract_class) => {
-                dbg!("esta option");
-                self._execute_version0_class(
-                    state,
-                    resources_manager,
-                    general_config,
-                    tx_execution_context,
-                    contract_class,
-                    class_hash,
-                )
-            }
+            CompiledClass::Deprecated(contract_class) => self._execute_version0_class(
+                state,
+                resources_manager,
+                general_config,
+                tx_execution_context,
+                contract_class,
+                class_hash,
+            ),
 
             CompiledClass::Casm(contract_class) => self._execute(
                 state,
@@ -317,11 +312,6 @@ impl ExecutionEntryPoint {
             &CairoArg::Single(alloc_pointer),
         ];
 
-        dbg!("prev to run from entry");
-        println!(
-            "resources in tx execution context: {:?}",
-            tx_execution_context.run_resources.clone()
-        );
         // cairo runner entry point
         runner.run_from_entrypoint(
             entry_point.offset,
@@ -329,8 +319,6 @@ impl ExecutionEntryPoint {
             &mut Some(tx_execution_context.run_resources.clone()),
             None,
         )?;
-
-        dbg!("post to run from entry");
 
         runner.validate_and_process_os_context(os_context)?;
 

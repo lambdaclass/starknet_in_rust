@@ -82,8 +82,6 @@ where
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
 
-        dbg!("before run in the runner");
-
         self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,

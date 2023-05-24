@@ -218,11 +218,6 @@ impl<'a, T: State + StateReader + Default> DeprecatedBLSyscallHandler<'a, T> {
             0,
         );
 
-        println!(
-            "tx ex of deploy: {:?}",
-            &self.tx_execution_context.run_resources
-        );
-
         let _call_info = call
             .execute(
                 self.starknet_storage_state.state,

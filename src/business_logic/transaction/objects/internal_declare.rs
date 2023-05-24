@@ -197,8 +197,6 @@ impl InternalDeclare {
             0,
         );
 
-        dbg!("llego aca");
-        println!("steps: {:?}", general_config.invoke_tx_max_n_steps);
         let call_info = entry_point.execute(
             state,
             general_config,
