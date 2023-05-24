@@ -380,7 +380,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         // Write response to the syscall segment.
         self.expected_syscall_ptr = vm
-            .write_arg(syscall_ptr, &response)?
+            .write_arg(syscall_ptr, &response.to_cairo_compatible_args())?
             .get_relocatable()
             .ok_or(MemoryError::WriteArg)?;
 
