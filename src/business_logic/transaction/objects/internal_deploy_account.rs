@@ -49,7 +49,7 @@ pub struct InternalDeployAccount {
     constructor_calldata: Vec<Felt252>,
     version: u64,
     nonce: Felt252,
-    max_fee: u64,
+    max_fee: u128,
     #[getset(get = "pub")]
     hash_value: Felt252,
     #[getset(get = "pub")]
@@ -61,7 +61,7 @@ impl InternalDeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: ClassHash,
-        max_fee: u64,
+        max_fee: u128,
         version: u64,
         nonce: Felt252,
         constructor_calldata: Vec<Felt252>,
@@ -118,7 +118,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        S: State + StateReader + Default,
+        S: State + StateReader,
     {
         let tx_info = self.apply(state, general_config)?;
 
@@ -143,7 +143,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        S: State + StateReader + Default,
+        S: State + StateReader,
     {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
@@ -187,7 +187,7 @@ impl InternalDeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        S: State + StateReader + Default,
+        S: State + StateReader,
     {
         let num_constructors = contract_class
             .entry_points_by_type
@@ -238,7 +238,7 @@ impl InternalDeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        S: State + StateReader + Default,
+        S: State + StateReader,
     {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -293,7 +293,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
-        S: State + StateReader + Default,
+        S: State + StateReader,
     {
         if self.version == 0 {
             return Ok(None);
@@ -337,7 +337,7 @@ impl InternalDeployAccount {
         general_config: &StarknetGeneralConfig,
     ) -> Result<FeeInfo, TransactionError>
     where
-        S: State + StateReader + Default,
+        S: State + StateReader,
     {
         if self.max_fee.is_zero() {
             return Ok((None, 0));

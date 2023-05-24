@@ -14,7 +14,7 @@ pub(crate) enum ResponseBody {
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
-    pub gas: u64,
+    pub gas: u128,
     /// Syscall specific response fields.
     pub body: Option<ResponseBody>,
 }
