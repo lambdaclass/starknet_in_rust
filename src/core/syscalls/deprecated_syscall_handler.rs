@@ -140,6 +140,7 @@ impl<'a, T: State + StateReader + Default> HintProcessor for DeprecatedSyscallHi
         constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
+            dbg!("is a hint of starknet");
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
                     SyscallHandlerError::NotImplemented(hint_code) => {
@@ -205,6 +206,7 @@ mod tests {
         },
     };
     use cairo_vm::relocatable;
+    use cairo_vm::utils::RunResources;
     use num_traits::Num;
     use std::path::PathBuf;
 
@@ -440,7 +442,7 @@ mod tests {
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
             n_sent_messages: 52,
-            _n_steps: 100000,
+            run_resources: RunResources::new(100000),
         };
         syscall_handler_hint_processor
             .syscall_handler
@@ -747,7 +749,7 @@ mod tests {
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
             n_sent_messages: 52,
-            _n_steps: 10000,
+            run_resources: RunResources::new(10000),
         };
         syscall_handler_hint_processor
             .syscall_handler

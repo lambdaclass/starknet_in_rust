@@ -28,7 +28,7 @@ use crate::{
     },
     utils::{Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::{felt::Felt252, utils::RunResources};
 use num_traits::{One, Zero};
 use std::collections::HashMap;
 
@@ -157,7 +157,10 @@ impl StarknetState {
         let mut state_copy = self.state.apply_to_copy();
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let tx_execution_context = TransactionExecutionContext::default();
+        let tx_execution_context = TransactionExecutionContext {
+            run_resources: RunResources::new(100000),
+            ..Default::default()
+        };
         let call_info = call.execute(
             &mut state_copy,
             &self.general_config,

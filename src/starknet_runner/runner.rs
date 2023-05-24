@@ -5,6 +5,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
+use cairo_vm::utils::RunResources;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -75,14 +76,18 @@ where
         &mut self,
         entrypoint: usize,
         args: &[&CairoArg],
+        run_resources: &mut Option<RunResources>,
         program_segment_size: Option<usize>,
     ) -> Result<(), TransactionError> {
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
 
+        dbg!("before run in the runner");
+
         self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
+            run_resources,
             verify_secure,
             program_segment_size,
             &mut self.vm,
@@ -166,6 +171,7 @@ where
             .run_from_entrypoint(
                 entrypoint_offset,
                 &entrypoint_args,
+                &mut None,
                 true,
                 Some(self.cairo_runner.get_program().data_len() + program_extra_data.len()),
                 &mut self.vm,
@@ -415,7 +421,7 @@ mod test {
         );
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
-        assert!(runner.run_from_entrypoint(1, &[], None).is_err())
+        assert!(runner.run_from_entrypoint(1, &[], &mut None, None).is_err())
     }
 
     #[test]

@@ -30,7 +30,7 @@ use crate::{
     },
     utils::*,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::{felt::Felt252, utils::RunResources};
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
@@ -121,7 +121,10 @@ impl<'a, T: State + StateReader + Default> DeprecatedBLSyscallHandler<'a, T> {
             "get_block_timestamp".to_string(),
         ]);
         let events = Vec::new();
-        let tx_execution_context = Default::default();
+        let tx_execution_context = TransactionExecutionContext {
+            run_resources: RunResources::new(100000),
+            ..Default::default()
+        };
         let read_only_segments = Vec::new();
         let resources_manager = ExecutionResourcesManager::new(syscalls, Default::default());
         let contract_address = Address(1.into());
@@ -213,6 +216,11 @@ impl<'a, T: State + StateReader + Default> DeprecatedBLSyscallHandler<'a, T> {
             Some(CallType::Call),
             None,
             0,
+        );
+
+        println!(
+            "tx ex of deploy: {:?}",
+            &self.tx_execution_context.run_resources
         );
 
         let _call_info = call
@@ -544,7 +552,6 @@ where
         } else {
             return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
         };
-
         self.syscall_storage_write(request.address, request.value)?;
 
         Ok(())

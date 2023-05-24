@@ -211,6 +211,7 @@ pub fn compute_deprecated_class_hash(
     runner.run_from_entrypoint(
         entrypoint,
         &[&hash_base.into(), contract_class_struct],
+        &mut None,
         true,
         None,
         &mut vm,

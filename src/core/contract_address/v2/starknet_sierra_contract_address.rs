@@ -122,6 +122,7 @@ pub fn compute_sierra_class_hash(
     runner.run_from_entrypoint(
         entrypoint,
         &[&poseidon_base.into(), contract_class_struct],
+        &mut None,
         true,
         None,
         &mut vm,

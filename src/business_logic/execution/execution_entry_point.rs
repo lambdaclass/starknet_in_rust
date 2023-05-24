@@ -100,15 +100,21 @@ impl ExecutionEntryPoint {
             .get_compiled_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
 
+        println!("run resources: {:?}", tx_execution_context.run_resources);
+
         match contract_class {
-            CompiledClass::Deprecated(contract_class) => self._execute_version0_class(
-                state,
-                resources_manager,
-                general_config,
-                tx_execution_context,
-                contract_class,
-                class_hash,
-            ),
+            CompiledClass::Deprecated(contract_class) => {
+                dbg!("esta option");
+                self._execute_version0_class(
+                    state,
+                    resources_manager,
+                    general_config,
+                    tx_execution_context,
+                    contract_class,
+                    class_hash,
+                )
+            }
+
             CompiledClass::Casm(contract_class) => self._execute(
                 state,
                 resources_manager,
@@ -311,8 +317,21 @@ impl ExecutionEntryPoint {
             &CairoArg::Single(alloc_pointer),
         ];
 
+        dbg!("prev to run from entry");
+        println!(
+            "resources in tx execution context: {:?}",
+            tx_execution_context.run_resources.clone()
+        );
         // cairo runner entry point
-        runner.run_from_entrypoint(entry_point.offset, &entry_point_args, None)?;
+        runner.run_from_entrypoint(
+            entry_point.offset,
+            &entry_point_args,
+            &mut Some(tx_execution_context.run_resources.clone()),
+            None,
+        )?;
+
+        dbg!("post to run from entry");
+
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
@@ -440,6 +459,7 @@ impl ExecutionEntryPoint {
         runner.run_from_entrypoint(
             entry_point.offset,
             &ref_vec,
+            &mut Some(tx_execution_context.run_resources.clone()),
             Some(program.data_len() + program_extra_data.len()),
         )?;
 

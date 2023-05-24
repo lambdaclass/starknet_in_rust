@@ -11,6 +11,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
+    utils::RunResources,
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use getset::Getters;
@@ -286,6 +287,7 @@ impl Event {
 
 #[derive(Clone, Debug, Default, Getters)]
 pub struct TransactionExecutionContext {
+    pub(crate) run_resources: RunResources,
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,
     pub(crate) account_contract_address: Address,
@@ -295,7 +297,6 @@ pub struct TransactionExecutionContext {
     #[get = "pub"]
     pub(crate) nonce: Felt252,
     pub(crate) n_sent_messages: usize,
-    pub(crate) _n_steps: u64,
 }
 
 impl TransactionExecutionContext {
@@ -317,7 +318,7 @@ impl TransactionExecutionContext {
             transaction_hash,
             version,
             n_sent_messages: 0,
-            _n_steps: n_steps,
+            run_resources: RunResources::new(n_steps as usize),
         }
     }
 
@@ -337,7 +338,7 @@ impl TransactionExecutionContext {
             signature: Vec::new(),
             nonce,
             n_sent_messages: 0,
-            _n_steps: n_steps,
+            run_resources: RunResources::new(n_steps as usize),
         }
     }
 }
