@@ -50,7 +50,7 @@ impl<'a, T: State + StateReader> SyscallHintProcessor<'a, T> {
     }
 }
 
-impl<'a, T: Default + State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
+impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,

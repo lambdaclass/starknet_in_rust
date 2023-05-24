@@ -45,7 +45,7 @@ pub struct CallInfo {
     pub storage_read_values: Vec<Felt252>,
     pub accessed_storage_keys: HashSet<ClassHash>,
     pub internal_calls: Vec<CallInfo>,
-    pub gas_consumed: u64,
+    pub gas_consumed: u128,
     pub failure_flag: bool,
 }
 
@@ -232,7 +232,7 @@ impl Default for CallInfo {
 // ----------------------
 
 pub struct CallResult {
-    pub gas_consumed: u64,
+    pub gas_consumed: u128,
     pub is_success: bool,
     pub retdata: Vec<MaybeRelocatable>,
 }
@@ -291,7 +291,7 @@ pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: u64,
     pub(crate) account_contract_address: Address,
-    pub(crate) max_fee: u64,
+    pub(crate) max_fee: u128,
     pub(crate) transaction_hash: Felt252,
     pub(crate) signature: Vec<Felt252>,
     #[get = "pub"]
@@ -304,7 +304,7 @@ impl TransactionExecutionContext {
         account_contract_address: Address,
         transaction_hash: Felt252,
         signature: Vec<Felt252>,
-        max_fee: u64,
+        max_fee: u128,
         nonce: Felt252,
         n_steps: u64,
         version: u64,
@@ -324,7 +324,7 @@ impl TransactionExecutionContext {
 
     pub fn create_for_testing(
         account_contract_address: Address,
-        _max_fee: u64,
+        _max_fee: u128,
         nonce: Felt252,
         n_steps: u64,
         version: u64,
@@ -347,7 +347,7 @@ impl TransactionExecutionContext {
 pub(crate) struct TxInfoStruct {
     pub(crate) version: usize,
     pub(crate) account_contract_address: Address,
-    pub(crate) max_fee: u64,
+    pub(crate) max_fee: u128,
     pub(crate) signature_len: usize,
     pub(crate) signature: Relocatable,
     pub(crate) transaction_hash: Felt252,
@@ -394,8 +394,8 @@ impl TxInfoStruct {
 
         let account_contract_address = Address(get_big_int(vm, &tx_info_ptr + 1)?);
         let max_fee = get_big_int(vm, &tx_info_ptr + 2)?
-            .to_u64()
-            .ok_or(SyscallHandlerError::FeltToU64Fail)?;
+            .to_u128()
+            .ok_or(SyscallHandlerError::FeltToU128Fail)?;
         let signature_len = get_integer(vm, &tx_info_ptr + 3)?;
         let signature = get_relocatable(vm, &tx_info_ptr + 4)?;
         let transaction_hash = get_big_int(vm, &tx_info_ptr + 5)?;
@@ -420,7 +420,7 @@ pub struct TransactionExecutionInfo {
     pub validate_info: Option<CallInfo>,
     pub call_info: Option<CallInfo>,
     pub fee_transfer_info: Option<CallInfo>,
-    pub actual_fee: u64,
+    pub actual_fee: u128,
     pub actual_resources: HashMap<String, usize>,
     pub tx_type: Option<TransactionType>,
 }
@@ -430,7 +430,7 @@ impl TransactionExecutionInfo {
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         fee_transfer_info: Option<CallInfo>,
-        actual_fee: u64,
+        actual_fee: u128,
         actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
     ) -> Self {
@@ -500,7 +500,7 @@ impl TransactionExecutionInfo {
 
     pub fn from_concurrent_state_execution_info(
         concurrent_execution_info: TransactionExecutionInfo,
-        actual_fee: u64,
+        actual_fee: u128,
         fee_transfer_info: Option<CallInfo>,
     ) -> Self {
         TransactionExecutionInfo {

@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 // TODO: Change [u8; 32] to Felt252.
 pub type StorageEntry = (Address, [u8; 32]);
 
-#[derive(Debug, Default, Clone, Eq, Getters, MutGetters, PartialEq)]
+#[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
 pub struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
     #[get_mut = "pub"]
@@ -130,15 +130,6 @@ impl StateCache {
         self.storage_initial_values.get(storage_entry)
     }
 
-    pub(crate) fn update_writes_from_other(&mut self, other: &Self) {
-        self.class_hash_writes
-            .extend(other.class_hash_writes.clone());
-        self.compiled_class_hash_writes
-            .extend(other.compiled_class_hash_writes.clone());
-        self.nonce_writes.extend(other.nonce_writes.clone());
-        self.storage_writes.extend(other.storage_writes.clone());
-    }
-
     pub(crate) fn update_writes(
         &mut self,
         address_to_class_hash: &HashMap<Address, ClassHash>,
@@ -229,66 +220,6 @@ mod tests {
         assert_eq!(
             state_cache.get_accessed_contract_addresses(),
             HashSet::from([Address(10.into()), Address(9.into()), Address(4.into())])
-        );
-    }
-
-    #[test]
-    fn state_chache_update_writes_from_other() {
-        let mut state_cache = StateCache::default();
-        let address_to_class_hash = HashMap::from([(Address(10.into()), [11; 32])]);
-        let compiled_class = CompiledClass::Deprecated(Box::new(
-            ContractClass::new(Program::default(), HashMap::new(), None).unwrap(),
-        ));
-        let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class.clone())]);
-        let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
-        let storage_updates = HashMap::from([((Address(20.into()), [1; 32]), 18.into())]);
-
-        state_cache
-            .set_initial_values(
-                &address_to_class_hash,
-                &class_hash_to_compiled_class_hash,
-                &address_to_nonce,
-                &storage_updates,
-            )
-            .expect("Error setting StateCache values");
-
-        let mut other_state_cache = StateCache::default();
-        let other_address_to_class_hash = HashMap::from([(Address(10.into()), [13; 32])]);
-        let other_address_to_nonce = HashMap::from([(Address(401.into()), 100.into())]);
-        let other_storage_updates = HashMap::from([((Address(4002.into()), [2; 32]), 101.into())]);
-
-        other_state_cache
-            .set_initial_values(
-                &other_address_to_class_hash,
-                &class_hash_to_compiled_class_hash,
-                &other_address_to_nonce,
-                &other_storage_updates,
-            )
-            .expect("Error setting StateCache values");
-
-        state_cache.update_writes_from_other(&other_state_cache);
-
-        assert_eq!(
-            state_cache.get_class_hash(&Address(10.into())),
-            Some(&[13; 32])
-        );
-        assert_eq!(
-            state_cache.get_compiled_class_hash(&[8; 32]),
-            Some(&compiled_class)
-        );
-        assert_eq!(
-            state_cache.nonce_writes,
-            HashMap::from([
-                (Address(9.into()), 12.into()),
-                (Address(401.into()), 100.into())
-            ])
-        );
-        assert_eq!(
-            state_cache.storage_writes,
-            HashMap::from([
-                ((Address(20.into()), [1; 32]), 18.into()),
-                ((Address(4002.into()), [2; 32]), 101.into())
-            ])
         );
     }
 }

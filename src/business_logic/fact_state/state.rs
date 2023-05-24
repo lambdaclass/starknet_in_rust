@@ -54,27 +54,29 @@ pub struct StateDiff {
 impl StateDiff {
     pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
     where
-        T: StateReader + Clone,
+        T: StateReader,
     {
         let state_cache = cached_state.cache().to_owned();
 
         let substracted_maps = subtract_mappings(
-            state_cache.storage_writes,
-            state_cache.storage_initial_values,
+            state_cache.storage_writes.clone(),
+            state_cache.storage_initial_values.clone(),
         );
 
         let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
-        let address_to_nonce =
-            subtract_mappings(state_cache.nonce_writes, state_cache.nonce_initial_values);
+        let address_to_nonce = subtract_mappings(
+            state_cache.nonce_writes.clone(),
+            state_cache.nonce_initial_values.clone(),
+        );
 
         let class_hash_to_compiled_class = subtract_mappings(
-            state_cache.compiled_class_hash_writes,
-            state_cache.compiled_class_hash_initial_values,
+            state_cache.compiled_class_hash_writes.clone(),
+            state_cache.compiled_class_hash_initial_values.clone(),
         );
 
         let address_to_class_hash = subtract_mappings(
-            state_cache.class_hash_writes,
+            state_cache.class_hash_writes.clone(),
             state_cache.class_hash_initial_values,
         );
 
