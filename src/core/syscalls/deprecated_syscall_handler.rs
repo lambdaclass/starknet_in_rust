@@ -21,12 +21,12 @@ use cairo_vm::{
 };
 use std::{any::Any, collections::HashMap};
 
-pub(crate) struct DeprecatedSyscallHintProcessor<'a, T: State + StateReader + Default> {
+pub(crate) struct DeprecatedSyscallHintProcessor<'a, T: State + StateReader> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, T>,
 }
 
-impl<'a, T: State + StateReader + Default> DeprecatedSyscallHintProcessor<'a, T> {
+impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
     pub fn new(syscall_handler: DeprecatedBLSyscallHandler<'a, T>) -> Self {
         DeprecatedSyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
@@ -131,7 +131,7 @@ impl<'a, T: State + StateReader + Default> DeprecatedSyscallHintProcessor<'a, T>
     }
 }
 
-impl<'a, T: State + StateReader + Default> HintProcessor for DeprecatedSyscallHintProcessor<'a, T> {
+impl<'a, T: State + StateReader> HintProcessor for DeprecatedSyscallHintProcessor<'a, T> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -153,9 +153,7 @@ impl<'a, T: State + StateReader + Default> HintProcessor for DeprecatedSyscallHi
     }
 }
 
-impl<'a, T: State + StateReader + Default> HintProcessorPostRun
-    for DeprecatedSyscallHintProcessor<'a, T>
-{
+impl<'a, T: State + StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor<'a, T> {
     fn post_run(
         &self,
         runner: &mut VirtualMachine,

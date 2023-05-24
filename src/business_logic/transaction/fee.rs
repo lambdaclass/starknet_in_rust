@@ -17,15 +17,15 @@ use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses
-pub type FeeInfo = (Option<CallInfo>, u64);
+pub type FeeInfo = (Option<CallInfo>, u128);
 
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-pub(crate) fn execute_fee_transfer<S: State + StateReader + Default>(
+pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     state: &mut S,
     general_config: &StarknetGeneralConfig,
     tx_context: &TransactionExecutionContext,
-    actual_fee: u64,
+    actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_context.max_fee {
         return Err(TransactionError::FeeError(
@@ -72,9 +72,9 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader + Default>(
 
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
-    gas_price: u64,
+    gas_price: u128,
     general_config: &StarknetGeneralConfig,
-) -> Result<u64, TransactionError> {
+) -> Result<u128, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
         .ok_or_else(|| TransactionError::FeeError("Invalid fee value".to_string()))?
@@ -83,7 +83,7 @@ pub fn calculate_tx_fee(
     let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(general_config, resources)?;
     let total_l1_gas_usage = gas_usage.to_f64().unwrap() + l1_gas_by_cairo_usage;
 
-    Ok(total_l1_gas_usage.ceil() as u64 * gas_price)
+    Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
 }
 
 // ----------------------------------------------------------------------------------------

@@ -58,7 +58,7 @@ pub fn calculate_transaction_hash_common(
     contract_address: &Address,
     entry_point_selector: Felt252,
     calldata: &[Felt252],
-    max_fee: u64,
+    max_fee: u128,
     chain_id: Felt252,
     additional_data: &[Felt252],
 ) -> Result<Felt252, SyscallHandlerError> {
@@ -103,7 +103,7 @@ pub fn calculate_deploy_account_transaction_hash(
     contract_address: &Address,
     class_hash: Felt252,
     constructor_calldata: &[Felt252],
-    max_fee: u64,
+    max_fee: u128,
     nonce: Felt252,
     salt: Felt252,
     chain_id: Felt252,
@@ -127,7 +127,7 @@ pub fn calculate_declare_transaction_hash(
     contract_class: &ContractClass,
     chain_id: Felt252,
     sender_address: &Address,
-    max_fee: u64,
+    max_fee: u128,
     version: u64,
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
@@ -161,7 +161,7 @@ pub fn calculate_declare_v2_transaction_hash(
     compiled_class_hash: Felt252,
     chain_id: Felt252,
     sender_address: &Address,
-    max_fee: u64,
+    max_fee: u128,
     version: u64,
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
