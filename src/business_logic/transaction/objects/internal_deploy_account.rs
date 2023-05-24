@@ -49,7 +49,7 @@ pub struct InternalDeployAccount {
     constructor_calldata: Vec<Felt252>,
     version: u64,
     nonce: Felt252,
-    max_fee: u64,
+    max_fee: u128,
     #[getset(get = "pub")]
     hash_value: Felt252,
     #[getset(get = "pub")]
@@ -61,7 +61,7 @@ impl InternalDeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: ClassHash,
-        max_fee: u64,
+        max_fee: u128,
         version: u64,
         nonce: Felt252,
         constructor_calldata: Vec<Felt252>,
