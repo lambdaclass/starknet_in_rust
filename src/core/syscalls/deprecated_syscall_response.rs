@@ -312,7 +312,7 @@ mod tests {
     use cairo_vm::relocatable;
 
     type DeprecatedBLSyscallHandler<'a> =
-        crate::core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
+        crate::core::syscall_handling::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;

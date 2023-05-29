@@ -380,7 +380,7 @@ mod test {
         },
         core::{
             syscall_handling::syscall_handler::SyscallHintProcessor,
-            syscalls::{
+            syscall_handling::{
                 deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
                 deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
             },

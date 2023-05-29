@@ -425,7 +425,7 @@ fn expected_fee_transfer_call_info(
             data: vec![
                 account_address.0.clone(),
                 general_config.block_info().sequencer_address.0.clone(),
-                actual_fee.into(),
+                actual_fe.into(),
                 Felt252::zero(),
             ],
         }],

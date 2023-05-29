@@ -8,15 +8,11 @@ use crate::{
         state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },
-    core::{
-        syscall_handling::{
-            business_logic_syscall_handler::BusinessLogicSyscallHandler,
-            syscall_handler::SyscallHintProcessor,
-        },
-        syscalls::{
-            deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
-            deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
-        },
+    core::syscall_handling::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
+        deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
+        syscall_handler::SyscallHintProcessor,
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_classes::{

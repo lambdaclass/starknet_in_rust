@@ -1,8 +1,8 @@
 use super::{
-    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, hint_code::*,
-    other_syscalls,
+    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
+    syscall_handler::HintProcessorPostRun,
 };
-use crate::core::syscall_handling::syscall_handler::HintProcessorPostRun;
+use crate::core::syscalls::{hint_code::*, other_syscalls};
 use crate::{
     business_logic::state::state_api::{State, StateReader},
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -182,10 +182,7 @@ mod tests {
         business_logic::{
             execution::objects::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::{
-                cached_state::CachedState,
-                state_api::{State, StateReader},
-            },
+            state::cached_state::CachedState,
             transaction::objects::internal_invoke_function::InternalInvokeFunction,
         },
         core::syscalls::deprecated_syscall_request::{
@@ -208,7 +205,7 @@ mod tests {
     use std::path::PathBuf;
 
     type DeprecatedBLSyscallHandler<'a> =
-        crate::core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
+        crate::core::syscall_handling::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;

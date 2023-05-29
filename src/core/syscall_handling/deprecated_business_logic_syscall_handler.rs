@@ -1,4 +1,4 @@
-use super::{
+use crate::core::syscalls::{
     deprecated_syscall_request::*,
     deprecated_syscall_response::{
         DeprecatedCallContractResponse, DeprecatedDeployResponse, DeprecatedGetBlockNumberResponse,
