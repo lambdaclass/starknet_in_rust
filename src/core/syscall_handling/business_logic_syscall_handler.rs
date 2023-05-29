@@ -1,13 +1,14 @@
-#![allow(dead_code)] // TODO: Remove this!
-
 use std::collections::HashMap;
 use std::ops::Add;
 
-use super::syscall_request::{
+use crate::business_logic::state::state_api_objects::BlockInfo;
+use crate::core::syscalls::syscall_request::{
     EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest,
 };
-use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, SyscallResponse};
-use super::{
+use crate::core::syscalls::syscall_response::{
+    DeployResponse, GetBlockTimestampResponse, SyscallResponse,
+};
+use crate::core::syscalls::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
         CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
@@ -15,7 +16,6 @@ use super::{
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
-use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
@@ -113,8 +113,6 @@ lazy_static! {
     };
 }
 
-//TODO Remove allow dead_code after merging to 0.11
-#[allow(dead_code)]
 #[derive(Debug)]
 
 pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {

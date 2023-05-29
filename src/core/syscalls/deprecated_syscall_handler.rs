@@ -1,7 +1,8 @@
 use super::{
     deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, hint_code::*,
-    other_syscalls, syscall_handler::HintProcessorPostRun,
+    other_syscalls,
 };
+use crate::core::syscall_handling::syscall_handler::HintProcessorPostRun;
 use crate::{
     business_logic::state::state_api::{State, StateReader},
     core::errors::syscall_handler_errors::SyscallHandlerError,
