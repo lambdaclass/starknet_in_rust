@@ -48,3 +48,4 @@ __pycache__/
 .pytest_cache/
 # codecov report
 lcov.info
+.rusty-hook.toml
