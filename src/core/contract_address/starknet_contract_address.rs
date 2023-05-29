@@ -241,15 +241,52 @@ pub fn compute_deprecated_class_hash(
     // 1. INSERT THE FIELDS OF THE CONTRACT CLASS IN A VECTOR. (this have an specific order).
     // 2. CALL compute_hash_on_elements FROM THE HASH UTILS MODULE.
     // 3. RETURN THE RESULT.
-    let mut contract_class_struct = get_contract_class_struct2(&Felt252::zero(), contract_class)?;
+
+    // hashing order:
+    // compiled_class_version
+    // external functions
+    // l1_handlers
+    // constructors.
+    // builtin_list
+    // hinted class hash
+    // bytecode ptr
+    let api_version = Felt252::zero();
+    let mut external_functions =
+        get_contract_entry_points(contract_class, &EntryPointType::External)?
+            .iter()
+            .map(|contract_entry_point| contract_entry_point.selector.clone())
+            .collect::<Vec<Felt252>>();
+    let mut l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?
+        .iter()
+        .map(|contract_entry_point| contract_entry_point.selector.clone())
+        .collect::<Vec<Felt252>>();
+    let mut constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?
+        .iter()
+        .map(|contract_entry_point| contract_entry_point.selector.clone())
+        .collect::<Vec<Felt252>>();
+    let mut builtin_list = contract_class
+        .program()
+        .iter_builtins()
+        .map(|builtin_name| Felt252::from_bytes_be(builtin_name.name().as_bytes()))
+        .collect();
+
+    let hinted_class_hash = compute_hinted_class_hash(contract_class);
+
+    let mut bytecode = contract_class
+        .program()
+        .iter_data()
+        .map(|maybe_reloc| maybe_reloc.get_int_ref().unwrap().clone())
+        .collect();
+
+    let _contract_class_struct = get_contract_class_struct2(&Felt252::zero(), contract_class)?;
     let mut vector: Vec<Felt252> = Vec::new();
-    vector.append(&mut vec![contract_class_struct.compiled_class_version]);
-    vector.append(&mut contract_class_struct.external_functions);
-    vector.append(&mut contract_class_struct.l1_handlers);
-    vector.append(&mut contract_class_struct.constructors);
-    vector.append(&mut contract_class_struct.builtin_list);
-    vector.append(&mut vec![contract_class_struct.hinted_class_hash]);
-    vector.append(&mut contract_class_struct.bytecode_ptr);
+    vector.append(&mut vec![api_version]);
+    vector.append(&mut external_functions);
+    vector.append(&mut l1_handlers);
+    vector.append(&mut constructors);
+    vector.append(&mut builtin_list);
+    vector.append(&mut vec![hinted_class_hash]);
+    vector.append(&mut bytecode);
 
     let result = compute_hash_on_elements(&vector).unwrap();
 
