@@ -250,43 +250,60 @@ pub fn compute_deprecated_class_hash(
     // builtin_list
     // hinted class hash
     // bytecode ptr
-    let api_version = Felt252::zero();
-    let mut external_functions =
-        get_contract_entry_points(contract_class, &EntryPointType::External)?
+    let api_version = compute_hash_on_elements(&[Felt252::zero()]).unwrap();
+
+    let mut external_functions = compute_hash_on_elements(
+        &get_contract_entry_points(contract_class, &EntryPointType::External)?
             .iter()
             .map(|contract_entry_point| contract_entry_point.selector.clone())
-            .collect::<Vec<Felt252>>();
-    let mut l1_handlers = get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?
-        .iter()
-        .map(|contract_entry_point| contract_entry_point.selector.clone())
-        .collect::<Vec<Felt252>>();
-    let mut constructors = get_contract_entry_points(contract_class, &EntryPointType::Constructor)?
-        .iter()
-        .map(|contract_entry_point| contract_entry_point.selector.clone())
-        .collect::<Vec<Felt252>>();
-    let mut builtin_list = contract_class
-        .program()
-        .iter_builtins()
-        .map(|builtin_name| Felt252::from_bytes_be(builtin_name.name().as_bytes()))
-        .collect();
+            .collect::<Vec<Felt252>>(),
+    )
+    .unwrap();
 
-    let hinted_class_hash = compute_hinted_class_hash(contract_class);
+    let mut l1_handlers = compute_hash_on_elements(
+        &get_contract_entry_points(contract_class, &EntryPointType::L1Handler)?
+            .iter()
+            .map(|contract_entry_point| contract_entry_point.selector.clone())
+            .collect::<Vec<Felt252>>(),
+    )
+    .unwrap();
+    let mut constructors = compute_hash_on_elements(
+        &get_contract_entry_points(contract_class, &EntryPointType::Constructor)?
+            .iter()
+            .map(|contract_entry_point| contract_entry_point.selector.clone())
+            .collect::<Vec<Felt252>>(),
+    )
+    .unwrap();
+    let mut builtin_list = compute_hash_on_elements(
+        &contract_class
+            .program()
+            .iter_builtins()
+            .map(|builtin_name| Felt252::from_bytes_be(builtin_name.name().as_bytes()))
+            .collect::<Vec<Felt252>>(),
+    )
+    .unwrap();
 
-    let mut bytecode = contract_class
-        .program()
-        .iter_data()
-        .map(|maybe_reloc| maybe_reloc.get_int_ref().unwrap().clone())
-        .collect();
+    let hinted_class_hash =
+        compute_hash_on_elements(&[compute_hinted_class_hash(contract_class)]).unwrap();
 
-    let _contract_class_struct = get_contract_class_struct2(&Felt252::zero(), contract_class)?;
+    let mut bytecode = compute_hash_on_elements(
+        &contract_class
+            .program()
+            .iter_data()
+            .map(|maybe_reloc| maybe_reloc.get_int_ref().unwrap().clone())
+            .collect::<Vec<Felt252>>(),
+    )
+    .unwrap();
+
+    //let _contract_class_struct = get_contract_class_struct2(&Felt252::zero(), contract_class)?;
     let mut vector: Vec<Felt252> = Vec::new();
     vector.append(&mut vec![api_version]);
-    vector.append(&mut external_functions);
-    vector.append(&mut l1_handlers);
-    vector.append(&mut constructors);
-    vector.append(&mut builtin_list);
+    vector.append(&mut vec![external_functions]);
+    vector.append(&mut vec![l1_handlers]);
+    vector.append(&mut vec![constructors]);
+    vector.append(&mut vec![builtin_list]);
     vector.append(&mut vec![hinted_class_hash]);
-    vector.append(&mut bytecode);
+    vector.append(&mut vec![bytecode]);
 
     let result = compute_hash_on_elements(&vector).unwrap();
 
