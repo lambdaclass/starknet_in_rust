@@ -67,6 +67,7 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
                 Hint::Starknet(starknet_hint) => match starknet_hint {
                     StarknetHint::SystemCall { system } => {
                         let syscall_ptr = as_relocatable(vm, system)?;
+                        println!("syscall_ptr {:?}", syscall_ptr);
                         self.syscall_handler
                             .syscall(vm, syscall_ptr)
                             .map_err(|err| {

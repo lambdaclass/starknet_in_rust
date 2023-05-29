@@ -355,6 +355,7 @@ impl ExecutionEntryPoint {
     where
         T: State + StateReader,
     {
+        dbg!("execute of v2");
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
@@ -365,12 +366,12 @@ impl ExecutionEntryPoint {
         let program: Program = contract_class.as_ref().clone().try_into()?;
         // create and initialize a cairo runner for running cairo 1 programs.
         let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false)?;
+
         cairo_runner.initialize_function_runner_cairo_1(
             &mut vm,
             &parse_builtin_names(&entry_point.builtins)?,
         )?;
         validate_contract_deployed(state, &self.contract_address)?;
-
         // prepare OS context
         let os_context = StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context_cairo1(
             &cairo_runner,
@@ -436,6 +437,7 @@ impl ExecutionEntryPoint {
 
         let ref_vec: Vec<&CairoArg> = entrypoint_args.iter().collect();
 
+        dbg!("before run entrypoint");
         // run the Cairo1 entrypoint
         runner.run_from_entrypoint(
             entry_point.offset,
@@ -443,6 +445,7 @@ impl ExecutionEntryPoint {
             Some(program.data_len() + program_extra_data.len()),
         )?;
 
+        dbg!("post run entry");
         // TODO: Fix these validations to work with cairo_1 os_context structure
         //
         // runner.validate_and_process_os_context(os_context)?;

@@ -17,7 +17,7 @@ use crate::{
 // }
 // ```
 
-const HEADER_OFFSET: usize = 2;
+// const HEADER_OFFSET: usize = 2;
 
 #[allow(unused)]
 #[derive(Debug, PartialEq)]
@@ -206,10 +206,12 @@ impl FromPtr for StorageReadRequest {
 impl FromPtr for DeployRequest {
     fn from_ptr(
         vm: &VirtualMachine,
-        mut syscall_ptr: Relocatable,
+        syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        syscall_ptr += HEADER_OFFSET;
+        dbg!("inside from_ptr");
+        println!("pointer in from ptr: {:?}", syscall_ptr);
         let class_hash = get_big_int(vm, syscall_ptr)?;
+        print!("class hash: {:?}", class_hash);
         let salt = get_big_int(vm, (syscall_ptr + 1)?)?;
         let calldata_start = get_relocatable(vm, (syscall_ptr + 2)?)?;
         let calldata_end = get_relocatable(vm, (syscall_ptr + 3)?)?;
