@@ -686,7 +686,7 @@ where
             EntryPointType::External,
             Some(CallType::Delegate),
             Some(request.class_hash.to_be_bytes()),
-            0,
+            remaining_gas,
         );
 
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
