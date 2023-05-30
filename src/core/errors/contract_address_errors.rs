@@ -7,6 +7,8 @@ use cairo_vm::{
 };
 use thiserror::Error;
 
+use super::syscall_handler_errors::SyscallHandlerError;
+
 #[derive(Debug, Error)]
 pub enum ContractAddressError {
     #[error(transparent)]
@@ -33,4 +35,6 @@ pub enum ContractAddressError {
     VirtualMachine(#[from] VirtualMachineError),
     #[error("Could not remove suffix from builtin")]
     BuiltinSuffix,
+    #[error(transparent)]
+    SyscallHandler(#[from] SyscallHandlerError),
 }
