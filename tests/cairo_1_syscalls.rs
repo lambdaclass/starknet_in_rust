@@ -34,7 +34,7 @@ fn storage_write_read() {
     let entrypoints = contract_class.clone().entry_points_by_type;
     let constructor_entrypoint_selector = &entrypoints.constructor.get(0).unwrap().selector;
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
-    let increase_balance_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
+    let increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
