@@ -527,6 +527,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InternalInvokeFunction {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         2,
+        TRANSACTION_VERSION,
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -1317,6 +1318,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
         1,
+        TRANSACTION_VERSION,
         vec![
             test_contract_address, // CONTRACT_ADDRESS
             Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
