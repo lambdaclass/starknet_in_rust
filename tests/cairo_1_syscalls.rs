@@ -365,7 +365,7 @@ fn call_contract_storage_write_read() {
 
     let create_execute_extrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType|
+                                     entry_point_type: EntryPointType, class_hash: [u8; 32]|
      -> ExecutionEntryPoint {
         ExecutionEntryPoint::new(
             address.clone(),
@@ -386,6 +386,7 @@ fn call_contract_storage_write_read() {
         &simple_wallet_constructor_entrypoint_selector,
         calldata,
         EntryPointType::Constructor,
+        simple_wallet_class_hash
     );
 
     // Run constructor entrypoint
@@ -406,6 +407,7 @@ fn call_contract_storage_write_read() {
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
+        class_hash
     );
 
     // Run get_balance entrypoint
