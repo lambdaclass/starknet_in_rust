@@ -35,7 +35,7 @@ use cairo_vm::{
     },
 };
 
-use super::*;
+use super::{CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext};
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 
