@@ -10,6 +10,10 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_rs::core::errors::state_errors::StateError;
+use starknet_rs::definitions::constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS;
+use starknet_rs::services::api::contract_classes::deprecated_contract_class::{
+    ContractClass, EntryPointType,
+};
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
@@ -42,7 +46,6 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
@@ -105,7 +108,7 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
         ),
         0,
         0,
-        Default::default(),
+        DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
         1_000_000,
         0,
         BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
