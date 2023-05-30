@@ -484,7 +484,7 @@ where
             EntryPointType::External,
             Some(CallType::Call),
             None,
-            0,
+            remaining_gas,
         );
 
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
