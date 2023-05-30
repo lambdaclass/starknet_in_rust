@@ -128,14 +128,14 @@ fn storage_write_read() {
     // RUN INCREASE_BALANCE
     // Create an execution entry point
     let calldata = [100.into()].to_vec();
-    let external_exec_entry_point = create_execute_extrypoint(
+    let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
     );
 
     // Run increase_balance entrypoint
-    external_exec_entry_point
+    increase_balance_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -303,7 +303,7 @@ fn call_contract_storage_write_read() {
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
-    let _increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -377,7 +377,7 @@ fn call_contract_storage_write_read() {
             entry_point_type,
             Some(CallType::Delegate),
             Some(class_hash),
-            100000,
+            u64::MAX,
         )
     };
 
@@ -411,7 +411,7 @@ fn call_contract_storage_write_read() {
         calldata,
         EntryPointType::External,
         class_hash,
-        address,
+        address.clone(),
     );
 
     // Run get_balance entrypoint
@@ -426,41 +426,48 @@ fn call_contract_storage_write_read() {
         .unwrap();
     assert_eq!(call_info.retdata, [25.into()]);
 
-    // // RUN INCREASE_BALANCE
-    // // Create an execution entry point
-    // let calldata = [100.into(), simple_wallet_address.clone().0.clone()].to_vec();
-    // let external_exec_entry_point = create_execute_extrypoint(
-    //     increase_balance_entrypoint_selector,
-    //     calldata,
-    //     EntryPointType::External,
-    // );
+    // RUN INCREASE_BALANCE
+    // Create an execution entry point
+    let calldata = [100.into(), simple_wallet_address.clone().0.clone()].to_vec();
+    let increase_balance_entry_point = create_execute_extrypoint(
+        increase_balance_entrypoint_selector,
+        calldata,
+        EntryPointType::External,
+        class_hash,
+        address.clone(),
+    );
 
-    // // Run increase_balance entrypoint
-    // external_exec_entry_point
-    //     .execute(
-    //         &mut state,
-    //         &general_config,
-    //         &mut resources_manager,
-    //         &tx_execution_context,
-    //         false,
-    //     )
-    //     .unwrap();
+    // Run increase_balance entrypoint
+    increase_balance_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
 
-    // // RUN GET_BALANCE
-    // // Create an execution entry point
-    // let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
-    // let get_balance_exec_entry_point =
-    //     create_execute_extrypoint(get_balance_entrypoint_selector, calldata, EntryPointType::External);
+    // RUN GET_BALANCE
+    // Create an execution entry point
+    let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
+    let get_balance_exec_entry_point = create_execute_extrypoint(
+        get_balance_entrypoint_selector,
+        calldata,
+        EntryPointType::External,
+        class_hash,
+        address,
+    );
 
-    // // Run get_balance entrypoint
-    // let call_info = get_balance_exec_entry_point
-    //     .execute(
-    //         &mut state,
-    //         &general_config,
-    //         &mut resources_manager,
-    //         &tx_execution_context,
-    //         false,
-    //     )
-    //     .unwrap();
-    // assert_eq!(call_info.retdata, [125.into()])
+    // Run get_balance entrypoint
+    let call_info = get_balance_exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(call_info.retdata, [125.into()])
 }
