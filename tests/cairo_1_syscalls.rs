@@ -107,14 +107,14 @@ fn storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let view_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
     );
 
     // Run get_balance entrypoint
-    let call_info = view_exec_entry_point
+    let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -148,14 +148,14 @@ fn storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let view_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
     );
 
     // Run get_balance entrypoint
-    let call_info = view_exec_entry_point
+    let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -365,10 +365,12 @@ fn call_contract_storage_write_read() {
 
     let create_execute_extrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType, class_hash: [u8; 32]|
+                                     entry_point_type: EntryPointType,
+                                     class_hash: [u8; 32],
+                                     address: Address|
      -> ExecutionEntryPoint {
         ExecutionEntryPoint::new(
-            address.clone(),
+            address,
             calldata,
             Felt252::new(selector.clone()),
             Address(0000.into()),
@@ -381,12 +383,13 @@ fn call_contract_storage_write_read() {
 
     // RUN SIMPLE_WALLET CONSTRUCTOR
     // Create an execution entry point
-    let calldata = [25.into(), simple_wallet_address.clone().0.clone()].to_vec();
+    let calldata = [25.into()].to_vec();
     let constructor_exec_entry_point = create_execute_extrypoint(
         &simple_wallet_constructor_entrypoint_selector,
         calldata,
         EntryPointType::Constructor,
-        simple_wallet_class_hash
+        simple_wallet_class_hash,
+        simple_wallet_address.clone(),
     );
 
     // Run constructor entrypoint
@@ -403,15 +406,16 @@ fn call_contract_storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
-    let view_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
-        class_hash
+        class_hash,
+        address,
     );
 
     // Run get_balance entrypoint
-    let call_info = view_exec_entry_point
+    let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -445,11 +449,11 @@ fn call_contract_storage_write_read() {
     // // RUN GET_BALANCE
     // // Create an execution entry point
     // let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
-    // let view_exec_entry_point =
+    // let get_balance_exec_entry_point =
     //     create_execute_extrypoint(get_balance_entrypoint_selector, calldata, EntryPointType::External);
 
     // // Run get_balance entrypoint
-    // let call_info = view_exec_entry_point
+    // let call_info = get_balance_exec_entry_point
     //     .execute(
     //         &mut state,
     //         &general_config,
