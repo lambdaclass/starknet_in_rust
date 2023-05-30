@@ -847,12 +847,12 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        // Use max_fee with certain value to make sure that the transaction fails due to weight resources
+        // Use non-zero value so that the actual fee calculation is done
         let internal_declare = InternalDeclare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
-            1000,
+            10,
             1,
             Vec::new(),
             Felt252::zero(),
@@ -860,9 +860,10 @@ mod tests {
         )
         .unwrap();
 
+        // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
             internal_declare.execute(&mut state, &StarknetGeneralConfig::default()),
-            Err(TransactionError::ResourcesError { .. })
+            Err(TransactionError::FeeError(e)) if e == "Fee transfer failure"
         );
     }
 }
