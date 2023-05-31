@@ -1,5 +1,7 @@
 #![deny(warnings)]
 
+mod cairo_1_syscalls;
+
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;

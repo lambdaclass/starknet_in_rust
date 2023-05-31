@@ -188,6 +188,7 @@ fn invoke_parser(
         contract_address.clone(),
         entrypoint_selector.clone(),
         0,
+        TRANSACTION_VERSION,
         calldata.clone(),
         vec![],
         Felt252::zero(),

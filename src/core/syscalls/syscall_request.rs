@@ -73,7 +73,6 @@ pub(crate) struct EmitEventRequest {
 pub(crate) struct CallContractRequest {
     pub(crate) selector: Felt252,
     pub(crate) contract_address: Address,
-    pub(crate) function_selector: Felt252,
     pub(crate) calldata_start: Relocatable,
     pub(crate) calldata_end: Relocatable,
 }
@@ -232,15 +231,13 @@ impl FromPtr for CallContractRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        let selector = get_big_int(vm, syscall_ptr)?;
-        let contract_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
-        let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
-        let calldata_start = get_relocatable(vm, &syscall_ptr + 3)?;
-        let calldata_end = get_relocatable(vm, &syscall_ptr + 4)?;
+        let contract_address = Address(get_big_int(vm, syscall_ptr)?);
+        let selector = get_big_int(vm, &syscall_ptr + 1)?;
+        let calldata_start = get_relocatable(vm, &syscall_ptr + 2)?;
+        let calldata_end = get_relocatable(vm, &syscall_ptr + 3)?;
         Ok(CallContractRequest {
             selector,
             contract_address,
-            function_selector,
             calldata_start,
             calldata_end,
         }

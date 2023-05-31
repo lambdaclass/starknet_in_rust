@@ -17,8 +17,7 @@ use crate::{
         calculate_transaction_hash_common, TransactionHashPrefix,
     },
     definitions::{
-        constants::{EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
-        general_config::StarknetGeneralConfig,
+        constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
@@ -54,13 +53,13 @@ impl InternalInvokeFunction {
         contract_address: Address,
         entry_point_selector: Felt252,
         max_fee: u128,
+        version: u64,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         chain_id: Felt252,
         nonce: Option<Felt252>,
         hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        let version = TRANSACTION_VERSION;
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
