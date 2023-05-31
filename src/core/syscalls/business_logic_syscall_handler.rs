@@ -711,9 +711,13 @@ where
     fn replace_class(
         &mut self,
         _vm: &VirtualMachine,
-        _request: ReplaceClassRequest,
-        _remaining_gas: u128,
+        request: ReplaceClassRequest,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        unimplemented!();
+        self.starknet_storage_state.state.set_class_hash_at(
+            self.contract_address.clone(),
+            request.class_hash.to_be_bytes(),
+        )?;
+        Ok(SyscallResponse { gas: remaining_gas, body: None })
     }
 }
