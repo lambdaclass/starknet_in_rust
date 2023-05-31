@@ -104,32 +104,6 @@ where
             .initialize_function_runner_cairo_1(&mut self.vm, &program_builtins)
             .unwrap();
 
-        // Implicit Args
-        // let syscall_segment = MaybeRelocatable::from(self.vm.add_memory_segment());
-
-        // let builtins: Vec<&'static str> = self
-        //     .cairo_runner
-        //     .get_program_builtins()
-        //     .iter()
-        //     .map(|b| b.name())
-        //     .collect();
-
-        // let builtin_segment: Vec<MaybeRelocatable> = self
-        //     .vm
-        //     .get_builtin_runners()
-        //     .iter()
-        //     .filter(|b| builtins.contains(&b.name()))
-        //     .flat_map(|b| b.initial_stack())
-        //     .collect();
-
-        // let initial_gas = MaybeRelocatable::from(usize::MAX);
-
-        // let mut implicit_args = builtin_segment;
-        // implicit_args.extend([initial_gas]);
-        // implicit_args.extend([syscall_segment]);
-
-        // Other args
-
         // Load builtin costs
         let builtin_costs: Vec<MaybeRelocatable> =
             vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
@@ -366,7 +340,7 @@ where
             .get_maybe(&(self.vm.get_ap() - 4)?)
             .ok_or(TransactionError::InvalidPtrFetch)?;
 
-        self.validate_segment_pointers(&syscall_base_ptr, &syscall_stop_ptr)?;
+        self.validate_segment_pointers(syscall_base_ptr, &syscall_stop_ptr)?;
 
         self.hint_processor
             .post_run(&mut self.vm, syscall_stop_ptr.try_into()?)?;
