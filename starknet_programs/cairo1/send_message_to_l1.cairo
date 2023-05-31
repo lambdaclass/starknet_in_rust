@@ -2,9 +2,13 @@
 mod SendMessageToL1 {
 
     use starknet::syscalls::send_message_to_l1_syscall;
+    use array::{Array, ArrayTrait};
 
     #[external]
-    fn send_msg(to_address: felt252, payload: Span<felt252>) {
-        send_message_to_l1_syscall(to_address, payload);
+    fn send_msg() {
+        let mut payload = array::array_new::<felt252>();
+        payload.append(555);
+        payload.append(666);
+        send_message_to_l1_syscall(444, payload.span());
     }
 }
