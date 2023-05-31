@@ -405,9 +405,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::GetBlockTimestamp(req) => {
                 self.get_block_timestamp(vm, req, remaining_gas)
             }
-            SyscallRequest::ReplaceClass(_req) => {
-                unimplemented!()
-            }
+            SyscallRequest::ReplaceClass(req) => self.replace_class(vm, req, remaining_gas),
         }
     }
 }
@@ -708,5 +706,14 @@ where
                 timestamp: self.general_config.block_info.block_timestamp.into(),
             })),
         })
+    }
+
+    fn replace_class(
+        &mut self,
+        _vm: &VirtualMachine,
+        _request: ReplaceClassRequest,
+        _remaining_gas: u128,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        unimplemented!();
     }
 }
