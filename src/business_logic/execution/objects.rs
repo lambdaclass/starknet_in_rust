@@ -152,8 +152,8 @@ impl CallInfo {
             for ordered_msg in call.l2_to_l1_messages {
                 let l2tol1msg =
                     L2toL1MessageInfo::new(ordered_msg.clone(), call.caller_address.clone());
-                starknet_events.remove(ordered_msg.order - 1);
-                starknet_events.insert(ordered_msg.order - 1, Some(l2tol1msg));
+                starknet_events.remove(ordered_msg.order);
+                starknet_events.insert(ordered_msg.order, Some(l2tol1msg));
             }
         }
 
@@ -766,10 +766,10 @@ mod tests {
         let mut ord_msg4 = OrderedL2ToL1Message::default();
 
         // set orders
-        ord_msg1.order = 1;
-        ord_msg2.order = 2;
-        ord_msg3.order = 3;
-        ord_msg4.order = 4;
+        ord_msg1.order = 0;
+        ord_msg2.order = 1;
+        ord_msg3.order = 2;
+        ord_msg4.order = 3;
 
         // store events
         child1.l2_to_l1_messages = Vec::from([ord_msg3.clone(), ord_msg4.clone()]);
@@ -806,10 +806,10 @@ mod tests {
         let mut ord_msg4 = OrderedL2ToL1Message::default();
 
         // set orders
-        ord_msg1.order = 1;
-        ord_msg2.order = 2;
-        ord_msg3.order = 3;
-        ord_msg4.order = 3;
+        ord_msg1.order = 0;
+        ord_msg2.order = 1;
+        ord_msg3.order = 2;
+        ord_msg4.order = 2;
 
         // store events
         child1.l2_to_l1_messages = Vec::from([ord_msg3, ord_msg4]);

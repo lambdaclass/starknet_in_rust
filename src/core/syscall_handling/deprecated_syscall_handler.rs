@@ -189,7 +189,10 @@ mod tests {
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
             DeprecatedSyscallRequest,
         },
-        definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+        definitions::{
+            constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig,
+            transaction_type::TransactionType,
+        },
         memory_insert,
         services::api::contract_classes::deprecated_contract_class::{
             ContractClass, EntryPointType,
@@ -1088,6 +1091,7 @@ mod tests {
             )
             .unwrap(),
             0,
+            TRANSACTION_VERSION,
             vec![10.into()],
             Vec::new(),
             0.into(),
