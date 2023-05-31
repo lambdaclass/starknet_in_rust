@@ -31,21 +31,8 @@ mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 starknet-rs = {path = "../"}
-
 starknet-contract-class = { path = "../crates/starknet-contract-class" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 coverage-helper = "0.1.0"
-
-[[bench]]
-path = "bench/internals.rs"
-name = "internals"
-harness = false
-
-[profile.release.package.fuzzer]
-strip = "debuginfo"
-overflow-checks = true
-opt-level = 3
-debug = true
-debug-assertions = true
