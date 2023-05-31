@@ -31,7 +31,7 @@ pub struct InternalDeclareV2 {
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
     pub version: u64,
-    pub max_fee: u64,
+    pub max_fee: u128,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
     pub compiled_class_hash: Felt252,
@@ -47,7 +47,7 @@ impl InternalDeclareV2 {
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
-        max_fee: u64,
+        max_fee: u128,
         version: u64,
         signature: Vec<Felt252>,
         nonce: Felt252,
@@ -130,7 +130,7 @@ impl InternalDeclareV2 {
     }
 
     /// Calculates and charges the actual fee.
-    pub fn charge_fee<S: Default + State + StateReader + Clone>(
+    pub fn charge_fee<S: State + StateReader>(
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
@@ -155,10 +155,7 @@ impl InternalDeclareV2 {
 
     // TODO: delete once used
     #[allow(dead_code)]
-    fn handle_nonce<S: Default + State + StateReader + Clone>(
-        &self,
-        state: &mut S,
-    ) -> Result<(), TransactionError> {
+    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version == 0 {
             return Ok(());
         }
@@ -177,11 +174,11 @@ impl InternalDeclareV2 {
         Ok(())
     }
 
-    pub fn execute<S: Default + State + StateReader + Clone>(
+    pub fn execute<S: State + StateReader>(
         &mut self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
@@ -214,7 +211,7 @@ impl InternalDeclareV2 {
         )
     }
 
-    pub(crate) fn compile_and_store_casm_class<S: Default + State + StateReader + Clone>(
+    pub(crate) fn compile_and_store_casm_class<S: State + StateReader>(
         &mut self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
@@ -230,13 +227,13 @@ impl InternalDeclareV2 {
         Ok(())
     }
 
-    fn run_validate_entrypoint<S: Default + State + StateReader + Clone>(
+    fn run_validate_entrypoint<S: State + StateReader>(
         &mut self,
-        mut remaining_gas: u64,
+        mut remaining_gas: u128,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
-    ) -> Result<(CallInfo, u64), TransactionError> {
+    ) -> Result<(CallInfo, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
         let entry_point = ExecutionEntryPoint {

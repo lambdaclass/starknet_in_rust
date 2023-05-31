@@ -55,8 +55,8 @@ use lazy_static::lazy_static;
 
 use num_traits::{One, ToPrimitive, Zero};
 
-const STEP: u64 = 100;
-const SYSCALL_BASE: u64 = 100 * STEP;
+const STEP: u128 = 100;
+const SYSCALL_BASE: u128 = 100 * STEP;
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> = {
@@ -88,7 +88,7 @@ lazy_static! {
     // Taken from starkware/starknet/constants.py in cairo-lang
     // See further documentation on cairo_programs/constants.cairo
     /// Maps syscall name to gas costs
-    static ref SYSCALL_GAS_COST: HashMap<&'static str, u64> = {
+    static ref SYSCALL_GAS_COST: HashMap<&'static str, u128> = {
         let mut map = HashMap::new();
 
         map.insert("initial", 100_000_000 * STEP);
@@ -135,7 +135,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
@@ -233,7 +233,7 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
     fn call_contract_helper(
         &mut self,
         vm: &mut VirtualMachine,
-        remaining_gas: u64,
+        remaining_gas: u128,
         execution_entry_point: ExecutionEntryPoint,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let result = execution_entry_point
@@ -273,7 +273,7 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
         contract_address: &Address,
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
-        remainig_gas: u64,
+        remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
         let contract_class = self
             .starknet_storage_state
@@ -341,8 +341,8 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
         )?;
 
         let initial_gas: Felt252 = get_big_int(vm, (syscall_ptr + 1)?)?;
-        let initial_gas: u64 = initial_gas
-            .to_u64()
+        let initial_gas = initial_gas
+            .to_u128()
             .ok_or(MathError::Felt252ToU64Conversion(initial_gas))?;
 
         // Advance SyscallPointer as the first two cells contain the selector & gas
@@ -390,7 +390,7 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
     fn execute_syscall(
         &mut self,
         request: SyscallRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
         vm: &mut VirtualMachine,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         match request {
@@ -411,13 +411,13 @@ impl<'a, T: State + StateReader + Default> BusinessLogicSyscallHandler<'a, T> {
 
 impl<'a, T> BusinessLogicSyscallHandler<'a, T>
 where
-    T: State + StateReader + Default,
+    T: State + StateReader,
 {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
         request: EmitEventRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let order = self.tx_execution_context.n_emitted_events;
         let keys: Vec<Felt252> = get_felt_range(vm, request.keys_start, request.keys_end)?;
@@ -435,7 +435,7 @@ where
     fn get_block_number(
         &mut self,
         _vm: &mut VirtualMachine,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         Ok(SyscallResponse {
             gas: remaining_gas,
@@ -453,7 +453,7 @@ where
         &mut self,
         _vm: &mut VirtualMachine,
         request: StorageWriteRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         if request.reserved != 0.into() {
             return Err(SyscallHandlerError::UnsopportedAddressDomain(
@@ -473,7 +473,7 @@ where
         &mut self,
         vm: &mut VirtualMachine,
         request: CallContractRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         // Change own contract_address to the called one in order to interact with its storage
@@ -500,7 +500,7 @@ where
         &mut self,
         _vm: &VirtualMachine,
         request: StorageReadRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         if request.reserved != Felt252::zero() {
             return Err(SyscallHandlerError::UnsupportedAddressDomain(
@@ -520,7 +520,7 @@ where
         &mut self,
         vm: &VirtualMachine,
         request: DeployRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<(Address, CallResult), SyscallHandlerError> {
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
             return Err(SyscallHandlerError::DeployFromZero(
@@ -567,7 +567,7 @@ where
         &mut self,
         vm: &mut VirtualMachine,
         syscall_request: DeployRequest,
-        mut remaining_gas: u64,
+        mut remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let (contract_address, result) = self.syscall_deploy(vm, syscall_request, remaining_gas)?;
 
@@ -640,7 +640,7 @@ where
         &mut self,
         vm: &mut VirtualMachine,
         request: SendMessageToL1Request,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let payload = get_felt_range(vm, request.payload_start, request.payload_end)?;
 
@@ -675,7 +675,7 @@ where
         &mut self,
         vm: &mut VirtualMachine,
         request: LibraryCallRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(
@@ -696,7 +696,7 @@ where
         &mut self,
         _vm: &VirtualMachine,
         _request: GetBlockTimestampRequest,
-        remaining_gas: u64,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         Ok(SyscallResponse {
             gas: remaining_gas,

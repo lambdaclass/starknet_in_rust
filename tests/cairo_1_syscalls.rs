@@ -377,7 +377,7 @@ fn call_contract_storage_write_read() {
             entry_point_type,
             Some(CallType::Delegate),
             Some(class_hash),
-            u64::MAX,
+            u64::MAX.into(),
         )
     };
 
