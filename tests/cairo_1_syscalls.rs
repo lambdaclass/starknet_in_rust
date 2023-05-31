@@ -405,7 +405,7 @@ fn call_contract_storage_write_read() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0.clone()].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
@@ -428,7 +428,7 @@ fn call_contract_storage_write_read() {
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
-    let calldata = [100.into(), simple_wallet_address.clone().0.clone()].to_vec();
+    let calldata = [100.into(), simple_wallet_address.0.clone()].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,
@@ -450,7 +450,7 @@ fn call_contract_storage_write_read() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.clone().0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
