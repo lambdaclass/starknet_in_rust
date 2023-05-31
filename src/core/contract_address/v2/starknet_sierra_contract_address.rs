@@ -26,7 +26,7 @@ use crate::{
     },
 };
 
-const CONTRACT_CLASS_VERSION: &str = "CONTRACT_CLASS_V0.1.0";
+const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 
 // ---------------------------------
 //  Version 2 functions and structs
@@ -101,9 +101,8 @@ fn get_contract_entry_points_hashed(
 pub fn compute_sierra_class_hash_refactorized(
     contract_class: &SierraContractClass,
 ) -> Result<Felt252, ContractAddressError> {
-    // hash_update_single(item=contract_class.contract_class_version); -> update_singlea means unhashed
-    let api_version = Felt252::from_bytes_be(CONTRACT_CLASS_VERSION.as_bytes());
-
+    // hash_update_single(item=contract_class.contract_class_version); -> update_single means unhashed
+    let api_version = Felt252::from_bytes_be(CONTRACT_CLASS_VERSION);
     // // Hash external entry points.
     // hash_update_with_nested_hash(
     //     data_ptr=contract_class.external_functions,
