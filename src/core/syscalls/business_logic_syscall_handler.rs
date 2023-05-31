@@ -718,6 +718,9 @@ where
             self.contract_address.clone(),
             request.class_hash.to_be_bytes(),
         )?;
-        Ok(SyscallResponse { gas: remaining_gas, body: None })
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
+        })
     }
 }
