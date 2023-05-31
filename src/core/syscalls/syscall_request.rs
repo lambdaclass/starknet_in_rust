@@ -109,7 +109,9 @@ pub(crate) struct SendMessageToL1Request {
 
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ReplaceClassRequest {}
+pub(crate) struct ReplaceClassRequest {
+    pub(crate) class_hash: Felt252,
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Into<SyscallRequest> implementations
@@ -175,10 +177,13 @@ pub(crate) trait FromPtr {
 
 impl FromPtr for ReplaceClassRequest {
     fn from_ptr(
-        _vm: &VirtualMachine,
-        _syscall_ptr: Relocatable,
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        Ok(ReplaceClassRequest {}.into())
+        Ok(ReplaceClassRequest {
+            class_hash: vm.get_integer(syscall_ptr)?.into_owned(),
+        }
+        .into())
     }
 }
 

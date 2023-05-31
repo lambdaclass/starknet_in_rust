@@ -10,8 +10,8 @@ use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, Syscall
 use super::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
-        CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
-        SyscallRequest, ReplaceClassRequest
+        CallContractRequest, DeployRequest, LibraryCallRequest, ReplaceClassRequest,
+        SendMessageToL1Request, SyscallRequest,
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
@@ -405,7 +405,9 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::GetBlockTimestamp(req) => {
                 self.get_block_timestamp(vm, req, remaining_gas)
             }
-            SyscallRequest::ReplaceClass(_req) => {unimplemented!()}
+            SyscallRequest::ReplaceClass(_req) => {
+                unimplemented!()
+            }
         }
     }
 }
