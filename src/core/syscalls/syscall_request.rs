@@ -31,7 +31,7 @@ pub(crate) enum SyscallRequest {
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1Request),
     GetBlockTimestamp(GetBlockTimestampRequest),
-    ReplaceClass(ReplaceClassSyscallRequest),
+    ReplaceClass(ReplaceClassRequest),
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,14 +109,14 @@ pub(crate) struct SendMessageToL1Request {
 
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ReplaceClassSyscallRequest {}
+pub(crate) struct ReplaceClassRequest {}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-impl From<ReplaceClassSyscallRequest> for SyscallRequest {
-    fn from(replace_class_request: ReplaceClassSyscallRequest) -> SyscallRequest {
+impl From<ReplaceClassRequest> for SyscallRequest {
+    fn from(replace_class_request: ReplaceClassRequest) -> SyscallRequest {
         SyscallRequest::ReplaceClass(replace_class_request)
     }
 }
@@ -173,12 +173,12 @@ pub(crate) trait FromPtr {
     ) -> Result<SyscallRequest, SyscallHandlerError>;
 }
 
-impl FromPtr for ReplaceClassSyscallRequest {
+impl FromPtr for ReplaceClassRequest {
     fn from_ptr(
         _vm: &VirtualMachine,
         _syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        Ok(ReplaceClassSyscallRequest {}.into())
+        Ok(ReplaceClassRequest {}.into())
     }
 }
 
