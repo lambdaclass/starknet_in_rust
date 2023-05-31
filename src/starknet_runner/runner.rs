@@ -344,12 +344,46 @@ where
         initial_os_context: Vec<MaybeRelocatable>,
     ) -> Result<(), TransactionError> {
         // The returned values are os_context, retdata_size, retdata_ptr.
-        let os_context_end = (self.vm.get_ap() - 2)?;
-        let stack_pointer = os_context_end;
+        let os_context_end = (self.vm.get_ap() - 5)?;
 
         let stack_ptr = self
             .cairo_runner
-            .get_builtins_final_stack(&mut self.vm, stack_pointer)?;
+            .get_builtins_final_stack(&mut self.vm, os_context_end)?;
+
+        let final_os_context_ptr = (stack_ptr - 2)?;
+
+        if final_os_context_ptr + initial_os_context.len() != Ok(os_context_end) {
+            return Err(TransactionError::OsContextPtrNotEqual);
+        }
+
+        // Validate system calls
+        let syscall_base_ptr = initial_os_context
+            .last()
+            .ok_or(TransactionError::EmptyOsContext)?;
+        // Stack ends with: syscall_ptr, vairant_selector, retdata_start, retdata_end.
+        let syscall_stop_ptr = self
+            .vm
+            .get_maybe(&(self.vm.get_ap() - 4)?)
+            .ok_or(TransactionError::InvalidPtrFetch)?;
+
+        self.validate_segment_pointers(&syscall_base_ptr, &syscall_stop_ptr)?;
+
+        self.hint_processor
+            .post_run(&mut self.vm, syscall_stop_ptr.try_into()?)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn validate_and_process_os_context_for_version0_class(
+        &mut self,
+        initial_os_context: Vec<MaybeRelocatable>,
+    ) -> Result<(), TransactionError> {
+        // The returned values are os_context, retdata_size, retdata_ptr.
+        let os_context_end = (self.vm.get_ap() - 2)?;
+
+        let stack_ptr = self
+            .cairo_runner
+            .get_builtins_final_stack(&mut self.vm, os_context_end)?;
 
         let final_os_context_ptr = (stack_ptr - 1)?;
 

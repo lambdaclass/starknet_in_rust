@@ -79,6 +79,8 @@ pub enum TransactionError {
     EntryPointNotFound,
     #[error("Ptr result diverges after calculating final stacks")]
     OsContextPtrNotEqual,
+    #[error("Empty OS context")]
+    EmptyOsContext,
     #[error("Illegal OS ptr offset")]
     IllegalOsPtrOffset,
     #[error("Invalid pointer fetched from memory expected maybe relocatable but got None")]
