@@ -3616,6 +3616,34 @@ dependencies = [
 name = "starknet-rs"
 version = "0.1.0"
 dependencies = [
+ "assert_matches",
+ "awc",
+ "cairo-lang-casm 1.0.0-rc0",
+ "cairo-lang-starknet 1.0.0-rc0",
+ "cairo-vm",
+ "cargo-llvm-cov",
+ "clap",
+ "coverage-helper",
+ "getset",
+ "hex",
+ "lazy_static",
+ "mimalloc",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.15",
+ "serde",
+ "serde_json",
+ "sha3",
+ "starknet-contract-class",
+ "starknet-crypto 0.4.3",
+ "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?rev=b29d881)",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-rs-cli"
+version = "0.1.0"
+dependencies = [
  "actix-web",
  "assert_matches",
  "awc",
@@ -3637,6 +3665,7 @@ dependencies = [
  "sha3",
  "starknet-contract-class",
  "starknet-crypto 0.4.3",
+ "starknet-rs",
  "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?rev=b29d881)",
  "thiserror",
 ]
