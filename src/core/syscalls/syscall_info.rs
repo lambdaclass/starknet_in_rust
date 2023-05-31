@@ -6,6 +6,7 @@ pub fn get_syscall_size_from_name(syscall_name: &str) -> usize {
         "storage_write" => 3,
         "storage_read" => 2,
         "send_message_to_l1" => 3,
+        "call_contract" => 4,
         _ => unimplemented!(),
     }
 }
