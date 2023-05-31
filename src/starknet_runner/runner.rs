@@ -80,8 +80,6 @@ where
         let verify_secure = true;
         let args: Vec<&CairoArg> = args.iter().map(ToOwned::to_owned).collect();
 
-        dbg!("after args");
-
         self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
@@ -90,7 +88,6 @@ where
             &mut self.vm,
             &mut self.hint_processor,
         )?;
-        dbg!("never arrives here");
         Ok(())
     }
 

@@ -207,14 +207,16 @@ impl FromPtr for DeployRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        dbg!("inside from_ptr");
-        println!("pointer in from ptr: {:?}", syscall_ptr);
         let class_hash = get_big_int(vm, syscall_ptr)?;
-        print!("class hash: {:?}", class_hash);
+        //println!("class hash: {:?}", class_hash);
         let salt = get_big_int(vm, (syscall_ptr + 1)?)?;
+        //println!("salt: {:?}", salt);
         let calldata_start = get_relocatable(vm, (syscall_ptr + 2)?)?;
+        //println!("caldata star: {:?}", calldata_start);
         let calldata_end = get_relocatable(vm, (syscall_ptr + 3)?)?;
+        //println!("caldata end: {:?}", calldata_end);
         let deploy_from_zero = get_integer(vm, (syscall_ptr + 4)?)?;
+        //println!("deploy zero: {:?}", deploy_from_zero);
 
         Ok(SyscallRequest::Deploy(DeployRequest {
             class_hash,

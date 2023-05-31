@@ -574,12 +574,15 @@ fn emit_event() {
 // insert data in memory
 // execute syscall call
 
+#[allow(unused_variables)]
 #[test]
 fn deploy() {
     // data to deploy
-    let data_class_hash: ClassHash = [2; 32];
-    let data_felt_hash = Felt252::from_bytes_be(&data_class_hash);
+    let test_class_hash: ClassHash = [2; 32];
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
     let salt = Felt252::zero();
+    let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
+    let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
     // Create the deploy contract class
     let program_data = include_bytes!("../starknet_programs/cairo1/deploy.casm");
@@ -595,6 +598,8 @@ fn deploy() {
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(test_class_hash, test_contract_class);
+
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -606,7 +611,7 @@ fn deploy() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let calldata = [data_felt_hash, salt].to_vec();
+    let calldata = [test_felt_hash, salt].to_vec();
 
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
