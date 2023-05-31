@@ -444,21 +444,19 @@ impl ExecutionEntryPoint {
             Some(program.data_len() + program_extra_data.len()),
         )?;
 
-        // TODO: Fix these validations to work with cairo_1 os_context structure
-        //
         runner.validate_and_process_os_context(os_context)?;
 
-        // // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
-        // let initial_fp = runner
-        //     .cairo_runner
-        //     .get_initial_fp()
-        //     .ok_or(TransactionError::MissingInitialFp)?;
+        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        let initial_fp = runner
+            .cairo_runner
+            .get_initial_fp()
+            .ok_or(TransactionError::MissingInitialFp)?;
 
-        // let args_ptr = initial_fp - (entrypoint_args.len() + 2);
+        let args_ptr = initial_fp - (entrypoint_args.len() + 2);
 
-        // runner
-        //     .vm
-        //     .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
+        runner
+            .vm
+            .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
