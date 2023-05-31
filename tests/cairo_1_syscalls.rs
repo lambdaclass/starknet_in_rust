@@ -617,7 +617,7 @@ fn replace_class_internal() {
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
-        calldata.clone(),
+        calldata,
         Felt252::new(upgrade_selector.clone()),
         caller_address,
         entry_point_type,
