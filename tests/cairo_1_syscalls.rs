@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    path::PathBuf,
     vec,
 };
 
@@ -22,6 +23,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
     },
@@ -874,6 +876,114 @@ fn replace_class_contract_call_same_transaction() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+
+    // INITIALIZE STARKNET CONFIG
+    let general_config = StarknetGeneralConfig::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // CALL GET_NUMBERS_OLD_NEW
+
+    let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata.clone(),
+        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        caller_address.clone(),
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(wrapper_class_hash),
+        u64::MAX.into(),
+    );
+
+    let result = exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(result.retdata, vec![25.into(), 17.into()]);
+}
+
+#[test]
+fn call_contract_upgrade_cairo_0_to_cairo_same_transaction() {
+    /* Test Outline:
+       - Add `get_number_c.cairo` contract at address 2 and `get_number_b.cairo` contract without an address
+       - Call `get_numbers_old_new` function of `get_number_wrapper.cairo` and expect to get both answers from `get_number_c`, and 'get_number_b' (33, 17)
+    */
+
+    // SET GET_NUMBER_C
+    // Add get_number_a.cairo to storage
+    let path = PathBuf::from("starknet_programs/get_number_c.json");
+    let contract_class_c = ContractClass::try_from(path).unwrap();
+
+    // Create state reader with class hash data
+    let mut casm_contract_class_cache = HashMap::new();
+    let mut deprecated_contract_class_cache = HashMap::new();
+
+    let address = Address(Felt252::one());
+    let class_hash_c: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    deprecated_contract_class_cache.insert(class_hash_c, contract_class_c);
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash_c);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce.clone());
+
+    // SET GET_NUMBER_B
+
+    // Add get_number_b contract to the state (only its contract_class)
+
+    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
+    let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+    let class_hash_b: ClassHash = [2; 32];
+
+    casm_contract_class_cache.insert(class_hash_b, contract_class_b.clone());
+
+    // SET GET_NUMBER_WRAPPER
+
+    //  Create program and entry point types for contract class
+    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_wrapper.casm");
+    let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
+    let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
+
+    let wrapper_address = Address(Felt252::from(2));
+    let wrapper_class_hash: ClassHash = [3; 32];
+
+    casm_contract_class_cache.insert(wrapper_class_hash, wrapper_contract_class);
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(wrapper_address.clone(), wrapper_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(wrapper_address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(
+        state_reader,
+        Some(deprecated_contract_class_cache),
+        Some(casm_contract_class_cache),
+    );
 
     // INITIALIZE STARKNET CONFIG
     let general_config = StarknetGeneralConfig::default();
