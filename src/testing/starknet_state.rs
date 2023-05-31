@@ -284,6 +284,7 @@ impl StarknetState {
             contract_address,
             entry_point_selector,
             max_fee,
+            TRANSACTION_VERSION,
             calldata,
             signature,
             self.chain_id(),
