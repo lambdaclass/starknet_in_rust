@@ -22,7 +22,9 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::{deprecated_contract_class::EntryPointType, compiled_class::CompiledClass},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    },
     utils::{Address, ClassHash},
 };
 
@@ -638,16 +640,19 @@ fn replace_class_internal() {
     let mut resources_manager = ExecutionResourcesManager::default();
 
     exec_entry_point
-            .execute(
-                &mut state,
-                &general_config,
-                &mut resources_manager,
-                &tx_execution_context,
-                false,
-            )
-            .unwrap();
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
     // Check that the class was indeed replaced in storage
     assert_eq!(state.get_class_hash_at(&address).unwrap(), class_hash_b);
     // Check that the class_hash_b leads to contract_class_b for soundness
-    assert_eq!(state.get_compiled_class(&class_hash_b).unwrap(), CompiledClass::Casm(Box::new(contract_class_b)));
+    assert_eq!(
+        state.get_compiled_class(&class_hash_b).unwrap(),
+        CompiledClass::Casm(Box::new(contract_class_b))
+    );
 }
