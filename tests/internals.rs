@@ -609,7 +609,6 @@ fn declare_tx() -> InternalDeclare {
 }
 
 fn declarev2_tx() -> InternalDeclareV2 {
-    //  Create program and entry point types for contract class
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
 
