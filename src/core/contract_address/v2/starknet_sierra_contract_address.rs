@@ -15,14 +15,18 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
+
 use std::path::Path;
 
+use crate::hash_utils::compute_poseidon_hash_on_elements;
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
     services::api::contract_classes::deprecated_contract_class::{
         ContractEntryPoint, EntryPointType,
     },
 };
+
+const CONTRACT_CLASS_VERSION: &str = "CONTRACT_CLASS_V0.1.0";
 
 // ---------------------------------
 //  Version 2 functions and structs
@@ -77,6 +81,90 @@ fn load_program() -> Result<Program, ContractAddressError> {
     )?)
 }
 
+fn get_contract_entry_points_hashed(
+    contract_class: &SierraContractClass,
+    entry_point_type: &EntryPointType,
+) -> Result<Felt252, ContractAddressError> {
+    Ok(compute_poseidon_hash_on_elements(
+        &get_contract_entry_points(contract_class, entry_point_type)?
+            .iter()
+            .flat_map(|contract_entry_point| {
+                vec![
+                    contract_entry_point.selector.clone(),
+                    Felt252::from(contract_entry_point.offset),
+                ]
+            })
+            .collect::<Vec<Felt252>>(),
+    )?)
+}
+
+pub fn compute_sierra_class_hash_refactorized(
+    contract_class: &SierraContractClass,
+) -> Result<Felt252, ContractAddressError> {
+    // hash_update_single(item=contract_class.contract_class_version); -> update_singlea means unhashed
+    let api_version = Felt252::from_bytes_be(CONTRACT_CLASS_VERSION.as_bytes());
+
+    // // Hash external entry points.
+    // hash_update_with_nested_hash(
+    //     data_ptr=contract_class.external_functions,
+    //     data_length=contract_class.n_external_functions * ContractEntryPoint.SIZE,
+    // );
+
+    // // Hash L1 handler entry points.
+    // hash_update_with_nested_hash(
+    //     data_ptr=contract_class.l1_handlers,
+    //     data_length=contract_class.n_l1_handlers * ContractEntryPoint.SIZE,
+    // );
+
+    // // Hash constructor entry points.
+    // hash_update_with_nested_hash(
+    //     data_ptr=contract_class.constructors,
+    //     data_length=contract_class.n_constructors * ContractEntryPoint.SIZE,
+    // );
+
+    // Entrypoints by type, hashed.
+    let external_functions =
+        get_contract_entry_points_hashed(contract_class, &EntryPointType::External)?;
+    let l1_handlers = get_contract_entry_points_hashed(contract_class, &EntryPointType::L1Handler)?;
+    let constructors =
+        get_contract_entry_points_hashed(contract_class, &EntryPointType::Constructor)?;
+
+    // // Hash abi_hash.
+    // hash_update_single(item=contract_class.abi_hash);
+    let abi = contract_class
+        .abi
+        .clone()
+        .ok_or(ContractAddressError::MissingAbi)?
+        .json();
+
+    let abi_hash = Felt252::from(starknet_keccak(abi.as_bytes()));
+
+    // // Hash Sierra program.
+    // hash_update_with_nested_hash(
+    //     data_ptr=contract_class.sierra_program_ptr,
+    //     data_length=contract_class.sierra_program_length,
+    // );
+
+    let sierra_program_ptr = compute_poseidon_hash_on_elements(
+        &contract_class
+            .sierra_program
+            .iter()
+            .map(|b| Felt252::from(b.value.clone()))
+            .collect::<Vec<Felt252>>(),
+    )?;
+
+    let flatted_contract_class: Vec<Felt252> = vec![
+        api_version,
+        external_functions,
+        l1_handlers,
+        constructors,
+        abi_hash,
+        sierra_program_ptr,
+    ];
+
+    Ok(compute_poseidon_hash_on_elements(&flatted_contract_class)?)
+}
+
 // TODO: Maybe this could be hard-coded (to avoid returning a result)?
 pub fn compute_sierra_class_hash(
     contract_class: &SierraContractClass,
@@ -129,7 +217,13 @@ pub fn compute_sierra_class_hash(
     )?;
 
     match vm.get_return_values(2)?.get(1) {
-        Some(MaybeRelocatable::Int(felt)) => Ok(felt.clone()),
+        Some(MaybeRelocatable::Int(felt)) => {
+            assert_eq!(
+                felt.clone(),
+                compute_sierra_class_hash_refactorized(contract_class).unwrap()
+            );
+            Ok(felt.clone())
+        }
         _ => Err(ContractAddressError::IndexOutOfRange),
     }
 }
