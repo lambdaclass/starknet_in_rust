@@ -381,20 +381,18 @@ where
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             DeprecatedSyscallRequest::CallContract(request) => {
-                caller_address = match syscall_name {
-                    "call_contract" => self.contract_address.clone(),
-                    "delegate_call" => self.caller_address.clone(),
+                (caller_address, contract_address, call_type) = match syscall_name {
+                    "call_contract" => (self.contract_address.clone(), request.contract_address, CallType::Call),
+                    "delegate_call" => (self.caller_address.clone(), self.contract_address.clone(), CallType::Delegate),
                     _ => {
                         return Err(SyscallHandlerError::UnknownSyscall(
                             syscall_name.to_string(),
                         ))
                     }
                 };
-                let entry_point_type = EntryPointType::External;
+                entry_point_type = EntryPointType::External;
                 function_selector = request.function_selector;
                 class_hash = None;
-                contract_address = request.contract_address;
-                call_type = CallType::Call;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             _ => {
