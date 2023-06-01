@@ -2,7 +2,7 @@ use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Ad
 use cairo_vm::felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
-use starknet_crypto::{pedersen_hash, poseidon_hash, FieldElement};
+use starknet_crypto::{pedersen_hash, FieldElement};
 use std::vec;
 
 pub fn calculate_contract_address(
@@ -43,29 +43,6 @@ pub(crate) fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, Sysca
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
-        .ok_or(SyscallHandlerError::FailToComputeHash)?;
-
-    let result = Felt252::from_bytes_be(&felt_result.to_bytes_be());
-    Ok(result)
-}
-
-pub(crate) fn compute_poseidon_hash_on_elements(
-    vec: &[Felt252],
-) -> Result<Felt252, SyscallHandlerError> {
-    let mut felt_vec = vec
-        .iter()
-        .map(|num| {
-            FieldElement::from_dec_str(&num.to_str_radix(10))
-                .map_err(|_| SyscallHandlerError::FailToComputeHash)
-        })
-        .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
-
-    felt_vec.push(FieldElement::from(felt_vec.len()));
-    felt_vec.insert(0, FieldElement::from(0_u16));
-
-    let felt_result = felt_vec
-        .into_iter()
-        .reduce(|x, y| poseidon_hash(x, y))
         .ok_or(SyscallHandlerError::FailToComputeHash)?;
 
     let result = Felt252::from_bytes_be(&felt_result.to_bytes_be());
