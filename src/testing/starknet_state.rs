@@ -591,12 +591,12 @@ mod tests {
     fn test_add_messages_and_events() {
         let mut starknet_state = StarknetState::new(None);
         let test_msg_1 = OrderedL2ToL1Message {
-            order: 1,
+            order: 0,
             to_address: Address(0.into()),
             payload: vec![0.into()],
         };
         let test_msg_2 = OrderedL2ToL1Message {
-            order: 2,
+            order: 1,
             to_address: Address(0.into()),
             payload: vec![0.into()],
         };
@@ -621,12 +621,12 @@ mod tests {
     fn test_consume_message_hash() {
         let mut starknet_state = StarknetState::new(None);
         let test_msg_1 = OrderedL2ToL1Message {
-            order: 1,
+            order: 0,
             to_address: Address(0.into()),
             payload: vec![0.into()],
         };
         let test_msg_2 = OrderedL2ToL1Message {
-            order: 2,
+            order: 1,
             to_address: Address(0.into()),
             payload: vec![0.into()],
         };
@@ -654,7 +654,7 @@ mod tests {
     fn test_consume_message_hash_twice_should_fail() {
         let mut starknet_state = StarknetState::new(None);
         let test_msg = OrderedL2ToL1Message {
-            order: 1,
+            order: 0,
             to_address: Address(0.into()),
             payload: vec![0.into()],
         };

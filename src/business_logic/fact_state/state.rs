@@ -48,7 +48,7 @@ pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
     pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
-    pub(crate) storage_updates: HashMap<Felt252, HashMap<ClassHash, Address>>,
+    pub(crate) storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
 }
 
 impl StateDiff {
@@ -93,7 +93,7 @@ impl StateDiff {
         T: StateReader + Clone,
     {
         let mut cache_state = CachedState::new(state_reader, None, None);
-        let cache_storage_mapping = to_cache_state_storage_mapping(self.storage_updates.clone());
+        let cache_storage_mapping = to_cache_state_storage_mapping(&self.storage_updates);
 
         cache_state.cache_mut().set_initial_values(
             &self.address_to_class_hash,
@@ -118,11 +118,11 @@ impl StateDiff {
 
         let mut storage_updates = HashMap::new();
 
-        let addresses: Vec<Felt252> =
+        let addresses: Vec<Address> =
             get_keys(self.storage_updates.clone(), other.storage_updates.clone());
 
         for address in addresses {
-            let default: HashMap<ClassHash, Address> = HashMap::new();
+            let default: HashMap<Felt252, Felt252> = HashMap::new();
             let mut map_a = self
                 .storage_updates
                 .get(&address)
