@@ -22,6 +22,7 @@ pub(crate) enum DeprecatedSyscallRequest {
     StorageRead(DeprecatedStorageReadRequest),
     StorageWrite(DeprecatedStorageWriteRequest),
     ReplaceClass(DeprecatedReplaceClassRequest),
+    DelegateCall(DeprecatedDelegateCallRequest),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -129,6 +130,15 @@ pub(crate) struct DeprecatedReplaceClassRequest {
     pub(crate) class_hash: Felt252,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeprecatedDelegateCallRequest {
+    pub(crate) selector: Felt252,
+    pub(crate) contract_address: Address,
+    pub(crate) function_selector: Felt252,
+    pub(crate) calldata_size: usize,
+    pub(crate) calldata: Relocatable,
+}
+
 impl From<DeprecatedEmitEventRequest> for DeprecatedSyscallRequest {
     fn from(emit_event_struct: DeprecatedEmitEventRequest) -> DeprecatedSyscallRequest {
         DeprecatedSyscallRequest::EmitEvent(emit_event_struct)
@@ -212,6 +222,12 @@ impl From<DeprecatedStorageWriteRequest> for DeprecatedSyscallRequest {
 impl From<DeprecatedReplaceClassRequest> for DeprecatedSyscallRequest {
     fn from(replace_class: DeprecatedReplaceClassRequest) -> DeprecatedSyscallRequest {
         DeprecatedSyscallRequest::ReplaceClass(replace_class)
+    }
+}
+
+impl From<DeprecatedDelegateCallRequest> for DeprecatedSyscallRequest {
+    fn from(delegate_call: DeprecatedDelegateCallRequest) -> DeprecatedSyscallRequest {
+        DeprecatedSyscallRequest::DelegateCall(delegate_call)
     }
 }
 
@@ -463,6 +479,27 @@ impl DeprecatedFromPtr for DeprecatedReplaceClassRequest {
         Ok(DeprecatedSyscallRequest::ReplaceClass(
             DeprecatedReplaceClassRequest { class_hash },
         ))
+    }
+}
+
+impl DeprecatedFromPtr for DeprecatedDelegateCallRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
+        let selector = get_big_int(vm, syscall_ptr)?;
+        let contract_address = Address(get_big_int(vm, &syscall_ptr + 1)?);
+        let function_selector = get_big_int(vm, &syscall_ptr + 2)?;
+        let calldata_size = get_integer(vm, &syscall_ptr + 3)?;
+        let calldata = get_relocatable(vm, &syscall_ptr + 4)?;
+        Ok(DeprecatedDelegateCallRequest {
+            selector,
+            contract_address,
+            function_selector,
+            calldata_size,
+            calldata,
+        }
+        .into())
     }
 }
 

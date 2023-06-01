@@ -794,6 +794,7 @@ where
             "storage_read" => DeprecatedStorageReadRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
             "replace_class" => DeprecatedReplaceClassRequest::from_ptr(vm, syscall_ptr),
+            "delegate_call" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
