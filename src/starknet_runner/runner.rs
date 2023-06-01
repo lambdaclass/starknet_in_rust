@@ -340,7 +340,7 @@ where
             .get_maybe(&(self.vm.get_ap() - 4)?)
             .ok_or(TransactionError::InvalidPtrFetch)?;
 
-        self.validate_segment_pointers(&syscall_base_ptr, &syscall_stop_ptr)?;
+        self.validate_segment_pointers(syscall_base_ptr, &syscall_stop_ptr)?;
 
         self.hint_processor
             .post_run(&mut self.vm, syscall_stop_ptr.try_into()?)?;
