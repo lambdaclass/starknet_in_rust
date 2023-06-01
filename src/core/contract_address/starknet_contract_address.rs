@@ -94,31 +94,34 @@ pub fn compute_deprecated_class_hash(
         get_contract_entry_points_hashed(contract_class, &EntryPointType::Constructor)?;
 
     // Builtin list but with the "_builtin" suffix removed.
-    let builtin_list = compute_hash_on_elements(
-        &contract_class
-            .program()
-            .iter_builtins()
-            .map(|builtin_name| {
-                Felt252::from_bytes_be(
-                    builtin_name
-                        .name()
-                        .strip_suffix("_builtin")
-                        .unwrap()
-                        .as_bytes(),
-                )
-            })
-            .collect::<Vec<Felt252>>(),
-    )?;
+    // This could be Vec::with_capacity when using the latest version of cairo-vm which includes .builtins_len() method for Program.
+    let mut builtin_list_vec = Vec::new();
+
+    for builtin_name in contract_class.program().iter_builtins() {
+        builtin_list_vec.push(Felt252::from_bytes_be(
+            builtin_name
+                .name()
+                .strip_suffix("_builtin")
+                .ok_or(ContractAddressError::BuiltinSuffix)?
+                .as_bytes(),
+        ));
+    }
+
+    let builtin_list = compute_hash_on_elements(&builtin_list_vec)?;
 
     let hinted_class_hash = compute_hinted_class_hash(contract_class);
 
-    let bytecode = compute_hash_on_elements(
-        &contract_class
-            .program()
-            .iter_data()
-            .map(|maybe_reloc| maybe_reloc.get_int_ref().unwrap().clone())
-            .collect::<Vec<Felt252>>(),
-    )?;
+    let mut bytecode_vector = Vec::new();
+
+    for data in contract_class.program().iter_data() {
+        bytecode_vector.push(
+            data.get_int_ref()
+                .ok_or(ContractAddressError::NoneIntMaybeRelocatable)?
+                .clone(),
+        );
+    }
+
+    let bytecode = compute_hash_on_elements(&bytecode_vector)?;
 
     let flatted_contract_class: Vec<Felt252> = vec![
         api_version,

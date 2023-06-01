@@ -37,4 +37,6 @@ pub enum ContractAddressError {
     BuiltinSuffix,
     #[error(transparent)]
     SyscallHandler(#[from] SyscallHandlerError),
+    #[error("MaybeRelocatable is not an Int variant")]
+    NoneIntMaybeRelocatable,
 }
