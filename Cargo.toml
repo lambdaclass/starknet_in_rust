@@ -32,6 +32,7 @@ hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 
 starknet-contract-class = { path = "crates/starknet-contract-class" }
+starknet-syscall = { path = "crates/starknet-syscall" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

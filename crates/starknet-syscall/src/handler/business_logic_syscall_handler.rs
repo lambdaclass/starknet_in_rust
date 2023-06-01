@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
-use crate::business_logic::state::state_api_objects::BlockInfo;
-use crate::core::syscalls::syscall_request::{
+use starknet_rs::business_logic::state::state_api_objects::BlockInfo;
+use crate::syscall_request::{
     EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest,
 };
-use crate::core::syscalls::syscall_response::{
+use crate::syscall_response::{
     DeployResponse, GetBlockTimestampResponse, SyscallResponse,
 };
-use crate::core::syscalls::{
+use crate::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
         CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
@@ -16,8 +16,8 @@ use crate::core::syscalls::{
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
-use crate::utils::calculate_sn_keccak;
-use crate::{
+use starknet_rs::utils::calculate_sn_keccak;
+use starknet_rs::{
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
@@ -199,7 +199,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
         let mut general_config = StarknetGeneralConfig::default();
-        general_config.block_info = block_info;
+        general_config.set_block_info(block_info);
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
         let internal_calls = Vec::new();
@@ -417,13 +417,13 @@ where
         request: EmitEventRequest,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let order = self.tx_execution_context.n_emitted_events;
+        let order = self.tx_execution_context.n_emitted_events();
         let keys: Vec<Felt252> = get_felt_range(vm, request.keys_start, request.keys_end)?;
         let data: Vec<Felt252> = get_felt_range(vm, request.data_start, request.data_end)?;
         self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.
-        self.tx_execution_context.n_emitted_events += 1;
+        self.tx_execution_context.set_n_emitted_events(order + 1);
         Ok(SyscallResponse {
             gas: remaining_gas,
             body: None,
@@ -438,7 +438,7 @@ where
         Ok(SyscallResponse {
             gas: remaining_gas,
             body: Some(ResponseBody::GetBlockNumber {
-                number: self.general_config.block_info.block_number.into(),
+                number: self.general_config.block_info().block_number.into(),
             }),
         })
     }
@@ -643,13 +643,14 @@ where
         let payload = get_felt_range(vm, request.payload_start, request.payload_end)?;
 
         self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
-            self.tx_execution_context.n_sent_messages,
+            self.tx_execution_context.n_sent_messages(),
             request.to_address,
             payload,
         ));
 
         // Update messages count.
-        self.tx_execution_context.n_sent_messages += 1;
+        let sent = self.tx_execution_context.n_sent_messages();
+        self.tx_execution_context.set_n_sent_messages(sent + 1);
         Ok(SyscallResponse {
             gas: remaining_gas,
             body: None,
@@ -699,7 +700,7 @@ where
         Ok(SyscallResponse {
             gas: remaining_gas,
             body: Some(ResponseBody::GetBlockTimestamp(GetBlockTimestampResponse {
-                timestamp: self.general_config.block_info.block_timestamp.into(),
+                timestamp: self.general_config.block_info().block_timestamp.into(),
             })),
         })
     }

@@ -1,7 +1,7 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
-use crate::{
+use starknet_rs::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };

@@ -1,9 +1,7 @@
-use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
-    utils::{get_big_int, get_integer, get_relocatable, Address},
-};
+use crate::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_vm::felt::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use starknet_rs::utils::{get_big_int, get_integer, get_relocatable, Address};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum DeprecatedSyscallRequest {

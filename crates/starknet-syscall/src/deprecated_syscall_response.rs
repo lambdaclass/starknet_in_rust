@@ -5,9 +5,10 @@ use super::deprecated_syscall_request::{
     DeprecatedGetSequencerAddressRequest, DeprecatedGetTxInfoRequest,
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
-use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use crate::errors::syscall_handler_errors::SyscallHandlerError;
 use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt252;
+use starknet_rs::utils::Address;
 
 pub(crate) trait DeprecatedWriteSyscallResponse {
     fn write_syscall_response(
@@ -301,7 +302,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
+    use starknet_rs::{
         add_segments,
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
@@ -312,7 +313,7 @@ mod tests {
     use cairo_vm::relocatable;
 
     type DeprecatedBLSyscallHandler<'a> =
-        crate::core::syscall_handling::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
+        crate::handler::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;

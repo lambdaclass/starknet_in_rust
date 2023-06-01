@@ -2,11 +2,7 @@ use super::{
     deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
     syscall_handler::HintProcessorPostRun,
 };
-use crate::core::syscalls::{hint_code::*, other_syscalls};
-use crate::{
-    business_logic::state::state_api::{State, StateReader},
-    core::errors::syscall_handler_errors::SyscallHandlerError,
-};
+use crate::{hint_code::*, other_syscalls};
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
     hint_processor::{
@@ -19,6 +15,10 @@ use cairo_vm::{
     serde::deserialize_program::ApTracking,
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
+};
+use starknet_rs::{
+    business_logic::state::state_api::{State, StateReader},
+    core::errors::syscall_handler_errors::SyscallHandlerError,
 };
 use std::{any::Any, collections::HashMap};
 
@@ -159,7 +159,7 @@ impl<'a, T: State + StateReader> HintProcessorPostRun for DeprecatedSyscallHintP
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
-    ) -> Result<(), crate::business_logic::transaction::error::TransactionError> {
+    ) -> Result<(), starknet_rs::business_logic::transaction::error::TransactionError> {
         self.syscall_handler.post_run(runner, syscall_stop_ptr)
     }
 }
@@ -177,17 +177,18 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
+    use crate::syscalls::deprecated_syscall_request::{
+        DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest, DeprecatedSyscallRequest,
+    };
+    use cairo_vm::relocatable;
+    use num_traits::Num;
+    use starknet_rs::{
         add_segments, allocate_selector, any_box,
         business_logic::{
             execution::objects::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
             transaction::objects::internal_invoke_function::InternalInvokeFunction,
-        },
-        core::syscalls::deprecated_syscall_request::{
-            DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
-            DeprecatedSyscallRequest,
         },
         definitions::{
             constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig,
@@ -203,12 +204,10 @@ mod tests {
             Address,
         },
     };
-    use cairo_vm::relocatable;
-    use num_traits::Num;
     use std::path::PathBuf;
 
     type DeprecatedBLSyscallHandler<'a> =
-        crate::core::syscall_handling::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
+        crate::handler::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;

@@ -1,0 +1,14 @@
+[package]
+name = "starknet-syscall"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+starknet-rs = { git = "https://github.com/lambdaclass/starknet_in_rust" }
+thiserror = "1.0.40"
+lazy_static = "1.4.0"
+num-traits = "0.2.15"
+cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "4afacfd574de1121d61dea28f8c73e1516c7e07d"}
+
+[dependencies.cairo-vm]
+git = "https://github.com/lambdaclass/cairo-rs.git"

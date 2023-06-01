@@ -2024,7 +2024,7 @@ dependencies = [
  "honggfuzz",
  "num-traits 0.2.15",
  "serde_json",
- "starknet-rs",
+ "starknet-rs 0.1.0",
  "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?branch=main)",
  "tempfile",
 ]
@@ -3475,6 +3475,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "starknet-contract-class"
+version = "0.1.0"
+source = "git+https://github.com/lambdaclass/starknet_in_rust#04f854e9495ee08fa74eedfdc19b3fe79d03caa9"
+dependencies = [
+ "cairo-vm",
+ "serde",
+ "serde_json",
+ "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
+]
+
+[[package]]
 name = "starknet-crypto"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3635,9 +3646,50 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
- "starknet-contract-class",
+ "starknet-contract-class 0.1.0",
+ "starknet-crypto 0.4.3",
+ "starknet-syscall",
+ "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-rs"
+version = "0.1.0"
+source = "git+https://github.com/lambdaclass/starknet_in_rust#04f854e9495ee08fa74eedfdc19b3fe79d03caa9"
+dependencies = [
+ "actix-web",
+ "awc",
+ "cairo-lang-casm 1.0.0-rc0",
+ "cairo-lang-starknet 1.0.0-rc0",
+ "cairo-vm",
+ "cargo-llvm-cov",
+ "clap",
+ "getset",
+ "hex",
+ "lazy_static",
+ "mimalloc",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.15",
+ "serde",
+ "serde_json",
+ "sha3",
+ "starknet-contract-class 0.1.0 (git+https://github.com/lambdaclass/starknet_in_rust)",
  "starknet-crypto 0.4.3",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-syscall"
+version = "0.1.0"
+dependencies = [
+ "cairo-lang-casm 1.0.0-rc0",
+ "cairo-vm",
+ "lazy_static",
+ "num-traits 0.2.15",
+ "starknet-rs 0.1.0 (git+https://github.com/lambdaclass/starknet_in_rust)",
  "thiserror",
 ]
 

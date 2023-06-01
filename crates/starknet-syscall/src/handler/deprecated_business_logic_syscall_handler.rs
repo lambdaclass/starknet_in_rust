@@ -1,4 +1,4 @@
-use crate::core::syscalls::{
+use crate::{
     deprecated_syscall_request::*,
     deprecated_syscall_response::{
         DeprecatedCallContractResponse, DeprecatedDeployResponse, DeprecatedGetBlockNumberResponse,
@@ -9,7 +9,13 @@ use crate::core::syscalls::{
     },
     syscall_info::get_deprecated_syscall_size_from_name,
 };
-use crate::{
+use cairo_vm::felt::Felt252;
+use cairo_vm::{
+    types::relocatable::{MaybeRelocatable, Relocatable},
+    vm::vm_core::VirtualMachine,
+};
+use num_traits::{One, ToPrimitive, Zero};
+use starknet_rs::{
     business_logic::{
         execution::{execution_entry_point::ExecutionEntryPoint, objects::*},
         fact_state::state::ExecutionResourcesManager,
@@ -30,12 +36,6 @@ use crate::{
     },
     utils::*,
 };
-use cairo_vm::felt::Felt252;
-use cairo_vm::{
-    types::relocatable::{MaybeRelocatable, Relocatable},
-    vm::vm_core::VirtualMachine,
-};
-use num_traits::{One, ToPrimitive, Zero};
 use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------
@@ -128,7 +128,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
         let mut general_config = StarknetGeneralConfig::default();
-        general_config.block_info = block_info;
+        general_config.set_block_info(block_info);
         let tx_info_ptr = None;
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
@@ -262,13 +262,14 @@ where
 
         let keys_len = request.keys_len;
         let data_len = request.data_len;
-        let order = self.tx_execution_context.n_emitted_events;
+        let order = self.tx_execution_context.n_emitted_events();
         let keys: Vec<Felt252> = get_integer_range(vm, request.keys, keys_len)?;
         let data: Vec<Felt252> = get_integer_range(vm, request.data, data_len)?;
         self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.
-        self.tx_execution_context.n_emitted_events += 1;
+        let emitted = self.tx_execution_context.n_emitted_events();
+        self.tx_execution_context.set_n_emitted_events(emitted + 1);
         Ok(())
     }
 
@@ -432,7 +433,7 @@ where
     }
 
     pub(crate) fn get_block_info(&self) -> &BlockInfo {
-        &self.general_config.block_info
+        &self.general_config.block_info()
     }
 
     pub(crate) fn syscall_get_caller_address(
@@ -477,13 +478,14 @@ where
         let payload = get_integer_range(vm, request.payload_ptr, request.payload_size)?;
 
         self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
-            self.tx_execution_context.n_sent_messages,
+            self.tx_execution_context.n_sent_messages(),
             request.to_address,
             payload,
         ));
 
         // Update messages count.
-        self.tx_execution_context.n_sent_messages += 1;
+        let sent = self.tx_execution_context.n_sent_messages();
+        self.tx_execution_context.set_n_sent_messages(sent + 1);
         Ok(())
     }
 
@@ -497,13 +499,13 @@ where
         let tx = self.tx_execution_context.clone();
 
         let signature_data: Vec<MaybeRelocatable> =
-            tx.signature.iter().map(|num| num.into()).collect();
+            tx.signature().iter().map(|num| num.into()).collect();
         let signature = self.allocate_segment(vm, signature_data)?;
 
         let tx_info = TxInfoStruct::new(
             tx,
             signature,
-            self.general_config.starknet_os_config.chain_id,
+            self.general_config.starknet_os_config().chain_id(),
         );
 
         let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
@@ -841,14 +843,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
-        },
-        core::errors::syscall_handler_errors::SyscallHandlerError,
-        utils::{test_utils::*, Address},
-    };
+    use crate::errors::syscall_handler_errors::SyscallHandlerError;
     use cairo_vm::felt::Felt252;
     use cairo_vm::{
         hint_processor::{
@@ -865,6 +860,13 @@ mod tests {
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
     use num_traits::Zero;
+    use starknet_rs::{
+        business_logic::{
+            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::cached_state::CachedState,
+        },
+        utils::{test_utils::*, Address},
+    };
     use std::{any::Any, borrow::Cow, collections::HashMap};
 
     type DeprecatedBLSyscallHandler<'a> =

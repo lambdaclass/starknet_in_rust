@@ -5,3 +5,5 @@ pub mod other_syscalls;
 pub mod syscall_info;
 pub mod syscall_request;
 pub mod syscall_response;
+pub mod handler;
+pub mod errors;
