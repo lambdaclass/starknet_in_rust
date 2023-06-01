@@ -37,6 +37,8 @@ pub enum ContractAddressError {
     BuiltinSuffix,
     #[error(transparent)]
     SyscallHandler(#[from] SyscallHandlerError),
+    #[error("Failed to cast {0} into {1}")]
+    Cast(String, String),
     #[error("MaybeRelocatable is not an Int variant")]
     NoneIntMaybeRelocatable,
 }
