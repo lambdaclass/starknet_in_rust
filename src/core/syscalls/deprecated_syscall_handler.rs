@@ -126,6 +126,10 @@ impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_contract_address(vm, syscall_ptr)
             }
+            DELEGATE_CALL => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.delegate_call(vm, syscall_ptr)
+            }
             _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
         }
     }

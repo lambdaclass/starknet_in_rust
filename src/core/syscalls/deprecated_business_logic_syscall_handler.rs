@@ -738,6 +738,14 @@ where
         self.call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
+    pub(crate) fn delegate_call(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self.call_contract_and_write_response("delegate_call", vm, syscall_ptr)
+    }
+
     pub(crate) fn syscall_storage_read(
         &mut self,
         address: Address,
