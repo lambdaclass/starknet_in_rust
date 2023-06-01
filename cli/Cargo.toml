@@ -30,7 +30,7 @@ awc = "3.1.1"
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
-starknet-rs = {git = "https://github.com/lambdaclass/starknet_in_rust", rev = "04f854e9495ee08fa74eedfdc19b3fe79d03caa9"}
+starknet-rs = {git = "https://github.com/lambdaclass/starknet_in_rust", branch = "main"}
 starknet-contract-class = { path = "../crates/starknet-contract-class" }
 
 [dev-dependencies]

@@ -30,6 +30,8 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
+const VERSION_0: u64 = 0;
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
@@ -117,7 +119,7 @@ impl InternalDeclare {
             }
         }
 
-        if !self.signature.len().is_zero() {
+        if self.version == VERSION_0 && !self.signature.len().is_zero() {
             return Err(TransactionError::StarknetError(
                 "The signature field in Declare transactions must be an empty list.".to_string(),
             ));
