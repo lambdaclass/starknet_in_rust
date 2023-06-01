@@ -7,7 +7,7 @@ use cairo_vm::felt::Felt252;
 use std::collections::HashSet;
 
 #[derive(Debug)]
-pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
+pub struct ContractStorageState<'a, T: State + StateReader> {
     pub(crate) state: &'a mut T,
     pub(crate) contract_address: Address,
     /// Maintain all read request values in chronological order
@@ -16,7 +16,7 @@ pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
 }
 
 impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
-    pub(crate) fn new(state: &'a mut T, contract_address: Address) -> Self {
+    pub fn new(state: &'a mut T, contract_address: Address) -> Self {
         Self {
             state,
             contract_address,
@@ -25,7 +25,7 @@ impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
         }
     }
 
-    pub(crate) fn read(&mut self, address: &ClassHash) -> Result<Felt252, StateError> {
+    pub fn read(&mut self, address: &ClassHash) -> Result<Felt252, StateError> {
         self.accessed_keys.insert(*address);
         let value = self
             .state
@@ -35,7 +35,7 @@ impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
         Ok(value)
     }
 
-    pub(crate) fn write(&mut self, address: &ClassHash, value: Felt252) {
+    pub fn write(&mut self, address: &ClassHash, value: Felt252) {
         self.accessed_keys.insert(*address);
         self.state
             .set_storage_at(&(self.contract_address.clone(), *address), value);
