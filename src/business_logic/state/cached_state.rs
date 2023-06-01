@@ -3,12 +3,13 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
+    business_logic::fact_state::state::StateDiff,
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     starknet_storage::errors::storage_errors::StorageError,
-    utils::{subtract_mappings, Address, ClassHash},
+    utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
@@ -314,6 +315,18 @@ impl<T: StateReader> State for CachedState<T> {
             .insert(class_hash, compiled_class_hash);
         Ok(())
     }
+
+    fn apply_state_update(&mut self, state_updates: &StateDiff) -> Result<(), StateError> {
+        let storage_updates = to_cache_state_storage_mapping(&state_updates.storage_updates);
+
+        self.cache.update_writes(
+            &state_updates.address_to_class_hash,
+            &state_updates.class_hash_to_compiled_class,
+            &state_updates.address_to_nonce,
+            &storage_updates,
+        );
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -326,6 +339,7 @@ mod tests {
         },
     };
     use cairo_vm::types::program::Program;
+    use num_traits::One;
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
@@ -588,5 +602,49 @@ mod tests {
             cached_state.get_class_hash_at(&contract_address),
             Ok(class_hash) if class_hash == [12u8; 32]
         );
+    }
+
+    #[test]
+    fn cached_state_apply_state_update() {
+        let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let address_one = Address(Felt252::one());
+
+        let mut cached_state = CachedState::new(state_reader, None, None);
+
+        let state_diff = StateDiff {
+            address_to_class_hash: HashMap::from([(
+                address_one.clone(),
+                Felt252::one().to_be_bytes(),
+            )]),
+            address_to_nonce: HashMap::from([(address_one.clone(), Felt252::one())]),
+            class_hash_to_compiled_class: HashMap::new(),
+            storage_updates: HashMap::new(),
+        };
+        assert!(cached_state.apply_state_update(&state_diff).is_ok());
+        assert!(cached_state
+            .cache
+            .nonce_writes
+            .get(&address_one)
+            .unwrap()
+            .is_one());
+        assert!(Felt252::from_bytes_be(
+            cached_state
+                .cache
+                .class_hash_writes
+                .get(&address_one)
+                .unwrap()
+        )
+        .is_one());
+        assert!(cached_state.cache.storage_writes.is_empty());
+        assert!(cached_state.cache.nonce_initial_values.is_empty());
+        assert!(cached_state.cache.class_hash_initial_values.is_empty());
     }
 }
