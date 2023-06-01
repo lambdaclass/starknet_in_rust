@@ -117,15 +117,13 @@ fn delegate_call() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    assert!(
-        exec_entry_point
-            .execute(
-                &mut state,
-                &general_config,
-                &mut resources_manager,
-                &tx_execution_context,
-                false,
-            )
-            .is_ok()
-    );
+    assert!(exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .is_ok());
 }
