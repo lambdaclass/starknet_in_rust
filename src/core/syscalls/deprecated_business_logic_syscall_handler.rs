@@ -358,6 +358,7 @@ where
         let caller_address;
         let call_type;
         let call_data;
+        let mut code_address = None;
 
         // TODO: What about `delegate_l1_handler`?
         //   The call to `self.read_and_validate_syscall_request()` will always fail in that
@@ -381,15 +382,16 @@ where
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             DeprecatedSyscallRequest::CallContract(request) => {
-                (caller_address, contract_address, call_type) = match syscall_name {
+                (code_address, caller_address, call_type) = match syscall_name {
                     "call_contract" => (
-                        self.contract_address.clone(),
+                        Some(request.contract_address.clone()),
                         request.contract_address,
                         CallType::Call,
+
                     ),
                     "delegate_call" => (
+                        Some(request.contract_address),
                         self.caller_address.clone(),
-                        self.contract_address.clone(),
                         CallType::Delegate,
                     ),
                     _ => {
@@ -398,6 +400,7 @@ where
                         ))
                     }
                 };
+                contract_address = self.contract_address.clone();
                 entry_point_type = EntryPointType::External;
                 function_selector = request.function_selector;
                 class_hash = None;
@@ -410,7 +413,7 @@ where
             }
         }
 
-        let entry_point = ExecutionEntryPoint::new(
+        let mut entry_point = ExecutionEntryPoint::new(
             contract_address,
             call_data,
             function_selector,
@@ -420,6 +423,7 @@ where
             class_hash,
             0,
         );
+        entry_point.code_address = code_address;
 
         entry_point
             .execute(
