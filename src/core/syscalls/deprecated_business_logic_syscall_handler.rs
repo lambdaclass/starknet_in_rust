@@ -359,9 +359,9 @@ where
         let call_type;
         let call_data;
 
-        // TODO: What about `delegate_call`, `delegate_l1_handler`?
-        //   The call to `self.read_and_validate_syscall_request()` will always fail in those
-        //   cases.
+        // TODO: What about `delegate_l1_handler`?
+        //   The call to `self.read_and_validate_syscall_request()` will always fail in that
+        //   case.
         match request {
             DeprecatedSyscallRequest::LibraryCall(request) => {
                 entry_point_type = match syscall_name {
@@ -394,6 +394,22 @@ where
                 contract_address = request.contract_address;
                 caller_address = self.contract_address.clone();
                 call_type = CallType::Call;
+                call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
+            }
+            DeprecatedSyscallRequest::DelegateCall(request) => {
+                entry_point_type = match syscall_name {
+                    "call_contract" => EntryPointType::External,
+                    _ => {
+                        return Err(SyscallHandlerError::UnknownSyscall(
+                            syscall_name.to_string(),
+                        ))
+                    }
+                };
+                function_selector = request.function_selector;
+                class_hash = None;
+                contract_address = request.contract_address;
+                caller_address = self.contract_address.clone();
+                call_type = CallType::Delegate;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             _ => {
@@ -794,7 +810,7 @@ where
             "storage_read" => DeprecatedStorageReadRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
             "replace_class" => DeprecatedReplaceClassRequest::from_ptr(vm, syscall_ptr),
-            "delegate_call" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
+            "delegate_call" => DeprecatedDelegateCallRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
