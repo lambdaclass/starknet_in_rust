@@ -936,7 +936,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_same_transaction() {
     let mut deprecated_contract_class_cache = HashMap::new();
 
     let address = Address(Felt252::one());
-    let class_hash_c: ClassHash = [1; 32];
+    let class_hash_c: ClassHash = Felt252::one().to_be_bytes();
     let nonce = Felt252::zero();
 
     deprecated_contract_class_cache.insert(class_hash_c, contract_class_c);
@@ -955,7 +955,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_same_transaction() {
     let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
-    let class_hash_b: ClassHash = [2; 32];
+    let class_hash_b: ClassHash = Felt252::from(2).to_be_bytes();
 
     casm_contract_class_cache.insert(class_hash_b, contract_class_b.clone());
 
@@ -1024,5 +1024,5 @@ fn call_contract_upgrade_cairo_0_to_cairo_same_transaction() {
             false,
         )
         .unwrap();
-    assert_eq!(result.retdata, vec![25.into(), 17.into()]);
+    assert_eq!(result.retdata, vec![33.into(), 17.into()]);
 }
