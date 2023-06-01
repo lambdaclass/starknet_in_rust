@@ -678,18 +678,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cairo-felt"
-version = "0.4.0"
-source = "git+https://github.com/lambdaclass/cairo-rs#cf5768c3a5473727e737cec3a693b1257e39e761"
-dependencies = [
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.15",
- "serde",
-]
-
-[[package]]
 name = "cairo-lang-casm"
 version = "1.0.0-rc0"
 source = "git+https://github.com/starkware-libs/cairo?rev=4afacfd574de1121d61dea28f8c73e1516c7e07d#4afacfd574de1121d61dea28f8c73e1516c7e07d"
@@ -1474,14 +1462,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cairo-take_until_unbalanced"
-version = "0.25.0"
-source = "git+https://github.com/lambdaclass/cairo-rs#cf5768c3a5473727e737cec3a693b1257e39e761"
-dependencies = [
- "nom",
-]
-
-[[package]]
 name = "cairo-vm"
 version = "0.4.0"
 source = "git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb#5db2e656d46a97d89563a74f8fc3abd595e8befb"
@@ -1491,47 +1471,10 @@ dependencies = [
  "ark-std 0.3.0",
  "bincode",
  "bitvec",
- "cairo-felt 0.4.0 (git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb)",
+ "cairo-felt 0.4.0",
  "cairo-lang-casm 1.0.0-rc0",
  "cairo-lang-starknet 1.0.0-rc0",
- "cairo-take_until_unbalanced 0.25.0 (git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb)",
- "generic-array",
- "hashbrown 0.13.2",
- "hex",
- "keccak",
- "lazy_static",
- "mimalloc",
- "nom",
- "num-bigint",
- "num-integer",
- "num-prime",
- "num-traits 0.2.15",
- "rand",
- "rand_core",
- "serde",
- "serde_bytes",
- "serde_json",
- "sha2 0.10.6",
- "sha3",
- "starknet-crypto 0.5.1",
- "thiserror",
- "thiserror-no-std",
-]
-
-[[package]]
-name = "cairo-vm"
-version = "0.4.0"
-source = "git+https://github.com/lambdaclass/cairo-rs#cf5768c3a5473727e737cec3a693b1257e39e761"
-dependencies = [
- "anyhow",
- "ark-ff 0.4.2",
- "ark-std 0.3.0",
- "bincode",
- "bitvec",
- "cairo-felt 0.4.0 (git+https://github.com/lambdaclass/cairo-rs)",
- "cairo-lang-casm 1.0.0-rc0",
- "cairo-lang-starknet 1.0.0-rc0",
- "cairo-take_until_unbalanced 0.25.0 (git+https://github.com/lambdaclass/cairo-rs)",
+ "cairo-take_until_unbalanced",
  "generic-array",
  "hashbrown 0.13.2",
  "hex",
@@ -2077,7 +2020,7 @@ dependencies = [
 name = "fuzzer"
 version = "0.1.0"
 dependencies = [
- "cairo-vm 0.4.0 (git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb)",
+ "cairo-vm",
  "honggfuzz",
  "num-traits 0.2.15",
  "serde_json",
@@ -3522,7 +3465,7 @@ dependencies = [
 name = "starknet-contract-class"
 version = "0.1.0"
 dependencies = [
- "cairo-vm 0.4.0 (git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb)",
+ "cairo-vm",
  "serde",
  "serde_json",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
@@ -3531,9 +3474,9 @@ dependencies = [
 [[package]]
 name = "starknet-contract-class"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#b40f075e3ae227bcd346a523c256f5eb2a4efe68"
+source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#c79f1719f04c197a7f834603eb29a0e57bcdbe6c"
 dependencies = [
- "cairo-vm 0.4.0 (git+https://github.com/lambdaclass/cairo-rs)",
+ "cairo-vm",
  "serde",
  "serde_json",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
@@ -3685,7 +3628,7 @@ dependencies = [
  "awc",
  "cairo-lang-casm 1.0.0-rc0",
  "cairo-lang-starknet 1.0.0-rc0",
- "cairo-vm 0.4.0 (git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb)",
+ "cairo-vm",
  "cargo-llvm-cov",
  "clap",
  "coverage-helper",
@@ -3709,13 +3652,13 @@ dependencies = [
 [[package]]
 name = "starknet-rs"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#b40f075e3ae227bcd346a523c256f5eb2a4efe68"
+source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#c79f1719f04c197a7f834603eb29a0e57bcdbe6c"
 dependencies = [
  "actix-web",
  "awc",
  "cairo-lang-casm 1.0.0-rc0",
  "cairo-lang-starknet 1.0.0-rc0",
- "cairo-vm 0.4.0 (git+https://github.com/lambdaclass/cairo-rs)",
+ "cairo-vm",
  "cargo-llvm-cov",
  "clap",
  "getset",
@@ -3725,6 +3668,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits 0.2.15",
+ "once_cell",
  "serde",
  "serde_json",
  "sha3",
@@ -3743,7 +3687,7 @@ dependencies = [
  "awc",
  "cairo-lang-casm 1.0.0-rc0",
  "cairo-lang-starknet 1.0.0-rc0",
- "cairo-vm 0.4.0 (git+https://github.com/lambdaclass/cairo-rs)",
+ "cairo-vm",
  "cargo-llvm-cov",
  "clap",
  "coverage-helper",
