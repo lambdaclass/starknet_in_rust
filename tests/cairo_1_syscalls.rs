@@ -619,7 +619,7 @@ fn replace_class_internal() {
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
-        calldata.clone(),
+        calldata,
         Felt252::new(upgrade_selector.clone()),
         caller_address,
         entry_point_type,
@@ -698,7 +698,7 @@ fn replace_class_contract_call() {
 
     let class_hash_b: ClassHash = [2; 32];
 
-    contract_class_cache.insert(class_hash_b, contract_class_b.clone());
+    contract_class_cache.insert(class_hash_b, contract_class_b);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -718,7 +718,7 @@ fn replace_class_contract_call() {
         .insert(wrapper_address.clone(), wrapper_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(wrapper_address.clone(), nonce);
+        .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
@@ -744,7 +744,7 @@ fn replace_class_contract_call() {
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
-        calldata.clone(),
+        calldata,
         Felt252::new(get_number_entrypoint_selector.clone()),
         caller_address.clone(),
         entry_point_type,
@@ -770,7 +770,7 @@ fn replace_class_contract_call() {
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
-        calldata.clone(),
+        calldata,
         Felt252::new(upgrade_entrypoint_selector.clone()),
         caller_address.clone(),
         entry_point_type,
@@ -794,10 +794,10 @@ fn replace_class_contract_call() {
     let calldata = [].to_vec();
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata.clone(),
+        address,
+        calldata,
         Felt252::new(get_number_entrypoint_selector.clone()),
-        caller_address.clone(),
+        caller_address,
         entry_point_type,
         Some(CallType::Delegate),
         Some(wrapper_class_hash),
@@ -853,7 +853,7 @@ fn replace_class_contract_call_same_transaction() {
 
     let class_hash_b: ClassHash = [2; 32];
 
-    contract_class_cache.insert(class_hash_b, contract_class_b.clone());
+    contract_class_cache.insert(class_hash_b, contract_class_b);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -872,7 +872,7 @@ fn replace_class_contract_call_same_transaction() {
         .insert(wrapper_address.clone(), wrapper_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(wrapper_address.clone(), nonce);
+        .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
@@ -897,10 +897,10 @@ fn replace_class_contract_call_same_transaction() {
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata.clone(),
+        address,
+        calldata,
         Felt252::new(get_numbers_entrypoint_selector.clone()),
-        caller_address.clone(),
+        caller_address,
         entry_point_type,
         Some(CallType::Delegate),
         Some(wrapper_class_hash),
@@ -959,7 +959,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
 
     let class_hash_b: ClassHash = Felt252::from(2).to_be_bytes();
 
-    casm_contract_class_cache.insert(class_hash_b, contract_class_b.clone());
+    casm_contract_class_cache.insert(class_hash_b, contract_class_b);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -978,7 +978,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         .insert(wrapper_address.clone(), wrapper_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(wrapper_address.clone(), nonce);
+        .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
@@ -1007,10 +1007,10 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata.clone(),
+        address,
+        calldata,
         Felt252::new(get_numbers_entrypoint_selector.clone()),
-        caller_address.clone(),
+        caller_address,
         entry_point_type,
         Some(CallType::Delegate),
         Some(wrapper_class_hash),
@@ -1060,7 +1060,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
 
     let class_hash_b: ClassHash = Felt252::from(2).to_be_bytes();
 
-    casm_contract_class_cache.insert(class_hash_b, contract_class_b.clone());
+    casm_contract_class_cache.insert(class_hash_b, contract_class_b);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -1086,7 +1086,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         .insert(wrapper_address.clone(), wrapper_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(wrapper_address.clone(), nonce);
+        .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
@@ -1115,10 +1115,10 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata.clone(),
+        address,
+        calldata,
         Felt252::new(get_numbers_entrypoint_selector.clone()),
-        caller_address.clone(),
+        caller_address,
         entry_point_type,
         Some(CallType::Delegate),
         Some(wrapper_class_hash),
@@ -1168,7 +1168,7 @@ fn call_contract_replace_class_cairo_0() {
 
     let class_hash_d: ClassHash = Felt252::from(2).to_be_bytes();
 
-    deprecated_contract_class_cache.insert(class_hash_d, contract_class_d.clone());
+    deprecated_contract_class_cache.insert(class_hash_d, contract_class_d);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -1194,7 +1194,7 @@ fn call_contract_replace_class_cairo_0() {
         .insert(wrapper_address.clone(), wrapper_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(wrapper_address.clone(), nonce);
+        .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
@@ -1223,10 +1223,10 @@ fn call_contract_replace_class_cairo_0() {
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata.clone(),
+        address,
+        calldata,
         Felt252::new(get_numbers_entrypoint_selector.clone()),
-        caller_address.clone(),
+        caller_address,
         entry_point_type,
         Some(CallType::Delegate),
         Some(wrapper_class_hash),
