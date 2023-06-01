@@ -49,6 +49,9 @@ impl SyscallResponse {
             Some(ResponseBody::GetBlockTimestamp(get_block_timestamp_response)) => {
                 cairo_args.push(get_block_timestamp_response.timestamp.clone().into())
             }
+            Some(ResponseBody::GetBlockHash(get_block_hash_response)) => {
+                cairo_args.push(get_block_hash_response.block_hash.clone().into())
+            }
             None => {}
         }
         cairo_args

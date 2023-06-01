@@ -4,9 +4,12 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use super::syscall_request::{
-    EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest, GetBlockHashRequest,
+    EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, StorageReadRequest,
+    StorageWriteRequest,
 };
-use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, SyscallResponse, GetBlockHashResponse};
+use super::syscall_response::{
+    DeployResponse, GetBlockHashResponse, GetBlockTimestampResponse, SyscallResponse,
+};
 use super::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
