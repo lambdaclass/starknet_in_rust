@@ -39,4 +39,6 @@ pub enum ContractAddressError {
     SyscallHandler(#[from] SyscallHandlerError),
     #[error("Failed to cast {0} into {1}")]
     Cast(String, String),
+    #[error("MaybeRelocatable is not an Int variant")]
+    NoneIntMaybeRelocatable,
 }

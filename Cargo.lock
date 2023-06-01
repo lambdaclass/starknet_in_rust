@@ -2025,7 +2025,7 @@ dependencies = [
  "num-traits 0.2.15",
  "serde_json",
  "starknet-rs",
- "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?branch=main)",
+ "starknet_api",
  "tempfile",
 ]
 
@@ -3471,7 +3471,7 @@ dependencies = [
  "cairo-vm",
  "serde",
  "serde_json",
- "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?rev=b29d881)",
+ "starknet_api",
 ]
 
 [[package]]
@@ -3637,31 +3637,14 @@ dependencies = [
  "sha3",
  "starknet-contract-class",
  "starknet-crypto 0.4.3",
- "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?rev=b29d881)",
+ "starknet_api",
  "thiserror",
 ]
 
 [[package]]
 name = "starknet_api"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet-api?branch=main#b29d88128cd79ecd1ab1e4336a2bea012462692d"
-dependencies = [
- "cairo-lang-starknet 1.1.0-alpha0",
- "derive_more",
- "hex",
- "indexmap",
- "once_cell",
- "primitive-types",
- "serde",
- "serde_json",
- "starknet-crypto 0.2.0",
- "thiserror",
-]
-
-[[package]]
-name = "starknet_api"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet-api?rev=b29d881#b29d88128cd79ecd1ab1e4336a2bea012462692d"
+source = "git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172#a891109ecc9c269e91b1afd2d44bc597728e1172"
 dependencies = [
  "cairo-lang-starknet 1.1.0-alpha0",
  "derive_more",
