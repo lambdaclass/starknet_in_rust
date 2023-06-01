@@ -387,7 +387,6 @@ where
                         Some(request.contract_address.clone()),
                         request.contract_address,
                         CallType::Call,
-
                     ),
                     "delegate_call" => (
                         Some(request.contract_address),

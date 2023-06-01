@@ -45,7 +45,7 @@ fn delegate_call() {
         .insert(address.clone(), class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address, nonce.clone());
 
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
@@ -93,8 +93,8 @@ fn delegate_call() {
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
-        calldata.clone(),
-        test_delegate_call_selector.clone(),
+        calldata,
+        test_delegate_call_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
