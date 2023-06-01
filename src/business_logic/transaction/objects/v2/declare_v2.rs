@@ -258,9 +258,6 @@ impl InternalDeclareV2 {
             false,
         )?;
 
-        let class_hash = state.get_class_hash_at(&self.sender_address)?;
-        let _compiled_class_hash = state.get_compiled_class_hash(&class_hash)?;
-
         remaining_gas -= call_info.gas_consumed;
         verify_no_calls_to_other_contracts(&call_info)?;
 
