@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -16,7 +17,7 @@ use starknet_rs::{
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;

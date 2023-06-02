@@ -11,10 +11,10 @@ use crate::{
     definitions::{
         constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
 use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses

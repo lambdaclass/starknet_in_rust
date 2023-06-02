@@ -13,7 +13,6 @@ use crate::{
     },
     core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
 };
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
@@ -22,6 +21,7 @@ use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
+use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
 use std::{
     collections::{HashMap, HashSet},

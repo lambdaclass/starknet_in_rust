@@ -1,6 +1,7 @@
 use crate::complex_contracts::utils::*;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
 use starknet_rs::{
     business_logic::{
@@ -11,7 +12,6 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
 use std::collections::{HashMap, HashSet};

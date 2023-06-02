@@ -21,12 +21,12 @@ use crate::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 
 #[derive(Debug, Getters)]
 pub struct InternalInvokeFunction {

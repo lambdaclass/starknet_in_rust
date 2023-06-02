@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType},
@@ -13,7 +14,6 @@ use starknet_rs::{
         transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
 

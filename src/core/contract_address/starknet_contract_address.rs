@@ -3,14 +3,13 @@
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
     hash_utils::compute_hash_on_elements,
-    services::api::contract_classes::deprecated_contract_class::{
-        ContractClass, ContractEntryPoint, EntryPointType,
-    },
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
 use cairo_vm::felt::Felt252;
 
 use num_traits::Zero;
 use sha3::{Digest, Keccak256};
+use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 3;
@@ -28,17 +27,11 @@ fn get_contract_entry_points(
 
     let program_len = program_length;
     for entry_point in entry_points {
-        if entry_point.offset > program_len {
-            return Err(ContractAddressError::InvalidOffset(entry_point.offset));
+        if entry_point.offset() > program_len {
+            return Err(ContractAddressError::InvalidOffset(entry_point.offset()));
         }
     }
-    Ok(entry_points
-        .iter()
-        .map(|entry_point| ContractEntryPoint {
-            offset: entry_point.offset,
-            selector: entry_point.selector.clone(),
-        })
-        .collect())
+    Ok(entry_points.to_owned())
 }
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
@@ -72,8 +65,8 @@ fn get_contract_entry_points_hashed(
             .iter()
             .flat_map(|contract_entry_point| {
                 vec![
-                    contract_entry_point.selector.clone(),
-                    Felt252::from(contract_entry_point.offset),
+                    contract_entry_point.selector().clone(),
+                    Felt252::from(contract_entry_point.offset()),
                 ]
             })
             .collect::<Vec<Felt252>>(),
@@ -144,6 +137,7 @@ mod tests {
     use cairo_vm::{felt::Felt252, types::program::Program};
     use coverage_helper::test;
     use num_traits::Num;
+    use starknet_contract_class::ParsedContractClass;
 
     const DEPRECATED_COMPILED_CLASS_CONTRACT: &str =
         "cairo_programs/deprecated_compiled_class.json";
@@ -277,6 +271,25 @@ mod tests {
             abi: None,
         };
 
+        assert_eq!(
+            compute_hinted_class_hash(&contract_class),
+            Felt252::from_str_radix(
+                "1703103364832599665802491695999915073351807236114175062140703903952998591438",
+                10
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_compute_hinted_class_hash_with_abi() {
+        let contract_str = fs::read_to_string("starknet_programs/class_with_abi.json").unwrap();
+        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = ContractClass {
+            program: parsed_contract_class.program,
+            entry_points_by_type: parsed_contract_class.entry_points_by_type,
+            abi: parsed_contract_class.abi,
+        };
         assert_eq!(
             compute_hinted_class_hash(&contract_class),
             Felt252::from_str_radix(

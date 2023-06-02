@@ -2024,6 +2024,7 @@ dependencies = [
  "honggfuzz",
  "num-traits 0.2.15",
  "serde_json",
+ "starknet-contract-class",
  "starknet-rs",
  "starknet_api",
  "tempfile",
@@ -3469,6 +3470,7 @@ name = "starknet-contract-class"
 version = "0.1.0"
 dependencies = [
  "cairo-vm",
+ "getset",
  "serde",
  "serde_json",
  "starknet_api",

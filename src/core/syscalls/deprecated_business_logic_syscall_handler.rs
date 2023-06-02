@@ -24,10 +24,7 @@ use crate::{
     definitions::general_config::StarknetGeneralConfig,
     hash_utils::calculate_contract_address,
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    services::api::{
-        contract_class_errors::ContractClassError,
-        contract_classes::deprecated_contract_class::EntryPointType,
-    },
+    services::api::contract_class_errors::ContractClassError,
     utils::*,
 };
 use cairo_vm::felt::Felt252;
@@ -36,6 +33,7 @@ use cairo_vm::{
     vm::vm_core::VirtualMachine,
 };
 use num_traits::{One, ToPrimitive, Zero};
+use starknet_contract_class::EntryPointType;
 use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------

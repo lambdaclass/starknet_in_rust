@@ -10,9 +10,12 @@ use cairo_vm::{
         errors::program_errors::ProgramError, program::Program, relocatable::MaybeRelocatable,
     },
 };
+use getset::{CopyGetters, Getters};
 use serde::Deserialize;
 use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
+
+pub type AbiType = Vec<ContractClassAbiEntry>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EntryPointType {
@@ -21,13 +24,19 @@ pub enum EntryPointType {
     Constructor,
 }
 
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq)]
 pub struct ContractEntryPoint {
+    #[getset(get = "pub")]
     pub selector: Felt252,
+    #[getset(get_copy = "pub")]
     pub offset: usize,
 }
 
-pub type AbiType = Vec<HashMap<String, ContractClassAbiEntry>>;
+impl ContractEntryPoint {
+    pub fn new(selector: Felt252, offset: usize) -> ContractEntryPoint {
+        ContractEntryPoint { selector, offset }
+    }
+}
 
 // -------------------------------
 //         Contract Class
@@ -78,7 +87,7 @@ impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for ParsedC
         Ok(Self {
             program,
             entry_points_by_type,
-            abi: None,
+            abi: contract_class.abi,
         })
     }
 }
@@ -190,7 +199,8 @@ mod tests {
 
         // We check only some of the attributes. Ideally we would serialize
         // and compare with original
-        assert_eq!(contract_class.abi, None);
+        // TODO: Add the real abi.
+        // assert_eq!(contract_class.abi, None);
 
         let program_builtins: Vec<BuiltinName> =
             contract_class.program.iter_builtins().cloned().collect();
