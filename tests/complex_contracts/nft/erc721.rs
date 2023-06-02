@@ -7,6 +7,7 @@ use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_rs::business_logic::state::cached_state::CachedState;
 use starknet_rs::business_logic::transaction::error::TransactionError;
+use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_rs::{
     business_logic::{
         execution::objects::{CallInfo, CallType, OrderedEvent},
@@ -45,9 +46,9 @@ fn erc721_constructor_test() {
     )
     .unwrap();
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
     let entry_point_type = EntryPointType::External;
@@ -98,9 +99,9 @@ fn erc721_balance_of_test() {
     let entry_point_type = EntryPointType::External;
 
     let entry_point_type_constructor = EntryPointType::Constructor;
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
     let mut call_config = CallConfig {
@@ -181,9 +182,9 @@ fn erc721_test_owner_of() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -257,9 +258,9 @@ fn erc721_test_get_approved() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -350,9 +351,9 @@ fn erc721_test_is_approved_for_all() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -446,9 +447,9 @@ fn erc721_test_approve() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -544,9 +545,9 @@ fn erc721_set_approval_for_all() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -636,9 +637,9 @@ fn erc721_transfer_from_test() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -769,9 +770,9 @@ fn erc721_transfer_from_and_get_owner_test() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -858,9 +859,9 @@ fn erc721_safe_transfer_from_should_fail_test() {
     )
     .unwrap();
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -922,9 +923,9 @@ fn erc721_calling_constructor_twice_should_fail_test() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::Constructor;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -1000,9 +1001,9 @@ fn erc721_transfer_fail_to_zero_address() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 
@@ -1055,9 +1056,9 @@ fn erc721_transfer_fail_not_owner() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
-    let entry_points_by_type = state
+    let entry_points_by_type = TryInto::<ContractClass>::try_into(state
         .get_contract_class(&class_hash)
-        .unwrap()
+        .unwrap()).unwrap()
         .entry_points_by_type()
         .clone();
 

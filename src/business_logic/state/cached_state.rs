@@ -165,8 +165,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
         if let Some(compiled_class) = self
             .contract_classes
             .as_ref()
-            .map(|x| x.get(class_hash))
-            .flatten()
+            .and_then(|x| x.get(class_hash))
         {
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
         }
@@ -186,10 +185,10 @@ impl<T: StateReader> StateReader for CachedState<T> {
                     }
                 }
             }
-            return Err(StateError::MissingCasmClass(*compiled_class_hash));
+            Err(StateError::MissingCasmClass(*compiled_class_hash))
         } else {
             // Fetch for contract from state_reader
-            let contract = self.state_reader.get_contract_class(class_hash)?.clone();
+            let contract = self.state_reader.get_contract_class(class_hash)?;
             // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
             let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
             match contract {
@@ -206,7 +205,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
                     }
                 }
             }
-            return Ok(contract);
+            Ok(contract)
         }
     }
 }
