@@ -89,21 +89,6 @@ impl<T: StateReader> CachedState<T> {
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
-    fn get_contract_class_old(
-        &mut self,
-        class_hash: &ClassHash,
-    ) -> Result<ContractClass, StateError> {
-        if !self.get_contract_classes()?.contains_key(class_hash) {
-            let contract_class = self.state_reader.get_contract_class_old(class_hash)?;
-            self.set_contract_class(class_hash, &contract_class)?;
-        }
-        Ok(self
-            .get_contract_classes()?
-            .get(class_hash)
-            .ok_or(StateError::MissingContractClassCache)?
-            .to_owned())
-    }
-
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = match self.state_reader.get_class_hash_at(contract_address) {

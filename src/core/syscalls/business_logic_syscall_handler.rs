@@ -17,6 +17,7 @@ use super::{
 };
 use crate::business_logic::state::state_api_objects::BlockInfo;
 use crate::business_logic::transaction::error::TransactionError;
+use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
@@ -276,10 +277,11 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class = self
+        let contract_class: ContractClass = self
             .starknet_storage_state
             .state
-            .get_contract_class_old(&class_hash_bytes)?;
+            .get_contract_class(&class_hash_bytes)?
+            .try_into()?;
 
         let constructor_entry_points = contract_class
             .entry_points_by_type

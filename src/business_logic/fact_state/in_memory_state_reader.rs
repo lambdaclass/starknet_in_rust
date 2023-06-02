@@ -49,19 +49,6 @@ impl InMemoryStateReader {
 }
 
 impl StateReader for InMemoryStateReader {
-    fn get_contract_class_old(
-        &mut self,
-        class_hash: &ClassHash,
-    ) -> Result<ContractClass, StateError> {
-        let contract_class = self
-            .class_hash_to_contract_class
-            .get(class_hash)
-            .ok_or(StateError::MissingClassHash())
-            .cloned()?;
-        contract_class.validate()?;
-        Ok(contract_class)
-    }
-
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let class_hash = self
             .address_to_class_hash
