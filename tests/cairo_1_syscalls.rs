@@ -673,7 +673,7 @@ fn test_send_message_to_l1_syscall() {
 
 #[test]
 fn replace_class_internal() {
-    // This test only checks that the contract is updated in the storage, see `replace_class_library_call`
+    // This test only checks that the contract is updated in the storage, see `replace_class_contract_call`
     //  Create program and entry point types for contract class
     let program_data_a = include_bytes!("../starknet_programs/cairo1/get_number_a.casm");
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data_a).unwrap();
@@ -759,6 +759,7 @@ fn replace_class_internal() {
 #[test]
 fn replace_class_contract_call() {
     /* Test Outline:
+       - Add `get_number_a.cairo` contract at address 2 and `get_number_b.cairo` contract without an address
        - Call `get_number` function of `get_number_wrapper.cairo` and expect to get an answer from `get_number_a` (25)
        - Call `upgrade` function of `get_number_wrapper.cairo` with `get_number_b.cairo`'s class_hash
        - Call `get_number` function of `get_number_wrapper.cairo` and expect to get an answer from `get_number_b` (17)
