@@ -162,7 +162,8 @@ fn invoke_parser(
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
     let contract_class: ContractClass = cached_state
         .get_contract_class(&class_hash)?
-        .try_into().map_err(StateError::from)?;
+        .try_into()
+        .map_err(StateError::from)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let transaction_hash = args.hash.clone().map(|f| {
         Felt252::from_str_radix(&f, 16)

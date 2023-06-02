@@ -477,10 +477,13 @@ mod tests {
         );
         // check that state has store fib class hash
         assert_eq!(
-            starknet_state
-                .state
-                .get_contract_class_old(&fib_class_hash)
-                .unwrap(),
+            TryInto::<ContractClass>::try_into(
+                starknet_state
+                    .state
+                    .get_contract_class(&fib_class_hash)
+                    .unwrap()
+            )
+            .unwrap(),
             fib_contract_class
         );
     }

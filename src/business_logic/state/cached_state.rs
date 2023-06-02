@@ -419,8 +419,8 @@ mod tests {
         assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
-            cached_state.get_contract_class_old(&[0; 32]),
-            cached_state.state_reader.get_contract_class_old(&[0; 32])
+            cached_state.get_contract_class(&[0; 32]),
+            cached_state.state_reader.get_contract_class(&[0; 32])
         );
     }
 

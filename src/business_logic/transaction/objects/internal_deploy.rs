@@ -88,7 +88,10 @@ impl InternalDeploy {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
-        let contract_class = state.get_contract_class_old(&class_hash)?;
+        let contract_class: ContractClass = state
+            .get_contract_class(&class_hash)?
+            .try_into()
+            .map_err(StateError::from());
 
         let constructors = contract_class
             .entry_points_by_type()

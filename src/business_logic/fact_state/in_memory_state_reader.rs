@@ -186,7 +186,10 @@ mod tests {
             .class_hash_to_contract_class
             .insert([0; 32], contract_class.clone());
         assert_eq!(
-            state_reader.get_contract_class_old(&contract_class_key),
+            state_reader
+                .get_contract_class(&contract_class_key)
+                .unwrap()
+                .try_into(),
             Ok(contract_class)
         )
     }
