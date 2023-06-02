@@ -384,7 +384,7 @@ where
             DeprecatedSyscallRequest::CallContract(request) => {
                 (code_address, caller_address, call_type, contract_address) = match syscall_name {
                     "call_contract" => (
-                        Some(request.contract_address.clone()),
+                        None,
                         self.contract_address.clone(),
                         CallType::Call,
                         request.contract_address.clone(),
