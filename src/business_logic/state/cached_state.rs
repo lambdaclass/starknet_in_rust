@@ -198,7 +198,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
                         self.casm_contract_classes = Some(casm_class.clone());
                     }
                 }
-                _ => {},
+                _ => {}
             }
             Ok(contract)
         }

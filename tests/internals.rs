@@ -515,7 +515,9 @@ fn test_create_account_tx_test_state() {
 
     let contract_class: ContractClass = state
         .get_contract_class(&felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
-        .unwrap().try_into().unwrap();
+        .unwrap()
+        .try_into()
+        .unwrap();
     assert_eq!(
         contract_class,
         get_contract_class(ERC20_CONTRACT_PATH).unwrap()
