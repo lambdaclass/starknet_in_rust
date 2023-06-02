@@ -387,7 +387,7 @@ where
                         Some(request.contract_address.clone()),
                         self.contract_address.clone(),
                         CallType::Call,
-                        request.contract_address.clone()
+                        request.contract_address.clone(),
                     ),
                     "delegate_call" => (
                         Some(request.contract_address),
