@@ -10,6 +10,10 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_rs::core::errors::state_errors::StateError;
+use starknet_rs::definitions::constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS;
+use starknet_rs::services::api::contract_classes::deprecated_contract_class::{
+    ContractClass, EntryPointType,
+};
 use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
@@ -42,7 +46,6 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
@@ -105,7 +108,7 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
         ),
         0,
         0,
-        Default::default(),
+        DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
         1_000_000,
         0,
         BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
@@ -524,6 +527,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InternalInvokeFunction {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         2,
+        TRANSACTION_VERSION,
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -831,7 +835,7 @@ fn test_deploy_account() {
         Default::default(),
         Default::default(),
         Default::default(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         None,
     )
     .unwrap();
@@ -1314,6 +1318,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
         1,
+        TRANSACTION_VERSION,
         vec![
             test_contract_address, // CONTRACT_ADDRESS
             Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
@@ -1348,7 +1353,7 @@ fn test_deploy_undeclared_account() {
         Default::default(),
         Default::default(),
         Default::default(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         None,
     )
     .unwrap();

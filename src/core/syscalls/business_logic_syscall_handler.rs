@@ -10,12 +10,13 @@ use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, Syscall
 use super::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
-        CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
-        SyscallRequest,
+        CallContractRequest, DeployRequest, LibraryCallRequest, ReplaceClassRequest,
+        SendMessageToL1Request, SyscallRequest,
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
 use crate::business_logic::state::BlockInfo;
+use crate::business_logic::transaction::error::TransactionError;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
@@ -402,7 +403,47 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::GetBlockTimestamp(req) => {
                 self.get_block_timestamp(vm, req, remaining_gas)
             }
+            SyscallRequest::ReplaceClass(req) => self.replace_class(vm, req, remaining_gas),
         }
+    }
+
+    pub(crate) fn post_run(
+        &self,
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: Relocatable,
+    ) -> Result<(), TransactionError> {
+        let expected_stop_ptr = self.expected_syscall_ptr;
+        if syscall_stop_ptr != expected_stop_ptr {
+            return Err(TransactionError::InvalidStopPointer(
+                expected_stop_ptr,
+                syscall_stop_ptr,
+            ));
+        }
+        self.validate_read_only_segments(runner)
+    }
+
+    /// Validates that there were no out of bounds writes to read-only segments and marks
+    /// them as accessed.
+    pub(crate) fn validate_read_only_segments(
+        &self,
+        runner: &mut VirtualMachine,
+    ) -> Result<(), TransactionError> {
+        for (segment_ptr, segment_size) in self.read_only_segments.clone() {
+            let used_size = runner
+                .get_segment_used_size(segment_ptr.segment_index as usize)
+                .ok_or(TransactionError::InvalidSegmentSize)?;
+
+            let seg_size = match segment_size {
+                MaybeRelocatable::Int(size) => size,
+                _ => return Err(TransactionError::NotAnInt),
+            };
+
+            if seg_size != used_size.into() {
+                return Err(TransactionError::OutOfBound);
+            }
+            runner.mark_address_range_as_accessed(segment_ptr, used_size)?;
+        }
+        Ok(())
     }
 }
 
@@ -473,18 +514,24 @@ where
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
+        // Change own contract_address to the called one in order to interact with its storage
+        let previous_contract_address = std::mem::take(&mut self.contract_address);
+        self.contract_address = request.contract_address;
         let execution_entry_point = ExecutionEntryPoint::new(
-            request.contract_address,
+            self.contract_address.clone(),
             calldata,
             request.selector,
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Call),
             None,
-            0,
+            remaining_gas,
         );
 
-        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
+        let response = self.call_contract_helper(vm, remaining_gas, execution_entry_point);
+        // Restore contract address after call is finished
+        self.contract_address = previous_contract_address;
+        response
     }
 
     fn storage_read(
@@ -607,6 +654,7 @@ where
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
+            "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -677,7 +725,7 @@ where
             EntryPointType::External,
             Some(CallType::Delegate),
             Some(request.class_hash.to_be_bytes()),
-            0,
+            remaining_gas,
         );
 
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
@@ -694,6 +742,22 @@ where
             body: Some(ResponseBody::GetBlockTimestamp(GetBlockTimestampResponse {
                 timestamp: self.general_config.block_info.block_timestamp.into(),
             })),
+        })
+    }
+
+    fn replace_class(
+        &mut self,
+        _vm: &VirtualMachine,
+        request: ReplaceClassRequest,
+        remaining_gas: u128,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        self.starknet_storage_state.state.set_class_hash_at(
+            self.contract_address.clone(),
+            request.class_hash.to_be_bytes(),
+        )?;
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
         })
     }
 }

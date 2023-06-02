@@ -35,7 +35,7 @@ use cairo_vm::{
     },
 };
 
-use super::*;
+use super::{CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext};
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
 
@@ -312,7 +312,7 @@ impl ExecutionEntryPoint {
 
         // cairo runner entry point
         runner.run_from_entrypoint(entry_point.offset, &entry_point_args, None)?;
-        runner.validate_and_process_os_context(os_context)?;
+        runner.validate_and_process_os_context_for_version0_class(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
         let args_ptr = (runner
@@ -425,9 +425,10 @@ impl ExecutionEntryPoint {
             .allocate_segment(&mut runner.vm, data)?
             .into();
 
-        // TODO: iterate os_context values properly and convert each one to CairoArg::Single()
-        let mut entrypoint_args: Vec<CairoArg> =
-            os_context.into_iter().map(CairoArg::Single).collect();
+        let mut entrypoint_args: Vec<CairoArg> = os_context
+            .iter()
+            .map(|x| CairoArg::Single(x.into()))
+            .collect();
         entrypoint_args.push(CairoArg::Single(alloc_pointer.clone()));
         entrypoint_args.push(CairoArg::Single(
             alloc_pointer.add_usize(self.calldata.len()).unwrap(),
@@ -442,21 +443,19 @@ impl ExecutionEntryPoint {
             Some(program.data_len() + program_extra_data.len()),
         )?;
 
-        // TODO: Fix these validations to work with cairo_1 os_context structure
-        //
-        // runner.validate_and_process_os_context(os_context)?;
+        runner.validate_and_process_os_context(os_context)?;
 
-        // // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
-        // let initial_fp = runner
-        //     .cairo_runner
-        //     .get_initial_fp()
-        //     .ok_or(TransactionError::MissingInitialFp)?;
+        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        let initial_fp = runner
+            .cairo_runner
+            .get_initial_fp()
+            .ok_or(TransactionError::MissingInitialFp)?;
 
-        // let args_ptr = initial_fp - (entrypoint_args.len() + 2);
+        let args_ptr = initial_fp - (entrypoint_args.len() + 2);
 
-        // runner
-        //     .vm
-        //     .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
+        runner
+            .vm
+            .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =

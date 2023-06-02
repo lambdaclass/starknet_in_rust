@@ -3,6 +3,11 @@ pub fn get_syscall_size_from_name(syscall_name: &str) -> usize {
         "emit_event" => 4,
         "deploy" => 9,
         "library_call" => 4,
+        "storage_write" => 3,
+        "storage_read" => 2,
+        "send_message_to_l1" => 3,
+        "call_contract" => 4,
+        "replace_class" => 1,
         _ => unimplemented!(),
     }
 }

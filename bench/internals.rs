@@ -15,7 +15,7 @@ use starknet_rs::{
         },
     },
     core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
-    definitions::general_config::StarknetChainId,
+    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetChainId},
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
@@ -90,7 +90,7 @@ fn deploy_account() {
                 vec![],
                 signature,
                 salt,
-                StarknetChainId::TestNet,
+                StarknetChainId::TestNet.to_felt(),
                 None,
             )
             .unwrap();
@@ -209,6 +209,7 @@ fn invoke() {
                 address,
                 selector,
                 0,
+                TRANSACTION_VERSION,
                 calldata,
                 signature,
                 StarknetChainId::TestNet.to_felt(),

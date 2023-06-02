@@ -9,7 +9,10 @@ use starknet_rs::{
         state::{cached_state::CachedState, BlockInfo},
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
-    definitions::general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
+    definitions::{
+        constants::TRANSACTION_VERSION,
+        general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
+    },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };
@@ -56,6 +59,7 @@ fn main() {
             CONTRACT_ADDRESS.clone(),
             INCREASE_BALANCE_SELECTOR.clone(),
             2,
+            TRANSACTION_VERSION,
             vec![1000.into()],
             vec![],
             StarknetChainId::TestNet.to_felt(),
@@ -70,6 +74,7 @@ fn main() {
             CONTRACT_ADDRESS.clone(),
             GET_BALANCE_SELECTOR.clone(),
             2,
+            TRANSACTION_VERSION,
             vec![],
             vec![],
             StarknetChainId::TestNet.to_felt(),

@@ -668,7 +668,7 @@ dependencies = [
 [[package]]
 name = "cairo-felt"
 version = "0.4.0"
-source = "git+https://github.com/lambdaclass/cairo-rs#e173ec963d24d7a7199c4f5eebe04bf0c674f8a7"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb#5db2e656d46a97d89563a74f8fc3abd595e8befb"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1456,7 +1456,7 @@ dependencies = [
 [[package]]
 name = "cairo-take_until_unbalanced"
 version = "0.25.0"
-source = "git+https://github.com/lambdaclass/cairo-rs#e173ec963d24d7a7199c4f5eebe04bf0c674f8a7"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb#5db2e656d46a97d89563a74f8fc3abd595e8befb"
 dependencies = [
  "nom",
 ]
@@ -1464,7 +1464,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.4.0"
-source = "git+https://github.com/lambdaclass/cairo-rs#e173ec963d24d7a7199c4f5eebe04bf0c674f8a7"
+source = "git+https://github.com/lambdaclass/cairo-rs?rev=5db2e656d46a97d89563a74f8fc3abd595e8befb#5db2e656d46a97d89563a74f8fc3abd595e8befb"
 dependencies = [
  "anyhow",
  "ark-ff 0.4.2",
@@ -1595,15 +1595,6 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
-
-[[package]]
-name = "ci_info"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24f638c70e8c5753795cc9a8c07c44da91554a09e4cf11a7326e8161b0a3c45e"
-dependencies = [
- "envmnt",
-]
 
 [[package]]
 name = "clap"
@@ -1910,16 +1901,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "envmnt"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2d328fc287c61314c4a61af7cfdcbd7e678e39778488c7cb13ec133ce0f4059"
-dependencies = [
- "fsio",
- "indexmap",
-]
-
-[[package]]
 name = "errno"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1999,12 +1980,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0845fa252299212f0389d64ba26f34fa32cfe41588355f21ed507c59a0f64541"
 
 [[package]]
-name = "fsio"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1fd087255f739f4f1aeea69f11b72f8080e9c2e7645cd06955dad4a178a49e3"
-
-[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2050,7 +2025,7 @@ dependencies = [
  "num-traits 0.2.15",
  "serde_json",
  "starknet-rs",
- "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?branch=main)",
+ "starknet_api",
  "tempfile",
 ]
 
@@ -2084,15 +2059,6 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
-]
-
-[[package]]
-name = "getopts"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14dbbfd5c71d70241ecf9e6f13737f7b5ce823821063188d7e46c41d371eebd5"
-dependencies = [
- "unicode-width",
 ]
 
 [[package]]
@@ -2659,12 +2625,6 @@ name = "new_debug_unreachable"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
-
-[[package]]
-name = "nias"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab250442c86f1850815b5d268639dff018c0627022bc1940eb2d642ca1ce12f0"
 
 [[package]]
 name = "nom"
@@ -3240,18 +3200,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 
 [[package]]
-name = "rusty-hook"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96cee9be61be7e1cbadd851e58ed7449c29c620f00b23df937cb9cbc04ac21a3"
-dependencies = [
- "ci_info",
- "getopts",
- "nias",
- "toml 0.5.11",
-]
-
-[[package]]
 name = "ryu"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3523,7 +3471,7 @@ dependencies = [
  "cairo-vm",
  "serde",
  "serde_json",
- "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?rev=b29d881)",
+ "starknet_api",
 ]
 
 [[package]]
@@ -3684,37 +3632,20 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits 0.2.15",
- "rusty-hook",
+ "once_cell",
  "serde",
  "serde_json",
  "sha3",
  "starknet-contract-class",
  "starknet-crypto 0.4.3",
- "starknet_api 0.1.0 (git+https://github.com/lambdaclass/starknet-api?rev=b29d881)",
+ "starknet_api",
  "thiserror",
 ]
 
 [[package]]
 name = "starknet_api"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet-api?branch=main#b29d88128cd79ecd1ab1e4336a2bea012462692d"
-dependencies = [
- "cairo-lang-starknet 1.1.0-alpha0",
- "derive_more",
- "hex",
- "indexmap",
- "once_cell",
- "primitive-types",
- "serde",
- "serde_json",
- "starknet-crypto 0.2.0",
- "thiserror",
-]
-
-[[package]]
-name = "starknet_api"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet-api?rev=b29d881#b29d88128cd79ecd1ab1e4336a2bea012462692d"
+source = "git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172#a891109ecc9c269e91b1afd2d44bc597728e1172"
 dependencies = [
  "cairo-lang-starknet 1.1.0-alpha0",
  "derive_more",
@@ -3955,15 +3886,6 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "toml"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6135d499e69981f9ff0ef2167955a5333c35e36f6937d382974566b3d5b94ec"
@@ -4076,12 +3998,6 @@ name = "unicode-segmentation"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dd624098567895118886609431a7c3b8f516e41d30e0643f03d94592a147e36"
-
-[[package]]
-name = "unicode-width"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0edd1e5b14653f783770bce4a4dabb4a5108a5370a5f5d8cfe8710c361f6c8b"
 
 [[package]]
 name = "unicode-xid"

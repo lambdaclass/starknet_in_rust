@@ -41,6 +41,7 @@ starknet-venv/
 **/*.json
 cairo_programs/cairo_1_contracts/*.sierra
 starknet_programs/cairo1/*.casm
+starknet_programs/cairo1/*.sierra
 default.profraw
 **.DS_Store
 /scripts/reports
@@ -48,3 +49,4 @@ __pycache__/
 .pytest_cache/
 # codecov report
 lcov.info
+.rusty-hook.toml
