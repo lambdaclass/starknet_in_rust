@@ -1,4 +1,3 @@
-use super::starknet_runner_error::StarknetRunnerError;
 use crate::business_logic::transaction::error::TransactionError;
 use crate::core::syscalls::syscall_handler::HintProcessorPostRun;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -99,32 +98,30 @@ where
         args: &[MaybeRelocatable],
     ) -> Result<(), TransactionError> {
         let program_builtins = get_casm_contract_builtins(contract_class, entrypoint_offset);
-        // TODO: investigate this line (cairo runner must be initialized once)
+
         self.cairo_runner
-            .initialize_function_runner_cairo_1(&mut self.vm, &program_builtins)
-            .unwrap();
+            .initialize_function_runner_cairo_1(&mut self.vm, &program_builtins)?;
 
         // Load builtin costs
         let builtin_costs: Vec<MaybeRelocatable> =
             vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
         let builtin_costs_ptr = self.vm.add_memory_segment();
-        self.vm
-            .load_data(builtin_costs_ptr, &builtin_costs)
-            .unwrap();
+        self.vm.load_data(builtin_costs_ptr, &builtin_costs)?;
 
         // Load extra data
-        let core_program_end_ptr = (self.cairo_runner.program_base.unwrap()
-            + self.cairo_runner.get_program().data_len())
-        .unwrap();
+        let core_program_end_ptr = (self
+            .cairo_runner
+            .program_base
+            .ok_or(TransactionError::NotAnInt)?
+            + self.cairo_runner.get_program().data_len())?;
         let program_extra_data: Vec<MaybeRelocatable> =
             vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
         self.vm
-            .load_data(core_program_end_ptr, &program_extra_data)
-            .unwrap();
+            .load_data(core_program_end_ptr, &program_extra_data)?;
 
         // Load calldata
         let calldata_start = self.vm.add_memory_segment();
-        let calldata_end = self.vm.load_data(calldata_start, &args.to_vec()).unwrap();
+        let calldata_end = self.vm.load_data(calldata_start, &args.to_vec())?;
 
         // Create entrypoint_args
         let mut entrypoint_args: Vec<CairoArg> =
@@ -136,16 +133,14 @@ where
         let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
 
         // Once we have all the entrypoint args in place we can run it
-        self.cairo_runner
-            .run_from_entrypoint(
-                entrypoint_offset,
-                &entrypoint_args,
-                true,
-                Some(self.cairo_runner.get_program().data_len() + program_extra_data.len()),
-                &mut self.vm,
-                &mut self.hint_processor,
-            )
-            .unwrap();
+        self.cairo_runner.run_from_entrypoint(
+            entrypoint_offset,
+            &entrypoint_args,
+            true,
+            Some(self.cairo_runner.get_program().data_len() + program_extra_data.len()),
+            &mut self.vm,
+            &mut self.hint_processor,
+        )?;
 
         Ok(())
     }
@@ -154,16 +149,16 @@ where
         Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
-    pub fn get_return_values(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
+    pub fn get_return_values(&self) -> Result<Vec<Felt252>, TransactionError> {
         let ret_data = self.vm.get_return_values(2)?;
 
         let n_rets = ret_data[0]
             .get_int_ref()
-            .ok_or(StarknetRunnerError::NotAFelt)?;
+            .ok_or(TransactionError::InvalidReturnData)?;
 
         let ret_ptr = ret_data[1]
             .get_relocatable()
-            .ok_or(StarknetRunnerError::NotARelocatable)?;
+            .ok_or(TransactionError::InvalidReturnData)?;
 
         let ret_data = self
             .vm
@@ -171,21 +166,25 @@ where
                 ret_ptr,
                 n_rets
                     .to_usize()
-                    .ok_or(StarknetRunnerError::DataConversionError)?,
+                    .ok_or(TransactionError::InvalidReturnData)?,
             )
-            .map_err(|_| StarknetRunnerError::NotAFelt)?;
+            .map_err(|_| TransactionError::InvalidReturnData)?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
-    pub fn get_return_values_cairo_1(&self) -> Result<Vec<Felt252>, StarknetRunnerError> {
-        // TODO: convert unwraps in proper errors
-        let return_values = self.vm.get_return_values(5).unwrap();
-        let retdata_start = return_values[3].get_relocatable().unwrap();
-        let retdata_end = return_values[4].get_relocatable().unwrap();
+    pub fn get_return_values_cairo_1(&self) -> Result<Vec<Felt252>, TransactionError> {
+        let return_values = self.vm.get_return_values(5)?;
+        let retdata_start = return_values[3]
+            .get_relocatable()
+            .ok_or(TransactionError::InvalidReturnData)?;
+        let retdata_end = return_values[4]
+            .get_relocatable()
+            .ok_or(TransactionError::InvalidReturnData)?;
+        let size =
+            (retdata_end - retdata_start).map_err(|_| TransactionError::InvalidReturnData)?;
         let retdata: Vec<Felt252> = self
             .vm
-            .get_integer_range(retdata_start, (retdata_end - retdata_start).unwrap())
-            .unwrap()
+            .get_integer_range(retdata_start, size)?
             .iter()
             .map(|c| c.clone().into_owned())
             .collect();
