@@ -1,6 +1,8 @@
 use crate::{
     business_logic::state::{
-        cached_state::CasmClassCache, state_api::StateReader, state_cache::StorageEntry,
+        cached_state::{CasmClassCache, UNINITIALIZED_CLASS_HASH},
+        state_api::StateReader,
+        state_cache::StorageEntry,
     },
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
@@ -98,6 +100,16 @@ impl StateReader for InMemoryStateReader {
             .get(class_hash)
             .ok_or(StateError::NoneCompiledHash(*class_hash))
             .copied()
+    }
+
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+        let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+        if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
+            let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
+            Ok(compiled_class)
+        } else {
+            Err(StateError::MissingCasmClass(compiled_class_hash))
+        }
     }
 }
 

@@ -193,6 +193,16 @@ impl<T: StateReader> StateReader for CachedState<T> {
         }
         Ok(hash.unwrap().to_owned())
     }
+
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+        let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+        if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
+            let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
+            Ok(compiled_class)
+        } else {
+            Err(StateError::MissingCasmClass(compiled_class_hash))
+        }
+    }
 }
 
 impl<T: StateReader> State for CachedState<T> {

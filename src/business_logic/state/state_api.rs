@@ -1,4 +1,4 @@
-use super::{cached_state::UNINITIALIZED_CLASS_HASH, state_cache::StorageEntry};
+use super::state_cache::StorageEntry;
 use crate::{
     business_logic::fact_state::state::StateDiff,
     core::errors::state_errors::StateError,
@@ -12,15 +12,7 @@ use cairo_vm::felt::Felt252;
 
 pub trait StateReader {
     /// Returns the class hash of the contract class at the given address.
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-        if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
-            let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
-            Ok(compiled_class)
-        } else {
-            Err(StateError::MissingCasmClass(compiled_class_hash))
-        }
-    }
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
     /// Returns the class hash of the contract class at the given address.
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError>;
     /// Returns the nonce of the given contract instance.
