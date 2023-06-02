@@ -89,9 +89,12 @@ impl<T: StateReader> CachedState<T> {
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
+    fn get_contract_class_old(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> Result<ContractClass, StateError> {
         if !self.get_contract_classes()?.contains_key(class_hash) {
-            let contract_class = self.state_reader.get_contract_class(class_hash)?;
+            let contract_class = self.state_reader.get_contract_class_old(class_hash)?;
             self.set_contract_class(class_hash, &contract_class)?;
         }
         Ok(self
@@ -416,8 +419,8 @@ mod tests {
         assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
-            cached_state.get_contract_class(&[0; 32]),
-            cached_state.state_reader.get_contract_class(&[0; 32])
+            cached_state.get_contract_class_old(&[0; 32]),
+            cached_state.state_reader.get_contract_class_old(&[0; 32])
         );
     }
 

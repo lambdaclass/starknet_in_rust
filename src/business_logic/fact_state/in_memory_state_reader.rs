@@ -49,7 +49,10 @@ impl InMemoryStateReader {
 }
 
 impl StateReader for InMemoryStateReader {
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
+    fn get_contract_class_old(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> Result<ContractClass, StateError> {
         let contract_class = self
             .class_hash_to_contract_class
             .get(class_hash)
@@ -183,7 +186,7 @@ mod tests {
             .class_hash_to_contract_class
             .insert([0; 32], contract_class.clone());
         assert_eq!(
-            state_reader.get_contract_class(&contract_class_key),
+            state_reader.get_contract_class_old(&contract_class_key),
             Ok(contract_class)
         )
     }

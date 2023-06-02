@@ -479,7 +479,7 @@ mod tests {
         assert_eq!(
             starknet_state
                 .state
-                .get_contract_class(&fib_class_hash)
+                .get_contract_class_old(&fib_class_hash)
                 .unwrap(),
             fib_contract_class
         );

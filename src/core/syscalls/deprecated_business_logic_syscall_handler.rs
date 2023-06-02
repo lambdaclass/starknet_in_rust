@@ -184,7 +184,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         let contract_class = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?;
+            .get_contract_class_old(&class_hash_bytes)?;
         let constructor_entry_points = contract_class
             .entry_points_by_type
             .get(&EntryPointType::Constructor)

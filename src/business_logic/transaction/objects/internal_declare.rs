@@ -266,7 +266,7 @@ impl InternalDeclare {
         let concurrent_exec_info = self.apply(state, general_config)?;
         self.handle_nonce(state)?;
         // Set contract class
-        match state.get_contract_class(&self.class_hash) {
+        match state.get_contract_class_old(&self.class_hash) {
             Err(StateError::MissingClassHash()) => {
                 // Class is undeclared; declare it.
                 state.set_contract_class(&self.class_hash, &self.contract_class)?;

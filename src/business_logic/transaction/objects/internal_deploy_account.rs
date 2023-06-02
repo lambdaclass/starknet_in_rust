@@ -143,7 +143,7 @@ impl InternalDeployAccount {
     where
         S: State + StateReader,
     {
-        let contract_class = state.get_contract_class(&self.class_hash)?;
+        let contract_class = state.get_contract_class_old(&self.class_hash)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
