@@ -3630,7 +3630,6 @@ dependencies = [
  "cairo-lang-starknet 1.0.0-rc0",
  "cairo-vm",
  "cargo-llvm-cov",
- "clap",
  "coverage-helper",
  "getset",
  "hex",

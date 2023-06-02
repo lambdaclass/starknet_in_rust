@@ -24,7 +24,6 @@ starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev="a8
 ] }
 starknet-crypto = "0.4.3"
 thiserror = "1.0.32"
-clap = { version = "4.1.8", features = ["derive"] }
 awc = "3.1.1"
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
