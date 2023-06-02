@@ -513,10 +513,63 @@ where
 
     fn get_execution_info(
         &self,
-        _vm: &mut VirtualMachine,
-        _remaining_gas: u128,
+        vm: &mut VirtualMachine,
+        remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        todo!()
+        let tx_info = &self.tx_execution_context;
+        let block_info = &self.general_config.block_info;
+
+        let mut res_segment = vm.add_memory_segment();
+
+        let signature_start = res_segment.offset;
+        for s in tx_info.signature.iter() {
+            vm.insert_value(res_segment, s)?;
+            res_segment = (res_segment + 1)?;
+        }
+        let signature_end = res_segment.offset;
+
+        let tx_info_ptr = res_segment.offset;
+        vm.insert_value::<Felt252>(res_segment, tx_info.version.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value(res_segment, tx_info.account_contract_address.0.clone())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, tx_info.max_fee.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, signature_start.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, signature_end.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, tx_info.transaction_hash.clone())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(
+            res_segment,
+            self.general_config.starknet_os_config.chain_id.to_felt(),
+        )?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;
+        res_segment = (res_segment + 1)?;
+
+        let block_info_ptr = res_segment.offset;
+        vm.insert_value::<Felt252>(res_segment, block_info.block_number.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, block_info.block_timestamp.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, block_info.sequencer_address.0.clone())?;
+        res_segment = (res_segment + 1)?;
+
+        let exec_info_ptr = res_segment;
+        vm.insert_value::<Felt252>(res_segment, tx_info_ptr.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, block_info_ptr.into())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, self.caller_address.0.clone())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, self.contract_address.0.clone())?;
+
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: Some(ResponseBody::GetExecutionInfo { exec_info_ptr }),
+        })
     }
 
     fn call_contract(

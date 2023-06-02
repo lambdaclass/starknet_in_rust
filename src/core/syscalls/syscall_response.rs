@@ -10,6 +10,7 @@ pub(crate) enum ResponseBody {
     CallContract(CallContractResponse),
     Failure(FailureReason),
     GetBlockTimestamp(GetBlockTimestampResponse),
+    GetExecutionInfo { exec_info_ptr: Relocatable },
 }
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
@@ -47,6 +48,9 @@ impl SyscallResponse {
             }
             Some(ResponseBody::GetBlockTimestamp(get_block_timestamp_response)) => {
                 cairo_args.push(get_block_timestamp_response.timestamp.clone().into())
+            }
+            Some(ResponseBody::GetExecutionInfo { exec_info_ptr }) => {
+                cairo_args.push(exec_info_ptr.into())
             }
             None => {}
         }
