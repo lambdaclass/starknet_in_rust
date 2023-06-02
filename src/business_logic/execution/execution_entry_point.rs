@@ -97,7 +97,7 @@ impl ExecutionEntryPoint {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
-            .get_compiled_class(&class_hash)
+            .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
 
         match contract_class {

@@ -162,7 +162,12 @@ impl<T: StateReader> StateReader for CachedState<T> {
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // Deprecated contract classes dont have a compiled_class_hash, we dont need to fetch it
-        if let Some(compiled_class) = self.contract_classes.map(|x| x.get(class_hash)).flatten() {
+        if let Some(compiled_class) = self
+            .contract_classes
+            .as_ref()
+            .map(|x| x.get(class_hash))
+            .flatten()
+        {
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
         }
         if let Some(compiled_class_hash) =
@@ -184,17 +189,17 @@ impl<T: StateReader> StateReader for CachedState<T> {
             return Err(StateError::MissingCasmClass(*compiled_class_hash));
         } else {
             // Fetch for contract from state_reader
-            let contract = self.state_reader.get_contract_class(class_hash)?;
+            let contract = self.state_reader.get_contract_class(class_hash)?.clone();
             // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
             let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
             match contract {
-                CompiledClass::Casm(class) => {
+                CompiledClass::Casm(ref class) => {
                     if let Some(casm_class) = &mut self.casm_contract_classes {
                         casm_class.insert(compiled_class_hash, *class.clone());
                         self.casm_contract_classes = Some(casm_class.clone());
                     }
                 }
-                CompiledClass::Deprecated(class) => {
+                CompiledClass::Deprecated(ref class) => {
                     if let Some(contract_class) = &mut self.contract_classes {
                         contract_class.insert(compiled_class_hash, *class.clone());
                         self.contract_classes = Some(contract_class.clone());

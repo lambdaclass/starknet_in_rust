@@ -271,11 +271,12 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::InternalDeclareV2;
+    use crate::business_logic::state::state_api::StateReader;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::{cached_state::CachedState, state_api::StateReader},
+            state::cached_state::CachedState,
         },
         definitions::general_config::StarknetChainId,
         utils::Address,
@@ -330,7 +331,7 @@ mod tests {
         .unwrap();
 
         let casm_class = match state
-            .get_compiled_class(&internal_declare.compiled_class_hash.to_le_bytes())
+            .get_contract_class(&internal_declare.compiled_class_hash.to_le_bytes())
             .unwrap()
         {
             CompiledClass::Casm(casm) => *casm,
