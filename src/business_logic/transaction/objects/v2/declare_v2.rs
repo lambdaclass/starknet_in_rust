@@ -37,7 +37,7 @@ pub struct InternalDeclareV2 {
     pub compiled_class_hash: Felt252,
     pub sierra_contract_class: SierraContractClass,
     pub hash_value: Felt252,
-    pub casm_class: Option<CasmContractClass>,
+    pub casm_class: once_cell::unsync::OnceCell<CasmContractClass>,
 }
 
 impl InternalDeclareV2 {
@@ -79,7 +79,7 @@ impl InternalDeclareV2 {
             nonce,
             compiled_class_hash,
             hash_value,
-            casm_class: None,
+            casm_class: Default::default(),
         };
 
         internal_declare.verify_version()?;
@@ -175,7 +175,7 @@ impl InternalDeclareV2 {
     }
 
     pub fn execute<S: State + StateReader>(
-        &mut self,
+        &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
         remaining_gas: u128,
@@ -212,23 +212,24 @@ impl InternalDeclareV2 {
     }
 
     pub(crate) fn compile_and_store_casm_class<S: State + StateReader>(
-        &mut self,
+        &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        let casm_class =
-            CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
-                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
-
-        self.casm_class = Some(casm_class.clone());
+        let casm_class = self
+            .casm_class
+            .get_or_try_init(|| {
+                CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
+            })
+            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
         state.set_compiled_class_hash(&self.hash_value, &self.compiled_class_hash)?;
-        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
+        state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
 
         Ok(())
     }
 
     fn run_validate_entrypoint<S: State + StateReader>(
-        &mut self,
+        &self,
         mut remaining_gas: u128,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
@@ -257,9 +258,6 @@ impl InternalDeclareV2 {
             &tx_execution_context,
             false,
         )?;
-
-        let class_hash = state.get_class_hash_at(&self.sender_address)?;
-        let _compiled_class_hash = state.get_compiled_class_hash(&class_hash)?;
 
         remaining_gas -= call_info.gas_consumed;
         verify_no_calls_to_other_contracts(&call_info)?;
@@ -301,7 +299,7 @@ mod tests {
 
         // create internal declare v2
 
-        let mut internal_declare = InternalDeclareV2::new(
+        let internal_declare = InternalDeclareV2::new(
             &sierra_contract_class,
             Felt252::zero(),
             chain_id,
