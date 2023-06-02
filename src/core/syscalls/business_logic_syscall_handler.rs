@@ -10,8 +10,8 @@ use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, Syscall
 use super::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
-        CallContractRequest, DeployRequest, LibraryCallRequest, SendMessageToL1Request,
-        SyscallRequest,
+        CallContractRequest, DeployRequest, LibraryCallRequest, ReplaceClassRequest,
+        SendMessageToL1Request, SyscallRequest,
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
@@ -406,6 +406,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::GetBlockTimestamp(req) => {
                 self.get_block_timestamp(vm, req, remaining_gas)
             }
+            SyscallRequest::ReplaceClass(req) => self.replace_class(vm, req, remaining_gas),
         }
     }
 
@@ -656,6 +657,7 @@ where
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
+            "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -743,6 +745,22 @@ where
             body: Some(ResponseBody::GetBlockTimestamp(GetBlockTimestampResponse {
                 timestamp: self.general_config.block_info.block_timestamp.into(),
             })),
+        })
+    }
+
+    fn replace_class(
+        &mut self,
+        _vm: &VirtualMachine,
+        request: ReplaceClassRequest,
+        remaining_gas: u128,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        self.starknet_storage_state.state.set_class_hash_at(
+            self.contract_address.clone(),
+            request.class_hash.to_be_bytes(),
+        )?;
+        Ok(SyscallResponse {
+            gas: remaining_gas,
+            body: None,
         })
     }
 }
