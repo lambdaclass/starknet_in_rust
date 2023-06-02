@@ -109,7 +109,7 @@ clean:
 clippy: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
+test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS) $(COMPILED_SIERRA_CONTRACTS)
 	cargo test --all --all-targets
 
 coverage: compile-cairo compile-starknet compile-abi $(COMPILED_CASM_CONTRACTS)

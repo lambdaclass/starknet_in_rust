@@ -1,5 +1,5 @@
 [package]
-name = "starknet-rs"
+name = "starknet-rs-cli"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,7 @@ with_mimalloc = ["mimalloc"]
 [dependencies]
 cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo", rev = "4afacfd574de1121d61dea28f8c73e1516c7e07d"}
 cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "4afacfd574de1121d61dea28f8c73e1516c7e07d"}
-cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", features = ["cairo-1-hints"], rev = "5db2e656d46a97d89563a74f8fc3abd595e8befb" }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", features = ["cairo-1-hints"], rev = "5db2e656d46a97d89563a74f8fc3abd595e8befb"  }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
@@ -19,35 +19,20 @@ num-traits = "0.2.15"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 sha3 = "0.10.1"
-starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev="a891109ecc9c269e91b1afd2d44bc597728e1172", features = [
+starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev="a891109", features = [
     "testing",
 ] }
 starknet-crypto = "0.4.3"
 thiserror = "1.0.32"
+clap = { version = "4.1.8", features = ["derive"] }
+actix-web = "4.3.1"
 awc = "3.1.1"
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
-
-starknet-contract-class = { path = "crates/starknet-contract-class" }
-starknet-syscall = { path = "crates/starknet-syscall" }
-once_cell = "1.17.1"
+starknet-rs = {git = "https://github.com/lambdaclass/starknet_in_rust", branch = "main"}
+starknet-contract-class = { path = "../crates/starknet-contract-class" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 coverage-helper = "0.1.0"
-
-[workspace]
-members = ["crates/starknet-contract-class", "fuzzer", "cli"]
-
-[[bench]]
-path = "bench/internals.rs"
-name = "internals"
-harness = false
-
-[profile.release.package.fuzzer]
-strip = "debuginfo"
-overflow-checks = true
-opt-level = 3
-debug = true
-debug-assertions = true

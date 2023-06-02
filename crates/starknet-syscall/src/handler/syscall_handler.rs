@@ -27,9 +27,7 @@ pub(crate) trait HintProcessorPostRun {
         &self,
         _runner: &mut VirtualMachine,
         _syscall_stop_ptr: Relocatable,
-    ) -> Result<(), TransactionError> {
-        Ok(())
-    }
+    ) -> Result<(), TransactionError>;
 }
 
 #[allow(unused)]
@@ -107,10 +105,10 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
 impl<'a, T: State + StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, T> {
     fn post_run(
         &self,
-        _runner: &mut VirtualMachine,
-        _syscall_stop_ptr: Relocatable,
-    ) -> Result<(), TransactionError> {
-        Ok(())
+        runner: &mut VirtualMachine,
+        syscall_stop_ptr: Relocatable,
+    ) -> Result<(), crate::business_logic::transaction::error::TransactionError> {
+        self.syscall_handler.post_run(runner, syscall_stop_ptr)
     }
 }
 
