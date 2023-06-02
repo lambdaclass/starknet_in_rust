@@ -74,12 +74,6 @@ impl<T: StateReader> CachedState<T> {
         Ok(())
     }
 
-    pub(crate) fn get_contract_classes(&self) -> Result<&ContractClassCache, StateError> {
-        self.contract_classes
-            .as_ref()
-            .ok_or(StateError::MissingContractClassCache)
-    }
-
     #[allow(dead_code)]
     pub(crate) fn get_casm_classes(&mut self) -> Result<&CasmClassCache, StateError> {
         self.casm_contract_classes
