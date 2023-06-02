@@ -50,3 +50,4 @@ __pycache__/
 # codecov report
 lcov.info
 .rusty-hook.toml
+!starknet_programs/class_with_abi.json

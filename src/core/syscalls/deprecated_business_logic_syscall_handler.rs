@@ -798,7 +798,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn replace_class(
         &mut self,
         vm: &mut VirtualMachine,
