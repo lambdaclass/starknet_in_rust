@@ -189,21 +189,16 @@ impl<T: StateReader> StateReader for CachedState<T> {
         } else {
             // Fetch for contract from state_reader
             let contract = self.state_reader.get_contract_class(class_hash)?;
-            // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
-            let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
             match contract {
                 CompiledClass::Casm(ref class) => {
+                    // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
+                    let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
                     if let Some(casm_class) = &mut self.casm_contract_classes {
                         casm_class.insert(compiled_class_hash, *class.clone());
                         self.casm_contract_classes = Some(casm_class.clone());
                     }
                 }
-                CompiledClass::Deprecated(ref class) => {
-                    if let Some(contract_class) = &mut self.contract_classes {
-                        contract_class.insert(compiled_class_hash, *class.clone());
-                        self.contract_classes = Some(contract_class.clone());
-                    }
-                }
+                _ => {},
             }
             Ok(contract)
         }
