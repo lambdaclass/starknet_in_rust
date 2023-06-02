@@ -400,6 +400,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::Deploy(req) => self.deploy(vm, req, remaining_gas),
             SyscallRequest::StorageRead(req) => self.storage_read(vm, req, remaining_gas),
             SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
+            SyscallRequest::GetExecutionInfo => self.get_execution_info(vm, remaining_gas),
             SyscallRequest::SendMessageToL1(req) => self.send_message_to_l1(vm, req, remaining_gas),
             SyscallRequest::EmitEvent(req) => self.emit_event(vm, req, remaining_gas),
             SyscallRequest::GetBlockNumber => self.get_block_number(vm, remaining_gas),
@@ -508,6 +509,14 @@ where
             gas: remaining_gas,
             body: None,
         })
+    }
+
+    fn get_execution_info(
+        &self,
+        _vm: &mut VirtualMachine,
+        _remaining_gas: u128,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        todo!()
     }
 
     fn call_contract(

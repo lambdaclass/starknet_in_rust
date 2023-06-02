@@ -27,6 +27,7 @@ pub(crate) enum SyscallRequest {
     CallContract(CallContractRequest),
     Deploy(DeployRequest),
     GetBlockNumber,
+    GetExecutionInfo,
     StorageRead(StorageReadRequest),
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1Request),
