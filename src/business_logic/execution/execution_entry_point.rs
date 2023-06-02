@@ -21,7 +21,7 @@ use crate::{
     },
     starknet_runner::runner::StarknetRunner,
     utils::{
-        felt_to_hash, get_deployed_address_class_hash_at_address, parse_builtin_names,
+        get_deployed_address_class_hash_at_address, parse_builtin_names,
         validate_contract_deployed, Address,
     },
 };
@@ -313,7 +313,7 @@ impl ExecutionEntryPoint {
 
         // cairo runner entry point
         runner.run_from_entrypoint(entry_point.offset, &entry_point_args, None)?;
-        runner.validate_and_process_os_context(os_context)?;
+        runner.validate_and_process_os_context_for_version0_class(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
         let args_ptr = (runner
@@ -426,9 +426,10 @@ impl ExecutionEntryPoint {
             .allocate_segment(&mut runner.vm, data)?
             .into();
 
-        // TODO: iterate os_context values properly and convert each one to CairoArg::Single()
-        let mut entrypoint_args: Vec<CairoArg> =
-            os_context.into_iter().map(CairoArg::Single).collect();
+        let mut entrypoint_args: Vec<CairoArg> = os_context
+            .iter()
+            .map(|x| CairoArg::Single(x.into()))
+            .collect();
         entrypoint_args.push(CairoArg::Single(alloc_pointer.clone()));
         entrypoint_args.push(CairoArg::Single(
             alloc_pointer.add_usize(self.calldata.len()).unwrap(),
@@ -443,28 +444,26 @@ impl ExecutionEntryPoint {
             Some(program.data_len() + program_extra_data.len()),
         )?;
 
-        // TODO: Fix these validations to work with cairo_1 os_context structure
-        //
-        // runner.validate_and_process_os_context(os_context)?;
+        runner.validate_and_process_os_context(os_context)?;
 
-        // // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
-        // let initial_fp = runner
-        //     .cairo_runner
-        //     .get_initial_fp()
-        //     .ok_or(TransactionError::MissingInitialFp)?;
+        // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
+        let initial_fp = runner
+            .cairo_runner
+            .get_initial_fp()
+            .ok_or(TransactionError::MissingInitialFp)?;
 
-        // let args_ptr = initial_fp - (entrypoint_args.len() + 2);
+        let args_ptr = initial_fp - (entrypoint_args.len() + 2);
 
-        // runner
-        //     .vm
-        //     .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
+        runner
+            .vm
+            .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage =
             &resources_manager.cairo_usage + &runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values_cairo_1()?;
-        println!("retdata {:?}", felt_to_hash(retdata.get(0).unwrap()));
+
         let c = self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler.resources_manager,
