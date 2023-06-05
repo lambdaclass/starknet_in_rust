@@ -9,7 +9,7 @@ use crate::{
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-            objects::internal_invoke_function::verify_no_calls_to_other_contracts,
+            invoke_function::verify_no_calls_to_other_contracts,
         },
     },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
