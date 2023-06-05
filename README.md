@@ -1,9 +1,9 @@
 <div align="center">
 <img src="./starknet_logo.svg" width="150"/>
 
-### 🦀 StarkNet in Rust 🦀
+### 🦀 Starknet in Rust 🦀
 
-StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdaclass/cairo-rs) VM
+Starknet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdaclass/cairo-rs) VM
 
 [Report Bug](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+) · [Request Feature](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+)
 
@@ -35,7 +35,7 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 - [🛠 Contributing](#-contributing)
 - [🌞 Related Projects](#-related-projects)
 - [📚 Documentation](#-documentation)
-  - [StarkNet](#starknet)
+  - [Starknet](#starknet)
 - [⚖️ License](#️-license)
 
 ## ⚠️ Disclaimer
@@ -44,14 +44,14 @@ StarkNet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 
 ## 📖 About
 
-`starknet_in_rust` is an implementation of [StarkNet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
+`starknet_in_rust` is an implementation of [Starknet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
 It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust implementation of the Cairo virtual machine.
 
 ## 🌅 Getting Started
 
 ### Dependencies
-- Rust 1.62
-- A working installation of cairo-lang 0.10.2 (for compiling the cairo files)
+- Rust 1.70
+- A working installation of cairo-lang 0.11.2 (for compiling the cairo files)
 - [Optional, for testing purposes] Heaptrack 
 
 ### Installation
@@ -89,8 +89,8 @@ export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/li
 
 You can find a tutorial on running contracts [here](/examples/contract_execution/README.md).
 
-### Using the Cli
-You can find an example on how to use the cli [here](/docs/CLI_USAGE_EXAMPLE.md)
+### Using the CLI
+You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
 ### Testing
 
@@ -138,9 +138,9 @@ And don't forget to give the project a star! ⭐ Thank you again for your suppor
 
 ## 📚 Documentation
 
-### StarkNet
-- [StarkNet's Architecture Review](https://david-barreto.com/starknets-architecture-review/)
-- [StarkNet State](https://docs.starknet.io/documentation/architecture_and_concepts/State/starknet-state/)
+### Starknet
+- [Starknet's Architecture Review](https://david-barreto.com/starknets-architecture-review/)
+- [Starknet State](https://docs.starknet.io/documentation/architecture_and_concepts/State/starknet-state/)
 - [Array Hashing](https://docs.starknet.io/documentation/architecture_and_concepts/Hashing/hash-functions/#array_hashing)
 
 ## ⚖️ License
