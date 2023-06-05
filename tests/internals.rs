@@ -731,7 +731,7 @@ fn test_declarev2_tx() {
     let result = declare_tx.execute(&mut state, &general_config, 0).unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
-        .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
+        .get_compiled_class(&declare_tx.compiled_class_hash.to_be_bytes())
         .is_ok());
 
     let expected_execution_info = TransactionExecutionInfo::new(

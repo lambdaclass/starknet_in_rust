@@ -284,7 +284,7 @@ impl<T: StateReader> State for CachedState<T> {
         compiled_class_hash: &Felt252,
         casm_class: CasmContractClass,
     ) -> Result<(), StateError> {
-        let compiled_class_hash = compiled_class_hash.to_le_bytes();
+        let compiled_class_hash = compiled_class_hash.to_be_bytes();
 
         self.casm_contract_classes
             .as_mut()
@@ -298,8 +298,8 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = class_hash.to_le_bytes();
-        let compiled_class_hash = compiled_class_hash.to_le_bytes();
+        let class_hash = class_hash.to_be_bytes();
+        let compiled_class_hash = compiled_class_hash.to_be_bytes();
 
         self.cache
             .class_hash_to_compiled_class_hash
