@@ -1,5 +1,5 @@
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError, hash_utils::compute_hash_on_elements,
+    hash_utils::compute_hash_on_elements, syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use cairo_vm::felt::Felt252;
 use starknet_crypto::{pedersen_hash, FieldElement};

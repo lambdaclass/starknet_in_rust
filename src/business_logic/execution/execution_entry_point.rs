@@ -5,18 +5,18 @@ use crate::{
         state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },
-    core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
-        deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
-        syscall_handler::SyscallHintProcessor,
-    },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     services::api::contract_classes::{
         compiled_class::CompiledClass,
         deprecated_contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     },
     starknet_runner::runner::StarknetRunner,
+    syscalls::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
+        deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
+        syscall_handler::SyscallHintProcessor,
+    },
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
         validate_contract_deployed, Address,

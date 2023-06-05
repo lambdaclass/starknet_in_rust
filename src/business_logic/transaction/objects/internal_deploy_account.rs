@@ -12,10 +12,7 @@ use crate::{
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
         },
     },
-    core::{
-        errors::syscall_handler_errors::SyscallHandlerError,
-        transaction_hash::starknet_transaction_hash::calculate_deploy_account_transaction_hash,
-    },
+    core::transaction_hash::starknet_transaction_hash::calculate_deploy_account_transaction_hash,
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
         general_config::StarknetGeneralConfig,
@@ -24,6 +21,7 @@ use crate::{
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     starkware_utils::starkware_errors::StarkwareError,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;

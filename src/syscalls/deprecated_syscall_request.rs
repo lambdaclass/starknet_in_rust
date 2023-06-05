@@ -1,5 +1,5 @@
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
 use cairo_vm::felt::Felt252;

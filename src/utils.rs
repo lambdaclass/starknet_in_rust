@@ -10,9 +10,9 @@ use crate::{
         },
         transaction::error::TransactionError,
     },
-    core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::transaction_type::TransactionType,
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,

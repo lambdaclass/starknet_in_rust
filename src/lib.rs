@@ -17,5 +17,6 @@ pub mod services;
 pub mod starknet_runner;
 pub mod starknet_storage;
 pub mod starkware_utils;
+pub mod syscalls;
 pub mod testing;
 pub mod utils;

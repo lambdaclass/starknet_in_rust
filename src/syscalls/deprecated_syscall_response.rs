@@ -5,7 +5,7 @@ use super::deprecated_syscall_request::{
     DeprecatedGetSequencerAddressRequest, DeprecatedGetTxInfoRequest,
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
-use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
 use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt252;
 
@@ -312,7 +312,7 @@ mod tests {
     use cairo_vm::relocatable;
 
     type DeprecatedBLSyscallHandler<'a> =
-        crate::core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
+        crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;
