@@ -463,7 +463,7 @@ impl ExecutionEntryPoint {
 
         let retdata = runner.get_return_values_cairo_1()?;
 
-        let c = self.build_call_info::<T>(
+        self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler.resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,
@@ -471,8 +471,6 @@ impl ExecutionEntryPoint {
             runner.hint_processor.syscall_handler.l2_to_l1_messages,
             runner.hint_processor.syscall_handler.internal_calls,
             retdata,
-        );
-        println!("call info: {:?}", c);
-        c
+        )
     }
 }

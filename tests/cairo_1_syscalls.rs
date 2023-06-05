@@ -611,7 +611,9 @@ fn deploy() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
+    let constructor_calldata: Felt252 = Felt252::from_bytes_be(&[1]);
+
+    let calldata: Vec<_> = [test_felt_hash, salt, constructor_calldata, Felt252::zero()].to_vec();
 
     let resources_manager = ExecutionResourcesManager::default();
 
@@ -642,17 +644,15 @@ fn deploy() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let call_info = exec_entry_point
-        .execute(
-            &mut state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context,
-            false,
-        )
-        .unwrap();
+    let call_info = exec_entry_point.execute(
+        &mut state,
+        &general_config,
+        &mut resources_manager,
+        &tx_execution_context,
+        false,
+    );
 
-    //assert!(call_info.is_ok());
+    assert!(call_info.is_ok());
 }
 
 #[test]
