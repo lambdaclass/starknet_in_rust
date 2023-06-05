@@ -18,14 +18,16 @@ pub fn addr_bound_prime(
     let addr_bound = constants
         .get("starkware.starknet.common.storage.ADDR_BOUND")
         .ok_or(HintError::MissingConstant(
-            "starkware.starknet.common.storage.ADDR_BOUND",
+            "starkware.starknet.common.storage.ADDR_BOUND".into(),
         ))?;
 
     let lower_bound = Felt252::from(1).shl(250u32);
     let upper_bound = Felt252::from(1).shl(251u32);
     if !(&lower_bound < addr_bound && addr_bound <= &upper_bound) {
         return Err(HintError::AssertionFailed(
-            "normalize_address() cannot be used with the current constants.".to_string(),
+            "normalize_address() cannot be used with the current constants."
+                .to_string()
+                .into_boxed_str(),
         )
         .into());
     }

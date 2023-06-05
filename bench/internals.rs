@@ -14,7 +14,7 @@ use starknet_rs::{
             internal_invoke_function::InternalInvokeFunction,
         },
     },
-    core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
+    core::contract_address::compute_deprecated_class_hash,
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetChainId},
     public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     services::api::contract_classes::deprecated_contract_class::ContractClass,

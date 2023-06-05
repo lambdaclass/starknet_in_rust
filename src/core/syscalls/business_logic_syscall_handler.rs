@@ -351,7 +351,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let initial_gas: Felt252 = get_big_int(vm, (syscall_ptr + 1)?)?;
         let initial_gas = initial_gas
             .to_u128()
-            .ok_or(MathError::Felt252ToU64Conversion(initial_gas))?;
+            .ok_or(MathError::Felt252ToU64Conversion(Box::new(initial_gas)))?;
 
         // Advance SyscallPointer as the first two cells contain the selector & gas
         let mut syscall_ptr: Relocatable =
