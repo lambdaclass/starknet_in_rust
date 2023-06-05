@@ -5,7 +5,6 @@ use crate::{
         syscall_handler_errors::SyscallHandlerError,
     },
     definitions::transaction_type::TransactionType,
-    starkware_utils::starkware_errors::StarkwareError,
     utils::ClassHash,
 };
 use cairo_vm::{
@@ -54,8 +53,8 @@ pub enum TransactionError {
     UnauthorizedActionOnValidate,
     #[error("Class hash {0:?} already declared")]
     ClassAlreadyDeclared(ClassHash),
-    #[error(transparent)]
-    Starkware(#[from] StarkwareError),
+    #[error("Starkware error: {0}")]
+    Starkware(String),
     #[error("Expected a relocatable value but got an integer")]
     NotARelocatableValue,
     #[error("Unexpected holes in the event order")]

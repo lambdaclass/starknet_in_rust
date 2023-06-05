@@ -1,4 +1,4 @@
-use crate::{starkware_utils::starkware_errors::StarkwareError, utils::Address};
+use crate::{business_logic::transaction::error::TransactionError, utils::Address};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockInfo {
@@ -28,13 +28,17 @@ impl BlockInfo {
     pub fn validate_legal_progress(
         &self,
         next_block_info: &BlockInfo,
-    ) -> Result<(), StarkwareError> {
+    ) -> Result<(), TransactionError> {
         if self.block_number + 1 != next_block_info.block_number {
-            return Err(StarkwareError::InvalidBlockNumber);
+            return Err(TransactionError::Starkware(String::from(
+                "Invalid Block number",
+            )));
         }
 
         if self.block_timestamp >= next_block_info.block_timestamp {
-            return Err(StarkwareError::InvalidBlockTimestamp);
+            return Err(TransactionError::Starkware(String::from(
+                "Invalid Block timestamp",
+            )));
         }
 
         Ok(())

@@ -23,7 +23,6 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
-    starkware_utils::starkware_errors::StarkwareError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -196,9 +195,9 @@ impl InternalDeployAccount {
         match num_constructors {
             0 => {
                 if !self.constructor_calldata.is_empty() {
-                    return Err(TransactionError::Starkware(
-                        StarkwareError::TransactionFailed,
-                    ));
+                    return Err(TransactionError::Starkware(String::from(
+                        "Cannot pass calldata to a contract with no constructor",
+                    )));
                 }
 
                 Ok(CallInfo::empty_constructor_call(
