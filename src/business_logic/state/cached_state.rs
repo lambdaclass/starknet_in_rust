@@ -409,7 +409,7 @@ mod tests {
 
         state_reader
             .class_hash_to_contract_class
-            .insert([0; 32], contract_class);
+            .insert([1; 32], contract_class);
 
         let mut cached_state = CachedState::new(state_reader, None, None);
 
@@ -417,8 +417,8 @@ mod tests {
         assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
-            cached_state.get_contract_class(&[0; 32]),
-            cached_state.state_reader.get_contract_class(&[0; 32])
+            cached_state.get_contract_class(&[1; 32]),
+            cached_state.state_reader.get_contract_class(&[1; 32])
         );
     }
 
