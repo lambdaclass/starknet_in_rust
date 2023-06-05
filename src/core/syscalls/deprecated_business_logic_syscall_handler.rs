@@ -11,7 +11,7 @@ use super::{
 };
 use crate::{
     business_logic::{
-        execution::{execution_entry_point::ExecutionEntryPoint, objects::*},
+        execution::{execution_entry_point::ExecutionEntryPoint, *},
         fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
@@ -358,10 +358,11 @@ where
         let caller_address;
         let call_type;
         let call_data;
+        let mut code_address = None;
 
-        // TODO: What about `delegate_call`, `delegate_l1_handler`?
-        //   The call to `self.read_and_validate_syscall_request()` will always fail in those
-        //   cases.
+        // TODO: What about `delegate_l1_handler`?
+        //   The call to `self.read_and_validate_syscall_request()` will always fail in that
+        //   case.
         match request {
             DeprecatedSyscallRequest::LibraryCall(request) => {
                 entry_point_type = match syscall_name {
@@ -381,19 +382,28 @@ where
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             DeprecatedSyscallRequest::CallContract(request) => {
-                entry_point_type = match syscall_name {
-                    "call_contract" => EntryPointType::External,
+                (code_address, caller_address, call_type, contract_address) = match syscall_name {
+                    "call_contract" => (
+                        None,
+                        self.contract_address.clone(),
+                        CallType::Call,
+                        request.contract_address.clone(),
+                    ),
+                    "delegate_call" => (
+                        Some(request.contract_address),
+                        self.caller_address.clone(),
+                        CallType::Delegate,
+                        self.contract_address.clone(),
+                    ),
                     _ => {
                         return Err(SyscallHandlerError::UnknownSyscall(
                             syscall_name.to_string(),
                         ))
                     }
                 };
+                entry_point_type = EntryPointType::External;
                 function_selector = request.function_selector;
                 class_hash = None;
-                contract_address = request.contract_address;
-                caller_address = self.contract_address.clone();
-                call_type = CallType::Call;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             _ => {
@@ -403,7 +413,7 @@ where
             }
         }
 
-        let entry_point = ExecutionEntryPoint::new(
+        let mut entry_point = ExecutionEntryPoint::new(
             contract_address,
             call_data,
             function_selector,
@@ -413,6 +423,7 @@ where
             class_hash,
             0,
         );
+        entry_point.code_address = code_address;
 
         entry_point
             .execute(
@@ -731,6 +742,14 @@ where
         self.call_contract_and_write_response("call_contract", vm, syscall_ptr)
     }
 
+    pub(crate) fn delegate_call(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self.call_contract_and_write_response("delegate_call", vm, syscall_ptr)
+    }
+
     pub(crate) fn syscall_storage_read(
         &mut self,
         address: Address,
@@ -794,13 +813,13 @@ where
             "storage_read" => DeprecatedStorageReadRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
             "replace_class" => DeprecatedReplaceClassRequest::from_ptr(vm, syscall_ptr),
+            "delegate_call" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn replace_class(
         &mut self,
         vm: &mut VirtualMachine,

@@ -129,6 +129,15 @@ pub(crate) struct DeprecatedReplaceClassRequest {
     pub(crate) class_hash: Felt252,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeprecatedDelegateCallRequest {
+    pub(crate) selector: Felt252,
+    pub(crate) contract_address: Address,
+    pub(crate) function_selector: Felt252,
+    pub(crate) calldata_size: usize,
+    pub(crate) calldata: Relocatable,
+}
+
 impl From<DeprecatedEmitEventRequest> for DeprecatedSyscallRequest {
     fn from(emit_event_struct: DeprecatedEmitEventRequest) -> DeprecatedSyscallRequest {
         DeprecatedSyscallRequest::EmitEvent(emit_event_struct)
@@ -458,7 +467,8 @@ impl DeprecatedFromPtr for DeprecatedReplaceClassRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
-        let class_hash = get_big_int(vm, syscall_ptr)?;
+        // memory[syscall_ptr] contains the selector, so we fetch the next memory cell
+        let class_hash = get_big_int(vm, (syscall_ptr + 1)?)?;
 
         Ok(DeprecatedSyscallRequest::ReplaceClass(
             DeprecatedReplaceClassRequest { class_hash },

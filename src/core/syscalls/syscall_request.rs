@@ -1,5 +1,6 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use num_traits::ToPrimitive;
 
 use crate::{
     core::errors::syscall_handler_errors::SyscallHandlerError,
@@ -31,6 +32,7 @@ pub(crate) enum SyscallRequest {
     StorageWrite(StorageWriteRequest),
     SendMessageToL1(SendMessageToL1Request),
     GetBlockTimestamp(GetBlockTimestampRequest),
+    GetBlockHash(GetBlockHashRequest),
     ReplaceClass(ReplaceClassRequest),
 }
 
@@ -107,6 +109,11 @@ pub(crate) struct SendMessageToL1Request {
     pub(crate) payload_end: Relocatable,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GetBlockHashRequest {
+    pub(crate) block_number: u64,
+}
+
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ReplaceClassRequest {
@@ -158,9 +165,16 @@ impl From<StorageWriteRequest> for SyscallRequest {
         SyscallRequest::StorageWrite(storage_write_request)
     }
 }
+
 impl From<StorageReadRequest> for SyscallRequest {
     fn from(storage_read_request: StorageReadRequest) -> SyscallRequest {
         SyscallRequest::StorageRead(storage_read_request)
+    }
+}
+
+impl From<GetBlockHashRequest> for SyscallRequest {
+    fn from(get_block_hash_request: GetBlockHashRequest) -> SyscallRequest {
+        SyscallRequest::GetBlockHash(get_block_hash_request)
     }
 }
 
@@ -193,6 +207,20 @@ impl FromPtr for GetBlockTimestampRequest {
         _syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         Ok(GetBlockTimestampRequest {}.into())
+    }
+}
+
+impl FromPtr for GetBlockHashRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        Ok(GetBlockHashRequest {
+            block_number: get_big_int(vm, syscall_ptr)?
+                .to_u64()
+                .ok_or(SyscallHandlerError::FeltToU64Fail)?,
+        }
+        .into())
     }
 }
 
