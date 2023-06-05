@@ -2,8 +2,8 @@ use super::internal_invoke_function::verify_no_calls_to_other_contracts;
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+            TransactionExecutionInfo,
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
@@ -18,7 +18,7 @@ use crate::{
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
-        general_config::{StarknetChainId, StarknetGeneralConfig},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
@@ -54,7 +54,6 @@ pub struct InternalDeployAccount {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
-    chain_id: StarknetChainId,
 }
 
 impl InternalDeployAccount {
@@ -67,7 +66,7 @@ impl InternalDeployAccount {
         constructor_calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         contract_address_salt: Address,
-        chain_id: StarknetChainId,
+        chain_id: Felt252,
         hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = Address(calculate_contract_address(
@@ -87,7 +86,7 @@ impl InternalDeployAccount {
                 max_fee,
                 nonce.clone(),
                 contract_address_salt.0.clone(),
-                chain_id.to_felt(),
+                chain_id,
             )?,
         };
 
@@ -101,7 +100,6 @@ impl InternalDeployAccount {
             max_fee,
             hash_value,
             signature,
-            chain_id,
         })
     }
 
@@ -267,17 +265,7 @@ impl InternalDeployAccount {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
-            calculate_deploy_account_transaction_hash(
-                self.version,
-                &self.contract_address,
-                Felt252::from_bytes_be(&self.class_hash),
-                &self.constructor_calldata,
-                self.max_fee,
-                self.nonce.clone(),
-                self.contract_address_salt.0.clone(),
-                self.chain_id.to_felt(),
-            )
-            .unwrap(),
+            self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
             self.nonce.clone(),
@@ -371,6 +359,7 @@ mod tests {
             contract_address::starknet_contract_address::compute_deprecated_class_hash,
             errors::state_errors::StateError,
         },
+        definitions::general_config::StarknetChainId,
         utils::felt_to_hash,
     };
 
@@ -397,7 +386,7 @@ mod tests {
             vec![10.into()],
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
             None,
         )
         .unwrap();
@@ -434,7 +423,7 @@ mod tests {
             vec![10.into()],
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
             None,
         )
         .unwrap();
@@ -447,7 +436,7 @@ mod tests {
             vec![10.into()],
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
             None,
         )
         .unwrap();
@@ -490,7 +479,7 @@ mod tests {
             Vec::new(),
             Vec::new(),
             Address(0.into()),
-            StarknetChainId::TestNet2,
+            StarknetChainId::TestNet2.to_felt(),
             None,
         )
         .unwrap();

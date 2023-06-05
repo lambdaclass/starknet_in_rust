@@ -33,6 +33,7 @@ pub(crate) enum SyscallRequest {
     SendMessageToL1(SendMessageToL1Request),
     GetBlockTimestamp(GetBlockTimestampRequest),
     GetBlockHash(GetBlockHashRequest),
+    ReplaceClass(ReplaceClassRequest),
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,9 +114,21 @@ pub(crate) struct GetBlockHashRequest {
     pub(crate) block_number: u64,
 }
 
+#[allow(unused)]
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct ReplaceClassRequest {
+    pub(crate) class_hash: Felt252,
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+impl From<ReplaceClassRequest> for SyscallRequest {
+    fn from(replace_class_request: ReplaceClassRequest) -> SyscallRequest {
+        SyscallRequest::ReplaceClass(replace_class_request)
+    }
+}
 
 impl From<GetBlockTimestampRequest> for SyscallRequest {
     fn from(get_block_timestamp: GetBlockTimestampRequest) -> SyscallRequest {
@@ -174,6 +187,18 @@ pub(crate) trait FromPtr {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
+}
+
+impl FromPtr for ReplaceClassRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        Ok(ReplaceClassRequest {
+            class_hash: vm.get_integer(syscall_ptr)?.into_owned(),
+        }
+        .into())
+    }
 }
 
 impl FromPtr for GetBlockTimestampRequest {

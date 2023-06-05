@@ -16,7 +16,7 @@ use starknet_rs::services::api::contract_classes::deprecated_contract_class::{
 };
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
+        execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::{CachedState, ContractClassCache},
@@ -836,7 +836,7 @@ fn test_deploy_account() {
         Default::default(),
         Default::default(),
         Default::default(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         None,
     )
     .unwrap();
@@ -1354,7 +1354,7 @@ fn test_deploy_undeclared_account() {
         Default::default(),
         Default::default(),
         Default::default(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         None,
     )
     .unwrap();

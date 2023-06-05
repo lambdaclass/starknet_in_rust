@@ -4,7 +4,7 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
+        execution::{CallInfo, CallType, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
         transaction::objects::internal_deploy_account::InternalDeployAccount,
@@ -54,7 +54,7 @@ fn internal_deploy_account() {
         Address(felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         )),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         None,
     )
     .unwrap();

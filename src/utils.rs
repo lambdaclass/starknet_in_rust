@@ -1,8 +1,7 @@
 use crate::{
     business_logic::{
         execution::{
-            gas_usage::calculate_tx_gas_usage, objects::CallInfo,
-            os_usage::get_additional_os_resources,
+            gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
@@ -130,16 +129,18 @@ pub fn string_to_hash(class_string: &String) -> ClassHash {
 // -------------------
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
-/// See to_cached_state_storage_mapping documentation.
-
 pub fn to_state_diff_storage_mapping(
     storage_writes: HashMap<StorageEntry, Felt252>,
-) -> HashMap<Felt252, HashMap<ClassHash, Address>> {
-    let mut storage_updates: HashMap<Felt252, HashMap<ClassHash, Address>> = HashMap::new();
-    for ((address, key), value) in storage_writes {
-        let mut map = storage_updates.get(&address.0).cloned().unwrap_or_default();
-        map.insert(key, Address(value));
-        storage_updates.insert(address.0, map);
+) -> HashMap<Address, HashMap<Felt252, Felt252>> {
+    let mut storage_updates: HashMap<Address, HashMap<Felt252, Felt252>> = HashMap::new();
+    for ((address, key), value) in storage_writes.into_iter() {
+        storage_updates
+            .entry(address)
+            .and_modify(|updates_for_address: &mut HashMap<Felt252, Felt252>| {
+                let key_fe = Felt252::from_bytes_be(&key);
+                updates_for_address.insert(key_fe, value.clone());
+            })
+            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(&key), value)]));
     }
     storage_updates
 }
@@ -228,14 +229,13 @@ where
 
 /// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
 /// storage mapping (Tuple of address and key map to the associated value).
-
 pub fn to_cache_state_storage_mapping(
-    map: HashMap<Felt252, HashMap<ClassHash, Address>>,
+    map: &HashMap<Address, HashMap<Felt252, Felt252>>,
 ) -> HashMap<StorageEntry, Felt252> {
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
         for (key, value) in contract_storage {
-            storage_writes.insert((Address(address.clone()), key), value.0);
+            storage_writes.insert((address.clone(), felt_to_hash(key)), value.clone());
         }
     }
     storage_writes
@@ -531,7 +531,7 @@ mod test {
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
+        let mut storage: HashMap<(Address, [u8; 32]), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
         let key1 = [0; 32];
         let value1: Felt252 = 2.into();
@@ -546,14 +546,10 @@ mod test {
 
         let map = to_state_diff_storage_mapping(storage);
 
-        assert_eq!(
-            *map.get(&address1.0).unwrap().get(&key1).unwrap(),
-            Address(value1)
-        );
-        assert_eq!(
-            *map.get(&address2.0).unwrap().get(&key2).unwrap(),
-            Address(value2)
-        );
+        let key1_fe = Felt252::from_bytes_be(key1.as_slice());
+        let key2_fe = Felt252::from_bytes_be(key2.as_slice());
+        assert_eq!(*map.get(&address1).unwrap().get(&key1_fe).unwrap(), value1);
+        assert_eq!(*map.get(&address2).unwrap().get(&key2_fe).unwrap(), value2);
     }
 
     #[test]
@@ -622,7 +618,7 @@ mod test {
         storage.insert((address2.clone(), key2), value2.clone());
 
         let state_dff = to_state_diff_storage_mapping(storage);
-        let cache_storage = to_cache_state_storage_mapping(state_dff);
+        let cache_storage = to_cache_state_storage_mapping(&state_dff);
 
         let mut expected_res = HashMap::new();
 

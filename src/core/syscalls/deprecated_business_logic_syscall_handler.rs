@@ -11,7 +11,7 @@ use super::{
 };
 use crate::{
     business_logic::{
-        execution::{execution_entry_point::ExecutionEntryPoint, objects::*},
+        execution::{execution_entry_point::ExecutionEntryPoint, *},
         fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
@@ -800,7 +800,6 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn replace_class(
         &mut self,
         vm: &mut VirtualMachine,
