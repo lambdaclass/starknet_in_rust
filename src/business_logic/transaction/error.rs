@@ -120,8 +120,8 @@ pub enum TransactionError {
     CairoRunner(#[from] CairoRunError),
     #[error(transparent)]
     Runner(#[from] RunnerError),
-    #[error("Invalid Return Data")]
-    InvalidReturnData,
+    #[error("Invalid Return Data: {0}")]
+    InvalidReturnData(String),
     #[error("Transaction type {0:?} not found in OsResources: {1:?}")]
     NoneTransactionType(TransactionType, OsResources),
     #[error(transparent)]

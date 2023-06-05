@@ -154,11 +154,15 @@ where
 
         let n_rets = ret_data[0]
             .get_int_ref()
-            .ok_or(TransactionError::InvalidReturnData)?;
+            .ok_or(TransactionError::InvalidReturnData(String::from(
+                "Felt expected",
+            )))?;
 
         let ret_ptr = ret_data[1]
             .get_relocatable()
-            .ok_or(TransactionError::InvalidReturnData)?;
+            .ok_or(TransactionError::InvalidReturnData(String::from(
+                "Relocatable expected",
+            )))?;
 
         let ret_data = self
             .vm
@@ -166,22 +170,33 @@ where
                 ret_ptr,
                 n_rets
                     .to_usize()
-                    .ok_or(TransactionError::InvalidReturnData)?,
+                    .ok_or(TransactionError::InvalidReturnData(String::from(
+                        "Conversion error",
+                    )))?,
             )
-            .map_err(|_| TransactionError::InvalidReturnData)?;
+            .map_err(|_| TransactionError::InvalidReturnData(String::from("Felt expected")))?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
     pub fn get_return_values_cairo_1(&self) -> Result<Vec<Felt252>, TransactionError> {
         let return_values = self.vm.get_return_values(5)?;
-        let retdata_start = return_values[3]
-            .get_relocatable()
-            .ok_or(TransactionError::InvalidReturnData)?;
-        let retdata_end = return_values[4]
-            .get_relocatable()
-            .ok_or(TransactionError::InvalidReturnData)?;
-        let size =
-            (retdata_end - retdata_start).map_err(|_| TransactionError::InvalidReturnData)?;
+        let retdata_start =
+            return_values[3]
+                .get_relocatable()
+                .ok_or(TransactionError::InvalidReturnData(String::from(
+                    "Relocatable expected",
+                )))?;
+        let retdata_end =
+            return_values[4]
+                .get_relocatable()
+                .ok_or(TransactionError::InvalidReturnData(String::from(
+                    "Relocatable expected",
+                )))?;
+        let size = (retdata_end - retdata_start).map_err(|_| {
+            TransactionError::InvalidReturnData(String::from(
+                "End pointer cannot be before start pointer",
+            ))
+        })?;
         let retdata: Vec<Felt252> = self
             .vm
             .get_integer_range(retdata_start, size)?
