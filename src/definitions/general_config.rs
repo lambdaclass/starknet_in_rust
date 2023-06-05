@@ -1,6 +1,7 @@
 use crate::{business_logic::state::BlockInfo, utils::Address};
 use cairo_vm::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
+use starknet_api::block::Block;
 use std::collections::HashMap;
 
 use super::constants::{
@@ -74,9 +75,13 @@ pub struct StarknetGeneralConfig {
     pub(crate) validate_max_n_steps: u64,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) block_info: BlockInfo,
+    #[getset(get = "pub", get_mut = "pub")]
+    // Contains the blocks in the range [ current_block - 1024, current_block - 10 ]
+    pub(crate) blocks: HashMap<u64, Block>,
 }
 
 impl StarknetGeneralConfig {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         starknet_os_config: StarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
@@ -85,6 +90,7 @@ impl StarknetGeneralConfig {
         invoke_tx_max_n_steps: u64,
         validate_max_n_steps: u64,
         block_info: BlockInfo,
+        blocks: HashMap<u64, Block>,
     ) -> Self {
         Self {
             starknet_os_config,
@@ -94,6 +100,7 @@ impl StarknetGeneralConfig {
             cairo_resource_fee_weights,
             validate_max_n_steps,
             block_info,
+            blocks,
         }
     }
 }
@@ -109,6 +116,7 @@ impl Default for StarknetGeneralConfig {
             cairo_resource_fee_weights: DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
             validate_max_n_steps: DEFAULT_VALIDATE_MAX_N_STEPS,
             block_info: BlockInfo::empty(DEFAULT_SEQUENCER_ADDRESS.clone()),
+            blocks: HashMap::default(),
         }
     }
 }
