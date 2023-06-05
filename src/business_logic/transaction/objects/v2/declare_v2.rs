@@ -283,7 +283,7 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
-    use num_traits::Zero;
+    use num_traits::{One, Zero};
 
     #[test]
     fn create_declare_v2_test() {
@@ -302,14 +302,14 @@ mod tests {
 
         let internal_declare = InternalDeclareV2::new(
             &sierra_contract_class,
-            Felt252::zero(),
+            Felt252::one(),
             chain_id,
             sender_address,
             0,
             0,
             [1.into()].to_vec(),
             Felt252::zero(),
-            None,
+            Some(Felt252::one()),
         )
         .unwrap();
 
