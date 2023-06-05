@@ -5,7 +5,7 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, TransactionExecutionInfo},
+        execution::{CallInfo, CallType, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
         transaction::objects::internal_deploy_account::InternalDeployAccount,

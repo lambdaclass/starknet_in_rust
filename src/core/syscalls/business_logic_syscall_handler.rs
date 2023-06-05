@@ -4,9 +4,12 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use super::syscall_request::{
-    EmitEventRequest, FromPtr, GetBlockTimestampRequest, StorageReadRequest, StorageWriteRequest,
+    EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, StorageReadRequest,
+    StorageWriteRequest,
 };
-use super::syscall_response::{DeployResponse, GetBlockTimestampResponse, SyscallResponse};
+use super::syscall_response::{
+    DeployResponse, GetBlockHashResponse, GetBlockTimestampResponse, SyscallResponse,
+};
 use super::{
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
@@ -21,11 +24,8 @@ use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{
-                CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
-                TransactionExecutionContext,
-            },
+            execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType,
+            OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
@@ -404,7 +404,32 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::GetBlockTimestamp(req) => {
                 self.get_block_timestamp(vm, req, remaining_gas)
             }
+            SyscallRequest::GetBlockHash(req) => Ok(self.get_block_hash(req, remaining_gas)),
             SyscallRequest::ReplaceClass(req) => self.replace_class(vm, req, remaining_gas),
+        }
+    }
+
+    fn get_block_hash(&self, request: GetBlockHashRequest, remaining_gas: u128) -> SyscallResponse {
+        let block_number = request.block_number;
+        let current_block_number = self.general_config.block_info.block_number;
+        let block_hash = if block_number < current_block_number - 1024
+            || block_number > current_block_number - 10
+        {
+            Felt252::zero()
+        } else {
+            // Fetch hash from block header
+            self.general_config
+                .blocks()
+                .get(&block_number)
+                .map(|block| Felt252::from_bytes_be(block.header.block_hash.0.bytes()))
+                .unwrap_or_default()
+        };
+
+        SyscallResponse {
+            gas: remaining_gas,
+            body: Some(ResponseBody::GetBlockHash(GetBlockHashResponse {
+                block_hash,
+            })),
         }
     }
 

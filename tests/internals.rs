@@ -15,7 +15,7 @@ use starknet_rs::definitions::constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS;
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
+        execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::{CachedState, ContractClassCache},
@@ -111,6 +111,7 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
         1_000_000,
         0,
         BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
+        HashMap::default(),
     )
 }
 

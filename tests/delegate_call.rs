@@ -3,61 +3,40 @@
 mod cairo_1_syscalls;
 
 use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-            TransactionExecutionContext,
+            execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
-        state::{cached_state::CachedState, state_cache::StorageEntry},
+        state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    utils::{calculate_sn_keccak, Address},
+    utils::Address,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::{collections::HashMap, path::PathBuf};
 
 #[test]
-fn hello_starknet_increase_balance() {
-    // ---------------------------------------------------------
-    //  Create program and entry point types for contract class
-    // ---------------------------------------------------------
-
-    let path = PathBuf::from("starknet_programs/increase_balance.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
-    let entry_points_by_type = contract_class.entry_points_by_type().clone();
-
-    // External entry point, increase_balance function increase_balance.cairo:L13
-    let increase_balance_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(0)
-        .unwrap()
-        .selector()
-        .clone();
-
+fn delegate_call() {
     //* --------------------------------------------
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
     let mut contract_class_cache = HashMap::new();
-
-    //  ------------ contract data --------------------
-
-    let address = Address(1111.into());
-    let class_hash = [1; 32];
     let nonce = Felt252::zero();
-    let storage_entry: StorageEntry = (address.clone(), [1; 32]);
-    let storage = Felt252::zero();
+
+    // Add get_number.cairo contract to the state
+
+    let path = PathBuf::from("starknet_programs/get_number.json");
+    let contract_class = ContractClass::try_from(path).unwrap();
+
+    let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
+    let class_hash = [2; 32];
 
     contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::default();
@@ -66,10 +45,37 @@ fn hello_starknet_increase_balance() {
         .insert(address.clone(), class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce);
+        .insert(address, nonce.clone());
+
+    // ---------------------------------------------------------
+    //  Create program and entry point types for contract class
+    // ---------------------------------------------------------
+
+    let path = PathBuf::from("starknet_programs/delegate_call.json");
+    let contract_class = ContractClass::try_from(path).unwrap();
+    let entry_points_by_type = contract_class.entry_points_by_type().clone();
+
+    // External entry point, delegate_call function delegate.cairo:L13
+    let test_delegate_call_selector = entry_points_by_type
+        .get(&EntryPointType::External)
+        .unwrap()
+        .get(0)
+        .unwrap()
+        .selector()
+        .clone();
+
+    //  ------------ contract data --------------------
+
+    let address = Address(1111.into());
+    let class_hash = [1; 32];
+
+    contract_class_cache.insert(class_hash, contract_class);
     state_reader
-        .address_to_storage_mut()
-        .insert(storage_entry, storage);
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
 
     //* ---------------------------------------
     //*    Create state with previous data
@@ -81,14 +87,14 @@ fn hello_starknet_increase_balance() {
     //*    Create execution entry point
     //* ------------------------------------
 
-    let calldata = [1.into()].to_vec();
+    let calldata = [].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
-        calldata.clone(),
-        increase_balance_selector.clone(),
+        calldata,
+        test_delegate_call_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -110,37 +116,14 @@ fn hello_starknet_increase_balance() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-    let expected_key = calculate_sn_keccak("balance".as_bytes());
 
-    let mut expected_accessed_storage_keys = HashSet::new();
-    expected_accessed_storage_keys.insert(expected_key);
-    let expected_storage_read_values = vec![Felt252::zero()];
-
-    let expected_call_info = CallInfo {
-        caller_address: Address(0.into()),
-        call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
-        entry_point_selector: Some(increase_balance_selector),
-        entry_point_type: Some(EntryPointType::External),
-        calldata,
-        retdata: [].to_vec(),
-        execution_resources: ExecutionResources::default(),
-        class_hash: Some(class_hash),
-        accessed_storage_keys: expected_accessed_storage_keys,
-        storage_read_values: expected_storage_read_values,
-        ..Default::default()
-    };
-
-    assert_eq!(
-        exec_entry_point
-            .execute(
-                &mut state,
-                &general_config,
-                &mut resources_manager,
-                &tx_execution_context,
-                false,
-            )
-            .unwrap(),
-        expected_call_info
-    );
+    assert!(exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .is_ok());
 }

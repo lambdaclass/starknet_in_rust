@@ -2,8 +2,7 @@ use super::error::TransactionError;
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, TransactionExecutionContext},
+            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},

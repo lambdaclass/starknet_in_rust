@@ -15,10 +15,8 @@ use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{
-                CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
-            },
+            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
+            OrderedL2ToL1Message, TransactionExecutionContext,
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,

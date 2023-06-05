@@ -6,7 +6,7 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType},
+        execution::{CallInfo, CallType},
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
