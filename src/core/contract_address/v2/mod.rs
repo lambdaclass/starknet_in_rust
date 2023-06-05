@@ -1,1 +1,1 @@
-pub mod starknet_sierra_contract_address;
+pub mod sierra_contract_address;
