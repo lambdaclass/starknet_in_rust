@@ -12,7 +12,7 @@ use crate::{
             objects::internal_invoke_function::verify_no_calls_to_other_contracts,
         },
     },
-    core::transaction_hash::starknet_transaction_hash::calculate_declare_v2_transaction_hash,
+    core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,

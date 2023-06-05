@@ -1,4 +1,4 @@
-use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo};
+use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::{
     business_logic::{
         execution::{
@@ -307,10 +307,7 @@ mod tests {
             execution::{CallType, OrderedL2ToL1Message},
             state::state_cache::StorageEntry,
         },
-        core::{
-            contract_address::starknet_contract_address::compute_deprecated_class_hash,
-            errors::state_errors::StateError,
-        },
+        core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
