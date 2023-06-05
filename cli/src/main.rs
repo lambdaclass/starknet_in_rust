@@ -5,9 +5,7 @@ use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
 use starknet_rs::{
     business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, objects::TransactionExecutionContext,
-        },
+        execution::{execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext},
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
@@ -18,9 +16,9 @@ use starknet_rs::{
         transaction::invoke_function::InvokeFunction,
     },
     core::{
-        contract_address::starknet_contract_address::compute_deprecated_class_hash,
+        contract_address::compute_deprecated_class_hash,
         errors::contract_address_errors::ContractAddressError,
-        transaction_hash::starknet_transaction_hash::{
+        transaction_hash::{
             calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
             calculate_transaction_hash_common, TransactionHashPrefix,
         },

@@ -55,7 +55,7 @@ fn main() {
     let general_config = new_starknet_general_config_for_testing();
 
     for i in 0..RUNS {
-        InternalInvokeFunction::new(
+        InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
             INCREASE_BALANCE_SELECTOR.clone(),
             2,
@@ -70,7 +70,7 @@ fn main() {
         .execute(&mut cached_state, &general_config)
         .unwrap();
 
-        let tx_exec_info = InternalInvokeFunction::new(
+        let tx_exec_info = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
             GET_BALANCE_SELECTOR.clone(),
             2,

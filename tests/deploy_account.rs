@@ -7,7 +7,7 @@ use starknet_rs::{
         execution::{CallInfo, CallType, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
-        transaction::internal_deploy_account::InternalDeployAccount,
+        transaction::deploy_account::DeployAccount,
     },
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
@@ -37,7 +37,7 @@ fn internal_deploy_account() {
         .set_contract_class(&class_hash, &contract_class)
         .unwrap();
 
-    let internal_deploy_account = InternalDeployAccount::new(
+    let internal_deploy_account = DeployAccount::new(
         class_hash,
         0,
         0,

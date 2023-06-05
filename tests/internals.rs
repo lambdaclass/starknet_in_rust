@@ -26,14 +26,9 @@ use starknet_rs::{
             state_cache::StorageEntry,
         },
         transaction::{
+            deploy_account::DeployAccount,
             error::TransactionError,
-            objects::{
-                internal_deploy_account::InternalDeployAccount,
-                {
-                    declare::Declare,
-                    invoke_function::InvokeFunction,
-                },
-            },
+            {declare::Declare, invoke_function::InvokeFunction},
         },
     },
     definitions::{
@@ -523,8 +518,8 @@ fn test_create_account_tx_test_state() {
     );
 }
 
-fn invoke_tx(calldata: Vec<Felt252>) -> InternalInvokeFunction {
-    InternalInvokeFunction::new(
+fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
+    InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         2,
@@ -591,8 +586,8 @@ fn expected_fee_transfer_info() -> CallInfo {
     }
 }
 
-fn declare_tx() -> InternalDeclare {
-    InternalDeclare {
+fn declare_tx() -> Declare {
+    Declare {
         contract_class: get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -828,7 +823,7 @@ fn test_invoke_tx_state() {
 fn test_deploy_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
-    let deploy_account_tx = InternalDeployAccount::new(
+    let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         2,
         TRANSACTION_VERSION,
@@ -1314,7 +1309,7 @@ fn test_invoke_tx_wrong_entrypoint() {
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
 
     // Invoke transaction with an entrypoint that doesn't exists
-    let invoke_tx = InternalInvokeFunction::new(
+    let invoke_tx = InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
@@ -1346,7 +1341,7 @@ fn test_deploy_undeclared_account() {
 
     let not_deployed_class_hash = [1; 32];
     // Deploy transaction with a not_deployed_class_hash class_hash
-    let deploy_account_tx = InternalDeployAccount::new(
+    let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
         2,
         TRANSACTION_VERSION,
