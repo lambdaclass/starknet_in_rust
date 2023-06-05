@@ -35,7 +35,7 @@ const VERSION_0: u64 = 0;
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 #[derive(Debug)]
-pub struct InternalDeclare {
+pub struct Declare {
     pub class_hash: ClassHash,
     pub sender_address: Address,
     pub tx_type: TransactionType,
@@ -51,7 +51,7 @@ pub struct InternalDeclare {
 // ------------------------------------------------------------
 //                        Functions
 // ------------------------------------------------------------
-impl InternalDeclare {
+impl Declare {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         contract_class: ContractClass,
