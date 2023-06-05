@@ -128,5 +128,6 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
         1_000_000,
         0,
         BlockInfo::default(),
+        HashMap::default(),
     )
 }
