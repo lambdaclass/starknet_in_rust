@@ -624,7 +624,7 @@ fn declarev2_tx() -> InternalDeclareV2 {
         hash_value: 0.into(),
         compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
         sierra_contract_class,
-        casm_class: None,
+        casm_class: Default::default(),
     }
 }
 
