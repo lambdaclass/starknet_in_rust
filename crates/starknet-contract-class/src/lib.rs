@@ -182,7 +182,53 @@ pub fn to_cairo_runner_program(
 mod tests {
     use super::*;
     use cairo_vm::felt::felt_str;
+    use starknet_api::deprecated_contract_class::{
+        ContractClassAbiEntry, FunctionAbiEntry, FunctionAbiEntryType, FunctionAbiEntryWithType,
+        TypedParameter,
+    };
     use std::io::Read;
+
+    #[test]
+    fn try_from_string_abi() {
+        let mut serialized = String::new();
+
+        // This specific contract compiles with --no_debug_info
+        File::open(PathBuf::from("../../starknet_programs/fibonacci.json"))
+            .and_then(|mut f| f.read_to_string(&mut serialized))
+            .expect("should be able to read file");
+
+        let res = ParsedContractClass::try_from(serialized.as_str());
+
+        let contract_class = res.unwrap();
+
+        let expected_abi = Some(vec![ContractClassAbiEntry::Function(
+            FunctionAbiEntryWithType {
+                r#type: FunctionAbiEntryType::Function,
+                entry: FunctionAbiEntry {
+                    name: "fib".to_string(),
+                    inputs: vec![
+                        TypedParameter {
+                            name: "first_element".to_string(),
+                            r#type: "felt".to_string(),
+                        },
+                        TypedParameter {
+                            name: "second_element".to_string(),
+                            r#type: "felt".to_string(),
+                        },
+                        TypedParameter {
+                            name: "n".to_string(),
+                            r#type: "felt".to_string(),
+                        },
+                    ],
+                    outputs: vec![TypedParameter {
+                        name: "res".to_string(),
+                        r#type: "felt".to_string(),
+                    }],
+                },
+            },
+        )]);
+        assert_eq!(contract_class.abi, expected_abi);
+    }
 
     #[test]
     fn try_from_string() {
@@ -196,11 +242,6 @@ mod tests {
         let res = ParsedContractClass::try_from(serialized.as_str());
 
         let contract_class = res.unwrap();
-
-        // We check only some of the attributes. Ideally we would serialize
-        // and compare with original
-        // TODO: Add the real abi.
-        // assert_eq!(contract_class.abi, None);
 
         let program_builtins: Vec<BuiltinName> =
             contract_class.program.iter_builtins().cloned().collect();
