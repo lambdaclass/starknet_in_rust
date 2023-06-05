@@ -178,12 +178,6 @@ impl<T: StateReader> StateReader for CachedState<T> {
                         return Ok(CompiledClass::Casm(Box::new(class.clone())));
                     }
                 }
-                //TODO: remove this case
-                if let Some(contract_class) = &mut self.contract_classes {
-                    if let Some(class) = contract_class.get(compiled_class_hash) {
-                        return Ok(CompiledClass::Deprecated(Box::new(class.clone())));
-                    }
-                }
             }
             Err(StateError::MissingCasmClass(*compiled_class_hash))
         } else {
