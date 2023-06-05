@@ -88,10 +88,6 @@ impl StateReader for InMemoryStateReader {
         storage.cloned()
     }
 
-    fn count_actual_storage_changes(&mut self) -> (usize, usize) {
-        todo!()
-    }
-
     fn get_compiled_class_hash(
         &mut self,
         class_hash: &ClassHash,
@@ -195,20 +191,5 @@ mod tests {
                 .try_into(),
             Ok(contract_class)
         )
-    }
-
-    #[test]
-    #[should_panic]
-    fn count_actual_storage_changes_is_a_wip() {
-        let mut state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
-
-        state_reader.count_actual_storage_changes();
     }
 }

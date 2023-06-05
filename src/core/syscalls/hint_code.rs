@@ -47,6 +47,9 @@ pub(crate) const GET_BLOCK_TIMESTAMP: &str =
 pub(crate) const GET_BLOCK_NUMBER: &str =
     "syscall_handler.get_block_number(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
+pub(crate) const DELEGATE_CALL: &str =
+    "syscall_handler.delegate_call(segments=segments, syscall_ptr=ids.syscall_ptr)";
+
 pub(crate) const REPLACE_CLASS: &str =
     "syscall_handler.replace_class(segments=segments, syscall_ptr=ids.syscall_ptr)";
 

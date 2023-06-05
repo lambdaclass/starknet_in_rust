@@ -138,15 +138,6 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .cloned()
     }
 
-    fn count_actual_storage_changes(&mut self) -> (usize, usize) {
-        let storage_updates = subtract_mappings(
-            self.cache.storage_writes.clone(),
-            self.cache.storage_initial_values.clone(),
-        );
-        let modified_contracts = storage_updates.keys().map(|k| k.0.clone()).len();
-        (modified_contracts, storage_updates.len())
-    }
-
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         let hash = self.cache.class_hash_to_compiled_class_hash.get(class_hash);
@@ -327,6 +318,15 @@ impl<T: StateReader> State for CachedState<T> {
             &storage_updates,
         );
         Ok(())
+    }
+
+    fn count_actual_storage_changes(&mut self) -> (usize, usize) {
+        let storage_updates = subtract_mappings(
+            self.cache.storage_writes.clone(),
+            self.cache.storage_initial_values.clone(),
+        );
+        let modified_contracts = storage_updates.keys().map(|k| k.0.clone()).len();
+        (modified_contracts, storage_updates.len())
     }
 }
 

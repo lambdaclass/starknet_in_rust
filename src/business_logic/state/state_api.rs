@@ -19,8 +19,6 @@ pub trait StateReader {
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError>;
     /// Returns the storage value under the given key in the given contract instance.
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError>;
-    /// Counts the amount of modified contracts and the updates to the storage
-    fn count_actual_storage_changes(&mut self) -> (usize, usize);
     /// Return the class hash of the given casm contract class
     fn get_compiled_class_hash(
         &mut self,
@@ -57,4 +55,6 @@ pub trait State {
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
+    /// Counts the amount of modified contracts and the updates to the storage
+    fn count_actual_storage_changes(&mut self) -> (usize, usize);
 }
