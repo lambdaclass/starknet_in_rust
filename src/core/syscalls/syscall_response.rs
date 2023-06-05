@@ -52,6 +52,7 @@ impl SyscallResponse {
             }
             Some(ResponseBody::GetExecutionInfo { exec_info_ptr }) => {
                 cairo_args.push(exec_info_ptr.into())
+            }
             Some(ResponseBody::GetBlockHash(get_block_hash_response)) => {
                 cairo_args.push(get_block_hash_response.block_hash.clone().into())
             }
