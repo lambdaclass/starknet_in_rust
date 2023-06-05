@@ -11,7 +11,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 
 pub trait StateReader {
-    /// Returns the contract class of the given class hash.
+    /// Returns the contract class of the given class hash or compiled class hash.
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
     /// Returns the class hash of the contract class at the given address.
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError>;

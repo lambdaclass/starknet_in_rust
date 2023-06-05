@@ -161,7 +161,14 @@ impl<T: StateReader> StateReader for CachedState<T> {
     }
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        // Look for Deprecated contract class in cache (no compiled class hash needed)
+        // This method can receive both compiled_class_hash & class_hash and return both casm and deprecated contract classes
+        //, which can be on the cache or on the state_reader, different cases will be described below:
+        if class_hash == UNINITIALIZED_CLASS_HASH {
+            return Err(StateError::UninitiaizedClassHash);
+        }
+        // I: FETCHING FROM CACHE
+        // I: DEPRECATED CONTRACT CLASS
+        // deprecated contract classes dont have compiled class hashes, so we only have one case
         if let Some(compiled_class) = self
             .contract_classes
             .as_ref()
@@ -169,32 +176,36 @@ impl<T: StateReader> StateReader for CachedState<T> {
         {
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
         }
-        // Look for Casm contract class in cache
+        // I: CASM CONTRACT CLASS : COMPILED_CLASS_HASH
+        if let Some(compiled_class) = self
+            .casm_contract_classes
+            .as_ref()
+            .and_then(|x| x.get(class_hash))
+        {
+            return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
+        }
+        // I: CASM CONTRACT CLASS : CLASS_HASH
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if compiled_class_hash != UNINITIALIZED_CLASS_HASH {
-                if let Some(casm_class) = &mut self
-                    .casm_contract_classes
-                    .as_ref()
-                    .and_then(|m| m.get(compiled_class_hash))
-                {
-                    return Ok(CompiledClass::Casm(Box::new(casm_class.clone())));
-                }
+            if let Some(casm_class) = &mut self
+                .casm_contract_classes
+                .as_ref()
+                .and_then(|m| m.get(compiled_class_hash))
+            {
+                return Ok(CompiledClass::Casm(Box::new(casm_class.clone())));
             }
-            Err(StateError::MissingCasmClass(*compiled_class_hash))
-        } else {
-            // Fetch for contract class (any kind) from state_reader
-            let contract = self.state_reader.get_contract_class(class_hash)?;
-            if let CompiledClass::Casm(ref class) = contract {
-                // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
-                let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-                self.casm_contract_classes
-                    .as_mut()
-                    .and_then(|m| m.insert(compiled_class_hash, *class.clone()));
-            }
-            Ok(contract)
         }
+        // II: FETCHING FROM STATE_READER
+        let contract = self.state_reader.get_contract_class(class_hash)?;
+        if let CompiledClass::Casm(ref class) = contract {
+            // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
+            let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+            self.casm_contract_classes
+                .as_mut()
+                .and_then(|m| m.insert(compiled_class_hash, *class.clone()));
+        }
+        Ok(contract)
     }
 }
 
