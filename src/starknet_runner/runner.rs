@@ -164,17 +164,14 @@ where
                 "Relocatable expected",
             )))?;
 
-        let ret_data = self
-            .vm
-            .get_integer_range(
-                ret_ptr,
-                n_rets
-                    .to_usize()
-                    .ok_or(TransactionError::InvalidReturnData(String::from(
-                        "Conversion error",
-                    )))?,
-            )
-            .map_err(|_| TransactionError::InvalidReturnData(String::from("Felt expected")))?;
+        let ret_data = self.vm.get_integer_range(
+            ret_ptr,
+            n_rets
+                .to_usize()
+                .ok_or(TransactionError::InvalidReturnData(String::from(
+                    "Conversion error",
+                )))?,
+        )?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
