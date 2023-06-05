@@ -50,4 +50,6 @@ pub enum StateError {
     MissingCasmClass(ClassHash),
     #[error("No class hash declared in class_hash_to_contract_class")]
     MissingClassHash(),
+    #[error("Uninitializes class_hash")]
+    UninitiaizedClassHash,
 }
