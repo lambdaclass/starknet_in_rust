@@ -7,8 +7,8 @@ use num_traits::Zero;
 use starknet_rs::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
+            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
+            TransactionExecutionContext,
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,

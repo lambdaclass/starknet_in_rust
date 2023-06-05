@@ -1,6 +1,6 @@
 use crate::{
     business_logic::{
-        execution::objects::TransactionExecutionInfo,
+        execution::TransactionExecutionInfo,
         state::state_api::{State, StateReader},
     },
     definitions::general_config::StarknetGeneralConfig,
