@@ -196,7 +196,7 @@ fn create_account_tx_test_state(
             state_reader
         },
         Some(HashMap::new()),
-        None,
+        Some(HashMap::new()),
     );
 
     Ok((general_config, cached_state))
@@ -207,7 +207,11 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
 
     let state_cache = ContractClassCache::new();
 
-    CachedState::new(in_memory_state_reader, Some(state_cache), None)
+    CachedState::new(
+        in_memory_state_reader,
+        Some(state_cache),
+        Some(HashMap::new()),
+    )
 }
 
 fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
