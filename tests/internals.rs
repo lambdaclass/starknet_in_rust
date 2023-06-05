@@ -1370,6 +1370,6 @@ fn test_deploy_undeclared_account() {
     // Execute transaction
     assert_matches!(
         result,
-        Err(TransactionError::State(StateError::MissingClassHash()))
+        Err(TransactionError::State(StateError::NoneCompiledHash(_)))
     );
 }
