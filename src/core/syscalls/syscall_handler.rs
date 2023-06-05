@@ -68,12 +68,15 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
                         self.syscall_handler
                             .syscall(vm, syscall_ptr)
                             .map_err(|err| {
-                                HintError::CustomHint(format!(
-                                    "Syscall handler invocation error: {err}"
-                                ))
+                                HintError::CustomHint(
+                                    format!("Syscall handler invocation error: {err}")
+                                        .into_boxed_str(),
+                                )
                             })?;
                     }
-                    other => return Err(HintError::UnknownHint(other.to_string())),
+                    other => {
+                        return Err(HintError::UnknownHint(other.to_string().into_boxed_str()))
+                    }
                 },
             };
         }
@@ -127,12 +130,14 @@ fn extract_buffer(buffer: &ResOperand) -> Result<(&CellRef, Felt252), HintError>
             if let DerefOrImmediate::Immediate(val) = &bin_op.b {
                 (&bin_op.a, val.clone().value.into())
             } else {
-                return Err(HintError::CustomHint("Failed to extract buffer, expected ResOperand of BinOp type to have Inmediate b value".to_owned()));
+                return Err(HintError::CustomHint("Failed to extract buffer, expected ResOperand of BinOp type to have Inmediate b value".to_owned().into_boxed_str()));
             }
         }
         _ => {
             return Err(HintError::CustomHint(
-                "Illegal argument for a buffer.".to_string(),
+                "Illegal argument for a buffer."
+                    .to_string()
+                    .into_boxed_str(),
             ))
         }
     };

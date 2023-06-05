@@ -14,7 +14,7 @@ use crate::{
     },
     core::{
         errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-        transaction_hash::starknet_transaction_hash::calculate_deploy_account_transaction_hash,
+        transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
@@ -358,10 +358,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::{
-            contract_address::starknet_contract_address::compute_deprecated_class_hash,
-            errors::state_errors::StateError,
-        },
+        core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::general_config::StarknetChainId,
         utils::felt_to_hash,
     };
