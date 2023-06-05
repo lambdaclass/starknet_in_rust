@@ -8,8 +8,9 @@ default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
 
 [dependencies]
-cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo", rev = "4afacfd574de1121d61dea28f8c73e1516c7e07d"}
-cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "4afacfd574de1121d61dea28f8c73e1516c7e07d"}
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo", rev = "77ae28f"}
+cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "77ae28f"}
+cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo", rev = "77ae28f"}
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs", features = ["cairo-1-hints"], rev = "5db2e656d46a97d89563a74f8fc3abd595e8befb" }
 getset = "0.1.2"
 lazy_static = "1.4.0"

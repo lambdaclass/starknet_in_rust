@@ -5,6 +5,7 @@ use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
+use cairo_lang_runner::casm_run::execute_core_hint;
 use cairo_vm::{
     felt::Felt252,
     hint_processor::{
@@ -60,7 +61,7 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
         for hint in hints {
             match hint {
                 Hint::Core(_core_hint) => {
-                    self.cairo1_hint_processor.execute(vm, exec_scopes, hint)?
+                    execute_core_hint(vm, exec_scopes, hint)?;
                 }
                 Hint::Starknet(starknet_hint) => match starknet_hint {
                     StarknetHint::SystemCall { system } => {

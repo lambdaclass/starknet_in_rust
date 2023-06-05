@@ -6,10 +6,7 @@ edition = "2021"
 [dependencies]
 serde = "1.0.156"
 serde_json = "1.0.94"
-
-[dependencies.cairo-vm]
-git = "https://github.com/lambdaclass/cairo-rs.git"
-rev = "5db2e656d46a97d89563a74f8fc3abd595e8befb"
+cairo-vm = "0.3.0-rc1"
 
 [dependencies.starknet_api]
 git = "https://github.com/starkware-libs/starknet-api"
