@@ -165,7 +165,7 @@ where
             ret_ptr,
             n_rets
                 .to_usize()
-                .ok_or_else(|| MathError::Felt252ToUsizeConversion(n_rets.clone()))?,
+                .ok_or_else(|| MathError::Felt252ToUsizeConversion(Box::new(n_rets.clone())))?,
         )?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
