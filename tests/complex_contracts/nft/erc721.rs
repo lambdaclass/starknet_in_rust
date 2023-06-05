@@ -10,7 +10,7 @@ use starknet_rs::business_logic::transaction::error::TransactionError;
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent},
+        execution::{CallInfo, CallType, OrderedEvent},
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },

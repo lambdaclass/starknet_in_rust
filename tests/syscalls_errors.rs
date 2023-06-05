@@ -4,8 +4,7 @@ use cairo_vm::felt::Felt252;
 use starknet_rs::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallType, TransactionExecutionContext},
+            execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,

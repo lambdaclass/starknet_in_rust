@@ -126,6 +126,10 @@ impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_contract_address(vm, syscall_ptr)
             }
+            REPLACE_CLASS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.replace_class(vm, syscall_ptr)
+            }
             _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
         }
     }
@@ -179,7 +183,7 @@ mod tests {
     use crate::{
         add_segments, allocate_selector, any_box,
         business_logic::{
-            execution::objects::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
+            execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::{
                 cached_state::CachedState,

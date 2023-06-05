@@ -5,7 +5,7 @@ use starknet_crypto::FieldElement;
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType},
+        execution::{CallInfo, CallType},
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },

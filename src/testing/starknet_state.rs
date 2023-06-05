@@ -2,8 +2,8 @@ use super::{starknet_state_error::StarknetStateError, type_utils::ExecutionInfo}
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, Event, TransactionExecutionContext, TransactionExecutionInfo},
+            execution_entry_point::ExecutionEntryPoint, CallInfo, Event,
+            TransactionExecutionContext, TransactionExecutionInfo,
         },
         fact_state::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
@@ -304,7 +304,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::{
-            execution::objects::{CallType, OrderedL2ToL1Message},
+            execution::{CallType, OrderedL2ToL1Message},
             state::state_cache::StorageEntry,
         },
         core::{
