@@ -2,7 +2,6 @@ use crate::{
     business_logic::execution::os_usage::OsResources,
     core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
     definitions::transaction_type::TransactionType,
-    starknet_runner::starknet_runner_error::StarknetRunnerError,
     starkware_utils::starkware_errors::StarkwareError,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::ClassHash,
@@ -119,8 +118,8 @@ pub enum TransactionError {
     CairoRunner(#[from] CairoRunError),
     #[error(transparent)]
     Runner(#[from] RunnerError),
-    #[error(transparent)]
-    StarknetRunner(#[from] StarknetRunnerError),
+    #[error("Invalid Return Data: {0}")]
+    InvalidReturnData(String),
     #[error("Transaction type {0:?} not found in OsResources: {1:?}")]
     NoneTransactionType(TransactionType, OsResources),
     #[error(transparent)]

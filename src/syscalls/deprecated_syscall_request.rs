@@ -129,6 +129,15 @@ pub(crate) struct DeprecatedReplaceClassRequest {
     pub(crate) class_hash: Felt252,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DeprecatedDelegateCallRequest {
+    pub(crate) selector: Felt252,
+    pub(crate) contract_address: Address,
+    pub(crate) function_selector: Felt252,
+    pub(crate) calldata_size: usize,
+    pub(crate) calldata: Relocatable,
+}
+
 impl From<DeprecatedEmitEventRequest> for DeprecatedSyscallRequest {
     fn from(emit_event_struct: DeprecatedEmitEventRequest) -> DeprecatedSyscallRequest {
         DeprecatedSyscallRequest::EmitEvent(emit_event_struct)
