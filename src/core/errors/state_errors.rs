@@ -42,9 +42,9 @@ pub enum StateError {
     ConstructorCalldataEmpty(),
     #[error("Error in ExecutionEntryPoint")]
     ExecutionEntryPoint(),
-    #[error("{0:?}")]
+    #[error("No compiled class found for compiled_class_hash {0:?}")]
     NoneCompiledClass(ClassHash),
-    #[error("{0:?}")]
+    #[error("No compiled class hash found for class_hash {0:?}")]
     NoneCompiledHash(ClassHash),
     #[error("Missing casm class for hash {0:?}")]
     MissingCasmClass(ClassHash),
