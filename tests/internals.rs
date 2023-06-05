@@ -75,7 +75,7 @@ lazy_static! {
     static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
     static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
     static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str!("4112");
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("273");
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("27727");
 
     // Storage keys.
     static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt252 =
@@ -722,7 +722,7 @@ fn test_declare_tx() {
 fn test_declarev2_tx() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
     assert_eq!(state, expected_state_before_tx());
-    let mut declare_tx = declarev2_tx();
+    let declare_tx = declarev2_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state
         .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
