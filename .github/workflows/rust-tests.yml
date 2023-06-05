@@ -9,7 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: 1.67.0
+  RUST_TOOLCHAIN: 1.70.0
 
 jobs:
   build:
