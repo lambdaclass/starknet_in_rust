@@ -467,7 +467,8 @@ impl DeprecatedFromPtr for DeprecatedReplaceClassRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<DeprecatedSyscallRequest, SyscallHandlerError> {
-        let class_hash = get_big_int(vm, syscall_ptr)?;
+        // memory[syscall_ptr] contains the selector, so we fetch the next memory cell
+        let class_hash = get_big_int(vm, (syscall_ptr + 1)?)?;
 
         Ok(DeprecatedSyscallRequest::ReplaceClass(
             DeprecatedReplaceClassRequest { class_hash },

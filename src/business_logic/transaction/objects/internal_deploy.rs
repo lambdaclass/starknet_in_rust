@@ -1,8 +1,8 @@
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, TransactionExecutionContext, TransactionExecutionInfo},
+            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+            TransactionExecutionInfo,
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},

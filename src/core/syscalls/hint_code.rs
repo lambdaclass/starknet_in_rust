@@ -50,6 +50,9 @@ pub(crate) const GET_BLOCK_NUMBER: &str =
 pub(crate) const DELEGATE_CALL: &str =
     "syscall_handler.delegate_call(segments=segments, syscall_ptr=ids.syscall_ptr)";
 
+pub(crate) const REPLACE_CLASS: &str =
+    "syscall_handler.replace_class(segments=segments, syscall_ptr=ids.syscall_ptr)";
+
 // *************************
 //     Normal hints
 // *************************

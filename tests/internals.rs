@@ -16,7 +16,7 @@ use starknet_rs::services::api::contract_classes::deprecated_contract_class::{
 };
 use starknet_rs::{
     business_logic::{
-        execution::objects::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
+        execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::{CachedState, ContractClassCache},
