@@ -173,10 +173,12 @@ impl<T: StateReader> StateReader for CachedState<T> {
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
             if compiled_class_hash != UNINITIALIZED_CLASS_HASH {
-                if let Some(casm_class) = &mut self.casm_contract_classes {
-                    if let Some(class) = casm_class.get(compiled_class_hash) {
-                        return Ok(CompiledClass::Casm(Box::new(class.clone())));
-                    }
+                if let Some(casm_class) = &mut self
+                    .casm_contract_classes
+                    .as_ref()
+                    .and_then(|m| m.get(compiled_class_hash))
+                {
+                    return Ok(CompiledClass::Casm(Box::new(casm_class.clone())));
                 }
             }
             Err(StateError::MissingCasmClass(*compiled_class_hash))
