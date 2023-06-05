@@ -30,15 +30,11 @@ impl BlockInfo {
         next_block_info: &BlockInfo,
     ) -> Result<(), TransactionError> {
         if self.block_number + 1 != next_block_info.block_number {
-            return Err(TransactionError::Starkware(String::from(
-                "Invalid Block number",
-            )));
+            return Err(TransactionError::InvalidBlockNumber);
         }
 
         if self.block_timestamp >= next_block_info.block_timestamp {
-            return Err(TransactionError::Starkware(String::from(
-                "Invalid Block timestamp",
-            )));
+            return Err(TransactionError::InvalidBlockTimestamp);
         }
 
         Ok(())

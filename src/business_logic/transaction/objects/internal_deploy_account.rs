@@ -195,9 +195,7 @@ impl InternalDeployAccount {
         match num_constructors {
             0 => {
                 if !self.constructor_calldata.is_empty() {
-                    return Err(TransactionError::Starkware(String::from(
-                        "Cannot pass calldata to a contract with no constructor",
-                    )));
+                    return Err(TransactionError::EmptyConstructorCalldata);
                 }
 
                 Ok(CallInfo::empty_constructor_call(

@@ -106,9 +106,7 @@ impl InternalDeploy {
         state: &mut S,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if !self.constructor_calldata.is_empty() {
-            return Err(TransactionError::Starkware(String::from(
-                "Cannot pass calldata to a contract with no constructor",
-            )));
+            return Err(TransactionError::EmptyConstructorCalldata);
         }
 
         let class_hash: ClassHash = self.contract_hash;
@@ -342,7 +340,10 @@ mod tests {
         let config = Default::default();
 
         let result = internal_deploy.execute(&mut state, &config);
-        assert_matches!(result.unwrap_err(), TransactionError::Starkware(_))
+        assert_matches!(
+            result.unwrap_err(),
+            TransactionError::EmptyConstructorCalldata
+        )
     }
 
     #[test]

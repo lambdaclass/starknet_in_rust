@@ -107,22 +107,16 @@ impl InternalDeclare {
     pub fn verify_version(&self) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             if !self.max_fee.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+                return Err(TransactionError::InvalidMaxFee);
             }
 
             if !self.nonce.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+                return Err(TransactionError::InvalidNonce);
             }
         }
 
         if self.version == VERSION_0 && !self.signature.len().is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The signature field in Declare transactions must be an empty list.".to_string(),
-            ));
+            return Err(TransactionError::InvalidSignature);
         }
         Ok(())
     }
@@ -488,7 +482,7 @@ mod tests {
         assert!(internal_declare.is_err());
         assert_matches!(
             internal_declare.unwrap_err(),
-            TransactionError::StarknetError(..)
+            TransactionError::InvalidMaxFee
         );
     }
 
@@ -552,7 +546,7 @@ mod tests {
         assert!(internal_declare.is_err());
         assert_matches!(
             internal_declare.unwrap_err(),
-            TransactionError::StarknetError(..)
+            TransactionError::InvalidNonce
         );
     }
 
@@ -615,7 +609,7 @@ mod tests {
         assert!(internal_declare.is_err());
         assert_matches!(
             internal_declare.unwrap_err(),
-            TransactionError::StarknetError(..)
+            TransactionError::InvalidSignature
         );
     }
 

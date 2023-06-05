@@ -36,8 +36,6 @@ pub enum TransactionError {
     #[error("Invalid transaction nonce. Expected: {0} got {1}")]
     InvalidTransactionNonce(String, String),
     #[error("{0}")]
-    StarknetError(String),
-    #[error("{0}")]
     FeeError(String),
     #[error("Cairo resource names must be contained in fee weights dict")]
     ResourcesError,
@@ -53,8 +51,6 @@ pub enum TransactionError {
     UnauthorizedActionOnValidate,
     #[error("Class hash {0:?} already declared")]
     ClassAlreadyDeclared(ClassHash),
-    #[error("Starkware error: {0}")]
-    Starkware(String),
     #[error("Expected a relocatable value but got an integer")]
     NotARelocatableValue,
     #[error("Unexpected holes in the event order")]
@@ -91,8 +87,8 @@ pub enum TransactionError {
     InvalidStopPointer(Relocatable, Relocatable),
     #[error("Invalid entry point types")]
     InvalidEntryPoints,
-    #[error("Expected an int value got a Relocatable")]
-    NotAnInt,
+    #[error("Expected a Felt value got a Relocatable")]
+    NotAFelt,
     #[error("Out of bounds write to a read-only segment.")]
     OutOfBound,
     #[error("Call to another contract has been done")]
@@ -119,12 +115,16 @@ pub enum TransactionError {
     CairoRunner(#[from] CairoRunError),
     #[error(transparent)]
     Runner(#[from] RunnerError),
-    #[error("Invalid Return Data: {0}")]
-    InvalidReturnData(String),
     #[error("Transaction type {0:?} not found in OsResources: {1:?}")]
     NoneTransactionType(TransactionType, OsResources),
     #[error(transparent)]
     MathError(#[from] MathError),
     #[error(transparent)]
     ProgramError(#[from] ProgramError),
+    #[error("Cannot pass calldata to a contract with no constructor")]
+    EmptyConstructorCalldata,
+    #[error("Invalid Block number")]
+    InvalidBlockNumber,
+    #[error("Invalid Block timestamp")]
+    InvalidBlockTimestamp,
 }
