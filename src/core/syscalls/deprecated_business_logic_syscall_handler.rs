@@ -21,9 +21,10 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+    },
     hash_utils::calculate_contract_address,
-    public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::{
         contract_class_errors::ContractClassError,
         contract_classes::deprecated_contract_class::EntryPointType,

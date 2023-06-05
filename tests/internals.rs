@@ -10,7 +10,9 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_rs::core::errors::state_errors::StateError;
-use starknet_rs::definitions::constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS;
+use starknet_rs::definitions::constants::{
+    DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
+};
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::{
     ContractClass, EntryPointType,
 };
@@ -45,7 +47,6 @@ use starknet_rs::{
         general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
         transaction_type::TransactionType,
     },
-    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
