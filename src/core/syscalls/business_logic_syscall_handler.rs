@@ -21,11 +21,8 @@ use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
         execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{
-                CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
-                TransactionExecutionContext,
-            },
+            execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType,
+            OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
         },
         fact_state::state::ExecutionResourcesManager,
         state::{
