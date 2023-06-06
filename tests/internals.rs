@@ -745,7 +745,7 @@ fn test_declarev2_tx() {
             class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
-            calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
+            calldata: vec![TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()],
             ..Default::default()
         }),
         None,
