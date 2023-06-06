@@ -2,6 +2,7 @@ use crate::complex_contracts::utils::*;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use starknet_crypto::FieldElement;
+use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType},
@@ -43,11 +44,11 @@ fn amm_proxy_init_pool_test() {
     )
     .unwrap();
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
+    let proxy_entry_points_by_type =
+        TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
+            .unwrap()
+            .entry_points_by_type()
+            .clone();
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -137,11 +138,11 @@ fn amm_proxy_get_pool_token_balance_test() {
     )
     .unwrap();
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
+    let proxy_entry_points_by_type =
+        TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
+            .unwrap()
+            .entry_points_by_type()
+            .clone();
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -238,11 +239,11 @@ fn amm_proxy_add_demo_token_test() {
     )
     .unwrap();
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
+    let proxy_entry_points_by_type =
+        TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
+            .unwrap()
+            .entry_points_by_type()
+            .clone();
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -345,11 +346,11 @@ fn amm_proxy_get_account_token_balance() {
     )
     .unwrap();
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
+    let proxy_entry_points_by_type =
+        TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
+            .unwrap()
+            .entry_points_by_type()
+            .clone();
 
     let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -465,11 +466,11 @@ fn amm_proxy_swap() {
     )
     .unwrap();
 
-    let proxy_entry_points_by_type = state
-        .get_contract_class(&proxy_class_hash)
-        .unwrap()
-        .entry_points_by_type()
-        .clone();
+    let proxy_entry_points_by_type =
+        TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
+            .unwrap()
+            .entry_points_by_type()
+            .clone();
 
     let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
