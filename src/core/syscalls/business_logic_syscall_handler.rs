@@ -317,7 +317,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
             self.contract_address.clone(),
             EntryPointType::Constructor,
-            Some(CallType::Delegate),
+            Some(CallType::Call),
             None,
             remainig_gas,
         );
