@@ -204,9 +204,7 @@ mod tests {
             transaction_type::TransactionType,
         },
         memory_insert,
-        services::api::contract_classes::deprecated_contract_class::{
-            ContractClass, EntryPointType,
-        },
+        services::api::contract_classes::deprecated_contract_class::ContractClass,
         utils::{
             felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
@@ -215,6 +213,7 @@ mod tests {
     };
     use cairo_vm::relocatable;
     use num_traits::Num;
+    use starknet_contract_class::EntryPointType;
     use std::path::PathBuf;
 
     type DeprecatedBLSyscallHandler<'a> =

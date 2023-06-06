@@ -11,6 +11,7 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -23,9 +24,8 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
     services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     utils::{Address, ClassHash},
 };
