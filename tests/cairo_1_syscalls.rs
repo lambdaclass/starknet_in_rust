@@ -11,6 +11,7 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -23,9 +24,8 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
     services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     utils::{Address, ClassHash},
 };
@@ -749,7 +749,7 @@ fn replace_class_internal() {
     assert_eq!(state.get_class_hash_at(&address).unwrap(), class_hash_b);
     // Check that the class_hash_b leads to contract_class_b for soundness
     assert_eq!(
-        state.get_compiled_class(&class_hash_b).unwrap(),
+        state.get_contract_class(&class_hash_b).unwrap(),
         CompiledClass::Casm(Box::new(contract_class_b))
     );
 }
@@ -1338,4 +1338,75 @@ fn call_contract_replace_class_cairo_0() {
         )
         .unwrap();
     assert_eq!(result.retdata, vec![64.into(), 33.into()]);
+}
+
+#[test]
+fn test_out_of_gas_failure() {
+    //  Create program and entry point types for contract class
+    let program_data = include_bytes!("../starknet_programs/cairo1/emit_event.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(class_hash, contract_class);
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+
+    // Create an execution entry point
+    let calldata = [].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    // Purposefully set initial gas to 0 so that the syscall fails
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata,
+        Felt252::new(entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        0,
+    );
+
+    // Execute the entrypoint
+    let general_config = StarknetGeneralConfig::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+    let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(
+        call_info.retdata,
+        vec![Felt252::from_bytes_be("Out of gas".as_bytes())]
+    )
 }

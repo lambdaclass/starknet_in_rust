@@ -14,7 +14,6 @@ pub mod parser_errors;
 pub mod runner;
 pub mod serde_structs;
 pub mod services;
-pub mod starkware_utils;
 pub mod storage;
 pub mod testing;
 pub mod utils;

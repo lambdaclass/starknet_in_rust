@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -14,8 +15,9 @@ use starknet_rs::{
             state_api::State,
         },
     },
+    core::errors::state_errors::StateError,
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;
@@ -204,6 +206,6 @@ fn deploy_not_declared_class_hash() {
             Felt252::from_bytes_be(not_declared_class_hash.as_ref()),
             0.into(),
         ],
-        "No class hash declared in class_hash_to_contract_clas",
+        &StateError::NoneCompiledHash(not_declared_class_hash).to_string(),
     );
 }

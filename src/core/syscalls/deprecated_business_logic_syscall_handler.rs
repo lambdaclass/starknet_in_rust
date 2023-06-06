@@ -27,7 +27,7 @@ use crate::{
     hash_utils::calculate_contract_address,
     services::api::{
         contract_class_errors::ContractClassError,
-        contract_classes::deprecated_contract_class::EntryPointType,
+        contract_classes::deprecated_contract_class::ContractClass,
     },
     utils::*,
 };
@@ -37,6 +37,7 @@ use cairo_vm::{
     vm::vm_core::VirtualMachine,
 };
 use num_traits::{One, ToPrimitive, Zero};
+use starknet_contract_class::EntryPointType;
 use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------
@@ -165,7 +166,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
 
             let seg_size = match segment_size {
                 MaybeRelocatable::Int(size) => size,
-                _ => return Err(TransactionError::NotAnInt),
+                _ => return Err(TransactionError::NotAFelt),
             };
 
             if seg_size != used_size.into() {
@@ -182,10 +183,11 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
     ) -> Result<(), StateError> {
-        let contract_class = self
+        let contract_class: ContractClass = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?;
+            .get_contract_class(&class_hash_bytes)?
+            .try_into()?;
         let constructor_entry_points = contract_class
             .entry_points_by_type
             .get(&EntryPointType::Constructor)
