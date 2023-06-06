@@ -653,11 +653,12 @@ fn deploy() {
         false,
     );
 
+    assert!(call_info.is_ok());
+
     let ret_address = Address(felt_str!(
         "619464431559909356793718633071398796109800070568878623926447195121629120356"
     ));
-    //Address(call_info.unwrap().retdata[0].clone());
-    dbg!(&ret_address);
+    //let ret_address = Address(call_info.unwrap().retdata[0].clone());
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_compiled_class(&ret_class_hash).unwrap() {
