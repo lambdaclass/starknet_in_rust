@@ -23,13 +23,13 @@ use crate::{
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::{
-        contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
-        messages::StarknetMessageToL1,
+        contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
     },
     utils::{Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
@@ -474,10 +474,13 @@ mod tests {
         );
         // check that state has store fib class hash
         assert_eq!(
-            starknet_state
-                .state
-                .get_contract_class(&fib_class_hash)
-                .unwrap(),
+            TryInto::<ContractClass>::try_into(
+                starknet_state
+                    .state
+                    .get_contract_class(&fib_class_hash)
+                    .unwrap()
+            )
+            .unwrap(),
             fib_contract_class
         );
     }

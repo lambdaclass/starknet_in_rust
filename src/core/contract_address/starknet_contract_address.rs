@@ -1,5 +1,3 @@
-pub mod v2;
-
 /// Contains functionality for computing class hashes for deprecated Declare transactions
 /// (ie, declarations that do not correspond to Cairo 1 contracts)
 use crate::{

@@ -1,6 +1,8 @@
 use crate::{
     business_logic::state::{
-        cached_state::CasmClassCache, state_api::StateReader, state_cache::StorageEntry,
+        cached_state::{CasmClassCache, UNINITIALIZED_CLASS_HASH},
+        state_api::StateReader,
+        state_cache::StorageEntry,
     },
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
@@ -46,19 +48,22 @@ impl InMemoryStateReader {
             class_hash_to_compiled_class_hash,
         }
     }
+
+    fn get_compiled_class(
+        &mut self,
+        compiled_class_hash: &CompiledClassHash,
+    ) -> Result<CompiledClass, StateError> {
+        if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
+            return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
+        }
+        if let Some(compiled_class) = self.class_hash_to_contract_class.get(compiled_class_hash) {
+            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
+        }
+        Err(StateError::NoneCompiledClass(*compiled_class_hash))
+    }
 }
 
 impl StateReader for InMemoryStateReader {
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
-        let contract_class = self
-            .class_hash_to_contract_class
-            .get(class_hash)
-            .ok_or(StateError::MissingClassHash())
-            .cloned()?;
-        contract_class.validate()?;
-        Ok(contract_class)
-    }
-
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let class_hash = self
             .address_to_class_hash
@@ -83,19 +88,6 @@ impl StateReader for InMemoryStateReader {
         storage.cloned()
     }
 
-    fn get_compiled_class(
-        &mut self,
-        compiled_class_hash: &CompiledClassHash,
-    ) -> Result<CompiledClass, StateError> {
-        if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
-            return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
-        }
-        if let Some(compiled_class) = self.class_hash_to_contract_class.get(compiled_class_hash) {
-            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
-        }
-        Err(StateError::NoneCompiledClass(*compiled_class_hash))
-    }
-
     fn get_compiled_class_hash(
         &mut self,
         class_hash: &ClassHash,
@@ -105,15 +97,27 @@ impl StateReader for InMemoryStateReader {
             .ok_or(StateError::NoneCompiledHash(*class_hash))
             .copied()
     }
+
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+        // Deprecated contract classes dont have a compiled_class_hash, we dont need to fetch it
+        if let Some(compiled_class) = self.class_hash_to_contract_class.get(class_hash) {
+            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
+        }
+        let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+        if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
+            let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
+            Ok(compiled_class)
+        } else {
+            Err(StateError::MissingCasmClass(compiled_class_hash))
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_classes::deprecated_contract_class::{
-        ContractEntryPoint, EntryPointType,
-    };
     use cairo_vm::types::program::Program;
+    use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
     #[test]
     fn get_contract_state_test() {
@@ -179,7 +183,10 @@ mod tests {
             .class_hash_to_contract_class
             .insert([0; 32], contract_class.clone());
         assert_eq!(
-            state_reader.get_contract_class(&contract_class_key),
+            state_reader
+                .get_contract_class(&contract_class_key)
+                .unwrap()
+                .try_into(),
             Ok(contract_class)
         )
     }

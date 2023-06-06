@@ -10,7 +10,7 @@ use crate::{
     },
     core::{
         contract_address::compute_deprecated_class_hash,
-        errors::syscall_handler_errors::SyscallHandlerError,
+        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
         transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
@@ -18,12 +18,12 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
-    starkware_utils::starkware_errors::StarkwareError,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 
 #[derive(Debug)]
 pub struct InternalDeploy {
@@ -88,7 +88,10 @@ impl InternalDeploy {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
-        let contract_class = state.get_contract_class(&class_hash)?;
+        let contract_class: ContractClass = state
+            .get_contract_class(&class_hash)?
+            .try_into()
+            .map_err(StateError::from)?;
 
         let constructors = contract_class
             .entry_points_by_type()
@@ -105,9 +108,9 @@ impl InternalDeploy {
     pub fn handle_empty_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
-    ) -> Result<TransactionExecutionInfo, StarkwareError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         if !self.constructor_calldata.is_empty() {
-            return Err(StarkwareError::TransactionFailed);
+            return Err(TransactionError::EmptyConstructorCalldata);
         }
 
         let class_hash: ClassHash = self.contract_hash;
@@ -126,8 +129,7 @@ impl InternalDeploy {
             self.tx_type,
             changes,
             None,
-        )
-        .map_err(|_| StarkwareError::UnexpectedHolesL2toL1Messages)?;
+        )?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -344,7 +346,7 @@ mod tests {
         let result = internal_deploy.execute(&mut state, &config);
         assert_matches!(
             result.unwrap_err(),
-            TransactionError::Starkware(StarkwareError::TransactionFailed)
+            TransactionError::EmptyConstructorCalldata
         )
     }
 
