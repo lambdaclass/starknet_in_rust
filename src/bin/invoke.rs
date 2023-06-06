@@ -8,7 +8,7 @@ use starknet_rs::{
         fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::starknet_state::StarknetState,
+    testing::state::StarknetState,
     utils::Address,
 };
 

@@ -126,6 +126,10 @@ impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.get_contract_address(vm, syscall_ptr)
             }
+            DELEGATE_CALL => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.delegate_call(vm, syscall_ptr)
+            }
             REPLACE_CLASS => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.replace_class(vm, syscall_ptr)
@@ -147,10 +151,10 @@ impl<'a, T: State + StateReader> HintProcessor for DeprecatedSyscallHintProcesso
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
                     SyscallHandlerError::NotImplemented(hint_code) => {
-                        HintError::UnknownHint(hint_code)
+                        HintError::UnknownHint(hint_code.into_boxed_str())
                     }
 
-                    e => HintError::CustomHint(e.to_string()),
+                    e => HintError::CustomHint(e.to_string().into_boxed_str()),
                 })?;
         }
         Ok(())

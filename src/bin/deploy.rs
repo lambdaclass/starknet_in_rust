@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use lazy_static::lazy_static;
 use starknet_rs::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::starknet_state::StarknetState, utils::Address,
+    testing::state::StarknetState, utils::Address,
 };
 
 #[cfg(feature = "with_mimalloc")]
