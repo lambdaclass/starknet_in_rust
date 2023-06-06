@@ -4,8 +4,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
             TransactionExecutionContext, TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::structs::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -275,8 +275,7 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         definitions::general_config::StarknetChainId,
         utils::Address,

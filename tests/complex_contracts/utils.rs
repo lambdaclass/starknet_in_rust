@@ -10,10 +10,8 @@ use starknet_rs::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
             TransactionExecutionContext,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{cached_state::CachedState, state_api::State},
+        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
         transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},

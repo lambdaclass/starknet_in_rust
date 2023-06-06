@@ -1,7 +1,7 @@
 use crate::{
     business_logic::{
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::State,
+        state::structs::ExecutionResourcesManager,
         state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },

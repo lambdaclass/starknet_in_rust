@@ -18,10 +18,8 @@ use starknet_rs::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
             OrderedL2ToL1Message, TransactionExecutionContext,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{cached_state::CachedState, state_api::StateReader},
+        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_classes::{

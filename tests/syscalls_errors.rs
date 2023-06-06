@@ -7,13 +7,11 @@ use starknet_rs::{
         execution::{
             execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::State,
         },
+        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
     },
     core::errors::state_errors::StateError,
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},

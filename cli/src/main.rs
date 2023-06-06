@@ -6,13 +6,11 @@ use serde::{Deserialize, Serialize};
 use starknet_rs::{
     business_logic::{
         execution::{execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext},
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
+        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     core::{

@@ -6,8 +6,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
             TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::structs::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -348,8 +348,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         services::api::contract_classes::deprecated_contract_class::ContractClass,
     };

@@ -5,7 +5,7 @@ use num_traits::Zero;
 
 use starknet_rs::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, BlockInfo},
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },

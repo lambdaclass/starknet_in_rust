@@ -3,6 +3,9 @@ pub(crate) mod contract_storage_state;
 pub mod state_api;
 pub mod state_cache;
 
+pub mod in_memory_state_reader;
+pub mod structs;
+
 use crate::{business_logic::transaction::error::TransactionError, utils::Address};
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -12,10 +12,10 @@ use super::{
 use crate::{
     business_logic::{
         execution::{execution_entry_point::ExecutionEntryPoint, *},
-        fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
+            structs::ExecutionResourcesManager,
             BlockInfo,
         },
         transaction::error::TransactionError,
@@ -864,8 +864,7 @@ where
 mod tests {
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         core::errors::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},

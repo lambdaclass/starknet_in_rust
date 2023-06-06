@@ -28,7 +28,7 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType,
             OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
         },
-        fact_state::state::ExecutionResourcesManager,
+        state::structs::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
