@@ -743,6 +743,7 @@ where
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "get_execution_info" => Ok(SyscallRequest::GetExecutionInfo),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
             "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
