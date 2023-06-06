@@ -74,12 +74,6 @@ impl<T: StateReader> CachedState<T> {
         Ok(())
     }
 
-    pub(crate) fn get_contract_classes(&self) -> Result<&ContractClassCache, StateError> {
-        self.contract_classes
-            .as_ref()
-            .ok_or(StateError::MissingContractClassCache)
-    }
-
     #[allow(dead_code)]
     pub(crate) fn get_casm_classes(&mut self) -> Result<&CasmClassCache, StateError> {
         self.casm_contract_classes
@@ -89,18 +83,6 @@ impl<T: StateReader> CachedState<T> {
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError> {
-        if !self.get_contract_classes()?.contains_key(class_hash) {
-            let contract_class = self.state_reader.get_contract_class(class_hash)?;
-            self.set_contract_class(class_hash, &contract_class)?;
-        }
-        Ok(self
-            .get_contract_classes()?
-            .get(class_hash)
-            .ok_or(StateError::MissingContractClassCache)?
-            .to_owned())
-    }
-
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
@@ -156,40 +138,6 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .cloned()
     }
 
-    fn get_compiled_class(
-        &mut self,
-        compiled_class_hash: &ClassHash,
-    ) -> Result<CompiledClass, StateError> {
-        if let Some(casm_class) = &mut self.casm_contract_classes {
-            if let Some(class) = casm_class.get(compiled_class_hash) {
-                return Ok(CompiledClass::Casm(Box::new(class.clone())));
-            }
-        }
-        if let Some(contract_class) = &mut self.contract_classes {
-            if let Some(class) = contract_class.get(compiled_class_hash) {
-                return Ok(CompiledClass::Deprecated(Box::new(class.clone())));
-            }
-        }
-        let contract = self.state_reader.get_compiled_class(compiled_class_hash);
-        match contract {
-            Ok(CompiledClass::Casm(class)) => {
-                if let Some(casm_class) = &mut self.casm_contract_classes {
-                    casm_class.insert(*compiled_class_hash, *class.clone());
-                    self.casm_contract_classes = Some(casm_class.clone());
-                }
-                Ok(CompiledClass::Casm(class))
-            }
-            Ok(CompiledClass::Deprecated(class)) => {
-                if let Some(contract_class) = &mut self.contract_classes {
-                    contract_class.insert(*compiled_class_hash, *class.clone());
-                    self.contract_classes = Some(contract_class.clone());
-                }
-                Ok(CompiledClass::Deprecated(class))
-            }
-            _ => Err(StateError::NoneCompiledClass(*compiled_class_hash)),
-        }
-    }
-
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         let hash = self.cache.class_hash_to_compiled_class_hash.get(class_hash);
@@ -201,6 +149,59 @@ impl<T: StateReader> StateReader for CachedState<T> {
                 .insert(address, compiled_class_hash);
         }
         Ok(hash.unwrap().to_owned())
+    }
+
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+        // This method can receive both compiled_class_hash & class_hash and return both casm and deprecated contract classes
+        //, which can be on the cache or on the state_reader, different cases will be described below:
+        if class_hash == UNINITIALIZED_CLASS_HASH {
+            return Err(StateError::UninitiaizedClassHash);
+        }
+        // I: FETCHING FROM CACHE
+        // I: DEPRECATED CONTRACT CLASS
+        // deprecated contract classes dont have compiled class hashes, so we only have one case
+        if let Some(compiled_class) = self
+            .contract_classes
+            .as_ref()
+            .and_then(|x| x.get(class_hash))
+        {
+            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
+        }
+        // I: CASM CONTRACT CLASS : COMPILED_CLASS_HASH
+        if let Some(compiled_class) = self
+            .casm_contract_classes
+            .as_ref()
+            .and_then(|x| x.get(class_hash))
+        {
+            return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
+        }
+        // I: CASM CONTRACT CLASS : CLASS_HASH
+        if let Some(compiled_class_hash) =
+            self.cache.class_hash_to_compiled_class_hash.get(class_hash)
+        {
+            if let Some(casm_class) = &mut self
+                .casm_contract_classes
+                .as_ref()
+                .and_then(|m| m.get(compiled_class_hash))
+            {
+                return Ok(CompiledClass::Casm(Box::new(casm_class.clone())));
+            }
+        }
+        // II: FETCHING FROM STATE_READER
+        let contract = self.state_reader.get_contract_class(class_hash)?;
+        match contract {
+            CompiledClass::Casm(ref class) => {
+                // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
+                let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+                self.casm_contract_classes
+                    .as_mut()
+                    .and_then(|m| m.insert(compiled_class_hash, *class.clone()));
+            }
+            CompiledClass::Deprecated(ref contract) => {
+                self.set_contract_class(class_hash, &contract.clone())?
+            }
+        }
+        Ok(contract)
     }
 }
 
@@ -404,7 +405,7 @@ mod tests {
 
         state_reader
             .class_hash_to_contract_class
-            .insert([0; 32], contract_class);
+            .insert([1; 32], contract_class);
 
         let mut cached_state = CachedState::new(state_reader, None, None);
 
@@ -412,8 +413,8 @@ mod tests {
         assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
-            cached_state.get_contract_class(&[0; 32]),
-            cached_state.state_reader.get_contract_class(&[0; 32])
+            cached_state.get_contract_class(&[1; 32]),
+            cached_state.state_reader.get_contract_class(&[1; 32])
         );
     }
 

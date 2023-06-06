@@ -271,18 +271,19 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::InternalDeclareV2;
+    use crate::business_logic::state::state_api::StateReader;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::{cached_state::CachedState, state_api::StateReader},
+            state::cached_state::CachedState,
         },
         definitions::general_config::StarknetChainId,
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
-    use num_traits::Zero;
+    use num_traits::{One, Zero};
 
     #[test]
     fn create_declare_v2_test() {
@@ -301,14 +302,14 @@ mod tests {
 
         let internal_declare = InternalDeclareV2::new(
             &sierra_contract_class,
-            Felt252::zero(),
+            Felt252::one(),
             chain_id,
             sender_address,
             0,
             0,
             [1.into()].to_vec(),
             Felt252::zero(),
-            None,
+            Some(Felt252::one()),
         )
         .unwrap();
 
@@ -330,7 +331,7 @@ mod tests {
         .unwrap();
 
         let casm_class = match state
-            .get_compiled_class(&internal_declare.compiled_class_hash.to_le_bytes())
+            .get_contract_class(&internal_declare.compiled_class_hash.to_le_bytes())
             .unwrap()
         {
             CompiledClass::Casm(casm) => *casm,

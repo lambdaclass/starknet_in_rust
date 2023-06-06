@@ -6,20 +6,11 @@ use cairo_vm::{
         ReferenceManager,
     },
     types::{errors::program_errors::ProgramError, program::Program},
-    utils::is_subsequence,
 };
 use getset::Getters;
 use starknet_api::deprecated_contract_class::EntryPoint;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
-
-pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
-    BuiltinName::pedersen,
-    BuiltinName::range_check,
-    BuiltinName::ecdsa,
-    BuiltinName::bitwise,
-    BuiltinName::ec_op,
-];
 
 // -------------------------------
 //         Contract Class
@@ -56,16 +47,6 @@ impl ContractClass {
             entry_points_by_type,
             abi,
         })
-    }
-
-    pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
-        let builtin_list: &Vec<BuiltinName> = &self.program().iter_builtins().cloned().collect();
-
-        if !is_subsequence(builtin_list, &SUPPORTED_BUILTINS) {
-            return Err(ContractClassError::DisorderedBuiltins);
-        };
-
-        Ok(())
     }
 }
 

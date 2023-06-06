@@ -2024,8 +2024,8 @@ dependencies = [
  "honggfuzz",
  "num-traits 0.2.15",
  "serde_json",
- "starknet-contract-class 0.1.0",
- "starknet-rs 0.1.0",
+ "starknet-contract-class",
+ "starknet-rs",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
  "tempfile",
 ]
@@ -2064,9 +2064,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c85e1d9ab2eadba7e5040d4e09cbd6d072b76a557ad64e797c2cb9d4da21d7e4"
+checksum = "be4136b2a15dd319360be1c07d9933517ccf0be8f16bf62a3bee4f0d618df427"
 dependencies = [
  "cfg-if",
  "js-sys",
@@ -3474,17 +3474,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-contract-class"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#c24cf7c7840525bc754de06f8122a469d8850eb6"
-dependencies = [
- "cairo-vm",
- "serde",
- "serde_json",
- "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
-]
-
-[[package]]
 name = "starknet-crypto"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3644,34 +3633,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
- "starknet-contract-class 0.1.0",
- "starknet-crypto 0.4.3",
- "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-rs"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#c24cf7c7840525bc754de06f8122a469d8850eb6"
-dependencies = [
- "awc",
- "cairo-lang-casm 1.0.0-rc0",
- "cairo-lang-starknet 1.0.0-rc0",
- "cairo-vm",
- "cargo-llvm-cov",
- "getset",
- "hex",
- "lazy_static",
- "mimalloc",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.15",
- "once_cell",
- "serde",
- "serde_json",
- "sha3",
- "starknet-contract-class 0.1.0 (git+https://github.com/lambdaclass/starknet_in_rust?branch=main)",
+ "starknet-contract-class",
  "starknet-crypto 0.4.3",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
  "thiserror",
@@ -3700,9 +3662,9 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
- "starknet-contract-class 0.1.0",
+ "starknet-contract-class",
  "starknet-crypto 0.4.3",
- "starknet-rs 0.1.0 (git+https://github.com/lambdaclass/starknet_in_rust?branch=main)",
+ "starknet-rs",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109)",
  "thiserror",
 ]

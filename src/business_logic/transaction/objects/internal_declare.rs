@@ -267,7 +267,7 @@ impl InternalDeclare {
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
-            Err(StateError::MissingClassHash()) => {
+            Err(StateError::NoneCompiledHash(_)) => {
                 // Class is undeclared; declare it.
                 state.set_contract_class(&self.class_hash, &self.contract_class)?;
             }

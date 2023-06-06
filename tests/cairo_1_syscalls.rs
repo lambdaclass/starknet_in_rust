@@ -749,7 +749,7 @@ fn replace_class_internal() {
     assert_eq!(state.get_class_hash_at(&address).unwrap(), class_hash_b);
     // Check that the class_hash_b leads to contract_class_b for soundness
     assert_eq!(
-        state.get_compiled_class(&class_hash_b).unwrap(),
+        state.get_contract_class(&class_hash_b).unwrap(),
         CompiledClass::Casm(Box::new(contract_class_b))
     );
 }

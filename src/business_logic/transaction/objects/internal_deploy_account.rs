@@ -13,7 +13,7 @@ use crate::{
         },
     },
     core::{
-        errors::syscall_handler_errors::SyscallHandlerError,
+        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
         transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
@@ -144,7 +144,10 @@ impl InternalDeployAccount {
     where
         S: State + StateReader,
     {
-        let contract_class = state.get_contract_class(&self.class_hash)?;
+        let contract_class: ContractClass = state
+            .get_contract_class(&self.class_hash)?
+            .try_into()
+            .map_err(StateError::from)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
