@@ -16,7 +16,7 @@ use crate::{
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
+            BlockInfo,
         },
         transaction::error::TransactionError,
     },

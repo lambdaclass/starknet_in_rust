@@ -150,7 +150,8 @@ pub fn to_cairo_runner_program(
         return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
     };
 
-    let error_message_attributes = serde_json::from_value::<Vec<Attribute>>(program.attributes)?
+    let error_message_attributes = serde_json::from_value::<Vec<Attribute>>(program.attributes)
+        .unwrap_or(Vec::new())
         .into_iter()
         .filter(|attr| attr.name == "error_message")
         .collect();
@@ -222,6 +223,38 @@ mod tests {
                 offset: 366
             }]
         );
+    }
+
+    #[test]
+    fn try_from_string_without_program_attributes() {
+        let mut serialized = String::new();
+
+        // This specific contract was extracted from: https://testnet.starkscan.co/class/0x068dd0dd8a54ebdaa10563fbe193e6be1e0f7c423c0c3ce1e91c0b682a86b5f9
+        File::open(PathBuf::from(
+            "../../starknet_programs/program_without_attributes.json",
+        ))
+        .and_then(|mut f| f.read_to_string(&mut serialized))
+        .expect("should be able to read file");
+
+        let res = ParsedContractClass::try_from(serialized.as_str());
+
+        res.unwrap();
+    }
+
+    #[test]
+    fn try_from_string_without_program_attributes_2() {
+        let mut serialized = String::new();
+
+        // This specific contract was extracted from: https://testnet.starkscan.co/class/0x071b7f73b5e2b4f81f7cf01d4d1569ccba2921b3fa3170cf11cff3720dfe918e
+        File::open(PathBuf::from(
+            "../../starknet_programs/program_without_attributes_2.json",
+        ))
+        .and_then(|mut f| f.read_to_string(&mut serialized))
+        .expect("should be able to read file");
+
+        let res = ParsedContractClass::try_from(serialized.as_str());
+
+        res.unwrap();
     }
 
     #[test]

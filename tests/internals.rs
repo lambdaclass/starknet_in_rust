@@ -21,9 +21,9 @@ use starknet_rs::{
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
             state_cache::StateCache,
             state_cache::StorageEntry,
+            BlockInfo,
         },
         transaction::{
             deploy_account::DeployAccount,
