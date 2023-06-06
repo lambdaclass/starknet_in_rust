@@ -1,4 +1,4 @@
-use super::{cached_state::UNINITIALIZED_CLASS_HASH, state_cache::StorageEntry};
+use super::state_cache::StorageEntry;
 use crate::{
     business_logic::fact_state::state::StateDiff,
     core::errors::state_errors::StateError,
@@ -11,37 +11,19 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 
 pub trait StateReader {
-    /// Returns the contract class of the given class hash.
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<ContractClass, StateError>;
+    /// Returns the contract class of the given class hash or compiled class hash.
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
     /// Returns the class hash of the contract class at the given address.
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError>;
     /// Returns the nonce of the given contract instance.
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError>;
     /// Returns the storage value under the given key in the given contract instance.
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError>;
-    /// Return de casm contract class of the given class hash.
-    fn get_compiled_class(
-        &mut self,
-        compiled_class_hash: &CompiledClassHash,
-    ) -> Result<CompiledClass, StateError>;
     /// Return the class hash of the given casm contract class
     fn get_compiled_class_hash(
         &mut self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError>;
-
-    fn get_compiled_class_by_class_hash(
-        &mut self,
-        class_hash: &ClassHash,
-    ) -> Result<CompiledClass, StateError> {
-        let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-        if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
-            let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
-            Ok(compiled_class)
-        } else {
-            Err(StateError::MissingCasmClass(compiled_class_hash))
-        }
-    }
 }
 
 pub trait State {

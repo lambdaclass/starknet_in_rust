@@ -5,37 +5,12 @@ use cairo_vm::{
         deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
         ReferenceManager,
     },
-    types::{
-        errors::program_errors::ProgramError, program::Program, relocatable::MaybeRelocatable,
-    },
-    utils::is_subsequence,
+    types::{errors::program_errors::ProgramError, program::Program},
 };
-use getset::{CopyGetters, Getters};
+use getset::Getters;
 use starknet_api::deprecated_contract_class::EntryPoint;
+use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
-
-pub(crate) const SUPPORTED_BUILTINS: [BuiltinName; 5] = [
-    BuiltinName::pedersen,
-    BuiltinName::range_check,
-    BuiltinName::ecdsa,
-    BuiltinName::bitwise,
-    BuiltinName::ec_op,
-];
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EntryPointType {
-    External,
-    L1Handler,
-    Constructor,
-}
-
-#[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq)]
-pub struct ContractEntryPoint {
-    #[getset(get = "pub")]
-    pub(crate) selector: Felt252,
-    #[getset(get_copy = "pub")]
-    pub(crate) offset: usize,
-}
 
 // -------------------------------
 //         Contract Class
@@ -60,7 +35,7 @@ impl ContractClass {
         for entry_points in entry_points_by_type.values() {
             let mut index = 1;
             while let Some(entry_point) = entry_points.get(index) {
-                if entry_point.selector > entry_points[index - 1].selector {
+                if entry_point.selector() > entry_points[index - 1].selector() {
                     return Err(ContractClassError::EntrypointError(entry_points.clone()));
                 }
                 index += 1;
@@ -73,45 +48,11 @@ impl ContractClass {
             abi,
         })
     }
-
-    pub(crate) fn validate(&self) -> Result<(), ContractClassError> {
-        let builtin_list: &Vec<BuiltinName> = &self.program().iter_builtins().cloned().collect();
-
-        if !is_subsequence(builtin_list, &SUPPORTED_BUILTINS) {
-            return Err(ContractClassError::DisorderedBuiltins);
-        };
-
-        Ok(())
-    }
 }
 
 // -------------------------------
 //         From traits
 // -------------------------------
-
-impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
-    fn from(entry_point: &ContractEntryPoint) -> Self {
-        vec![
-            MaybeRelocatable::from(entry_point.selector.clone()),
-            MaybeRelocatable::from(entry_point.offset),
-        ]
-    }
-}
-
-impl From<starknet_api::deprecated_contract_class::EntryPointType> for EntryPointType {
-    fn from(entry_type: starknet_api::deprecated_contract_class::EntryPointType) -> Self {
-        type ApiEPT = starknet_api::deprecated_contract_class::EntryPointType;
-        type StarknetEPT =
-            crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-
-        match entry_type {
-            ApiEPT::Constructor => StarknetEPT::Constructor,
-            ApiEPT::External => StarknetEPT::External,
-            ApiEPT::L1Handler => StarknetEPT::L1Handler,
-        }
-    }
-}
-
 impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for ContractClass {
     type Error = ProgramError;
 
@@ -175,7 +116,7 @@ fn convert_entry_points(
             .map(|e| {
                 let selector = Felt252::from_bytes_be(e.selector.0.bytes());
                 let offset = e.offset.0;
-                ContractEntryPoint { selector, offset }
+                ContractEntryPoint::new(selector, offset)
             })
             .collect::<Vec<ContractEntryPoint>>();
 
@@ -259,12 +200,12 @@ mod tests {
                 .entry_points_by_type()
                 .get(&EntryPointType::Constructor)
                 .unwrap(),
-            &vec![ContractEntryPoint {
-                selector: felt_str!(
+            &vec![ContractEntryPoint::new(
+                felt_str!(
                     "1159040026212278395030414237414753050475174923702621880048416706425641521556"
                 ),
-                offset: 366
-            }]
+                366
+            )]
         );
     }
 }
