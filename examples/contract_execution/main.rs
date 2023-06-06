@@ -12,7 +12,7 @@
 use cairo_vm::felt::Felt252;
 use starknet_rs::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::starknet_state::StarknetState,
+    testing::state::StarknetState,
     utils::{calculate_sn_keccak, Address},
 };
 use std::path::Path;

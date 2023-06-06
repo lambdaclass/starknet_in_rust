@@ -16,7 +16,7 @@ use crate::{
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
+            BlockInfo,
         },
         transaction::error::TransactionError,
     },
@@ -903,7 +903,7 @@ mod tests {
         //ids and references are not needed for this test
         assert_matches!(
             run_hint!(vm, HashMap::new(), hint_code),
-            Err(e) if e.to_string().contains(&MemoryError::InconsistentMemory(Relocatable::from((1, 6)),MaybeRelocatable::from((1, 6)),MaybeRelocatable::from((3, 0))).to_string())
+            Err(e) if e.to_string().contains(&MemoryError::InconsistentMemory(Box::new((Relocatable::from((1, 6)),MaybeRelocatable::from((1, 6)),MaybeRelocatable::from((3, 0))))).to_string())
         );
     }
 
