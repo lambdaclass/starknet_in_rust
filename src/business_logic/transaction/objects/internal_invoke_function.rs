@@ -13,9 +13,7 @@ use crate::{
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
         },
     },
-    core::transaction_hash::starknet_transaction_hash::{
-        calculate_transaction_hash_common, TransactionHashPrefix,
-    },
+    core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,

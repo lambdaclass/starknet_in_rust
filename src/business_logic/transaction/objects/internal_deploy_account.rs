@@ -13,8 +13,8 @@ use crate::{
         },
     },
     core::{
-        errors::syscall_handler_errors::SyscallHandlerError,
-        transaction_hash::starknet_transaction_hash::calculate_deploy_account_transaction_hash,
+        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
@@ -143,7 +143,10 @@ impl InternalDeployAccount {
     where
         S: State + StateReader,
     {
-        let contract_class = state.get_contract_class(&self.class_hash)?;
+        let contract_class: ContractClass = state
+            .get_contract_class(&self.class_hash)?
+            .try_into()
+            .map_err(StateError::from)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
@@ -355,10 +358,7 @@ mod tests {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState,
         },
-        core::{
-            contract_address::starknet_contract_address::compute_deprecated_class_hash,
-            errors::state_errors::StateError,
-        },
+        core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::general_config::StarknetChainId,
         utils::felt_to_hash,
     };

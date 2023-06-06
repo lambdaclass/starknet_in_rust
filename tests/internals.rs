@@ -23,9 +23,9 @@ use starknet_rs::{
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
             state_cache::StateCache,
             state_cache::StorageEntry,
+            BlockInfo,
         },
         transaction::{
             error::TransactionError,
@@ -521,8 +521,10 @@ fn test_create_account_tx_test_state() {
     let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
     assert_eq!(class_hash, felt_to_hash(&TEST_CLASS_HASH));
 
-    let contract_class = state
+    let contract_class: ContractClass = state
         .get_contract_class(&felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
+        .unwrap()
+        .try_into()
         .unwrap();
     assert_eq!(
         contract_class,
@@ -735,7 +737,7 @@ fn test_declarev2_tx() {
     let result = declare_tx.execute(&mut state, &general_config, 0).unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
-        .get_compiled_class(&declare_tx.compiled_class_hash.to_be_bytes())
+        .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
         .is_ok());
 
     let expected_execution_info = TransactionExecutionInfo::new(
@@ -1434,6 +1436,6 @@ fn test_deploy_undeclared_account() {
     // Execute transaction
     assert_matches!(
         result,
-        Err(TransactionError::State(StateError::MissingClassHash()))
+        Err(TransactionError::State(StateError::NoneCompiledHash(_)))
     );
 }

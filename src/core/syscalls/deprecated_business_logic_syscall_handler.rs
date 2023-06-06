@@ -16,7 +16,7 @@ use crate::{
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
-            state_api_objects::BlockInfo,
+            BlockInfo,
         },
         transaction::error::TransactionError,
     },
@@ -26,7 +26,7 @@ use crate::{
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::{
         contract_class_errors::ContractClassError,
-        contract_classes::deprecated_contract_class::EntryPointType,
+        contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
     },
     utils::*,
 };
@@ -181,10 +181,11 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
     ) -> Result<(), StateError> {
-        let contract_class = self
+        let contract_class: ContractClass = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?;
+            .get_contract_class(&class_hash_bytes)?
+            .try_into()?;
         let constructor_entry_points = contract_class
             .entry_points_by_type
             .get(&EntryPointType::Constructor)
@@ -902,7 +903,7 @@ mod tests {
         //ids and references are not needed for this test
         assert_matches!(
             run_hint!(vm, HashMap::new(), hint_code),
-            Err(e) if e.to_string().contains(&MemoryError::InconsistentMemory(Relocatable::from((1, 6)),MaybeRelocatable::from((1, 6)),MaybeRelocatable::from((3, 0))).to_string())
+            Err(e) if e.to_string().contains(&MemoryError::InconsistentMemory(Box::new((Relocatable::from((1, 6)),MaybeRelocatable::from((1, 6)),MaybeRelocatable::from((3, 0))))).to_string())
         );
     }
 
