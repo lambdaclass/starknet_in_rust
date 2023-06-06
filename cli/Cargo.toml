@@ -30,7 +30,7 @@ awc = "3.1.1"
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
-starknet-rs = {path = ".."}
+starknet-rs = { path = "..", version = "0.1.0" }
 starknet-contract-class = { path = "../crates/starknet-contract-class" }
 
 [dev-dependencies]

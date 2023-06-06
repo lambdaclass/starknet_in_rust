@@ -17,7 +17,7 @@ use starknet_rs::{
     },
     core::{
         contract_address::compute_deprecated_class_hash,
-        errors::contract_address_errors::ContractAddressError,
+        errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
         transaction_hash::{
             calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
             calculate_transaction_hash_common, TransactionHashPrefix,
@@ -158,7 +158,10 @@ fn invoke_parser(
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
-    let contract_class = cached_state.get_contract_class(&class_hash)?;
+    let contract_class: ContractClass = cached_state
+        .get_contract_class(&class_hash)?
+        .try_into()
+        .map_err(StateError::from)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let transaction_hash = args.hash.clone().map(|f| {
         Felt252::from_str_radix(&f, 16)
@@ -218,7 +221,10 @@ fn call_parser(
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
-    let contract_class = cached_state.get_contract_class(&class_hash)?;
+    let contract_class: ContractClass = cached_state
+        .get_contract_class(&class_hash)?
+        .try_into()
+        .map_err(StateError::from)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
     let (entry_point_index, entry_point_type) = function_entrypoint_indexes

@@ -9,4 +9,8 @@ pub enum ContractClassError {
     NoneEntryPointType,
     #[error("Entry points must be unique and sorted. Found: {0:?}")]
     EntrypointError(Vec<ContractEntryPoint>),
+    #[error("Not a casm contract class")]
+    NotACasmContractClass,
+    #[error("Not a deprecated contract class")]
+    NotADeprecatedContractClass,
 }
