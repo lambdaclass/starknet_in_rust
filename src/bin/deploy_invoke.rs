@@ -5,7 +5,7 @@ use num_traits::Zero;
 
 use starknet_rs::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::starknet_state::StarknetState, utils::Address,
+    testing::state::StarknetState, utils::Address,
 };
 
 use lazy_static::lazy_static;
