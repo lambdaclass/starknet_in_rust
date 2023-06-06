@@ -21,7 +21,6 @@ use super::{
 use crate::business_logic::state::BlockInfo;
 use crate::business_logic::transaction::error::TransactionError;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
@@ -287,10 +286,10 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class: ContractClass = self
+        let contract_class: CompiledClass = self
             .starknet_storage_state
             .state
-            .get_compiled_class(&class_hash_bytes)?;
+            .get_contract_class(&class_hash_bytes)?;
 
         if self.constructor_entry_points(contract_class)? {
             if !constructor_calldata.is_empty() {

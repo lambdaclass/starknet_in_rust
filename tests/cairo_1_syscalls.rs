@@ -661,7 +661,7 @@ fn deploy() {
     //let ret_address = Address(call_info.unwrap().retdata[0].clone());
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
-    let ret_casm_class = match state.get_compiled_class(&ret_class_hash).unwrap() {
+    let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => *class,
         CompiledClass::Deprecated(_) => unreachable!(),
     };
