@@ -236,7 +236,7 @@ fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
         in_memory_state_reader,
         Some(contract_classes_cache),
         state_cache_after_invoke_tx(),
-        None,
+        Some(HashMap::new()),
     )
 }
 
@@ -895,7 +895,7 @@ fn test_deploy_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
     let deploy_account_tx = InternalDeployAccount::new(
-        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+        TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes(),
         2,
         TRANSACTION_VERSION,
         Default::default(),
@@ -913,7 +913,7 @@ fn test_deploy_account() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes(),
         ),
         ACTUAL_FEE.clone(),
     );
@@ -952,7 +952,7 @@ fn test_deploy_account() {
         contract_address: deploy_account_tx.contract_address().clone(),
 
         // Entries **not** in blockifier.
-        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+        class_hash: Some(TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes()),
         call_type: Some(CallType::Call),
 
         ..Default::default()
@@ -988,9 +988,9 @@ fn test_deploy_account() {
         .unwrap();
     assert_eq!(nonce_from_state, Felt252::one());
 
-    let hash = &felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY);
+    let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
-    validate_final_balances(&mut state, &general_config, Felt252::zero(), hash);
+    validate_final_balances(&mut state, &general_config, Felt252::zero(), &hash);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -1047,7 +1047,7 @@ fn expected_deploy_account_states() -> (
             HashMap::new()
         ),
         Some(ContractClassCache::new()),
-        None
+        Some(HashMap::new())
     );
     state_before.set_storage_at(
         &(
