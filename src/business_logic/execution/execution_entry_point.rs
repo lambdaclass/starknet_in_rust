@@ -12,10 +12,10 @@ use crate::{
         syscall_handler::SyscallHintProcessor,
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
+    runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    starknet_runner::runner::StarknetRunner,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
         validate_contract_deployed, Address,

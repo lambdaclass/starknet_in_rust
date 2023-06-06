@@ -1,4 +1,4 @@
-use crate::{public::abi::AbiType, services::api::contract_class_errors::ContractClassError};
+use crate::services::api::contract_class_errors::ContractClassError;
 use cairo_vm::felt::{Felt252, PRIME_STR};
 use cairo_vm::{
     serde::deserialize_program::{
@@ -9,6 +9,7 @@ use cairo_vm::{
 };
 use getset::Getters;
 use starknet_api::deprecated_contract_class::EntryPoint;
+use starknet_contract_class::AbiType;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
