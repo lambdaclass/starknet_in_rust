@@ -270,7 +270,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         Ok(SyscallResponse { gas, body })
     }
 
-    fn constructor_entry_points(&self, contract_class: CompiledClass) -> Result<bool, StateError> {
+    fn constructor_entry_points_empty(&self, contract_class: CompiledClass) -> Result<bool, StateError> {
         match contract_class {
             CompiledClass::Deprecated(class) => Ok(class
                 .entry_points_by_type
@@ -293,7 +293,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .state
             .get_contract_class(&class_hash_bytes)?;
 
-        if self.constructor_entry_points(compiled_class)? {
+        if self.constructor_entry_points_empty(compiled_class)? {
             if constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
@@ -317,7 +317,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
             self.contract_address.clone(),
             EntryPointType::Constructor,
-            Some(CallType::Call),
+            Some(CallType::Delegate),
             None,
             remainig_gas,
         );
