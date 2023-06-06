@@ -12,9 +12,8 @@ use crate::{
         },
     },
     core::{
-        contract_address::starknet_contract_address::compute_deprecated_class_hash,
-        errors::state_errors::StateError,
-        transaction_hash::starknet_transaction_hash::calculate_declare_transaction_hash,
+        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
+        transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
@@ -267,7 +266,7 @@ impl InternalDeclare {
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
-            Err(StateError::MissingClassHash()) => {
+            Err(StateError::NoneCompiledHash(_)) => {
                 // Class is undeclared; declare it.
                 state.set_contract_class(&self.class_hash, &self.contract_class)?;
             }

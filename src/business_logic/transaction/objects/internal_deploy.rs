@@ -9,8 +9,8 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::{
-        contract_address::starknet_contract_address::compute_deprecated_class_hash,
-        transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
+        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
+        transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
@@ -88,7 +88,10 @@ impl InternalDeploy {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
-        let contract_class = state.get_contract_class(&class_hash)?;
+        let contract_class: ContractClass = state
+            .get_contract_class(&class_hash)?
+            .try_into()
+            .map_err(StateError::from)?;
 
         let constructors = contract_class
             .entry_points_by_type()
