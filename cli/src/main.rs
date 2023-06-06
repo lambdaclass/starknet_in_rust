@@ -15,7 +15,7 @@ use starknet_rs::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
-        transaction::objects::internal_invoke_function::InternalInvokeFunction,
+        transaction::invoke_function::InvokeFunction,
     },
     core::{
         contract_address::starknet_contract_address::compute_deprecated_class_hash,
@@ -184,7 +184,7 @@ fn invoke_parser(
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
         None => Vec::new(),
     };
-    let internal_invoke = InternalInvokeFunction::new(
+    let internal_invoke = InvokeFunction::new(
         contract_address.clone(),
         entrypoint_selector.clone(),
         0,

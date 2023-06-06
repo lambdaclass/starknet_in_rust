@@ -7,7 +7,7 @@ use starknet_rs::{
     business_logic::{
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api_objects::BlockInfo},
-        transaction::objects::internal_invoke_function::InternalInvokeFunction,
+        transaction::invoke_function::InvokeFunction,
     },
     definitions::{
         constants::TRANSACTION_VERSION,

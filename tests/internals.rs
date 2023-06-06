@@ -30,8 +30,8 @@ use starknet_rs::{
             objects::{
                 internal_deploy_account::InternalDeployAccount,
                 {
-                    internal_declare::InternalDeclare,
-                    internal_invoke_function::InternalInvokeFunction,
+                    declare::Declare,
+                    invoke_function::InvokeFunction,
                 },
             },
         },
