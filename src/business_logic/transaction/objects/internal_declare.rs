@@ -19,7 +19,7 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -27,6 +27,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 const VERSION_0: u64 = 0;
@@ -260,7 +261,7 @@ impl InternalDeclare {
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
-            Err(StateError::MissingClassHash()) => {
+            Err(StateError::NoneCompiledHash(_)) => {
                 // Class is undeclared; declare it.
                 state.set_contract_class(&self.class_hash, &self.contract_class)?;
             }
@@ -308,9 +309,7 @@ mod tests {
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
-        services::api::contract_classes::deprecated_contract_class::{
-            ContractClass, EntryPointType,
-        },
+        services::api::contract_classes::deprecated_contract_class::ContractClass,
         utils::{felt_to_hash, Address},
     };
 

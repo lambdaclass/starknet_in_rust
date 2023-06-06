@@ -13,7 +13,7 @@ use crate::{
         },
     },
     core::{
-        errors::syscall_handler_errors::SyscallHandlerError,
+        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
         transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
@@ -22,12 +22,13 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -142,7 +143,10 @@ impl InternalDeployAccount {
     where
         S: State + StateReader,
     {
-        let contract_class = state.get_contract_class(&self.class_hash)?;
+        let contract_class: ContractClass = state
+            .get_contract_class(&self.class_hash)?
+            .try_into()
+            .map_err(StateError::from)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 

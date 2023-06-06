@@ -2,6 +2,7 @@
 
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Num;
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -20,7 +21,7 @@ use starknet_rs::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
         general_config::{StarknetChainId, StarknetGeneralConfig},
     },
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::{collections::HashSet, iter::empty, path::Path};

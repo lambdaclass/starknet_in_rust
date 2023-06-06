@@ -245,8 +245,8 @@ mod test {
         let mut cached_state = diff.to_cached_state(state_reader).unwrap();
 
         assert_eq!(
-            cached_state_original.get_contract_classes(),
-            cached_state.get_contract_classes()
+            cached_state_original.contract_classes(),
+            cached_state.contract_classes()
         );
         assert_eq!(
             cached_state_original.get_nonce_at(&contract_address),
