@@ -1405,5 +1405,8 @@ fn test_out_of_gas_failure() {
             false,
         )
         .unwrap();
-    assert_eq!(call_info.retdata, vec![Felt252::from_bytes_be("Out of gas".as_bytes())])
+    assert_eq!(
+        call_info.retdata,
+        vec![Felt252::from_bytes_be("Out of gas".as_bytes())]
+    )
 }
