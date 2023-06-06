@@ -13,7 +13,7 @@ use starknet_rs::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
-        transaction::invoke_function::InvokeFunction,
+        transaction::InvokeFunction,
     },
     core::{
         contract_address::compute_deprecated_class_hash,

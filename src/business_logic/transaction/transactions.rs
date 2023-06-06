@@ -7,7 +7,7 @@ use crate::{
     utils::{Address, ClassHash},
 };
 
-use super::{deploy::Deploy, error::TransactionError, invoke_function::InvokeFunction};
+use super::{error::TransactionError, Deploy, InvokeFunction};
 
 pub enum Transaction {
     Deploy(Deploy),

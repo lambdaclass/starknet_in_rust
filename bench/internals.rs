@@ -8,10 +8,7 @@ use starknet_rs::{
     business_logic::{
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
-        transaction::{
-            declare::Declare, deploy::Deploy, deploy_account::DeployAccount,
-            invoke_function::InvokeFunction,
-        },
+        transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     },
     core::contract_address::compute_deprecated_class_hash,
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetChainId},

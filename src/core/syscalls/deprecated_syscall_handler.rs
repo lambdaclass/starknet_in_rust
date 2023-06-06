@@ -193,7 +193,7 @@ mod tests {
                 cached_state::CachedState,
                 state_api::{State, StateReader},
             },
-            transaction::invoke_function::InvokeFunction,
+            transaction::InvokeFunction,
         },
         core::syscalls::deprecated_syscall_request::{
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,

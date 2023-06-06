@@ -13,7 +13,7 @@ use starknet_rs::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{cached_state::CachedState, state_api::State},
-        transaction::{deploy::Deploy, error::TransactionError},
+        transaction::{error::TransactionError, Deploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},

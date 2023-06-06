@@ -7,7 +7,7 @@ use starknet_rs::{
         execution::{CallInfo, CallType, TransactionExecutionInfo},
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
-        transaction::deploy_account::DeployAccount,
+        transaction::DeployAccount,
     },
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
