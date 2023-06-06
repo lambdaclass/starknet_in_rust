@@ -136,11 +136,11 @@ impl ExecutionEntryPoint {
         let entry_point = entry_points
             .iter()
             .filter_map(|x| {
-                if x.selector().clone() == *DEFAULT_ENTRY_POINT_SELECTOR {
+                if x.selector() == &*DEFAULT_ENTRY_POINT_SELECTOR {
                     default_entry_point = Some(x);
                 }
 
-                (x.selector().clone() == self.entry_point_selector).then_some(x)
+                (x.selector() == &self.entry_point_selector).then_some(x)
             })
             .fold(Ok(None), |acc, x| match acc {
                 Ok(None) => Ok(Some(x)),
