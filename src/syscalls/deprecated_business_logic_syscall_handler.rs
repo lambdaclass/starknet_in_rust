@@ -27,7 +27,7 @@ use crate::{
     public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::{
         contract_class_errors::ContractClassError,
-        contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+        contract_classes::deprecated_contract_class::ContractClass,
     },
     utils::*,
 };
@@ -37,6 +37,7 @@ use cairo_vm::{
     vm::vm_core::VirtualMachine,
 };
 use num_traits::{One, ToPrimitive, Zero};
+use starknet_contract_class::EntryPointType;
 use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------

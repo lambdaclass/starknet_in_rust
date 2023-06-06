@@ -17,13 +17,14 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     starkware_utils::starkware_errors::StarkwareError,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 
 #[derive(Debug)]
 pub struct InternalDeploy {

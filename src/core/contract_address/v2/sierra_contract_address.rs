@@ -1,13 +1,9 @@
-use crate::{
-    core::errors::contract_address_errors::ContractAddressError,
-    services::api::contract_classes::deprecated_contract_class::{
-        ContractEntryPoint, EntryPointType,
-    },
-};
+use crate::core::errors::contract_address_errors::ContractAddressError;
 use cairo_lang_starknet::{
     contract::starknet_keccak, contract_class::ContractClass as SierraContractClass,
 };
 use cairo_vm::felt::Felt252;
+use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
@@ -27,7 +23,7 @@ fn get_contract_entry_points_hashed(
 
     for entry_point in contract_entry_points {
         entry_points_flatted.push(
-            FieldElement::from_bytes_be(&entry_point.selector.to_be_bytes()).map_err(|_err| {
+            FieldElement::from_bytes_be(&entry_point.selector().to_be_bytes()).map_err(|_err| {
                 ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
             })?,
         );
@@ -116,9 +112,11 @@ fn get_contract_entry_points(
 
     Ok(entry_points
         .iter()
-        .map(|entry_point| ContractEntryPoint {
-            offset: entry_point.function_idx,
-            selector: entry_point.selector.clone().into(),
+        .map(|entry_point| {
+            ContractEntryPoint::new(
+                entry_point.selector.clone().into(),
+                entry_point.function_idx,
+            )
         })
         .collect())
 }

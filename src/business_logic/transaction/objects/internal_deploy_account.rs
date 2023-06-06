@@ -22,7 +22,7 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     starkware_utils::starkware_errors::StarkwareError,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, Address, ClassHash},
@@ -30,6 +30,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
