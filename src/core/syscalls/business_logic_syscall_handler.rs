@@ -294,7 +294,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .get_compiled_class(&class_hash_bytes)?;
 
         if self.constructor_entry_points(contract_class)? {
-            if constructor_calldata.is_empty() {
+            if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
 
@@ -666,6 +666,8 @@ where
         let constructor_calldata =
             get_felt_range(vm, request.calldata_start, request.calldata_end)?;
 
+        dbg!(&constructor_calldata);
+
         let class_hash = &request.class_hash;
 
         let deployer_address = if request.deploy_from_zero.is_zero() {
@@ -673,6 +675,8 @@ where
         } else {
             Address(0.into())
         };
+
+        dbg!(&deployer_address);
 
         let contract_address = Address(calculate_contract_address(
             &Address(request.salt),
@@ -683,6 +687,8 @@ where
 
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
+        dbg!(&class_hash_bytes);
+        dbg!(&contract_address);
 
         self.starknet_storage_state
             .state
@@ -704,6 +710,7 @@ where
         syscall_request: DeployRequest,
         mut remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
+        dbg!("deploy");
         let (contract_address, result) = self.syscall_deploy(vm, syscall_request, remaining_gas)?;
 
         remaining_gas -= result.gas_consumed;

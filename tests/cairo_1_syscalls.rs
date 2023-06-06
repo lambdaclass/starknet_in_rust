@@ -6,7 +6,7 @@ use std::{
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    felt::Felt252,
+    felt::{felt_str, Felt252},
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
 };
 use num_bigint::BigUint;
@@ -598,7 +598,7 @@ fn deploy() {
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
-    contract_class_cache.insert(test_class_hash, test_contract_class);
+    contract_class_cache.insert(test_class_hash, test_contract_class.clone());
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -611,12 +611,13 @@ fn deploy() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let constructor_calldata: Felt252 = Felt252::from_bytes_be(&[1]);
+    // arguments of deploy contract
+    //let constructor_calldata: Felt252 = Felt252::from_bytes_be(&[1]);
+    let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
 
-    let calldata: Vec<_> = [test_felt_hash, salt, constructor_calldata, Felt252::zero()].to_vec();
+    // set up remaining structures
 
     let resources_manager = ExecutionResourcesManager::default();
-
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -628,7 +629,7 @@ fn deploy() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
-        100000,
+        100_000_000,
     );
 
     // Execute the entrypoint
@@ -652,7 +653,19 @@ fn deploy() {
         false,
     );
 
-    assert!(call_info.is_ok());
+    let ret_address = Address(felt_str!(
+        "619464431559909356793718633071398796109800070568878623926447195121629120356"
+    ));
+    //Address(call_info.unwrap().retdata[0].clone());
+    dbg!(&ret_address);
+
+    let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
+    let ret_casm_class = match state.get_compiled_class(&ret_class_hash).unwrap() {
+        CompiledClass::Casm(class) => *class,
+        CompiledClass::Deprecated(_) => unreachable!(),
+    };
+
+    assert_eq!(ret_casm_class, test_contract_class);
 }
 
 #[test]

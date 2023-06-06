@@ -56,7 +56,9 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
         hint_data: &Box<dyn Any>,
         _constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
+        //  dbg!("hint processor");
         let hints: &Vec<Hint> = hint_data.downcast_ref().ok_or(HintError::WrongHintData)?;
+        // dbg!(hints);
         for hint in hints {
             match hint {
                 Hint::Core(_core_hint) => {

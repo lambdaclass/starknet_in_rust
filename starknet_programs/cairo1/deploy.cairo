@@ -13,7 +13,7 @@ mod DeployTest {
     fn deploy_test(class_hash: felt252, contract_address_salt: felt252,) -> ContractAddress {
         let mut calldata = ArrayTrait::new();
         calldata.append(100);
-        let (address0, _) = deploy_syscall(class_hash.try_into().unwrap(), 0, calldata.span(), false).unwrap();
+        let (address0, _) = deploy_syscall(class_hash.try_into().unwrap(), contract_address_salt, calldata.span(), false).unwrap();
         address0
     }
 }
