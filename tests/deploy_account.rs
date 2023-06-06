@@ -10,7 +10,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::State},
         transaction::objects::internal_deploy_account::InternalDeployAccount,
     },
-    core::contract_address::starknet_contract_address::compute_deprecated_class_hash,
+    core::contract_address::compute_deprecated_class_hash,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,

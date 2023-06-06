@@ -151,10 +151,10 @@ impl<'a, T: State + StateReader> HintProcessor for DeprecatedSyscallHintProcesso
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
                 .map_err(|e| match e {
                     SyscallHandlerError::NotImplemented(hint_code) => {
-                        HintError::UnknownHint(hint_code)
+                        HintError::UnknownHint(hint_code.into_boxed_str())
                     }
 
-                    e => HintError::CustomHint(e.to_string()),
+                    e => HintError::CustomHint(e.to_string().into_boxed_str()),
                 })?;
         }
         Ok(())

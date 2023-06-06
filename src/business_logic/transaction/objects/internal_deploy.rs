@@ -9,9 +9,9 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::{
-        contract_address::starknet_contract_address::compute_deprecated_class_hash,
+        contract_address::compute_deprecated_class_hash,
         errors::syscall_handler_errors::SyscallHandlerError,
-        transaction_hash::starknet_transaction_hash::calculate_deploy_transaction_hash,
+        transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,

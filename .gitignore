@@ -51,3 +51,5 @@ __pycache__/
 lcov.info
 .rusty-hook.toml
 !starknet_programs/class_with_abi.json
+!starknet_programs/program_without_attributes.json
+!starknet_programs/program_without_attributes_2.json
