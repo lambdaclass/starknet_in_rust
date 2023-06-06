@@ -1381,7 +1381,7 @@ fn test_out_of_gas_failure() {
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
-        100000,
+        0,
     );
 
     // Execute the entrypoint
@@ -1405,5 +1405,5 @@ fn test_out_of_gas_failure() {
             false,
         )
         .unwrap();
-    dbg!(call_info);
+    assert_eq!(call_info.retdata, vec![Felt252::from_bytes_be("Out of gas".as_bytes())])
 }
