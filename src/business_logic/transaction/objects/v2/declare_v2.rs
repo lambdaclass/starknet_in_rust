@@ -201,12 +201,21 @@ impl InternalDeclareV2 {
 
         self.compile_and_store_casm_class(state)?;
 
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &actual_resources, general_config)?;
+
+        let concurrent_exec_info = TransactionExecutionInfo::create_concurrent_stage_execution_info(
+            Some(validate_info),
+            None,
+            actual_resources,
+            Some(self.tx_type),
+        );
+
         Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                Some(validate_info),
-                None,
-                actual_resources,
-                Some(self.tx_type),
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                concurrent_exec_info,
+                actual_fee,
+                fee_transfer_info,
             ),
         )
     }
@@ -330,7 +339,7 @@ mod tests {
         .unwrap();
 
         let casm_class = match state
-            .get_compiled_class(&internal_declare.compiled_class_hash.to_le_bytes())
+            .get_compiled_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
             CompiledClass::Casm(casm) => *casm,
