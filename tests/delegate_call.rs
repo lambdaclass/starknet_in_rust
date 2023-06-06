@@ -4,6 +4,7 @@ mod cairo_1_syscalls;
 
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{
@@ -15,7 +16,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };
 use std::{collections::HashMap, path::PathBuf};

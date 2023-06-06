@@ -4,6 +4,7 @@ use assert_matches::assert_matches;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
 use starknet_rs::business_logic::state::cached_state::CachedState;
 use starknet_rs::business_logic::transaction::error::TransactionError;
@@ -17,7 +18,6 @@ use starknet_rs::{
         state::state_api::StateReader,
     },
     definitions::general_config::StarknetGeneralConfig,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_sn_keccak, Address},
 };
 

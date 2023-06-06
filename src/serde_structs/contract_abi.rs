@@ -1,6 +1,6 @@
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use serde::Deserialize;
 use serde_json::Value;
+use starknet_contract_class::EntryPointType;
 use std::{collections::HashMap, fs::File, path::PathBuf};
 
 #[allow(dead_code)]
