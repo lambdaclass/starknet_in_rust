@@ -12,6 +12,7 @@ pub mod definitions;
 pub mod hash_utils;
 pub mod parser_errors;
 pub mod runner;
+pub mod serde_structs;
 pub mod services;
 pub mod starkware_utils;
 pub mod storage;

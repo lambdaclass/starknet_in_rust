@@ -2024,7 +2024,7 @@ dependencies = [
  "honggfuzz",
  "num-traits 0.2.15",
  "serde_json",
- "starknet-rs 0.1.0",
+ "starknet-rs",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
  "tempfile",
 ]
@@ -3472,17 +3472,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-contract-class"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#c79f1719f04c197a7f834603eb29a0e57bcdbe6c"
-dependencies = [
- "cairo-vm",
- "serde",
- "serde_json",
- "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
-]
-
-[[package]]
 name = "starknet-crypto"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3642,36 +3631,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
- "starknet-contract-class 0.1.0",
- "starknet-crypto 0.4.3",
- "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-rs"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/starknet_in_rust?branch=main#c79f1719f04c197a7f834603eb29a0e57bcdbe6c"
-dependencies = [
- "actix-web",
- "awc",
- "cairo-lang-casm 1.0.0-rc0",
- "cairo-lang-starknet 1.0.0-rc0",
- "cairo-vm",
- "cargo-llvm-cov",
- "clap",
- "getset",
- "hex",
- "lazy_static",
- "mimalloc",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.15",
- "once_cell",
- "serde",
- "serde_json",
- "sha3",
- "starknet-contract-class 0.1.0 (git+https://github.com/lambdaclass/starknet_in_rust?branch=main)",
+ "starknet-contract-class",
  "starknet-crypto 0.4.3",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109ecc9c269e91b1afd2d44bc597728e1172)",
  "thiserror",
@@ -3700,9 +3660,9 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
- "starknet-contract-class 0.1.0",
+ "starknet-contract-class",
  "starknet-crypto 0.4.3",
- "starknet-rs 0.1.0 (git+https://github.com/lambdaclass/starknet_in_rust?branch=main)",
+ "starknet-rs",
  "starknet_api 0.1.0 (git+https://github.com/starkware-libs/starknet-api?rev=a891109)",
  "thiserror",
 ]
