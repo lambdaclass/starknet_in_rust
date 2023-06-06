@@ -26,9 +26,9 @@ use starknet_rs::{
             BlockInfo,
         },
         transaction::{
-            DeployAccount,
             error::TransactionError,
-            {Declare, invoke_function::InvokeFunction},
+            DeployAccount,
+            {invoke_function::InvokeFunction, Declare},
         },
     },
     definitions::{

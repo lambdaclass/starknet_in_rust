@@ -13,8 +13,8 @@ use crate::{
             state_api::{State, StateReader},
         },
         transaction::{
-            Declare, Deploy, error::TransactionError,
-            invoke_function::InvokeFunction, transactions::Transaction,
+            error::TransactionError, invoke_function::InvokeFunction, transactions::Transaction,
+            Declare, Deploy,
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
