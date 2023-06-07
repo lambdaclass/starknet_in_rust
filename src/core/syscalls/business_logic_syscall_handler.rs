@@ -678,14 +678,22 @@ where
             Address::default()
         };
 
-        let contract_address = if let Ok(addr) = calculate_contract_address(
+        let contract_address = Address(calculate_contract_address(
             &Address(request.salt),
             class_hash,
             &constructor_calldata,
             deployer_address,
-        ) {
-            Address(addr)
-        } else {
+        )?);
+
+        // Initialize the contract.
+        let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
+
+        if (self
+            .starknet_storage_state
+            .state
+            .deploy_contract(contract_address.clone(), class_hash_bytes))
+        .is_err()
+        {
             return Ok((
                 Address::default(),
                 (CallResult {
@@ -694,15 +702,7 @@ where
                     retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
                 }),
             ));
-        };
-
-        // Initialize the contract.
-        let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
-
-        self.starknet_storage_state
-            .state
-            .deploy_contract(contract_address.clone(), class_hash_bytes)?;
-
+        }
         let result = self.execute_constructor_entry_point(
             &contract_address,
             class_hash_bytes,
