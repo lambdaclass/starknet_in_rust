@@ -9,8 +9,7 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::{
-        contract_address::compute_deprecated_class_hash,
-        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
         transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
@@ -19,6 +18,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
