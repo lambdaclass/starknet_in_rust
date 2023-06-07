@@ -268,7 +268,10 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         Ok(SyscallResponse { gas, body })
     }
 
-    fn constructor_entry_points(&self, contract_class: CompiledClass) -> Result<bool, StateError> {
+    fn has_contructor_entry_points(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
         match contract_class {
             CompiledClass::Deprecated(class) => Ok(class
                 .entry_points_by_type
@@ -286,12 +289,12 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class: CompiledClass = self
+        let contract_class = self
             .starknet_storage_state
             .state
             .get_contract_class(&class_hash_bytes)?;
 
-        if self.constructor_entry_points(contract_class)? {
+        if self.has_contructor_entry_points(contract_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }

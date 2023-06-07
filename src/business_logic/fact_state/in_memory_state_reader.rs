@@ -49,7 +49,7 @@ impl InMemoryStateReader {
         }
     }
 
-    pub fn get_compiled_class(
+    fn get_compiled_class(
         &mut self,
         compiled_class_hash: &CompiledClassHash,
     ) -> Result<CompiledClass, StateError> {

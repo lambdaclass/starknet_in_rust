@@ -18,8 +18,6 @@ use crate::{
 // }
 // ```
 
-// const HEADER_OFFSET: usize = 2;
-
 #[allow(unused)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {

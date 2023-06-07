@@ -574,7 +574,6 @@ fn emit_event() {
     )
 }
 
-#[allow(unused_variables)]
 #[test]
 fn deploy() {
     // data to deploy
@@ -612,12 +611,10 @@ fn deploy() {
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
     // arguments of deploy contract
-    //let constructor_calldata: Felt252 = Felt252::from_bytes_be(&[1]);
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
 
     // set up remaining structures
 
-    let resources_manager = ExecutionResourcesManager::default();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -658,7 +655,6 @@ fn deploy() {
     let ret_address = Address(felt_str!(
         "619464431559909356793718633071398796109800070568878623926447195121629120356"
     ));
-    //let ret_address = Address(call_info.unwrap().retdata[0].clone());
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
