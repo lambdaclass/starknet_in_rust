@@ -289,10 +289,19 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let compiled_class = self
+        let compiled_class = if let Ok(compiled_class) = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?;
+            .get_contract_class(&class_hash_bytes)
+        {
+            compiled_class
+        } else {
+            return Ok(CallResult {
+                gas_consumed: 0,
+                is_success: false,
+                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+            });
+        };
 
         if self.constructor_entry_points_empty(compiled_class)? {
             if constructor_calldata.is_empty() {
@@ -694,12 +703,13 @@ where
             .deploy_contract(contract_address.clone(), class_hash_bytes))
         .is_err()
         {
+            // TODO: differentiate between taken & uninitialized
             return Ok((
                 Address::default(),
                 (CallResult {
                     gas_consumed: 0,
                     is_success: false,
-                    retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+                    retdata: vec![Felt252::from_bytes_be(b"FAILED TO DEPLOY CONTRACT").into()],
                 }),
             ));
         }
