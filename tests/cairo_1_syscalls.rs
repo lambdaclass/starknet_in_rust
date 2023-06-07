@@ -1556,7 +1556,7 @@ fn deploy_syscall_failure_in_constructor() {
     assert_eq!(
         std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
             .unwrap()
-            .trim_start_matches("\0"),
+            .trim_start_matches('\0'),
         "Oops"
     )
 }
