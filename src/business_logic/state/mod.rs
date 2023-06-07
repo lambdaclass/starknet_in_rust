@@ -6,7 +6,10 @@ pub mod state_cache;
 pub mod in_memory_state_reader;
 
 use crate::{
-    business_logic::{transaction::error::TransactionError, state::{cached_state::CachedState, state_api::StateReader}},
+    business_logic::{
+        state::{cached_state::CachedState, state_api::StateReader},
+        transaction::error::TransactionError,
+    },
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
     utils::{
@@ -205,7 +208,6 @@ impl StateDiff {
     }
 }
 
-
 #[test]
 fn test_validate_legal_progress() {
     let first_block = BlockInfo::default();
@@ -217,7 +219,6 @@ fn test_validate_legal_progress() {
 
     assert!(first_block.validate_legal_progress(&next_block).is_ok())
 }
-
 
 #[cfg(test)]
 mod test {

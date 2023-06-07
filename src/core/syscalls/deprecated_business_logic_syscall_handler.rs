@@ -15,8 +15,7 @@ use crate::{
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
-            ExecutionResourcesManager,
-            BlockInfo,
+            BlockInfo, ExecutionResourcesManager,
         },
         transaction::error::TransactionError,
     },

@@ -30,8 +30,8 @@ use crate::{
         },
         state::{
             contract_storage_state::ContractStorageState,
-            ExecutionResourcesManager,
             state_api::{State, StateReader},
+            ExecutionResourcesManager,
         },
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
