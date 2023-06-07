@@ -141,14 +141,16 @@ impl<T: StateReader> StateReader for CachedState<T> {
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         let hash = self.cache.class_hash_to_compiled_class_hash.get(class_hash);
-        if hash.is_none() {
+        if let Some(hash) = hash {
+            Ok(*hash)
+        } else {
             let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
             let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
             self.cache
                 .class_hash_initial_values
                 .insert(address, compiled_class_hash);
+            Ok(compiled_class_hash)
         }
-        Ok(hash.unwrap().to_owned())
     }
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
@@ -285,7 +287,7 @@ impl<T: StateReader> State for CachedState<T> {
         compiled_class_hash: &Felt252,
         casm_class: CasmContractClass,
     ) -> Result<(), StateError> {
-        let compiled_class_hash = compiled_class_hash.to_le_bytes();
+        let compiled_class_hash = compiled_class_hash.to_be_bytes();
 
         self.casm_contract_classes
             .as_mut()
@@ -299,8 +301,8 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = class_hash.to_le_bytes();
-        let compiled_class_hash = compiled_class_hash.to_le_bytes();
+        let class_hash = class_hash.to_be_bytes();
+        let compiled_class_hash = compiled_class_hash.to_be_bytes();
 
         self.cache
             .class_hash_to_compiled_class_hash

@@ -1,5 +1,5 @@
 use crate::business_logic::transaction::error::TransactionError;
-use crate::core::syscalls::syscall_handler::HintProcessorPostRun;
+use crate::syscalls::syscall_handler::HintProcessorPostRun;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
@@ -382,7 +382,7 @@ mod test {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState, transaction::error::TransactionError,
         },
-        core::syscalls::{
+        syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
             deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
             syscall_handler::SyscallHintProcessor,
