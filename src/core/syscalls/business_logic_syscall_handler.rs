@@ -703,13 +703,12 @@ where
             .deploy_contract(contract_address.clone(), class_hash_bytes))
         .is_err()
         {
-            // TODO: differentiate between taken & uninitialized
             return Ok((
                 Address::default(),
                 (CallResult {
                     gas_consumed: 0,
                     is_success: false,
-                    retdata: vec![Felt252::from_bytes_be(b"FAILED TO DEPLOY CONTRACT").into()],
+                    retdata: vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()],
                 }),
             ));
         }
