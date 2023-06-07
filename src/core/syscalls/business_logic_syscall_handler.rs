@@ -591,8 +591,9 @@ where
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, self.contract_address.0.clone())?;
         //TODO: insert entry point selector
-        //res_segment = (res_segment + 1)?;
-        //vm.insert_value::<Felt252>(res_segment, )?;
+        // res_segment = (res_segment + 1)?;
+        // let selector = ????
+        // vm.insert_value::<Felt252>(res_segment, selector)?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,
