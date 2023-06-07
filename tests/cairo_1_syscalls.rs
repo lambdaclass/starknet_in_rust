@@ -1478,7 +1478,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     assert_eq!(
         std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
             .unwrap()
-            .trim_start_matches("\0"),
+            .trim_start_matches('\0'),
         "CLASS_HASH_NOT_FOUND"
     )
 }
@@ -1514,7 +1514,7 @@ fn deploy_syscall_failure_contract_address_unavailable() {
     //Insert taken_address so that deploying the contract fails
     state_reader
         .address_to_class_hash_mut()
-        .insert(taken_address.clone(), [32; 32]);
+        .insert(taken_address, [32; 32]);
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
@@ -1558,7 +1558,7 @@ fn deploy_syscall_failure_contract_address_unavailable() {
     assert_eq!(
         std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
             .unwrap()
-            .trim_start_matches("\0"),
+            .trim_start_matches('\0'),
         "CONTRACT_ADDRESS_UNAVAILABLE"
     )
 }
@@ -1638,7 +1638,7 @@ fn deploy_syscall_failure_in_constructor() {
     assert_eq!(
         std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
             .unwrap()
-            .trim_start_matches("\0"),
+            .trim_start_matches('\0'),
         "Oops"
     )
 }
