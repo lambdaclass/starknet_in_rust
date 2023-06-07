@@ -700,7 +700,7 @@ fn test_get_execution_info() {
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
-        Vec::new(),
+        vec![1.into(), 1.into()],
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),

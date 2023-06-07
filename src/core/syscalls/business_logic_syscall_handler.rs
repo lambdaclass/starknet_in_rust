@@ -546,25 +546,25 @@ where
 
         let mut res_segment = vm.add_memory_segment();
 
-        let signature_start = res_segment.offset;
+        let signature_start = res_segment;
         for s in tx_info.signature.iter() {
             vm.insert_value(res_segment, s)?;
             res_segment = (res_segment + 1)?;
         }
-        let signature_end = res_segment.offset;
+        let signature_end = res_segment;
 
-        let tx_info_ptr = res_segment.offset;
+        let tx_info_ptr = res_segment;
         vm.insert_value::<Felt252>(res_segment, tx_info.version.into())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value(res_segment, tx_info.account_contract_address.0.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, tx_info.max_fee.into())?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, signature_start.into())?;
+        vm.insert_value(res_segment, signature_start)?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, signature_end.into())?;
+        vm.insert_value(res_segment, signature_end)?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, tx_info.transaction_hash.clone())?;
+        vm.insert_value(res_segment, tx_info.transaction_hash.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(
             res_segment,
@@ -574,7 +574,7 @@ where
         vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;
         res_segment = (res_segment + 1)?;
 
-        let block_info_ptr = res_segment.offset;
+        let block_info_ptr = res_segment;
         vm.insert_value::<Felt252>(res_segment, block_info.block_number.into())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, block_info.block_timestamp.into())?;
@@ -583,13 +583,16 @@ where
         res_segment = (res_segment + 1)?;
 
         let exec_info_ptr = res_segment;
-        vm.insert_value::<Felt252>(res_segment, tx_info_ptr.into())?;
+        vm.insert_value(res_segment, block_info_ptr)?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, block_info_ptr.into())?;
+        vm.insert_value(res_segment, tx_info_ptr)?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, self.caller_address.0.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, self.contract_address.0.clone())?;
+        //TODO: insert entry point selector
+        //res_segment = (res_segment + 1)?;
+        //vm.insert_value::<Felt252>(res_segment, )?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,
