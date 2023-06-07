@@ -19,7 +19,7 @@ use starknet_rs::{
             OrderedL2ToL1Message, TransactionExecutionContext,
         },
         state::{cached_state::CachedState, state_api::StateReader},
-        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_classes::{

@@ -13,7 +13,7 @@ use starknet_rs::{
             cached_state::{CachedState, ContractClassCache},
             state_api::State,
         },
-        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},

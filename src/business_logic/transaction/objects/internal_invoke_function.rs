@@ -7,7 +7,7 @@ use crate::{
             TransactionExecutionInfo,
         },
         state::state_api::{State, StateReader},
-        state::structs::ExecutionResourcesManager,
+        state::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},

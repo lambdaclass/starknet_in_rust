@@ -13,7 +13,7 @@ use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType, OrderedEvent},
         state::state_api::StateReader,
-        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
     definitions::general_config::StarknetGeneralConfig,
     utils::{calculate_sn_keccak, Address},

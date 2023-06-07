@@ -3,7 +3,7 @@ use crate::{
         execution::{
             gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
         },
-        state::structs::ExecutionResourcesManager,
+        state::ExecutionResourcesManager,
         state::{
             cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
             state_cache::StorageEntry,

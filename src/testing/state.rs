@@ -9,7 +9,7 @@ use crate::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
-        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::{
             error::TransactionError,
             objects::{

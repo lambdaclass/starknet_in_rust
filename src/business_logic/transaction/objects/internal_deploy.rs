@@ -5,7 +5,7 @@ use crate::{
             TransactionExecutionInfo,
         },
         state::state_api::{State, StateReader},
-        state::structs::ExecutionResourcesManager,
+        state::ExecutionResourcesManager,
         transaction::error::TransactionError,
     },
     core::{

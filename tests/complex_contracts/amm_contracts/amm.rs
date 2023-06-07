@@ -8,7 +8,7 @@ use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType},
         state::{cached_state::CachedState, state_api::StateReader},
-        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::error::TransactionError,
     },
     definitions::general_config::StarknetGeneralConfig,

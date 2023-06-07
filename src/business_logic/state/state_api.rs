@@ -1,6 +1,6 @@
 use super::state_cache::StorageEntry;
 use crate::{
-    business_logic::state::structs::StateDiff,
+    business_logic::state::StateDiff,
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,

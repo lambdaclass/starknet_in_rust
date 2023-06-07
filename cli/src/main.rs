@@ -10,7 +10,7 @@ use starknet_rs::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
-        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::objects::internal_invoke_function::InternalInvokeFunction,
     },
     core::{

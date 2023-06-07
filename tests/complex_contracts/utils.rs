@@ -11,7 +11,7 @@ use starknet_rs::{
             TransactionExecutionContext,
         },
         state::{cached_state::CachedState, state_api::State},
-        state::{in_memory_state_reader::InMemoryStateReader, structs::ExecutionResourcesManager},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},

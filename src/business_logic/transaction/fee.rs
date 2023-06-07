@@ -5,7 +5,7 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         },
         state::state_api::{State, StateReader},
-        state::structs::ExecutionResourcesManager,
+        state::ExecutionResourcesManager,
     },
     definitions::{
         constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
