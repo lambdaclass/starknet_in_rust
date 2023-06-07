@@ -1,8 +1,8 @@
 use thiserror::Error;
 
 use crate::{
-    business_logic::transaction::error::TransactionError,
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    business_logic::transaction::error::TransactionError, core::errors::state_errors::StateError,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 
 #[derive(Debug, Error)]

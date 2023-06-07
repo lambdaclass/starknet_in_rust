@@ -1,4 +1,4 @@
-use crate::core::errors::syscall_handler_errors::SyscallHandlerError;
+use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
     hint_processor::builtin_hint_processor::{
