@@ -465,7 +465,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
             let seg_size = match segment_size {
                 MaybeRelocatable::Int(size) => size,
-                _ => return Err(TransactionError::NotAnInt),
+                _ => return Err(TransactionError::NotAFelt),
             };
 
             if seg_size != used_size.into() {

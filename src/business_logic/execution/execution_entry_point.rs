@@ -6,10 +6,10 @@ use crate::{
         transaction::error::TransactionError,
     },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
+    runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    starknet_runner::runner::StarknetRunner,
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,

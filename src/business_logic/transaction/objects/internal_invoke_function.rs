@@ -15,10 +15,10 @@ use crate::{
     },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
     utils::{calculate_tx_resources, Address},
 };
 use cairo_vm::felt::Felt252;

@@ -18,7 +18,6 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    starkware_utils::starkware_errors::StarkwareError,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
@@ -109,9 +108,9 @@ impl InternalDeploy {
     pub fn handle_empty_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
-    ) -> Result<TransactionExecutionInfo, StarkwareError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         if !self.constructor_calldata.is_empty() {
-            return Err(StarkwareError::TransactionFailed);
+            return Err(TransactionError::EmptyConstructorCalldata);
         }
 
         let class_hash: ClassHash = self.contract_hash;
@@ -130,8 +129,7 @@ impl InternalDeploy {
             self.tx_type,
             changes,
             None,
-        )
-        .map_err(|_| StarkwareError::UnexpectedHolesL2toL1Messages)?;
+        )?;
 
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
@@ -348,7 +346,7 @@ mod tests {
         let result = internal_deploy.execute(&mut state, &config);
         assert_matches!(
             result.unwrap_err(),
-            TransactionError::Starkware(StarkwareError::TransactionFailed)
+            TransactionError::EmptyConstructorCalldata
         )
     }
 
