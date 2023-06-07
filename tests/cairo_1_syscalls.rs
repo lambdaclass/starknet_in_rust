@@ -787,6 +787,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
+    // simulate contract declare
     casm_contract_class_cache.insert(class_hash, contract_class);
     contract_class_cache.insert(test_class_hash, test_contract_class.clone());
 
