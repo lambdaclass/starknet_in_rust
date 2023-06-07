@@ -8,7 +8,7 @@ use crate::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    starknet_storage::errors::storage_errors::StorageError,
+    storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;

@@ -15,8 +15,10 @@ use starknet_rs::{
         },
     },
     core::contract_address::compute_deprecated_class_hash,
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetChainId},
-    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
+    definitions::{
+        constants::{TRANSACTION_VERSION, VALIDATE_ENTRY_POINT_SELECTOR},
+        general_config::StarknetChainId,
+    },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };

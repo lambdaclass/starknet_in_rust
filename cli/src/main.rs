@@ -27,7 +27,7 @@ use starknet_rs::{
     },
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
-    serde_structs::contract_abi::read_abi,
+    serde_structs::read_abi,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{felt_to_hash, string_to_hash, Address},
 };
