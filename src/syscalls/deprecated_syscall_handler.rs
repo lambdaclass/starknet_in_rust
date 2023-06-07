@@ -193,7 +193,7 @@ mod tests {
                 cached_state::CachedState,
                 state_api::{State, StateReader},
             },
-            transaction::objects::internal_invoke_function::InternalInvokeFunction,
+            transaction::InvokeFunction,
         },
         definitions::{
             constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig,
@@ -1092,7 +1092,7 @@ mod tests {
         /*
         INVOKE
         */
-        let internal_invoke_function = InternalInvokeFunction::new(
+        let internal_invoke_function = InvokeFunction::new(
             Address(deployed_address.clone()),
             Felt252::from_str_radix(
                 "283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c",
