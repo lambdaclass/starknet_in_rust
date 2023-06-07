@@ -21,9 +21,10 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::{
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+    },
     hash_utils::calculate_contract_address,
-    public::abi::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     services::api::{
         contract_class_errors::ContractClassError,
         contract_classes::deprecated_contract_class::ContractClass,
@@ -165,7 +166,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
 
             let seg_size = match segment_size {
                 MaybeRelocatable::Int(size) => size,
-                _ => return Err(TransactionError::NotAnInt),
+                _ => return Err(TransactionError::NotAFelt),
             };
 
             if seg_size != used_size.into() {
