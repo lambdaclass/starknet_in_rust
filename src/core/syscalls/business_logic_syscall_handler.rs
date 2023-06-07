@@ -256,14 +256,22 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
         let retdata_end = (retdata_start + result.retdata.len())?;
 
-        self.internal_calls.push(result);
+        let remaining_gas = remaining_gas - result.gas_consumed;
 
-        //TODO: remaining_gas -= result.gas_consumed
         let gas = remaining_gas;
-        let body = Some(ResponseBody::CallContract(CallContractResponse {
-            retdata_start,
-            retdata_end,
-        }));
+        let body = if result.failure_flag {
+            Some(ResponseBody::Failure(FailureReason {
+                retdata_start,
+                retdata_end,
+            }))
+        } else {
+            Some(ResponseBody::CallContract(CallContractResponse {
+                retdata_start,
+                retdata_end,
+            }))
+        };
+
+        self.internal_calls.push(result);
 
         Ok(SyscallResponse { gas, body })
     }
