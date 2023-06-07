@@ -1,9 +1,10 @@
 use crate::business_logic::transaction::error::TransactionError;
-use crate::core::syscalls::syscall_handler::HintProcessorPostRun;
+use crate::syscalls::syscall_handler::HintProcessorPostRun;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
+use cairo_vm::types::errors::math_errors::MathError;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -112,7 +113,7 @@ where
         let core_program_end_ptr = (self
             .cairo_runner
             .program_base
-            .ok_or(TransactionError::NotAnInt)?
+            .ok_or(TransactionError::NotAFelt)?
             + self.cairo_runner.get_program().data_len())?;
         let program_extra_data: Vec<MaybeRelocatable> =
             vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
@@ -154,46 +155,30 @@ where
 
         let n_rets = ret_data[0]
             .get_int_ref()
-            .ok_or(TransactionError::InvalidReturnData(String::from(
-                "Felt expected",
-            )))?;
+            .ok_or(TransactionError::NotAFelt)?;
 
         let ret_ptr = ret_data[1]
             .get_relocatable()
-            .ok_or(TransactionError::InvalidReturnData(String::from(
-                "Relocatable expected",
-            )))?;
+            .ok_or(TransactionError::NotARelocatableValue)?;
 
         let ret_data = self.vm.get_integer_range(
             ret_ptr,
             n_rets
                 .to_usize()
-                .ok_or(TransactionError::InvalidReturnData(String::from(
-                    "Conversion error",
-                )))?,
+                .ok_or_else(|| MathError::Felt252ToUsizeConversion(Box::new(n_rets.clone())))?,
         )?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
     pub fn get_return_values_cairo_1(&self) -> Result<Vec<Felt252>, TransactionError> {
         let return_values = self.vm.get_return_values(5)?;
-        let retdata_start =
-            return_values[3]
-                .get_relocatable()
-                .ok_or(TransactionError::InvalidReturnData(String::from(
-                    "Relocatable expected",
-                )))?;
-        let retdata_end =
-            return_values[4]
-                .get_relocatable()
-                .ok_or(TransactionError::InvalidReturnData(String::from(
-                    "Relocatable expected",
-                )))?;
-        let size = (retdata_end - retdata_start).map_err(|_| {
-            TransactionError::InvalidReturnData(String::from(
-                "End pointer cannot be before start pointer",
-            ))
-        })?;
+        let retdata_start = return_values[3]
+            .get_relocatable()
+            .ok_or(TransactionError::NotARelocatableValue)?;
+        let retdata_end = return_values[4]
+            .get_relocatable()
+            .ok_or(TransactionError::NotARelocatableValue)?;
+        let size = (retdata_end - retdata_start)?;
         let retdata: Vec<Felt252> = self
             .vm
             .get_integer_range(retdata_start, size)?
@@ -397,7 +382,7 @@ mod test {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState, transaction::error::TransactionError,
         },
-        core::syscalls::{
+        syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
             deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
             syscall_handler::SyscallHintProcessor,

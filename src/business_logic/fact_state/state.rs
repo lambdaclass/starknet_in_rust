@@ -2,7 +2,6 @@ use crate::{
     business_logic::state::{cached_state::CachedState, state_api::StateReader},
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
-    starkware_utils::starkware_errors::StarkwareError,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
         Address, ClassHash,
@@ -104,7 +103,7 @@ impl StateDiff {
         Ok(cache_state)
     }
 
-    pub fn squash(&mut self, other: StateDiff) -> Result<Self, StarkwareError> {
+    pub fn squash(&mut self, other: StateDiff) -> Self {
         self.address_to_class_hash
             .extend(other.address_to_class_hash);
         let address_to_class_hash = self.address_to_class_hash.clone();
@@ -137,12 +136,12 @@ impl StateDiff {
             storage_updates.insert(address, map_a.clone());
         }
 
-        Ok(StateDiff {
+        StateDiff {
             address_to_class_hash,
             address_to_nonce,
             class_hash_to_compiled_class,
             storage_updates,
-        })
+        }
     }
 }
 
@@ -293,7 +292,7 @@ mod test {
 
         let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
 
-        let diff_squashed = diff.squash(diff.clone()).unwrap();
+        let diff_squashed = diff.squash(diff.clone());
 
         assert_eq!(diff, diff_squashed);
     }

@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
+use super::syscall_handler_errors::SyscallHandlerError;
 use super::syscall_request::{
     EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, StorageReadRequest,
     StorageWriteRequest,
@@ -34,15 +35,12 @@ use crate::{
             state_api::{State, StateReader},
         },
     },
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    core::errors::state_errors::StateError,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
     hash_utils::calculate_contract_address,
-    services::api::{
-        contract_class_errors::ContractClassError,
-        contract_classes::deprecated_contract_class::EntryPointType,
-    },
+    services::api::contract_class_errors::ContractClassError,
     utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -56,6 +54,7 @@ use cairo_vm::{
 use lazy_static::lazy_static;
 
 use num_traits::{One, ToPrimitive, Zero};
+use starknet_contract_class::EntryPointType;
 
 const STEP: u128 = 100;
 const SYSCALL_BASE: u128 = 100 * STEP;
@@ -466,7 +465,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
             let seg_size = match segment_size {
                 MaybeRelocatable::Int(size) => size,
-                _ => return Err(TransactionError::NotAnInt),
+                _ => return Err(TransactionError::NotAFelt),
             };
 
             if seg_size != used_size.into() {

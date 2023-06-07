@@ -5,18 +5,17 @@ use crate::{
         state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },
-    core::syscalls::{
+    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
+    runner::StarknetRunner,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
         deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
         syscall_handler::SyscallHintProcessor,
     },
-    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::{
-        compiled_class::CompiledClass,
-        deprecated_contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
-    },
-    starknet_runner::runner::StarknetRunner,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
         validate_contract_deployed, Address,
@@ -34,6 +33,7 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
+use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
 use super::{CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext};
 
@@ -136,11 +136,11 @@ impl ExecutionEntryPoint {
         let entry_point = entry_points
             .iter()
             .filter_map(|x| {
-                if x.selector == *DEFAULT_ENTRY_POINT_SELECTOR {
+                if x.selector() == &*DEFAULT_ENTRY_POINT_SELECTOR {
                     default_entry_point = Some(x);
                 }
 
-                (x.selector == self.entry_point_selector).then_some(x)
+                (x.selector() == &self.entry_point_selector).then_some(x)
             })
             .fold(Ok(None), |acc, x| match acc {
                 Ok(None) => Ok(Some(x)),
@@ -311,7 +311,7 @@ impl ExecutionEntryPoint {
         ];
 
         // cairo runner entry point
-        runner.run_from_entrypoint(entry_point.offset, &entry_point_args, None)?;
+        runner.run_from_entrypoint(entry_point.offset(), &entry_point_args, None)?;
         runner.validate_and_process_os_context_for_version0_class(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].

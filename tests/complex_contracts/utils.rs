@@ -2,6 +2,7 @@
 
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
     business_logic::{
@@ -16,7 +17,7 @@ use starknet_rs::{
         transaction::{error::TransactionError, Deploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -29,10 +30,7 @@ pub struct CallConfig<'a> {
     pub caller_address: &'a Address,
     pub address: &'a Address,
     pub class_hash: &'a [u8; 32],
-    pub entry_points_by_type: &'a HashMap<
-        EntryPointType,
-        Vec<starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractEntryPoint>,
-    >,
+    pub entry_points_by_type: &'a HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub entry_point_type: &'a EntryPointType,
     pub general_config: &'a StarknetGeneralConfig,
     pub resources_manager: &'a mut ExecutionResourcesManager,

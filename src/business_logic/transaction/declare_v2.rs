@@ -17,13 +17,13 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 #[derive(Debug)]
 pub struct DeclareV2 {
@@ -201,12 +201,21 @@ impl DeclareV2 {
 
         self.compile_and_store_casm_class(state)?;
 
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &actual_resources, general_config)?;
+
+        let concurrent_exec_info = TransactionExecutionInfo::create_concurrent_stage_execution_info(
+            Some(validate_info),
+            None,
+            actual_resources,
+            Some(self.tx_type),
+        );
+
         Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                Some(validate_info),
-                None,
-                actual_resources,
-                Some(self.tx_type),
+            TransactionExecutionInfo::from_concurrent_state_execution_info(
+                concurrent_exec_info,
+                actual_fee,
+                fee_transfer_info,
             ),
         )
     }
@@ -331,7 +340,7 @@ mod tests {
         .unwrap();
 
         let casm_class = match state
-            .get_contract_class(&internal_declare.compiled_class_hash.to_le_bytes())
+            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
             CompiledClass::Casm(casm) => *casm,
