@@ -13,7 +13,7 @@ use crate::{
         },
     },
     core::{
-        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        errors::state_errors::StateError,
         transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
@@ -23,6 +23,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;

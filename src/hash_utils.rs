@@ -1,4 +1,4 @@
-use crate::{core::errors::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
 use cairo_vm::felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
