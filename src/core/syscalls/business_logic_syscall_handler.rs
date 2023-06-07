@@ -675,15 +675,26 @@ where
         let deployer_address = if request.deploy_from_zero.is_zero() {
             self.contract_address.clone()
         } else {
-            Address(0.into())
+            Address::default()
         };
 
-        let contract_address = Address(calculate_contract_address(
+        let contract_address = if let Ok(addr) = calculate_contract_address(
             &Address(request.salt),
             class_hash,
             &constructor_calldata,
             deployer_address,
-        )?);
+        ) {
+            Address(addr)
+        } else {
+            return Ok((
+                Address::default(),
+                (CallResult {
+                    gas_consumed: 0,
+                    is_success: false,
+                    retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+                }),
+            ));
+        };
 
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
