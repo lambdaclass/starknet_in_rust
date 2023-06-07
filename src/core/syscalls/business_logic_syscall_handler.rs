@@ -130,6 +130,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) support_reverted: bool,
+    pub(crate) entry_point_selector: Felt252,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
 }
 
@@ -146,6 +147,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
         support_reverted: bool,
+        entry_point_selector: Felt252,
     ) -> Self {
         let events = Vec::new();
         let read_only_segments = Vec::new();
@@ -166,6 +168,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             internal_calls,
             expected_syscall_ptr: syscall_ptr,
             support_reverted,
+            entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
@@ -206,6 +209,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         let internal_calls = Vec::new();
         let expected_syscall_ptr = Relocatable::from((0, 0));
+        let entry_point_selector = 333.into();
 
         BusinessLogicSyscallHandler {
             tx_execution_context,
@@ -220,6 +224,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             internal_calls,
             expected_syscall_ptr,
             support_reverted: false,
+            entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
@@ -590,10 +595,8 @@ where
         vm.insert_value::<Felt252>(res_segment, self.caller_address.0.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, self.contract_address.0.clone())?;
-        //TODO: insert entry point selector
-        // res_segment = (res_segment + 1)?;
-        // let selector = ????
-        // vm.insert_value::<Felt252>(res_segment, selector)?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, self.entry_point_selector.clone())?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,

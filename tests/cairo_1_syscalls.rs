@@ -700,7 +700,7 @@ fn test_get_execution_info() {
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
-        vec![1.into(), 1.into()],
+        vec![22.into(), 33.into()],
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
@@ -744,6 +744,13 @@ fn test_get_execution_info() {
         )
         .unwrap();
 
+    let expected_ret_data = vec![
+        general_config.block_info().sequencer_address.0.clone(),
+        0.into(),
+        0.into(),
+        address.0.clone(),
+    ];
+
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
@@ -751,6 +758,7 @@ fn test_get_execution_info() {
         class_hash: Some(class_hash),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
+        retdata: expected_ret_data,
         ..Default::default()
     };
 

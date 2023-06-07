@@ -5,12 +5,11 @@ mod GetExecutionInfo {
     use starknet::info::get_caller_address;
     use starknet::info::ExecutionInfo;
     use core::starknet::contract_address::ContractAddress;
-    use core::starknet::contract_address::ContractAddressIntoFelt252;
     use core::integer::u64;
     use box::BoxTrait;
 
     #[external]
-    fn get_info() -> felt252 {
+    fn get_info() -> (ContractAddress, ContractAddress, ContractAddress, ContractAddress) {
         let info = get_execution_info().unbox();
         let block_info = info.block_info.unbox();
         let tx_info = info.tx_info.unbox();
@@ -35,12 +34,16 @@ mod GetExecutionInfo {
         assert(block_timestamp == 0, 2);
         assert(version == 1, 3);
         assert(max_fee == 0, 4);
-        assert(signature[0] == 1, 5);
         assert(transaction_hash == 0, 5);
-        assert(chain_id == 0, 6);
-        assert(nonce == 0, 7);
-        //assert(entry_point_selector == 0, 8);
+        assert(chain_id == 1536727068981429685321, 6);
+        assert(nonce == 10, 7);
+        assert(entry_point_selector == 1583979555264088613757654119588925070177786702073426169970015447448454297318, 8);
         
-        return 0;
+        return (
+            sequencer_address,
+            account_contract_address,
+            caller_address,
+            contract_address
+        );
     }
 }
