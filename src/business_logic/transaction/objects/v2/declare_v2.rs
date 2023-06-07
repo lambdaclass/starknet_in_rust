@@ -17,13 +17,13 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 #[derive(Debug)]
 pub struct InternalDeclareV2 {

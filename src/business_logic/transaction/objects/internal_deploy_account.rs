@@ -22,13 +22,13 @@ use crate::{
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
-    starkware_utils::starkware_errors::StarkwareError,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -199,9 +199,7 @@ impl InternalDeployAccount {
         match num_constructors {
             0 => {
                 if !self.constructor_calldata.is_empty() {
-                    return Err(TransactionError::Starkware(
-                        StarkwareError::TransactionFailed,
-                    ));
+                    return Err(TransactionError::EmptyConstructorCalldata);
                 }
 
                 Ok(CallInfo::empty_constructor_call(

@@ -19,7 +19,7 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -27,6 +27,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 const VERSION_0: u64 = 0;
@@ -106,22 +107,16 @@ impl InternalDeclare {
     pub fn verify_version(&self) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             if !self.max_fee.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The max_fee field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+                return Err(TransactionError::InvalidMaxFee);
             }
 
             if !self.nonce.is_zero() {
-                return Err(TransactionError::StarknetError(
-                    "The nonce field in Declare transactions of version 0 must be 0.".to_string(),
-                ));
+                return Err(TransactionError::InvalidNonce);
             }
         }
 
         if self.version == VERSION_0 && !self.signature.len().is_zero() {
-            return Err(TransactionError::StarknetError(
-                "The signature field in Declare transactions must be an empty list.".to_string(),
-            ));
+            return Err(TransactionError::InvalidSignature);
         }
         Ok(())
     }
@@ -314,9 +309,7 @@ mod tests {
             general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
-        services::api::contract_classes::deprecated_contract_class::{
-            ContractClass, EntryPointType,
-        },
+        services::api::contract_classes::deprecated_contract_class::ContractClass,
         utils::{felt_to_hash, Address},
     };
 
@@ -487,7 +480,7 @@ mod tests {
         assert!(internal_declare.is_err());
         assert_matches!(
             internal_declare.unwrap_err(),
-            TransactionError::StarknetError(..)
+            TransactionError::InvalidMaxFee
         );
     }
 
@@ -551,7 +544,7 @@ mod tests {
         assert!(internal_declare.is_err());
         assert_matches!(
             internal_declare.unwrap_err(),
-            TransactionError::StarknetError(..)
+            TransactionError::InvalidNonce
         );
     }
 
@@ -614,7 +607,7 @@ mod tests {
         assert!(internal_declare.is_err());
         assert_matches!(
             internal_declare.unwrap_err(),
-            TransactionError::StarknetError(..)
+            TransactionError::InvalidSignature
         );
     }
 

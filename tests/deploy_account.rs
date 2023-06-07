@@ -2,6 +2,7 @@
 
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType, TransactionExecutionInfo},
@@ -14,7 +15,7 @@ use starknet_rs::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,
     },
-    services::api::contract_classes::deprecated_contract_class::{ContractClass, EntryPointType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{felt_to_hash, Address},
 };
 use std::path::PathBuf;

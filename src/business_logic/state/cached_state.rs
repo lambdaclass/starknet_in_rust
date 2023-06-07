@@ -8,7 +8,7 @@ use crate::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    starknet_storage::errors::storage_errors::StorageError,
+    storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -333,14 +333,10 @@ impl<T: StateReader> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
-        services::api::contract_classes::deprecated_contract_class::{
-            ContractEntryPoint, EntryPointType,
-        },
-    };
+    use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
     use cairo_vm::types::program::Program;
     use num_traits::One;
+    use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {

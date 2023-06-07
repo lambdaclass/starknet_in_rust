@@ -15,16 +15,16 @@ use crate::{
     },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        constants::EXECUTE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
+        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
     },
-    public::abi::VALIDATE_ENTRY_POINT_SELECTOR,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     utils::{calculate_tx_resources, Address},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_contract_class::EntryPointType;
 
 #[derive(Debug, Getters)]
 pub struct InternalInvokeFunction {
