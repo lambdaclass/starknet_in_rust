@@ -1,7 +1,7 @@
 use crate::{
     business_logic::state::state_cache::StorageEntry,
     services::api::contract_class_errors::ContractClassError,
-    starknet_storage::errors::storage_errors::StorageError,
+    storage::errors::storage_errors::StorageError,
     utils::{Address, ClassHash},
 };
 use thiserror::Error;
