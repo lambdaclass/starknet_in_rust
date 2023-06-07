@@ -2,11 +2,10 @@
 mod GetExecutionInfo {
 
     use starknet::info::get_execution_info;
-    use starknet::info::get_caller_address;
     use starknet::info::ExecutionInfo;
     use core::starknet::contract_address::ContractAddress;
-    use core::integer::u64;
     use box::BoxTrait;
+    use array::SpanTrait;
 
     #[external]
     fn get_info() -> (ContractAddress, ContractAddress, ContractAddress, ContractAddress) {
@@ -38,6 +37,9 @@ mod GetExecutionInfo {
         assert(chain_id == 1536727068981429685321, 6);
         assert(nonce == 10, 7);
         assert(entry_point_selector == 1583979555264088613757654119588925070177786702073426169970015447448454297318, 8);
+        assert(*signature.at(0) == 22, 9);
+        assert(*signature.at(1) == 33, 10);
+        assert(signature.len() == 2, 11);
         
         return (
             sequencer_address,
