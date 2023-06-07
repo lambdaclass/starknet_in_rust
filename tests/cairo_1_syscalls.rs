@@ -860,6 +860,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
 
     assert_eq!(ret_casm_class, test_contract_class);
 }
+
 #[test]
 fn test_send_message_to_l1_syscall() {
     //  Create program and entry point types for contract class

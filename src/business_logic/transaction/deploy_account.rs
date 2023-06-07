@@ -1,4 +1,4 @@
-use super::internal_invoke_function::verify_no_calls_to_other_contracts;
+use super::invoke_function::verify_no_calls_to_other_contracts;
 use crate::{
     business_logic::{
         execution::{
@@ -39,7 +39,7 @@ pub struct StateSelector {
 }
 
 #[derive(Clone, Debug, Getters)]
-pub struct InternalDeployAccount {
+pub struct DeployAccount {
     #[getset(get = "pub")]
     contract_address: Address,
     #[getset(get = "pub")]
@@ -57,7 +57,7 @@ pub struct InternalDeployAccount {
     signature: Vec<Felt252>,
 }
 
-impl InternalDeployAccount {
+impl DeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: ClassHash,
@@ -377,7 +377,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = InternalDeployAccount::new(
+        let internal_deploy = DeployAccount::new(
             class_hash,
             0,
             0,
@@ -414,7 +414,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = InternalDeployAccount::new(
+        let internal_deploy = DeployAccount::new(
             class_hash,
             0,
             0,
@@ -427,7 +427,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_deploy_error = InternalDeployAccount::new(
+        let internal_deploy_error = DeployAccount::new(
             class_hash,
             0,
             0,
@@ -470,7 +470,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = InternalDeployAccount::new(
+        let internal_deploy = DeployAccount::new(
             class_hash,
             0,
             0,
