@@ -1,5 +1,6 @@
 // This module tests our code against the blockifier to ensure they work in the same way.
 use assert_matches::assert_matches;
+use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::{felt_str, Felt252};
 use cairo_vm::vm::{
     errors::{
@@ -10,6 +11,7 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_contract_class::EntryPointType;
+use starknet_rs::business_logic::transaction::objects::v2::declare_v2::InternalDeclareV2;
 use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -73,6 +75,7 @@ lazy_static! {
     static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
     static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
     static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str!("4112");
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("27727");
 
     // Storage keys.
     static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt252 =
@@ -193,7 +196,7 @@ fn create_account_tx_test_state(
             state_reader
         },
         Some(HashMap::new()),
-        None,
+        Some(HashMap::new()),
     );
 
     Ok((general_config, cached_state))
@@ -204,7 +207,11 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
 
     let state_cache = ContractClassCache::new();
 
-    CachedState::new(in_memory_state_reader, Some(state_cache), None)
+    CachedState::new(
+        in_memory_state_reader,
+        Some(state_cache),
+        Some(HashMap::new()),
+    )
 }
 
 fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
@@ -229,7 +236,7 @@ fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
         in_memory_state_reader,
         Some(contract_classes_cache),
         state_cache_after_invoke_tx(),
-        None,
+        Some(HashMap::new()),
     )
 }
 
@@ -608,6 +615,25 @@ fn declare_tx() -> InternalDeclare {
     }
 }
 
+fn declarev2_tx() -> InternalDeclareV2 {
+    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+    let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
+
+    InternalDeclareV2 {
+        sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        tx_type: TransactionType::Declare,
+        validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
+        version: 1,
+        max_fee: 2,
+        signature: vec![],
+        nonce: 0.into(),
+        hash_value: 0.into(),
+        compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
+        sierra_contract_class,
+        casm_class: Default::default(),
+    }
+}
+
 fn expected_declare_fee_transfer_info() -> CallInfo {
     CallInfo {
         caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -682,6 +708,46 @@ fn test_declare_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
+            ..Default::default()
+        }),
+        None,
+        Some(expected_declare_fee_transfer_info()),
+        0,
+        HashMap::from([
+            ("range_check_builtin".to_string(), 57),
+            ("pedersen_builtin".to_string(), 15),
+            ("l1_gas_usage".to_string(), 0),
+        ]),
+        Some(TransactionType::Declare),
+    );
+
+    assert_eq!(result, expected_execution_info);
+}
+
+#[test]
+fn test_declarev2_tx() {
+    let (general_config, mut state) = create_account_tx_test_state().unwrap();
+    assert_eq!(state, expected_state_before_tx());
+    let declare_tx = declarev2_tx();
+    // Check ContractClass is not set before the declare_tx
+    assert!(state
+        .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
+        .is_err());
+    // Execute declare_tx
+    let result = declare_tx.execute(&mut state, &general_config, 0).unwrap();
+    // Check ContractClass is set after the declare_tx
+    assert!(state
+        .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
+        .is_ok());
+
+    let expected_execution_info = TransactionExecutionInfo::new(
+        Some(CallInfo {
+            call_type: Some(CallType::Call),
+            contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+            entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()],
             ..Default::default()
         }),
         None,
@@ -831,7 +897,7 @@ fn test_deploy_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
     let deploy_account_tx = InternalDeployAccount::new(
-        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+        TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes(),
         2,
         TRANSACTION_VERSION.clone(),
         Default::default(),
@@ -849,7 +915,7 @@ fn test_deploy_account() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes(),
         ),
         ACTUAL_FEE.clone(),
     );
@@ -888,7 +954,7 @@ fn test_deploy_account() {
         contract_address: deploy_account_tx.contract_address().clone(),
 
         // Entries **not** in blockifier.
-        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+        class_hash: Some(TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes()),
         call_type: Some(CallType::Call),
 
         ..Default::default()
@@ -924,9 +990,9 @@ fn test_deploy_account() {
         .unwrap();
     assert_eq!(nonce_from_state, Felt252::one());
 
-    let hash = &felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY);
+    let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
-    validate_final_balances(&mut state, &general_config, Felt252::zero(), hash);
+    validate_final_balances(&mut state, &general_config, Felt252::zero(), &hash);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -983,7 +1049,7 @@ fn expected_deploy_account_states() -> (
             HashMap::new()
         ),
         Some(ContractClassCache::new()),
-        None
+        Some(HashMap::new())
     );
     state_before.set_storage_at(
         &(

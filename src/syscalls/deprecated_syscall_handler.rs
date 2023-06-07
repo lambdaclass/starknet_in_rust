@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     business_logic::state::state_api::{State, StateReader},
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
@@ -195,16 +195,16 @@ mod tests {
             },
             transaction::objects::internal_invoke_function::InternalInvokeFunction,
         },
-        core::syscalls::deprecated_syscall_request::{
-            DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
-            DeprecatedSyscallRequest,
-        },
         definitions::{
             constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig,
             transaction_type::TransactionType,
         },
         memory_insert,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        syscalls::deprecated_syscall_request::{
+            DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
+            DeprecatedSyscallRequest,
+        },
         utils::{
             felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
@@ -217,7 +217,7 @@ mod tests {
     use std::path::PathBuf;
 
     type DeprecatedBLSyscallHandler<'a> =
-        crate::core::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
+        crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             CachedState<InMemoryStateReader>,
         >;

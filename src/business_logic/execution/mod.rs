@@ -4,11 +4,11 @@ pub mod os_usage;
 
 use crate::{
     business_logic::{state::state_cache::StorageEntry, transaction::error::TransactionError},
-    core::errors::syscall_handler_errors::SyscallHandlerError,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
         transaction_type::TransactionType,
     },
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;

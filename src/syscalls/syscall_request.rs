@@ -3,7 +3,7 @@ use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::ToPrimitive;
 
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
 // TODO: maybe we could make FromPtr trait more general, making
