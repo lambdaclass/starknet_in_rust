@@ -959,7 +959,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     );
 
     // arguments of deploy contract
-    let calldata: Vec<_> = [test_felt_hash, salt, Felt252::one(), Felt252::zero()].to_vec();
+    let calldata: Vec<_> = [test_felt_hash, salt, Felt252::one()].to_vec();
 
     // set up remaining structures
 
@@ -990,20 +990,18 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let _call_info = exec_entry_point
-        .execute(
-            &mut state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context,
-            false,
-        )
-        .unwrap();
+    let call_info = exec_entry_point.execute(
+        &mut state,
+        &general_config,
+        &mut resources_manager,
+        &tx_execution_context,
+        false,
+    );
 
-    //assert!(call_info.is_ok());
+    assert!(call_info.is_ok());
 
     let ret_address = Address(felt_str!(
-        "2771739216117269195266211756239816992170608283088994568066688164855938378843"
+        "3454846966442443238250078711203511197245006224544295074402370433368003323361"
     ));
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
