@@ -107,7 +107,7 @@ fn hello_starknet_increase_balance() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_key = calculate_sn_keccak("balance".as_bytes());

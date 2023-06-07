@@ -28,7 +28,7 @@ use starknet_contract_class::EntryPointType;
 #[derive(Debug)]
 pub struct InternalDeploy {
     pub hash_value: Felt252,
-    pub version: u64,
+    pub version: Felt252,
     pub contract_address: Address,
     pub contract_address_salt: Address,
     pub contract_hash: ClassHash,
@@ -42,7 +42,7 @@ impl InternalDeploy {
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt252>,
         chain_id: Felt252,
-        version: u64,
+        version: Felt252,
         hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_deprecated_class_hash(&contract_class)
@@ -59,7 +59,7 @@ impl InternalDeploy {
         let hash_value = match hash_value {
             Some(hash) => hash,
             None => calculate_deploy_transaction_hash(
-                version,
+                version.clone(),
                 &contract_address,
                 &constructor_calldata,
                 chain_id,
@@ -164,7 +164,7 @@ impl InternalDeploy {
             0,
             Felt252::zero(),
             general_config.invoke_tx_max_n_steps,
-            self.version,
+            self.version.clone(),
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
@@ -251,7 +251,7 @@ mod tests {
             contract_class,
             vec![10.into()],
             0.into(),
-            0,
+            0.into(),
             None,
         )
         .unwrap();
@@ -301,7 +301,7 @@ mod tests {
             contract_class,
             Vec::new(),
             0.into(),
-            0,
+            0.into(),
             None,
         )
         .unwrap();
@@ -336,7 +336,7 @@ mod tests {
             contract_class,
             vec![10.into()],
             0.into(),
-            0,
+            0.into(),
             None,
         )
         .unwrap();
@@ -367,7 +367,7 @@ mod tests {
             error_contract_class,
             Vec::new(),
             0.into(),
-            1,
+            1.into(),
             None,
         );
         assert_matches!(

@@ -30,8 +30,6 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
-const VERSION_0: u64 = 0;
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
@@ -41,7 +39,7 @@ pub struct InternalDeclare {
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
-    pub version: u64,
+    pub version: Felt252,
     pub max_fee: u128,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
@@ -59,7 +57,7 @@ impl InternalDeclare {
         chain_id: Felt252,
         sender_address: Address,
         max_fee: u128,
-        version: u64,
+        version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
         hash_value: Option<Felt252>,
@@ -74,7 +72,7 @@ impl InternalDeclare {
                 chain_id,
                 &sender_address,
                 max_fee,
-                version,
+                version.clone(),
                 nonce.clone(),
             )?,
         };
@@ -115,7 +113,7 @@ impl InternalDeclare {
             }
         }
 
-        if self.version == VERSION_0 && !self.signature.len().is_zero() {
+        if self.version.is_zero() && !self.signature.len().is_zero() {
             return Err(TransactionError::InvalidSignature);
         }
         Ok(())
@@ -166,7 +164,7 @@ impl InternalDeclare {
             self.max_fee,
             self.nonce.clone(),
             n_steps,
-            self.version,
+            self.version.clone(),
         )
     }
 
@@ -176,7 +174,7 @@ impl InternalDeclare {
         resources_manager: &mut ExecutionResourcesManager,
         general_config: &StarknetGeneralConfig,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(None);
         }
 
@@ -232,7 +230,7 @@ impl InternalDeclare {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -361,7 +359,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -460,7 +458,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
         let max_fee = 1000;
-        let version = 0;
+        let version = 0.into();
 
         // Declare tx should fail because max_fee > 0 and version == 0
         let internal_declare = InternalDeclare::new(
@@ -524,7 +522,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
         let nonce = Felt252::from(148);
-        let version = 0;
+        let version = 0.into();
 
         // Declare tx should fail because nonce > 0 and version == 0
         let internal_declare = InternalDeclare::new(
@@ -595,7 +593,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            0,
+            0.into(),
             signature,
             Felt252::zero(),
             None,
@@ -657,7 +655,7 @@ mod tests {
             chain_id.clone(),
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -669,7 +667,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::one(),
             None,
@@ -739,7 +737,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -784,7 +782,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -847,7 +845,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             10,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,

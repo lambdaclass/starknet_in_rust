@@ -554,7 +554,7 @@ where
         let signature_end = res_segment.offset;
 
         let tx_info_ptr = res_segment.offset;
-        vm.insert_value::<Felt252>(res_segment, tx_info.version.into())?;
+        vm.insert_value::<Felt252>(res_segment, tx_info.version.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value(res_segment, tx_info.account_contract_address.0.clone())?;
         res_segment = (res_segment + 1)?;

@@ -530,7 +530,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InternalInvokeFunction {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -600,7 +600,7 @@ fn declare_tx() -> InternalDeclare {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-        version: 1,
+        version: 1.into(),
         max_fee: 2,
         signature: vec![],
         nonce: 0.into(),
@@ -833,7 +833,7 @@ fn test_deploy_account() {
     let deploy_account_tx = InternalDeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),
@@ -1321,7 +1321,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
         1,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         vec![
             test_contract_address, // CONTRACT_ADDRESS
             Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
@@ -1351,7 +1351,7 @@ fn test_deploy_undeclared_account() {
     let deploy_account_tx = InternalDeployAccount::new(
         not_deployed_class_hash,
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),

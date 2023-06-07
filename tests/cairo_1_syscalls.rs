@@ -67,7 +67,7 @@ fn storage_write_read() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -240,7 +240,7 @@ fn library_call() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut expected_execution_resources = ExecutionResources::default();
@@ -362,7 +362,7 @@ fn call_contract_storage_write_read() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -528,7 +528,7 @@ fn emit_event() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -609,7 +609,7 @@ fn test_send_message_to_l1_syscall() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -732,7 +732,7 @@ fn replace_class_internal() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -827,7 +827,7 @@ fn replace_class_contract_call() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -981,7 +981,7 @@ fn replace_class_contract_call_same_transaction() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1091,7 +1091,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1199,7 +1199,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1307,7 +1307,7 @@ fn call_contract_replace_class_cairo_0() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1393,7 +1393,7 @@ fn test_out_of_gas_failure() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
