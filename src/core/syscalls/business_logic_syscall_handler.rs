@@ -270,7 +270,10 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         Ok(SyscallResponse { gas, body })
     }
 
-    fn constructor_entry_points_empty(&self, contract_class: CompiledClass) -> Result<bool, StateError> {
+    fn constructor_entry_points_empty(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
         match contract_class {
             CompiledClass::Deprecated(class) => Ok(class
                 .entry_points_by_type
