@@ -1,4 +1,4 @@
-use super::state_errors::StateError;
+use crate::core::errors::state_errors::StateError;
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
     types::errors::math_errors::MathError,

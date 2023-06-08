@@ -9,8 +9,7 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::{
-        contract_address::compute_deprecated_class_hash,
-        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
         transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
@@ -19,6 +18,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -26,7 +26,7 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
 #[derive(Debug)]
-pub struct InternalDeploy {
+pub struct Deploy {
     pub hash_value: Felt252,
     pub version: u64,
     pub contract_address: Address,
@@ -36,7 +36,7 @@ pub struct InternalDeploy {
     pub tx_type: TransactionType,
 }
 
-impl InternalDeploy {
+impl Deploy {
     pub fn new(
         contract_address_salt: Address,
         contract_class: ContractClass,
@@ -66,7 +66,7 @@ impl InternalDeploy {
             )?,
         };
 
-        Ok(InternalDeploy {
+        Ok(Deploy {
             hash_value,
             version,
             contract_address,
@@ -246,7 +246,7 @@ mod tests {
             .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy = InternalDeploy::new(
+        let internal_deploy = Deploy::new(
             Address(0.into()),
             contract_class,
             vec![10.into()],
@@ -296,7 +296,7 @@ mod tests {
             .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy = InternalDeploy::new(
+        let internal_deploy = Deploy::new(
             Address(0.into()),
             contract_class,
             Vec::new(),
@@ -331,7 +331,7 @@ mod tests {
             .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy = InternalDeploy::new(
+        let internal_deploy = Deploy::new(
             Address(0.into()),
             contract_class,
             vec![10.into()],
@@ -362,7 +362,7 @@ mod tests {
         };
 
         // Should fail when compouting the hash due to a failed contract class
-        let internal_deploy_error = InternalDeploy::new(
+        let internal_deploy_error = Deploy::new(
             Address(0.into()),
             error_contract_class,
             Vec::new(),

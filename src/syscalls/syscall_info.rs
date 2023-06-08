@@ -1,7 +1,7 @@
 pub fn get_syscall_size_from_name(syscall_name: &str) -> usize {
     match syscall_name {
         "emit_event" => 4,
-        "deploy" => 9,
+        "deploy" => 5,
         "library_call" => 4,
         "storage_write" => 3,
         "storage_read" => 2,
