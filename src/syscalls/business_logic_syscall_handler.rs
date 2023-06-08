@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
+use super::syscall_handler_errors::SyscallHandlerError;
 use super::syscall_request::{
     EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, StorageReadRequest,
     StorageWriteRequest,
@@ -20,7 +21,7 @@ use super::{
 };
 use crate::business_logic::state::BlockInfo;
 use crate::business_logic::transaction::error::TransactionError;
-use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
@@ -34,7 +35,7 @@ use crate::{
             state_api::{State, StateReader},
         },
     },
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    core::errors::state_errors::StateError,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
@@ -268,6 +269,20 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         Ok(SyscallResponse { gas, body })
     }
 
+    fn has_contructor_entry_points(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
+        match contract_class {
+            CompiledClass::Deprecated(class) => Ok(class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .ok_or(ContractClassError::NoneEntryPointType)?
+                .is_empty()),
+            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+        }
+    }
+
     fn execute_constructor_entry_point(
         &mut self,
         contract_address: &Address,
@@ -275,18 +290,12 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class: ContractClass = self
+        let contract_class = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?
-            .try_into()?;
+            .get_contract_class(&class_hash_bytes)?;
 
-        let constructor_entry_points = contract_class
-            .entry_points_by_type
-            .get(&EntryPointType::Constructor)
-            .ok_or(ContractClassError::NoneEntryPointType)?;
-
-        if constructor_entry_points.is_empty() {
+        if self.has_contructor_entry_points(contract_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
