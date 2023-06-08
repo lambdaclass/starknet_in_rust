@@ -1412,4 +1412,5 @@ fn test_out_of_gas_failure() {
         call_info.retdata,
         vec![Felt252::from_bytes_be("Out of gas".as_bytes())]
     );
+    assert!(call_info.failure_flag)
 }
