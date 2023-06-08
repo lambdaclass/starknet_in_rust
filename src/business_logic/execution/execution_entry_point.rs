@@ -460,8 +460,11 @@ impl ExecutionEntryPoint {
             .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
         // Update resources usage (for bouncer).
-        runner.hint_processor.syscall_handler.resources_manager.cairo_usage =
-            &resources_manager.cairo_usage + &runner.get_execution_resources()?;
+        runner
+            .hint_processor
+            .syscall_handler
+            .resources_manager
+            .cairo_usage = &resources_manager.cairo_usage + &runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values_cairo_1()?;
 

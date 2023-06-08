@@ -244,11 +244,16 @@ fn library_call() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-    let mut expected_execution_resources = ExecutionResources::default();
-    expected_execution_resources
-        .builtin_instance_counter
-        .insert(RANGE_CHECK_BUILTIN_NAME.to_string(), 7);
-    expected_execution_resources.n_memory_holes = 6;
+    let expected_execution_resources = ExecutionResources {
+        n_steps: 174,
+        n_memory_holes: 4,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 5)]),
+    };
+    let expected_execution_resources_internal_call = ExecutionResources {
+        n_steps: 85,
+        n_memory_holes: 6,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
+    };
 
     // expected results
     let expected_call_info = CallInfo {
@@ -275,7 +280,7 @@ fn library_call() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![25.into()],
             retdata: [5.into()].to_vec(),
-            execution_resources: ExecutionResources::default(),
+            execution_resources: expected_execution_resources_internal_call,
             class_hash: Some(lib_class_hash),
             ..Default::default()
         }],
