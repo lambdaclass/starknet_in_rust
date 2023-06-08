@@ -274,7 +274,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         Ok(SyscallResponse { gas, body })
     }
 
-    fn has_contructor_entry_points(
+    fn constructor_entry_points_empty(
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
@@ -295,12 +295,12 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class = self
+        let compiled_class = self
             .starknet_storage_state
             .state
             .get_contract_class(&class_hash_bytes)?;
 
-        if self.has_contructor_entry_points(contract_class)? {
+        if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
