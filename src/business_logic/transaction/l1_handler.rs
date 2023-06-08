@@ -12,6 +12,7 @@ use crate::{
         state::state_api::{State, StateReader},
         transaction::{error::TransactionError, fee::calculate_tx_fee},
     },
+    core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         constants::L1_HANDLER_VERSION, general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
@@ -33,6 +34,36 @@ pub struct L1Handler {
 }
 
 impl L1Handler {
+    pub fn new(
+        contract_address: Address,
+        entry_point_selector: Felt252,
+        calldata: Vec<Felt252>,
+        nonce: Felt252,
+        chain_id: Felt252,
+        paid_fee_on_l1: Option<Felt252>,
+    ) -> L1Handler {
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::L1Handler,
+            L1_HANDLER_VERSION,
+            &contract_address,
+            entry_point_selector.clone(),
+            &calldata,
+            0,
+            chain_id,
+            &[nonce.clone()],
+        )
+        .unwrap();
+
+        L1Handler {
+            hash_value,
+            contract_address,
+            entry_point_selector,
+            calldata,
+            nonce: Some(nonce),
+            paid_fee_on_l1,
+        }
+    }
+
     /// Applies self to 'state' by executing the L1-handler entry point.
     pub fn execute<S>(
         &self,
