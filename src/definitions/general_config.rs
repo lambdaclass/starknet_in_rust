@@ -78,6 +78,7 @@ pub struct StarknetGeneralConfig {
     #[getset(get = "pub", get_mut = "pub")]
     // Contains the blocks in the range [ current_block - 1024, current_block - 10 ]
     pub(crate) blocks: HashMap<u64, Block>,
+    pub(crate) enforce_l1_handler_fee: bool,
 }
 
 impl StarknetGeneralConfig {
@@ -91,6 +92,7 @@ impl StarknetGeneralConfig {
         validate_max_n_steps: u64,
         block_info: BlockInfo,
         blocks: HashMap<u64, Block>,
+        enforce_l1_handler_fee: bool,
     ) -> Self {
         Self {
             starknet_os_config,
@@ -101,6 +103,7 @@ impl StarknetGeneralConfig {
             validate_max_n_steps,
             block_info,
             blocks,
+            enforce_l1_handler_fee,
         }
     }
 }
@@ -117,6 +120,7 @@ impl Default for StarknetGeneralConfig {
             validate_max_n_steps: DEFAULT_VALIDATE_MAX_N_STEPS,
             block_info: BlockInfo::empty(DEFAULT_SEQUENCER_ADDRESS.clone()),
             blocks: HashMap::default(),
+            enforce_l1_handler_fee: true,
         }
     }
 }

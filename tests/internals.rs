@@ -111,6 +111,7 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
         0,
         BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
         HashMap::default(),
+        true,
     )
 }
 
