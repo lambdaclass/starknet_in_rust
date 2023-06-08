@@ -36,7 +36,7 @@ const VERSION_0: u64 = 0;
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 #[derive(Debug)]
-pub struct InternalDeclare {
+pub struct Declare {
     pub class_hash: ClassHash,
     pub sender_address: Address,
     pub tx_type: TransactionType,
@@ -52,7 +52,7 @@ pub struct InternalDeclare {
 // ------------------------------------------------------------
 //                        Functions
 // ------------------------------------------------------------
-impl InternalDeclare {
+impl Declare {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         contract_class: ContractClass,
@@ -81,7 +81,7 @@ impl InternalDeclare {
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
-        let internal_declare = InternalDeclare {
+        let internal_declare = Declare {
             class_hash,
             sender_address,
             tx_type: TransactionType::Declare,
@@ -313,7 +313,7 @@ mod tests {
         utils::{felt_to_hash, Address},
     };
 
-    use super::InternalDeclare;
+    use super::Declare;
 
     #[test]
     fn declare_fibonacci() {
@@ -356,7 +356,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -463,7 +463,7 @@ mod tests {
         let version = 0;
 
         // Declare tx should fail because max_fee > 0 and version == 0
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -527,7 +527,7 @@ mod tests {
         let version = 0;
 
         // Declare tx should fail because nonce > 0 and version == 0
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -590,7 +590,7 @@ mod tests {
         let signature = vec![1.into(), 2.into()];
 
         // Declare tx should fail because signature is not empty
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -652,7 +652,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class.clone(),
             chain_id.clone(),
             Address(Felt252::one()),
@@ -664,7 +664,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error = InternalDeclare::new(
+        let internal_declare_error = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -734,7 +734,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -779,7 +779,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -842,7 +842,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Use non-zero value so that the actual fee calculation is done
-        let internal_declare = InternalDeclare::new(
+        let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),

@@ -7,6 +7,7 @@ use super::{
         DeprecatedGetTxInfoResponse, DeprecatedGetTxSignatureResponse,
         DeprecatedStorageReadResponse, DeprecatedWriteSyscallResponse,
     },
+    syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
@@ -19,7 +20,7 @@ use crate::{
         },
         transaction::error::TransactionError,
     },
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    core::errors::state_errors::StateError,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
@@ -866,7 +867,7 @@ mod tests {
         business_logic::{
             state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
-        core::errors::syscall_handler_errors::SyscallHandlerError,
+        syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };
     use cairo_vm::felt::Felt252;

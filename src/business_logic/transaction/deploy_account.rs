@@ -1,4 +1,4 @@
-use super::internal_invoke_function::verify_no_calls_to_other_contracts;
+use super::invoke_function::verify_no_calls_to_other_contracts;
 use crate::{
     business_logic::{
         execution::{
@@ -13,7 +13,7 @@ use crate::{
         },
     },
     core::{
-        errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+        errors::state_errors::StateError,
         transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
@@ -23,6 +23,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -38,7 +39,7 @@ pub struct StateSelector {
 }
 
 #[derive(Clone, Debug, Getters)]
-pub struct InternalDeployAccount {
+pub struct DeployAccount {
     #[getset(get = "pub")]
     contract_address: Address,
     #[getset(get = "pub")]
@@ -56,7 +57,7 @@ pub struct InternalDeployAccount {
     signature: Vec<Felt252>,
 }
 
-impl InternalDeployAccount {
+impl DeployAccount {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         class_hash: ClassHash,
@@ -375,7 +376,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = InternalDeployAccount::new(
+        let internal_deploy = DeployAccount::new(
             class_hash,
             0,
             0,
@@ -412,7 +413,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = InternalDeployAccount::new(
+        let internal_deploy = DeployAccount::new(
             class_hash,
             0,
             0,
@@ -425,7 +426,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_deploy_error = InternalDeployAccount::new(
+        let internal_deploy_error = DeployAccount::new(
             class_hash,
             0,
             0,
@@ -468,7 +469,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = InternalDeployAccount::new(
+        let internal_deploy = DeployAccount::new(
             class_hash,
             0,
             0,

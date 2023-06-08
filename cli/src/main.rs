@@ -8,10 +8,11 @@ use starknet_rs::{
         execution::{execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext},
         state::{
             cached_state::CachedState,
+            in_memory_state_reader::InMemoryStateReader,
             state_api::{State, StateReader},
+            ExecutionResourcesManager,
         },
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-        transaction::objects::internal_invoke_function::InternalInvokeFunction,
+        transaction::InvokeFunction,
     },
     core::{
         contract_address::compute_deprecated_class_hash,
@@ -183,7 +184,7 @@ fn invoke_parser(
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
         None => Vec::new(),
     };
-    let internal_invoke = InternalInvokeFunction::new(
+    let internal_invoke = InvokeFunction::new(
         contract_address.clone(),
         entrypoint_selector.clone(),
         0,

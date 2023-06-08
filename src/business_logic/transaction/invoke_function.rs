@@ -27,7 +27,7 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
 #[derive(Debug, Getters)]
-pub struct InternalInvokeFunction {
+pub struct InvokeFunction {
     #[getset(get = "pub")]
     contract_address: Address,
     entry_point_selector: Felt252,
@@ -45,7 +45,7 @@ pub struct InternalInvokeFunction {
     nonce: Option<Felt252>,
 }
 
-impl InternalInvokeFunction {
+impl InvokeFunction {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         contract_address: Address,
@@ -78,7 +78,7 @@ impl InternalInvokeFunction {
         };
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
-        Ok(InternalInvokeFunction {
+        Ok(InvokeFunction {
             contract_address,
             entry_point_selector,
             entry_point_type: EntryPointType::External,
@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_apply_specific_concurrent_changes() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
@@ -423,7 +423,7 @@ mod tests {
 
     #[test]
     fn test_execute_specific_concurrent_changes() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
@@ -489,7 +489,7 @@ mod tests {
 
     #[test]
     fn test_apply_invoke_entrypoint_not_found_should_fail() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
             entry_point_type: EntryPointType::External,
@@ -541,7 +541,7 @@ mod tests {
 
     #[test]
     fn test_run_validate_entrypoint_nonce_is_none_should_fail() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
             entry_point_type: EntryPointType::External,
@@ -594,7 +594,7 @@ mod tests {
     #[test]
     // Test fee calculation is done correctly but payment to sequencer fails due to been WIP.
     fn test_execute_invoke_fee_payment_to_sequencer_should_fail() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
@@ -653,7 +653,7 @@ mod tests {
 
     #[test]
     fn test_execute_invoke_actual_fee_exceeded_max_fee_should_fail() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
@@ -713,7 +713,7 @@ mod tests {
 
     #[test]
     fn test_execute_invoke_twice_should_fail() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
@@ -773,7 +773,7 @@ mod tests {
 
     #[test]
     fn test_execute_inovoke_nonce_missing_should_fail() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
