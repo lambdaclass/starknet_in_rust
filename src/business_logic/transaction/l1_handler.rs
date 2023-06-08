@@ -21,7 +21,7 @@ use crate::{
 
 #[allow(dead_code)]
 #[derive(Debug, Getters)]
-pub struct InternalL1Handler {
+pub struct L1Handler {
     #[getset(get = "pub")]
     hash_value: Felt252,
     #[getset(get = "pub")]
@@ -32,9 +32,9 @@ pub struct InternalL1Handler {
     paid_fee_on_l1: Option<Felt252>,
 }
 
-impl InternalL1Handler {
+impl L1Handler {
     /// Applies self to 'state' by executing the L1-handler entry point.
-    pub fn apply<S>(
+    pub fn execute<S>(
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,

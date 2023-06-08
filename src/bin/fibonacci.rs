@@ -59,6 +59,7 @@ fn main() {
                 Some(Vec::new()),
                 Some(Felt252::from(i)),
                 None,
+                0,
             )
             .unwrap();
 
