@@ -177,7 +177,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         Ok(())
     }
 
-    fn empty_contructor_entry_points(
+    fn constructor_entry_points_empty(
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
@@ -202,7 +202,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             .state
             .get_contract_class(&class_hash_bytes)?;
 
-        if self.empty_contructor_entry_points(contract_class)? {
+        if self.constructor_entry_points_empty(contract_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
