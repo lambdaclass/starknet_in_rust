@@ -1652,7 +1652,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_error_string = StateError::UninitiaizedClassHash.to_string();
@@ -1727,7 +1727,7 @@ fn deploy_syscall_failure_in_constructor() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
