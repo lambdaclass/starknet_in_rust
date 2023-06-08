@@ -1,9 +1,7 @@
 use crate::{
     business_logic::transaction::error::TransactionError,
-    core::errors::{
-        contract_address_errors::ContractAddressError, state_errors::StateError,
-        syscall_handler_errors::SyscallHandlerError,
-    },
+    core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
+    syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use starknet_contract_class::EntryPointType;
 use thiserror::Error;

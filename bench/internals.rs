@@ -8,11 +8,7 @@ use starknet_rs::{
     business_logic::{
         fact_state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
-        transaction::objects::{
-            internal_declare::InternalDeclare, internal_deploy::InternalDeploy,
-            internal_deploy_account::InternalDeployAccount,
-            internal_invoke_function::InternalInvokeFunction,
-        },
+        transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     },
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
@@ -84,7 +80,7 @@ fn deploy_account() {
         let signature = SIGNATURE.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let internal_deploy_account = InternalDeployAccount::new(
+            let internal_deploy_account = DeployAccount::new(
                 class_hash,
                 0,
                 0,
@@ -117,7 +113,7 @@ fn declare() {
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let declare_tx = InternalDeclare::new(
+            let declare_tx = Declare::new(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,
@@ -156,7 +152,7 @@ fn deploy() {
         let class = CONTRACT_CLASS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let internal_deploy = InternalDeploy::new(
+            let internal_deploy = Deploy::new(
                 salt,
                 class,
                 vec![],
@@ -188,7 +184,7 @@ fn invoke() {
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     ));
     let class = CONTRACT_CLASS.clone();
-    let internal_deploy = InternalDeploy::new(
+    let internal_deploy = Deploy::new(
         salt,
         class,
         vec![],
@@ -207,7 +203,7 @@ fn invoke() {
         let calldata = vec![address.0.clone(), selector.clone(), Felt252::zero()];
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let internal_invoke = InternalInvokeFunction::new(
+            let internal_invoke = InvokeFunction::new(
                 address,
                 selector,
                 0,

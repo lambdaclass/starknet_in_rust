@@ -7,7 +7,7 @@ use cairo_vm::{
 };
 use thiserror::Error;
 
-use super::syscall_handler_errors::SyscallHandlerError;
+use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
 
 #[derive(Debug, Error)]
 pub enum ContractAddressError {
