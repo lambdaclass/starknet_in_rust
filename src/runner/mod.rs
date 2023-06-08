@@ -195,7 +195,7 @@ where
             .map(Clone::clone)
             .collect();
         Ok(CallResult {
-            gas_consumed: initial_gas - remaining_gas,
+            gas_consumed: initial_gas.saturating_sub(remaining_gas),
             is_success,
             retdata,
         })
