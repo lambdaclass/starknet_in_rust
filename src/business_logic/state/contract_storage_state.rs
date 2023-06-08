@@ -29,7 +29,7 @@ impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
         self.accessed_keys.insert(*address);
         let value = self
             .state
-            .get_storage_at(&(self.contract_address.clone(), *address))?;
+            .get_storage_at(&(self.contract_address.clone(), *address)).unwrap_or_default();
 
         self.read_values.push(value.clone());
         Ok(value)
