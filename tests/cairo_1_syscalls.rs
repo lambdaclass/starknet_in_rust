@@ -1599,5 +1599,6 @@ fn library_call_failure() {
             .unwrap()
             .trim_start_matches('\0'),
         "Unimplemented"
-    )
+    );
+    assert!(call_info.failure_flag);
 }
