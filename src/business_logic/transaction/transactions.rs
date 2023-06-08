@@ -7,14 +7,11 @@ use crate::{
     utils::{Address, ClassHash},
 };
 
-use super::{
-    error::TransactionError,
-    objects::{internal_deploy::InternalDeploy, internal_invoke_function::InternalInvokeFunction},
-};
+use super::{error::TransactionError, Deploy, InvokeFunction};
 
 pub enum Transaction {
-    Deploy(InternalDeploy),
-    InvokeFunction(InternalInvokeFunction),
+    Deploy(Deploy),
+    InvokeFunction(InvokeFunction),
 }
 
 impl Transaction {

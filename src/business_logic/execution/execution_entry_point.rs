@@ -5,16 +5,16 @@ use crate::{
         state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },
-    core::syscalls::{
-        business_logic_syscall_handler::BusinessLogicSyscallHandler,
-        deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
-        deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
-        syscall_handler::SyscallHintProcessor,
-    },
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
     runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    syscalls::{
+        business_logic_syscall_handler::BusinessLogicSyscallHandler,
+        deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
+        deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
+        syscall_handler::SyscallHintProcessor,
     },
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
@@ -364,12 +364,12 @@ impl ExecutionEntryPoint {
         let program: Program = contract_class.as_ref().clone().try_into()?;
         // create and initialize a cairo runner for running cairo 1 programs.
         let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false)?;
+
         cairo_runner.initialize_function_runner_cairo_1(
             &mut vm,
             &parse_builtin_names(&entry_point.builtins)?,
         )?;
         validate_contract_deployed(state, &self.contract_address)?;
-
         // prepare OS context
         let os_context = StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context_cairo1(
             &cairo_runner,
@@ -462,6 +462,7 @@ impl ExecutionEntryPoint {
             &resources_manager.cairo_usage + &runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values_cairo_1()?;
+
         self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler.resources_manager,

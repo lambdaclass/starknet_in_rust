@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
+use super::syscall_handler_errors::SyscallHandlerError;
 use super::syscall_request::{
     EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, StorageReadRequest,
     StorageWriteRequest,
@@ -34,7 +35,7 @@ use crate::{
             state_api::{State, StateReader},
         },
     },
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    core::errors::state_errors::StateError,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
@@ -295,7 +296,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .get_contract_class(&class_hash_bytes)?;
 
         if self.constructor_entry_points_empty(compiled_class)? {
-            if constructor_calldata.is_empty() {
+            if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
             if !constructor_calldata.is_empty() {
