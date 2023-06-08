@@ -854,6 +854,7 @@ fn test_get_execution_info() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
+        gas_consumed: 38180,
         ..Default::default()
     };
 
