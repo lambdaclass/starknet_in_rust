@@ -299,9 +299,6 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
-            if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
-            }
 
             let call_info = CallInfo::empty_constructor_call(
                 contract_address.clone(),
