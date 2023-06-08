@@ -1655,7 +1655,7 @@ fn library_call_failure() {
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
-        calldata.clone(),
+        calldata,
         Felt252::new(entrypoint_selector.clone()),
         caller_address,
         entry_point_type,
