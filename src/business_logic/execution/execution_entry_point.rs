@@ -249,7 +249,7 @@ impl ExecutionEntryPoint {
             retdata: call_result
                 .retdata
                 .iter()
-                .map(|n| n.get_int_ref().cloned().unwrap_or_default().to_owned())
+                .map(|n| n.get_int_ref().cloned().unwrap_or_default())
                 .collect(),
             execution_resources: execution_resources.filter_unused_builtins(),
             events,
