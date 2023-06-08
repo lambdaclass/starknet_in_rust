@@ -1,7 +1,7 @@
 use crate::{
     core::{
-        contract_address::compute_deprecated_class_hash,
-        contract_address::v2::sierra_contract_address::compute_sierra_class_hash,
+        contract_address::starknet_contract_address::compute_deprecated_class_hash,
+        contract_address::v2::starknet_sierra_contract_address::compute_sierra_class_hash,
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,

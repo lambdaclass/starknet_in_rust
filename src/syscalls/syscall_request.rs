@@ -3,7 +3,7 @@ use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::ToPrimitive;
 
 use crate::{
-    core::errors::syscall_handler_errors::SyscallHandlerError,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
 // TODO: maybe we could make FromPtr trait more general, making
@@ -17,8 +17,6 @@ use crate::{
 //     gas: Felt252,
 // }
 // ```
-
-const HEADER_OFFSET: usize = 2;
 
 #[allow(unused)]
 #[derive(Debug, PartialEq)]
@@ -259,9 +257,8 @@ impl FromPtr for StorageReadRequest {
 impl FromPtr for DeployRequest {
     fn from_ptr(
         vm: &VirtualMachine,
-        mut syscall_ptr: Relocatable,
+        syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-        syscall_ptr += HEADER_OFFSET;
         let class_hash = get_big_int(vm, syscall_ptr)?;
         let salt = get_big_int(vm, (syscall_ptr + 1)?)?;
         let calldata_start = get_relocatable(vm, (syscall_ptr + 2)?)?;

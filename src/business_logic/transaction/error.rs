@@ -1,10 +1,8 @@
 use crate::{
     business_logic::execution::os_usage::OsResources,
-    core::errors::{
-        contract_address_errors::ContractAddressError, state_errors::StateError,
-        syscall_handler_errors::SyscallHandlerError,
-    },
+    core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
     definitions::transaction_type::TransactionType,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::ClassHash,
 };
 use cairo_vm::{
