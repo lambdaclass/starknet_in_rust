@@ -435,6 +435,7 @@ impl ExecutionEntryPoint {
             general_config.clone(),
             initial_syscall_ptr,
             support_reverted,
+            self.entry_point_selector.clone(),
         );
         // create and attach a syscall hint processor to the starknet runner.
         let hint_processor = SyscallHintProcessor::new(syscall_handler, &contract_class.hints);
