@@ -257,7 +257,7 @@ impl ExecutionEntryPoint {
             storage_read_values: starknet_storage_state.read_values,
             accessed_storage_keys: starknet_storage_state.accessed_keys,
             internal_calls,
-            failure_flag: call_result.is_success,
+            failure_flag: !call_result.is_success,
             gas_consumed: call_result.gas_consumed,
         })
     }
