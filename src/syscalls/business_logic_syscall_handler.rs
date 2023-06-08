@@ -262,7 +262,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
         let retdata_end = (retdata_start + result.retdata.len())?;
 
-        let remaining_gas = remaining_gas - result.gas_consumed;
+        let remaining_gas = remaining_gas.saturating_sub(result.gas_consumed);
 
         let gas = remaining_gas;
         let body = if result.failure_flag {
