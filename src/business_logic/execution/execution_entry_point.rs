@@ -355,11 +355,12 @@ impl ExecutionEntryPoint {
         T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
+
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
 
         // create starknet runner
-        let mut vm = VirtualMachine::new(false);
+        let mut vm = VirtualMachine::new(true);
         // get a program from the casm contract class
         let program: Program = contract_class.as_ref().clone().try_into()?;
         // create and initialize a cairo runner for running cairo 1 programs.
@@ -459,7 +460,7 @@ impl ExecutionEntryPoint {
             .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
         // Update resources usage (for bouncer).
-        resources_manager.cairo_usage =
+        runner.hint_processor.syscall_handler.resources_manager.cairo_usage =
             &resources_manager.cairo_usage + &runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values_cairo_1()?;
