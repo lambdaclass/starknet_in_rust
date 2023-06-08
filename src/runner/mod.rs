@@ -171,9 +171,9 @@ where
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
-    pub fn get_call_result(&self) -> Result<CallResult, TransactionError> {
+    pub fn get_call_result(&self, initial_gas: u128) -> Result<CallResult, TransactionError> {
         let return_values = self.vm.get_return_values(5)?;
-        let gas_consumed = return_values[0]
+        let remaining_gas = return_values[0]
             .get_int_ref()
             .and_then(ToPrimitive::to_u128)
             .ok_or(TransactionError::NotAFelt)?;
@@ -195,7 +195,7 @@ where
             .map(Clone::clone)
             .collect();
         Ok(CallResult {
-            gas_consumed,
+            gas_consumed: initial_gas - remaining_gas,
             is_success,
             retdata,
         })
