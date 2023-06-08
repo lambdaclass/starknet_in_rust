@@ -14,7 +14,7 @@ use starknet_rs::{
             in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
         },
         state::{cached_state::CachedState, state_api::State},
-        transaction::{error::TransactionError, objects::internal_deploy::InternalDeploy},
+        transaction::{error::TransactionError, Deploy},
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
@@ -141,7 +141,7 @@ pub fn deploy(
     let path = PathBuf::from(path);
     let contract_class = ContractClass::try_from(path).unwrap();
 
-    let internal_deploy = InternalDeploy::new(
+    let internal_deploy = Deploy::new(
         Address(0.into()),
         contract_class.clone(),
         calldata.to_vec(),

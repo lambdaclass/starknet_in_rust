@@ -364,12 +364,12 @@ impl ExecutionEntryPoint {
         let program: Program = contract_class.as_ref().clone().try_into()?;
         // create and initialize a cairo runner for running cairo 1 programs.
         let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false)?;
+
         cairo_runner.initialize_function_runner_cairo_1(
             &mut vm,
             &parse_builtin_names(&entry_point.builtins)?,
         )?;
         validate_contract_deployed(state, &self.contract_address)?;
-
         // prepare OS context
         let os_context = StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context_cairo1(
             &cairo_runner,
@@ -392,6 +392,7 @@ impl ExecutionEntryPoint {
             general_config.clone(),
             initial_syscall_ptr,
             support_reverted,
+            self.entry_point_selector.clone(),
         );
         // create and attach a syscall hint processor to the starknet runner.
         let hint_processor = SyscallHintProcessor::new(syscall_handler, &contract_class.hints);
@@ -462,6 +463,7 @@ impl ExecutionEntryPoint {
             &resources_manager.cairo_usage + &runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values_cairo_1()?;
+
         self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler.resources_manager,

@@ -11,7 +11,7 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_contract_class::EntryPointType;
-use starknet_rs::business_logic::transaction::objects::v2::declare_v2::InternalDeclareV2;
+use starknet_rs::business_logic::transaction::DeclareV2;
 use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -30,13 +30,8 @@ use starknet_rs::{
         },
         transaction::{
             error::TransactionError,
-            objects::{
-                internal_deploy_account::InternalDeployAccount,
-                {
-                    internal_declare::InternalDeclare,
-                    internal_invoke_function::InternalInvokeFunction,
-                },
-            },
+            DeployAccount,
+            {invoke_function::InvokeFunction, Declare},
         },
     },
     definitions::{
@@ -532,8 +527,8 @@ fn test_create_account_tx_test_state() {
     );
 }
 
-fn invoke_tx(calldata: Vec<Felt252>) -> InternalInvokeFunction {
-    InternalInvokeFunction::new(
+fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
+    InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         2,
@@ -600,8 +595,8 @@ fn expected_fee_transfer_info() -> CallInfo {
     }
 }
 
-fn declare_tx() -> InternalDeclare {
-    InternalDeclare {
+fn declare_tx() -> Declare {
+    Declare {
         contract_class: get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -615,15 +610,15 @@ fn declare_tx() -> InternalDeclare {
     }
 }
 
-fn declarev2_tx() -> InternalDeclareV2 {
+fn declarev2_tx() -> DeclareV2 {
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
 
-    InternalDeclareV2 {
+    DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-        version: 1,
+        version: 1.into(),
         max_fee: 2,
         signature: vec![],
         nonce: 0.into(),
@@ -896,8 +891,8 @@ fn test_invoke_tx_state() {
 fn test_deploy_account() {
     let (general_config, mut state) = create_account_tx_test_state().unwrap();
 
-    let deploy_account_tx = InternalDeployAccount::new(
-        TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes(),
+    let deploy_account_tx = DeployAccount::new(
+        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         2,
         TRANSACTION_VERSION.clone(),
         Default::default(),
@@ -1382,7 +1377,7 @@ fn test_invoke_tx_wrong_entrypoint() {
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
 
     // Invoke transaction with an entrypoint that doesn't exists
-    let invoke_tx = InternalInvokeFunction::new(
+    let invoke_tx = InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
@@ -1414,7 +1409,7 @@ fn test_deploy_undeclared_account() {
 
     let not_deployed_class_hash = [1; 32];
     // Deploy transaction with a not_deployed_class_hash class_hash
-    let deploy_account_tx = InternalDeployAccount::new(
+    let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
         2,
         TRANSACTION_VERSION.clone(),

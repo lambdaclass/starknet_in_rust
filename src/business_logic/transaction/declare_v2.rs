@@ -9,7 +9,7 @@ use crate::{
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-            objects::internal_invoke_function::verify_no_calls_to_other_contracts,
+            invoke_function::verify_no_calls_to_other_contracts,
         },
     },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
@@ -26,7 +26,7 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 #[derive(Debug)]
-pub struct InternalDeclareV2 {
+pub struct DeclareV2 {
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
@@ -40,7 +40,7 @@ pub struct InternalDeclareV2 {
     pub casm_class: once_cell::unsync::OnceCell<CasmContractClass>,
 }
 
-impl InternalDeclareV2 {
+impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sierra_contract_class: &SierraContractClass,
@@ -68,7 +68,7 @@ impl InternalDeclareV2 {
             )?,
         };
 
-        let internal_declare = InternalDeclareV2 {
+        let internal_declare = DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sender_address,
             tx_type: TransactionType::Declare,
@@ -110,7 +110,7 @@ impl InternalDeclareV2 {
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    // Internal Account Functions
+    //  Account Functions
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
@@ -279,7 +279,7 @@ impl InternalDeclareV2 {
 mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
-    use super::InternalDeclareV2;
+    use super::DeclareV2;
     use crate::business_logic::state::state_api::StateReader;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::{
@@ -309,7 +309,7 @@ mod tests {
 
         // create internal declare v2
 
-        let internal_declare = InternalDeclareV2::new(
+        let internal_declare = DeclareV2::new(
             &sierra_contract_class,
             Felt252::one(),
             chain_id,
