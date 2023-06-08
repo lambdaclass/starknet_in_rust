@@ -504,7 +504,7 @@ impl ExecutionEntryPoint {
         resources_manager.cairo_usage =
             &resources_manager.cairo_usage + &runner.get_execution_resources()?;
 
-        let call_result = runner.get_call_result()?;
+        let call_result = runner.get_call_result(self.initial_gas)?;
         self.build_call_info::<T>(
             previous_cairo_usage,
             runner.hint_processor.syscall_handler.resources_manager,
