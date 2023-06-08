@@ -1,6 +1,9 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::{
+    felt::{felt_str, Felt252},
+    vm::runners::cairo_runner::ExecutionResources,
+};
 use num_traits::Num;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
@@ -24,7 +27,11 @@ use starknet_rs::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
-use std::{collections::HashSet, iter::empty, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::empty,
+    path::Path,
+};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -49,6 +56,7 @@ fn test_contract<'a>(
     arguments: impl Into<Vec<Felt252>>,
     internal_calls: impl Into<Vec<CallInfo>>,
     return_data: impl Into<Vec<Felt252>>,
+    execution_resources: ExecutionResources,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
@@ -151,6 +159,7 @@ fn test_contract<'a>(
             calldata,
             retdata: return_data.into(),
             internal_calls: internal_calls.into(),
+            execution_resources,
             ..Default::default()
         },
     );
@@ -224,6 +233,11 @@ fn call_contract_syscall() {
             },
         ],
         [],
+        ExecutionResources {
+            n_steps: 0,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default(),
+        },
     );
 }
 
@@ -274,6 +288,11 @@ fn emit_event_syscall() {
         [],
         [],
         [],
+        ExecutionResources {
+            n_steps: 0,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default(),
+        },
     );
 }
 
@@ -299,6 +318,11 @@ fn get_block_number_syscall() {
             [],
             [],
             [block_number.into()],
+            ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::default(),
+            },
         );
     };
 
@@ -329,6 +353,11 @@ fn get_block_timestamp_syscall() {
             [],
             [],
             [block_timestamp.into()],
+            ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::default(),
+            },
         );
     };
 
@@ -356,6 +385,11 @@ fn get_caller_address_syscall() {
             [],
             [],
             [caller_address],
+            ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::default(),
+            },
         );
     };
 
@@ -383,6 +417,11 @@ fn get_contract_address_syscall() {
             [],
             [],
             [contract_address],
+            ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::default(),
+            },
         );
     };
 
@@ -413,6 +452,11 @@ fn get_sequencer_address_syscall() {
             [],
             [],
             [sequencer_address],
+            ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::default(),
+            },
         );
     };
 
@@ -468,6 +512,11 @@ fn get_tx_info_syscall() {
                 transaction_hash,
                 chain_id.to_felt(),
             ],
+            ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::default(),
+            },
         );
     };
 
@@ -565,6 +614,11 @@ fn get_tx_signature_syscall() {
                     .reduce(|a, b| a + b)
                     .unwrap_or_default(),
             ],
+            ExecutionResources {
+                n_steps: 0,
+                n_memory_holes: 0,
+                builtin_instance_counter: HashMap::default(),
+            },
         );
     };
 
@@ -641,6 +695,11 @@ fn library_call_syscall() {
             },
         ],
         [],
+        ExecutionResources {
+            n_steps: 113,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default(),
+        },
     );
 }
 
@@ -684,6 +743,11 @@ fn library_call_l1_handler_syscall() {
             ..Default::default()
         }],
         [],
+        ExecutionResources {
+            n_steps: 0,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default(),
+        },
     );
 }
 
@@ -721,6 +785,11 @@ fn send_message_to_l1_syscall() {
         [],
         [],
         [],
+        ExecutionResources {
+            n_steps: 0,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default(),
+        },
     );
 }
 
@@ -759,6 +828,11 @@ fn deploy_syscall() {
             ..Default::default()
         }],
         [deploy_address],
+        ExecutionResources {
+            n_steps: 0,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default(),
+        },
     );
 }
 
@@ -796,6 +870,11 @@ fn deploy_with_constructor_syscall() {
         ],
         [],
         [deploy_address],
+        ExecutionResources {
+            n_steps: 0,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default(),
+        },
     );
 }
 
@@ -904,5 +983,9 @@ fn test_deploy_and_call_contract_syscall() {
             ..Default::default()
         }        ],
         [new_constant],
+        ExecutionResources {
+            n_steps: 0,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::default()},
     );
 }

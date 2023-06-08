@@ -753,6 +753,12 @@ fn test_send_message_to_l1_syscall() {
         payload: vec![555.into(), 666.into()],
     }];
 
+    let expected_execution_resources = ExecutionResources {
+        n_steps: 50,
+        n_memory_holes: 1,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
+    };
+
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
@@ -761,6 +767,7 @@ fn test_send_message_to_l1_syscall() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
+        execution_resources: expected_execution_resources,
         ..Default::default()
     };
 
@@ -849,6 +856,12 @@ fn test_get_execution_info() {
         address.0.clone(),
     ];
 
+    let expected_execution_resources = ExecutionResources {
+        n_steps: 335,
+        n_memory_holes: 14,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
+    };
+
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
@@ -857,6 +870,7 @@ fn test_get_execution_info() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
+        execution_resources: expected_execution_resources,
         ..Default::default()
     };
 
