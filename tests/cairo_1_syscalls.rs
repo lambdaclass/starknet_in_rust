@@ -6,7 +6,7 @@ use std::{
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    felt::Felt252,
+    felt::{felt_str, Felt252},
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
 };
 use num_bigint::BigUint;
@@ -575,6 +575,97 @@ fn emit_event() {
 }
 
 #[test]
+fn deploy() {
+    // data to deploy
+    let test_class_hash: ClassHash = [2; 32];
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let salt = Felt252::zero();
+    let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
+    let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
+
+    // Create the deploy contract class
+    let program_data = include_bytes!("../starknet_programs/cairo1/deploy.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(test_class_hash, test_contract_class.clone());
+
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+
+    // arguments of deploy contract
+    let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
+
+    // set up remaining structures
+
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata,
+        Felt252::new(entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100_000_000,
+    );
+
+    // Execute the entrypoint
+    let general_config = StarknetGeneralConfig::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let call_info = exec_entry_point.execute(
+        &mut state,
+        &general_config,
+        &mut resources_manager,
+        &tx_execution_context,
+        false,
+    );
+
+    assert!(call_info.is_ok());
+
+    let ret_address = Address(felt_str!(
+        "619464431559909356793718633071398796109800070568878623926447195121629120356"
+    ));
+
+    let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
+    let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
+        CompiledClass::Casm(class) => *class,
+        CompiledClass::Deprecated(_) => unreachable!(),
+    };
+
+    assert_eq!(ret_casm_class, test_contract_class);
+}
+
+#[test]
 fn test_send_message_to_l1_syscall() {
     //  Create program and entry point types for contract class
     let program_data = include_bytes!("../starknet_programs/cairo1/send_message_to_l1.casm");
@@ -590,6 +681,7 @@ fn test_send_message_to_l1_syscall() {
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
+
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -600,19 +692,6 @@ fn test_send_message_to_l1_syscall() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
-
-    let general_config = StarknetGeneralConfig::default();
-    let tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
-    );
-
-    let mut resources_manager = ExecutionResourcesManager::default();
 
     let create_execute_extrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
@@ -637,6 +716,19 @@ fn test_send_message_to_l1_syscall() {
         vec![],
         EntryPointType::External,
     );
+
+    // Execute the entrypoint
+    let general_config = StarknetGeneralConfig::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
 
     // Run send_msg entrypoint
     let call_info = send_message_exec_entry_point
