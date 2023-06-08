@@ -102,7 +102,11 @@ impl InvokeFunction {
             self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone().ok_or(TransactionError::MissingNonce)?,
+            if self.version == 0 {
+                Felt252::zero()
+            } else {
+                self.nonce.clone().ok_or(TransactionError::MissingNonce)?
+            },
             n_steps,
             self.version,
         ))
@@ -139,9 +143,7 @@ impl InvokeFunction {
             state,
             general_config,
             resources_manager,
-            &self
-                .get_execution_context(general_config.validate_max_n_steps)
-                .map_err(|_| TransactionError::InvalidTxContext)?,
+            &self.get_execution_context(general_config.validate_max_n_steps)?,
             false,
         )?;
 
@@ -177,9 +179,7 @@ impl InvokeFunction {
             state,
             general_config,
             resources_manager,
-            &self
-                .get_execution_context(general_config.invoke_tx_max_n_steps)
-                .map_err(|_| TransactionError::InvalidTxContext)?,
+            &self.get_execution_context(general_config.invoke_tx_max_n_steps)?,
             false,
         )
     }
@@ -540,6 +540,72 @@ mod tests {
     }
 
     #[test]
+    fn test_apply_v0_with_no_nonce() {
+        let internal_invoke_function = InvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 0,
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: None,
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None, None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let result = internal_invoke_function
+            .apply(&mut state, &StarknetGeneralConfig::default())
+            .unwrap();
+
+        assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
+        assert_eq!(
+            result.call_info.as_ref().unwrap().class_hash,
+            Some(class_hash)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().entry_point_selector,
+            Some(internal_invoke_function.entry_point_selector)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().calldata,
+            internal_invoke_function.calldata
+        );
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+    }
+
+    #[test]
     fn test_run_validate_entrypoint_nonce_is_none_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
@@ -585,10 +651,7 @@ mod tests {
             internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default());
 
         assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::InvalidTxContext
-        );
+        assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
     }
 
     #[test]
@@ -821,10 +884,7 @@ mod tests {
             internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
 
         assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::InvalidTxContext
-        )
+        assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)
     }
 
     #[test]
