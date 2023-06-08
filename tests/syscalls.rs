@@ -969,7 +969,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        Felt252::new(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1067,7 +1067,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        Felt252::new(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
