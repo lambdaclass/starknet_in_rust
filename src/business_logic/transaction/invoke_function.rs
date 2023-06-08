@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn test_apply_v0_with_no_nonce() {
-        let internal_invoke_function = InternalInvokeFunction {
+        let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
