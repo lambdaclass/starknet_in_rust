@@ -245,9 +245,9 @@ fn library_call() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
-        n_steps: 174,
-        n_memory_holes: 4,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 5)]),
+        n_steps: 259,
+        n_memory_holes: 10,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 12)]),
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         n_steps: 85,
