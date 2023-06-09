@@ -1789,7 +1789,7 @@ fn storage_read_no_value() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
