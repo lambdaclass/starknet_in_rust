@@ -184,7 +184,7 @@ fn amm_add_demo_tokens_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_add_demo_token.clone(),
         execution_resources: ExecutionResources {
-            n_steps: 939,
+            n_steps: 393,
             n_memory_holes: 44,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 20),
@@ -262,8 +262,8 @@ fn amm_get_pool_token_balance() {
             n_steps: 84,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
-                (RANGE_CHECK_BUILTIN_NAME.to_string(), 1),
-                (HASH_BUILTIN_NAME.to_string(), 3),
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
+                (HASH_BUILTIN_NAME.to_string(), 1),
             ]),
         },
         class_hash: Some(class_hash),
