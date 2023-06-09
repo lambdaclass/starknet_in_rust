@@ -1213,7 +1213,7 @@ fn deploy_cairo1_and_invoke() {
     assert_eq!(ret_casm_class, test_contract_class);
 
     let calldata = [3.into()].to_vec();
-    let entrypoints = test_contract_class.clone().entry_points_by_type;
+    let entrypoints = test_contract_class.entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     let exec_entry_point = ExecutionEntryPoint::new(
