@@ -12,7 +12,7 @@ use starknet_rs::{
         },
         state::{
             cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            ExecutionResourcesManager,
+            state_api::State, ExecutionResourcesManager,
         },
         transaction::{error::TransactionError, Deploy},
     },
