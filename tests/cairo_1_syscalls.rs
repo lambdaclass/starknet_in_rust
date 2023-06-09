@@ -277,6 +277,7 @@ fn library_call() {
             retdata: [5.into()].to_vec(),
             execution_resources: ExecutionResources::default(),
             class_hash: Some(lib_class_hash),
+            gas_consumed: 0,
             ..Default::default()
         }],
         code_address: None,
@@ -284,6 +285,7 @@ fn library_call() {
         l2_to_l1_messages: vec![],
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
+        gas_consumed: 78980,
         ..Default::default()
     };
 
@@ -756,6 +758,7 @@ fn test_send_message_to_l1_syscall() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
+        gas_consumed: 10040,
         ..Default::default()
     };
 
@@ -852,6 +855,7 @@ fn test_get_execution_info() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
+        gas_consumed: 38180,
         ..Default::default()
     };
 
@@ -1597,7 +1601,8 @@ fn test_out_of_gas_failure() {
     assert_eq!(
         call_info.retdata,
         vec![Felt252::from_bytes_be("Out of gas".as_bytes())]
-    )
+    );
+    assert!(call_info.failure_flag)
 }
 
 #[test]
