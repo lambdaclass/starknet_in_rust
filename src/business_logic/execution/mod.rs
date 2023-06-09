@@ -196,7 +196,7 @@ impl CallInfo {
     pub fn result(&self) -> CallResult {
         CallResult {
             gas_consumed: self.gas_consumed,
-            is_success: self.failure_flag,
+            is_success: !self.failure_flag,
             retdata: self.retdata.iter().map(|f| f.into()).collect(),
         }
     }

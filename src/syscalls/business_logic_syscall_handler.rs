@@ -526,8 +526,8 @@ where
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.starknet_storage_state.read(&key)
+    fn _storage_read(&mut self, key: [u8; 32]) -> Felt252 {
+        self.starknet_storage_state.read(&key).unwrap_or_default()
     }
 
     fn storage_write(
@@ -652,7 +652,7 @@ where
             ));
         }
 
-        let value = self._storage_read(request.key)?;
+        let value = self._storage_read(request.key);
 
         Ok(SyscallResponse {
             gas: remaining_gas,
