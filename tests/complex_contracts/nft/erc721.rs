@@ -226,7 +226,7 @@ fn erc721_test_owner_of() {
         calldata: calldata.clone(),
         retdata: expected_read_result.clone(),
         execution_resources: ExecutionResources {
-            n_steps: 117,
+            n_steps: 116,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 5),

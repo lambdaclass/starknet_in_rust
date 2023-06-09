@@ -842,7 +842,7 @@ fn expected_execute_call_info() -> CallInfo {
         }],
         events: vec![],
         execution_resources: ExecutionResources {
-            n_steps: 39,
+            n_steps: 61,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
         },
