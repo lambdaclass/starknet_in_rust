@@ -857,7 +857,7 @@ fn test_get_execution_info() {
     ];
 
     let expected_execution_resources = ExecutionResources {
-        n_steps: 335,
+        n_steps: 355,
         n_memory_holes: 14,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
     };

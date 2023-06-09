@@ -2,6 +2,7 @@
 use assert_matches::assert_matches;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME};
 use cairo_vm::vm::{
     errors::{
         cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError, vm_exception::VmException,
@@ -398,6 +399,10 @@ fn expected_validate_call_info(
         // Entries **not** in blockifier.
         class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
         call_type: Some(CallType::Call),
+        execution_resources: ExecutionResources {
+            n_steps: 13,
+            ..Default::default()
+        },
 
         ..Default::default()
     }
@@ -460,7 +465,14 @@ fn expected_fee_transfer_call_info(
             Felt252::zero(),
             Felt252::zero(),
         ],
-
+        execution_resources: ExecutionResources {
+            n_steps: 57,
+            n_memory_holes: 57,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
+                (HASH_BUILTIN_NAME.to_string(), 4),
+            ]),
+        },
         ..Default::default()
     }
 }
