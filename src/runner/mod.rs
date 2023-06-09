@@ -177,7 +177,7 @@ where
             .get_int_ref()
             .and_then(ToPrimitive::to_u128)
             .ok_or(TransactionError::NotAFelt)?;
-        let is_success = !return_values[2]
+        let is_success = return_values[2]
             .get_int_ref()
             .ok_or(TransactionError::NotAFelt)?
             .is_zero();
