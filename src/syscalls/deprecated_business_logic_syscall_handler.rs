@@ -342,8 +342,6 @@ where
             deployer_address,
         )?);
 
-        dbg!(&deploy_contract_address);
-
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
