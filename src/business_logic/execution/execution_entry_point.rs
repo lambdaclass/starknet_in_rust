@@ -325,9 +325,14 @@ impl ExecutionEntryPoint {
             .vm
             .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
 
+        *resources_manager = runner
+            .hint_processor
+            .syscall_handler
+            .resources_manager
+            .clone();
+
         // Update resources usage (for bouncer).
-        resources_manager.cairo_usage =
-            &resources_manager.cairo_usage + &runner.get_execution_resources()?;
+        resources_manager.cairo_usage += &runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values()?;
         self.build_call_info::<T>(
