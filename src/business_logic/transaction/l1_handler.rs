@@ -181,7 +181,10 @@ mod test {
             state::{cached_state::CachedState, state_api::State},
             transaction::l1_handler::L1Handler,
         },
-        definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+        definitions::{
+            general_config::{StarknetChainId, StarknetGeneralConfig},
+            transaction_type::TransactionType,
+        },
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         utils::Address,
     };
@@ -269,6 +272,129 @@ mod test {
                 retdata: vec![],
                 execution_resources: ExecutionResources {
                     n_steps: 0,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::new(),
+                },
+                events: vec![],
+                l2_to_l1_messages: vec![],
+                storage_read_values: vec![0.into()],
+                accessed_storage_keys: HashSet::from([[
+                    4, 40, 11, 247, 0, 35, 63, 18, 141, 159, 101, 81, 182, 2, 213, 216, 100, 110,
+                    5, 5, 101, 122, 13, 252, 204, 72, 77, 8, 58, 226, 194, 24,
+                ]]),
+                internal_calls: vec![],
+                gas_consumed: 0,
+                failure_flag: false,
+            }),
+            fee_transfer_info: None,
+            actual_fee: 0,
+            actual_resources: HashMap::from([
+                ("pedersen_builtin".to_string(), 13),
+                ("range_check_builtin".to_string(), 23),
+                ("l1_gas_usage".to_string(), 18471),
+            ]),
+            tx_type: Some(TransactionType::L1Handler),
+        }
+    }
+
+    #[test]
+    /// Tests l1 handler execution using a real transaction from starkscan: https://testnet.starkscan.co/tx/0x043898581f593de4709ffa9307e21c658b5dfefcd39fda1465820b9d0dcfd21f#overview
+    fn test_execute_l1_handler_with_starkscan_transaction() {
+        let l1_handler = L1Handler::new(
+            Address(felt_str!(
+                "001d5b64feabc8ac7c839753994f469704c6fabdd45c8fe6d26ed57b5eb79057",
+                16
+            )),
+            felt_str!(
+                "02d757788a8d8d6f21d1cd40bce38a8222d70654214e96ff95d8086e684fbee5",
+                16
+            ),
+            vec![
+                felt_str!("1065371579191304018083814177490898555345620197892"),
+                felt_str!(
+                    "2111738385242996801796487749623978186587213928083619564943645206207655559336"
+                ),
+                felt_str!("21000000"),
+                felt_str!("0"),
+            ],
+            738609.into(),
+            StarknetChainId::TestNet.to_felt(),
+            Some(10000.into()),
+        );
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = felt_str!(
+            "017d0db31ba2b34ea5927b0ac3301d514f5a629265da686d828bfb2959a75b32",
+            16
+        )
+        .to_be_bytes();
+        let contract_class = ContractClass::try_from(PathBuf::from(
+            "contract_class_full_for_l1_handler_transaction.json",
+        ))
+        .unwrap();
+        // Set contact_state
+        let contract_address = Address(felt_str!(
+            "001d5b64feabc8ac7c839753994f469704c6fabdd45c8fe6d26ed57b5eb79057",
+            16
+        ));
+        let nonce = 738609.into();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None, None);
+
+        // Initialize state.contract_classes
+        state.set_contract_classes(HashMap::new()).unwrap();
+
+        state
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
+
+        let mut config = StarknetGeneralConfig::default();
+        config.cairo_resource_fee_weights = HashMap::from([
+            (String::from("l1_gas_usage"), 0.into()),
+            (String::from("pedersen_builtin"), 16.into()),
+            (String::from("range_check_builtin"), 70.into()),
+        ]);
+        config.starknet_os_config.gas_price = 23007298;
+
+        let tx_exec = l1_handler.execute(&mut state, &config, 100000).unwrap();
+
+        let expected_tx_exec = expected_tx_exec_info_from_starkscan();
+        assert_eq!(tx_exec, expected_tx_exec)
+    }
+
+    fn expected_tx_exec_info_from_starkscan() -> TransactionExecutionInfo {
+        TransactionExecutionInfo {
+            validate_info: None,
+            call_info: Some(CallInfo {
+                caller_address: Address(0.into()),
+                call_type: Some(crate::business_logic::execution::CallType::Call),
+                contract_address: Address(0.into()),
+                code_address: None,
+                class_hash: Some([
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 1, 1, 1, 1,
+                ]),
+                entry_point_selector: Some(felt_str!(
+                    "02d757788a8d8d6f21d1cd40bce38a8222d70654214e96ff95d8086e684fbee5"
+                )),
+                entry_point_type: Some(EntryPointType::L1Handler),
+                calldata: vec![
+                    felt_str!("749882478819638189522059655282096373471980381600"),
+                    1.into(),
+                    10.into(),
+                ],
+                retdata: vec![],
+                execution_resources: ExecutionResources {
+                    n_steps: 512,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::new(),
                 },
