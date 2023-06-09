@@ -1239,5 +1239,6 @@ fn deploy_cairo1_and_invoke() {
 
     let retdata = call_info.retdata;
 
+    // expected result 3! = 6
     assert_eq!(retdata, [6.into()].to_vec());
 }
