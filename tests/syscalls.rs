@@ -508,7 +508,7 @@ fn get_tx_info_syscall() {
                 transaction_hash,
                 chain_id.to_felt(),
             ],
-            execution_resources
+            execution_resources,
         );
     };
 
@@ -603,6 +603,7 @@ fn get_tx_signature_syscall() {
     let run = |signature: Vec<Felt252>| {
         let general_config = StarknetGeneralConfig::default();
         let n_steps = general_config.invoke_tx_max_n_steps();
+        let resources_n_steps = if signature.is_empty() { 41 } else { 69 };
 
         test_contract(
             "starknet_programs/syscalls.json",
@@ -635,7 +636,7 @@ fn get_tx_signature_syscall() {
                     .unwrap_or_default(),
             ],
             ExecutionResources {
-                n_steps: 41,
+                n_steps: resources_n_steps,
                 ..Default::default()
             },
         );
