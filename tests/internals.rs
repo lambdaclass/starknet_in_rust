@@ -466,7 +466,7 @@ fn expected_fee_transfer_call_info(
             Felt252::zero(),
         ],
         execution_resources: ExecutionResources {
-            n_steps: 57,
+            n_steps: 529,
             n_memory_holes: 57,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
@@ -567,7 +567,14 @@ fn expected_fee_transfer_info() -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::zero(), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 525,
+            n_memory_holes: 59,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
+                (HASH_BUILTIN_NAME.to_string(), 4),
+            ]),
+        },
         l2_to_l1_messages: vec![],
         internal_calls: vec![],
         events: vec![OrderedEvent {
@@ -691,6 +698,14 @@ fn expected_declare_fee_transfer_info() -> CallInfo {
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
             ],
         ]),
+        execution_resources: ExecutionResources {
+            n_steps: 525,
+            n_memory_holes: 59,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
+                (HASH_BUILTIN_NAME.to_string(), 4),
+            ]),
+        },
         ..Default::default()
     }
 }
@@ -715,6 +730,10 @@ fn test_declare_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
+            execution_resources: ExecutionResources {
+                n_steps: 12,
+                ..Default::default()
+            },
             ..Default::default()
         }),
         None,
@@ -755,6 +774,10 @@ fn test_declarev2_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()],
+            execution_resources: ExecutionResources {
+                n_steps: 12,
+                ..Default::default()
+            },
             ..Default::default()
         }),
         None,
@@ -791,7 +814,6 @@ fn expected_execute_call_info() -> CallInfo {
             Felt252::from(2),
         ],
         retdata: vec![Felt252::from(2)],
-        execution_resources: ExecutionResources::default(),
         l2_to_l1_messages: vec![],
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -810,12 +832,20 @@ fn expected_execute_call_info() -> CallInfo {
             events: vec![],
             l2_to_l1_messages: vec![],
             internal_calls: vec![],
-            execution_resources: ExecutionResources::default(),
             contract_address: TEST_CONTRACT_ADDRESS.clone(),
             code_address: None,
+            execution_resources: ExecutionResources {
+                n_steps: 22,
+                ..Default::default()
+            },
             ..Default::default()
         }],
         events: vec![],
+        execution_resources: ExecutionResources {
+            n_steps: 39,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
+        },
         ..Default::default()
     }
 }
@@ -838,6 +868,11 @@ fn expected_validate_call_info_2() -> CallInfo {
             Felt252::from(1),
             Felt252::from(2),
         ],
+        execution_resources: ExecutionResources {
+            n_steps: 21,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
+        },
         ..Default::default()
     }
 }
