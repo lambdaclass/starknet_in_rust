@@ -457,7 +457,7 @@ fn get_tx_info_syscall() {
             [],
             [],
             [
-                version.into(),
+                version,
                 account_contract_address.0,
                 max_fee.into(),
                 signature.len().into(),
