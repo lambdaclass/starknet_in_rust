@@ -319,9 +319,8 @@ fn get_block_number_syscall() {
             [],
             [block_number.into()],
             ExecutionResources {
-                n_steps: 0,
-                n_memory_holes: 0,
-                builtin_instance_counter: HashMap::default(),
+                n_steps: 26,
+                ..Default::default()
             },
         );
     };
@@ -354,9 +353,8 @@ fn get_block_timestamp_syscall() {
             [],
             [block_timestamp.into()],
             ExecutionResources {
-                n_steps: 0,
-                n_memory_holes: 0,
-                builtin_instance_counter: HashMap::default(),
+                n_steps: 26,
+                ..Default::default()
             },
         );
     };
@@ -386,9 +384,8 @@ fn get_caller_address_syscall() {
             [],
             [caller_address],
             ExecutionResources {
-                n_steps: 0,
-                n_memory_holes: 0,
-                builtin_instance_counter: HashMap::default(),
+                n_steps: 26,
+                ..Default::default()
             },
         );
     };
@@ -418,9 +415,8 @@ fn get_contract_address_syscall() {
             [],
             [contract_address],
             ExecutionResources {
-                n_steps: 0,
-                n_memory_holes: 0,
-                builtin_instance_counter: HashMap::default(),
+                n_steps: 26,
+                ..Default::default()
             },
         );
     };
@@ -453,9 +449,8 @@ fn get_sequencer_address_syscall() {
             [],
             [sequencer_address],
             ExecutionResources {
-                n_steps: 0,
-                n_memory_holes: 0,
-                builtin_instance_counter: HashMap::default(),
+                n_steps: 26,
+                ..Default::default()
             },
         );
     };
@@ -513,9 +508,8 @@ fn get_tx_info_syscall() {
                 chain_id.to_felt(),
             ],
             ExecutionResources {
-                n_steps: 0,
-                n_memory_holes: 0,
-                builtin_instance_counter: HashMap::default(),
+                n_steps: 49,
+                ..Default::default()
             },
         );
     };
@@ -615,9 +609,8 @@ fn get_tx_signature_syscall() {
                     .unwrap_or_default(),
             ],
             ExecutionResources {
-                n_steps: 0,
-                n_memory_holes: 0,
-                builtin_instance_counter: HashMap::default(),
+                n_steps: 41,
+                ..Default::default()
             },
         );
     };
@@ -660,6 +653,11 @@ fn library_call_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 24,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -678,6 +676,11 @@ fn library_call_syscall() {
                 ]]
                 .into_iter()
                 .collect(),
+                execution_resources: ExecutionResources {
+                    n_steps: 63,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -691,14 +694,18 @@ fn library_call_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![1111.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 26,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             },
         ],
         [],
         ExecutionResources {
-            n_steps: 113,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::default(),
+            n_steps: 284,
+            ..Default::default()
         },
     );
 }
@@ -740,13 +747,16 @@ fn library_call_l1_handler_syscall() {
             ]]
             .into_iter()
             .collect(),
+            execution_resources: ExecutionResources {
+                n_steps: 40,
+                ..Default::default()
+            },
             ..Default::default()
         }],
         [],
         ExecutionResources {
-            n_steps: 0,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::default(),
+            n_steps: 103,
+            ..Default::default()
         },
     );
 }
@@ -786,9 +796,8 @@ fn send_message_to_l1_syscall() {
         [],
         [],
         ExecutionResources {
-            n_steps: 0,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::default(),
+            n_steps: 68,
+            ..Default::default()
         },
     );
 }
@@ -829,9 +838,9 @@ fn deploy_syscall() {
         }],
         [deploy_address],
         ExecutionResources {
-            n_steps: 0,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::default(),
+            n_steps: 39,
+            n_memory_holes: 2,
+            ..Default::default()
         },
     );
 }
@@ -871,9 +880,8 @@ fn deploy_with_constructor_syscall() {
         [],
         [deploy_address],
         ExecutionResources {
-            n_steps: 0,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::default(),
+            n_steps: 84,
+            ..Default::default()
         },
     );
 }
@@ -938,6 +946,10 @@ fn test_deploy_and_call_contract_syscall() {
             retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
             storage_read_values: vec![constructor_constant],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
+            execution_resources: ExecutionResources {
+                n_steps: 52,
+                ..Default::default()
+            },
             ..Default::default()
         },
         // Invoke storage_var_and_constructor.cairo set_constant function
@@ -959,6 +971,10 @@ fn test_deploy_and_call_contract_syscall() {
             retdata: vec![],
             storage_read_values: vec![],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
+            execution_resources: ExecutionResources {
+                n_steps: 40,
+                ..Default::default()
+            },
             ..Default::default()
         },
         // Invoke storage_var_and_constructor.cairo get_constant function
@@ -980,12 +996,16 @@ fn test_deploy_and_call_contract_syscall() {
             retdata: vec![new_constant.clone()],
             storage_read_values: vec![new_constant.clone()],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
+            execution_resources: ExecutionResources {
+                n_steps: 46,
+                ..Default::default()
+            },
             ..Default::default()
         }        ],
         [new_constant],
         ExecutionResources {
-            n_steps: 0,
-            n_memory_holes: 0,
+            n_steps: 325,
+            n_memory_holes: 2,
             builtin_instance_counter: HashMap::default()},
     );
 }
