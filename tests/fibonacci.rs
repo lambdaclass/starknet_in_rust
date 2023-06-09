@@ -193,6 +193,7 @@ fn integration_test_cairo1() {
         retdata: [144.into()].to_vec(),
         execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
+        gas_consumed: 35550,
         ..Default::default()
     };
 
