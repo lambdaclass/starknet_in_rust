@@ -467,7 +467,8 @@ fn get_tx_info_syscall() {
                max_fee,
                signature: Vec<Felt252>,
                transaction_hash: Felt252,
-               chain_id| {
+               chain_id,
+               execution_resources: ExecutionResources| {
         let mut general_config = StarknetGeneralConfig::default();
         *general_config.starknet_os_config_mut().chain_id_mut() = chain_id;
 
@@ -507,10 +508,7 @@ fn get_tx_info_syscall() {
                 transaction_hash,
                 chain_id.to_felt(),
             ],
-            ExecutionResources {
-                n_steps: 49,
-                ..Default::default()
-            },
+            execution_resources
         );
     };
 
@@ -521,6 +519,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -529,6 +531,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -537,6 +543,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -545,6 +555,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -553,6 +567,10 @@ fn get_tx_info_syscall() {
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 77,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -561,6 +579,10 @@ fn get_tx_info_syscall() {
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 77,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -569,6 +591,10 @@ fn get_tx_info_syscall() {
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
         StarknetChainId::TestNet2,
+        ExecutionResources {
+            n_steps: 77,
+            ..Default::default()
+        },
     );
 }
 
