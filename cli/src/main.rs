@@ -25,7 +25,7 @@ use starknet_rs::{
     },
     definitions::{
         constants::{DECLARE_VERSION, TRANSACTION_VERSION},
-        general_config::StarknetGeneralConfig,
+        general_config::TransactionContext,
     },
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
@@ -196,7 +196,7 @@ fn invoke_parser(
         Some(Felt252::zero()),
         transaction_hash,
     )?;
-    let _tx_info = internal_invoke.apply(cached_state, &StarknetGeneralConfig::default())?;
+    let _tx_info = internal_invoke.apply(cached_state, &TransactionContext::default())?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
@@ -255,7 +255,7 @@ fn call_parser(
     );
     let call_info = execution_entry_point.execute(
         cached_state,
-        &StarknetGeneralConfig::default(),
+        &TransactionContext::default(),
         &mut ExecutionResourcesManager::default(),
         &TransactionExecutionContext::default(),
         false,
