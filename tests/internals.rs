@@ -11,7 +11,7 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_contract_class::EntryPointType;
-use starknet_rs::business_logic::transaction::DeclareV2;
+use starknet_rs::business_logic::transaction::{DeclareV2, Deploy};
 use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -59,6 +59,7 @@ lazy_static! {
     // Addresses.
     static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
+    static ref TEST_FIB_CONTRACT_ADDRESS: Address = Address(felt_str!("27728"));
     pub static ref TEST_SEQUENCER_ADDRESS: Address =
     Address(felt_str!("4096"));
     pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
@@ -629,6 +630,18 @@ fn declarev2_tx() -> DeclareV2 {
     }
 }
 
+fn deploy_fib_syscall() -> Deploy {
+    Deploy {
+        hash_value: 0.into(),
+        version: 1,
+        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
+        contract_address_salt: Address(0.into()),
+        contract_hash: felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()),
+        constructor_calldata: Vec::new(),
+        tx_type: TransactionType::Deploy,
+    }
+}
+
 fn expected_declare_fee_transfer_info() -> CallInfo {
     CallInfo {
         caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -885,6 +898,37 @@ fn test_invoke_tx_state() {
     let expected_final_state = expected_state_after_tx();
 
     assert_eq!(*state, expected_final_state);
+}
+
+#[test]
+fn test_invoke_with_declarev2_tx() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let expected_initial_state = expected_state_before_tx();
+    assert_eq!(state, &expected_initial_state);
+
+    // Declare the fibonacci contract
+    let declare_tx = declarev2_tx();
+    declare_tx
+        .execute(state, starknet_general_config, 0)
+        .unwrap();
+
+    // Deploy the fibonacci contract
+    let deploy = deploy_fib_syscall();
+    deploy.execute(state, starknet_general_config).unwrap();
+
+    let Address(test_contract_address) = TEST_FIB_CONTRACT_ADDRESS.clone();
+    let calldata = vec![
+        test_contract_address,                                // CONTRACT_ADDRESS
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(1),                                     // CONTRACT_CALLDATA LEN
+        Felt252::from(2),                                     // CONTRACT_CALLDATA
+    ];
+    let invoke_tx = invoke_tx(calldata);
+
+    let result = invoke_tx.execute(state, starknet_general_config).unwrap();
+
+    let expected_execution_info = expected_transaction_execution_info();
+    assert_eq!(result, expected_execution_info);
 }
 
 #[test]
