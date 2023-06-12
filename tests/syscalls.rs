@@ -978,7 +978,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     );
 
     // Execute the entrypoint
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1076,7 +1076,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     );
 
     // Execute the entrypoint
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1176,7 +1176,7 @@ fn deploy_cairo1_and_invoke() {
     );
 
     // Execute the entrypoint
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
