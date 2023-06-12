@@ -12,14 +12,14 @@ use starknet_rs::{
         },
         state::{cached_state::CachedState, state_api::StateReader},
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::general_config::TransactionContext,
     utils::{calculate_sn_keccak, Address},
 };
 use std::collections::{HashMap, HashSet};
 
 #[test]
 fn amm_proxy_init_pool_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -113,7 +113,7 @@ fn amm_proxy_init_pool_test() {
 
 #[test]
 fn amm_proxy_get_pool_token_balance_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -214,7 +214,7 @@ fn amm_proxy_get_pool_token_balance_test() {
 
 #[test]
 fn amm_proxy_add_demo_token_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -321,7 +321,7 @@ fn amm_proxy_add_demo_token_test() {
 
 #[test]
 fn amm_proxy_get_account_token_balance() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -441,7 +441,7 @@ fn amm_proxy_get_account_token_balance() {
 
 #[test]
 fn amm_proxy_swap() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
