@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
+use super::syscall_handler_errors::SyscallHandlerError;
 use super::syscall_request::{
     EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, StorageReadRequest,
     StorageWriteRequest,
@@ -20,7 +21,7 @@ use super::{
 };
 use crate::business_logic::state::BlockInfo;
 use crate::business_logic::transaction::error::TransactionError;
-use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{
@@ -34,7 +35,7 @@ use crate::{
             state_api::{State, StateReader},
         },
     },
-    core::errors::{state_errors::StateError, syscall_handler_errors::SyscallHandlerError},
+    core::errors::state_errors::StateError,
     definitions::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
     },
@@ -130,6 +131,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) general_config: StarknetGeneralConfig,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) support_reverted: bool,
+    pub(crate) entry_point_selector: Felt252,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
 }
 
@@ -146,6 +148,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         general_config: StarknetGeneralConfig,
         syscall_ptr: Relocatable,
         support_reverted: bool,
+        entry_point_selector: Felt252,
     ) -> Self {
         let events = Vec::new();
         let read_only_segments = Vec::new();
@@ -166,6 +169,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             internal_calls,
             expected_syscall_ptr: syscall_ptr,
             support_reverted,
+            entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
@@ -206,6 +210,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
 
         let internal_calls = Vec::new();
         let expected_syscall_ptr = Relocatable::from((0, 0));
+        let entry_point_selector = 333.into();
 
         BusinessLogicSyscallHandler {
             tx_execution_context,
@@ -220,6 +225,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             internal_calls,
             expected_syscall_ptr,
             support_reverted: false,
+            entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
@@ -268,6 +274,20 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         Ok(SyscallResponse { gas, body })
     }
 
+    fn constructor_entry_points_empty(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
+        match contract_class {
+            CompiledClass::Deprecated(class) => Ok(class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .ok_or(ContractClassError::NoneEntryPointType)?
+                .is_empty()),
+            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+        }
+    }
+
     fn execute_constructor_entry_point(
         &mut self,
         contract_address: &Address,
@@ -275,18 +295,12 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class: ContractClass = self
+        let compiled_class = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?
-            .try_into()?;
+            .get_contract_class(&class_hash_bytes)?;
 
-        let constructor_entry_points = contract_class
-            .entry_points_by_type
-            .get(&EntryPointType::Constructor)
-            .ok_or(ContractClassError::NoneEntryPointType)?;
-
-        if constructor_entry_points.is_empty() {
+        if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
@@ -512,8 +526,8 @@ where
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.starknet_storage_state.read(&key)
+    fn _storage_read(&mut self, key: [u8; 32]) -> Felt252 {
+        self.starknet_storage_state.read(&key).unwrap_or_default()
     }
 
     fn storage_write(
@@ -546,25 +560,25 @@ where
 
         let mut res_segment = vm.add_memory_segment();
 
-        let signature_start = res_segment.offset;
+        let signature_start = res_segment;
         for s in tx_info.signature.iter() {
             vm.insert_value(res_segment, s)?;
             res_segment = (res_segment + 1)?;
         }
-        let signature_end = res_segment.offset;
+        let signature_end = res_segment;
 
-        let tx_info_ptr = res_segment.offset;
+        let tx_info_ptr = res_segment;
         vm.insert_value::<Felt252>(res_segment, tx_info.version.into())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value(res_segment, tx_info.account_contract_address.0.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, tx_info.max_fee.into())?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, signature_start.into())?;
+        vm.insert_value(res_segment, signature_start)?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, signature_end.into())?;
+        vm.insert_value(res_segment, signature_end)?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, tx_info.transaction_hash.clone())?;
+        vm.insert_value(res_segment, tx_info.transaction_hash.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(
             res_segment,
@@ -574,7 +588,7 @@ where
         vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;
         res_segment = (res_segment + 1)?;
 
-        let block_info_ptr = res_segment.offset;
+        let block_info_ptr = res_segment;
         vm.insert_value::<Felt252>(res_segment, block_info.block_number.into())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, block_info.block_timestamp.into())?;
@@ -583,13 +597,15 @@ where
         res_segment = (res_segment + 1)?;
 
         let exec_info_ptr = res_segment;
-        vm.insert_value::<Felt252>(res_segment, tx_info_ptr.into())?;
+        vm.insert_value(res_segment, block_info_ptr)?;
         res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, block_info_ptr.into())?;
+        vm.insert_value(res_segment, tx_info_ptr)?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, self.caller_address.0.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, self.contract_address.0.clone())?;
+        res_segment = (res_segment + 1)?;
+        vm.insert_value::<Felt252>(res_segment, self.entry_point_selector.clone())?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,
@@ -636,7 +652,7 @@ where
             ));
         }
 
-        let value = self._storage_read(request.key)?;
+        let value = self._storage_read(request.key);
 
         Ok(SyscallResponse {
             gas: remaining_gas,
@@ -743,6 +759,7 @@ where
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
+            "get_execution_info" => Ok(SyscallRequest::GetExecutionInfo),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
             "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(

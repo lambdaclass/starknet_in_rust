@@ -13,12 +13,8 @@ use crate::{
             state_api::{State, StateReader},
         },
         transaction::{
-            error::TransactionError,
-            objects::{
-                internal_declare::InternalDeclare, internal_deploy::InternalDeploy,
-                internal_invoke_function::InternalInvokeFunction,
-            },
-            transactions::Transaction,
+            error::TransactionError, invoke_function::InvokeFunction, transactions::Transaction,
+            Declare, Deploy,
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
@@ -90,7 +86,7 @@ impl StarknetState {
         contract_class: ContractClass,
         hash_value: Option<Felt252>,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
-        let tx = InternalDeclare::new(
+        let tx = Declare::new(
             contract_class,
             self.chain_id(),
             Address(Felt252::one()),
@@ -183,7 +179,7 @@ impl StarknetState {
         hash_value: Option<Felt252>,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
-        let mut tx = Transaction::Deploy(InternalDeploy::new(
+        let mut tx = Transaction::Deploy(Deploy::new(
             contract_address_salt,
             contract_class.clone(),
             constructor_calldata,
@@ -269,7 +265,7 @@ impl StarknetState {
         signature: Option<Vec<Felt252>>,
         nonce: Option<Felt252>,
         hash_value: Option<Felt252>,
-    ) -> Result<InternalInvokeFunction, TransactionError> {
+    ) -> Result<InvokeFunction, TransactionError> {
         let signature = match signature {
             Some(sign) => sign,
             None => Vec::new(),
@@ -280,7 +276,7 @@ impl StarknetState {
             None => self.state.get_nonce_at(&contract_address)?,
         };
 
-        InternalInvokeFunction::new(
+        InvokeFunction::new(
             contract_address,
             entry_point_selector,
             max_fee,

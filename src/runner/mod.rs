@@ -1,5 +1,6 @@
+use crate::business_logic::execution::CallResult;
 use crate::business_logic::transaction::error::TransactionError;
-use crate::core::syscalls::syscall_handler::HintProcessorPostRun;
+use crate::syscalls::syscall_handler::HintProcessorPostRun;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
@@ -15,7 +16,7 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
-use num_traits::ToPrimitive;
+use num_traits::{ToPrimitive, Zero};
 use std::{borrow::Cow, collections::HashMap};
 
 pub fn get_casm_contract_builtins(
@@ -83,6 +84,7 @@ where
         self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
+            &mut None,
             verify_secure,
             program_segment_size,
             &mut self.vm,
@@ -137,6 +139,7 @@ where
         self.cairo_runner.run_from_entrypoint(
             entrypoint_offset,
             &entrypoint_args,
+            &mut None,
             true,
             Some(self.cairo_runner.get_program().data_len() + program_extra_data.len()),
             &mut self.vm,
@@ -170,8 +173,16 @@ where
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
-    pub fn get_return_values_cairo_1(&self) -> Result<Vec<Felt252>, TransactionError> {
+    pub fn get_call_result(&self, initial_gas: u128) -> Result<CallResult, TransactionError> {
         let return_values = self.vm.get_return_values(5)?;
+        let remaining_gas = return_values[0]
+            .get_int_ref()
+            .and_then(ToPrimitive::to_u128)
+            .ok_or(TransactionError::NotAFelt)?;
+        let is_success = return_values[2]
+            .get_int_ref()
+            .ok_or(TransactionError::NotAFelt)?
+            .is_zero();
         let retdata_start = return_values[3]
             .get_relocatable()
             .ok_or(TransactionError::NotARelocatableValue)?;
@@ -179,13 +190,17 @@ where
             .get_relocatable()
             .ok_or(TransactionError::NotARelocatableValue)?;
         let size = (retdata_end - retdata_start)?;
-        let retdata: Vec<Felt252> = self
+        let retdata: Vec<MaybeRelocatable> = self
             .vm
-            .get_integer_range(retdata_start, size)?
+            .get_continuous_range(retdata_start, size)?
             .iter()
-            .map(|c| c.clone().into_owned())
+            .map(Clone::clone)
             .collect();
-        Ok(retdata)
+        Ok(CallResult {
+            gas_consumed: initial_gas.saturating_sub(remaining_gas),
+            is_success,
+            retdata,
+        })
     }
 
     pub fn prepare_os_context_cairo1(
@@ -382,7 +397,7 @@ mod test {
             fact_state::in_memory_state_reader::InMemoryStateReader,
             state::cached_state::CachedState, transaction::error::TransactionError,
         },
-        core::syscalls::{
+        syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
             deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
             syscall_handler::SyscallHintProcessor,
