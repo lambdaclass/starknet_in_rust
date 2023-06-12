@@ -37,7 +37,7 @@ use crate::{
     },
     core::errors::state_errors::StateError,
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class_errors::ContractClassError,
@@ -128,7 +128,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) caller_address: Address,
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
-    pub(crate) general_config: StarknetGeneralConfig,
+    pub(crate) general_config: TransactionContext,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) support_reverted: bool,
     pub(crate) entry_point_selector: Felt252,
@@ -145,7 +145,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        general_config: StarknetGeneralConfig,
+        general_config: TransactionContext,
         syscall_ptr: Relocatable,
         support_reverted: bool,
         entry_point_selector: Felt252,
@@ -204,7 +204,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
-        let mut general_config = StarknetGeneralConfig::default();
+        let mut general_config = TransactionContext::default();
         general_config.block_info = block_info;
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
@@ -535,8 +535,8 @@ where
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.starknet_storage_state.read(&key)
+    fn _storage_read(&mut self, key: [u8; 32]) -> Felt252 {
+        self.starknet_storage_state.read(&key).unwrap_or_default()
     }
 
     fn storage_write(
@@ -661,7 +661,7 @@ where
             ));
         }
 
-        let value = self._storage_read(request.key)?;
+        let value = self._storage_read(request.key);
 
         Ok(SyscallResponse {
             gas: remaining_gas,
