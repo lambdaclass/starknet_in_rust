@@ -22,7 +22,7 @@ use starknet_rs::{
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
-        general_config::{StarknetChainId, StarknetGeneralConfig},
+        general_config::{StarknetChainId, TransactionContext},
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address, ClassHash},
@@ -40,7 +40,7 @@ fn test_contract<'a>(
     class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
-    general_config: StarknetGeneralConfig,
+    general_config: TransactionContext,
     tx_context: Option<TransactionExecutionContext>,
     events: impl Into<Vec<OrderedEvent>>,
     l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
@@ -173,7 +173,7 @@ fn call_contract_syscall() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [],
         [],
@@ -260,7 +260,7 @@ fn emit_event_syscall() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [
             OrderedEvent {
@@ -309,7 +309,7 @@ fn emit_event_syscall() {
 #[test]
 fn get_block_number_syscall() {
     let run = |block_number| {
-        let mut general_config = StarknetGeneralConfig::default();
+        let mut general_config = TransactionContext::default();
         general_config.block_info_mut().block_number = block_number;
 
         test_contract(
@@ -343,7 +343,7 @@ fn get_block_number_syscall() {
 #[test]
 fn get_block_timestamp_syscall() {
     let run = |block_timestamp| {
-        let mut general_config = StarknetGeneralConfig::default();
+        let mut general_config = TransactionContext::default();
         general_config.block_info_mut().block_timestamp = block_timestamp;
 
         test_contract(
@@ -383,7 +383,7 @@ fn get_caller_address_syscall() {
             [1; 32],
             Address(1111.into()),
             Address(caller_address.clone()),
-            StarknetGeneralConfig::default(),
+            TransactionContext::default(),
             None,
             [],
             [],
@@ -414,7 +414,7 @@ fn get_contract_address_syscall() {
             [1; 32],
             Address(contract_address.clone()),
             Address(0.into()),
-            StarknetGeneralConfig::default(),
+            TransactionContext::default(),
             None,
             [],
             [],
@@ -439,7 +439,7 @@ fn get_contract_address_syscall() {
 #[test]
 fn get_sequencer_address_syscall() {
     let run = |sequencer_address: Felt252| {
-        let mut general_config = StarknetGeneralConfig::default();
+        let mut general_config = TransactionContext::default();
         general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
 
         test_contract(
@@ -479,7 +479,7 @@ fn get_tx_info_syscall() {
                transaction_hash: Felt252,
                chain_id,
                execution_resources: ExecutionResources| {
-        let mut general_config = StarknetGeneralConfig::default();
+        let mut general_config = TransactionContext::default();
         *general_config.starknet_os_config_mut().chain_id_mut() = chain_id;
 
         let n_steps = general_config.invoke_tx_max_n_steps();
@@ -611,7 +611,7 @@ fn get_tx_info_syscall() {
 #[test]
 fn get_tx_signature_syscall() {
     let run = |signature: Vec<Felt252>| {
-        let general_config = StarknetGeneralConfig::default();
+        let general_config = TransactionContext::default();
         let n_steps = general_config.invoke_tx_max_n_steps();
         let resources_n_steps = if signature.is_empty() { 41 } else { 69 };
 
@@ -665,7 +665,7 @@ fn library_call_syscall() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [],
         [],
@@ -755,7 +755,7 @@ fn library_call_l1_handler_syscall() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [],
         [],
@@ -806,7 +806,7 @@ fn send_message_to_l1_syscall() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [],
         [
@@ -851,7 +851,7 @@ fn deploy_syscall() {
         [1; 32],
         Address(11111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [],
         [],
@@ -897,7 +897,7 @@ fn deploy_with_constructor_syscall() {
         [1; 32],
         Address(11111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [],
         [],
@@ -946,7 +946,7 @@ fn test_deploy_and_call_contract_syscall() {
         [1; 32],
         Address(11111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [],
         [],
