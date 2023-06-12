@@ -5,14 +5,10 @@ use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_rs::{
-    business_logic::{
-        execution::{CallInfo, CallType},
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{cached_state::CachedState, state_api::StateReader},
-    },
     definitions::general_config::TransactionContext,
+    execution::{CallInfo, CallType},
+    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
+    state::{cached_state::CachedState, state_api::StateReader},
     utils::{calculate_sn_keccak, Address},
 };
 use std::collections::{HashMap, HashSet};

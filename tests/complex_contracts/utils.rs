@@ -5,19 +5,14 @@ use num_traits::Zero;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-            TransactionExecutionContext,
-        },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{cached_state::CachedState, state_api::State},
-        transaction::{error::TransactionError, Deploy},
-    },
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
+    },
+    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{cached_state::CachedState, state_api::State},
+    transaction::{error::TransactionError, Deploy},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{

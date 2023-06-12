@@ -1,23 +1,21 @@
 use std::collections::HashMap;
 
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        },
-    },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
         general_config::TransactionContext,
         transaction_type::TransactionType,
+    },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
+    fact_state::state::ExecutionResourcesManager,
+    state::state_api::{State, StateReader},
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
     },
     utils::{calculate_tx_resources, Address},
 };
@@ -347,11 +345,9 @@ pub(crate) fn preprocess_invoke_function_fields(
 mod tests {
     use super::*;
     use crate::{
-        business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
-        },
+        fact_state::in_memory_state_reader::InMemoryStateReader,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::cached_state::CachedState,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};

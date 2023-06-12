@@ -13,21 +13,17 @@ use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
-            OrderedL2ToL1Message, TransactionExecutionContext,
-        },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{cached_state::CachedState, state_api::StateReader},
-    },
     core::errors::state_errors::StateError,
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
+        OrderedL2ToL1Message, TransactionExecutionContext,
+    },
+    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
+    state::{cached_state::CachedState, state_api::StateReader},
     utils::{Address, ClassHash},
 };
 

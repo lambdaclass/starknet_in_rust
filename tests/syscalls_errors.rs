@@ -3,21 +3,17 @@
 use cairo_vm::felt::Felt252;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
-        },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{
-            cached_state::{CachedState, ContractClassCache},
-            state_api::State,
-        },
-    },
     core::errors::state_errors::StateError,
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
+    },
+    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{
+        cached_state::{CachedState, ContractClassCache},
+        state_api::State,
+    },
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;

@@ -4,12 +4,9 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_rs::{
-    business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
-    },
+    fact_state::in_memory_state_reader::InMemoryStateReader,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::state::StarknetState,
-    utils::Address,
+    state::cached_state::CachedState, testing::state::StarknetState, utils::Address,
 };
 
 use lazy_static::lazy_static;

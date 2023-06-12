@@ -503,8 +503,8 @@ pub mod test_utils {
             let mut state = CachedState::<InMemoryStateReader>::default();
             let mut hint_processor = $crate::core::syscalls::syscall_handler::SyscallHintProcessor::<
                 $crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler::<
-                    $crate::business_logic::state::cached_state::CachedState<
-                        $crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
+                    $crate::state::cached_state::CachedState<
+                        $crate::fact_state::in_memory_state_reader::InMemoryStateReader,
                     >,
                 >,
             >::new(DeprecatedBLSyscallHandler::default_with(&mut state));

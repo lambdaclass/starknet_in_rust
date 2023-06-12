@@ -1,9 +1,7 @@
 use crate::{
-    business_logic::{
-        execution::TransactionExecutionInfo,
-        state::state_api::{State, StateReader},
-    },
     definitions::general_config::TransactionContext,
+    execution::TransactionExecutionInfo,
+    state::state_api::{State, StateReader},
     utils::{Address, ClassHash},
 };
 

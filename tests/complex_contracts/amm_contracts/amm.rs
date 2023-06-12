@@ -5,16 +5,12 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{CallInfo, CallType},
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{cached_state::CachedState, state_api::StateReader},
-        transaction::error::TransactionError,
-    },
     definitions::general_config::TransactionContext,
+    execution::{CallInfo, CallType},
+    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{cached_state::CachedState, state_api::StateReader},
+    transaction::error::TransactionError,
     utils::{calculate_sn_keccak, Address},
 };
 

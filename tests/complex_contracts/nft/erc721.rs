@@ -6,18 +6,14 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
-use starknet_rs::business_logic::state::cached_state::CachedState;
-use starknet_rs::business_logic::transaction::error::TransactionError;
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_rs::state::cached_state::CachedState;
+use starknet_rs::transaction::error::TransactionError;
 use starknet_rs::{
-    business_logic::{
-        execution::{CallInfo, CallType, OrderedEvent},
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::state_api::StateReader,
-    },
     definitions::general_config::TransactionContext,
+    execution::{CallInfo, CallType, OrderedEvent},
+    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
+    state::state_api::StateReader,
     utils::{calculate_sn_keccak, Address},
 };
 

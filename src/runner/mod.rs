@@ -393,15 +393,14 @@ where
 mod test {
     use super::StarknetRunner;
     use crate::{
-        business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState, transaction::error::TransactionError,
-        },
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::cached_state::CachedState,
         syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
             deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
             syscall_handler::SyscallHintProcessor,
         },
+        transaction::error::TransactionError,
     };
     use cairo_vm::{
         types::relocatable::{MaybeRelocatable, Relocatable},
