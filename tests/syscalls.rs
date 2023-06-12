@@ -198,6 +198,10 @@ fn call_contract_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 24,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -216,6 +220,10 @@ fn call_contract_syscall() {
                 ]]
                 .into_iter()
                 .collect(),
+                execution_resources: ExecutionResources {
+                    n_steps: 63,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -229,14 +237,17 @@ fn call_contract_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![2222.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 26,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         ],
         [],
         ExecutionResources {
-            n_steps: 0,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::default(),
+            n_steps: 279,
+            ..Default::default()
         },
     );
 }
@@ -908,6 +919,7 @@ fn deploy_with_constructor_syscall() {
         [deploy_address],
         ExecutionResources {
             n_steps: 84,
+            n_memory_holes: 2,
             ..Default::default()
         },
     );
