@@ -477,7 +477,7 @@ impl ExecutionEntryPoint {
 
         self.build_call_info::<T>(
             previous_cairo_usage,
-            &resources_manager,
+            resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,
             runner.hint_processor.syscall_handler.events,
             runner.hint_processor.syscall_handler.l2_to_l1_messages,
