@@ -2,6 +2,13 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 
+use business_logic::{
+    execution::TransactionExecutionInfo,
+    state::state_api::{State, StateReader},
+    transaction::{error::TransactionError, Transaction},
+};
+use definitions::general_config::StarknetGeneralConfig;
+
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
@@ -18,3 +25,11 @@ pub mod storage;
 pub mod syscalls;
 pub mod testing;
 pub mod utils;
+
+pub fn execute_transaction<T: State + StateReader>(
+    tx: Transaction,
+    state: &mut T,
+    config: StarknetGeneralConfig,
+) -> Result<TransactionExecutionInfo, TransactionError> {
+    tx.execute(state, &config)
+}
