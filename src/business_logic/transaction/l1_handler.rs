@@ -298,11 +298,11 @@ mod test {
     }
 
     #[test]
-    /// Tests l1 handler execution using a real transaction from starkscan: https://testnet.starkscan.co/tx/0x043898581f593de4709ffa9307e21c658b5dfefcd39fda1465820b9d0dcfd21f#overview
+    /// Tests l1 handler execution using a real transaction from starkscan: https://testnet.starkscan.co/contract/0x073314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82
     fn test_execute_l1_handler_with_starkscan_transaction() {
         let l1_handler = L1Handler::new(
             Address(felt_str!(
-                "001d5b64feabc8ac7c839753994f469704c6fabdd45c8fe6d26ed57b5eb79057",
+                "073314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
                 16
             )),
             felt_str!(
@@ -310,33 +310,33 @@ mod test {
                 16
             ),
             vec![
-                felt_str!("1065371579191304018083814177490898555345620197892"),
+                felt_str!("1115060956765620476872948418762657804474621689758"),
                 felt_str!(
-                    "2111738385242996801796487749623978186587213928083619564943645206207655559336"
+                    "1256727858676552885419124503147865986765714294842921909437282015573644783575"
                 ),
-                felt_str!("21000000"),
+                felt_str!("1000000000000000"),
                 felt_str!("0"),
             ],
-            738609.into(),
+            215782.into(),
             StarknetChainId::TestNet.to_felt(),
-            Some(10000.into()),
+            Some(0.into()),
         );
 
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash = felt_str!(
-            "017d0db31ba2b34ea5927b0ac3301d514f5a629265da686d828bfb2959a75b32",
+            "00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3",
             16
         )
         .to_be_bytes();
         let contract_class = ContractClass::try_from(PathBuf::from(
-            "contract_class_full_for_l1_handler_transaction.json",
+            "l1_handler_constract_class_ethereum.json",
         ))
         .unwrap();
         // Set contact_state
         let contract_address = Address(felt_str!(
-            "001d5b64feabc8ac7c839753994f469704c6fabdd45c8fe6d26ed57b5eb79057",
+            "073314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
             16
         ));
         let nonce = 738609.into();
@@ -357,13 +357,7 @@ mod test {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = StarknetGeneralConfig::default();
-        config.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
-        config.starknet_os_config.gas_price = 23007298;
+        let config = StarknetGeneralConfig::default();
 
         let tx_exec = l1_handler.execute(&mut state, &config, 100000).unwrap();
 
