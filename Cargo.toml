@@ -11,7 +11,8 @@ with_mimalloc = ["mimalloc"]
 members = ["crates/starknet-contract-class", "fuzzer", "cli"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.5.1", features = ["cairo-1-hints"]}
+# cairo-vm = { version = "0.5.2", features = ["cairo-1-hints"]}
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-rs.git", rev = "91a83714db457519c9c5610a18d874617479dede",  features = ["cairo-1-hints"]}
 
 [dependencies]
 cairo-lang-starknet = "1.1.0"
