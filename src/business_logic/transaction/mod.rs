@@ -17,7 +17,7 @@ use crate::{
         execution::TransactionExecutionInfo,
         state::state_api::{State, StateReader},
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::general_config::TransactionContext,
 };
 use error::TransactionError;
 
@@ -38,7 +38,7 @@ impl Transaction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Declare(tx) => tx.execute(state, general_config),

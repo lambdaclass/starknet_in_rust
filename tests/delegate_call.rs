@@ -15,7 +15,7 @@ use starknet_rs::{
         },
         state::cached_state::CachedState,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };
@@ -105,7 +105,7 @@ fn delegate_call() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),

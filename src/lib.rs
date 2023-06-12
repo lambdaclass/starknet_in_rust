@@ -7,7 +7,7 @@ use business_logic::{
     state::state_api::{State, StateReader},
     transaction::{error::TransactionError, Transaction},
 };
-use definitions::general_config::StarknetGeneralConfig;
+use definitions::general_config::TransactionContext;
 
 #[cfg(test)]
 #[macro_use]
@@ -29,7 +29,7 @@ pub mod utils;
 pub fn execute_transaction<T: State + StateReader>(
     tx: Transaction,
     state: &mut T,
-    config: StarknetGeneralConfig,
+    config: TransactionContext,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
     tx.execute(state, &config)
 }
