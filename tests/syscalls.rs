@@ -300,9 +300,8 @@ fn emit_event_syscall() {
         [],
         [],
         ExecutionResources {
-            n_steps: 0,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::default(),
+            n_steps: 144,
+            ..Default::default()
         },
     );
 }
