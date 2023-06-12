@@ -5,13 +5,11 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, Event,
             TransactionExecutionContext, TransactionExecutionInfo,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::{
             error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
         },
