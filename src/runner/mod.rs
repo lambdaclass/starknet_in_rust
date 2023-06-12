@@ -1,6 +1,6 @@
-use crate::business_logic::execution::CallResult;
-use crate::business_logic::transaction::error::TransactionError;
+use crate::execution::CallResult;
 use crate::syscalls::syscall_handler::HintProcessorPostRun;
+use crate::transaction::error::TransactionError;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;

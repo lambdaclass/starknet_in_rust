@@ -1,6 +1,6 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use crate::business_logic::state::state_api::{State, StateReader};
-use crate::business_logic::transaction::error::TransactionError;
+use crate::state::state_api::{State, StateReader};
+use crate::transaction::error::TransactionError;
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},

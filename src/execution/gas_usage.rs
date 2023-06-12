@@ -1,5 +1,5 @@
-use crate::business_logic::execution::L2toL1MessageInfo;
 use crate::definitions::constants::*;
+use crate::execution::L2toL1MessageInfo;
 use crate::services::eth_definitions::eth_gas_constans::*;
 
 /// Returns an estimation of the L1 gas amount that will be used (by StarkNet's update state and

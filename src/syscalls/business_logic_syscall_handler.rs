@@ -19,9 +19,9 @@ use super::{
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
-use crate::business_logic::state::BlockInfo;
-use crate::business_logic::transaction::error::TransactionError;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use crate::state::BlockInfo;
+use crate::transaction::error::TransactionError;
 use crate::utils::calculate_sn_keccak;
 use crate::{
     business_logic::{

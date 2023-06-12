@@ -280,8 +280,8 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::DeclareV2;
-    use crate::business_logic::state::state_api::StateReader;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
+    use crate::state::state_api::StateReader;
     use crate::{
         business_logic::{
             fact_state::in_memory_state_reader::InMemoryStateReader,
