@@ -295,12 +295,12 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class = self
+        let compiled_class = self
             .starknet_storage_state
             .state
             .get_contract_class(&class_hash_bytes)?;
 
-        if self.constructor_entry_points_empty(contract_class)? {
+        if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
@@ -526,8 +526,8 @@ where
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.starknet_storage_state.read(&key)
+    fn _storage_read(&mut self, key: [u8; 32]) -> Felt252 {
+        self.starknet_storage_state.read(&key).unwrap_or_default()
     }
 
     fn storage_write(
@@ -652,7 +652,7 @@ where
             ));
         }
 
-        let value = self._storage_read(request.key)?;
+        let value = self._storage_read(request.key);
 
         Ok(SyscallResponse {
             gas: remaining_gas,

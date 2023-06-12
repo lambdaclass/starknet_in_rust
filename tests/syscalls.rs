@@ -1188,17 +1188,15 @@ fn deploy_cairo1_and_invoke() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let _call_info = exec_entry_point
-        .execute(
-            &mut state,
-            &general_config,
-            &mut resources_manager,
-            &tx_execution_context,
-            false,
-        )
-        .unwrap();
+    let call_info = exec_entry_point.execute(
+        &mut state,
+        &general_config,
+        &mut resources_manager,
+        &tx_execution_context,
+        false,
+    );
 
-    //assert!(call_info.is_ok());
+    assert!(call_info.is_ok());
 
     let ret_address = Address(felt_str!(
         "2771739216117269195266211756239816992170608283088994568066688164855938378843"
