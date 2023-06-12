@@ -1,21 +1,19 @@
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-            TransactionExecutionContext, TransactionExecutionInfo,
-        },
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-            invoke_function::verify_no_calls_to_other_contracts,
-        },
-    },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
         transaction_type::TransactionType,
+    },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
+        TransactionExecutionContext, TransactionExecutionInfo,
+    },
+    fact_state::state::ExecutionResourcesManager,
+    state::state_api::{State, StateReader},
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+        invoke_function::verify_no_calls_to_other_contracts,
     },
     utils::{calculate_tx_resources, Address},
 };
@@ -283,11 +281,8 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
-        business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
-        },
         definitions::general_config::StarknetChainId,
+        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;

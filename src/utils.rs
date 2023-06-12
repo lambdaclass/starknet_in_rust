@@ -1,17 +1,14 @@
 use crate::{
-    business_logic::{
-        execution::{
-            gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
-        },
-        fact_state::state::ExecutionResourcesManager,
-        state::{
-            cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
-            state_cache::StorageEntry,
-        },
-        transaction::error::TransactionError,
-    },
     definitions::transaction_type::TransactionType,
+    execution::{
+        gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
+    },
+    fact_state::state::ExecutionResourcesManager,
+    state::{
+        cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader, state_cache::StorageEntry,
+    },
     syscalls::syscall_handler_errors::SyscallHandlerError,
+    transaction::error::TransactionError,
 };
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,

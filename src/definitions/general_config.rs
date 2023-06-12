@@ -1,4 +1,4 @@
-use crate::{business_logic::state::BlockInfo, utils::Address};
+use crate::{state::BlockInfo, utils::Address};
 use cairo_vm::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
 use starknet_api::block::Block;

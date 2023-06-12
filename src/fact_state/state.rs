@@ -1,7 +1,7 @@
 use crate::{
-    business_logic::state::{cached_state::CachedState, state_api::StateReader},
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
+    state::{cached_state::CachedState, state_api::StateReader},
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
         Address, ClassHash,
@@ -151,13 +151,11 @@ mod test {
 
     use super::StateDiff;
     use crate::{
-        business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::{
-                cached_state::{CachedState, ContractClassCache},
-                state_api::StateReader,
-                state_cache::{StateCache, StorageEntry},
-            },
+        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            cached_state::{CachedState, ContractClassCache},
+            state_api::StateReader,
+            state_cache::{StateCache, StorageEntry},
         },
         utils::Address,
     };

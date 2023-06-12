@@ -1,16 +1,4 @@
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        },
-    },
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
         transaction_hash::calculate_declare_transaction_hash,
@@ -19,7 +7,17 @@ use crate::{
         constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
         transaction_type::TransactionType,
     },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
+    fact_state::state::ExecutionResourcesManager,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::state_api::{State, StateReader},
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+    },
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -300,16 +298,15 @@ mod tests {
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
-        business_logic::{
-            execution::CallType, fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
-        },
         definitions::{
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             general_config::{StarknetChainId, TransactionContext},
             transaction_type::TransactionType,
         },
+        execution::CallType,
+        fact_state::in_memory_state_reader::InMemoryStateReader,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::cached_state::CachedState,
         utils::{felt_to_hash, Address},
     };
 

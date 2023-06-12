@@ -1,12 +1,10 @@
 use super::error::TransactionError;
 use crate::{
-    business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         },
         fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
-    },
     definitions::{constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::TransactionContext},
 };
 use cairo_vm::felt::Felt252;

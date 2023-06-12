@@ -110,7 +110,7 @@ impl<'a, T: State + StateReader> HintProcessorPostRun for SyscallHintProcessor<'
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
-    ) -> Result<(), crate::business_logic::transaction::error::TransactionError> {
+    ) -> Result<(), crate::transaction::error::TransactionError> {
         self.syscall_handler.post_run(runner, syscall_stop_ptr)
     }
 }

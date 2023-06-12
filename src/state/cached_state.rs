@@ -3,8 +3,8 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
-    business_logic::fact_state::state::StateDiff,
     core::errors::state_errors::StateError,
+    fact_state::state::StateDiff,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
