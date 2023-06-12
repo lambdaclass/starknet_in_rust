@@ -13,7 +13,7 @@ use crate::{
         transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
@@ -84,7 +84,7 @@ impl Deploy {
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
@@ -144,7 +144,7 @@ impl Deploy {
     pub fn invoke_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -200,7 +200,7 @@ impl Deploy {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
         let (fee_transfer_info, actual_fee) = (None, 0);
