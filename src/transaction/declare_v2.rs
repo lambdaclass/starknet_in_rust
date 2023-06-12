@@ -8,8 +8,8 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
         TransactionExecutionContext, TransactionExecutionInfo,
     },
-    state::ExecutionResourcesManager,
     state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -281,9 +281,8 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
-        definitions::general_config::StarknetChainId,
-        state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
-        utils::Address,
+        definitions::general_config::StarknetChainId, state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader, utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;

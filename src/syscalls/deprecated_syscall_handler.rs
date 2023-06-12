@@ -191,9 +191,9 @@ mod tests {
             transaction_type::TransactionType,
         },
         execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
-        state::in_memory_state_reader::InMemoryStateReader,
         memory_insert,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},

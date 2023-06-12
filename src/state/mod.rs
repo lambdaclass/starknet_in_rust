@@ -1,8 +1,8 @@
 pub mod cached_state;
 pub(crate) mod contract_storage_state;
+pub mod in_memory_state_reader;
 pub mod state_api;
 pub mod state_cache;
-pub mod in_memory_state_reader;
 
 use crate::{
     core::errors::state_errors::StateError,
@@ -229,7 +229,8 @@ mod test {
         state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::{CachedState, ContractClassCache},
-            state_cache::{StateCache, StorageEntry}, state_api::StateReader,
+            state_api::StateReader,
+            state_cache::{StateCache, StorageEntry},
         },
         utils::Address,
     };

@@ -9,9 +9,9 @@ use starknet_rs::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{cached_state::CachedState, state_api::State},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{error::TransactionError, Deploy},
     utils::{calculate_sn_keccak, Address},
 };

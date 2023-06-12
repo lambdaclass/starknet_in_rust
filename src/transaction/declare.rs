@@ -11,9 +11,9 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::ExecutionResourcesManager,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -304,9 +304,9 @@ mod tests {
             transaction_type::TransactionType,
         },
         execution::CallType,
-        state::in_memory_state_reader::InMemoryStateReader,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         utils::{felt_to_hash, Address},
     };
 

@@ -4,8 +4,8 @@ use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
     },
-    state::ExecutionResourcesManager,
     state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
 };
 use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;

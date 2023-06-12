@@ -4,10 +4,10 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    state::StateDiff,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
+    state::StateDiff,
     storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };

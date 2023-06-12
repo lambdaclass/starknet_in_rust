@@ -1,11 +1,11 @@
 use crate::{
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::TransactionContext},
-    state::ExecutionResourcesManager,
     runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::state_api::State,
+    state::ExecutionResourcesManager,
     state::{contract_storage_state::ContractStorageState, state_api::StateReader},
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,

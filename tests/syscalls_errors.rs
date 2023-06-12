@@ -8,12 +8,12 @@ use starknet_rs::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
         cached_state::{CachedState, ContractClassCache},
         state_api::State,
     },
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;

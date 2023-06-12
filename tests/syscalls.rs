@@ -12,12 +12,12 @@ use starknet_rs::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
         OrderedL2ToL1Message, TransactionExecutionContext,
     },
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
         cached_state::{CachedState, ContractClassCache},
         state_api::State,
     },
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::{collections::HashSet, iter::empty, path::Path};

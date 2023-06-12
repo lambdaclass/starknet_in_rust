@@ -16,12 +16,12 @@ use crate::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
     },
     execution::{execution_entry_point::ExecutionEntryPoint, *},
-    state::ExecutionResourcesManager,
     hash_utils::calculate_contract_address,
     services::api::{
         contract_class_errors::ContractClassError,
         contract_classes::deprecated_contract_class::ContractClass,
     },
+    state::ExecutionResourcesManager,
     state::{
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
@@ -863,8 +863,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        state::in_memory_state_reader::InMemoryStateReader,
         state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };

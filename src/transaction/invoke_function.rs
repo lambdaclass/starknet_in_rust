@@ -11,8 +11,8 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::ExecutionResourcesManager,
     state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -345,9 +345,8 @@ pub(crate) fn preprocess_invoke_function_fields(
 mod tests {
     use super::*;
     use crate::{
-        state::in_memory_state_reader::InMemoryStateReader,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::cached_state::CachedState,
+        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};

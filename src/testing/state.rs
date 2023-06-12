@@ -5,7 +5,6 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, Event, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     services::api::{
         contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
     },
@@ -13,6 +12,7 @@ use crate::{
         cached_state::CachedState,
         state_api::{State, StateReader},
     },
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{
         error::TransactionError, invoke_function::InvokeFunction, transactions::Transaction,
         Declare, Deploy,

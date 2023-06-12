@@ -18,11 +18,11 @@ use starknet_rs::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
         OrderedL2ToL1Message, TransactionExecutionContext,
     },
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{cached_state::CachedState, state_api::StateReader},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
 
