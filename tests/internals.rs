@@ -577,6 +577,59 @@ fn expected_fee_transfer_info() -> CallInfo {
         ],
         accessed_storage_keys: HashSet::from([
             [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+            ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
+            ],
+            [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+            ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ],
+        ]),
+    }
+}
+
+fn expected_fib_fee_transfer_info() -> CallInfo {
+    CallInfo {
+        failure_flag: false,
+        gas_consumed: 0,
+        caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        call_type: Some(CallType::Call),
+        contract_address: Address(Felt252::from(4097)),
+        code_address: None,
+        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: vec![Felt252::from(4096), Felt252::zero(), Felt252::zero()],
+        retdata: vec![Felt252::from(1)],
+        execution_resources: ExecutionResources::default(),
+        l2_to_l1_messages: vec![],
+        internal_calls: vec![],
+        events: vec![OrderedEvent {
+            order: 0,
+            keys: vec![TRANSFER_EVENT_SELECTOR.clone()],
+            data: vec![
+                Felt252::from(257),
+                Felt252::from(4096),
+                Felt252::zero(),
+                Felt252::zero(),
+            ],
+        }],
+        storage_read_values: vec![
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
+        ],
+        accessed_storage_keys: HashSet::from([
+            [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
             ],
@@ -821,6 +874,57 @@ fn expected_execute_call_info() -> CallInfo {
     }
 }
 
+fn expected_fib_execute_call_info() -> CallInfo {
+    CallInfo {
+        caller_address: Address(Felt252::zero()),
+        call_type: Some(CallType::Call),
+        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
+        code_address: None,
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: vec![
+            Felt252::from(27728),
+            Felt252::from_str_radix(
+                "039a1491f76903a16feed0a6433bec78de4c73194944e1118e226820ad479701",
+                16,
+            )
+            .unwrap(),
+            Felt252::from(3),
+            Felt252::from(42),
+            Felt252::from(0),
+            Felt252::from(0),
+        ],
+        retdata: vec![Felt252::from(42)],
+        execution_resources: ExecutionResources::default(),
+        l2_to_l1_messages: vec![],
+        internal_calls: vec![CallInfo {
+            caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            call_type: Some(CallType::Call),
+            class_hash: Some(felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone())),
+            entry_point_selector: Some(
+                Felt252::from_str_radix(
+                    "039a1491f76903a16feed0a6433bec78de4c73194944e1118e226820ad479701",
+                    16,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![Felt252::from(42), Felt252::from(0), Felt252::from(0)],
+            retdata: vec![Felt252::from(42)],
+            events: vec![],
+            l2_to_l1_messages: vec![],
+            internal_calls: vec![],
+            execution_resources: ExecutionResources::default(),
+            contract_address: TEST_CONTRACT_ADDRESS.clone(),
+            code_address: None,
+            ..Default::default()
+        }],
+        events: vec![],
+        ..Default::default()
+    }
+}
+
 fn expected_validate_call_info_2() -> CallInfo {
     CallInfo {
         caller_address: Address(Felt252::zero()),
@@ -843,11 +947,49 @@ fn expected_validate_call_info_2() -> CallInfo {
     }
 }
 
+fn expected_fib_validate_call_info_2() -> CallInfo {
+    CallInfo {
+        caller_address: Address(Felt252::zero()),
+        call_type: Some(CallType::Call),
+        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: vec![
+            Felt252::from(27728),
+            Felt252::from_str_radix(
+                "485685360977693822178494178685050472186234432883326654755380582597179924681",
+                10,
+            )
+            .unwrap(),
+            Felt252::from(1),
+            Felt252::from(2),
+        ],
+        //retdata: vec![Felt252::from_str_radix("375233589013918064796019", 10)]
+        ..Default::default()
+    }
+}
+
 fn expected_transaction_execution_info() -> TransactionExecutionInfo {
     TransactionExecutionInfo::new(
         Some(expected_validate_call_info_2()),
         Some(expected_execute_call_info()),
         Some(expected_fee_transfer_info()),
+        0,
+        HashMap::from([
+            ("pedersen_builtin".to_string(), 16),
+            ("l1_gas_usage".to_string(), 0),
+            ("range_check_builtin".to_string(), 72),
+        ]),
+        Some(TransactionType::InvokeFunction),
+    )
+}
+
+fn expected_fib_transaction_execution_info() -> TransactionExecutionInfo {
+    TransactionExecutionInfo::new(
+        Some(expected_fib_validate_call_info_2()),
+        Some(expected_fib_execute_call_info()),
+        Some(expected_fib_fee_transfer_info()),
         0,
         HashMap::from([
             ("pedersen_builtin".to_string(), 16),
@@ -902,6 +1044,9 @@ fn test_invoke_tx_state() {
 
 #[test]
 fn test_invoke_with_declarev2_tx() {
+    let bytes = Felt252::from_str_radix("375233589013918064796019", 10).unwrap().to_be_bytes();
+    let string = std::str::from_utf8(&bytes).unwrap();
+    dbg!(string);
     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(state, &expected_initial_state);
@@ -920,14 +1065,16 @@ fn test_invoke_with_declarev2_tx() {
     let calldata = vec![
         test_contract_address,                                // CONTRACT_ADDRESS
         Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")), // CONTRACT FUNCTION SELECTOR
-        Felt252::from(1),                                     // CONTRACT_CALLDATA LEN
-        Felt252::from(2),                                     // CONTRACT_CALLDATA
+        Felt252::from(3),                                     // CONTRACT_CALLDATA LEN
+        Felt252::from(42),                                     // CONTRACT_CALLDATA
+        Felt252::from(0),                                     // CONTRACT_CALLDATA
+        Felt252::from(0),                                     // CONTRACT_CALLDATA
     ];
     let invoke_tx = invoke_tx(calldata);
 
     let result = invoke_tx.execute(state, starknet_general_config).unwrap();
 
-    let expected_execution_info = expected_transaction_execution_info();
+    let expected_execution_info = expected_fib_transaction_execution_info();
     assert_eq!(result, expected_execution_info);
 }
 
