@@ -202,6 +202,7 @@ fn integration_test_cairo1() {
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
         },
         class_hash: Some(class_hash),
+        gas_consumed: 35550,
         ..Default::default()
     };
 
