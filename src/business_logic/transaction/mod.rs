@@ -25,7 +25,7 @@ pub enum Transaction {
     /// A declare transaction.
     Declare(Declare),
     /// A declare transaction.
-    DeclareV2(DeclareV2),
+    DeclareV2(Box<DeclareV2>),
     /// A deploy transaction.
     Deploy(Deploy),
     /// A deploy account transaction.
