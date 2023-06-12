@@ -225,7 +225,7 @@ impl ExecutionEntryPoint {
     fn build_call_info<S>(
         &self,
         previous_cairo_usage: ExecutionResources,
-        resources_manager: ExecutionResourcesManager,
+        resources_manager: &ExecutionResourcesManager,
         starknet_storage_state: ContractStorageState<S>,
         events: Vec<OrderedEvent>,
         l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
