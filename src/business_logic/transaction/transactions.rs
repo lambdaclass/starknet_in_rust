@@ -3,7 +3,7 @@ use crate::{
         execution::TransactionExecutionInfo,
         state::state_api::{State, StateReader},
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::general_config::TransactionContext,
     utils::{Address, ClassHash},
 };
 
@@ -34,7 +34,7 @@ impl Transaction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {

@@ -11,7 +11,7 @@ use starknet_rs::{
     },
     definitions::{
         constants::TRANSACTION_VERSION,
-        general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
+        general_config::{StarknetChainId, StarknetOsConfig, TransactionContext},
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
@@ -119,8 +119,8 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
     cached_state
 }
 
-pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
-    StarknetGeneralConfig::new(
+pub fn new_starknet_general_config_for_testing() -> TransactionContext {
+    TransactionContext::new(
         StarknetOsConfig::new(StarknetChainId::TestNet, Address(Felt252::zero()), 0),
         0,
         0,

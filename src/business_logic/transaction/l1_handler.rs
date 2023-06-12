@@ -14,7 +14,7 @@ use crate::{
     },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        constants::L1_HANDLER_VERSION, general_config::StarknetGeneralConfig,
+        constants::L1_HANDLER_VERSION, general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -68,7 +68,7 @@ impl L1Handler {
     pub fn execute<S>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
@@ -181,7 +181,7 @@ mod test {
             state::{cached_state::CachedState, state_api::State},
             transaction::l1_handler::L1Handler,
         },
-        definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
+        definitions::{general_config::TransactionContext, transaction_type::TransactionType},
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         utils::Address,
     };
@@ -231,7 +231,7 @@ mod test {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = StarknetGeneralConfig::default();
+        let mut config = TransactionContext::default();
         config.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),

@@ -60,7 +60,7 @@ impl Default for StarknetOsConfig {
 }
 
 #[derive(Clone, Debug, CopyGetters, Getters, MutGetters)]
-pub struct StarknetGeneralConfig {
+pub struct TransactionContext {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) starknet_os_config: StarknetOsConfig,
     #[get_copy = "pub"]
@@ -81,7 +81,7 @@ pub struct StarknetGeneralConfig {
     pub(crate) enforce_l1_handler_fee: bool,
 }
 
-impl StarknetGeneralConfig {
+impl TransactionContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         starknet_os_config: StarknetOsConfig,
@@ -108,7 +108,7 @@ impl StarknetGeneralConfig {
     }
 }
 
-impl Default for StarknetGeneralConfig {
+impl Default for TransactionContext {
     fn default() -> Self {
         Self {
             starknet_os_config: Default::default(),

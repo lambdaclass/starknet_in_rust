@@ -17,7 +17,7 @@ use starknet_rs::{
         },
         state::state_api::StateReader,
     },
-    definitions::general_config::StarknetGeneralConfig,
+    definitions::general_config::TransactionContext,
     utils::{calculate_sn_keccak, Address},
 };
 
@@ -25,7 +25,7 @@ use crate::complex_contracts::utils::*;
 
 #[test]
 fn erc721_constructor_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -72,7 +72,7 @@ fn erc721_constructor_test() {
 
 #[test]
 fn erc721_balance_of_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -94,7 +94,7 @@ fn erc721_balance_of_test() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -156,7 +156,7 @@ fn erc721_balance_of_test() {
 
 #[test]
 fn erc721_test_owner_of() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -178,7 +178,7 @@ fn erc721_test_owner_of() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -232,7 +232,7 @@ fn erc721_test_owner_of() {
 
 #[test]
 fn erc721_test_get_approved() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -254,7 +254,7 @@ fn erc721_test_get_approved() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -325,7 +325,7 @@ fn erc721_test_get_approved() {
 
 #[test]
 fn erc721_test_is_approved_for_all() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -347,7 +347,7 @@ fn erc721_test_is_approved_for_all() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -421,7 +421,7 @@ fn erc721_test_is_approved_for_all() {
 
 #[test]
 fn erc721_test_approve() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -443,7 +443,7 @@ fn erc721_test_approve() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -519,7 +519,7 @@ fn erc721_test_approve() {
 
 #[test]
 fn erc721_set_approval_for_all() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -541,7 +541,7 @@ fn erc721_set_approval_for_all() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -611,7 +611,7 @@ fn erc721_set_approval_for_all() {
 
 #[test]
 fn erc721_transfer_from_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -633,7 +633,7 @@ fn erc721_transfer_from_test() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -744,7 +744,7 @@ fn erc721_transfer_from_test() {
 
 #[test]
 fn erc721_transfer_from_and_get_owner_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -766,7 +766,7 @@ fn erc721_transfer_from_and_get_owner_test() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -829,7 +829,7 @@ fn erc721_transfer_from_and_get_owner_test() {
 
 #[test]
 fn erc721_safe_transfer_from_should_fail_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -866,7 +866,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
             .clone();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -897,7 +897,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
 
 #[test]
 fn erc721_calling_constructor_twice_should_fail_test() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -919,7 +919,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::Constructor;
 
@@ -947,7 +947,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
 //deploy() will try to unwrap the result of the constructor
 #[test]
 fn erc721_constructor_should_fail_with_to_equal_zero() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -975,7 +975,7 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
 
 #[test]
 fn erc721_transfer_fail_to_zero_address() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -997,7 +997,7 @@ fn erc721_transfer_fail_to_zero_address() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -1030,7 +1030,7 @@ fn erc721_transfer_fail_to_zero_address() {
 
 #[test]
 fn erc721_transfer_fail_not_owner() {
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -1052,7 +1052,7 @@ fn erc721_transfer_fail_not_owner() {
     .unwrap();
 
     let caller_address = Address(666.into());
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 

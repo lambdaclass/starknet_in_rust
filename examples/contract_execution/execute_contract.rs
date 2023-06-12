@@ -15,7 +15,7 @@ use starknet_rs::{
     },
     definitions::{
         constants::TRANSACTION_VERSION,
-        general_config::StarknetGeneralConfig,
+        general_config::TransactionContext,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
     starknet_storage::dict_storage::DictStorage,
@@ -45,7 +45,7 @@ fn test_contract(
     //*          Create default context
     //* --------------------------------------------
 
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
 
     let tx_execution_context =
         TransactionExecutionContext::create_for_testing(
