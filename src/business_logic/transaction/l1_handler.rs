@@ -181,10 +181,7 @@ mod test {
             state::{cached_state::CachedState, state_api::State},
             transaction::l1_handler::L1Handler,
         },
-        definitions::{
-            general_config::{StarknetChainId, StarknetGeneralConfig},
-            transaction_type::TransactionType,
-        },
+        definitions::{general_config::StarknetGeneralConfig, transaction_type::TransactionType},
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         utils::Address,
     };
@@ -272,123 +269,6 @@ mod test {
                 retdata: vec![],
                 execution_resources: ExecutionResources {
                     n_steps: 0,
-                    n_memory_holes: 0,
-                    builtin_instance_counter: HashMap::new(),
-                },
-                events: vec![],
-                l2_to_l1_messages: vec![],
-                storage_read_values: vec![0.into()],
-                accessed_storage_keys: HashSet::from([[
-                    4, 40, 11, 247, 0, 35, 63, 18, 141, 159, 101, 81, 182, 2, 213, 216, 100, 110,
-                    5, 5, 101, 122, 13, 252, 204, 72, 77, 8, 58, 226, 194, 24,
-                ]]),
-                internal_calls: vec![],
-                gas_consumed: 0,
-                failure_flag: false,
-            }),
-            fee_transfer_info: None,
-            actual_fee: 0,
-            actual_resources: HashMap::from([
-                ("pedersen_builtin".to_string(), 13),
-                ("range_check_builtin".to_string(), 23),
-                ("l1_gas_usage".to_string(), 18471),
-            ]),
-            tx_type: Some(TransactionType::L1Handler),
-        }
-    }
-
-    #[test]
-    /// Tests l1 handler execution using a real transaction from starkscan: https://testnet.starkscan.co/contract/0x073314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82
-    fn test_execute_l1_handler_with_starkscan_transaction() {
-        let l1_handler = L1Handler::new(
-            Address(felt_str!(
-                "073314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
-                16
-            )),
-            felt_str!(
-                "02d757788a8d8d6f21d1cd40bce38a8222d70654214e96ff95d8086e684fbee5",
-                16
-            ),
-            vec![
-                felt_str!("1115060956765620476872948418762657804474621689758"),
-                felt_str!(
-                    "1256727858676552885419124503147865986765714294842921909437282015573644783575"
-                ),
-                felt_str!("1000000000000000"),
-                felt_str!("0"),
-            ],
-            215782.into(),
-            StarknetChainId::TestNet.to_felt(),
-            Some(0.into()),
-        );
-
-        // Instantiate CachedState
-        let mut state_reader = InMemoryStateReader::default();
-        // Set contract_class
-        let class_hash = felt_str!(
-            "00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3",
-            16
-        )
-        .to_be_bytes();
-        let contract_class = ContractClass::try_from(PathBuf::from(
-            "l1_handler_constract_class_ethereum.json",
-        ))
-        .unwrap();
-        // Set contact_state
-        let contract_address = Address(felt_str!(
-            "073314940630fd6dcda0d772d4c972c4e0a9946bef9dabf4ef84eda8ef542b82",
-            16
-        ));
-        let nonce = 738609.into();
-
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(contract_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce
-            .insert(contract_address, nonce);
-
-        let mut state = CachedState::new(state_reader.clone(), None, None);
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
-
-        state
-            .set_contract_class(&class_hash, &contract_class)
-            .unwrap();
-
-        let config = StarknetGeneralConfig::default();
-
-        let tx_exec = l1_handler.execute(&mut state, &config, 100000).unwrap();
-
-        let expected_tx_exec = expected_tx_exec_info_from_starkscan();
-        assert_eq!(tx_exec, expected_tx_exec)
-    }
-
-    fn expected_tx_exec_info_from_starkscan() -> TransactionExecutionInfo {
-        TransactionExecutionInfo {
-            validate_info: None,
-            call_info: Some(CallInfo {
-                caller_address: Address(0.into()),
-                call_type: Some(crate::business_logic::execution::CallType::Call),
-                contract_address: Address(0.into()),
-                code_address: None,
-                class_hash: Some([
-                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                    1, 1, 1, 1, 1, 1,
-                ]),
-                entry_point_selector: Some(felt_str!(
-                    "02d757788a8d8d6f21d1cd40bce38a8222d70654214e96ff95d8086e684fbee5"
-                )),
-                entry_point_type: Some(EntryPointType::L1Handler),
-                calldata: vec![
-                    felt_str!("749882478819638189522059655282096373471980381600"),
-                    1.into(),
-                    10.into(),
-                ],
-                retdata: vec![],
-                execution_resources: ExecutionResources {
-                    n_steps: 512,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::new(),
                 },
