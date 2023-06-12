@@ -303,7 +303,7 @@ mod tests {
     use super::*;
     use crate::{
         add_segments,
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::in_memory_state_reader::InMemoryStateReader,
         state::cached_state::CachedState,
         utils::{get_integer, test_utils::vm},
     };

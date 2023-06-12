@@ -5,7 +5,7 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, Event, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     services::api::{
         contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
     },

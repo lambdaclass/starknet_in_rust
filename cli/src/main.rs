@@ -17,7 +17,6 @@ use starknet_rs::{
         general_config::TransactionContext,
     },
     execution::{execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext},
-    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::read_abi,
@@ -26,6 +25,7 @@ use starknet_rs::{
         cached_state::CachedState,
         state_api::{State, StateReader},
     },
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::InvokeFunction,
     utils::{felt_to_hash, string_to_hash, Address},
 };

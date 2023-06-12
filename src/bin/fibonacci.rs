@@ -5,9 +5,9 @@ use num_traits::Zero;
 
 use lazy_static::lazy_static;
 use starknet_rs::{
-    fact_state::in_memory_state_reader::InMemoryStateReader,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState, testing::state::StarknetState, utils::Address,
+    state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+    testing::state::StarknetState, utils::Address,
 };
 
 #[cfg(feature = "with_mimalloc")]

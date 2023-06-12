@@ -1,6 +1,6 @@
 use crate::{
     definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::TransactionContext},
-    fact_state::state::ExecutionResourcesManager,
+    state::ExecutionResourcesManager,
     runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,

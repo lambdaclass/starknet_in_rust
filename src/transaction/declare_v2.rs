@@ -8,7 +8,7 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
         TransactionExecutionContext, TransactionExecutionInfo,
     },
-    fact_state::state::ExecutionResourcesManager,
+    state::ExecutionResourcesManager,
     state::state_api::{State, StateReader},
     transaction::{
         error::TransactionError,
@@ -282,7 +282,7 @@ mod tests {
     use crate::state::state_api::StateReader;
     use crate::{
         definitions::general_config::StarknetChainId,
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;

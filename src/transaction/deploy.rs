@@ -11,7 +11,7 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    fact_state::state::ExecutionResourcesManager,
+    state::ExecutionResourcesManager,
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::state_api::{State, StateReader},
@@ -219,7 +219,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
         utils::calculate_sn_keccak,
     };
 

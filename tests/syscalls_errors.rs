@@ -8,7 +8,7 @@ use starknet_rs::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
         cached_state::{CachedState, ContractClassCache},

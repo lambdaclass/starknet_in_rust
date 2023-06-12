@@ -12,7 +12,7 @@ use starknet_rs::transaction::error::TransactionError;
 use starknet_rs::{
     definitions::general_config::TransactionContext,
     execution::{CallInfo, CallType, OrderedEvent},
-    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     state::state_api::StateReader,
     utils::{calculate_sn_keccak, Address},
 };

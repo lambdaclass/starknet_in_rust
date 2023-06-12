@@ -4,7 +4,7 @@ use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
     },
-    fact_state::state::ExecutionResourcesManager,
+    state::ExecutionResourcesManager,
     state::state_api::{State, StateReader},
 };
 use cairo_vm::felt::Felt252;

@@ -32,7 +32,7 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType, OrderedEvent,
         OrderedL2ToL1Message, TransactionExecutionContext,
     },
-    fact_state::state::ExecutionResourcesManager,
+    state::ExecutionResourcesManager,
     hash_utils::calculate_contract_address,
     services::api::contract_class_errors::ContractClassError,
     state::{

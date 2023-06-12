@@ -9,7 +9,6 @@ extern crate assert_matches;
 pub mod core;
 pub mod definitions;
 pub mod execution;
-pub mod fact_state;
 pub mod hash_utils;
 pub mod parser_errors;
 pub mod runner;

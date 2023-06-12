@@ -7,7 +7,7 @@ use starknet_rs::services::api::contract_classes::deprecated_contract_class::Con
 use starknet_rs::{
     definitions::general_config::TransactionContext,
     execution::{CallInfo, CallType},
-    fact_state::{in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     state::{cached_state::CachedState, state_api::StateReader},
     utils::{calculate_sn_keccak, Address},
 };

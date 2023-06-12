@@ -3,7 +3,7 @@ use crate::{
     execution::{
         gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
     },
-    fact_state::state::ExecutionResourcesManager,
+    state::ExecutionResourcesManager,
     state::{
         cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader, state_cache::StorageEntry,
     },
@@ -504,7 +504,7 @@ pub mod test_utils {
             let mut hint_processor = $crate::core::syscalls::syscall_handler::SyscallHintProcessor::<
                 $crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler::<
                     $crate::state::cached_state::CachedState<
-                        $crate::fact_state::in_memory_state_reader::InMemoryStateReader,
+                        $crate::state::in_memory_state_reader::InMemoryStateReader,
                     >,
                 >,
             >::new(DeprecatedBLSyscallHandler::default_with(&mut state));

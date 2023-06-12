@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    fact_state::state::StateDiff,
+    state::StateDiff,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
@@ -335,7 +335,7 @@ impl<T: StateReader> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fact_state::in_memory_state_reader::InMemoryStateReader;
+    use crate::state::in_memory_state_reader::InMemoryStateReader;
     use cairo_vm::types::program::Program;
     use num_traits::One;
     use starknet_contract_class::{ContractEntryPoint, EntryPointType};

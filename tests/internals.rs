@@ -28,7 +28,7 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-    fact_state::in_memory_state_reader::InMemoryStateReader,
+    state::in_memory_state_reader::InMemoryStateReader,
     state::{
         cached_state::{CachedState, ContractClassCache},
         state_api::{State, StateReader},

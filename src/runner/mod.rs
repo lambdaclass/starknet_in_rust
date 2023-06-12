@@ -393,7 +393,7 @@ where
 mod test {
     use super::StarknetRunner;
     use crate::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::in_memory_state_reader::InMemoryStateReader,
         state::cached_state::CachedState,
         syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,

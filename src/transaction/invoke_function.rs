@@ -11,7 +11,7 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    fact_state::state::ExecutionResourcesManager,
+    state::ExecutionResourcesManager,
     state::state_api::{State, StateReader},
     transaction::{
         error::TransactionError,
@@ -345,7 +345,7 @@ pub(crate) fn preprocess_invoke_function_fields(
 mod tests {
     use super::*;
     use crate::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::in_memory_state_reader::InMemoryStateReader,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::cached_state::CachedState,
     };
