@@ -23,7 +23,7 @@ use crate::{
     },
     core::errors::state_errors::StateError,
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
     },
     hash_utils::calculate_contract_address,
     services::api::{
@@ -55,7 +55,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub(crate) general_config: StarknetGeneralConfig,
+    pub(crate) general_config: TransactionContext,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) internal_calls: Vec<CallInfo>,
@@ -69,7 +69,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        general_config: StarknetGeneralConfig,
+        general_config: TransactionContext,
         syscall_ptr: Relocatable,
     ) -> Self {
         let events = Vec::new();
@@ -129,7 +129,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
-        let mut general_config = StarknetGeneralConfig::default();
+        let mut general_config = TransactionContext::default();
         general_config.block_info = block_info;
         let tx_info_ptr = None;
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
