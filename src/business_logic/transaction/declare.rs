@@ -4,8 +4,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
             TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -304,8 +304,8 @@ mod tests {
 
     use crate::{
         business_logic::{
-            execution::CallType, fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            execution::CallType, state::cached_state::CachedState,
+            state::in_memory_state_reader::InMemoryStateReader,
         },
         definitions::{
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
