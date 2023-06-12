@@ -642,14 +642,24 @@ where
 
     fn storage_read(
         &mut self,
-        _vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         request: StorageReadRequest,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         if request.reserved != Felt252::zero() {
-            return Err(SyscallHandlerError::UnsupportedAddressDomain(
-                request.reserved.to_string(),
-            ));
+            let retdata_start = self.allocate_segment(
+                vm,
+                vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],
+            )?;
+            let retdata_end = retdata_start.add(1)?;
+
+            return Ok(SyscallResponse {
+                gas: remaining_gas,
+                body: Some(ResponseBody::Failure(FailureReason {
+                    retdata_start,
+                    retdata_end,
+                })),
+            });
         }
 
         let value = self._storage_read(request.key);
