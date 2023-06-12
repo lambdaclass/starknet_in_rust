@@ -188,7 +188,7 @@ mod tests {
         add_segments, allocate_selector, any_box,
         business_logic::{
             execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
-            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::in_memory_state_reader::InMemoryStateReader,
             state::{
                 cached_state::CachedState,
                 state_api::{State, StateReader},
@@ -196,7 +196,7 @@ mod tests {
             transaction::InvokeFunction,
         },
         definitions::{
-            constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig,
+            constants::TRANSACTION_VERSION, general_config::TransactionContext,
             transaction_type::TransactionType,
         },
         memory_insert,
@@ -1111,7 +1111,7 @@ mod tests {
 
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &TransactionContext::default())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

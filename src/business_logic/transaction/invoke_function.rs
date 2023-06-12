@@ -6,8 +6,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
             TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -16,7 +16,7 @@ use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
-        general_config::StarknetGeneralConfig,
+        general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -116,7 +116,7 @@ impl InvokeFunction {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
         T: State + StateReader,
@@ -158,7 +158,7 @@ impl InvokeFunction {
     fn run_execute_entrypoint<T>(
         &self,
         state: &mut T,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -189,7 +189,7 @@ impl InvokeFunction {
     pub fn apply<S>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -224,7 +224,7 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<FeeInfo, TransactionError>
     where
         S: State + StateReader,
@@ -251,7 +251,7 @@ impl InvokeFunction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
         self.handle_nonce(state)?;
@@ -348,8 +348,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         services::api::contract_classes::deprecated_contract_class::ContractClass,
     };
@@ -403,7 +402,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &TransactionContext::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -469,7 +468,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &TransactionContext::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -531,7 +530,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.apply(&mut state, &TransactionContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -587,7 +586,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &TransactionContext::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -649,7 +648,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.apply(&mut state, &TransactionContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -702,7 +701,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = StarknetGeneralConfig::default();
+        let mut config = TransactionContext::default();
         config.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
@@ -761,7 +760,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = StarknetGeneralConfig::default();
+        let mut config = TransactionContext::default();
         config.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
@@ -822,11 +821,11 @@ mod tests {
             .unwrap();
 
         internal_invoke_function
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &TransactionContext::default())
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.execute(&mut state, &TransactionContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -882,7 +881,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.execute(&mut state, &TransactionContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)

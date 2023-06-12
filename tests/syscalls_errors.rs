@@ -7,16 +7,14 @@ use starknet_rs::{
         execution::{
             execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::State,
         },
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
     core::errors::state_errors::StateError,
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
@@ -31,7 +29,7 @@ fn test_contract<'a>(
     class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
-    general_config: StarknetGeneralConfig,
+    general_config: TransactionContext,
     tx_context: Option<TransactionExecutionContext>,
     extra_contracts: impl Iterator<
         Item = (
@@ -139,7 +137,7 @@ fn call_contract_with_extra_arguments() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [(
             [2u8; 32],
@@ -161,7 +159,7 @@ fn call_contract_not_deployed() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [(
             [2u8; 32],
@@ -182,7 +180,7 @@ fn library_call_not_declared_contract() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [].into_iter(),
         [],
@@ -199,7 +197,7 @@ fn deploy_not_declared_class_hash() {
         [1; 32],
         Address(11111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        TransactionContext::default(),
         None,
         [].into_iter(),
         [

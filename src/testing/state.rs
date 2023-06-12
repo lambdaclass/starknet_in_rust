@@ -5,19 +5,17 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, Event,
             TransactionExecutionContext, TransactionExecutionInfo,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::{
             error::TransactionError, invoke_function::InvokeFunction, transactions::Transaction,
             Declare, Deploy,
         },
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::{
         contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
     },
@@ -32,14 +30,14 @@ use std::collections::HashMap;
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
-    pub(crate) general_config: StarknetGeneralConfig,
+    pub(crate) general_config: TransactionContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
 impl StarknetState {
-    pub fn new(config: Option<StarknetGeneralConfig>) -> Self {
+    pub fn new(config: Option<TransactionContext>) -> Self {
         let general_config = config.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
@@ -59,7 +57,7 @@ impl StarknetState {
     }
 
     pub fn new_with_states(
-        config: Option<StarknetGeneralConfig>,
+        config: Option<TransactionContext>,
         state: CachedState<InMemoryStateReader>,
     ) -> Self {
         let general_config = config.unwrap_or_default();

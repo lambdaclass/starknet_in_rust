@@ -5,8 +5,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
             TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -18,7 +18,7 @@ use crate::{
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
-        general_config::StarknetGeneralConfig,
+        general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
@@ -104,7 +104,7 @@ impl DeployAccount {
         })
     }
 
-    pub fn get_state_selector(&self, _general_config: StarknetGeneralConfig) -> StateSelector {
+    pub fn get_state_selector(&self, _general_config: TransactionContext) -> StateSelector {
         StateSelector {
             contract_addresses: vec![self.contract_address.clone()],
             class_hashes: vec![self.class_hash],
@@ -114,7 +114,7 @@ impl DeployAccount {
     pub fn execute<S>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -139,7 +139,7 @@ impl DeployAccount {
     fn apply<S>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -185,7 +185,7 @@ impl DeployAccount {
         &self,
         contract_class: ContractClass,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -234,7 +234,7 @@ impl DeployAccount {
     pub fn run_constructor_entrypoint<S>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -280,7 +280,7 @@ impl DeployAccount {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
         S: State + StateReader,
@@ -324,7 +324,7 @@ impl DeployAccount {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<FeeInfo, TransactionError>
     where
         S: State + StateReader,
@@ -354,8 +354,7 @@ mod tests {
     use super::*;
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::general_config::StarknetChainId,
@@ -370,7 +369,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let general_config = StarknetGeneralConfig::default();
+        let general_config = TransactionContext::default();
         let mut _state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),
@@ -407,7 +406,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let general_config = StarknetGeneralConfig::default();
+        let general_config = TransactionContext::default();
         let mut state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),
@@ -463,7 +462,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let general_config = StarknetGeneralConfig::default();
+        let general_config = TransactionContext::default();
         let mut state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),

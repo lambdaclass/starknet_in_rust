@@ -4,8 +4,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
             TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -16,7 +16,7 @@ use crate::{
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
@@ -124,7 +124,7 @@ impl Declare {
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
@@ -172,7 +172,7 @@ impl Declare {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version.is_zero() {
             return Ok(None);
@@ -210,7 +210,7 @@ impl Declare {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -253,7 +253,7 @@ impl Declare {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, general_config)?;
         self.handle_nonce(state)?;
@@ -299,12 +299,12 @@ mod tests {
 
     use crate::{
         business_logic::{
-            execution::CallType, fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            execution::CallType, state::cached_state::CachedState,
+            state::in_memory_state_reader::InMemoryStateReader,
         },
         definitions::{
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            general_config::{StarknetChainId, StarknetGeneralConfig},
+            general_config::{StarknetChainId, TransactionContext},
             transaction_type::TransactionType,
         },
         services::api::contract_classes::deprecated_contract_class::ContractClass,
@@ -412,7 +412,7 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply(&mut state, &StarknetGeneralConfig::default())
+                .apply(&mut state, &TransactionContext::default())
                 .unwrap(),
             transaction_exec_info
         );
@@ -675,11 +675,11 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &TransactionContext::default())
             .unwrap();
 
         let expected_error =
-            internal_declare_error.execute(&mut state, &StarknetGeneralConfig::default());
+            internal_declare_error.execute(&mut state, &TransactionContext::default());
 
         // ---------------------
         //      Comparison
@@ -745,11 +745,10 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &TransactionContext::default())
             .unwrap();
 
-        let expected_error =
-            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
+        let expected_error = internal_declare.execute(&mut state, &TransactionContext::default());
 
         // ---------------------
         //      Comparison
@@ -790,7 +789,7 @@ mod tests {
         .unwrap();
 
         let internal_declare_error =
-            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
+            internal_declare.execute(&mut state, &TransactionContext::default());
 
         assert!(internal_declare_error.is_err());
         assert_matches!(
@@ -854,7 +853,7 @@ mod tests {
 
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
-            internal_declare.execute(&mut state, &StarknetGeneralConfig::default()),
+            internal_declare.execute(&mut state, &TransactionContext::default()),
             Err(TransactionError::FeeError(e)) if e == "Fee transfer failure"
         );
     }

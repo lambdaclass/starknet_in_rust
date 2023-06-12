@@ -20,7 +20,7 @@ use starknet_rs::services::api::contract_classes::deprecated_contract_class::Con
 use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::{CachedState, ContractClassCache},
             state_api::{State, StateReader},
@@ -40,7 +40,7 @@ use starknet_rs::{
             TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
             VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
-        general_config::{StarknetChainId, StarknetGeneralConfig, StarknetOsConfig},
+        general_config::{StarknetChainId, StarknetOsConfig, TransactionContext},
         transaction_type::TransactionType,
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
@@ -97,8 +97,8 @@ where
     Ok(ContractClass::try_from(path.into())?)
 }
 
-pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
-    StarknetGeneralConfig::new(
+pub fn new_starknet_general_config_for_testing() -> TransactionContext {
+    TransactionContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet,
             TEST_ERC20_CONTRACT_ADDRESS.clone(),
@@ -115,7 +115,7 @@ pub fn new_starknet_general_config_for_testing() -> StarknetGeneralConfig {
 }
 
 fn create_account_tx_test_state(
-) -> Result<(StarknetGeneralConfig, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+) -> Result<(TransactionContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let general_config = new_starknet_general_config_for_testing();
 
     let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
@@ -404,7 +404,7 @@ fn expected_validate_call_info(
 }
 
 fn expected_fee_transfer_call_info(
-    general_config: &StarknetGeneralConfig,
+    general_config: &TransactionContext,
     account_address: &Address,
     actual_fee: u64,
 ) -> CallInfo {
@@ -467,7 +467,7 @@ fn expected_fee_transfer_call_info(
 
 fn validate_final_balances<S>(
     state: &mut S,
-    general_config: &StarknetGeneralConfig,
+    general_config: &TransactionContext,
     expected_sequencer_balance: Felt252,
     erc20_account_balance_storage_key: &ClassHash,
 ) where
