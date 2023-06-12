@@ -6,7 +6,10 @@
 #[macro_use]
 extern crate assert_matches;
 
-pub mod business_logic;
+pub mod execution;
+pub mod fact_state;
+pub mod state;
+pub mod transaction;
 pub mod core;
 pub mod definitions;
 pub mod hash_utils;
