@@ -292,7 +292,10 @@ impl Declare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::felt::{felt_str, Felt252};
+    use cairo_vm::{
+        felt::{felt_str, Felt252},
+        vm::runners::cairo_runner::ExecutionResources,
+    };
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 
@@ -389,6 +392,10 @@ mod tests {
             entry_point_type: Some(EntryPointType::External),
             calldata,
             class_hash: Some(expected_class_hash),
+            execution_resources: ExecutionResources {
+                n_steps: 12,
+                ..Default::default()
+            },
             ..Default::default()
         });
 

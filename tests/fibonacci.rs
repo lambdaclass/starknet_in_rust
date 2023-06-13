@@ -1,8 +1,8 @@
 #![deny(warnings)]
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
@@ -107,8 +107,11 @@ fn integration_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
+        execution_resources: ExecutionResources {
+            n_steps: 94,
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -191,7 +194,11 @@ fn integration_test_cairo1() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 421,
+            n_memory_holes: 1,
+            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
+        },
         class_hash: Some(class_hash),
         gas_consumed: 35550,
         ..Default::default()

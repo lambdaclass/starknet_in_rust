@@ -79,7 +79,14 @@ fn amm_proxy_init_pool_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 232,
+            n_memory_holes: 20,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen_builtin".to_string(), 2),
+                ("range_check_builtin".to_string(), 14),
+            ]),
+        },
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -94,12 +101,12 @@ fn amm_proxy_init_pool_test() {
         calldata: calldata.clone(),
         retdata: [].to_vec(),
         execution_resources: ExecutionResources {
+            n_steps: 280,
             n_memory_holes: 20,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 14),
             ]),
-            ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
         internal_calls,
@@ -180,7 +187,14 @@ fn amm_proxy_get_pool_token_balance_test() {
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [555.into()].to_vec(),
         storage_read_values: [555.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 84,
+            n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen_builtin".to_string(), 1),
+                ("range_check_builtin".to_string(), 3),
+            ]),
+        },
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -195,12 +209,12 @@ fn amm_proxy_get_pool_token_balance_test() {
         calldata: calldata.clone(),
         retdata: [555.into()].to_vec(),
         execution_resources: ExecutionResources {
+            n_steps: 140,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 1),
                 ("range_check_builtin".to_string(), 3),
             ]),
-            ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
         internal_calls,
@@ -288,7 +302,14 @@ fn amm_proxy_add_demo_token_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
         storage_read_values: vec![0.into(), 0.into()],
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 397,
+            n_memory_holes: 42,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen_builtin".to_string(), 8),
+                ("range_check_builtin".to_string(), 20),
+            ]),
+        },
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -302,12 +323,12 @@ fn amm_proxy_add_demo_token_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         execution_resources: ExecutionResources {
+            n_steps: 445,
             n_memory_holes: 42,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 8),
                 ("range_check_builtin".to_string(), 20),
             ]),
-            ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
         internal_calls,
@@ -407,7 +428,14 @@ fn amm_proxy_get_account_token_balance() {
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [200.into()].to_vec(),
         storage_read_values: [200.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 94,
+            n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen_builtin".to_string(), 2),
+                ("range_check_builtin".to_string(), 3),
+            ]),
+        },
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -422,12 +450,12 @@ fn amm_proxy_get_account_token_balance() {
         calldata: calldata.clone(),
         retdata: [200.into()].to_vec(),
         execution_resources: ExecutionResources {
+            n_steps: 153,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 3),
             ]),
-            ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
         internal_calls,
@@ -534,7 +562,14 @@ fn amm_proxy_swap() {
         retdata: [90.into()].to_vec(),
         storage_read_values: [100.into(), 1000.into(), 1000.into(), 100.into(), 200.into()]
             .to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 824,
+            n_memory_holes: 93,
+            builtin_instance_counter: HashMap::from([
+                ("pedersen_builtin".to_string(), 14),
+                ("range_check_builtin".to_string(), 41),
+            ]),
+        },
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -549,12 +584,12 @@ fn amm_proxy_swap() {
         calldata: calldata.clone(),
         retdata: expected_result,
         execution_resources: ExecutionResources {
+            n_steps: 883,
             n_memory_holes: 93,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 14),
                 ("range_check_builtin".to_string(), 41),
             ]),
-            ..Default::default()
         },
         class_hash: Some(proxy_class_hash),
         internal_calls,
