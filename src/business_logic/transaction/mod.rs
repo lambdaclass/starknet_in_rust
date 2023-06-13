@@ -42,8 +42,7 @@ impl Transaction {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Declare(tx) => tx.execute(state, general_config),
-            // TODO: Remove remaining gas and set it internally to a proper value
-            Transaction::DeclareV2(tx) => tx.execute(state, general_config, 0),
+            Transaction::DeclareV2(tx) => tx.execute(state, general_config),
             Transaction::Deploy(tx) => tx.execute(state, general_config),
             Transaction::DeployAccount(tx) => tx.execute(state, general_config),
             Transaction::InvokeFunction(tx) => tx.execute(state, general_config),
