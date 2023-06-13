@@ -529,8 +529,9 @@ dependencies = [
 
 [[package]]
 name = "bincode"
-version = "2.0.0-rc.2"
-source = "git+https://github.com/bincode-org/bincode.git?tag=v2.0.0-rc.2#6c219e9214bda2bdce1327db6ed7f66d2fa4bf02"
+version = "2.0.0-rc.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f11ea1a0346b94ef188834a65c068a03aec181c94896d481d7a0a40d85b0ce95"
 dependencies = [
  "serde",
 ]
@@ -668,7 +669,8 @@ dependencies = [
 [[package]]
 name = "cairo-felt"
 version = "0.5.2"
-source = "git+https://github.com/lambdaclass/cairo-rs.git?rev=91a83714db457519c9c5610a18d874617479dede#91a83714db457519c9c5610a18d874617479dede"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "451a9144bbe8bf0b351672fa0bf34e6dcc8733e2ff3a3201c8f7480fe7eb68a6"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1456,7 +1458,8 @@ dependencies = [
 [[package]]
 name = "cairo-take_until_unbalanced"
 version = "0.28.0"
-source = "git+https://github.com/lambdaclass/cairo-rs.git?rev=91a83714db457519c9c5610a18d874617479dede#91a83714db457519c9c5610a18d874617479dede"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ec66f846411e5fdecd2527d429135fd39ca98ef46b0df3f1558cc272b596a30"
 dependencies = [
  "nom",
 ]
@@ -1464,7 +1467,8 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.5.2"
-source = "git+https://github.com/lambdaclass/cairo-rs.git?rev=91a83714db457519c9c5610a18d874617479dede#91a83714db457519c9c5610a18d874617479dede"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0c73ed69023e595a18799552803550fe0a3af83713f1fc97f9edaaa677f59a8"
 dependencies = [
  "anyhow",
  "ark-ff 0.4.2",
