@@ -1,5 +1,6 @@
 use cairo_vm::felt::Felt252;
 use getset::Getters;
+use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
 use crate::{
@@ -8,8 +9,10 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
             TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
+        state::{
+            state_api::{State, StateReader},
+            ExecutionResourcesManager,
+        },
         transaction::{error::TransactionError, fee::calculate_tx_fee},
     },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
@@ -177,8 +180,10 @@ mod test {
     use crate::{
         business_logic::{
             execution::{CallInfo, TransactionExecutionInfo},
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::{cached_state::CachedState, state_api::State},
+            state::{
+                cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+                state_api::State,
+            },
             transaction::l1_handler::L1Handler,
         },
         definitions::{general_config::TransactionContext, transaction_type::TransactionType},
