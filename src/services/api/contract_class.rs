@@ -10,6 +10,8 @@ use cairo_vm::{
     },
     utils::is_subsequence,
 };
+
+pub use starknet_contract_class::to_cairo_runner_program;
 use cairo_vm::felt::{Felt252, PRIME_STR};
 use getset::{CopyGetters, Getters};
 use starknet_api::deprecated_contract_class::EntryPoint;
@@ -181,56 +183,6 @@ fn convert_entry_points(
     }
 
     converted_entries
-}
-
-fn to_cairo_runner_program(
-    program: &starknet_api::deprecated_contract_class::Program,
-) -> Result<Program, ProgramError> {
-    let program = program.clone();
-    let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
-
-    let start = match identifiers.get("__main__.__start__") {
-        Some(identifier) => identifier.pc,
-        None => None,
-    };
-    let end = match identifiers.get("__main__.__end__") {
-        Some(identifier) => identifier.pc,
-        None => None,
-    };
-    if program.prime != *PRIME_STR {
-        return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
-    };
-
-    Ok(Program {
-        builtins: serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
-        prime: PRIME_STR.to_string(),
-        data: deserialize_array_of_bigint_hex(program.data)?,
-        constants: {
-            let mut constants = HashMap::new();
-            for (key, value) in identifiers.iter() {
-                if value.type_.as_deref() == Some("const") {
-                    let value = value
-                        .value
-                        .clone()
-                        .ok_or_else(|| ProgramError::ConstWithoutValue(key.to_owned()))?;
-                    constants.insert(key.to_owned(), value);
-                }
-            }
-
-            constants
-        },
-        main: None,
-        start,
-        end,
-        hints: serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
-        reference_manager: serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
-        identifiers,
-        error_message_attributes: serde_json::from_value::<Vec<Attribute>>(program.attributes).unwrap_or(Vec::new())
-            .into_iter()
-            .filter(|attr| attr.name == "error_message")
-            .collect(),
-        instruction_locations: None,
-    })
 }
 
 #[cfg(test)]
