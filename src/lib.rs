@@ -103,7 +103,7 @@ mod test {
     };
 
     #[test]
-    fn call_contract_fibonacci_with_10_should_return_6() {
+    fn call_contract_fibonacci_with_10_should_return_89() {
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
