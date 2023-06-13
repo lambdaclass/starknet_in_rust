@@ -6,7 +6,7 @@ use crate::{
 };
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Eq, Error)]
+#[derive(Debug, Error)]
 pub enum StateError {
     #[error("Missing ContractClassCache")]
     MissingContractClassCache,
@@ -53,5 +53,5 @@ pub enum StateError {
     #[error("Uninitializes class_hash")]
     UninitiaizedClassHash,
     #[error(transparent)]
-    Io(#[from] std::io::Error)
+    Io(#[from] std::io::Error),
 }
