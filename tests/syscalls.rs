@@ -1,7 +1,10 @@
 #![deny(warnings)]
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::{
+    felt::{felt_str, Felt252},
+    vm::runners::cairo_runner::ExecutionResources,
+};
 use num_traits::{Num, One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
@@ -52,6 +55,7 @@ fn test_contract<'a>(
     arguments: impl Into<Vec<Felt252>>,
     internal_calls: impl Into<Vec<CallInfo>>,
     return_data: impl Into<Vec<Felt252>>,
+    execution_resources: ExecutionResources,
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
@@ -154,6 +158,7 @@ fn test_contract<'a>(
             calldata,
             retdata: return_data.into(),
             internal_calls: internal_calls.into(),
+            execution_resources,
             ..Default::default()
         },
     );
@@ -192,6 +197,10 @@ fn call_contract_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 24,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -210,6 +219,10 @@ fn call_contract_syscall() {
                 ]]
                 .into_iter()
                 .collect(),
+                execution_resources: ExecutionResources {
+                    n_steps: 63,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -223,10 +236,18 @@ fn call_contract_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![2222.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 26,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         ],
         [],
+        ExecutionResources {
+            n_steps: 279,
+            ..Default::default()
+        },
     );
 }
 
@@ -277,6 +298,10 @@ fn emit_event_syscall() {
         [],
         [],
         [],
+        ExecutionResources {
+            n_steps: 144,
+            ..Default::default()
+        },
     );
 }
 
@@ -302,6 +327,10 @@ fn get_block_number_syscall() {
             [],
             [],
             [block_number.into()],
+            ExecutionResources {
+                n_steps: 26,
+                ..Default::default()
+            },
         );
     };
 
@@ -332,6 +361,10 @@ fn get_block_timestamp_syscall() {
             [],
             [],
             [block_timestamp.into()],
+            ExecutionResources {
+                n_steps: 26,
+                ..Default::default()
+            },
         );
     };
 
@@ -359,6 +392,10 @@ fn get_caller_address_syscall() {
             [],
             [],
             [caller_address],
+            ExecutionResources {
+                n_steps: 26,
+                ..Default::default()
+            },
         );
     };
 
@@ -386,6 +423,10 @@ fn get_contract_address_syscall() {
             [],
             [],
             [contract_address],
+            ExecutionResources {
+                n_steps: 26,
+                ..Default::default()
+            },
         );
     };
 
@@ -416,6 +457,10 @@ fn get_sequencer_address_syscall() {
             [],
             [],
             [sequencer_address],
+            ExecutionResources {
+                n_steps: 26,
+                ..Default::default()
+            },
         );
     };
 
@@ -431,7 +476,8 @@ fn get_tx_info_syscall() {
                max_fee,
                signature: Vec<Felt252>,
                transaction_hash: Felt252,
-               chain_id| {
+               chain_id,
+               execution_resources: ExecutionResources| {
         let mut general_config = TransactionContext::default();
         *general_config.starknet_os_config_mut().chain_id_mut() = chain_id;
 
@@ -471,6 +517,7 @@ fn get_tx_info_syscall() {
                 transaction_hash,
                 chain_id.to_felt(),
             ],
+            execution_resources,
         );
     };
 
@@ -481,6 +528,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -489,6 +540,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -497,6 +552,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -505,6 +564,10 @@ fn get_tx_info_syscall() {
         vec![],
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 49,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -513,6 +576,10 @@ fn get_tx_info_syscall() {
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         0.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 77,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -521,6 +588,10 @@ fn get_tx_info_syscall() {
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
         StarknetChainId::TestNet,
+        ExecutionResources {
+            n_steps: 77,
+            ..Default::default()
+        },
     );
     run(
         10,
@@ -529,6 +600,10 @@ fn get_tx_info_syscall() {
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
         StarknetChainId::TestNet2,
+        ExecutionResources {
+            n_steps: 77,
+            ..Default::default()
+        },
     );
 }
 
@@ -537,6 +612,7 @@ fn get_tx_signature_syscall() {
     let run = |signature: Vec<Felt252>| {
         let general_config = TransactionContext::default();
         let n_steps = general_config.invoke_tx_max_n_steps();
+        let resources_n_steps = if signature.is_empty() { 41 } else { 69 };
 
         test_contract(
             "starknet_programs/syscalls.json",
@@ -568,6 +644,10 @@ fn get_tx_signature_syscall() {
                     .reduce(|a, b| a + b)
                     .unwrap_or_default(),
             ],
+            ExecutionResources {
+                n_steps: resources_n_steps,
+                ..Default::default()
+            },
         );
     };
 
@@ -609,6 +689,11 @@ fn library_call_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 24,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -627,6 +712,11 @@ fn library_call_syscall() {
                 ]]
                 .into_iter()
                 .collect(),
+                execution_resources: ExecutionResources {
+                    n_steps: 63,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             },
             CallInfo {
@@ -640,10 +730,19 @@ fn library_call_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![1111.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 26,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             },
         ],
         [],
+        ExecutionResources {
+            n_steps: 284,
+            ..Default::default()
+        },
     );
 }
 
@@ -684,9 +783,17 @@ fn library_call_l1_handler_syscall() {
             ]]
             .into_iter()
             .collect(),
+            execution_resources: ExecutionResources {
+                n_steps: 40,
+                ..Default::default()
+            },
             ..Default::default()
         }],
         [],
+        ExecutionResources {
+            n_steps: 103,
+            ..Default::default()
+        },
     );
 }
 
@@ -724,6 +831,10 @@ fn send_message_to_l1_syscall() {
         [],
         [],
         [],
+        ExecutionResources {
+            n_steps: 68,
+            ..Default::default()
+        },
     );
 }
 
@@ -762,6 +873,11 @@ fn deploy_syscall() {
             ..Default::default()
         }],
         [deploy_address],
+        ExecutionResources {
+            n_steps: 39,
+            n_memory_holes: 2,
+            ..Default::default()
+        },
     );
 }
 
@@ -799,6 +915,11 @@ fn deploy_with_constructor_syscall() {
         ],
         [],
         [deploy_address],
+        ExecutionResources {
+            n_steps: 84,
+            n_memory_holes: 2,
+            ..Default::default()
+        },
     );
 }
 
@@ -862,6 +983,10 @@ fn test_deploy_and_call_contract_syscall() {
             retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
             storage_read_values: vec![constructor_constant],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
+            execution_resources: ExecutionResources {
+                n_steps: 52,
+                ..Default::default()
+            },
             ..Default::default()
         },
         // Invoke storage_var_and_constructor.cairo set_constant function
@@ -883,6 +1008,10 @@ fn test_deploy_and_call_contract_syscall() {
             retdata: vec![],
             storage_read_values: vec![],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
+            execution_resources: ExecutionResources {
+                n_steps: 40,
+                ..Default::default()
+            },
             ..Default::default()
         },
         // Invoke storage_var_and_constructor.cairo get_constant function
@@ -904,9 +1033,17 @@ fn test_deploy_and_call_contract_syscall() {
             retdata: vec![new_constant.clone()],
             storage_read_values: vec![new_constant.clone()],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
+            execution_resources: ExecutionResources {
+                n_steps: 46,
+                ..Default::default()
+            },
             ..Default::default()
         }        ],
         [new_constant],
+        ExecutionResources {
+            n_steps: 325,
+            n_memory_holes: 2,
+            builtin_instance_counter: HashMap::default()},
     );
 }
 

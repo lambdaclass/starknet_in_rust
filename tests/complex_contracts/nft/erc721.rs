@@ -1,7 +1,8 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use assert_matches::assert_matches;
 use cairo_vm::felt::Felt252;
+use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME};
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
@@ -137,7 +138,14 @@ fn erc721_balance_of_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result.clone(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 105,
+            n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
+                (HASH_BUILTIN_NAME.to_string(), 1),
+            ]),
+        },
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: expected_read_result,
@@ -213,7 +221,14 @@ fn erc721_test_owner_of() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result.clone(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 116,
+            n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 5),
+                (HASH_BUILTIN_NAME.to_string(), 2),
+            ]),
+        },
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: expected_read_result,
@@ -306,7 +321,14 @@ fn erc721_test_get_approved() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 192,
+            n_memory_holes: 20,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 8),
+                (HASH_BUILTIN_NAME.to_string(), 4),
+            ]),
+        },
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -402,7 +424,14 @@ fn erc721_test_is_approved_for_all() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 101,
+            n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
+                (HASH_BUILTIN_NAME.to_string(), 2),
+            ]),
+        },
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -499,7 +528,14 @@ fn erc721_test_approve() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 332,
+            n_memory_holes: 30,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 13),
+                (HASH_BUILTIN_NAME.to_string(), 6),
+            ]),
+        },
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -591,7 +627,14 @@ fn erc721_set_approval_for_all() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 154,
+            n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
+                (HASH_BUILTIN_NAME.to_string(), 2),
+            ]),
+        },
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -729,6 +772,14 @@ fn erc721_transfer_from_test() {
         accessed_storage_keys,
         storage_read_values: expected_read_values,
         events: expected_events,
+        execution_resources: ExecutionResources {
+            n_steps: 1131,
+            n_memory_holes: 117,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 53),
+                (HASH_BUILTIN_NAME.to_string(), 16),
+            ]),
+        },
         ..Default::default()
     };
 
@@ -810,10 +861,17 @@ fn erc721_transfer_from_and_get_owner_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result.clone(),
-        execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: expected_read_result,
+        execution_resources: ExecutionResources {
+            n_steps: 116,
+            n_memory_holes: 10,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 5),
+                (HASH_BUILTIN_NAME.to_string(), 2),
+            ]),
+        },
         ..Default::default()
     };
 
