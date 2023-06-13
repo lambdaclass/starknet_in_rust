@@ -118,7 +118,7 @@ impl L1Handler {
                 // The error message still indicates the required fee.
                 // if we are here, means that self.paid_fee_on_l1 is Some(...)
                 let paid_fee = self.paid_fee_on_l1.clone().unwrap();
-                if paid_fee <= 0.into() {
+                if paid_fee.is_zero() {
                     return Err(TransactionError::FeeError(format!(
                         "Insufficient fee was paid. Expected: {required_fee};\n got: {paid_fee}."
                     )));
