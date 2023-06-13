@@ -11,8 +11,7 @@ use crate::{
         },
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::{
-            error::TransactionError, invoke_function::InvokeFunction, transactions::Transaction,
-            Declare, Deploy,
+            error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
@@ -177,20 +176,23 @@ impl StarknetState {
         hash_value: Option<Felt252>,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
-        let mut tx = Transaction::Deploy(Deploy::new(
+        let deploy = Deploy::new(
             contract_address_salt,
             contract_class.clone(),
             constructor_calldata,
             chain_id,
             TRANSACTION_VERSION,
             hash_value,
-        )?);
+        )?;
+        let contract_address = deploy.contract_address.clone();
+        let contract_hash = deploy.contract_hash;
+        let mut tx = Transaction::Deploy(deploy);
 
         self.state
-            .set_contract_class(&tx.contract_hash(), &contract_class)?;
+            .set_contract_class(&contract_hash, &contract_class)?;
 
         let tx_execution_info = self.execute_tx(&mut tx)?;
-        Ok((tx.contract_address(), tx_execution_info))
+        Ok((contract_address, tx_execution_info))
     }
 
     pub fn execute_tx(
