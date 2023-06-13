@@ -373,10 +373,7 @@ mod tests {
             cached_state.get_class_hash_at(&contract_address).unwrap(),
             class_hash
         );
-        assert_eq!(
-            cached_state.get_nonce_at(&contract_address).unwrap(),
-            nonce
-        );
+        assert_eq!(cached_state.get_nonce_at(&contract_address).unwrap(), nonce);
         cached_state.increment_nonce(&contract_address).unwrap();
         assert_eq!(
             cached_state.get_nonce_at(&contract_address).unwrap(),
