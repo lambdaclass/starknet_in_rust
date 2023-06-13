@@ -1,11 +1,11 @@
 use crate::{
     business_logic::{
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::State,
+        state::ExecutionResourcesManager,
         state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },
-    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig},
+    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::TransactionContext},
     runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
@@ -87,7 +87,7 @@ impl ExecutionEntryPoint {
     pub fn execute<T>(
         &self,
         state: &mut T,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &TransactionExecutionContext,
         support_reverted: bool,
@@ -291,7 +291,7 @@ impl ExecutionEntryPoint {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         tx_execution_context: &TransactionExecutionContext,
         contract_class: Box<ContractClass>,
         class_hash: [u8; 32],
@@ -388,7 +388,7 @@ impl ExecutionEntryPoint {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         tx_execution_context: &TransactionExecutionContext,
         contract_class: Box<CasmContractClass>,
         class_hash: [u8; 32],
