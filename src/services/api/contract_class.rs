@@ -225,7 +225,7 @@ fn to_cairo_runner_program(
         hints: serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
         reference_manager: serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
         identifiers,
-        error_message_attributes: serde_json::from_value::<Vec<Attribute>>(program.attributes)?
+        error_message_attributes: serde_json::from_value::<Vec<Attribute>>(program.attributes).unwrap_or(Vec::new())
             .into_iter()
             .filter(|attr| attr.name == "error_message")
             .collect(),
