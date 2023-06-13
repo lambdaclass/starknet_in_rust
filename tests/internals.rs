@@ -532,7 +532,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        2,
+        9999,
         TRANSACTION_VERSION,
         calldata,
         vec![],
@@ -1054,7 +1054,7 @@ fn test_invoke_with_declarev2_tx() {
     // Declare the fibonacci contract
     let declare_tx = declarev2_tx();
     declare_tx
-        .execute(state, starknet_general_config, 0)
+        .execute(state, starknet_general_config, 9999999999)
         .unwrap();
 
     // Deploy the fibonacci contract
@@ -1066,7 +1066,7 @@ fn test_invoke_with_declarev2_tx() {
         test_contract_address,                                // CONTRACT_ADDRESS
         Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")), // CONTRACT FUNCTION SELECTOR
         Felt252::from(3),                                     // CONTRACT_CALLDATA LEN
-        Felt252::from(42),                                     // CONTRACT_CALLDATA
+        Felt252::from(42),                                    // CONTRACT_CALLDATA
         Felt252::from(0),                                     // CONTRACT_CALLDATA
         Felt252::from(0),                                     // CONTRACT_CALLDATA
     ];

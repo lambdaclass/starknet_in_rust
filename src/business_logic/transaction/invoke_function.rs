@@ -136,7 +136,7 @@ impl InvokeFunction {
             EntryPointType::External,
             None,
             None,
-            0,
+            999999,
         );
 
         let call_info = call.execute(
@@ -172,7 +172,7 @@ impl InvokeFunction {
             EntryPointType::External,
             None,
             None,
-            0,
+            99999999999,
         );
 
         call.execute(
