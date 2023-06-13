@@ -13,11 +13,10 @@ use super::{
 use crate::{
     business_logic::{
         execution::{execution_entry_point::ExecutionEntryPoint, *},
-        fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
-            BlockInfo,
+            BlockInfo, ExecutionResourcesManager,
         },
         transaction::error::TransactionError,
     },
@@ -27,8 +26,7 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::{
-        contract_class_errors::ContractClassError,
-        contract_classes::deprecated_contract_class::ContractClass,
+        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
     utils::*,
 };
@@ -178,22 +176,32 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         Ok(())
     }
 
+    fn constructor_entry_points_empty(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
+        match contract_class {
+            CompiledClass::Deprecated(class) => Ok(class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .ok_or(ContractClassError::NoneEntryPointType)?
+                .is_empty()),
+            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+        }
+    }
+
     fn execute_constructor_entry_point(
         &mut self,
         contract_address: &Address,
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
     ) -> Result<(), StateError> {
-        let contract_class: ContractClass = self
+        let contract_class = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?
-            .try_into()?;
-        let constructor_entry_points = contract_class
-            .entry_points_by_type
-            .get(&EntryPointType::Constructor)
-            .ok_or(ContractClassError::NoneEntryPointType)?;
-        if constructor_entry_points.is_empty() {
+            .get_contract_class(&class_hash_bytes)?;
+
+        if self.constructor_entry_points_empty(contract_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
@@ -339,6 +347,7 @@ where
         self.starknet_storage_state
             .state
             .deploy_contract(deploy_contract_address.clone(), class_hash_bytes)?;
+
         self.execute_constructor_entry_point(
             &deploy_contract_address,
             class_hash_bytes,
@@ -866,8 +875,7 @@ where
 mod tests {
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},

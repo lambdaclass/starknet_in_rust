@@ -12,10 +12,8 @@ use starknet_rs::services::api::contract_classes::deprecated_contract_class::Con
 use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType, OrderedEvent},
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::state_api::StateReader,
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
     definitions::general_config::TransactionContext,
     utils::{calculate_sn_keccak, Address},

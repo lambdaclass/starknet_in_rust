@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    path::{Path, PathBuf},
     vec,
 };
 
@@ -18,12 +18,9 @@ use starknet_rs::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
             OrderedL2ToL1Message, TransactionExecutionContext,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{cached_state::CachedState, state_api::StateReader},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    core::errors::state_errors::StateError,
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
@@ -578,7 +575,7 @@ fn emit_event() {
 }
 
 #[test]
-fn deploy() {
+fn deploy_cairo1_from_cairo1() {
     // data to deploy
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
@@ -666,6 +663,332 @@ fn deploy() {
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
+}
+
+#[test]
+fn deploy_cairo0_from_cairo1_without_constructor() {
+    // data to deploy
+    let test_class_hash: ClassHash = [2; 32];
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let salt = Felt252::zero();
+    let contract_path = Path::new("starknet_programs/fibonacci.json");
+    let test_contract_class: ContractClass =
+        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+
+    // Create the deploy contract class
+    let program_data =
+        include_bytes!("../starknet_programs/cairo1/deploy_without_constructor.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut casm_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    casm_contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(test_class_hash, test_contract_class.clone());
+
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(
+        state_reader,
+        Some(contract_class_cache),
+        Some(casm_contract_class_cache),
+    );
+
+    // arguments of deploy contract
+    let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
+
+    // set up remaining structures
+
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata,
+        Felt252::new(entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100_000_000,
+    );
+
+    // Execute the entrypoint
+    let general_config = TransactionContext::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let call_info = exec_entry_point.execute(
+        &mut state,
+        &general_config,
+        &mut resources_manager,
+        &tx_execution_context,
+        false,
+    );
+
+    assert!(call_info.is_ok());
+
+    let ret_address = Address(felt_str!(
+        "3326516449409112130211257005742850249535379011750934837578774621442000311202"
+    ));
+
+    let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
+    let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
+        CompiledClass::Deprecated(class) => *class,
+        CompiledClass::Casm(_) => unreachable!(),
+    };
+
+    assert_eq!(ret_casm_class, test_contract_class);
+}
+
+#[test]
+fn deploy_cairo0_from_cairo1_with_constructor() {
+    // data to deploy
+    let test_class_hash: ClassHash = [2; 32];
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let salt = Felt252::zero();
+    let contract_path = Path::new("starknet_programs/test_contract.json");
+    let test_contract_class: ContractClass =
+        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+
+    // Create the deploy contract class
+    let program_data = include_bytes!("../starknet_programs/cairo1/deploy_with_constructor.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut casm_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    // simulate contract declare
+    casm_contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(test_class_hash, test_contract_class.clone());
+
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(
+        state_reader,
+        Some(contract_class_cache),
+        Some(casm_contract_class_cache),
+    );
+
+    // arguments of deploy contract
+    let calldata: Vec<_> = [test_felt_hash, salt, address.0.clone(), Felt252::zero()].to_vec();
+
+    // set up remaining structures
+
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata,
+        Felt252::new(entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100_000_000,
+    );
+
+    // Execute the entrypoint
+    let general_config = TransactionContext::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let call_info = exec_entry_point.execute(
+        &mut state,
+        &general_config,
+        &mut resources_manager,
+        &tx_execution_context,
+        false,
+    );
+
+    assert!(call_info.is_ok());
+
+    let ret_address = Address(felt_str!(
+        "2981367321579044137695643605491580626686793431687828656373743652416610344312"
+    ));
+
+    let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
+    let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
+        CompiledClass::Deprecated(class) => *class,
+        CompiledClass::Casm(_) => unreachable!(),
+    };
+
+    assert_eq!(ret_casm_class, test_contract_class);
+}
+
+#[test]
+fn deploy_cairo0_and_invoke() {
+    // data to deploy
+    let test_class_hash: ClassHash = [2; 32];
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let salt = Felt252::zero();
+    let contract_path = Path::new("starknet_programs/factorial.json");
+    let test_contract_class: ContractClass =
+        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+
+    // Create the deploy contract class
+    let program_data =
+        include_bytes!("../starknet_programs/cairo1/deploy_without_constructor.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut casm_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    casm_contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(test_class_hash, test_contract_class.clone());
+
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(
+        state_reader,
+        Some(contract_class_cache),
+        Some(casm_contract_class_cache),
+    );
+
+    // arguments of deploy contract
+    let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
+
+    // set up remaining structures
+
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata,
+        Felt252::new(entrypoint_selector.clone()),
+        caller_address.clone(),
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100_000_000,
+    );
+
+    // Execute the entrypoint
+    let general_config = TransactionContext::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let call_info = exec_entry_point.execute(
+        &mut state,
+        &general_config,
+        &mut resources_manager,
+        &tx_execution_context,
+        false,
+    );
+
+    assert!(call_info.is_ok());
+
+    let ret_address = Address(felt_str!(
+        "3326516449409112130211257005742850249535379011750934837578774621442000311202"
+    ));
+
+    let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
+    let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
+        CompiledClass::Deprecated(class) => *class,
+        CompiledClass::Casm(_) => unreachable!(),
+    };
+
+    assert_eq!(ret_casm_class, test_contract_class);
+
+    // invoke factorial
+
+    let calldata = [3.into()].to_vec();
+    let selector =
+        felt_str!("1554360238305724106620514039016755337737024783182305317707426109255385571750");
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        ret_address,
+        calldata,
+        selector,
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(test_class_hash),
+        100_000_000,
+    );
+
+    let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+
+    let retdata = call_info.retdata;
+
+    // expected result 3! = 6
+    assert_eq!(retdata, [6.into()].to_vec());
 }
 
 #[test]
@@ -1660,8 +1983,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-    let expected_error_string = StateError::UninitiaizedClassHash.to_string();
-    assert!(exec_entry_point
+    let call_info = exec_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -1669,9 +1991,13 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
             &tx_execution_context,
             false,
         )
-        .unwrap_err()
-        .to_string()
-        .contains(&expected_error_string));
+        .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
+            .unwrap()
+            .trim_start_matches('\0'),
+        "CLASS_HASH_NOT_FOUND"
+    )
 }
 
 #[test]
@@ -1838,6 +2164,89 @@ fn storage_read_unavailable_address_domain() {
     //  Create program and entry point types for contract class
     let program_data =
         include_bytes!("../starknet_programs/cairo1/faulty_low_level_storage_read.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(class_hash, contract_class);
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+
+    let general_config = TransactionContext::default();
+    let tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        general_config.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
+
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let create_execute_extrypoint = |selector: &BigUint,
+                                     calldata: Vec<Felt252>,
+                                     entry_point_type: EntryPointType|
+     -> ExecutionEntryPoint {
+        ExecutionEntryPoint::new(
+            address.clone(),
+            calldata,
+            Felt252::new(selector.clone()),
+            Address(0000.into()),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        )
+    };
+
+    // RUN READ_STORAGE
+    // Create an execution entry point
+    let calldata = [].to_vec();
+    let read_storage_exec_entry_point = create_execute_extrypoint(
+        read_storage_entrypoint_selector,
+        calldata,
+        EntryPointType::External,
+    );
+
+    // Run read_storage entrypoint
+    let call_info = read_storage_exec_entry_point
+        .execute(
+            &mut state,
+            &general_config,
+            &mut resources_manager,
+            &tx_execution_context,
+            false,
+        )
+        .unwrap();
+
+    assert_eq!(
+        call_info.retdata[0],
+        Felt252::from_bytes_be(b"Unsupported address domain")
+    );
+}
+
+#[test]
+fn storage_write_unavailable_address_domain() {
+    //  Create program and entry point types for contract class
+    let program_data =
+        include_bytes!("../starknet_programs/cairo1/faulty_low_level_storage_write.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
