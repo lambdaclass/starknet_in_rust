@@ -904,9 +904,10 @@ mod tests {
         let write = syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
-            .read(&felt_to_hash(&address));
+            .read(&felt_to_hash(&address))
+            .unwrap();
 
-        assert_eq!(write, Ok(Felt252::new(45)));
+        assert_eq!(write, Felt252::new(45));
     }
 
     #[test]
@@ -992,8 +993,9 @@ mod tests {
                 .syscall_handler
                 .starknet_storage_state
                 .state
-                .get_class_hash_at(&Address(deployed_address)),
-            Ok(class_hash)
+                .get_class_hash_at(&Address(deployed_address))
+                .unwrap(),
+            class_hash
         );
     }
 
@@ -1089,8 +1091,9 @@ mod tests {
                 .syscall_handler
                 .starknet_storage_state
                 .state
-                .get_class_hash_at(&Address(deployed_address.clone())),
-            Ok(class_hash)
+                .get_class_hash_at(&Address(deployed_address.clone()))
+                .unwrap(),
+            class_hash
         );
 
         /*

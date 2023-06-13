@@ -189,7 +189,7 @@ impl ExecutionEntryPoint {
     fn build_call_info_deprecated<S>(
         &self,
         previous_cairo_usage: ExecutionResources,
-        resources_manager: ExecutionResourcesManager,
+        resources_manager: &ExecutionResourcesManager,
         starknet_storage_state: ContractStorageState<S>,
         events: Vec<OrderedEvent>,
         l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
@@ -225,7 +225,7 @@ impl ExecutionEntryPoint {
     fn build_call_info<S>(
         &self,
         previous_cairo_usage: ExecutionResources,
-        resources_manager: ExecutionResourcesManager,
+        resources_manager: &ExecutionResourcesManager,
         starknet_storage_state: ContractStorageState<S>,
         events: Vec<OrderedEvent>,
         l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
@@ -366,15 +366,20 @@ impl ExecutionEntryPoint {
             .vm
             .mark_address_range_as_accessed(args_ptr, entry_point_args.len())?;
 
+        *resources_manager = runner
+            .hint_processor
+            .syscall_handler
+            .resources_manager
+            .clone();
+
         // Update resources usage (for bouncer).
-        resources_manager.cairo_usage =
-            &resources_manager.cairo_usage + &runner.get_execution_resources()?;
+        resources_manager.cairo_usage += &runner.get_execution_resources()?;
 
         let retdata = runner.get_return_values()?;
 
         self.build_call_info_deprecated::<T>(
             previous_cairo_usage,
-            runner.hint_processor.syscall_handler.resources_manager,
+            resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,
             runner.hint_processor.syscall_handler.events,
             runner.hint_processor.syscall_handler.l2_to_l1_messages,
@@ -397,6 +402,7 @@ impl ExecutionEntryPoint {
         T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
+
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point(&contract_class, class_hash)?;
 
@@ -500,14 +506,19 @@ impl ExecutionEntryPoint {
             .vm
             .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
 
+        *resources_manager = runner
+            .hint_processor
+            .syscall_handler
+            .resources_manager
+            .clone();
+
         // Update resources usage (for bouncer).
-        resources_manager.cairo_usage =
-            &resources_manager.cairo_usage + &runner.get_execution_resources()?;
+        resources_manager.cairo_usage += &runner.get_execution_resources()?;
 
         let call_result = runner.get_call_result(self.initial_gas)?;
         self.build_call_info::<T>(
             previous_cairo_usage,
-            runner.hint_processor.syscall_handler.resources_manager,
+            resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,
             runner.hint_processor.syscall_handler.events,
             runner.hint_processor.syscall_handler.l2_to_l1_messages,
