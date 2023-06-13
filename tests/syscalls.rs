@@ -1,10 +1,10 @@
 #![deny(warnings)]
 
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
     felt::{felt_str, Felt252},
     vm::runners::cairo_runner::ExecutionResources,
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use num_traits::{Num, One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
