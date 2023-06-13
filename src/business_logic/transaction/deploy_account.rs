@@ -18,7 +18,7 @@ use crate::{
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
-        general_config::TransactionContext,
+        general_config::BlockContext,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
@@ -104,7 +104,7 @@ impl DeployAccount {
         })
     }
 
-    pub fn get_state_selector(&self, _general_config: TransactionContext) -> StateSelector {
+    pub fn get_state_selector(&self, _general_config: BlockContext) -> StateSelector {
         StateSelector {
             contract_addresses: vec![self.contract_address.clone()],
             class_hashes: vec![self.class_hash],
@@ -114,7 +114,7 @@ impl DeployAccount {
     pub fn execute<S>(
         &self,
         state: &mut S,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -139,7 +139,7 @@ impl DeployAccount {
     fn apply<S>(
         &self,
         state: &mut S,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -181,7 +181,7 @@ impl DeployAccount {
         &self,
         contract_class: ContractClass,
         state: &mut S,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -230,7 +230,7 @@ impl DeployAccount {
     pub fn run_constructor_entrypoint<S>(
         &self,
         state: &mut S,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -276,7 +276,7 @@ impl DeployAccount {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
         S: State + StateReader,
@@ -320,7 +320,7 @@ impl DeployAccount {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>
     where
         S: State + StateReader,
@@ -365,7 +365,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let tx_context = TransactionContext::default();
+        let tx_context = BlockContext::default();
         let mut _state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),
@@ -402,7 +402,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let tx_context = TransactionContext::default();
+        let tx_context = BlockContext::default();
         let mut state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),
@@ -456,7 +456,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let tx_context = TransactionContext::default();
+        let tx_context = BlockContext::default();
         let mut state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),

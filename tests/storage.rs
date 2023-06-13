@@ -11,7 +11,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address},
 };
@@ -92,7 +92,7 @@ fn integration_storage_test() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),

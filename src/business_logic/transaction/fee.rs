@@ -7,7 +7,7 @@ use crate::{
         state::state_api::{State, StateReader},
         state::ExecutionResourcesManager,
     },
-    definitions::{constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::TransactionContext},
+    definitions::{constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::BlockContext},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;
@@ -21,7 +21,7 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 /// Returns the resulting CallInfo of the transfer call.
 pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     state: &mut S,
-    tx_context: &TransactionContext,
+    tx_context: &BlockContext,
     tx_execution_context: &TransactionExecutionContext,
     actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
@@ -71,7 +71,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
     gas_price: u128,
-    tx_context: &TransactionContext,
+    tx_context: &BlockContext,
 ) -> Result<u128, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
@@ -90,7 +90,7 @@ pub fn calculate_tx_fee(
 /// a proof is determined similarly - by the (normalized) largest segment.
 
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
-    tx_context: &TransactionContext,
+    tx_context: &BlockContext,
     cairo_resource_usage: &HashMap<String, usize>,
 ) -> Result<f64, TransactionError> {
     if !cairo_resource_usage

@@ -3,7 +3,7 @@ use crate::{
         execution::TransactionExecutionInfo,
         state::state_api::{State, StateReader},
     },
-    definitions::general_config::TransactionContext,
+    definitions::general_config::BlockContext,
     utils::{Address, ClassHash},
 };
 
@@ -32,7 +32,7 @@ impl Transaction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Deploy(tx) => tx.execute(state, tx_context),

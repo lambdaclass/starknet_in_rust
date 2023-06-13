@@ -16,7 +16,7 @@ use starknet_rs::{
         },
         transaction::{error::TransactionError, Deploy},
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address},
 };
@@ -32,7 +32,7 @@ pub struct CallConfig<'a> {
     pub class_hash: &'a [u8; 32],
     pub entry_points_by_type: &'a HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub entry_point_type: &'a EntryPointType,
-    pub tx_context: &'a TransactionContext,
+    pub tx_context: &'a BlockContext,
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }
 
@@ -135,7 +135,7 @@ pub fn deploy(
     state: &mut CachedState<InMemoryStateReader>,
     path: &str,
     calldata: &[Felt252],
-    tx_context: &TransactionContext,
+    tx_context: &BlockContext,
     hash_value: Option<Felt252>,
 ) -> Result<(Address, [u8; 32]), TransactionError> {
     let path = PathBuf::from(path);

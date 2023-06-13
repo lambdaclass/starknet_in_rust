@@ -196,7 +196,7 @@ mod tests {
             transaction::InvokeFunction,
         },
         definitions::{
-            constants::TRANSACTION_VERSION, general_config::TransactionContext,
+            constants::TRANSACTION_VERSION, general_config::BlockContext,
             transaction_type::TransactionType,
         },
         memory_insert,
@@ -1111,7 +1111,7 @@ mod tests {
 
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &TransactionContext::default())
+            .apply(&mut state, &BlockContext::default())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

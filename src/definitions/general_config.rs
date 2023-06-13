@@ -60,7 +60,7 @@ impl Default for StarknetOsConfig {
 }
 
 #[derive(Clone, Debug, CopyGetters, Getters, MutGetters)]
-pub struct TransactionContext {
+pub struct BlockContext {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) starknet_os_config: StarknetOsConfig,
     #[get_copy = "pub"]
@@ -80,7 +80,7 @@ pub struct TransactionContext {
     pub(crate) blocks: HashMap<u64, Block>,
 }
 
-impl TransactionContext {
+impl BlockContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         starknet_os_config: StarknetOsConfig,
@@ -105,7 +105,7 @@ impl TransactionContext {
     }
 }
 
-impl Default for TransactionContext {
+impl Default for BlockContext {
     fn default() -> Self {
         Self {
             starknet_os_config: Default::default(),

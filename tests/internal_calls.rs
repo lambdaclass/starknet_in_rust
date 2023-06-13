@@ -11,7 +11,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_cache::StorageEntry},
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
@@ -23,7 +23,7 @@ fn test_internal_calls() {
         ContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
             .expect("Could not load contract from JSON");
 
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::create_for_testing(
         Address(0.into()),
         10,

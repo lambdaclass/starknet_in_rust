@@ -15,7 +15,7 @@ use crate::{
             Declare, Deploy,
         },
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
     services::api::{
         contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
     },
@@ -30,14 +30,14 @@ use std::collections::HashMap;
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
-    pub(crate) tx_context: TransactionContext,
+    pub(crate) tx_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
 impl StarknetState {
-    pub fn new(context: Option<TransactionContext>) -> Self {
+    pub fn new(context: Option<BlockContext>) -> Self {
         let tx_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
@@ -57,7 +57,7 @@ impl StarknetState {
     }
 
     pub fn new_with_states(
-        context: Option<TransactionContext>,
+        context: Option<BlockContext>,
         state: CachedState<InMemoryStateReader>,
     ) -> Self {
         let tx_context = context.unwrap_or_default();

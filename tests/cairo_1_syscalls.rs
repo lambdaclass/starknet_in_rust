@@ -21,7 +21,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
@@ -57,7 +57,7 @@ fn storage_write_read() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -230,7 +230,7 @@ fn library_call() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -359,7 +359,7 @@ fn call_contract_storage_write_read() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -525,7 +525,7 @@ fn emit_event() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -635,7 +635,7 @@ fn deploy_cairo1_from_cairo1() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -733,7 +733,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -831,7 +831,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -929,7 +929,7 @@ fn deploy_cairo0_and_invoke() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1049,7 +1049,7 @@ fn test_send_message_to_l1_syscall() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1127,7 +1127,7 @@ fn test_get_execution_info() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1259,7 +1259,7 @@ fn replace_class_internal() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1354,7 +1354,7 @@ fn replace_class_contract_call() {
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1508,7 +1508,7 @@ fn replace_class_contract_call_same_transaction() {
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1618,7 +1618,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     );
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1726,7 +1726,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     );
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1834,7 +1834,7 @@ fn call_contract_replace_class_cairo_0() {
     );
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1920,7 +1920,7 @@ fn test_out_of_gas_failure() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -1991,7 +1991,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -2069,7 +2069,7 @@ fn deploy_syscall_failure_in_constructor() {
     );
 
     // Execute the entrypoint
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -2126,7 +2126,7 @@ fn storage_read_no_value() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -2206,7 +2206,7 @@ fn storage_read_unavailable_address_domain() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -2289,7 +2289,7 @@ fn storage_write_unavailable_address_domain() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -2405,7 +2405,7 @@ fn library_call_failure() {
     );
 
     // Execute the entrypoint
-    let general_config = TransactionContext::default();
+    let general_config = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),

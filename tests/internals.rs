@@ -41,7 +41,7 @@ use starknet_rs::{
             TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
             VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
-        general_config::{StarknetChainId, StarknetOsConfig, TransactionContext},
+        general_config::{StarknetChainId, StarknetOsConfig, BlockContext},
         transaction_type::TransactionType,
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
@@ -98,8 +98,8 @@ where
     Ok(ContractClass::try_from(path.into())?)
 }
 
-pub fn new_starknet_tx_context_for_testing() -> TransactionContext {
-    TransactionContext::new(
+pub fn new_starknet_tx_context_for_testing() -> BlockContext {
+    BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet,
             TEST_ERC20_CONTRACT_ADDRESS.clone(),
@@ -116,7 +116,7 @@ pub fn new_starknet_tx_context_for_testing() -> TransactionContext {
 }
 
 fn create_account_tx_test_state(
-) -> Result<(TransactionContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let tx_context = new_starknet_tx_context_for_testing();
 
     let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
@@ -406,7 +406,7 @@ fn expected_validate_call_info(
 }
 
 fn expected_fee_transfer_call_info(
-    tx_context: &TransactionContext,
+    tx_context: &BlockContext,
     account_address: &Address,
     actual_fee: u64,
 ) -> CallInfo {
@@ -473,7 +473,7 @@ fn expected_fee_transfer_call_info(
 
 fn validate_final_balances<S>(
     state: &mut S,
-    tx_context: &TransactionContext,
+    tx_context: &BlockContext,
     expected_sequencer_balance: Felt252,
     erc20_account_balance_storage_key: &ClassHash,
 ) where

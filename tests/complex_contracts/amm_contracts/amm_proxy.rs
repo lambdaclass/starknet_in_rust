@@ -10,14 +10,14 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    definitions::general_config::TransactionContext,
+    definitions::general_config::BlockContext,
     utils::{calculate_sn_keccak, Address},
 };
 use std::collections::{HashMap, HashSet};
 
 #[test]
 fn amm_proxy_init_pool_test() {
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -118,7 +118,7 @@ fn amm_proxy_init_pool_test() {
 
 #[test]
 fn amm_proxy_get_pool_token_balance_test() {
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -226,7 +226,7 @@ fn amm_proxy_get_pool_token_balance_test() {
 
 #[test]
 fn amm_proxy_add_demo_token_test() {
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -340,7 +340,7 @@ fn amm_proxy_add_demo_token_test() {
 
 #[test]
 fn amm_proxy_get_account_token_balance() {
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -467,7 +467,7 @@ fn amm_proxy_get_account_token_balance() {
 
 #[test]
 fn amm_proxy_swap() {
-    let tx_context = TransactionContext::default();
+    let tx_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),

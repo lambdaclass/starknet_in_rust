@@ -14,7 +14,7 @@ use crate::{
     },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
+        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::BlockContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -134,7 +134,7 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -177,7 +177,7 @@ impl DeclareV2 {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
@@ -238,7 +238,7 @@ impl DeclareV2 {
         mut remaining_gas: u128,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        tx_context: &TransactionContext,
+        tx_context: &BlockContext,
     ) -> Result<(CallInfo, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
