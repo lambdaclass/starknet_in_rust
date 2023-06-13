@@ -10,4 +10,3 @@ Description of the pull request changes and motivation.
 - [ ] Integration tests added.
 - [ ] This change requires new documentation.
   - [ ] Documentation has been added/updated.
-  - [ ] CHANGELOG has been updated.
