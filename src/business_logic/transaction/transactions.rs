@@ -32,11 +32,11 @@ impl Transaction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Deploy(tx) => tx.execute(state, general_config),
-            Transaction::InvokeFunction(tx) => tx.execute(state, general_config),
+            Transaction::Deploy(tx) => tx.execute(state, tx_context),
+            Transaction::InvokeFunction(tx) => tx.execute(state, tx_context),
         }
     }
 }

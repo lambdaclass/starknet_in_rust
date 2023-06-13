@@ -84,7 +84,7 @@ impl Deploy {
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
@@ -101,7 +101,7 @@ impl Deploy {
             // Contract has no constructors
             Ok(self.handle_empty_constructor(state)?)
         } else {
-            self.invoke_constructor(state, general_config)
+            self.invoke_constructor(state, tx_context)
         }
     }
 
@@ -144,7 +144,7 @@ impl Deploy {
     pub fn invoke_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -163,14 +163,14 @@ impl Deploy {
             Vec::new(),
             0,
             Felt252::zero(),
-            general_config.invoke_tx_max_n_steps,
+            tx_context.invoke_tx_max_n_steps,
             self.version,
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
         let call_info = call.execute(
             state,
-            general_config,
+            tx_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -200,9 +200,9 @@ impl Deploy {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+        let concurrent_exec_info = self.apply(state, tx_context)?;
         let (fee_transfer_info, actual_fee) = (None, 0);
 
         Ok(

@@ -29,8 +29,8 @@ fn test_contract<'a>(
     class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
-    general_config: TransactionContext,
-    tx_context: Option<TransactionExecutionContext>,
+    tx_context: TransactionContext,
+    tx_execution_context_option: Option<TransactionExecutionContext>,
     extra_contracts: impl Iterator<
         Item = (
             ClassHash,
@@ -44,12 +44,12 @@ fn test_contract<'a>(
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
-    let tx_execution_context = tx_context.unwrap_or_else(|| {
+    let tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
             0.into(),
-            general_config.invoke_tx_max_n_steps(),
+            tx_context.invoke_tx_max_n_steps(),
             TRANSACTION_VERSION,
         )
     });
@@ -120,7 +120,7 @@ fn test_contract<'a>(
 
     let result = entry_point.execute(
         &mut state,
-        &general_config,
+        &tx_context,
         &mut resources_manager,
         &tx_execution_context,
         false,

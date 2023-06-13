@@ -103,14 +103,14 @@ fn delegate_call() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
+        tx_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -118,7 +118,7 @@ fn delegate_call() {
     assert!(exec_entry_point
         .execute(
             &mut state,
-            &general_config,
+            &tx_context,
             &mut resources_manager,
             &tx_execution_context,
             false,

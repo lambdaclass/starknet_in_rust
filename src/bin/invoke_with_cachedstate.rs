@@ -52,7 +52,7 @@ fn main() {
         .nonce_initial_values_mut()
         .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
 
-    let general_config = new_starknet_general_config_for_testing();
+    let tx_context = new_starknet_tx_context_for_testing();
 
     for i in 0..RUNS {
         InvokeFunction::new(
@@ -67,7 +67,7 @@ fn main() {
             None,
         )
         .unwrap()
-        .execute(&mut cached_state, &general_config)
+        .execute(&mut cached_state, &tx_context)
         .unwrap();
 
         let tx_exec_info = InvokeFunction::new(
@@ -82,7 +82,7 @@ fn main() {
             None,
         )
         .unwrap()
-        .execute(&mut cached_state, &general_config)
+        .execute(&mut cached_state, &tx_context)
         .unwrap();
 
         assert_eq!(
@@ -119,7 +119,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
     cached_state
 }
 
-pub fn new_starknet_general_config_for_testing() -> TransactionContext {
+pub fn new_starknet_tx_context_for_testing() -> TransactionContext {
     TransactionContext::new(
         StarknetOsConfig::new(StarknetChainId::TestNet, Address(Felt252::zero()), 0),
         0,

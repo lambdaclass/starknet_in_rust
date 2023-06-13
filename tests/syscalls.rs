@@ -38,8 +38,8 @@ fn test_contract<'a>(
     class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
-    general_config: TransactionContext,
-    tx_context: Option<TransactionExecutionContext>,
+    tx_context: TransactionContext,
+    tx_execution_context_option: Option<TransactionExecutionContext>,
     events: impl Into<Vec<OrderedEvent>>,
     l2_to_l1_messages: impl Into<Vec<OrderedL2ToL1Message>>,
     storage_read_values: impl Into<Vec<Felt252>>,
@@ -58,12 +58,12 @@ fn test_contract<'a>(
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
-    let tx_execution_context = tx_context.unwrap_or_else(|| {
+    let tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
             0.into(),
-            general_config.invoke_tx_max_n_steps(),
+            tx_context.invoke_tx_max_n_steps(),
             TRANSACTION_VERSION,
         )
     });
@@ -136,7 +136,7 @@ fn test_contract<'a>(
         entry_point
             .execute(
                 &mut state,
-                &general_config,
+                &tx_context,
                 &mut resources_manager,
                 &tx_execution_context,
                 false,
@@ -285,8 +285,8 @@ fn emit_event_syscall() {
 #[test]
 fn get_block_number_syscall() {
     let run = |block_number| {
-        let mut general_config = TransactionContext::default();
-        general_config.block_info_mut().block_number = block_number;
+        let mut tx_context = TransactionContext::default();
+        tx_context.block_info_mut().block_number = block_number;
 
         test_contract(
             "starknet_programs/syscalls.json",
@@ -294,7 +294,7 @@ fn get_block_number_syscall() {
             [1; 32],
             Address(1111.into()),
             Address(0.into()),
-            general_config,
+            tx_context,
             None,
             [],
             [],
@@ -315,8 +315,8 @@ fn get_block_number_syscall() {
 #[test]
 fn get_block_timestamp_syscall() {
     let run = |block_timestamp| {
-        let mut general_config = TransactionContext::default();
-        general_config.block_info_mut().block_timestamp = block_timestamp;
+        let mut tx_context = TransactionContext::default();
+        tx_context.block_info_mut().block_timestamp = block_timestamp;
 
         test_contract(
             "starknet_programs/syscalls.json",
@@ -324,7 +324,7 @@ fn get_block_timestamp_syscall() {
             [1; 32],
             Address(1111.into()),
             Address(0.into()),
-            general_config,
+            tx_context,
             None,
             [],
             [],
@@ -399,8 +399,8 @@ fn get_contract_address_syscall() {
 #[test]
 fn get_sequencer_address_syscall() {
     let run = |sequencer_address: Felt252| {
-        let mut general_config = TransactionContext::default();
-        general_config.block_info_mut().sequencer_address = Address(sequencer_address.clone());
+        let mut tx_context = TransactionContext::default();
+        tx_context.block_info_mut().sequencer_address = Address(sequencer_address.clone());
 
         test_contract(
             "starknet_programs/syscalls.json",
@@ -408,7 +408,7 @@ fn get_sequencer_address_syscall() {
             [1; 32],
             Address(1111.into()),
             Address(0.into()),
-            general_config,
+            tx_context,
             None,
             [],
             [],
@@ -434,17 +434,17 @@ fn get_tx_info_syscall() {
                signature: Vec<Felt252>,
                transaction_hash: Felt252,
                chain_id| {
-        let mut general_config = TransactionContext::default();
-        *general_config.starknet_os_config_mut().chain_id_mut() = chain_id;
+        let mut tx_context = TransactionContext::default();
+        *tx_context.starknet_os_config_mut().chain_id_mut() = chain_id;
 
-        let n_steps = general_config.invoke_tx_max_n_steps();
+        let n_steps = tx_context.invoke_tx_max_n_steps();
         test_contract(
             "starknet_programs/syscalls.json",
             "test_get_tx_info",
             [1; 32],
             Address(1111.into()),
             Address(0.into()),
-            general_config,
+            tx_context,
             Some(TransactionExecutionContext::new(
                 account_contract_address.clone(),
                 transaction_hash.clone(),
@@ -537,8 +537,8 @@ fn get_tx_info_syscall() {
 #[test]
 fn get_tx_signature_syscall() {
     let run = |signature: Vec<Felt252>| {
-        let general_config = TransactionContext::default();
-        let n_steps = general_config.invoke_tx_max_n_steps();
+        let tx_context = TransactionContext::default();
+        let n_steps = tx_context.invoke_tx_max_n_steps();
 
         test_contract(
             "starknet_programs/syscalls.json",
@@ -546,7 +546,7 @@ fn get_tx_signature_syscall() {
             [1; 32],
             Address(1111.into()),
             Address(0.into()),
-            general_config,
+            tx_context,
             Some(TransactionExecutionContext::new(
                 Address::default(),
                 0.into(),
@@ -976,21 +976,21 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     );
 
     // Execute the entrypoint
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
+        tx_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let call_info = exec_entry_point.execute(
         &mut state,
-        &general_config,
+        &tx_context,
         &mut resources_manager,
         &tx_execution_context,
         false,
@@ -1074,14 +1074,14 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     );
 
     // Execute the entrypoint
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
+        tx_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1089,7 +1089,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let _call_info = exec_entry_point
         .execute(
             &mut state,
-            &general_config,
+            &tx_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1174,21 +1174,21 @@ fn deploy_cairo1_and_invoke() {
     );
 
     // Execute the entrypoint
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
+        tx_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let call_info = exec_entry_point.execute(
         &mut state,
-        &general_config,
+        &tx_context,
         &mut resources_manager,
         &tx_execution_context,
         false,
@@ -1226,7 +1226,7 @@ fn deploy_cairo1_and_invoke() {
     let call_info = exec_entry_point
         .execute(
             &mut state,
-            &general_config,
+            &tx_context,
             &mut resources_manager,
             &tx_execution_context,
             false,

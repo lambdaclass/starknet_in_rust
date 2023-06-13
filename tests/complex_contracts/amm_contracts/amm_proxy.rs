@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 
 #[test]
 fn amm_proxy_init_pool_test() {
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -28,7 +28,7 @@ fn amm_proxy_init_pool_test() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -37,7 +37,7 @@ fn amm_proxy_init_pool_test() {
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -59,7 +59,7 @@ fn amm_proxy_init_pool_test() {
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        general_config: &general_config,
+        tx_context: &tx_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -111,7 +111,7 @@ fn amm_proxy_init_pool_test() {
 
 #[test]
 fn amm_proxy_get_pool_token_balance_test() {
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -122,7 +122,7 @@ fn amm_proxy_get_pool_token_balance_test() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -131,7 +131,7 @@ fn amm_proxy_get_pool_token_balance_test() {
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -153,7 +153,7 @@ fn amm_proxy_get_pool_token_balance_test() {
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        general_config: &general_config,
+        tx_context: &tx_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -212,7 +212,7 @@ fn amm_proxy_get_pool_token_balance_test() {
 
 #[test]
 fn amm_proxy_add_demo_token_test() {
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -223,7 +223,7 @@ fn amm_proxy_add_demo_token_test() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -232,7 +232,7 @@ fn amm_proxy_add_demo_token_test() {
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -254,7 +254,7 @@ fn amm_proxy_add_demo_token_test() {
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        general_config: &general_config,
+        tx_context: &tx_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -319,7 +319,7 @@ fn amm_proxy_add_demo_token_test() {
 
 #[test]
 fn amm_proxy_get_account_token_balance() {
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -330,7 +330,7 @@ fn amm_proxy_get_account_token_balance() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -339,7 +339,7 @@ fn amm_proxy_get_account_token_balance() {
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -361,7 +361,7 @@ fn amm_proxy_get_account_token_balance() {
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        general_config: &general_config,
+        tx_context: &tx_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -439,7 +439,7 @@ fn amm_proxy_get_account_token_balance() {
 
 #[test]
 fn amm_proxy_swap() {
-    let general_config = TransactionContext::default();
+    let tx_context = TransactionContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -450,7 +450,7 @@ fn amm_proxy_swap() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -459,7 +459,7 @@ fn amm_proxy_swap() {
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
-        &general_config,
+        &tx_context,
         None,
     )
     .unwrap();
@@ -481,7 +481,7 @@ fn amm_proxy_swap() {
         class_hash: &proxy_class_hash,
         entry_points_by_type: &proxy_entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        general_config: &general_config,
+        tx_context: &tx_context,
         resources_manager: &mut resources_manager,
     };
 

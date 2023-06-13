@@ -30,15 +30,15 @@ use std::collections::HashMap;
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
-    pub(crate) general_config: TransactionContext,
+    pub(crate) tx_context: TransactionContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
 impl StarknetState {
-    pub fn new(config: Option<TransactionContext>) -> Self {
-        let general_config = config.unwrap_or_default();
+    pub fn new(context: Option<TransactionContext>) -> Self {
+        let tx_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
         let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
@@ -49,7 +49,7 @@ impl StarknetState {
         let events = Vec::new();
         StarknetState {
             state,
-            general_config,
+            tx_context,
             l2_to_l1_messages,
             l2_to_l1_messages_log,
             events,
@@ -57,17 +57,17 @@ impl StarknetState {
     }
 
     pub fn new_with_states(
-        config: Option<TransactionContext>,
+        context: Option<TransactionContext>,
         state: CachedState<InMemoryStateReader>,
     ) -> Self {
-        let general_config = config.unwrap_or_default();
+        let tx_context = context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 
         let events = Vec::new();
         StarknetState {
             state,
-            general_config,
+            tx_context,
             l2_to_l1_messages,
             l2_to_l1_messages_log,
             events,
@@ -95,7 +95,7 @@ impl StarknetState {
             hash_value,
         )?;
 
-        let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
+        let tx_execution_info = tx.execute(&mut self.state, &self.tx_context)?;
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -152,7 +152,7 @@ impl StarknetState {
         let tx_execution_context = TransactionExecutionContext::default();
         let call_info = call.execute(
             &mut self.state,
-            &self.general_config,
+            &self.tx_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -176,7 +176,7 @@ impl StarknetState {
         contract_address_salt: Address,
         hash_value: Option<Felt252>,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
-        let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
+        let chain_id = self.tx_context.starknet_os_config.chain_id.to_felt();
         let mut tx = Transaction::Deploy(Deploy::new(
             contract_address_salt,
             contract_class.clone(),
@@ -197,7 +197,7 @@ impl StarknetState {
         &mut self,
         tx: &mut Transaction,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
-        let tx = tx.execute(&mut self.state, &self.general_config)?;
+        let tx = tx.execute(&mut self.state, &self.tx_context)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
@@ -250,7 +250,7 @@ impl StarknetState {
     // ------------------------
 
     fn chain_id(&self) -> Felt252 {
-        self.general_config.starknet_os_config.chain_id.to_felt()
+        self.tx_context.starknet_os_config.chain_id.to_felt()
     }
 
     #[allow(clippy::too_many_arguments)]

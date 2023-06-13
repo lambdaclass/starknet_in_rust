@@ -116,7 +116,7 @@ impl InvokeFunction {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
         T: State + StateReader,
@@ -141,9 +141,9 @@ impl InvokeFunction {
 
         let call_info = call.execute(
             state,
-            general_config,
+            tx_context,
             resources_manager,
-            &self.get_execution_context(general_config.validate_max_n_steps)?,
+            &self.get_execution_context(tx_context.validate_max_n_steps)?,
             false,
         )?;
 
@@ -158,7 +158,7 @@ impl InvokeFunction {
     fn run_execute_entrypoint<T>(
         &self,
         state: &mut T,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -177,9 +177,9 @@ impl InvokeFunction {
 
         call.execute(
             state,
-            general_config,
+            tx_context,
             resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps)?,
+            &self.get_execution_context(tx_context.invoke_tx_max_n_steps)?,
             false,
         )
     }
@@ -189,7 +189,7 @@ impl InvokeFunction {
     pub fn apply<S>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -197,10 +197,9 @@ impl InvokeFunction {
         let mut resources_manager = ExecutionResourcesManager::default();
 
         let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+            self.run_validate_entrypoint(state, &mut resources_manager, tx_context)?;
         // Execute transaction
-        let call_info =
-            self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
+        let call_info = self.run_execute_entrypoint(state, tx_context, &mut resources_manager)?;
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -224,7 +223,7 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<FeeInfo, TransactionError>
     where
         S: State + StateReader,
@@ -235,13 +234,13 @@ impl InvokeFunction {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            general_config.starknet_os_config.gas_price,
-            general_config,
+            tx_context.starknet_os_config.gas_price,
+            tx_context,
         )?;
 
-        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
+        let tx_execution_context = self.get_execution_context(tx_context.invoke_tx_max_n_steps)?;
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+            execute_fee_transfer(state, tx_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -251,16 +250,13 @@ impl InvokeFunction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+        let concurrent_exec_info = self.apply(state, tx_context)?;
         self.handle_nonce(state)?;
 
-        let (fee_transfer_info, actual_fee) = self.charge_fee(
-            state,
-            &concurrent_exec_info.actual_resources,
-            general_config,
-        )?;
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &concurrent_exec_info.actual_resources, tx_context)?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -701,14 +697,14 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = TransactionContext::default();
-        config.cairo_resource_fee_weights = HashMap::from([
+        let mut tx_context = TransactionContext::default();
+        tx_context.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
             (String::from("range_check_builtin"), 70.into()),
         ]);
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let expected_error = internal_invoke_function.execute(&mut state, &tx_context);
         let error_msg = "Fee transfer failure".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
@@ -760,15 +756,15 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = TransactionContext::default();
-        config.cairo_resource_fee_weights = HashMap::from([
+        let mut tx_context = TransactionContext::default();
+        tx_context.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
             (String::from("range_check_builtin"), 70.into()),
         ]);
-        config.starknet_os_config.gas_price = 1;
+        tx_context.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let expected_error = internal_invoke_function.execute(&mut state, &tx_context);
         let error_msg = "Actual fee exceeded max fee.".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);

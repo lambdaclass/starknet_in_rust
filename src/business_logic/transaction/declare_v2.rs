@@ -134,7 +134,7 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -142,13 +142,13 @@ impl DeclareV2 {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            general_config.starknet_os_config.gas_price,
-            general_config,
+            tx_context.starknet_os_config.gas_price,
+            tx_context,
         )?;
 
-        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps);
+        let tx_execution_context = self.get_execution_context(tx_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+            execute_fee_transfer(state, tx_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -177,18 +177,14 @@ impl DeclareV2 {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let (validate_info, _remaining_gas) = self.run_validate_entrypoint(
-            remaining_gas,
-            state,
-            &mut resources_manager,
-            general_config,
-        )?;
+        let (validate_info, _remaining_gas) =
+            self.run_validate_entrypoint(remaining_gas, state, &mut resources_manager, tx_context)?;
 
         let storage_changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -202,7 +198,7 @@ impl DeclareV2 {
         self.compile_and_store_casm_class(state)?;
 
         let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &actual_resources, general_config)?;
+            self.charge_fee(state, &actual_resources, tx_context)?;
 
         let concurrent_exec_info = TransactionExecutionInfo::create_concurrent_stage_execution_info(
             Some(validate_info),
@@ -242,7 +238,7 @@ impl DeclareV2 {
         mut remaining_gas: u128,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &TransactionContext,
+        tx_context: &TransactionContext,
     ) -> Result<(CallInfo, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
@@ -258,11 +254,11 @@ impl DeclareV2 {
             call_type: CallType::Call,
         };
 
-        let tx_execution_context = self.get_execution_context(general_config.validate_max_n_steps);
+        let tx_execution_context = self.get_execution_context(tx_context.validate_max_n_steps);
 
         let call_info = entry_point.execute(
             state,
-            general_config,
+            tx_context,
             resources_manager,
             &tx_execution_context,
             false,
