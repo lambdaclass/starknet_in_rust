@@ -140,7 +140,7 @@ impl L1Handler {
     pub fn get_payload_size(&self) -> usize {
         // The calldata includes the "from" field, which is not a part of the payload.
         // We thus subtract 1.
-        self.calldata.len() - 1
+        self.calldata.len().saturating_sub(1)
     }
 
     /// Returns the execution context of the transaction.
