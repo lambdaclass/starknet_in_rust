@@ -188,7 +188,7 @@ mod tests {
         add_segments, allocate_selector, any_box,
         business_logic::{
             execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
-            fact_state::in_memory_state_reader::InMemoryStateReader,
+            state::in_memory_state_reader::InMemoryStateReader,
             state::{
                 cached_state::CachedState,
                 state_api::{State, StateReader},

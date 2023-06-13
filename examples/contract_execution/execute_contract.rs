@@ -7,9 +7,9 @@ use starknet_rs::{
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, CallType, TransactionExecutionContext},
         },
-        fact_state::{
+        state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            structs::ExecutionResourcesManager,
         },
         state::cached_state::CachedState,
     },

@@ -29,10 +29,10 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType,
             OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
+            ExecutionResourcesManager,
         },
     },
     core::errors::state_errors::StateError,
@@ -295,10 +295,19 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let compiled_class = self
+        let compiled_class = if let Ok(compiled_class) = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?;
+            .get_contract_class(&class_hash_bytes)
+        {
+            compiled_class
+        } else {
+            return Ok(CallResult {
+                gas_consumed: 0,
+                is_success: false,
+                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+            });
+        };
 
         if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
@@ -700,7 +709,7 @@ where
         let deployer_address = if request.deploy_from_zero.is_zero() {
             self.contract_address.clone()
         } else {
-            Address(0.into())
+            Address::default()
         };
 
         let contract_address = Address(calculate_contract_address(
@@ -713,10 +722,21 @@ where
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
-        self.starknet_storage_state
+        if (self
+            .starknet_storage_state
             .state
-            .deploy_contract(contract_address.clone(), class_hash_bytes)?;
-
+            .deploy_contract(contract_address.clone(), class_hash_bytes))
+        .is_err()
+        {
+            return Ok((
+                Address::default(),
+                (CallResult {
+                    gas_consumed: 0,
+                    is_success: false,
+                    retdata: vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()],
+                }),
+            ));
+        }
         let result = self.execute_constructor_entry_point(
             &contract_address,
             class_hash_bytes,

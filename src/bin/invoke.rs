@@ -5,7 +5,7 @@ use num_traits::Zero;
 
 use starknet_rs::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
+        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     testing::state::StarknetState,
