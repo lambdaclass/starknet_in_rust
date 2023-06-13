@@ -6,8 +6,11 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
             TransactionExecutionInfo,
         },
-        state::state_api::{State, StateReader},
         state::ExecutionResourcesManager,
+        state::{
+            cached_state::CachedState,
+            state_api::{State, StateReader},
+        },
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -297,7 +300,17 @@ impl InvokeFunction {
             }
         }
     }
-}
+    pub(crate) fn simulate_transaction<S: StateReader>(
+        &self,
+        state: S,
+        transaction_context: TransactionContext,
+        skip_validation: bool,
+    ) {
+        let cache_state = CachedState::new(state, None, None);
+        let traces = Vec::new();
+        let fee_estimation_infos = Vec::new();
+        let transaction_types = Vec::new();
+    }
 
 // ------------------------------------
 //  Invoke internal functions utils
