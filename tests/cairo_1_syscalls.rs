@@ -21,7 +21,6 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    core::errors::state_errors::StateError,
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
@@ -1677,8 +1676,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-    let expected_error_string = StateError::UninitiaizedClassHash.to_string();
-    assert!(exec_entry_point
+    let call_info = exec_entry_point
         .execute(
             &mut state,
             &general_config,
@@ -1686,9 +1684,13 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
             &tx_execution_context,
             false,
         )
-        .unwrap_err()
-        .to_string()
-        .contains(&expected_error_string));
+        .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
+            .unwrap()
+            .trim_start_matches('\0'),
+        "CLASS_HASH_NOT_FOUND"
+    )
 }
 
 #[test]
