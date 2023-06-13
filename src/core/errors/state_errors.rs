@@ -52,4 +52,6 @@ pub enum StateError {
     MissingClassHash(),
     #[error("Uninitializes class_hash")]
     UninitiaizedClassHash,
+    #[error(transparent)]
+    Io(#[from] std::io::Error)
 }
