@@ -6,7 +6,7 @@ use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType, TransactionExecutionInfo},
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, state_api::State},
         transaction::DeployAccount,
     },

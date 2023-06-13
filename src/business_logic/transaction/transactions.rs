@@ -7,11 +7,12 @@ use crate::{
     utils::{Address, ClassHash},
 };
 
-use super::{error::TransactionError, Deploy, InvokeFunction};
+use super::{error::TransactionError, l1_handler::L1Handler, Deploy, InvokeFunction};
 
 pub enum Transaction {
     Deploy(Deploy),
     InvokeFunction(InvokeFunction),
+    L1Handler(L1Handler),
 }
 
 impl Transaction {
@@ -26,6 +27,7 @@ impl Transaction {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
             Transaction::InvokeFunction(tx) => tx.contract_address().clone(),
+            Transaction::L1Handler(tx) => tx.contract_address().clone(),
         }
     }
 
@@ -33,10 +35,12 @@ impl Transaction {
         &self,
         state: &mut S,
         general_config: &TransactionContext,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Deploy(tx) => tx.execute(state, general_config),
             Transaction::InvokeFunction(tx) => tx.execute(state, general_config),
+            Transaction::L1Handler(tx) => tx.execute(state, general_config, remaining_gas),
         }
     }
 }

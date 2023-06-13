@@ -4,8 +4,8 @@ use crate::{
         execution::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::ExecutionResourcesManager,
     },
     definitions::{constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::TransactionContext},
 };

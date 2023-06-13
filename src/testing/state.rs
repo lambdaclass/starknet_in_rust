@@ -5,13 +5,11 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, Event,
             TransactionExecutionContext, TransactionExecutionInfo,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{
             cached_state::CachedState,
             state_api::{State, StateReader},
         },
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::{
             error::TransactionError, invoke_function::InvokeFunction, transactions::Transaction,
             Declare, Deploy,
@@ -114,6 +112,7 @@ impl StarknetState {
         signature: Option<Vec<Felt252>>,
         nonce: Option<Felt252>,
         hash_value: Option<Felt252>,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         let tx = self.create_invoke_function(
             contract_address,
@@ -126,7 +125,7 @@ impl StarknetState {
         )?;
 
         let mut tx = Transaction::InvokeFunction(tx);
-        self.execute_tx(&mut tx)
+        self.execute_tx(&mut tx, remaining_gas)
     }
 
     /// Builds the transaction execution context and executes the entry point.
@@ -177,6 +176,7 @@ impl StarknetState {
         constructor_calldata: Vec<Felt252>,
         contract_address_salt: Address,
         hash_value: Option<Felt252>,
+        remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
         let mut tx = Transaction::Deploy(Deploy::new(
@@ -191,15 +191,16 @@ impl StarknetState {
         self.state
             .set_contract_class(&tx.contract_hash(), &contract_class)?;
 
-        let tx_execution_info = self.execute_tx(&mut tx)?;
+        let tx_execution_info = self.execute_tx(&mut tx, remaining_gas)?;
         Ok((tx.contract_address(), tx_execution_info))
     }
 
     pub fn execute_tx(
         &mut self,
         tx: &mut Transaction,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
-        let tx = tx.execute(&mut self.state, &self.general_config)?;
+        let tx = tx.execute(&mut self.state, &self.general_config, remaining_gas)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
@@ -352,7 +353,13 @@ mod tests {
         let exec = (address, transaction_exec_info);
         assert_eq!(
             starknet_state
-                .deploy(contract_class.clone(), vec![], contract_address_salt, None)
+                .deploy(
+                    contract_class.clone(),
+                    vec![],
+                    contract_address_salt,
+                    None,
+                    0
+                )
                 .unwrap(),
             exec
         );
@@ -493,7 +500,13 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class.clone(), vec![], contract_address_salt, None)
+            .deploy(
+                contract_class.clone(),
+                vec![],
+                contract_address_salt,
+                None,
+                0,
+            )
             .unwrap();
 
         // fibonacci selector
@@ -519,6 +532,7 @@ mod tests {
                 Some(Vec::new()),
                 Some(Felt252::zero()),
                 None,
+                0,
             )
             .unwrap();
 
@@ -566,7 +580,7 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class, vec![], contract_address_salt, None)
+            .deploy(contract_class, vec![], contract_address_salt, None, 0)
             .unwrap();
 
         // fibonacci selector

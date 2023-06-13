@@ -5,7 +5,7 @@ use num_traits::Zero;
 
 use starknet_rs::{
     business_logic::{
-        fact_state::in_memory_state_reader::InMemoryStateReader,
+        state::in_memory_state_reader::InMemoryStateReader,
         state::{cached_state::CachedState, BlockInfo},
         transaction::InvokeFunction,
     },
@@ -129,5 +129,6 @@ pub fn new_starknet_general_config_for_testing() -> TransactionContext {
         0,
         BlockInfo::default(),
         HashMap::default(),
+        true,
     )
 }

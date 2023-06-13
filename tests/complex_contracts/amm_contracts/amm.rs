@@ -7,10 +7,8 @@ use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     business_logic::{
         execution::{CallInfo, CallType},
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::{cached_state::CachedState, state_api::StateReader},
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::error::TransactionError,
     },
     definitions::general_config::TransactionContext,
