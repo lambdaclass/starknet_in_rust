@@ -32,13 +32,13 @@ func test_delegate_l1_handler{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr: felt
 }() {
     let (calldata) = alloc();
+    assert calldata[0] = 5;
+
     let (retdata_size, retdata) = delegate_l1_handler(
         contract_address=CONTRACT_ADDRESS,
-        // function_selector=sn_keccak('get_number'),
         function_selector=0x23180acc053dfb2dbc82a0da33515906d37498b42f34ee4ed308f9d5fb51b6c,
-        calldata_size=0,
+        calldata_size=1,
         calldata=calldata,
     );
-    assert retdata_size = 1;
     return ();
 }

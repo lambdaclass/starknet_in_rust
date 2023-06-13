@@ -417,7 +417,6 @@ where
                     }
                 };
                 function_selector = request.function_selector;
-                println!("function selector: {:?}", function_selector);
                 class_hash = None;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
