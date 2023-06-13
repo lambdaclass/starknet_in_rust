@@ -18,7 +18,6 @@ use starknet_rs::{
         general_config::TransactionContext,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
 use std::path::Path;
@@ -67,7 +66,7 @@ fn test_contract(
         tx_execution_context.nonce(),
         Default::default(),
     );
-    let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
     state_reader
         .contract_states_mut()
         .insert(contract_address, contract_state);
