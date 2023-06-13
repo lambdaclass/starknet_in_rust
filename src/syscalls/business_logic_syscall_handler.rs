@@ -262,14 +262,22 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
         let retdata_end = (retdata_start + result.retdata.len())?;
 
-        self.internal_calls.push(result);
+        let remaining_gas = remaining_gas.saturating_sub(result.gas_consumed);
 
-        //TODO: remaining_gas -= result.gas_consumed
         let gas = remaining_gas;
-        let body = Some(ResponseBody::CallContract(CallContractResponse {
-            retdata_start,
-            retdata_end,
-        }));
+        let body = if result.failure_flag {
+            Some(ResponseBody::Failure(FailureReason {
+                retdata_start,
+                retdata_end,
+            }))
+        } else {
+            Some(ResponseBody::CallContract(CallContractResponse {
+                retdata_start,
+                retdata_end,
+            }))
+        };
+
+        self.internal_calls.push(result);
 
         Ok(SyscallResponse { gas, body })
     }
@@ -535,8 +543,12 @@ where
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Felt252 {
-        self.starknet_storage_state.read(&key).unwrap_or_default()
+    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
+        match self.starknet_storage_state.read(&key) {
+            Ok(value) => Ok(value),
+            Err(e @ StateError::Io(_)) => Err(e),
+            Err(_) => Ok(Felt252::zero()),
+        }
     }
 
     fn storage_write(
@@ -681,7 +693,7 @@ where
             });
         }
 
-        let value = self._storage_read(request.key);
+        let value = self._storage_read(request.key)?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,
