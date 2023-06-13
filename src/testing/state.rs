@@ -292,7 +292,7 @@ impl StarknetState {
 mod tests {
     use std::path::PathBuf;
 
-    use cairo_vm::felt::felt_str;
+    use cairo_vm::{felt::felt_str, vm::runners::cairo_runner::ExecutionResources};
     use num_traits::Num;
 
     use super::*;
@@ -546,6 +546,11 @@ mod tests {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![1.into(), 1.into(), 10.into()],
                 retdata: vec![144.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 94,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             }),
             actual_resources,
