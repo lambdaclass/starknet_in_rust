@@ -421,7 +421,6 @@ where
                 println!("function selector: {:?}", function_selector);
                 class_hash = None;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
-                println!("call data: {:?}", call_data);
             }
             _ => {
                 return Err(SyscallHandlerError::UnknownSyscall(
@@ -451,7 +450,6 @@ where
                 false,
             )
             .map(|x| {
-                println!("call info: {:?}", x);
                 let retdata = x.retdata.clone();
                 self.internal_calls.push(x);
 
