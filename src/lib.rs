@@ -59,7 +59,7 @@ pub fn call_contract<T: State + StateReader>(
         entrypoint_selector,
         caller_address,
         EntryPointType::External,
-        Some(CallType::Call),
+        Some(CallType::Delegate),
         Some(class_hash),
         initial_gas,
     );
@@ -83,4 +83,59 @@ pub fn call_contract<T: State + StateReader>(
     )?;
 
     Ok(call_info.retdata)
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+
+    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+    use cairo_vm::felt::Felt252;
+    use num_traits::Zero;
+
+    use crate::{
+        business_logic::state::{
+            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+        },
+        call_contract,
+        definitions::general_config::TransactionContext,
+        utils::{Address, ClassHash},
+    };
+
+    #[test]
+    fn call_contract_fibonacci_with_10_should_return_6() {
+        let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+        let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+        let entrypoints = contract_class.clone().entry_points_by_type;
+        let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+        let mut contract_class_cache = HashMap::new();
+
+        let address = Address(1111.into());
+        let class_hash: ClassHash = [1; 32];
+        let nonce = Felt252::zero();
+
+        contract_class_cache.insert(class_hash, contract_class);
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(address.clone(), nonce);
+
+        let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+
+        let retdata = call_contract(
+            address.0,
+            entrypoint_selector.into(),
+            calldata,
+            &mut state,
+            TransactionContext::default(),
+        )
+        .unwrap();
+
+        assert_eq!(retdata, vec![89.into()]);
+    }
 }
