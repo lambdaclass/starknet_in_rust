@@ -29,15 +29,15 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType,
             OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::{
             contract_storage_state::ContractStorageState,
             state_api::{State, StateReader},
+            ExecutionResourcesManager,
         },
     },
     core::errors::state_errors::StateError,
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
     },
     hash_utils::calculate_contract_address,
     services::api::contract_class_errors::ContractClassError,
@@ -128,7 +128,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) caller_address: Address,
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
-    pub(crate) general_config: StarknetGeneralConfig,
+    pub(crate) general_config: TransactionContext,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) support_reverted: bool,
     pub(crate) entry_point_selector: Felt252,
@@ -145,7 +145,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        general_config: StarknetGeneralConfig,
+        general_config: TransactionContext,
         syscall_ptr: Relocatable,
         support_reverted: bool,
         entry_point_selector: Felt252,
@@ -204,7 +204,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
-        let mut general_config = StarknetGeneralConfig::default();
+        let mut general_config = TransactionContext::default();
         general_config.block_info = block_info;
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
@@ -282,7 +282,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         Ok(SyscallResponse { gas, body })
     }
 
-    fn has_contructor_entry_points(
+    fn constructor_entry_points_empty(
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
@@ -303,12 +303,21 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let contract_class = self
+        let compiled_class = if let Ok(compiled_class) = self
             .starknet_storage_state
             .state
-            .get_contract_class(&class_hash_bytes)?;
+            .get_contract_class(&class_hash_bytes)
+        {
+            compiled_class
+        } else {
+            return Ok(CallResult {
+                gas_consumed: 0,
+                is_success: false,
+                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+            });
+        };
 
-        if self.has_contructor_entry_points(contract_class)? {
+        if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }
@@ -534,20 +543,30 @@ where
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        self.starknet_storage_state.read(&key)
+    fn _storage_read(&mut self, key: [u8; 32]) -> Felt252 {
+        self.starknet_storage_state.read(&key).unwrap_or_default()
     }
 
     fn storage_write(
         &mut self,
-        _vm: &mut VirtualMachine,
+        vm: &mut VirtualMachine,
         request: StorageWriteRequest,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         if request.reserved != 0.into() {
-            return Err(SyscallHandlerError::UnsopportedAddressDomain(
-                request.reserved,
-            ));
+            let retdata_start = self.allocate_segment(
+                vm,
+                vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],
+            )?;
+            let retdata_end = retdata_start.add(1)?;
+
+            return Ok(SyscallResponse {
+                gas: remaining_gas,
+                body: Some(ResponseBody::Failure(FailureReason {
+                    retdata_start,
+                    retdata_end,
+                })),
+            });
         }
 
         self.syscall_storage_write(request.key, request.value);
@@ -650,17 +669,27 @@ where
 
     fn storage_read(
         &mut self,
-        _vm: &VirtualMachine,
+        vm: &mut VirtualMachine,
         request: StorageReadRequest,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         if request.reserved != Felt252::zero() {
-            return Err(SyscallHandlerError::UnsupportedAddressDomain(
-                request.reserved.to_string(),
-            ));
+            let retdata_start = self.allocate_segment(
+                vm,
+                vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],
+            )?;
+            let retdata_end = retdata_start.add(1)?;
+
+            return Ok(SyscallResponse {
+                gas: remaining_gas,
+                body: Some(ResponseBody::Failure(FailureReason {
+                    retdata_start,
+                    retdata_end,
+                })),
+            });
         }
 
-        let value = self._storage_read(request.key)?;
+        let value = self._storage_read(request.key);
 
         Ok(SyscallResponse {
             gas: remaining_gas,
@@ -688,7 +717,7 @@ where
         let deployer_address = if request.deploy_from_zero.is_zero() {
             self.contract_address.clone()
         } else {
-            Address(0.into())
+            Address::default()
         };
 
         let contract_address = Address(calculate_contract_address(
@@ -701,10 +730,21 @@ where
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
-        self.starknet_storage_state
+        if (self
+            .starknet_storage_state
             .state
-            .deploy_contract(contract_address.clone(), class_hash_bytes)?;
-
+            .deploy_contract(contract_address.clone(), class_hash_bytes))
+        .is_err()
+        {
+            return Ok((
+                Address::default(),
+                (CallResult {
+                    gas_consumed: 0,
+                    is_success: false,
+                    retdata: vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()],
+                }),
+            ));
+        }
         let result = self.execute_constructor_entry_point(
             &contract_address,
             class_hash_bytes,

@@ -84,6 +84,7 @@ where
         self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
+            &mut None,
             verify_secure,
             program_segment_size,
             &mut self.vm,
@@ -138,6 +139,7 @@ where
         self.cairo_runner.run_from_entrypoint(
             entrypoint_offset,
             &entrypoint_args,
+            &mut None,
             true,
             Some(self.cairo_runner.get_program().data_len() + program_extra_data.len()),
             &mut self.vm,
@@ -177,7 +179,7 @@ where
             .get_int_ref()
             .and_then(ToPrimitive::to_u128)
             .ok_or(TransactionError::NotAFelt)?;
-        let is_success = !return_values[2]
+        let is_success = return_values[2]
             .get_int_ref()
             .ok_or(TransactionError::NotAFelt)?
             .is_zero();
@@ -195,7 +197,7 @@ where
             .map(Clone::clone)
             .collect();
         Ok(CallResult {
-            gas_consumed: initial_gas - remaining_gas,
+            gas_consumed: initial_gas.saturating_sub(remaining_gas),
             is_success,
             retdata,
         })
@@ -392,8 +394,8 @@ mod test {
     use super::StarknetRunner;
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState, transaction::error::TransactionError,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+            transaction::error::TransactionError,
         },
         syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,

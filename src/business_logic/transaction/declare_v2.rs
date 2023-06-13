@@ -4,8 +4,8 @@ use crate::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
             TransactionExecutionContext, TransactionExecutionInfo,
         },
-        fact_state::state::ExecutionResourcesManager,
         state::state_api::{State, StateReader},
+        state::ExecutionResourcesManager,
         transaction::{
             error::TransactionError,
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -14,7 +14,7 @@ use crate::{
     },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -134,7 +134,7 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -177,7 +177,7 @@ impl DeclareV2 {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
@@ -242,7 +242,7 @@ impl DeclareV2 {
         mut remaining_gas: u128,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        general_config: &TransactionContext,
     ) -> Result<(CallInfo, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
@@ -284,8 +284,7 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::{
         business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
+            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         definitions::general_config::StarknetChainId,
         utils::Address,

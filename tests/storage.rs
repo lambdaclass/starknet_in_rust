@@ -8,12 +8,10 @@ use starknet_rs::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
             TransactionExecutionContext,
         },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
         state::cached_state::CachedState,
+        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address},
 };
@@ -94,7 +92,7 @@ fn integration_storage_test() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let general_config = StarknetGeneralConfig::default();
+    let general_config = TransactionContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
@@ -119,7 +117,10 @@ fn integration_storage_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [42.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 68,
+            ..Default::default()
+        },
         class_hash: Some(class_hash),
         storage_read_values: vec![42.into()],
         accessed_storage_keys: expected_accessed_storage_keys,
