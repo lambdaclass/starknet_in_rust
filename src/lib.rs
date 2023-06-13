@@ -6,12 +6,14 @@ use business_logic::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    fact_state::state::ExecutionResourcesManager,
-    state::state_api::{State, StateReader},
+    state::{
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     transaction::error::TransactionError,
 };
 use cairo_vm::felt::Felt252;
-use definitions::general_config::StarknetGeneralConfig;
+use definitions::general_config::TransactionContext;
 use starknet_contract_class::EntryPointType;
 use utils::Address;
 
@@ -37,7 +39,7 @@ pub fn call_contract<T: State + StateReader>(
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
     state: &mut T,
-    config: StarknetGeneralConfig,
+    config: TransactionContext,
 ) -> Result<Vec<Felt252>, TransactionError> {
     let contract_address = Address(contract_address);
     let class_hash = state.get_class_hash_at(&contract_address)?;
