@@ -5,12 +5,13 @@
 use business_logic::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
     state::{
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
-    transaction::error::TransactionError,
+    transaction::{error::TransactionError, Transaction},
 };
 use cairo_vm::felt::Felt252;
 use definitions::general_config::TransactionContext;
@@ -83,6 +84,14 @@ pub fn call_contract<T: State + StateReader>(
     )?;
 
     Ok(call_info.retdata)
+}
+
+pub fn execute_transaction<T: State + StateReader>(
+    tx: Transaction,
+    state: &mut T,
+    config: TransactionContext,
+) -> Result<TransactionExecutionInfo, TransactionError> {
+    tx.execute(state, &config)
 }
 
 #[cfg(test)]
