@@ -270,9 +270,12 @@ mod test {
                 ],
                 retdata: vec![],
                 execution_resources: ExecutionResources {
-                    n_steps: 0,
-                    n_memory_holes: 0,
-                    builtin_instance_counter: HashMap::new(),
+                    n_steps: 141,
+                    n_memory_holes: 20,
+                    builtin_instance_counter: HashMap::from([
+                        ("range_check_builtin".to_string(), 6),
+                        ("pedersen_builtin".to_string(), 2),
+                    ]),
                 },
                 events: vec![],
                 l2_to_l1_messages: vec![],
