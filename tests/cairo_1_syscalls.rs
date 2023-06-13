@@ -241,11 +241,16 @@ fn library_call() {
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-    let mut expected_execution_resources = ExecutionResources::default();
-    expected_execution_resources
-        .builtin_instance_counter
-        .insert(RANGE_CHECK_BUILTIN_NAME.to_string(), 7);
-    expected_execution_resources.n_memory_holes = 6;
+    let expected_execution_resources = ExecutionResources {
+        n_steps: 259,
+        n_memory_holes: 10,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 12)]),
+    };
+    let expected_execution_resources_internal_call = ExecutionResources {
+        n_steps: 85,
+        n_memory_holes: 6,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
+    };
 
     // expected results
     let expected_call_info = CallInfo {
@@ -272,7 +277,7 @@ fn library_call() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![25.into()],
             retdata: [5.into()].to_vec(),
-            execution_resources: ExecutionResources::default(),
+            execution_resources: expected_execution_resources_internal_call,
             class_hash: Some(lib_class_hash),
             gas_consumed: 0,
             ..Default::default()
@@ -1073,6 +1078,12 @@ fn test_send_message_to_l1_syscall() {
         payload: vec![555.into(), 666.into()],
     }];
 
+    let expected_execution_resources = ExecutionResources {
+        n_steps: 50,
+        n_memory_holes: 1,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
+    };
+
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
@@ -1081,6 +1092,7 @@ fn test_send_message_to_l1_syscall() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
+        execution_resources: expected_execution_resources,
         gas_consumed: 10040,
         ..Default::default()
     };
@@ -1170,6 +1182,12 @@ fn test_get_execution_info() {
         address.0.clone(),
     ];
 
+    let expected_execution_resources = ExecutionResources {
+        n_steps: 355,
+        n_memory_holes: 14,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
+    };
+
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
@@ -1178,6 +1196,7 @@ fn test_get_execution_info() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
+        execution_resources: expected_execution_resources,
         gas_consumed: 38180,
         ..Default::default()
     };
