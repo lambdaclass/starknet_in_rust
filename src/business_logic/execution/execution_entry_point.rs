@@ -300,10 +300,10 @@ impl ExecutionEntryPoint {
         T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
-
+        println!("1\n\n");
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point_v0(&contract_class, class_hash)?;
-
+        println!("2\n\n");
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
         let mut cairo_runner = CairoRunner::new(&contract_class.program, "all_cairo", false)?;
