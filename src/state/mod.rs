@@ -1,25 +1,25 @@
 pub mod cached_state;
 pub(crate) mod contract_storage_state;
+pub mod in_memory_state_reader;
 pub mod state_api;
 pub mod state_cache;
 
-pub mod in_memory_state_reader;
-
 use crate::{
-    business_logic::{
-        state::{cached_state::CachedState, state_api::StateReader},
-        transaction::error::TransactionError,
-    },
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
     utils::{
         get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-        Address, ClassHash,
     },
 };
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use std::collections::HashMap;
+
+use crate::{
+    transaction::error::TransactionError,
+    utils::{Address, ClassHash},
+};
+
+use self::{cached_state::CachedState, state_api::StateReader};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockInfo {
@@ -226,13 +226,11 @@ mod test {
 
     use super::StateDiff;
     use crate::{
-        business_logic::{
-            state::in_memory_state_reader::InMemoryStateReader,
-            state::{
-                cached_state::{CachedState, ContractClassCache},
-                state_api::StateReader,
-                state_cache::{StateCache, StorageEntry},
-            },
+        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            cached_state::{CachedState, ContractClassCache},
+            state_api::StateReader,
+            state_cache::{StateCache, StorageEntry},
         },
         utils::Address,
     };
@@ -324,8 +322,10 @@ mod test {
             cached_state.contract_classes()
         );
         assert_eq!(
-            cached_state_original.get_nonce_at(&contract_address),
-            cached_state.get_nonce_at(&contract_address)
+            cached_state_original
+                .get_nonce_at(&contract_address)
+                .unwrap(),
+            cached_state.get_nonce_at(&contract_address).unwrap()
         );
     }
 

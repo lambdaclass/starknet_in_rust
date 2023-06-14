@@ -1,6 +1,6 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use crate::business_logic::state::state_api::{State, StateReader};
-use crate::business_logic::transaction::error::TransactionError;
+use crate::state::state_api::{State, StateReader};
+use crate::transaction::error::TransactionError;
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
@@ -110,7 +110,7 @@ impl<'a, T: State + StateReader> HintProcessorPostRun for SyscallHintProcessor<'
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
-    ) -> Result<(), crate::business_logic::transaction::error::TransactionError> {
+    ) -> Result<(), crate::transaction::error::TransactionError> {
         self.syscall_handler.post_run(runner, syscall_stop_ptr)
     }
 }

@@ -3,7 +3,7 @@ use super::{
     other_syscalls, syscall_handler::HintProcessorPostRun,
 };
 use crate::{
-    business_logic::state::state_api::{State, StateReader},
+    state::state_api::{State, StateReader},
     syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use cairo_vm::felt::Felt252;
@@ -170,7 +170,7 @@ impl<'a, T: State + StateReader> HintProcessorPostRun for DeprecatedSyscallHintP
         &self,
         runner: &mut VirtualMachine,
         syscall_stop_ptr: Relocatable,
-    ) -> Result<(), crate::business_logic::transaction::error::TransactionError> {
+    ) -> Result<(), crate::transaction::error::TransactionError> {
         self.syscall_handler.post_run(runner, syscall_stop_ptr)
     }
 }
@@ -190,25 +190,23 @@ mod tests {
     use super::*;
     use crate::{
         add_segments, allocate_selector, any_box,
-        business_logic::{
-            execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
-            state::in_memory_state_reader::InMemoryStateReader,
-            state::{
-                cached_state::CachedState,
-                state_api::{State, StateReader},
-            },
-            transaction::InvokeFunction,
-        },
         definitions::{
-            constants::TRANSACTION_VERSION, general_config::TransactionContext,
+            block_context::BlockContext, constants::TRANSACTION_VERSION,
             transaction_type::TransactionType,
         },
+        execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
         memory_insert,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            cached_state::CachedState,
+            state_api::{State, StateReader},
+        },
         syscalls::deprecated_syscall_request::{
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
             DeprecatedSyscallRequest,
         },
+        transaction::InvokeFunction,
         utils::{
             felt_to_hash, get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
@@ -445,7 +443,7 @@ mod tests {
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
-            version: 51,
+            version: 51.into(),
             account_contract_address: Address(260.into()),
             max_fee: 261,
             transaction_hash: 262.into(),
@@ -481,8 +479,8 @@ mod tests {
 
         // TxInfoStruct
         assert_matches!(
-            get_integer(&vm, relocatable!(4, 0)),
-            Ok(field) if field == tx_execution_context.version as usize
+            get_big_int(&vm, relocatable!(4, 0)),
+            Ok(field) if field == tx_execution_context.version
         );
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 1)),
@@ -508,7 +506,7 @@ mod tests {
             get_big_int(&vm, relocatable!(4, 6)),
             Ok(field) if field == syscall_handler_hint_processor
                 .syscall_handler
-                .general_config
+                .block_context
                 .starknet_os_config
                 .chain_id
                 .to_felt());
@@ -752,7 +750,7 @@ mod tests {
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
-            version: 51,
+            version: 51.into(),
             account_contract_address: Address(260.into()),
             max_fee: 261,
             transaction_hash: 262.into(),
@@ -904,9 +902,10 @@ mod tests {
         let write = syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
-            .read(&felt_to_hash(&address));
+            .read(&felt_to_hash(&address))
+            .unwrap();
 
-        assert_eq!(write, Ok(Felt252::new(45)));
+        assert_eq!(write, Felt252::new(45));
     }
 
     #[test]
@@ -992,8 +991,9 @@ mod tests {
                 .syscall_handler
                 .starknet_storage_state
                 .state
-                .get_class_hash_at(&Address(deployed_address)),
-            Ok(class_hash)
+                .get_class_hash_at(&Address(deployed_address))
+                .unwrap(),
+            class_hash
         );
     }
 
@@ -1089,8 +1089,9 @@ mod tests {
                 .syscall_handler
                 .starknet_storage_state
                 .state
-                .get_class_hash_at(&Address(deployed_address.clone())),
-            Ok(class_hash)
+                .get_class_hash_at(&Address(deployed_address.clone()))
+                .unwrap(),
+            class_hash
         );
 
         /*
@@ -1104,7 +1105,7 @@ mod tests {
             )
             .unwrap(),
             0,
-            TRANSACTION_VERSION,
+            TRANSACTION_VERSION.clone(),
             vec![10.into()],
             Vec::new(),
             0.into(),
@@ -1115,7 +1116,7 @@ mod tests {
 
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &TransactionContext::default())
+            .apply(&mut state, &BlockContext::default())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

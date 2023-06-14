@@ -1,12 +1,12 @@
 use crate::{
-    business_logic::state::{
-        cached_state::{CasmClassCache, UNINITIALIZED_CLASS_HASH},
-        state_api::StateReader,
-        state_cache::StorageEntry,
-    },
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::{CasmClassCache, UNINITIALIZED_CLASS_HASH},
+        state_api::StateReader,
+        state_cache::StorageEntry,
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
@@ -147,13 +147,13 @@ mod tests {
             .insert(storage_entry.clone(), storage_value.clone());
 
         assert_eq!(
-            state_reader.get_class_hash_at(&contract_address),
-            Ok(class_hash)
+            state_reader.get_class_hash_at(&contract_address).unwrap(),
+            class_hash
         );
-        assert_eq!(state_reader.get_nonce_at(&contract_address), Ok(nonce));
+        assert_eq!(state_reader.get_nonce_at(&contract_address).unwrap(), nonce);
         assert_eq!(
-            state_reader.get_storage_at(&storage_entry),
-            Ok(storage_value)
+            state_reader.get_storage_at(&storage_entry).unwrap(),
+            storage_value
         );
     }
 

@@ -1,24 +1,22 @@
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        state::state_api::{State, StateReader},
-        state::ExecutionResourcesManager,
-        transaction::error::TransactionError,
-    },
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
         transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
+        block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
+    },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -28,7 +26,7 @@ use starknet_contract_class::EntryPointType;
 #[derive(Debug)]
 pub struct Deploy {
     pub hash_value: Felt252,
-    pub version: u64,
+    pub version: Felt252,
     pub contract_address: Address,
     pub contract_address_salt: Address,
     pub contract_hash: ClassHash,
@@ -42,7 +40,7 @@ impl Deploy {
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt252>,
         chain_id: Felt252,
-        version: u64,
+        version: Felt252,
         hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_deprecated_class_hash(&contract_class)
@@ -59,7 +57,7 @@ impl Deploy {
         let hash_value = match hash_value {
             Some(hash) => hash,
             None => calculate_deploy_transaction_hash(
-                version,
+                version.clone(),
                 &contract_address,
                 &constructor_calldata,
                 chain_id,
@@ -84,7 +82,7 @@ impl Deploy {
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
@@ -101,7 +99,7 @@ impl Deploy {
             // Contract has no constructors
             Ok(self.handle_empty_constructor(state)?)
         } else {
-            self.invoke_constructor(state, general_config)
+            self.invoke_constructor(state, block_context)
         }
     }
 
@@ -144,7 +142,7 @@ impl Deploy {
     pub fn invoke_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -163,14 +161,14 @@ impl Deploy {
             Vec::new(),
             0,
             Felt252::zero(),
-            general_config.invoke_tx_max_n_steps,
-            self.version,
+            block_context.invoke_tx_max_n_steps,
+            self.version.clone(),
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
         let call_info = call.execute(
             state,
-            general_config,
+            block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -200,9 +198,9 @@ impl Deploy {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+        let concurrent_exec_info = self.apply(state, block_context)?;
         let (fee_transfer_info, actual_fee) = (None, 0);
 
         Ok(
@@ -221,9 +219,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
+        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         utils::calculate_sn_keccak,
     };
 
@@ -250,14 +246,14 @@ mod tests {
             contract_class,
             vec![10.into()],
             0.into(),
-            0,
+            0.into(),
             None,
         )
         .unwrap();
 
-        let config = Default::default();
+        let block_context = Default::default();
 
-        let _result = internal_deploy.apply(&mut state, &config).unwrap();
+        let _result = internal_deploy.apply(&mut state, &block_context).unwrap();
 
         assert_eq!(
             state
@@ -300,14 +296,14 @@ mod tests {
             contract_class,
             Vec::new(),
             0.into(),
-            0,
+            0.into(),
             None,
         )
         .unwrap();
 
-        let config = Default::default();
+        let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &config);
+        let result = internal_deploy.execute(&mut state, &block_context);
         assert_matches!(result.unwrap_err(), TransactionError::CairoRunner(..))
     }
 
@@ -335,14 +331,14 @@ mod tests {
             contract_class,
             vec![10.into()],
             0.into(),
-            0,
+            0.into(),
             None,
         )
         .unwrap();
 
-        let config = Default::default();
+        let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &config);
+        let result = internal_deploy.execute(&mut state, &block_context);
         assert_matches!(
             result.unwrap_err(),
             TransactionError::EmptyConstructorCalldata
@@ -366,7 +362,7 @@ mod tests {
             error_contract_class,
             Vec::new(),
             0.into(),
-            1,
+            1.into(),
             None,
         );
         assert_matches!(

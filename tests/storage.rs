@@ -3,16 +3,13 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-            TransactionExecutionContext,
-        },
-        state::cached_state::CachedState,
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::cached_state::CachedState,
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{
@@ -92,15 +89,15 @@ fn integration_storage_test() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let general_config = TransactionContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -117,7 +114,10 @@ fn integration_storage_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [42.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 68,
+            ..Default::default()
+        },
         class_hash: Some(class_hash),
         storage_read_values: vec![42.into()],
         accessed_storage_keys: expected_accessed_storage_keys,
@@ -128,7 +128,7 @@ fn integration_storage_test() {
         exec_entry_point
             .execute(
                 &mut state,
-                &general_config,
+                &block_context,
                 &mut resources_manager,
                 &tx_execution_context,
                 false,
