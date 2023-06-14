@@ -6,7 +6,7 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::{One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    definitions::{constants::TRANSACTION_VERSION, block_context::BlockContext},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
@@ -96,21 +96,21 @@ fn delegate_l1_handler() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let general_config = TransactionContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     assert!(exec_entry_point
         .execute(
             &mut state,
-            &general_config,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
