@@ -1,25 +1,23 @@
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        state::state_api::{State, StateReader},
-        state::ExecutionResourcesManager,
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        },
-    },
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
+        block_context::BlockContext, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+    },
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -124,14 +122,14 @@ impl Declare {
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -172,7 +170,7 @@ impl Declare {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version.is_zero() {
             return Ok(None);
@@ -193,9 +191,9 @@ impl Declare {
 
         let call_info = entry_point.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps),
+            &self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
         )?;
 
@@ -210,7 +208,7 @@ impl Declare {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -218,13 +216,13 @@ impl Declare {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            general_config.starknet_os_config.gas_price,
-            general_config,
+            block_context.starknet_os_config.gas_price,
+            block_context,
         )?;
 
-        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps);
+        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -253,9 +251,9 @@ impl Declare {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+        let concurrent_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
@@ -270,11 +268,8 @@ impl Declare {
             }
         }
 
-        let (fee_transfer_info, actual_fee) = self.charge_fee(
-            state,
-            &concurrent_exec_info.actual_resources,
-            general_config,
-        )?;
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &concurrent_exec_info.actual_resources, block_context)?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -301,16 +296,15 @@ mod tests {
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
-        business_logic::{
-            execution::CallType, state::cached_state::CachedState,
-            state::in_memory_state_reader::InMemoryStateReader,
-        },
         definitions::{
+            block_context::{BlockContext, StarknetChainId},
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            general_config::{StarknetChainId, TransactionContext},
             transaction_type::TransactionType,
         },
+        execution::CallType,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         utils::{felt_to_hash, Address},
     };
 
@@ -419,7 +413,7 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply(&mut state, &TransactionContext::default())
+                .apply(&mut state, &BlockContext::default())
                 .unwrap(),
             transaction_exec_info
         );
@@ -682,11 +676,10 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &TransactionContext::default())
+            .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error =
-            internal_declare_error.execute(&mut state, &TransactionContext::default());
+        let expected_error = internal_declare_error.execute(&mut state, &BlockContext::default());
 
         // ---------------------
         //      Comparison
@@ -752,10 +745,10 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &TransactionContext::default())
+            .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error = internal_declare.execute(&mut state, &TransactionContext::default());
+        let expected_error = internal_declare.execute(&mut state, &BlockContext::default());
 
         // ---------------------
         //      Comparison
@@ -795,8 +788,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error =
-            internal_declare.execute(&mut state, &TransactionContext::default());
+        let internal_declare_error = internal_declare.execute(&mut state, &BlockContext::default());
 
         assert!(internal_declare_error.is_err());
         assert_matches!(
@@ -860,7 +852,7 @@ mod tests {
 
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
-            internal_declare.execute(&mut state, &TransactionContext::default()),
+            internal_declare.execute(&mut state, &BlockContext::default()),
             Err(TransactionError::FeeError(e)) if e == "Fee transfer failure"
         );
     }

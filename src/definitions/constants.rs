@@ -1,4 +1,4 @@
-use super::general_config::{StarknetChainId, StarknetOsConfig};
+use super::block_context::{StarknetChainId, StarknetOsConfig};
 use crate::utils::Address;
 use cairo_vm::felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -19,6 +19,9 @@ pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
 
 /// The (empirical) L1 gas cost of each Cairo step.
 pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
+
+/// The version is considered 0 for L1-Handler transaction hash calculation purposes.
+pub(crate) const L1_HANDLER_VERSION: u64 = 0;
 
 lazy_static! {
     // Ratios are taken from the `starknet_instance` CairoLayout object in cairo-lang.

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+<<<<<<< HEAD:src/business_logic/transaction/invoke_function.rs
     business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
@@ -16,13 +17,29 @@ use crate::{
             fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
         },
     },
+=======
+>>>>>>> main:src/transaction/invoke_function.rs
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
+        block_context::BlockContext,
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
-        general_config::TransactionContext,
         transaction_type::TransactionType,
     },
+<<<<<<< HEAD:src/business_logic/transaction/invoke_function.rs
     utils::{calculate_tx_resources, Address, FunctionInvocation},
+=======
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+    },
+    utils::{calculate_tx_resources, Address},
+>>>>>>> main:src/transaction/invoke_function.rs
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
@@ -121,7 +138,7 @@ impl InvokeFunction {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
         T: State + StateReader,
@@ -149,9 +166,9 @@ impl InvokeFunction {
 
         let call_info = call.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.validate_max_n_steps)?,
+            &self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
         )?;
 
@@ -166,7 +183,7 @@ impl InvokeFunction {
     fn run_execute_entrypoint<T>(
         &self,
         state: &mut T,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -185,9 +202,9 @@ impl InvokeFunction {
 
         call.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps)?,
+            &self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
             false,
         )
     }
@@ -197,7 +214,7 @@ impl InvokeFunction {
     pub fn apply<S>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -205,10 +222,10 @@ impl InvokeFunction {
         let mut resources_manager = ExecutionResourcesManager::default();
 
         let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
         let call_info =
-            self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
+            self.run_execute_entrypoint(state, block_context, &mut resources_manager)?;
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -232,7 +249,7 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>
     where
         S: State + StateReader,
@@ -243,13 +260,14 @@ impl InvokeFunction {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            general_config.starknet_os_config.gas_price,
-            general_config,
+            block_context.starknet_os_config.gas_price,
+            block_context,
         )?;
 
-        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
+        let tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -259,16 +277,13 @@ impl InvokeFunction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+        let concurrent_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
 
-        let (fee_transfer_info, actual_fee) = self.charge_fee(
-            state,
-            &concurrent_exec_info.actual_resources,
-            general_config,
-        )?;
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &concurrent_exec_info.actual_resources, block_context)?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -392,10 +407,8 @@ pub(crate) fn preprocess_invoke_function_fields(
 mod tests {
     use super::*;
     use crate::{
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
@@ -447,7 +460,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &TransactionContext::default())
+            .apply(&mut state, &BlockContext::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -513,7 +526,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .execute(&mut state, &TransactionContext::default())
+            .execute(&mut state, &BlockContext::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -574,8 +587,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.apply(&mut state, &TransactionContext::default());
+        let expected_error = internal_invoke_function.apply(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -631,7 +643,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &TransactionContext::default())
+            .apply(&mut state, &BlockContext::default())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -692,8 +704,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.apply(&mut state, &TransactionContext::default());
+        let expected_error = internal_invoke_function.apply(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -746,14 +757,14 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = TransactionContext::default();
-        config.cairo_resource_fee_weights = HashMap::from([
+        let mut block_context = BlockContext::default();
+        block_context.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
             (String::from("range_check_builtin"), 70.into()),
         ]);
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let expected_error = internal_invoke_function.execute(&mut state, &block_context);
         let error_msg = "Fee transfer failure".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
@@ -805,15 +816,15 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = TransactionContext::default();
-        config.cairo_resource_fee_weights = HashMap::from([
+        let mut block_context = BlockContext::default();
+        block_context.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
             (String::from("range_check_builtin"), 70.into()),
         ]);
-        config.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let expected_error = internal_invoke_function.execute(&mut state, &block_context);
         let error_msg = "Actual fee exceeded max fee.".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
@@ -866,11 +877,10 @@ mod tests {
             .unwrap();
 
         internal_invoke_function
-            .execute(&mut state, &TransactionContext::default())
+            .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.execute(&mut state, &TransactionContext::default());
+        let expected_error = internal_invoke_function.execute(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -925,8 +935,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.execute(&mut state, &TransactionContext::default());
+        let expected_error = internal_invoke_function.execute(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)

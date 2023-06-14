@@ -4,16 +4,14 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_rs::{
-    business_logic::{
-        state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, BlockInfo},
-        transaction::InvokeFunction,
-    },
     definitions::{
+        block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::TRANSACTION_VERSION,
-        general_config::{StarknetChainId, StarknetOsConfig, TransactionContext},
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::in_memory_state_reader::InMemoryStateReader,
+    state::{cached_state::CachedState, BlockInfo},
+    transaction::InvokeFunction,
     utils::Address,
 };
 
@@ -52,7 +50,7 @@ fn main() {
         .nonce_initial_values_mut()
         .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
 
-    let general_config = new_starknet_general_config_for_testing();
+    let block_context = new_starknet_block_context_for_testing();
 
     for i in 0..RUNS {
         InvokeFunction::new(
@@ -67,7 +65,7 @@ fn main() {
             None,
         )
         .unwrap()
-        .execute(&mut cached_state, &general_config)
+        .execute(&mut cached_state, &block_context)
         .unwrap();
 
         let tx_exec_info = InvokeFunction::new(
@@ -82,7 +80,7 @@ fn main() {
             None,
         )
         .unwrap()
-        .execute(&mut cached_state, &general_config)
+        .execute(&mut cached_state, &block_context)
         .unwrap();
 
         assert_eq!(
@@ -119,8 +117,8 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
     cached_state
 }
 
-pub fn new_starknet_general_config_for_testing() -> TransactionContext {
-    TransactionContext::new(
+pub fn new_starknet_block_context_for_testing() -> BlockContext {
+    BlockContext::new(
         StarknetOsConfig::new(StarknetChainId::TestNet, Address(Felt252::zero()), 0),
         0,
         0,
@@ -129,5 +127,6 @@ pub fn new_starknet_general_config_for_testing() -> TransactionContext {
         0,
         BlockInfo::default(),
         HashMap::default(),
+        true,
     )
 }

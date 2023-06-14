@@ -1,12 +1,12 @@
 use crate::{
-    business_logic::state::{
-        cached_state::{CasmClassCache, UNINITIALIZED_CLASS_HASH},
-        state_api::StateReader,
-        state_cache::StorageEntry,
-    },
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::{CasmClassCache, UNINITIALIZED_CLASS_HASH},
+        state_api::StateReader,
+        state_cache::StorageEntry,
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };

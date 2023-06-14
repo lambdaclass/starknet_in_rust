@@ -1,4 +1,4 @@
-use crate::{business_logic::state::BlockInfo, utils::Address};
+use crate::{state::BlockInfo, utils::Address};
 use cairo_vm::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
 use starknet_api::block::Block;
@@ -60,7 +60,7 @@ impl Default for StarknetOsConfig {
 }
 
 #[derive(Clone, Debug, CopyGetters, Getters, MutGetters)]
-pub struct TransactionContext {
+pub struct BlockContext {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) starknet_os_config: StarknetOsConfig,
     #[get_copy = "pub"]
@@ -78,9 +78,10 @@ pub struct TransactionContext {
     #[getset(get = "pub", get_mut = "pub")]
     // Contains the blocks in the range [ current_block - 1024, current_block - 10 ]
     pub(crate) blocks: HashMap<u64, Block>,
+    pub(crate) enforce_l1_handler_fee: bool,
 }
 
-impl TransactionContext {
+impl BlockContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         starknet_os_config: StarknetOsConfig,
@@ -91,6 +92,7 @@ impl TransactionContext {
         validate_max_n_steps: u64,
         block_info: BlockInfo,
         blocks: HashMap<u64, Block>,
+        enforce_l1_handler_fee: bool,
     ) -> Self {
         Self {
             starknet_os_config,
@@ -101,11 +103,12 @@ impl TransactionContext {
             validate_max_n_steps,
             block_info,
             blocks,
+            enforce_l1_handler_fee,
         }
     }
 }
 
-impl Default for TransactionContext {
+impl Default for BlockContext {
     fn default() -> Self {
         Self {
             starknet_os_config: Default::default(),
@@ -117,6 +120,7 @@ impl Default for TransactionContext {
             validate_max_n_steps: DEFAULT_VALIDATE_MAX_N_STEPS,
             block_info: BlockInfo::empty(DEFAULT_SEQUENCER_ADDRESS.clone()),
             blocks: HashMap::default(),
+            enforce_l1_handler_fee: true,
         }
     }
 }

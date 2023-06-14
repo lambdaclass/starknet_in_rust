@@ -11,23 +11,20 @@ use super::{
     syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
-    business_logic::{
-        execution::{execution_entry_point::ExecutionEntryPoint, *},
-        state::{
-            contract_storage_state::ContractStorageState,
-            state_api::{State, StateReader},
-            BlockInfo, ExecutionResourcesManager,
-        },
-        transaction::error::TransactionError,
-    },
     core::errors::state_errors::StateError,
-    definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
-    },
+    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    execution::{execution_entry_point::ExecutionEntryPoint, *},
     hash_utils::calculate_contract_address,
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
+    state::ExecutionResourcesManager,
+    state::{
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
+        BlockInfo,
+    },
+    transaction::error::TransactionError,
     utils::*,
 };
 use cairo_vm::felt::Felt252;
@@ -54,7 +51,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub(crate) general_config: TransactionContext,
+    pub(crate) block_context: BlockContext,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) internal_calls: Vec<CallInfo>,
@@ -68,7 +65,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        general_config: TransactionContext,
+        block_context: BlockContext,
         syscall_ptr: Relocatable,
     ) -> Self {
         let events = Vec::new();
@@ -87,7 +84,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             contract_address,
             caller_address,
             l2_to_l1_messages,
-            general_config,
+            block_context,
             tx_info_ptr,
             starknet_storage_state,
             internal_calls,
@@ -128,8 +125,8 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
-        let mut general_config = TransactionContext::default();
-        general_config.block_info = block_info;
+        let mut block_context = BlockContext::default();
+        block_context.block_info = block_info;
         let tx_info_ptr = None;
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
@@ -144,7 +141,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             contract_address,
             caller_address,
             l2_to_l1_messages,
-            general_config,
+            block_context,
             tx_info_ptr,
             starknet_storage_state,
             internal_calls,
@@ -230,7 +227,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         let _call_info = call
             .execute(
                 self.starknet_storage_state.state,
-                &self.general_config,
+                &self.block_context,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
                 false,
@@ -441,7 +438,7 @@ where
         entry_point
             .execute(
                 self.starknet_storage_state.state,
-                &self.general_config,
+                &self.block_context,
                 &mut self.resources_manager,
                 &self.tx_execution_context,
                 false,
@@ -456,7 +453,7 @@ where
     }
 
     pub(crate) fn get_block_info(&self) -> &BlockInfo {
-        &self.general_config.block_info
+        &self.block_context.block_info
     }
 
     pub(crate) fn syscall_get_caller_address(
@@ -527,7 +524,7 @@ where
         let tx_info = TxInfoStruct::new(
             tx,
             signature,
-            self.general_config.starknet_os_config.chain_id,
+            self.block_context.starknet_os_config.chain_id,
         );
 
         let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
@@ -874,9 +871,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };

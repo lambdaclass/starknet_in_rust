@@ -1,22 +1,20 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, Event,
-            TransactionExecutionContext, TransactionExecutionInfo,
-        },
-        state::{
-            cached_state::CachedState,
-            state_api::{State, StateReader},
-        },
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-        transaction::{
-            error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
-        },
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, Event, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::{
         contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
+    },
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+    },
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    transaction::{
+        error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
     },
     utils::{Address, ClassHash},
 };
@@ -29,15 +27,15 @@ use std::collections::HashMap;
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
-    pub(crate) general_config: TransactionContext,
+    pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
 impl StarknetState {
-    pub fn new(config: Option<TransactionContext>) -> Self {
-        let general_config = config.unwrap_or_default();
+    pub fn new(context: Option<BlockContext>) -> Self {
+        let block_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
         let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
@@ -48,7 +46,7 @@ impl StarknetState {
         let events = Vec::new();
         StarknetState {
             state,
-            general_config,
+            block_context,
             l2_to_l1_messages,
             l2_to_l1_messages_log,
             events,
@@ -56,17 +54,17 @@ impl StarknetState {
     }
 
     pub fn new_with_states(
-        config: Option<TransactionContext>,
+        block_context: Option<BlockContext>,
         state: CachedState<InMemoryStateReader>,
     ) -> Self {
-        let general_config = config.unwrap_or_default();
+        let block_context = block_context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 
         let events = Vec::new();
         StarknetState {
             state,
-            general_config,
+            block_context,
             l2_to_l1_messages,
             l2_to_l1_messages_log,
             events,
@@ -94,7 +92,7 @@ impl StarknetState {
             hash_value,
         )?;
 
-        let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
+        let tx_execution_info = tx.execute(&mut self.state, &self.block_context)?;
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -111,6 +109,7 @@ impl StarknetState {
         signature: Option<Vec<Felt252>>,
         nonce: Option<Felt252>,
         hash_value: Option<Felt252>,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         let tx = self.create_invoke_function(
             contract_address,
@@ -123,7 +122,7 @@ impl StarknetState {
         )?;
 
         let mut tx = Transaction::InvokeFunction(tx);
-        self.execute_tx(&mut tx)
+        self.execute_tx(&mut tx, remaining_gas)
     }
 
     /// Builds the transaction execution context and executes the entry point.
@@ -151,7 +150,7 @@ impl StarknetState {
         let tx_execution_context = TransactionExecutionContext::default();
         let call_info = call.execute(
             &mut self.state,
-            &self.general_config,
+            &self.block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -174,8 +173,9 @@ impl StarknetState {
         constructor_calldata: Vec<Felt252>,
         contract_address_salt: Address,
         hash_value: Option<Felt252>,
+        remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
-        let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
+        let chain_id = self.block_context.starknet_os_config.chain_id.to_felt();
         let deploy = Deploy::new(
             contract_address_salt,
             contract_class.clone(),
@@ -191,15 +191,16 @@ impl StarknetState {
         self.state
             .set_contract_class(&contract_hash, &contract_class)?;
 
-        let tx_execution_info = self.execute_tx(&mut tx)?;
+        let tx_execution_info = self.execute_tx(&mut tx, remaining_gas)?;
         Ok((contract_address, tx_execution_info))
     }
 
     pub fn execute_tx(
         &mut self,
         tx: &mut Transaction,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
-        let tx = tx.execute(&mut self.state, &self.general_config)?;
+        let tx = tx.execute(&mut self.state, &self.block_context, remaining_gas)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
@@ -252,7 +253,7 @@ impl StarknetState {
     // ------------------------
 
     fn chain_id(&self) -> Felt252 {
-        self.general_config.starknet_os_config.chain_id.to_felt()
+        self.block_context.starknet_os_config.chain_id.to_felt()
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -299,14 +300,12 @@ mod tests {
 
     use super::*;
     use crate::{
-        business_logic::{
-            execution::{CallType, OrderedL2ToL1Message},
-            state::state_cache::StorageEntry,
-        },
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
+        execution::{CallType, OrderedL2ToL1Message},
+        state::state_cache::StorageEntry,
         utils::{calculate_sn_keccak, felt_to_hash},
     };
 
@@ -352,7 +351,13 @@ mod tests {
         let exec = (address, transaction_exec_info);
         assert_eq!(
             starknet_state
-                .deploy(contract_class.clone(), vec![], contract_address_salt, None)
+                .deploy(
+                    contract_class.clone(),
+                    vec![],
+                    contract_address_salt,
+                    None,
+                    0
+                )
                 .unwrap(),
             exec
         );
@@ -493,7 +498,13 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class.clone(), vec![], contract_address_salt, None)
+            .deploy(
+                contract_class.clone(),
+                vec![],
+                contract_address_salt,
+                None,
+                0,
+            )
             .unwrap();
 
         // fibonacci selector
@@ -519,6 +530,7 @@ mod tests {
                 Some(Vec::new()),
                 Some(Felt252::zero()),
                 None,
+                0,
             )
             .unwrap();
 
@@ -571,7 +583,7 @@ mod tests {
         let contract_address_salt = Address(1.into());
 
         let (contract_address, _exec_info) = starknet_state
-            .deploy(contract_class, vec![], contract_address_salt, None)
+            .deploy(contract_class, vec![], contract_address_salt, None, 0)
             .unwrap();
 
         // fibonacci selector

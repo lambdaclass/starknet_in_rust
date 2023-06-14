@@ -5,12 +5,9 @@ use num_traits::Zero;
 
 use lazy_static::lazy_static;
 use starknet_rs::{
-    business_logic::{
-        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-    },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::state::StarknetState,
-    utils::Address,
+    state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+    testing::state::StarknetState, utils::Address,
 };
 
 #[cfg(feature = "with_mimalloc")]
@@ -59,6 +56,7 @@ fn main() {
                 Some(Vec::new()),
                 Some(Felt252::from(i)),
                 None,
+                0,
             )
             .unwrap();
 

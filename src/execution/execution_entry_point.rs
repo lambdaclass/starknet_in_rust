@@ -1,21 +1,19 @@
 use crate::{
-    business_logic::{
-        state::state_api::State,
-        state::ExecutionResourcesManager,
-        state::{contract_storage_state::ContractStorageState, state_api::StateReader},
-        transaction::error::TransactionError,
-    },
-    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::TransactionContext},
+    definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
+    state::state_api::State,
+    state::ExecutionResourcesManager,
+    state::{contract_storage_state::ContractStorageState, state_api::StateReader},
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
         deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
         syscall_handler::SyscallHintProcessor,
     },
+    transaction::error::TransactionError,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
         validate_contract_deployed, Address,
@@ -87,7 +85,7 @@ impl ExecutionEntryPoint {
     pub fn execute<T>(
         &self,
         state: &mut T,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &TransactionExecutionContext,
         support_reverted: bool,
@@ -105,7 +103,7 @@ impl ExecutionEntryPoint {
             CompiledClass::Deprecated(contract_class) => self._execute_version0_class(
                 state,
                 resources_manager,
-                general_config,
+                block_context,
                 tx_execution_context,
                 contract_class,
                 class_hash,
@@ -113,7 +111,7 @@ impl ExecutionEntryPoint {
             CompiledClass::Casm(contract_class) => self._execute(
                 state,
                 resources_manager,
-                general_config,
+                block_context,
                 tx_execution_context,
                 contract_class,
                 class_hash,
@@ -291,7 +289,7 @@ impl ExecutionEntryPoint {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         tx_execution_context: &TransactionExecutionContext,
         contract_class: Box<ContractClass>,
         class_hash: [u8; 32],
@@ -331,7 +329,7 @@ impl ExecutionEntryPoint {
             resources_manager.clone(),
             self.caller_address.clone(),
             self.contract_address.clone(),
-            general_config.clone(),
+            block_context.clone(),
             initial_syscall_ptr,
         );
         let hint_processor = DeprecatedSyscallHintProcessor::new(syscall_handler);
@@ -393,7 +391,7 @@ impl ExecutionEntryPoint {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         tx_execution_context: &TransactionExecutionContext,
         contract_class: Box<CasmContractClass>,
         class_hash: [u8; 32],
@@ -438,7 +436,7 @@ impl ExecutionEntryPoint {
             resources_manager.clone(),
             self.caller_address.clone(),
             self.contract_address.clone(),
-            general_config.clone(),
+            block_context.clone(),
             initial_syscall_ptr,
             support_reverted,
             self.entry_point_selector.clone(),
