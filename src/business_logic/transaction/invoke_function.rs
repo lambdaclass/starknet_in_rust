@@ -325,19 +325,22 @@ impl InvokeFunction {
         transaction_context: TransactionContext,
     ) -> Result<Vec<FunctionInvocation>, TransactionError> {
         let mut cache_state = CachedState::new(state, None, None);
-        // let traces = Vec::new();
         //  let fee_estimation_infos = Vec::new();
-        //  let transaction_types = Vec::new();
+
         //  // init simulation
         let execution_info = self.execute(&mut cache_state, &transaction_context)?;
-        Ok([
+        let _traces = [
             execution_info.validate_info.clone(),
             execution_info.call_info.clone(),
             execution_info.fee_transfer_info.clone(),
         ]
         .iter()
         .map(|c| FunctionInvocation::new(&c))
-        .collect::<Vec<FunctionInvocation>>())
+        .collect::<Vec<FunctionInvocation>>();
+
+        let _transaction_types = [self.tx_type].to_vec();
+
+        unimplemented!();
     }
 }
 
