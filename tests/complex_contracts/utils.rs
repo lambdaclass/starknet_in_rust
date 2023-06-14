@@ -32,7 +32,7 @@ pub struct CallConfig<'a> {
     pub class_hash: &'a [u8; 32],
     pub entry_points_by_type: &'a HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub entry_point_type: &'a EntryPointType,
-    pub tx_context: &'a BlockContext,
+    pub block_context: &'a BlockContext,
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }
 
@@ -118,13 +118,13 @@ pub fn execute_entry_point(
         Vec::new(),
         0,
         10.into(),
-        call_config.tx_context.invoke_tx_max_n_steps(),
+        call_config.block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
     exec_entry_point.execute(
         call_config.state,
-        call_config.tx_context,
+        call_config.block_context,
         call_config.resources_manager,
         &tx_execution_context,
         false,
@@ -135,7 +135,7 @@ pub fn deploy(
     state: &mut CachedState<InMemoryStateReader>,
     path: &str,
     calldata: &[Felt252],
-    tx_context: &BlockContext,
+    block_context: &BlockContext,
     hash_value: Option<Felt252>,
 ) -> Result<(Address, [u8; 32]), TransactionError> {
     let path = PathBuf::from(path);
@@ -152,7 +152,7 @@ pub fn deploy(
     let class_hash = internal_deploy.class_hash();
     state.set_contract_class(&class_hash, &contract_class)?;
 
-    let tx_execution_info = internal_deploy.apply(state, tx_context)?;
+    let tx_execution_info = internal_deploy.apply(state, block_context)?;
 
     let call_info = tx_execution_info.call_info.unwrap();
     let contract_address = call_info.contract_address;

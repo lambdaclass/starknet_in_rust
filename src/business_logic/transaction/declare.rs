@@ -126,14 +126,14 @@ impl Declare {
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, tx_context)?;
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -174,7 +174,7 @@ impl Declare {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version == 0 {
             return Ok(None);
@@ -195,9 +195,9 @@ impl Declare {
 
         let call_info = entry_point.execute(
             state,
-            tx_context,
+            block_context,
             resources_manager,
-            &self.get_execution_context(tx_context.invoke_tx_max_n_steps),
+            &self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
         )?;
 
@@ -212,7 +212,7 @@ impl Declare {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -220,13 +220,13 @@ impl Declare {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            tx_context.starknet_os_config.gas_price,
-            tx_context,
+            block_context.starknet_os_config.gas_price,
+            block_context,
         )?;
 
-        let tx_execution_context = self.get_execution_context(tx_context.invoke_tx_max_n_steps);
+        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, tx_context, &tx_execution_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -255,9 +255,9 @@ impl Declare {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, tx_context)?;
+        let concurrent_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
@@ -273,7 +273,7 @@ impl Declare {
         }
 
         let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &concurrent_exec_info.actual_resources, tx_context)?;
+            self.charge_fee(state, &concurrent_exec_info.actual_resources, block_context)?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(

@@ -23,12 +23,12 @@ fn test_internal_calls() {
         ContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
             .expect("Could not load contract from JSON");
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::create_for_testing(
         Address(0.into()),
         10,
         0.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
@@ -70,7 +70,7 @@ fn test_internal_calls() {
     let call_info = entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,

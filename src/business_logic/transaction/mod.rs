@@ -38,14 +38,14 @@ impl Transaction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Declare(tx) => tx.execute(state, tx_context),
-            Transaction::DeclareV2(tx) => tx.execute(state, tx_context),
-            Transaction::Deploy(tx) => tx.execute(state, tx_context),
-            Transaction::DeployAccount(tx) => tx.execute(state, tx_context),
-            Transaction::InvokeFunction(tx) => tx.execute(state, tx_context),
+            Transaction::Declare(tx) => tx.execute(state, block_context),
+            Transaction::DeclareV2(tx) => tx.execute(state, block_context),
+            Transaction::Deploy(tx) => tx.execute(state, block_context),
+            Transaction::DeployAccount(tx) => tx.execute(state, block_context),
+            Transaction::InvokeFunction(tx) => tx.execute(state, block_context),
         }
     }
 }

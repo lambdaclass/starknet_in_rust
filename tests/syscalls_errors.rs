@@ -29,7 +29,7 @@ fn test_contract<'a>(
     class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
-    tx_context: BlockContext,
+    block_context: BlockContext,
     tx_execution_context_option: Option<TransactionExecutionContext>,
     extra_contracts: impl Iterator<
         Item = (
@@ -49,7 +49,7 @@ fn test_contract<'a>(
             Address(0.into()),
             10,
             0.into(),
-            tx_context.invoke_tx_max_n_steps(),
+            block_context.invoke_tx_max_n_steps(),
             TRANSACTION_VERSION,
         )
     });
@@ -120,7 +120,7 @@ fn test_contract<'a>(
 
     let result = entry_point.execute(
         &mut state,
-        &tx_context,
+        &block_context,
         &mut resources_manager,
         &tx_execution_context,
         false,

@@ -135,7 +135,7 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -143,13 +143,13 @@ impl DeclareV2 {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            tx_context.starknet_os_config.gas_price,
-            tx_context,
+            block_context.starknet_os_config.gas_price,
+            block_context,
         )?;
 
-        let tx_execution_context = self.get_execution_context(tx_context.invoke_tx_max_n_steps);
+        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, tx_context, &tx_execution_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -178,7 +178,7 @@ impl DeclareV2 {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
@@ -190,7 +190,7 @@ impl DeclareV2 {
             initial_gas,
             state,
             &mut resources_manager,
-            tx_context,
+            block_context,
         )?;
 
         let storage_changes = state.count_actual_storage_changes();
@@ -205,7 +205,7 @@ impl DeclareV2 {
         self.compile_and_store_casm_class(state)?;
 
         let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &actual_resources, tx_context)?;
+            self.charge_fee(state, &actual_resources, block_context)?;
 
         let concurrent_exec_info = TransactionExecutionInfo::create_concurrent_stage_execution_info(
             Some(validate_info),
@@ -245,7 +245,7 @@ impl DeclareV2 {
         mut remaining_gas: u128,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        tx_context: &BlockContext,
+        block_context: &BlockContext,
     ) -> Result<(CallInfo, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
@@ -261,11 +261,11 @@ impl DeclareV2 {
             call_type: CallType::Call,
         };
 
-        let tx_execution_context = self.get_execution_context(tx_context.validate_max_n_steps);
+        let tx_execution_context = self.get_execution_context(block_context.validate_max_n_steps);
 
         let call_info = entry_point.execute(
             state,
-            tx_context,
+            block_context,
             resources_manager,
             &tx_execution_context,
             false,

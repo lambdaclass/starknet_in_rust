@@ -57,14 +57,14 @@ fn storage_write_read() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
@@ -99,7 +99,7 @@ fn storage_write_read() {
     constructor_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -119,7 +119,7 @@ fn storage_write_read() {
     let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -140,7 +140,7 @@ fn storage_write_read() {
     increase_balance_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -160,7 +160,7 @@ fn storage_write_read() {
     let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -230,14 +230,14 @@ fn library_call() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -295,7 +295,7 @@ fn library_call() {
         exec_entry_point
             .execute(
                 &mut state,
-                &tx_context,
+                &block_context,
                 &mut resources_manager,
                 &tx_execution_context,
                 false,
@@ -359,14 +359,14 @@ fn call_contract_storage_write_read() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
@@ -405,7 +405,7 @@ fn call_contract_storage_write_read() {
     constructor_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -427,7 +427,7 @@ fn call_contract_storage_write_read() {
     let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -450,7 +450,7 @@ fn call_contract_storage_write_read() {
     increase_balance_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -472,7 +472,7 @@ fn call_contract_storage_write_read() {
     let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -525,21 +525,21 @@ fn emit_event() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -635,21 +635,21 @@ fn deploy_cairo1_from_cairo1() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let call_info = exec_entry_point.execute(
         &mut state,
-        &tx_context,
+        &block_context,
         &mut resources_manager,
         &tx_execution_context,
         false,
@@ -733,21 +733,21 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let call_info = exec_entry_point.execute(
         &mut state,
-        &tx_context,
+        &block_context,
         &mut resources_manager,
         &tx_execution_context,
         false,
@@ -831,21 +831,21 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let call_info = exec_entry_point.execute(
         &mut state,
-        &tx_context,
+        &block_context,
         &mut resources_manager,
         &tx_execution_context,
         false,
@@ -929,21 +929,21 @@ fn deploy_cairo0_and_invoke() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
     let call_info = exec_entry_point.execute(
         &mut state,
-        &tx_context,
+        &block_context,
         &mut resources_manager,
         &tx_execution_context,
         false,
@@ -983,7 +983,7 @@ fn deploy_cairo0_and_invoke() {
     let call_info = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1049,14 +1049,14 @@ fn test_send_message_to_l1_syscall() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1065,7 +1065,7 @@ fn test_send_message_to_l1_syscall() {
     let call_info = send_message_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1127,14 +1127,14 @@ fn test_get_execution_info() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         vec![22.into(), 33.into()],
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
@@ -1168,7 +1168,7 @@ fn test_get_execution_info() {
     let call_info = get_info_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1176,7 +1176,7 @@ fn test_get_execution_info() {
         .unwrap();
 
     let expected_ret_data = vec![
-        tx_context.block_info().sequencer_address.0.clone(),
+        block_context.block_info().sequencer_address.0.clone(),
         0.into(),
         0.into(),
         address.0.clone(),
@@ -1259,14 +1259,14 @@ fn replace_class_internal() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1274,7 +1274,7 @@ fn replace_class_internal() {
     exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1354,14 +1354,14 @@ fn replace_class_contract_call() {
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1386,7 +1386,7 @@ fn replace_class_contract_call() {
     let result = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1412,7 +1412,7 @@ fn replace_class_contract_call() {
     exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1437,7 +1437,7 @@ fn replace_class_contract_call() {
     let result = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1508,14 +1508,14 @@ fn replace_class_contract_call_same_transaction() {
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1540,7 +1540,7 @@ fn replace_class_contract_call_same_transaction() {
     let result = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1618,14 +1618,14 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     );
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1650,7 +1650,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let result = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1726,14 +1726,14 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     );
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1758,7 +1758,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let result = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1834,14 +1834,14 @@ fn call_contract_replace_class_cairo_0() {
     );
 
     // INITIALIZE STARKNET CONFIG
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1866,7 +1866,7 @@ fn call_contract_replace_class_cairo_0() {
     let result = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1920,21 +1920,21 @@ fn test_out_of_gas_failure() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -1991,21 +1991,21 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -2069,21 +2069,21 @@ fn deploy_syscall_failure_in_constructor() {
     );
 
     // Execute the entrypoint
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -2126,14 +2126,14 @@ fn storage_read_no_value() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
@@ -2168,7 +2168,7 @@ fn storage_read_no_value() {
     let call_info = get_balance_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -2206,14 +2206,14 @@ fn storage_read_unavailable_address_domain() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
@@ -2248,7 +2248,7 @@ fn storage_read_unavailable_address_domain() {
     let call_info = read_storage_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -2289,14 +2289,14 @@ fn storage_write_unavailable_address_domain() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
 
@@ -2331,7 +2331,7 @@ fn storage_write_unavailable_address_domain() {
     let call_info = read_storage_exec_entry_point
         .execute(
             &mut state,
-            &tx_context,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -2405,14 +2405,14 @@ fn library_call_failure() {
     );
 
     // Execute the entrypoint
-    let general_config = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2425,7 +2425,7 @@ fn library_call_failure() {
     let call_info = exec_entry_point
         .execute(
             &mut state,
-            &general_config,
+            &block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,

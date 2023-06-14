@@ -21,7 +21,7 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 /// Returns the resulting CallInfo of the transfer call.
 pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     state: &mut S,
-    tx_context: &BlockContext,
+    block_context: &BlockContext,
     tx_execution_context: &TransactionExecutionContext,
     actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
@@ -31,10 +31,10 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         ));
     }
 
-    let fee_token_address = tx_context.starknet_os_config.fee_token_address.clone();
+    let fee_token_address = block_context.starknet_os_config.fee_token_address.clone();
 
     let calldata = [
-        tx_context.block_info.sequencer_address.0.clone(),
+        block_context.block_info.sequencer_address.0.clone(),
         Felt252::from(actual_fee),
         0.into(),
     ]
@@ -55,7 +55,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     fee_transfer_call
         .execute(
             state,
-            tx_context,
+            block_context,
             &mut resources_manager,
             tx_execution_context,
             false,
@@ -71,14 +71,14 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
     gas_price: u128,
-    tx_context: &BlockContext,
+    block_context: &BlockContext,
 ) -> Result<u128, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
         .ok_or_else(|| TransactionError::FeeError("Invalid fee value".to_string()))?
         .to_owned();
 
-    let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(tx_context, resources)?;
+    let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(block_context, resources)?;
     let total_l1_gas_usage = gas_usage.to_f64().unwrap() + l1_gas_by_cairo_usage;
 
     Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
@@ -90,12 +90,12 @@ pub fn calculate_tx_fee(
 /// a proof is determined similarly - by the (normalized) largest segment.
 
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
-    tx_context: &BlockContext,
+    block_context: &BlockContext,
     cairo_resource_usage: &HashMap<String, usize>,
 ) -> Result<f64, TransactionError> {
     if !cairo_resource_usage
         .keys()
-        .all(|k| k == "l1_gas_usage" || tx_context.cairo_resource_fee_weights.contains_key(k))
+        .all(|k| k == "l1_gas_usage" || block_context.cairo_resource_fee_weights.contains_key(k))
     {
         return Err(TransactionError::ResourcesError);
     }
@@ -103,7 +103,7 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     // Convert Cairo usage to L1 gas usage.
     Ok(max_of_keys(
         cairo_resource_usage,
-        &tx_context.cairo_resource_fee_weights,
+        &block_context.cairo_resource_fee_weights,
     ))
 }
 

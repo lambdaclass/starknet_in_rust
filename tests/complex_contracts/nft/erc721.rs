@@ -24,7 +24,7 @@ use crate::complex_contracts::utils::*;
 
 #[test]
 fn erc721_constructor_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -40,7 +40,7 @@ fn erc721_constructor_test() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -59,7 +59,7 @@ fn erc721_constructor_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -71,7 +71,7 @@ fn erc721_constructor_test() {
 
 #[test]
 fn erc721_balance_of_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -87,13 +87,13 @@ fn erc721_balance_of_test() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -110,7 +110,7 @@ fn erc721_balance_of_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type_constructor,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -162,7 +162,7 @@ fn erc721_balance_of_test() {
 
 #[test]
 fn erc721_test_owner_of() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -178,13 +178,13 @@ fn erc721_test_owner_of() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -201,7 +201,7 @@ fn erc721_test_owner_of() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -245,7 +245,7 @@ fn erc721_test_owner_of() {
 
 #[test]
 fn erc721_test_get_approved() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -261,13 +261,13 @@ fn erc721_test_get_approved() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -284,7 +284,7 @@ fn erc721_test_get_approved() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -345,7 +345,7 @@ fn erc721_test_get_approved() {
 
 #[test]
 fn erc721_test_is_approved_for_all() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -361,13 +361,13 @@ fn erc721_test_is_approved_for_all() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -384,7 +384,7 @@ fn erc721_test_is_approved_for_all() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -448,7 +448,7 @@ fn erc721_test_is_approved_for_all() {
 
 #[test]
 fn erc721_test_approve() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -464,13 +464,13 @@ fn erc721_test_approve() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -487,7 +487,7 @@ fn erc721_test_approve() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
     // The address given approval to transfer the token
@@ -553,7 +553,7 @@ fn erc721_test_approve() {
 
 #[test]
 fn erc721_set_approval_for_all() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -569,13 +569,13 @@ fn erc721_set_approval_for_all() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -592,7 +592,7 @@ fn erc721_set_approval_for_all() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -652,7 +652,7 @@ fn erc721_set_approval_for_all() {
 
 #[test]
 fn erc721_transfer_from_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -668,13 +668,13 @@ fn erc721_transfer_from_test() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -691,7 +691,7 @@ fn erc721_transfer_from_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -793,7 +793,7 @@ fn erc721_transfer_from_test() {
 
 #[test]
 fn erc721_transfer_from_and_get_owner_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -809,13 +809,13 @@ fn erc721_transfer_from_and_get_owner_test() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -832,7 +832,7 @@ fn erc721_transfer_from_and_get_owner_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -885,7 +885,7 @@ fn erc721_transfer_from_and_get_owner_test() {
 
 #[test]
 fn erc721_safe_transfer_from_should_fail_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -901,7 +901,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -910,7 +910,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
         &mut state,
         "starknet_programs/ERC165.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -922,7 +922,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
             .clone();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -933,7 +933,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -953,7 +953,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
 
 #[test]
 fn erc721_calling_constructor_twice_should_fail_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -969,13 +969,13 @@ fn erc721_calling_constructor_twice_should_fail_test() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::Constructor;
 
@@ -992,7 +992,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -1003,7 +1003,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
 //deploy() will try to unwrap the result of the constructor
 #[test]
 fn erc721_constructor_should_fail_with_to_equal_zero() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -1021,7 +1021,7 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
             &mut state,
             "starknet_programs/ERC721.json",
             &calldata,
-            &tx_context,
+            &block_context,
             None
         )
         .unwrap_err(),
@@ -1031,7 +1031,7 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
 
 #[test]
 fn erc721_transfer_fail_to_zero_address() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -1047,13 +1047,13 @@ fn erc721_transfer_fail_to_zero_address() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -1070,7 +1070,7 @@ fn erc721_transfer_fail_to_zero_address() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -1086,7 +1086,7 @@ fn erc721_transfer_fail_to_zero_address() {
 
 #[test]
 fn erc721_transfer_fail_not_owner() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -1102,13 +1102,13 @@ fn erc721_transfer_fail_not_owner() {
         &mut state,
         "starknet_programs/ERC721.json",
         &calldata,
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
 
     let caller_address = Address(666.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let entry_point_type = EntryPointType::External;
 
@@ -1125,7 +1125,7 @@ fn erc721_transfer_fail_not_owner() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &entry_point_type,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 

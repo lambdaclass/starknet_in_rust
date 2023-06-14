@@ -92,14 +92,14 @@ fn integration_storage_test() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        tx_context.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -131,7 +131,7 @@ fn integration_storage_test() {
         exec_entry_point
             .execute(
                 &mut state,
-                &tx_context,
+                &block_context,
                 &mut resources_manager,
                 &tx_execution_context,
                 false,

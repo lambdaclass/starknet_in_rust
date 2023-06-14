@@ -504,7 +504,7 @@ mod tests {
             get_big_int(&vm, relocatable!(4, 6)),
             Ok(field) if field == syscall_handler_hint_processor
                 .syscall_handler
-                .tx_context
+                .block_context
                 .starknet_os_config
                 .chain_id
                 .to_felt());

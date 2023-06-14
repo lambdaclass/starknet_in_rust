@@ -54,7 +54,7 @@ fn swap(calldata: &[Felt252], call_config: &mut CallConfig) -> Result<CallInfo, 
 
 #[test]
 fn amm_init_pool_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -65,7 +65,7 @@ fn amm_init_pool_test() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -112,7 +112,7 @@ fn amm_init_pool_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -124,7 +124,7 @@ fn amm_init_pool_test() {
 
 #[test]
 fn amm_add_demo_tokens_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -135,7 +135,7 @@ fn amm_add_demo_tokens_test() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -156,7 +156,7 @@ fn amm_add_demo_tokens_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -203,7 +203,7 @@ fn amm_add_demo_tokens_test() {
 
 #[test]
 fn amm_get_pool_token_balance() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -214,7 +214,7 @@ fn amm_get_pool_token_balance() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -235,7 +235,7 @@ fn amm_get_pool_token_balance() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -279,7 +279,7 @@ fn amm_get_pool_token_balance() {
 
 #[test]
 fn amm_swap_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -290,7 +290,7 @@ fn amm_swap_test() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -311,7 +311,7 @@ fn amm_swap_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -381,7 +381,7 @@ fn amm_swap_test() {
 
 #[test]
 fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -392,7 +392,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -403,7 +403,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
             .clone();
     let calldata = [Felt252::new(2_u32.pow(30)), Felt252::new(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut call_config = CallConfig {
         state: &mut state,
@@ -412,7 +412,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -421,7 +421,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
 
 #[test]
 fn amm_swap_should_fail_with_unexistent_token() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -432,7 +432,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -443,7 +443,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
             .clone();
     let calldata = [Felt252::zero(), Felt252::new(10)].to_vec();
     let caller_address = Address(0000.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut call_config = CallConfig {
         state: &mut state,
@@ -452,7 +452,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -461,7 +461,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
 
 #[test]
 fn amm_swap_should_fail_with_amount_out_of_bounds() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -472,7 +472,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -483,7 +483,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
             .clone();
     let calldata = [Felt252::new(1), Felt252::new(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut call_config = CallConfig {
         state: &mut state,
@@ -492,7 +492,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -501,7 +501,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
 
 #[test]
 fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -512,7 +512,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -523,7 +523,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
             .clone();
     let calldata = [Felt252::new(1), Felt252::new(100)].to_vec();
     let caller_address = Address(0000.into());
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut call_config = CallConfig {
         state: &mut state,
@@ -532,7 +532,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 
@@ -544,7 +544,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
 
 #[test]
 fn amm_get_account_token_balance_test() {
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut state = CachedState::new(
         InMemoryStateReader::default(),
         Some(Default::default()),
@@ -555,7 +555,7 @@ fn amm_get_account_token_balance_test() {
         &mut state,
         "starknet_programs/amm.json",
         &[],
-        &tx_context,
+        &block_context,
         None,
     )
     .unwrap();
@@ -568,7 +568,7 @@ fn amm_get_account_token_balance_test() {
     let caller_address = Address(0000.into());
     let calldata = [10.into(), 0.into()].to_vec();
 
-    let tx_context = BlockContext::default();
+    let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut call_config = CallConfig {
         state: &mut state,
@@ -577,7 +577,7 @@ fn amm_get_account_token_balance_test() {
         class_hash: &class_hash,
         entry_points_by_type: &entry_points_by_type,
         entry_point_type: &EntryPointType::External,
-        tx_context: &tx_context,
+        block_context: &block_context,
         resources_manager: &mut resources_manager,
     };
 

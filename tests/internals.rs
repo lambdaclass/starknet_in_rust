@@ -98,7 +98,7 @@ where
     Ok(ContractClass::try_from(path.into())?)
 }
 
-pub fn new_starknet_tx_context_for_testing() -> BlockContext {
+pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet,
@@ -117,7 +117,7 @@ pub fn new_starknet_tx_context_for_testing() -> BlockContext {
 
 fn create_account_tx_test_state(
 ) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
-    let tx_context = new_starknet_tx_context_for_testing();
+    let block_context = new_starknet_block_context_for_testing();
 
     let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
     let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
@@ -139,7 +139,7 @@ fn create_account_tx_test_state(
 
     let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
     let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
-    let test_erc20_address = tx_context.starknet_os_config().fee_token_address().clone();
+    let test_erc20_address = block_context.starknet_os_config().fee_token_address().clone();
     let address_to_class_hash = HashMap::from([
         (test_contract_address, test_contract_class_hash),
         (
@@ -192,7 +192,7 @@ fn create_account_tx_test_state(
         Some(HashMap::new()),
     );
 
-    Ok((tx_context, cached_state))
+    Ok((block_context, cached_state))
 }
 
 fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
@@ -406,7 +406,7 @@ fn expected_validate_call_info(
 }
 
 fn expected_fee_transfer_call_info(
-    tx_context: &BlockContext,
+    block_context: &BlockContext,
     account_address: &Address,
     actual_fee: u64,
 ) -> CallInfo {
@@ -414,11 +414,11 @@ fn expected_fee_transfer_call_info(
         entry_point_type: EntryPointType::External.into(),
         entry_point_selector: TRANSFER_ENTRY_POINT_SELECTOR.clone().into(),
         calldata: vec![
-            tx_context.block_info().sequencer_address.0.clone(),
+            block_context.block_info().sequencer_address.0.clone(),
             actual_fee.into(),
             Felt252::zero(),
         ],
-        contract_address: tx_context.starknet_os_config().fee_token_address().clone(),
+        contract_address: block_context.starknet_os_config().fee_token_address().clone(),
         caller_address: account_address.clone(),
         retdata: vec![Felt252::one()],
         events: vec![OrderedEvent {
@@ -426,7 +426,7 @@ fn expected_fee_transfer_call_info(
             keys: vec![TRANSFER_EVENT_SELECTOR.clone()],
             data: vec![
                 account_address.0.clone(),
-                tx_context.block_info().sequencer_address.0.clone(),
+                block_context.block_info().sequencer_address.0.clone(),
                 actual_fee.into(),
                 Felt252::zero(),
             ],
@@ -473,7 +473,7 @@ fn expected_fee_transfer_call_info(
 
 fn validate_final_balances<S>(
     state: &mut S,
-    tx_context: &BlockContext,
+    block_context: &BlockContext,
     expected_sequencer_balance: Felt252,
     erc20_account_balance_storage_key: &ClassHash,
 ) where
@@ -481,7 +481,7 @@ fn validate_final_balances<S>(
 {
     let account_balance = state
         .get_storage_at(&(
-            tx_context.starknet_os_config().fee_token_address().clone(),
+            block_context.starknet_os_config().fee_token_address().clone(),
             *erc20_account_balance_storage_key,
         ))
         .unwrap();
@@ -489,7 +489,7 @@ fn validate_final_balances<S>(
 
     let sequencer_balance = state
         .get_storage_at(&(
-            tx_context.starknet_os_config().fee_token_address().clone(),
+            block_context.starknet_os_config().fee_token_address().clone(),
             felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
         ))
         .unwrap();
@@ -498,13 +498,13 @@ fn validate_final_balances<S>(
 
 #[test]
 fn test_create_account_tx_test_state() {
-    let (tx_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
     assert_eq!(state, expected_state_before_tx());
 
     let value = state
         .get_storage_at(&(
-            tx_context.starknet_os_config().fee_token_address().clone(),
+            block_context.starknet_os_config().fee_token_address().clone(),
             felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
@@ -697,13 +697,13 @@ fn expected_declare_fee_transfer_info() -> CallInfo {
 
 #[test]
 fn test_declare_tx() {
-    let (tx_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
     assert_eq!(state, expected_state_before_tx());
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
     // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &tx_context).unwrap();
+    let result = declare_tx.execute(&mut state, &block_context).unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
@@ -737,7 +737,7 @@ fn test_declare_tx() {
 
 #[test]
 fn test_declarev2_tx() {
-    let (tx_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
     assert_eq!(state, expected_state_before_tx());
     let declare_tx = declarev2_tx();
     // Check ContractClass is not set before the declare_tx
@@ -745,7 +745,7 @@ fn test_declarev2_tx() {
         .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
         .is_err());
     // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &tx_context).unwrap();
+    let result = declare_tx.execute(&mut state, &block_context).unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
         .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
@@ -921,7 +921,7 @@ fn test_invoke_tx_state() {
 
 #[test]
 fn test_deploy_account() {
-    let (tx_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -938,7 +938,7 @@ fn test_deploy_account() {
 
     state.set_storage_at(
         &(
-            tx_context.starknet_os_config().fee_token_address().clone(),
+            block_context.starknet_os_config().fee_token_address().clone(),
             TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes(),
         ),
         ACTUAL_FEE.clone(),
@@ -954,7 +954,7 @@ fn test_deploy_account() {
         Felt252::zero(),
     );
 
-    let tx_info = deploy_account_tx.execute(&mut state, &tx_context).unwrap();
+    let tx_info = deploy_account_tx.execute(&mut state, &block_context).unwrap();
 
     assert_eq!(state, state_after);
 
@@ -983,7 +983,7 @@ fn test_deploy_account() {
     };
 
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
-        &tx_context,
+        &block_context,
         deploy_account_tx.contract_address(),
         ACTUAL_FEE.to_u64().unwrap(),
     );
@@ -1014,7 +1014,7 @@ fn test_deploy_account() {
 
     let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
-    validate_final_balances(&mut state, &tx_context, Felt252::zero(), &hash);
+    validate_final_balances(&mut state, &block_context, Felt252::zero(), &hash);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -1192,7 +1192,7 @@ fn expected_deploy_account_states() -> (
 
 #[test]
 fn test_state_for_declare_tx() {
-    let (tx_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
@@ -1202,7 +1202,7 @@ fn test_state_for_declare_tx() {
         .unwrap()
         .is_zero());
     // Execute declare_tx
-    assert!(declare_tx.execute(&mut state, &tx_context).is_ok());
+    assert!(declare_tx.execute(&mut state, &block_context).is_ok());
     assert!(state
         .get_nonce_at(&declare_tx.sender_address)
         .unwrap()
@@ -1438,7 +1438,7 @@ fn test_invoke_tx_wrong_entrypoint() {
 
 #[test]
 fn test_deploy_undeclared_account() {
-    let (tx_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
     let not_deployed_class_hash = [1; 32];
     // Deploy transaction with a not_deployed_class_hash class_hash
@@ -1459,7 +1459,7 @@ fn test_deploy_undeclared_account() {
     assert!(state.get_contract_class(&not_deployed_class_hash).is_err());
 
     // Execute transaction
-    let result = deploy_account_tx.execute(&mut state, &tx_context);
+    let result = deploy_account_tx.execute(&mut state, &block_context);
 
     // Execute transaction
     assert_matches!(
