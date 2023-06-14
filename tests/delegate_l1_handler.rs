@@ -6,7 +6,7 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::{One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    definitions::{constants::TRANSACTION_VERSION, block_context::BlockContext},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
