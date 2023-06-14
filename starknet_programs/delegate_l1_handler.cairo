@@ -6,7 +6,7 @@ from starkware.starknet.common.syscalls import (
     DELEGATE_L1_HANDLER_SELECTOR, CallContractRequest, CallContract
 )
 
-// Address set in test for contract get_number.cairo
+// Address set in test for contract get_number_l1_handler.cairo
 const CONTRACT_ADDRESS = 1;
 
 func delegate_l1_handler{syscall_ptr: felt*}(
