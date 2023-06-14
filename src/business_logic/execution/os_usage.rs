@@ -57,6 +57,17 @@ impl Default for OsResources {
                     ]),
                 },
             ),
+            (
+                TransactionType::L1Handler,
+                ExecutionResources {
+                    n_steps: 1068,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::from([
+                        ("pedersen_builtin".to_string(), 11),
+                        ("range_check_builtin".to_string(), 17),
+                    ]),
+                },
+            ),
         ]);
 
         OsResources {
