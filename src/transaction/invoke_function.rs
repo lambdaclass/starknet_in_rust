@@ -33,7 +33,7 @@ pub struct InvokeFunction {
     entry_point_type: EntryPointType,
     calldata: Vec<Felt252>,
     tx_type: TransactionType,
-    version: u64,
+    version: Felt252,
     validate_entry_point_selector: Felt252,
     #[getset(get = "pub")]
     hash_value: Felt252,
@@ -49,7 +49,7 @@ impl InvokeFunction {
         contract_address: Address,
         entry_point_selector: Felt252,
         max_fee: u128,
-        version: u64,
+        version: Felt252,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         chain_id: Felt252,
@@ -59,13 +59,13 @@ impl InvokeFunction {
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
-            version,
+            version.clone(),
         )?;
         let hash_value = match hash_value {
             Some(hash) => hash,
             None => calculate_transaction_hash_common(
                 TransactionHashPrefix::Invoke,
-                version,
+                version.clone(),
                 &contract_address,
                 entry_point_selector_field,
                 &calldata,
@@ -100,13 +100,13 @@ impl InvokeFunction {
             self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
-            if self.version == 0 {
+            if self.version.is_zero() {
                 Felt252::zero()
             } else {
                 self.nonce.clone().ok_or(TransactionError::MissingNonce)?
             },
             n_steps,
-            self.version,
+            self.version.clone(),
         ))
     }
 
@@ -122,7 +122,7 @@ impl InvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(None);
         }
 
@@ -270,7 +270,7 @@ impl InvokeFunction {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -318,9 +318,9 @@ pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Tr
 pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt252,
     nonce: Option<Felt252>,
-    version: u64,
+    version: Felt252,
 ) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version == 0 || version == u64::MAX {
+    if version.is_zero() {
         match nonce {
             Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {
@@ -363,7 +363,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -429,7 +429,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -491,7 +491,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -547,7 +547,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -609,7 +609,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -663,7 +663,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -722,7 +722,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -782,7 +782,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -842,7 +842,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -892,7 +892,7 @@ mod tests {
             )
             .unwrap(),
             Some(1.into()),
-            0,
+            0.into(),
         )
         .unwrap_err();
         assert_matches!(expected_error, TransactionError::InvokeFunctionZeroHasNonce)
@@ -926,7 +926,8 @@ mod tests {
             16,
         )
         .unwrap();
-        let result = preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0);
+        let result =
+            preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0.into());
 
         let expected_additional_data: Vec<Felt252> = Vec::new();
         let expected_entry_point_selector_field = entry_point_selector;
@@ -948,7 +949,7 @@ mod tests {
             )
             .unwrap(),
             None,
-            1,
+            1.into(),
         );
         assert!(expected_error.is_err());
         assert_matches!(

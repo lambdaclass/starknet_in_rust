@@ -292,7 +292,7 @@ impl Event {
 #[derive(Clone, Debug, Default, Getters)]
 pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
-    pub(crate) version: u64,
+    pub(crate) version: Felt252,
     pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u128,
     pub(crate) transaction_hash: Felt252,
@@ -311,7 +311,7 @@ impl TransactionExecutionContext {
         max_fee: u128,
         nonce: Felt252,
         n_steps: u64,
-        version: u64,
+        version: Felt252,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
@@ -331,7 +331,7 @@ impl TransactionExecutionContext {
         _max_fee: u128,
         nonce: Felt252,
         n_steps: u64,
-        version: u64,
+        version: Felt252,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
@@ -349,7 +349,7 @@ impl TransactionExecutionContext {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct TxInfoStruct {
-    pub(crate) version: usize,
+    pub(crate) version: Felt252,
     pub(crate) account_contract_address: Address,
     pub(crate) max_fee: u128,
     pub(crate) signature_len: usize,
@@ -366,7 +366,7 @@ impl TxInfoStruct {
         chain_id: StarknetChainId,
     ) -> TxInfoStruct {
         TxInfoStruct {
-            version: tx.version as usize,
+            version: tx.version,
             account_contract_address: tx.account_contract_address,
             max_fee: tx.max_fee,
             signature_len: tx.signature.len(),
@@ -379,7 +379,7 @@ impl TxInfoStruct {
 
     pub(crate) fn to_vec(&self) -> Vec<MaybeRelocatable> {
         vec![
-            MaybeRelocatable::from(Felt252::new(self.version)),
+            MaybeRelocatable::from(&self.version),
             MaybeRelocatable::from(&self.account_contract_address.0),
             MaybeRelocatable::from(Felt252::new(self.max_fee)),
             MaybeRelocatable::from(Felt252::new(self.signature_len)),
@@ -394,7 +394,7 @@ impl TxInfoStruct {
         vm: &VirtualMachine,
         tx_info_ptr: Relocatable,
     ) -> Result<TxInfoStruct, SyscallHandlerError> {
-        let version = get_integer(vm, tx_info_ptr)?;
+        let version = get_big_int(vm, tx_info_ptr)?;
 
         let account_contract_address = Address(get_big_int(vm, &tx_info_ptr + 1)?);
         let max_fee = get_big_int(vm, &tx_info_ptr + 2)?

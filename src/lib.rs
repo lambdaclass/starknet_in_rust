@@ -13,14 +13,19 @@ use crate::{
     },
     transaction::{error::TransactionError, Transaction},
 };
-use cairo_vm::felt::Felt252;
 use definitions::general_config::TransactionContext;
-use starknet_contract_class::EntryPointType;
 use utils::Address;
 
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
+
+// Re-exports
+pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+pub use cairo_lang_starknet::contract_class::ContractClass;
+pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+pub use cairo_vm::felt::Felt252;
+pub use starknet_contract_class::EntryPointType;
 
 pub mod core;
 pub mod definitions;
@@ -74,7 +79,7 @@ pub fn call_contract<T: State + StateReader>(
         max_fee,
         nonce,
         config.invoke_tx_max_n_steps(),
-        version,
+        version.into(),
     );
 
     let call_info = execution_entrypoint.execute(

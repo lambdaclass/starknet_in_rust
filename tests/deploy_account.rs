@@ -39,7 +39,7 @@ fn internal_deploy_account() {
     let internal_deploy_account = DeployAccount::new(
         class_hash,
         0,
-        0,
+        0.into(),
         Felt252::zero(),
         vec![],
         vec![
