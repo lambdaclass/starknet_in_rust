@@ -255,9 +255,9 @@ mod tests {
         )
         .unwrap();
 
-        let config = Default::default();
+        let block_context = Default::default();
 
-        let _result = internal_deploy.apply(&mut state, &config).unwrap();
+        let _result = internal_deploy.apply(&mut state, &block_context).unwrap();
 
         assert_eq!(
             state
@@ -305,9 +305,9 @@ mod tests {
         )
         .unwrap();
 
-        let config = Default::default();
+        let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &config);
+        let result = internal_deploy.execute(&mut state, &block_context);
         assert_matches!(result.unwrap_err(), TransactionError::CairoRunner(..))
     }
 
@@ -340,9 +340,9 @@ mod tests {
         )
         .unwrap();
 
-        let config = Default::default();
+        let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &config);
+        let result = internal_deploy.execute(&mut state, &block_context);
         assert_matches!(
             result.unwrap_err(),
             TransactionError::EmptyConstructorCalldata
