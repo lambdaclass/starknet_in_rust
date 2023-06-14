@@ -44,6 +44,7 @@ pub struct Address(pub Felt252);
 //*  FunctionInvocation
 //* -----------------------
 
+#[derive(Debug, Clone, Default)]
 pub struct FunctionInvocation {
     pub caller_address: Address,
     pub call_type: Option<CallType>,
@@ -59,19 +60,22 @@ pub struct FunctionInvocation {
 }
 
 impl FunctionInvocation {
-    pub fn new(call_info: &CallInfo) -> Self {
-        FunctionInvocation {
-            caller_address: call_info.caller_address.clone(),
-            call_type: call_info.call_type.clone(),
-            contract_address: call_info.contract_address.clone(),
-            class_hash: call_info.class_hash.clone(),
-            entry_point_selector: call_info.entry_point_selector.clone(),
-            entry_point_type: call_info.entry_point_type.clone(),
-            calldata: call_info.calldata.clone(),
-            retdata: call_info.retdata.clone(),
-            execution_resources: call_info.execution_resources.clone(),
-            events: call_info.events.clone(),
-            internal_calls: call_info.internal_calls.clone(),
+    pub fn new(call_info: &Option<CallInfo>) -> Self {
+        match call_info {
+            None => FunctionInvocation::default(),
+            Some(c) => FunctionInvocation {
+                caller_address: c.caller_address.clone(),
+                call_type: c.call_type.clone(),
+                contract_address: c.contract_address.clone(),
+                class_hash: c.class_hash.clone(),
+                entry_point_selector: c.entry_point_selector.clone(),
+                entry_point_type: c.entry_point_type.clone(),
+                calldata: c.calldata.clone(),
+                retdata: c.retdata.clone(),
+                execution_resources: c.execution_resources.clone(),
+                events: c.events.clone(),
+                internal_calls: c.internal_calls.clone(),
+            },
         }
     }
 }

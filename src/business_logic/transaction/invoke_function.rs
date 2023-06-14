@@ -22,14 +22,14 @@ use crate::{
         general_config::TransactionContext,
         transaction_type::TransactionType,
     },
-    utils::{calculate_tx_resources, Address},
+    utils::{calculate_tx_resources, Address, FunctionInvocation},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
     #[getset(get = "pub")]
     contract_address: Address,
@@ -310,13 +310,12 @@ impl InvokeFunction {
 
     pub(crate) fn create_for_simulation(
         &self,
-        tx: &InvokeFunction,
+        tx: InvokeFunction,
         skip_validation: bool,
     ) -> InvokeFunction {
-        let t = tx.clone();
         InvokeFunction {
             skip_validation,
-            ..t
+            ..tx
         }
     }
 
@@ -324,14 +323,21 @@ impl InvokeFunction {
         &self,
         state: S,
         transaction_context: TransactionContext,
-    ) {
+    ) -> Result<Vec<FunctionInvocation>, TransactionError> {
         let mut cache_state = CachedState::new(state, None, None);
         // let traces = Vec::new();
         //  let fee_estimation_infos = Vec::new();
         //  let transaction_types = Vec::new();
         //  // init simulation
-
-        let _execution_info = self.execute(&mut cache_state, &transaction_context);
+        let execution_info = self.execute(&mut cache_state, &transaction_context)?;
+        Ok([
+            execution_info.validate_info.clone(),
+            execution_info.call_info.clone(),
+            execution_info.fee_transfer_info.clone(),
+        ]
+        .iter()
+        .map(|c| FunctionInvocation::new(&c))
+        .collect::<Vec<FunctionInvocation>>())
     }
 }
 
