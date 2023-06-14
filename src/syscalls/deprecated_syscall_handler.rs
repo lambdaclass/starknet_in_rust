@@ -191,7 +191,7 @@ mod tests {
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{
-            constants::TRANSACTION_VERSION, general_config::TransactionContext,
+            block_context::BlockContext, constants::TRANSACTION_VERSION,
             transaction_type::TransactionType,
         },
         execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
@@ -506,7 +506,7 @@ mod tests {
             get_big_int(&vm, relocatable!(4, 6)),
             Ok(field) if field == syscall_handler_hint_processor
                 .syscall_handler
-                .general_config
+                .block_context
                 .starknet_os_config
                 .chain_id
                 .to_felt());
@@ -1116,7 +1116,7 @@ mod tests {
 
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &TransactionContext::default())
+            .apply(&mut state, &BlockContext::default())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

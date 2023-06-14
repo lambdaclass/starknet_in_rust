@@ -7,8 +7,8 @@ use num_traits::Zero;
 use starknet_rs::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
+        block_context::StarknetChainId,
         constants::{TRANSACTION_VERSION, VALIDATE_ENTRY_POINT_SELECTOR},
-        general_config::StarknetChainId,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::in_memory_state_reader::InMemoryStateReader,
@@ -67,7 +67,7 @@ fn deploy_account() {
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
         .unwrap();
 
-    let config = &Default::default();
+    let block_context = &Default::default();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
@@ -90,7 +90,7 @@ fn deploy_account() {
                 None,
             )
             .unwrap();
-            internal_deploy_account.execute(&mut state_copy, config)
+            internal_deploy_account.execute(&mut state_copy, block_context)
         })
         .unwrap();
     }
@@ -103,7 +103,7 @@ fn declare() {
     let state_reader = InMemoryStateReader::default();
     let state = CachedState::new(state_reader, Some(Default::default()), None);
 
-    let config = &Default::default();
+    let block_context = &Default::default();
 
     for _ in 0..RUNS {
         let mut cloned_state = state.clone();
@@ -123,7 +123,7 @@ fn declare() {
             )
             .expect("couldn't create transaction");
 
-            declare_tx.execute(&mut cloned_state, config)
+            declare_tx.execute(&mut cloned_state, block_context)
         })
         .unwrap();
     }
@@ -140,7 +140,7 @@ fn deploy() {
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
         .unwrap();
 
-    let config = &Default::default();
+    let block_context = &Default::default();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
@@ -159,7 +159,7 @@ fn deploy() {
                 None,
             )
             .unwrap();
-            internal_deploy.execute(&mut state_copy, config)
+            internal_deploy.execute(&mut state_copy, block_context)
         })
         .unwrap();
     }
@@ -176,7 +176,7 @@ fn invoke() {
         .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
         .unwrap();
 
-    let config = &Default::default();
+    let block_context = &Default::default();
 
     let salt = Address(felt_str!(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
@@ -191,7 +191,7 @@ fn invoke() {
         None,
     )
     .unwrap();
-    internal_deploy.execute(&mut state, config).unwrap();
+    internal_deploy.execute(&mut state, block_context).unwrap();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
@@ -213,7 +213,7 @@ fn invoke() {
                 None,
             )
             .unwrap();
-            internal_invoke.execute(&mut state_copy, config)
+            internal_invoke.execute(&mut state_copy, block_context)
         })
         .unwrap();
     }

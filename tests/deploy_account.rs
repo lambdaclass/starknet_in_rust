@@ -6,7 +6,7 @@ use starknet_contract_class::EntryPointType;
 use starknet_rs::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
+        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
     execution::{CallInfo, CallType, TransactionExecutionInfo},

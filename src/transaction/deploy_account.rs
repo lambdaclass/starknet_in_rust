@@ -5,8 +5,8 @@ use crate::{
         transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
+        block_context::BlockContext,
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
-        general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     execution::{
@@ -102,7 +102,7 @@ impl DeployAccount {
         })
     }
 
-    pub fn get_state_selector(&self, _general_config: TransactionContext) -> StateSelector {
+    pub fn get_state_selector(&self, _block_context: BlockContext) -> StateSelector {
         StateSelector {
             contract_addresses: vec![self.contract_address.clone()],
             class_hashes: vec![self.class_hash],
@@ -112,16 +112,16 @@ impl DeployAccount {
     pub fn execute<S>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
     {
-        let tx_info = self.apply(state, general_config)?;
+        let tx_info = self.apply(state, block_context)?;
 
         self.handle_nonce(state)?;
         let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &tx_info.actual_resources, general_config)?;
+            self.charge_fee(state, &tx_info.actual_resources, block_context)?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -137,7 +137,7 @@ impl DeployAccount {
     fn apply<S>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -150,15 +150,11 @@ impl DeployAccount {
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let constructor_call_info = self.handle_constructor(
-            contract_class,
-            state,
-            general_config,
-            &mut resources_manager,
-        )?;
+        let constructor_call_info =
+            self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
 
         let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -183,7 +179,7 @@ impl DeployAccount {
         &self,
         contract_class: ContractClass,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -207,7 +203,7 @@ impl DeployAccount {
                     Some(self.class_hash),
                 ))
             }
-            _ => self.run_constructor_entrypoint(state, general_config, resources_manager),
+            _ => self.run_constructor_entrypoint(state, block_context, resources_manager),
         }
     }
 
@@ -232,7 +228,7 @@ impl DeployAccount {
     pub fn run_constructor_entrypoint<S>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -251,9 +247,9 @@ impl DeployAccount {
 
         let call_info = entry_point.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.validate_max_n_steps),
+            &self.get_execution_context(block_context.validate_max_n_steps),
             false,
         )?;
 
@@ -278,7 +274,7 @@ impl DeployAccount {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
         S: State + StateReader,
@@ -306,9 +302,9 @@ impl DeployAccount {
 
         let call_info = call.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.validate_max_n_steps),
+            &self.get_execution_context(block_context.validate_max_n_steps),
             false,
         )?;
 
@@ -322,7 +318,7 @@ impl DeployAccount {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>
     where
         S: State + StateReader,
@@ -333,13 +329,13 @@ impl DeployAccount {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            general_config.starknet_os_config.gas_price,
-            general_config,
+            block_context.starknet_os_config.gas_price,
+            block_context,
         )?;
 
-        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps);
+        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -352,7 +348,7 @@ mod tests {
     use super::*;
     use crate::{
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
-        definitions::general_config::StarknetChainId,
+        definitions::block_context::StarknetChainId,
         state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
         utils::felt_to_hash,
@@ -366,7 +362,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let general_config = TransactionContext::default();
+        let block_context = BlockContext::default();
         let mut _state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),
@@ -386,7 +382,7 @@ mod tests {
         )
         .unwrap();
 
-        let state_selector = internal_deploy.get_state_selector(general_config);
+        let state_selector = internal_deploy.get_state_selector(block_context);
 
         assert_eq!(
             state_selector.contract_addresses,
@@ -403,7 +399,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let general_config = TransactionContext::default();
+        let block_context = BlockContext::default();
         let mut state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),
@@ -438,12 +434,10 @@ mod tests {
 
         let class_hash = internal_deploy.class_hash();
         state.set_contract_class(class_hash, &contract).unwrap();
-        internal_deploy
-            .execute(&mut state, &general_config)
-            .unwrap();
+        internal_deploy.execute(&mut state, &block_context).unwrap();
         assert_matches!(
             internal_deploy_error
-                .execute(&mut state, &general_config)
+                .execute(&mut state, &block_context)
                 .unwrap_err(),
             TransactionError::State(StateError::ContractAddressUnavailable(..))
         )
@@ -459,7 +453,7 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let general_config = TransactionContext::default();
+        let block_context = BlockContext::default();
         let mut state = CachedState::new(
             InMemoryStateReader::default(),
             Some(Default::default()),
@@ -481,8 +475,6 @@ mod tests {
 
         let class_hash = internal_deploy.class_hash();
         state.set_contract_class(class_hash, &contract).unwrap();
-        internal_deploy
-            .execute(&mut state, &general_config)
-            .unwrap();
+        internal_deploy.execute(&mut state, &block_context).unwrap();
     }
 }
