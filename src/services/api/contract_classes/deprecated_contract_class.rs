@@ -1,14 +1,9 @@
 use crate::services::api::contract_class_errors::ContractClassError;
-use cairo_vm::felt::{Felt252, PRIME_STR};
-use cairo_vm::{
-    serde::deserialize_program::{
-        deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
-        ReferenceManager,
-    },
-    types::{errors::program_errors::ProgramError, program::Program},
-};
+use cairo_vm::felt::Felt252;
+use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
 use getset::Getters;
 use starknet_api::deprecated_contract_class::EntryPoint;
+pub use starknet_contract_class::to_cairo_runner_program;
 use starknet_contract_class::AbiType;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
@@ -127,34 +122,13 @@ fn convert_entry_points(
     converted_entries
 }
 
-pub fn to_cairo_runner_program(
-    program: &starknet_api::deprecated_contract_class::Program,
-) -> Result<Program, ProgramError> {
-    let program = program.clone();
-    let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
-    if program.prime != *PRIME_STR {
-        return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
-    };
-
-    Program::new(
-        serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
-        deserialize_array_of_bigint_hex(program.data)?,
-        None,
-        serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
-        serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
-        identifiers,
-        serde_json::from_value::<Vec<Attribute>>(program.attributes)?
-            .into_iter()
-            .filter(|attr| attr.name == "error_message")
-            .collect(),
-        None,
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::felt::felt_str;
+    use cairo_vm::{
+        felt::{felt_str, PRIME_STR},
+        serde::deserialize_program::BuiltinName,
+    };
     use std::io::Read;
 
     #[test]
