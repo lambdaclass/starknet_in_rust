@@ -13,7 +13,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     definitions::{
         constants::TRANSACTION_VERSION,
-        general_config::TransactionContext,
+        general_config::BlockContext,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},
@@ -42,14 +42,14 @@ fn test_contract(
     //*          Create default context
     //* --------------------------------------------
 
-    let general_config = TransactionContext::default();
+    let block_context = BlockContext::default();
 
     let tx_execution_context =
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
             0.into(),
-            general_config.invoke_tx_max_n_steps(),
+            block_context.invoke_tx_max_n_steps(),
             TRANSACTION_VERSION,
         );
 
@@ -97,7 +97,7 @@ fn test_contract(
         entry_point
             .execute(
                 &mut state,
-                &general_config,
+                &block_context,
                 &mut resources_manager,
                 &tx_execution_context,
             )

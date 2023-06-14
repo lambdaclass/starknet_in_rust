@@ -4,7 +4,7 @@ pub mod os_usage;
 
 use crate::{
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
+        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
     state::state_cache::StorageEntry,

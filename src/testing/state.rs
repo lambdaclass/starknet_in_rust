@@ -1,6 +1,6 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::{
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, Event, TransactionExecutionContext,
         TransactionExecutionInfo,
@@ -27,15 +27,15 @@ use std::collections::HashMap;
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub struct StarknetState {
     pub state: CachedState<InMemoryStateReader>,
-    pub(crate) general_config: TransactionContext,
+    pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
 impl StarknetState {
-    pub fn new(config: Option<TransactionContext>) -> Self {
-        let general_config = config.unwrap_or_default();
+    pub fn new(context: Option<BlockContext>) -> Self {
+        let block_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
         let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
@@ -46,7 +46,7 @@ impl StarknetState {
         let events = Vec::new();
         StarknetState {
             state,
-            general_config,
+            block_context,
             l2_to_l1_messages,
             l2_to_l1_messages_log,
             events,
@@ -54,17 +54,17 @@ impl StarknetState {
     }
 
     pub fn new_with_states(
-        config: Option<TransactionContext>,
+        block_context: Option<BlockContext>,
         state: CachedState<InMemoryStateReader>,
     ) -> Self {
-        let general_config = config.unwrap_or_default();
+        let block_context = block_context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 
         let events = Vec::new();
         StarknetState {
             state,
-            general_config,
+            block_context,
             l2_to_l1_messages,
             l2_to_l1_messages_log,
             events,
@@ -92,7 +92,7 @@ impl StarknetState {
             hash_value,
         )?;
 
-        let tx_execution_info = tx.execute(&mut self.state, &self.general_config)?;
+        let tx_execution_info = tx.execute(&mut self.state, &self.block_context)?;
 
         Ok((tx.class_hash, tx_execution_info))
     }
@@ -150,7 +150,7 @@ impl StarknetState {
         let tx_execution_context = TransactionExecutionContext::default();
         let call_info = call.execute(
             &mut self.state,
-            &self.general_config,
+            &self.block_context,
             &mut resources_manager,
             &tx_execution_context,
             false,
@@ -175,7 +175,7 @@ impl StarknetState {
         hash_value: Option<Felt252>,
         remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
-        let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
+        let chain_id = self.block_context.starknet_os_config.chain_id.to_felt();
         let deploy = Deploy::new(
             contract_address_salt,
             contract_class.clone(),
@@ -200,7 +200,7 @@ impl StarknetState {
         tx: &mut Transaction,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
-        let tx = tx.execute(&mut self.state, &self.general_config, remaining_gas)?;
+        let tx = tx.execute(&mut self.state, &self.block_context, remaining_gas)?;
         let tx_execution_info = ExecutionInfo::Transaction(Box::new(tx.clone()));
         self.add_messages_and_events(&tx_execution_info)?;
         Ok(tx)
@@ -253,7 +253,7 @@ impl StarknetState {
     // ------------------------
 
     fn chain_id(&self) -> Felt252 {
-        self.general_config.starknet_os_config.chain_id.to_felt()
+        self.block_context.starknet_os_config.chain_id.to_felt()
     }
 
     #[allow(clippy::too_many_arguments)]

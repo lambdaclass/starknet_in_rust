@@ -15,7 +15,7 @@ pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
 
 use crate::{
-    definitions::general_config::TransactionContext,
+    definitions::block_context::BlockContext,
     execution::TransactionExecutionInfo,
     state::state_api::{State, StateReader},
 };
@@ -40,16 +40,16 @@ impl Transaction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Declare(tx) => tx.execute(state, general_config),
-            Transaction::DeclareV2(tx) => tx.execute(state, general_config),
-            Transaction::Deploy(tx) => tx.execute(state, general_config),
-            Transaction::DeployAccount(tx) => tx.execute(state, general_config),
-            Transaction::InvokeFunction(tx) => tx.execute(state, general_config),
-            Transaction::L1Handler(tx) => tx.execute(state, general_config, remaining_gas),
+            Transaction::Declare(tx) => tx.execute(state, block_context),
+            Transaction::DeclareV2(tx) => tx.execute(state, block_context),
+            Transaction::Deploy(tx) => tx.execute(state, block_context),
+            Transaction::DeployAccount(tx) => tx.execute(state, block_context),
+            Transaction::InvokeFunction(tx) => tx.execute(state, block_context),
+            Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
 }
