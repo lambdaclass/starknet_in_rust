@@ -13,9 +13,9 @@ pub use deploy_account::DeployAccount;
 pub use invoke_function::InvokeFunction;
 
 use crate::{
-        execution::TransactionExecutionInfo,
-        state::state_api::{State, StateReader},
     definitions::general_config::TransactionContext,
+    execution::TransactionExecutionInfo,
+    state::state_api::{State, StateReader},
 };
 use error::TransactionError;
 

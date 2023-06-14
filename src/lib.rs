@@ -110,11 +110,9 @@ mod test {
     use num_traits::Zero;
 
     use crate::{
-        state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-        },
         call_contract,
         definitions::general_config::TransactionContext,
+        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
         utils::{Address, ClassHash},
     };
 

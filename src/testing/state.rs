@@ -14,8 +14,7 @@ use crate::{
     },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{
-        error::TransactionError, invoke_function::InvokeFunction,
-        Declare, Deploy, Transaction,
+        error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
     },
     utils::{Address, ClassHash},
 };
