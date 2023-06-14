@@ -324,8 +324,10 @@ mod test {
             cached_state.contract_classes()
         );
         assert_eq!(
-            cached_state_original.get_nonce_at(&contract_address),
-            cached_state.get_nonce_at(&contract_address)
+            cached_state_original
+                .get_nonce_at(&contract_address)
+                .unwrap(),
+            cached_state.get_nonce_at(&contract_address).unwrap()
         );
     }
 

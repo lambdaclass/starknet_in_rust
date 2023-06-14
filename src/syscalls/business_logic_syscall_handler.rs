@@ -543,8 +543,12 @@ where
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Felt252 {
-        self.starknet_storage_state.read(&key).unwrap_or_default()
+    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
+        match self.starknet_storage_state.read(&key) {
+            Ok(value) => Ok(value),
+            Err(e @ StateError::Io(_)) => Err(e),
+            Err(_) => Ok(Felt252::zero()),
+        }
     }
 
     fn storage_write(
@@ -595,7 +599,7 @@ where
         let signature_end = res_segment;
 
         let tx_info_ptr = res_segment;
-        vm.insert_value::<Felt252>(res_segment, tx_info.version.into())?;
+        vm.insert_value::<Felt252>(res_segment, tx_info.version.clone())?;
         res_segment = (res_segment + 1)?;
         vm.insert_value(res_segment, tx_info.account_contract_address.0.clone())?;
         res_segment = (res_segment + 1)?;
@@ -689,7 +693,7 @@ where
             });
         }
 
-        let value = self._storage_read(request.key);
+        let value = self._storage_read(request.key)?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,

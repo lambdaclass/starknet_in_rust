@@ -544,7 +544,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -621,7 +621,7 @@ fn declare_tx() -> Declare {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-        version: 1,
+        version: 1.into(),
         max_fee: 2,
         signature: vec![],
         nonce: 0.into(),
@@ -637,7 +637,7 @@ fn declarev2_tx() -> DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-        version: 1,
+        version: 1.into(),
         max_fee: 2,
         signature: vec![],
         nonce: 0.into(),
@@ -760,7 +760,7 @@ fn test_declarev2_tx() {
         .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
         .is_err());
     // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &general_config, 0).unwrap();
+    let result = declare_tx.execute(&mut state, &general_config).unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
         .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
@@ -941,7 +941,7 @@ fn test_deploy_account() {
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),
@@ -1217,10 +1217,16 @@ fn test_state_for_declare_tx() {
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(0.into()));
+    assert!(state
+        .get_nonce_at(&declare_tx.sender_address)
+        .unwrap()
+        .is_zero());
     // Execute declare_tx
     assert!(declare_tx.execute(&mut state, &general_config).is_ok());
-    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(1.into()));
+    assert!(state
+        .get_nonce_at(&declare_tx.sender_address)
+        .unwrap()
+        .is_one());
 
     // Check state.state_reader
     let mut state_reader = state.state_reader().clone();
@@ -1429,7 +1435,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
         1,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         vec![
             test_contract_address, // CONTRACT_ADDRESS
             Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
@@ -1459,7 +1465,7 @@ fn test_deploy_undeclared_account() {
     let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),

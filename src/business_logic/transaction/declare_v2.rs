@@ -14,7 +14,8 @@ use crate::{
     },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
+        constants::{INITIAL_GAS_COST, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
+        general_config::TransactionContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -30,7 +31,7 @@ pub struct DeclareV2 {
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
-    pub version: u64,
+    pub version: Felt252,
     pub max_fee: u128,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
@@ -48,7 +49,7 @@ impl DeclareV2 {
         chain_id: Felt252,
         sender_address: Address,
         max_fee: u128,
-        version: u64,
+        version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
         hash_value: Option<Felt252>,
@@ -63,7 +64,7 @@ impl DeclareV2 {
                 chain_id,
                 &sender_address,
                 max_fee,
-                version,
+                version.clone(),
                 nonce.clone(),
             )?,
         };
@@ -88,7 +89,7 @@ impl DeclareV2 {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             if self.sender_address != Address(1.into()) {
                 return Err(TransactionError::InvalidSenderAddress);
             }
@@ -120,7 +121,7 @@ impl DeclareV2 {
             self.max_fee,
             self.nonce.clone(),
             n_steps,
-            self.version,
+            self.version.clone(),
         )
     }
 
@@ -156,7 +157,7 @@ impl DeclareV2 {
     // TODO: delete once used
     #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -178,13 +179,14 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         general_config: &TransactionContext,
-        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
+        let initial_gas = INITIAL_GAS_COST;
+
         let mut resources_manager = ExecutionResourcesManager::default();
         let (validate_info, _remaining_gas) = self.run_validate_entrypoint(
-            remaining_gas,
+            initial_gas,
             state,
             &mut resources_manager,
             general_config,
@@ -314,7 +316,7 @@ mod tests {
             chain_id,
             sender_address,
             0,
-            0,
+            0.into(),
             [1.into()].to_vec(),
             Felt252::zero(),
             Some(Felt252::one()),
