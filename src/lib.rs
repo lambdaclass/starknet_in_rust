@@ -72,7 +72,7 @@ pub fn call_contract<T: State + StateReader>(
         max_fee,
         nonce,
         config.invoke_tx_max_n_steps(),
-        version,
+        version.into(),
     );
 
     let call_info = execution_entrypoint.execute(
