@@ -66,7 +66,7 @@ fn test_contract(
     //*     Deploy new contract class instance
     //* --------------------------------------------
     let (contract_address, _) = state
-        .deploy(contract_class, vec![], Default::default(), None)
+        .deploy(contract_class, vec![], Default::default(), None, 0)
         .expect("Could not deploy contract");
 
     //* --------------------------------------------
