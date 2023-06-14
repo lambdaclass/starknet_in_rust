@@ -45,6 +45,7 @@ fn main() {
             vec![],
             contract_address_salt,
             None,
+            0,
         )
         .unwrap();
 
@@ -65,6 +66,7 @@ fn main() {
                 Some(Vec::new()),
                 Some(Felt252::from(i * 2)),
                 None,
+                0,
             )
             .unwrap();
 
@@ -77,6 +79,7 @@ fn main() {
                 Some(Vec::new()),
                 Some(Felt252::from((i * 2) + 1)),
                 None,
+                0,
             )
             .unwrap();
 

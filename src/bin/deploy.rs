@@ -28,7 +28,13 @@ fn main() {
         let contract_address_salt = Address(n.into());
 
         starknet_state
-            .deploy(CONTRACT_CLASS.clone(), vec![], contract_address_salt, None)
+            .deploy(
+                CONTRACT_CLASS.clone(),
+                vec![],
+                contract_address_salt,
+                None,
+                0,
+            )
             .unwrap();
     }
 }

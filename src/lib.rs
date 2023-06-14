@@ -95,8 +95,9 @@ pub fn execute_transaction<T: State + StateReader>(
     tx: Transaction,
     state: &mut T,
     config: TransactionContext,
+    remaining_gas: u128,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    tx.execute(state, &config)
+    tx.execute(state, &config, remaining_gas)
 }
 
 #[cfg(test)]
