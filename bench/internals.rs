@@ -5,17 +5,15 @@ use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_rs::{
-    business_logic::{
-        state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, state_api::State},
-        transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
-    },
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
         block_context::StarknetChainId,
         constants::{TRANSACTION_VERSION, VALIDATE_ENTRY_POINT_SELECTOR},
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::in_memory_state_reader::InMemoryStateReader,
+    state::{cached_state::CachedState, state_api::State},
+    transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
 use std::{hint::black_box, path::PathBuf};

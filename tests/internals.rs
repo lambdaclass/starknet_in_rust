@@ -12,29 +12,13 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_contract_class::EntryPointType;
-use starknet_rs::business_logic::transaction::DeclareV2;
 use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
 };
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_rs::transaction::DeclareV2;
 use starknet_rs::{
-    business_logic::{
-        execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-        state::in_memory_state_reader::InMemoryStateReader,
-        state::{
-            cached_state::{CachedState, ContractClassCache},
-            state_api::{State, StateReader},
-            state_cache::StateCache,
-            state_cache::StorageEntry,
-            BlockInfo,
-        },
-        transaction::{
-            error::TransactionError,
-            DeployAccount,
-            {invoke_function::InvokeFunction, Declare},
-        },
-    },
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::{
@@ -43,6 +27,20 @@ use starknet_rs::{
             VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
         transaction_type::TransactionType,
+    },
+    execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
+    state::in_memory_state_reader::InMemoryStateReader,
+    state::{
+        cached_state::{CachedState, ContractClassCache},
+        state_api::{State, StateReader},
+        state_cache::StateCache,
+        state_cache::StorageEntry,
+        BlockInfo,
+    },
+    transaction::{
+        error::TransactionError,
+        DeployAccount,
+        {invoke_function::InvokeFunction, Declare},
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };

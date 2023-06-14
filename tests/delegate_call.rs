@@ -6,15 +6,13 @@ use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
-        },
-        state::cached_state::CachedState,
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    },
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
+    },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::cached_state::CachedState,
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::Address,
 };
 use std::{collections::HashMap, path::PathBuf};

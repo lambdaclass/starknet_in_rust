@@ -1,4 +1,4 @@
-use crate::business_logic::{
+use crate::{
     execution::{CallInfo, Event, L2toL1MessageInfo, TransactionExecutionInfo},
     transaction::error::TransactionError,
 };

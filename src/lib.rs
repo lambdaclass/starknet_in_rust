@@ -2,7 +2,7 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 
-use business_logic::{
+use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         TransactionExecutionInfo,
@@ -28,17 +28,19 @@ pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 
-pub mod business_logic;
 pub mod core;
 pub mod definitions;
+pub mod execution;
 pub mod hash_utils;
 pub mod parser_errors;
 pub mod runner;
 pub mod serde_structs;
 pub mod services;
+pub mod state;
 pub mod storage;
 pub mod syscalls;
 pub mod testing;
+pub mod transaction;
 pub mod utils;
 
 pub fn call_contract<T: State + StateReader>(
@@ -110,11 +112,9 @@ mod test {
     use num_traits::Zero;
 
     use crate::{
-        business_logic::state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-        },
         call_contract,
         definitions::block_context::BlockContext,
+        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
         utils::{Address, ClassHash},
     };
 

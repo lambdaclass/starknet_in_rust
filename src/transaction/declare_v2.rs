@@ -1,22 +1,20 @@
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-            TransactionExecutionContext, TransactionExecutionInfo,
-        },
-        state::state_api::{State, StateReader},
-        state::ExecutionResourcesManager,
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-            invoke_function::verify_no_calls_to_other_contracts,
-        },
-    },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
         block_context::BlockContext,
         constants::{INITIAL_GAS_COST, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
+    },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
+        TransactionExecutionContext, TransactionExecutionInfo,
+    },
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+        invoke_function::verify_no_calls_to_other_contracts,
     },
     utils::{calculate_tx_resources, Address},
 };
@@ -283,14 +281,11 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::DeclareV2;
-    use crate::business_logic::state::state_api::StateReader;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
+    use crate::state::state_api::StateReader;
     use crate::{
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
-        definitions::block_context::StarknetChainId,
-        utils::Address,
+        definitions::block_context::StarknetChainId, state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader, utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;

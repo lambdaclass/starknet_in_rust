@@ -3,12 +3,13 @@ pub mod gas_usage;
 pub mod os_usage;
 
 use crate::{
-    business_logic::{state::state_cache::StorageEntry, transaction::error::TransactionError},
     definitions::{
         block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
+    state::state_cache::StorageEntry,
     syscalls::syscall_handler_errors::SyscallHandlerError,
+    transaction::error::TransactionError,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;

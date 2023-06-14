@@ -19,26 +19,25 @@ use super::{
     },
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
-use crate::business_logic::state::BlockInfo;
-use crate::business_logic::transaction::error::TransactionError;
+use crate::definitions::block_context::BlockContext;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use crate::state::BlockInfo;
+use crate::transaction::error::TransactionError;
 use crate::utils::calculate_sn_keccak;
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType,
-            OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
-        },
-        state::{
-            contract_storage_state::ContractStorageState,
-            state_api::{State, StateReader},
-            ExecutionResourcesManager,
-        },
-    },
     core::errors::state_errors::StateError,
-    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType, OrderedEvent,
+        OrderedL2ToL1Message, TransactionExecutionContext,
+    },
     hash_utils::calculate_contract_address,
     services::api::contract_class_errors::ContractClassError,
+    state::ExecutionResourcesManager,
+    state::{
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
+    },
     utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;

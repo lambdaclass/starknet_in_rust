@@ -4,22 +4,20 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        state::{
-            state_api::{State, StateReader},
-            ExecutionResourcesManager,
-        },
-        transaction::{error::TransactionError, fee::calculate_tx_fee},
-    },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::BlockContext, constants::L1_HANDLER_VERSION,
         transaction_type::TransactionType,
     },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
+    state::{
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    transaction::{error::TransactionError, fee::calculate_tx_fee},
     utils::{calculate_tx_resources, Address},
 };
 
@@ -174,16 +172,14 @@ mod test {
     use starknet_contract_class::EntryPointType;
 
     use crate::{
-        business_logic::{
-            execution::{CallInfo, TransactionExecutionInfo},
-            state::{
-                cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-                state_api::State,
-            },
-            transaction::l1_handler::L1Handler,
-        },
         definitions::{block_context::BlockContext, transaction_type::TransactionType},
+        execution::{CallInfo, TransactionExecutionInfo},
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::{
+            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+            state_api::State,
+        },
+        transaction::l1_handler::L1Handler,
         utils::Address,
     };
 
@@ -254,7 +250,7 @@ mod test {
             validate_info: None,
             call_info: Some(CallInfo {
                 caller_address: Address(0.into()),
-                call_type: Some(crate::business_logic::execution::CallType::Call),
+                call_type: Some(crate::execution::CallType::Call),
                 contract_address: Address(0.into()),
                 code_address: None,
                 class_hash: Some([

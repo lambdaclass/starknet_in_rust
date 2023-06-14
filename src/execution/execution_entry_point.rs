@@ -1,21 +1,19 @@
 use crate::{
-    business_logic::{
-        state::state_api::State,
-        state::ExecutionResourcesManager,
-        state::{contract_storage_state::ContractStorageState, state_api::StateReader},
-        transaction::error::TransactionError,
-    },
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
+    state::state_api::State,
+    state::ExecutionResourcesManager,
+    state::{contract_storage_state::ContractStorageState, state_api::StateReader},
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
         deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
         syscall_handler::SyscallHintProcessor,
     },
+    transaction::error::TransactionError,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
         validate_contract_deployed, Address,

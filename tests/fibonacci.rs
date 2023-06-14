@@ -5,17 +5,15 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
+use starknet_rs::definitions::block_context::BlockContext;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-            TransactionExecutionContext,
-        },
-        state::cached_state::CachedState,
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    definitions::constants::TRANSACTION_VERSION,
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::cached_state::CachedState,
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
 use std::{collections::HashMap, path::PathBuf};
