@@ -13,7 +13,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
     definitions::{
         constants::TRANSACTION_VERSION,
-        general_config::BlockContext,
+        block_context::BlockContext,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
     utils::{calculate_sn_keccak, Address},

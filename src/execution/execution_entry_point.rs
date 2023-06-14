@@ -298,7 +298,6 @@ impl ExecutionEntryPoint {
         T: State + StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
-
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point_v0(&contract_class, class_hash)?;
 

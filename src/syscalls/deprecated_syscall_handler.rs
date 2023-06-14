@@ -130,6 +130,10 @@ impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.delegate_call(vm, syscall_ptr)
             }
+            DELEGATE_L1_HANDLER => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.delegate_l1_handler(vm, syscall_ptr)
+            }
             REPLACE_CLASS => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
                 self.syscall_handler.replace_class(vm, syscall_ptr)

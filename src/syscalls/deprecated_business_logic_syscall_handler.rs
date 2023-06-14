@@ -370,9 +370,6 @@ where
         let call_data;
         let mut code_address = None;
 
-        // TODO: What about `delegate_l1_handler`?
-        //   The call to `self.read_and_validate_syscall_request()` will always fail in that
-        //   case.
         match request {
             DeprecatedSyscallRequest::LibraryCall(request) => {
                 entry_point_type = match syscall_name {
@@ -392,18 +389,33 @@ where
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             DeprecatedSyscallRequest::CallContract(request) => {
-                (code_address, caller_address, call_type, contract_address) = match syscall_name {
+                (
+                    code_address,
+                    caller_address,
+                    call_type,
+                    contract_address,
+                    entry_point_type,
+                ) = match syscall_name {
                     "call_contract" => (
                         None,
                         self.contract_address.clone(),
                         CallType::Call,
                         request.contract_address.clone(),
+                        EntryPointType::External,
                     ),
                     "delegate_call" => (
                         Some(request.contract_address),
                         self.caller_address.clone(),
                         CallType::Delegate,
                         self.contract_address.clone(),
+                        EntryPointType::External,
+                    ),
+                    "delegate_l1_handler" => (
+                        Some(request.contract_address),
+                        self.caller_address.clone(),
+                        CallType::Delegate,
+                        self.contract_address.clone(),
+                        EntryPointType::L1Handler,
                     ),
                     _ => {
                         return Err(SyscallHandlerError::UnknownSyscall(
@@ -411,7 +423,6 @@ where
                         ))
                     }
                 };
-                entry_point_type = EntryPointType::External;
                 function_selector = request.function_selector;
                 class_hash = None;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
@@ -467,6 +478,14 @@ where
         }
 
         Ok(self.caller_address.clone())
+    }
+
+    pub(crate) fn delegate_l1_handler(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self.call_contract_and_write_response("delegate_l1_handler", vm, syscall_ptr)
     }
 
     pub(crate) fn syscall_get_contract_address(
@@ -824,6 +843,7 @@ where
             "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
             "replace_class" => DeprecatedReplaceClassRequest::from_ptr(vm, syscall_ptr),
             "delegate_call" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
+            "delegate_l1_handler" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
