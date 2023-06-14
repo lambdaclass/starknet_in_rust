@@ -104,7 +104,7 @@ impl DeployAccount {
         })
     }
 
-    pub fn get_state_selector(&self, _general_config: BlockContext) -> StateSelector {
+    pub fn get_state_selector(&self, _block_context: BlockContext) -> StateSelector {
         StateSelector {
             contract_addresses: vec![self.contract_address.clone()],
             class_hashes: vec![self.class_hash],

@@ -56,10 +56,10 @@ impl StarknetState {
     }
 
     pub fn new_with_states(
-        context: Option<BlockContext>,
+        block_context: Option<BlockContext>,
         state: CachedState<InMemoryStateReader>,
     ) -> Self {
-        let block_context = context.unwrap_or_default();
+        let block_context = block_context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 

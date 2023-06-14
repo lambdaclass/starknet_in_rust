@@ -46,7 +46,7 @@ pub fn call_contract<T: State + StateReader>(
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
     state: &mut T,
-    config: BlockContext,
+    block_context: BlockContext,
 ) -> Result<Vec<Felt252>, TransactionError> {
     let contract_address = Address(contract_address);
     let class_hash = state.get_class_hash_at(&contract_address)?;
@@ -77,13 +77,13 @@ pub fn call_contract<T: State + StateReader>(
         signature,
         max_fee,
         nonce,
-        config.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         version.into(),
     );
 
     let call_info = execution_entrypoint.execute(
         state,
-        &config,
+        &block_context,
         &mut ExecutionResourcesManager::default(),
         &tx_execution_context,
         false,
@@ -95,10 +95,10 @@ pub fn call_contract<T: State + StateReader>(
 pub fn execute_transaction<T: State + StateReader>(
     tx: Transaction,
     state: &mut T,
-    config: BlockContext,
+    block_context: BlockContext,
     remaining_gas: u128,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    tx.execute(state, &config, remaining_gas)
+    tx.execute(state, &block_context, remaining_gas)
 }
 
 #[cfg(test)]
