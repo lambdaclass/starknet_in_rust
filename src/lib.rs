@@ -27,8 +27,6 @@ extern crate assert_matches;
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-pub use cairo_vm::felt::Felt252;
-pub use starknet_contract_class::EntryPointType;
 
 pub mod business_logic;
 pub mod core;
