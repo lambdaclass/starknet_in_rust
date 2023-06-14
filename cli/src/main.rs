@@ -116,7 +116,7 @@ fn declare_parser(
         Felt252::zero(),
         &Address(0.into()),
         0,
-        DECLARE_VERSION,
+        DECLARE_VERSION.clone(),
         Felt252::zero(),
     )?;
     Ok((class_hash, tx_hash))
@@ -140,7 +140,7 @@ fn deploy_parser(
 
     cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
     let tx_hash = calculate_deploy_transaction_hash(
-        0,
+        0.into(),
         &Address(address.clone()),
         &constructor_calldata,
         Felt252::zero(),
@@ -188,7 +188,7 @@ fn invoke_parser(
         contract_address.clone(),
         entrypoint_selector.clone(),
         0,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         calldata.clone(),
         vec![],
         Felt252::zero(),
@@ -199,7 +199,7 @@ fn invoke_parser(
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         &contract_address,
         entrypoint_selector,
         &calldata,

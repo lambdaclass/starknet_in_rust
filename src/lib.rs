@@ -13,6 +13,7 @@ use business_logic::{
     },
     transaction::{error::TransactionError, Transaction},
 };
+
 use cairo_vm::felt::Felt252;
 use definitions::general_config::BlockContext;
 use starknet_contract_class::EntryPointType;
@@ -21,6 +22,13 @@ use utils::Address;
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
+
+// Re-exports
+pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+pub use cairo_lang_starknet::contract_class::ContractClass;
+pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+pub use cairo_vm::felt::Felt252;
+pub use starknet_contract_class::EntryPointType;
 
 pub mod business_logic;
 pub mod core;
@@ -72,7 +80,7 @@ pub fn call_contract<T: State + StateReader>(
         max_fee,
         nonce,
         config.invoke_tx_max_n_steps(),
-        version,
+        version.into(),
     );
 
     let call_info = execution_entrypoint.execute(
@@ -90,8 +98,9 @@ pub fn execute_transaction<T: State + StateReader>(
     tx: Transaction,
     state: &mut T,
     config: BlockContext,
+    remaining_gas: u128,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    tx.execute(state, &config)
+    tx.execute(state, &config, remaining_gas)
 }
 
 #[cfg(test)]

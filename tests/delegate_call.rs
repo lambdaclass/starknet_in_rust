@@ -111,7 +111,7 @@ fn delegate_call() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

@@ -59,7 +59,7 @@ fn main() {
             CONTRACT_ADDRESS.clone(),
             INCREASE_BALANCE_SELECTOR.clone(),
             2,
-            TRANSACTION_VERSION,
+            TRANSACTION_VERSION.clone(),
             vec![1000.into()],
             vec![],
             StarknetChainId::TestNet.to_felt(),
@@ -74,7 +74,7 @@ fn main() {
             CONTRACT_ADDRESS.clone(),
             GET_BALANCE_SELECTOR.clone(),
             2,
-            TRANSACTION_VERSION,
+            TRANSACTION_VERSION.clone(),
             vec![],
             vec![],
             StarknetChainId::TestNet.to_felt(),
@@ -129,5 +129,6 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
         0,
         BlockInfo::default(),
         HashMap::default(),
+        true,
     )
 }

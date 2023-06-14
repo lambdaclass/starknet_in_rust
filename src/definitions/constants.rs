@@ -20,6 +20,9 @@ pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
 /// The (empirical) L1 gas cost of each Cairo step.
 pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
 
+/// The version is considered 0 for L1-Handler transaction hash calculation purposes.
+pub(crate) const L1_HANDLER_VERSION: u64 = 0;
+
 lazy_static! {
     // Ratios are taken from the `starknet_instance` CairoLayout object in cairo-lang.
     pub static ref DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS: HashMap<String, f64> =
@@ -46,6 +49,9 @@ lazy_static! {
         )),
         gas_price: 0,
     };
+
+pub static ref DECLARE_VERSION: Felt252 = 2.into();
+pub static ref TRANSACTION_VERSION: Felt252 = 1.into();
 }
 
 pub const DEFAULT_GAS_PRICE: u64 = 100_000_000_000; // 100 * 10**9
@@ -53,9 +59,6 @@ pub const DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT: u64 = 251;
 pub const DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT: u64 = 251;
 pub const DEFAULT_INVOKE_TX_MAX_N_STEPS: u64 = 1000000;
 pub const DEFAULT_VALIDATE_MAX_N_STEPS: u64 = 1000000;
-
-pub const DECLARE_VERSION: u64 = 2;
-pub const TRANSACTION_VERSION: u64 = 1;
 
 // Gas Cost.
 // From cairo_programs/constants.cairo.

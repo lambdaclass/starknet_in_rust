@@ -5,12 +5,14 @@ pub mod deploy_account;
 pub mod error;
 pub mod fee;
 pub mod invoke_function;
+pub mod l1_handler;
 
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
 pub use invoke_function::InvokeFunction;
+pub use l1_handler::L1Handler;
 
 use crate::{
     business_logic::{
@@ -32,6 +34,8 @@ pub enum Transaction {
     DeployAccount(DeployAccount),
     /// An invoke transaction.
     InvokeFunction(InvokeFunction),
+    /// An L1 handler transaction.
+    L1Handler(L1Handler),
 }
 
 impl Transaction {
@@ -39,6 +43,7 @@ impl Transaction {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Declare(tx) => tx.execute(state, block_context),
@@ -46,6 +51,7 @@ impl Transaction {
             Transaction::Deploy(tx) => tx.execute(state, block_context),
             Transaction::DeployAccount(tx) => tx.execute(state, block_context),
             Transaction::InvokeFunction(tx) => tx.execute(state, block_context),
+            Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
 }

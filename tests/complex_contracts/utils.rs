@@ -119,7 +119,7 @@ pub fn execute_entry_point(
         0,
         10.into(),
         call_config.block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
 
     exec_entry_point.execute(
@@ -146,7 +146,7 @@ pub fn deploy(
         contract_class.clone(),
         calldata.to_vec(),
         0.into(),
-        0,
+        0.into(),
         hash_value,
     )?;
     let class_hash = internal_deploy.class_hash();
