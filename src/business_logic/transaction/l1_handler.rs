@@ -47,7 +47,7 @@ impl L1Handler {
     ) -> Result<L1Handler, TransactionError> {
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::L1Handler,
-            L1_HANDLER_VERSION,
+            L1_HANDLER_VERSION.into(),
             &contract_address,
             entry_point_selector.clone(),
             &calldata,
@@ -154,7 +154,7 @@ impl L1Handler {
             0,
             self.nonce.clone().ok_or(TransactionError::MissingNonce)?,
             n_steps,
-            L1_HANDLER_VERSION,
+            L1_HANDLER_VERSION.into(),
         ))
     }
 }
