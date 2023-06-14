@@ -49,6 +49,9 @@ lazy_static! {
         )),
         gas_price: 0,
     };
+
+pub static ref DECLARE_VERSION: Felt252 = 2.into();
+pub static ref TRANSACTION_VERSION: Felt252 = 1.into();
 }
 
 pub const DEFAULT_GAS_PRICE: u64 = 100_000_000_000; // 100 * 10**9
@@ -56,9 +59,6 @@ pub const DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT: u64 = 251;
 pub const DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT: u64 = 251;
 pub const DEFAULT_INVOKE_TX_MAX_N_STEPS: u64 = 1000000;
 pub const DEFAULT_VALIDATE_MAX_N_STEPS: u64 = 1000000;
-
-pub const DECLARE_VERSION: u64 = 2;
-pub const TRANSACTION_VERSION: u64 = 1;
 
 // Gas Cost.
 // From cairo_programs/constants.cairo.
