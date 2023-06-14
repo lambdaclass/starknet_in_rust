@@ -1,7 +1,3 @@
-#![allow(warnings)]
-#![forbid(unsafe_code)]
-#![cfg_attr(coverage_nightly, feature(no_coverage))]
-
 use crate::business_logic::transaction::InvokeFunction;
 use business_logic::{
     execution::TransactionExecutionContext, state::state_api::StateReader,
@@ -9,6 +5,9 @@ use business_logic::{
 };
 use definitions::general_config::TransactionContext;
 
+#[allow(warnings)]
+#[forbid(unsafe_code)]
+#[cfg_attr(coverage_nightly, feature(no_coverage))]
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;

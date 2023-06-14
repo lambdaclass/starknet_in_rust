@@ -105,7 +105,7 @@ fn hello_starknet_increase_balance() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_key = calculate_sn_keccak("balance".as_bytes());
@@ -122,7 +122,10 @@ fn hello_starknet_increase_balance() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 65,
+            ..Default::default()
+        },
         class_hash: Some(class_hash),
         accessed_storage_keys: expected_accessed_storage_keys,
         storage_read_values: expected_storage_read_values,

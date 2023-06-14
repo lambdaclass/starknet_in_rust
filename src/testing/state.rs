@@ -11,8 +11,7 @@ use crate::{
         },
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::{
-            error::TransactionError, invoke_function::InvokeFunction, transactions::Transaction,
-            Declare, Deploy,
+            error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
         },
     },
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
@@ -89,7 +88,7 @@ impl StarknetState {
             self.chain_id(),
             Address(Felt252::one()),
             0,
-            0,
+            0.into(),
             Vec::new(),
             0.into(),
             hash_value,
@@ -177,20 +176,23 @@ impl StarknetState {
         hash_value: Option<Felt252>,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.general_config.starknet_os_config.chain_id.to_felt();
-        let mut tx = Transaction::Deploy(Deploy::new(
+        let deploy = Deploy::new(
             contract_address_salt,
             contract_class.clone(),
             constructor_calldata,
             chain_id,
-            TRANSACTION_VERSION,
+            TRANSACTION_VERSION.clone(),
             hash_value,
-        )?);
+        )?;
+        let contract_address = deploy.contract_address.clone();
+        let contract_hash = deploy.contract_hash;
+        let mut tx = Transaction::Deploy(deploy);
 
         self.state
-            .set_contract_class(&tx.contract_hash(), &contract_class)?;
+            .set_contract_class(&contract_hash, &contract_class)?;
 
         let tx_execution_info = self.execute_tx(&mut tx)?;
-        Ok((tx.contract_address(), tx_execution_info))
+        Ok((contract_address, tx_execution_info))
     }
 
     pub fn execute_tx(
@@ -278,7 +280,7 @@ impl StarknetState {
             contract_address,
             entry_point_selector,
             max_fee,
-            TRANSACTION_VERSION,
+            TRANSACTION_VERSION.clone(),
             calldata,
             signature,
             self.chain_id(),
@@ -292,7 +294,7 @@ impl StarknetState {
 mod tests {
     use std::path::PathBuf;
 
-    use cairo_vm::felt::felt_str;
+    use cairo_vm::{felt::felt_str, vm::runners::cairo_runner::ExecutionResources};
     use num_traits::Num;
 
     use super::*;
@@ -546,6 +548,11 @@ mod tests {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![1.into(), 1.into(), 10.into()],
                 retdata: vec![144.into()],
+                execution_resources: ExecutionResources {
+                    n_steps: 94,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::default(),
+                },
                 ..Default::default()
             }),
             actual_resources,

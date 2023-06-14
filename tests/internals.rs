@@ -2,6 +2,7 @@
 use assert_matches::assert_matches;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME};
 use cairo_vm::vm::{
     errors::{
         cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError, vm_exception::VmException,
@@ -398,6 +399,10 @@ fn expected_validate_call_info(
         // Entries **not** in blockifier.
         class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
         call_type: Some(CallType::Call),
+        execution_resources: ExecutionResources {
+            n_steps: 13,
+            ..Default::default()
+        },
 
         ..Default::default()
     }
@@ -460,7 +465,14 @@ fn expected_fee_transfer_call_info(
             Felt252::zero(),
             Felt252::zero(),
         ],
-
+        execution_resources: ExecutionResources {
+            n_steps: 529,
+            n_memory_holes: 57,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
+                (HASH_BUILTIN_NAME.to_string(), 4),
+            ]),
+        },
         ..Default::default()
     }
 }
@@ -532,7 +544,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -555,7 +567,14 @@ fn expected_fee_transfer_info() -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::zero(), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 525,
+            n_memory_holes: 59,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
+                (HASH_BUILTIN_NAME.to_string(), 4),
+            ]),
+        },
         l2_to_l1_messages: vec![],
         internal_calls: vec![],
         events: vec![OrderedEvent {
@@ -602,7 +621,7 @@ fn declare_tx() -> Declare {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-        version: 1,
+        version: 1.into(),
         max_fee: 2,
         signature: vec![],
         nonce: 0.into(),
@@ -618,7 +637,7 @@ fn declarev2_tx() -> DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-        version: 1,
+        version: 1.into(),
         max_fee: 2,
         signature: vec![],
         nonce: 0.into(),
@@ -679,6 +698,14 @@ fn expected_declare_fee_transfer_info() -> CallInfo {
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
             ],
         ]),
+        execution_resources: ExecutionResources {
+            n_steps: 525,
+            n_memory_holes: 59,
+            builtin_instance_counter: HashMap::from([
+                (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
+                (HASH_BUILTIN_NAME.to_string(), 4),
+            ]),
+        },
         ..Default::default()
     }
 }
@@ -703,6 +730,10 @@ fn test_declare_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
+            execution_resources: ExecutionResources {
+                n_steps: 12,
+                ..Default::default()
+            },
             ..Default::default()
         }),
         None,
@@ -729,7 +760,7 @@ fn test_declarev2_tx() {
         .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
         .is_err());
     // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &general_config, 0).unwrap();
+    let result = declare_tx.execute(&mut state, &general_config).unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
         .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
@@ -743,6 +774,10 @@ fn test_declarev2_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()],
+            execution_resources: ExecutionResources {
+                n_steps: 12,
+                ..Default::default()
+            },
             ..Default::default()
         }),
         None,
@@ -779,7 +814,6 @@ fn expected_execute_call_info() -> CallInfo {
             Felt252::from(2),
         ],
         retdata: vec![Felt252::from(2)],
-        execution_resources: ExecutionResources::default(),
         l2_to_l1_messages: vec![],
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -798,12 +832,20 @@ fn expected_execute_call_info() -> CallInfo {
             events: vec![],
             l2_to_l1_messages: vec![],
             internal_calls: vec![],
-            execution_resources: ExecutionResources::default(),
             contract_address: TEST_CONTRACT_ADDRESS.clone(),
             code_address: None,
+            execution_resources: ExecutionResources {
+                n_steps: 22,
+                ..Default::default()
+            },
             ..Default::default()
         }],
         events: vec![],
+        execution_resources: ExecutionResources {
+            n_steps: 61,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
+        },
         ..Default::default()
     }
 }
@@ -826,6 +868,11 @@ fn expected_validate_call_info_2() -> CallInfo {
             Felt252::from(1),
             Felt252::from(2),
         ],
+        execution_resources: ExecutionResources {
+            n_steps: 21,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
+        },
         ..Default::default()
     }
 }
@@ -894,7 +941,7 @@ fn test_deploy_account() {
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),
@@ -1170,10 +1217,16 @@ fn test_state_for_declare_tx() {
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(0.into()));
+    assert!(state
+        .get_nonce_at(&declare_tx.sender_address)
+        .unwrap()
+        .is_zero());
     // Execute declare_tx
     assert!(declare_tx.execute(&mut state, &general_config).is_ok());
-    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(1.into()));
+    assert!(state
+        .get_nonce_at(&declare_tx.sender_address)
+        .unwrap()
+        .is_one());
 
     // Check state.state_reader
     let mut state_reader = state.state_reader().clone();
@@ -1382,7 +1435,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
         1,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         vec![
             test_contract_address, // CONTRACT_ADDRESS
             Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
@@ -1412,7 +1465,7 @@ fn test_deploy_undeclared_account() {
     let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
         2,
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
         Default::default(),
