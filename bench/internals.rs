@@ -83,7 +83,7 @@ fn deploy_account() {
             let internal_deploy_account = DeployAccount::new(
                 class_hash,
                 0,
-                0,
+                0.into(),
                 Felt252::zero(),
                 vec![],
                 signature,
@@ -118,7 +118,7 @@ fn declare() {
                 StarknetChainId::TestNet.to_felt(),
                 address,
                 0,
-                0,
+                0.into(),
                 vec![],
                 Felt252::zero(),
                 None,
@@ -157,7 +157,7 @@ fn deploy() {
                 class,
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
-                0,
+                0.into(),
                 None,
             )
             .unwrap();
@@ -189,7 +189,7 @@ fn invoke() {
         class,
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        0,
+        0.into(),
         None,
     )
     .unwrap();
@@ -207,7 +207,7 @@ fn invoke() {
                 address,
                 selector,
                 0,
-                TRANSACTION_VERSION,
+                TRANSACTION_VERSION.clone(),
                 calldata,
                 signature,
                 StarknetChainId::TestNet.to_felt(),

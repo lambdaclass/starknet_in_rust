@@ -54,7 +54,7 @@ impl TransactionHashPrefix {
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
-    version: u64,
+    version: Felt252,
     contract_address: &Address,
     entry_point_selector: Felt252,
     calldata: &[Felt252],
@@ -66,7 +66,7 @@ pub fn calculate_transaction_hash_common(
 
     let mut data_to_hash: Vec<Felt252> = vec![
         tx_hash_prefix.get_prefix(),
-        version.into(),
+        version,
         contract_address.0.clone(),
         entry_point_selector,
         calldata_hash,
@@ -80,7 +80,7 @@ pub fn calculate_transaction_hash_common(
 }
 
 pub fn calculate_deploy_transaction_hash(
-    version: u64,
+    version: Felt252,
     contract_address: &Address,
     constructor_calldata: &[Felt252],
     chain_id: Felt252,
@@ -99,7 +99,7 @@ pub fn calculate_deploy_transaction_hash(
 
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
-    version: u64,
+    version: Felt252,
     contract_address: &Address,
     class_hash: Felt252,
     constructor_calldata: &[Felt252],
@@ -128,16 +128,16 @@ pub fn calculate_declare_transaction_hash(
     chain_id: Felt252,
     sender_address: &Address,
     max_fee: u128,
-    version: u64,
+    version: Felt252,
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
     let class_hash = compute_deprecated_class_hash(contract_class)
         .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
 
-    let (calldata, additional_data) = if version > 0 {
-        (Vec::new(), vec![class_hash])
-    } else {
+    let (calldata, additional_data) = if version.is_zero() {
         (vec![class_hash], vec![nonce])
+    } else {
+        (Vec::new(), vec![class_hash])
     };
 
     calculate_transaction_hash_common(
@@ -162,7 +162,7 @@ pub fn calculate_declare_v2_transaction_hash(
     chain_id: Felt252,
     sender_address: &Address,
     max_fee: u128,
-    version: u64,
+    version: Felt252,
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
     let class_hash = compute_sierra_class_hash(contract_class)
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn calculate_transaction_hash_common_test() {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
-        let version = 0;
+        let version = 0.into();
         let contract_address = Address(42.into());
         let entry_point_selector = 100.into();
         let calldata = vec![540.into(), 338.into()];
