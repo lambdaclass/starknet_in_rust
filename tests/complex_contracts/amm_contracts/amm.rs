@@ -6,14 +6,12 @@ use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_N
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{CallInfo, CallType},
-        state::{cached_state::CachedState, state_api::StateReader},
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-        transaction::error::TransactionError,
-    },
     definitions::general_config::TransactionContext,
+    execution::{CallInfo, CallType},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{cached_state::CachedState, state_api::StateReader},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    transaction::error::TransactionError,
     utils::{calculate_sn_keccak, Address},
 };
 

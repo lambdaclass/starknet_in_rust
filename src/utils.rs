@@ -1,17 +1,14 @@
 use crate::{
-    business_logic::{
-        execution::{
-            gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
-        },
-        state::ExecutionResourcesManager,
-        state::{
-            cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader,
-            state_cache::StorageEntry,
-        },
-        transaction::error::TransactionError,
-    },
     definitions::transaction_type::TransactionType,
+    execution::{
+        gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
+    },
+    state::ExecutionResourcesManager,
+    state::{
+        cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader, state_cache::StorageEntry,
+    },
     syscalls::syscall_handler_errors::SyscallHandlerError,
+    transaction::error::TransactionError,
 };
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
@@ -506,8 +503,8 @@ pub mod test_utils {
             let mut state = CachedState::<InMemoryStateReader>::default();
             let mut hint_processor = $crate::core::syscalls::syscall_handler::SyscallHintProcessor::<
                 $crate::core::syscalls::business_logic_syscall_handler::DeprecatedBLSyscallHandler::<
-                    $crate::business_logic::state::cached_state::CachedState<
-                        $crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader,
+                    $crate::state::cached_state::CachedState<
+                        $crate::state::in_memory_state_reader::InMemoryStateReader,
                     >,
                 >,
             >::new(DeprecatedBLSyscallHandler::default_with(&mut state));

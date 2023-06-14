@@ -303,9 +303,8 @@ mod tests {
     use super::*;
     use crate::{
         add_segments,
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         utils::{get_integer, test_utils::vm},
     };
     use cairo_vm::relocatable;

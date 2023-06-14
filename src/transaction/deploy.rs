@@ -1,13 +1,4 @@
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        state::state_api::{State, StateReader},
-        state::ExecutionResourcesManager,
-        transaction::error::TransactionError,
-    },
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
         transaction_hash::calculate_deploy_transaction_hash,
@@ -16,9 +7,16 @@ use crate::{
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
         transaction_type::TransactionType,
     },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -221,9 +219,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
+        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         utils::calculate_sn_keccak,
     };
 

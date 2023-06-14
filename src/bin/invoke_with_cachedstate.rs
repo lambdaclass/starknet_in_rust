@@ -4,16 +4,14 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_rs::{
-    business_logic::{
-        state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, BlockInfo},
-        transaction::InvokeFunction,
-    },
     definitions::{
         constants::TRANSACTION_VERSION,
         general_config::{StarknetChainId, StarknetOsConfig, TransactionContext},
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::in_memory_state_reader::InMemoryStateReader,
+    state::{cached_state::CachedState, BlockInfo},
+    transaction::InvokeFunction,
     utils::Address,
 };
 
