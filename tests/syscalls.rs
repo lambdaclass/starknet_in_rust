@@ -21,7 +21,7 @@ use starknet_rs::{
     },
     definitions::{
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
-        general_config::{StarknetChainId, BlockContext},
+        general_config::{BlockContext, StarknetChainId},
     },
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,

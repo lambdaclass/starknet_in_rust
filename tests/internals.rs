@@ -41,7 +41,7 @@ use starknet_rs::{
             TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
             VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
-        general_config::{StarknetChainId, StarknetOsConfig, BlockContext},
+        general_config::{BlockContext, StarknetChainId, StarknetOsConfig},
         transaction_type::TransactionType,
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
@@ -139,7 +139,10 @@ fn create_account_tx_test_state(
 
     let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
     let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
-    let test_erc20_address = block_context.starknet_os_config().fee_token_address().clone();
+    let test_erc20_address = block_context
+        .starknet_os_config()
+        .fee_token_address()
+        .clone();
     let address_to_class_hash = HashMap::from([
         (test_contract_address, test_contract_class_hash),
         (
@@ -418,7 +421,10 @@ fn expected_fee_transfer_call_info(
             actual_fee.into(),
             Felt252::zero(),
         ],
-        contract_address: block_context.starknet_os_config().fee_token_address().clone(),
+        contract_address: block_context
+            .starknet_os_config()
+            .fee_token_address()
+            .clone(),
         caller_address: account_address.clone(),
         retdata: vec![Felt252::one()],
         events: vec![OrderedEvent {
@@ -481,7 +487,10 @@ fn validate_final_balances<S>(
 {
     let account_balance = state
         .get_storage_at(&(
-            block_context.starknet_os_config().fee_token_address().clone(),
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
             *erc20_account_balance_storage_key,
         ))
         .unwrap();
@@ -489,7 +498,10 @@ fn validate_final_balances<S>(
 
     let sequencer_balance = state
         .get_storage_at(&(
-            block_context.starknet_os_config().fee_token_address().clone(),
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
             felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
         ))
         .unwrap();
@@ -504,7 +516,10 @@ fn test_create_account_tx_test_state() {
 
     let value = state
         .get_storage_at(&(
-            block_context.starknet_os_config().fee_token_address().clone(),
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
             felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
@@ -938,7 +953,10 @@ fn test_deploy_account() {
 
     state.set_storage_at(
         &(
-            block_context.starknet_os_config().fee_token_address().clone(),
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
             TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes(),
         ),
         ACTUAL_FEE.clone(),
@@ -954,7 +972,9 @@ fn test_deploy_account() {
         Felt252::zero(),
     );
 
-    let tx_info = deploy_account_tx.execute(&mut state, &block_context).unwrap();
+    let tx_info = deploy_account_tx
+        .execute(&mut state, &block_context)
+        .unwrap();
 
     assert_eq!(state, state_after);
 

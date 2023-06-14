@@ -11,7 +11,7 @@ use starknet_rs::{
     },
     definitions::{
         constants::TRANSACTION_VERSION,
-        general_config::{StarknetChainId, StarknetOsConfig, BlockContext},
+        general_config::{BlockContext, StarknetChainId, StarknetOsConfig},
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,

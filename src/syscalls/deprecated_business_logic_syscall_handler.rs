@@ -21,9 +21,7 @@ use crate::{
         transaction::error::TransactionError,
     },
     core::errors::state_errors::StateError,
-    definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::BlockContext,
-    },
+    definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::BlockContext},
     hash_utils::calculate_contract_address,
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
@@ -524,7 +522,11 @@ where
             tx.signature.iter().map(|num| num.into()).collect();
         let signature = self.allocate_segment(vm, signature_data)?;
 
-        let tx_info = TxInfoStruct::new(tx, signature, self.block_context.starknet_os_config.chain_id);
+        let tx_info = TxInfoStruct::new(
+            tx,
+            signature,
+            self.block_context.starknet_os_config.chain_id,
+        );
 
         let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
 

@@ -199,7 +199,8 @@ impl InvokeFunction {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
-        let call_info = self.run_execute_entrypoint(state, block_context, &mut resources_manager)?;
+        let call_info =
+            self.run_execute_entrypoint(state, block_context, &mut resources_manager)?;
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -238,7 +239,8 @@ impl InvokeFunction {
             block_context,
         )?;
 
-        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
+        let tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
         let fee_transfer_info =
             execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
@@ -525,8 +527,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.apply(&mut state, &BlockContext::default());
+        let expected_error = internal_invoke_function.apply(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -643,8 +644,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.apply(&mut state, &BlockContext::default());
+        let expected_error = internal_invoke_function.apply(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -820,8 +820,7 @@ mod tests {
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.execute(&mut state, &BlockContext::default());
+        let expected_error = internal_invoke_function.execute(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -876,8 +875,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.execute(&mut state, &BlockContext::default());
+        let expected_error = internal_invoke_function.execute(&mut state, &BlockContext::default());
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)

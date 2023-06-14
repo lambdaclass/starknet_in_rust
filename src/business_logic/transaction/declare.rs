@@ -306,7 +306,7 @@ mod tests {
         },
         definitions::{
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            general_config::{StarknetChainId, BlockContext},
+            general_config::{BlockContext, StarknetChainId},
             transaction_type::TransactionType,
         },
         services::api::contract_classes::deprecated_contract_class::ContractClass,
@@ -684,8 +684,7 @@ mod tests {
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error =
-            internal_declare_error.execute(&mut state, &BlockContext::default());
+        let expected_error = internal_declare_error.execute(&mut state, &BlockContext::default());
 
         // ---------------------
         //      Comparison
@@ -794,8 +793,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error =
-            internal_declare.execute(&mut state, &BlockContext::default());
+        let internal_declare_error = internal_declare.execute(&mut state, &BlockContext::default());
 
         assert!(internal_declare_error.is_err());
         assert_matches!(
