@@ -60,6 +60,11 @@ pub const DEFAULT_VALIDATE_MAX_N_STEPS: u64 = 1000000;
 pub const DECLARE_VERSION: u64 = 2;
 pub const TRANSACTION_VERSION: u64 = 1;
 
+// Gas Cost.
+// From cairo_programs/constants.cairo.
+pub const STEP_GAS_COST: u128 = 100;
+pub const INITIAL_GAS_COST: u128 = 10_u128.pow(8) * STEP_GAS_COST;
+
 lazy_static! {
     /// Value generated from `get_selector_from_name('constructor')`.
     pub static ref CONSTRUCTOR_ENTRY_POINT_SELECTOR: Felt252 =

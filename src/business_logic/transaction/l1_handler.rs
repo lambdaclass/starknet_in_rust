@@ -44,7 +44,7 @@ impl L1Handler {
         nonce: Felt252,
         chain_id: Felt252,
         paid_fee_on_l1: Option<Felt252>,
-    ) -> L1Handler {
+    ) -> Result<L1Handler, TransactionError> {
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::L1Handler,
             L1_HANDLER_VERSION,
@@ -54,17 +54,16 @@ impl L1Handler {
             0,
             chain_id,
             &[nonce.clone()],
-        )
-        .unwrap();
+        )?;
 
-        L1Handler {
+        Ok(L1Handler {
             hash_value,
             contract_address,
             entry_point_selector,
             calldata,
             nonce: Some(nonce),
             paid_fee_on_l1,
-        }
+        })
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
@@ -111,16 +110,13 @@ impl L1Handler {
             // Backward compatibility; Continue running the transaction even when
             // L1 handler fee is enforced, and paid_fee_on_l1 is None; If this is the case,
             // the transaction is an old transaction.
-            if self.paid_fee_on_l1.is_some() {
+            if let Some(paid_fee) = self.paid_fee_on_l1.clone() {
                 let required_fee = calculate_tx_fee(
                     &actual_resources,
                     general_config.starknet_os_config.gas_price,
                     general_config,
                 )?;
                 // For now, assert only that any amount of fee was paid.
-                // The error message still indicates the required fee.
-                // if we are here, means that self.paid_fee_on_l1 is Some(...)
-                let paid_fee = self.paid_fee_on_l1.clone().unwrap();
                 if paid_fee.is_zero() {
                     return Err(TransactionError::FeeError(format!(
                         "Insufficient fee was paid. Expected: {required_fee};\n got: {paid_fee}."
@@ -208,7 +204,8 @@ mod test {
             0.into(),
             0.into(),
             Some(10000.into()),
-        );
+        )
+        .unwrap();
 
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
@@ -273,9 +270,12 @@ mod test {
                 ],
                 retdata: vec![],
                 execution_resources: ExecutionResources {
-                    n_steps: 0,
-                    n_memory_holes: 0,
-                    builtin_instance_counter: HashMap::new(),
+                    n_steps: 141,
+                    n_memory_holes: 20,
+                    builtin_instance_counter: HashMap::from([
+                        ("range_check_builtin".to_string(), 6),
+                        ("pedersen_builtin".to_string(), 2),
+                    ]),
                 },
                 events: vec![],
                 l2_to_l1_messages: vec![],
