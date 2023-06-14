@@ -741,7 +741,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -839,7 +839,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -937,7 +937,7 @@ fn deploy_cairo0_and_invoke() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2413,7 +2413,7 @@ fn library_call_failure() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut expected_execution_resources = ExecutionResources::default();

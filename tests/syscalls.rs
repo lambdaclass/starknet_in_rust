@@ -1121,7 +1121,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1219,7 +1219,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1319,7 +1319,7 @@ fn deploy_cairo1_and_invoke() {
         0,
         10.into(),
         general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
