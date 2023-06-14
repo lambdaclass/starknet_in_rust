@@ -36,7 +36,7 @@ impl Transaction {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Deploy(tx) => tx.execute(state, general_config),
-            Transaction::InvokeFunction(tx) => tx.execute(state, general_config),
+            Transaction::InvokeFunction(tx) => tx.execute(state, general_config, 0),
         }
     }
 }

@@ -196,7 +196,7 @@ fn invoke_parser(
         Some(Felt252::zero()),
         transaction_hash,
     )?;
-    let _tx_info = internal_invoke.apply(cached_state, &StarknetGeneralConfig::default())?;
+    let _tx_info = internal_invoke.apply(cached_state, &StarknetGeneralConfig::default(), 0)?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,

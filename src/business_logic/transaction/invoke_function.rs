@@ -136,7 +136,7 @@ impl InvokeFunction {
             EntryPointType::External,
             None,
             None,
-            999999,
+            99999999999,
         );
 
         let call_info = call.execute(
@@ -160,6 +160,7 @@ impl InvokeFunction {
         state: &mut T,
         general_config: &StarknetGeneralConfig,
         resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
     ) -> Result<CallInfo, TransactionError>
     where
         T: State + StateReader,
@@ -172,7 +173,7 @@ impl InvokeFunction {
             EntryPointType::External,
             None,
             None,
-            99999999999,
+            remaining_gas,
         );
 
         call.execute(
@@ -190,6 +191,7 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -199,8 +201,12 @@ impl InvokeFunction {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
         // Execute transaction
-        let call_info =
-            self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
+        let call_info = self.run_execute_entrypoint(
+            state,
+            general_config,
+            &mut resources_manager,
+            remaining_gas,
+        )?;
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -252,8 +258,9 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         general_config: &StarknetGeneralConfig,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+        let concurrent_exec_info = self.apply(state, general_config, remaining_gas)?;
         self.handle_nonce(state)?;
 
         let (fee_transfer_info, actual_fee) = self.charge_fee(
@@ -403,7 +410,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &StarknetGeneralConfig::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -469,7 +476,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &StarknetGeneralConfig::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -531,7 +538,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -587,7 +594,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &StarknetGeneralConfig::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -649,7 +656,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -709,7 +716,7 @@ mod tests {
             (String::from("range_check_builtin"), 70.into()),
         ]);
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let expected_error = internal_invoke_function.execute(&mut state, &config, 0);
         let error_msg = "Fee transfer failure".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
@@ -769,7 +776,7 @@ mod tests {
         ]);
         config.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config);
+        let expected_error = internal_invoke_function.execute(&mut state, &config, 0);
         let error_msg = "Actual fee exceeded max fee.".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
@@ -822,11 +829,11 @@ mod tests {
             .unwrap();
 
         internal_invoke_function
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &StarknetGeneralConfig::default(), 0)
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -882,7 +889,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default());
+            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)

@@ -215,7 +215,7 @@ fn invoke() {
                 None,
             )
             .unwrap();
-            internal_invoke.execute(&mut state_copy, config)
+            internal_invoke.execute(&mut state_copy, config, 0)
         })
         .unwrap();
     }

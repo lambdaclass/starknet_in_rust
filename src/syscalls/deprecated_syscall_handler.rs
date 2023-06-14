@@ -1111,7 +1111,7 @@ mod tests {
 
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default())
+            .apply(&mut state, &StarknetGeneralConfig::default(), 0)
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();
