@@ -2,6 +2,7 @@ use crate::{
     business_logic::{
         execution::{
             gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
+            CallType, OrderedEvent,
         },
         state::ExecutionResourcesManager,
         state::{
@@ -14,7 +15,9 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use cairo_vm::{
-    felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
+    felt::Felt252,
+    serde::deserialize_program::BuiltinName,
+    vm::runners::{builtin_runner, cairo_runner::ExecutionResources},
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
@@ -36,6 +39,42 @@ pub type CompiledClassHash = [u8; 32];
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt252);
+
+//* -----------------------
+//*  FunctionInvocation
+//* -----------------------
+
+pub struct FunctionInvocation {
+    pub caller_address: Address,
+    pub call_type: Option<CallType>,
+    pub contract_address: Address,
+    pub class_hash: Option<ClassHash>,
+    pub entry_point_selector: Option<Felt252>,
+    pub entry_point_type: Option<EntryPointType>,
+    pub calldata: Vec<Felt252>,
+    pub retdata: Vec<Felt252>,
+    pub execution_resources: ExecutionResources,
+    pub events: Vec<OrderedEvent>,
+    pub internal_calls: Vec<CallInfo>,
+}
+
+impl FunctionInvocation {
+    pub fn new(call_info: &CallInfo) -> Self {
+        FunctionInvocation {
+            caller_address: call_info.caller_address.clone(),
+            call_type: call_info.call_type.clone(),
+            contract_address: call_info.contract_address.clone(),
+            class_hash: call_info.class_hash.clone(),
+            entry_point_selector: call_info.entry_point_selector.clone(),
+            entry_point_type: call_info.entry_point_type.clone(),
+            calldata: call_info.calldata.clone(),
+            retdata: call_info.retdata.clone(),
+            execution_resources: call_info.execution_resources.clone(),
+            events: call_info.events.clone(),
+            internal_calls: call_info.internal_calls.clone(),
+        }
+    }
+}
 
 //* -------------------
 //*  Helper Functions

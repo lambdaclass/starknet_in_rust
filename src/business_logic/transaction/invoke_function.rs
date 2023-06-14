@@ -46,6 +46,7 @@ pub struct InvokeFunction {
     signature: Vec<Felt252>,
     max_fee: u128,
     nonce: Option<Felt252>,
+    skip_validation: bool,
 }
 
 impl InvokeFunction {
@@ -93,6 +94,7 @@ impl InvokeFunction {
             validate_entry_point_selector,
             nonce,
             hash_value,
+            skip_validation: false,
         })
     }
 
@@ -128,6 +130,9 @@ impl InvokeFunction {
             return Ok(None);
         }
         if self.version.is_zero() {
+            return Ok(None);
+        }
+        if self.skip_validation {
             return Ok(None);
         }
 
@@ -300,17 +305,35 @@ impl InvokeFunction {
             }
         }
     }
+
+    // Simulation function
+
+    pub(crate) fn create_for_simulation(
+        &self,
+        tx: &InvokeFunction,
+        skip_validation: bool,
+    ) -> InvokeFunction {
+        let t = tx.clone();
+        InvokeFunction {
+            skip_validation,
+            ..t
+        }
+    }
+
     pub(crate) fn simulate_transaction<S: StateReader>(
         &self,
         state: S,
         transaction_context: TransactionContext,
-        skip_validation: bool,
     ) {
-        let cache_state = CachedState::new(state, None, None);
-        let traces = Vec::new();
-        let fee_estimation_infos = Vec::new();
-        let transaction_types = Vec::new();
+        let mut cache_state = CachedState::new(state, None, None);
+        // let traces = Vec::new();
+        //  let fee_estimation_infos = Vec::new();
+        //  let transaction_types = Vec::new();
+        //  // init simulation
+
+        let _execution_info = self.execute(&mut cache_state, &transaction_context);
     }
+}
 
 // ------------------------------------
 //  Invoke internal functions utils

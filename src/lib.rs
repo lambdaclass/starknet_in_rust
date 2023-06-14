@@ -26,11 +26,12 @@ pub mod testing;
 pub mod utils;
 
 pub fn simulate_transaction<S: StateReader>(
-    transaction: InvokeFunction,
+    transaction: &InvokeFunction,
     state: S,
     transaction_context: TransactionContext,
     skip_validate: bool,
 ) -> Result<(), TransactionError> {
-    transaction.simulate_transaction(state, transaction_context, skip_validate);
+    let tx_for_simulation = transaction.create_for_simulation(transaction, skip_validate);
+    tx_for_simulation.simulate_transaction(state, transaction_context);
     Ok(())
 }
