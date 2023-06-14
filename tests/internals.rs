@@ -745,7 +745,7 @@ fn test_declarev2_tx() {
         .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
         .is_err());
     // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &tx_context, 0).unwrap();
+    let result = declare_tx.execute(&mut state, &tx_context).unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
         .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
@@ -1197,10 +1197,16 @@ fn test_state_for_declare_tx() {
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(0.into()));
+    assert!(state
+        .get_nonce_at(&declare_tx.sender_address)
+        .unwrap()
+        .is_zero());
     // Execute declare_tx
     assert!(declare_tx.execute(&mut state, &tx_context).is_ok());
-    assert_eq!(state.get_nonce_at(&declare_tx.sender_address), Ok(1.into()));
+    assert!(state
+        .get_nonce_at(&declare_tx.sender_address)
+        .unwrap()
+        .is_one());
 
     // Check state.state_reader
     let mut state_reader = state.state_reader().clone();

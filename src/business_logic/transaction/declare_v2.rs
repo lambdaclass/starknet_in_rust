@@ -14,7 +14,8 @@ use crate::{
     },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::BlockContext,
+        constants::{INITIAL_GAS_COST, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
+        general_config::BlockContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -178,13 +179,19 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         tx_context: &BlockContext,
-        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
+        let initial_gas = INITIAL_GAS_COST;
+
         let mut resources_manager = ExecutionResourcesManager::default();
-        let (validate_info, _remaining_gas) =
-            self.run_validate_entrypoint(remaining_gas, state, &mut resources_manager, tx_context)?;
+
+        let (validate_info, _remaining_gas) = self.run_validate_entrypoint(
+            initial_gas,
+            state,
+            &mut resources_manager,
+            tx_context,
+        )?;
 
         let storage_changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
