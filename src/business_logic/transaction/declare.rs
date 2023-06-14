@@ -16,7 +16,7 @@ use crate::{
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::BlockContext,
+        block_context::BlockContext, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
@@ -303,8 +303,8 @@ mod tests {
             state::in_memory_state_reader::InMemoryStateReader,
         },
         definitions::{
+            block_context::{BlockContext, StarknetChainId},
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            general_config::{BlockContext, StarknetChainId},
             transaction_type::TransactionType,
         },
         services::api::contract_classes::deprecated_contract_class::ContractClass,

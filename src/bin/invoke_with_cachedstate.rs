@@ -10,8 +10,8 @@ use starknet_rs::{
         transaction::InvokeFunction,
     },
     definitions::{
+        block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::TRANSACTION_VERSION,
-        general_config::{BlockContext, StarknetChainId, StarknetOsConfig},
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,

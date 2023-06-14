@@ -196,7 +196,7 @@ mod tests {
             transaction::InvokeFunction,
         },
         definitions::{
-            constants::TRANSACTION_VERSION, general_config::BlockContext,
+            block_context::BlockContext, constants::TRANSACTION_VERSION,
             transaction_type::TransactionType,
         },
         memory_insert,

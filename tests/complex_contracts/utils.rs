@@ -16,7 +16,7 @@ use starknet_rs::{
         },
         transaction::{error::TransactionError, Deploy},
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address},
 };

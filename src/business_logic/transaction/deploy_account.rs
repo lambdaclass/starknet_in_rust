@@ -17,8 +17,8 @@ use crate::{
         transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
+        block_context::BlockContext,
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
-        general_config::BlockContext,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,
@@ -353,7 +353,7 @@ mod tests {
             state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
-        definitions::general_config::StarknetChainId,
+        definitions::block_context::StarknetChainId,
         utils::felt_to_hash,
     };
 

@@ -10,7 +10,7 @@ use starknet_rs::{
         state::{cached_state::CachedState, state_api::StateReader},
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    definitions::general_config::BlockContext,
+    definitions::block_context::BlockContext,
     utils::{calculate_sn_keccak, Address},
 };
 use std::collections::{HashMap, HashSet};

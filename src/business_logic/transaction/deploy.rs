@@ -13,7 +13,7 @@ use crate::{
         transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::BlockContext,
+        block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
     hash_utils::calculate_contract_address,

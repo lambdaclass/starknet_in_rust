@@ -13,7 +13,7 @@ use starknet_rs::{
         state::cached_state::CachedState,
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::Address,
 };

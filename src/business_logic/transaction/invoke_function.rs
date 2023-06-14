@@ -15,8 +15,8 @@ use crate::{
     },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
+        block_context::BlockContext,
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
-        general_config::BlockContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},

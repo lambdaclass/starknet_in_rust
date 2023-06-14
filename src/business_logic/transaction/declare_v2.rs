@@ -14,8 +14,8 @@ use crate::{
     },
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
+        block_context::BlockContext,
         constants::{INITIAL_GAS_COST, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
-        general_config::BlockContext,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -289,7 +289,7 @@ mod tests {
         business_logic::{
             state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         },
-        definitions::general_config::StarknetChainId,
+        definitions::block_context::StarknetChainId,
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;

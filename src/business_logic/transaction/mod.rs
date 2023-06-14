@@ -19,7 +19,7 @@ use crate::{
         execution::TransactionExecutionInfo,
         state::state_api::{State, StateReader},
     },
-    definitions::general_config::BlockContext,
+    definitions::block_context::BlockContext,
 };
 use error::TransactionError;
 

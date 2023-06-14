@@ -36,12 +36,12 @@ use starknet_rs::{
         },
     },
     definitions::{
+        block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::{
             CONSTRUCTOR_ENTRY_POINT_SELECTOR, EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION,
             TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
             VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
-        general_config::{BlockContext, StarknetChainId, StarknetOsConfig},
         transaction_type::TransactionType,
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},

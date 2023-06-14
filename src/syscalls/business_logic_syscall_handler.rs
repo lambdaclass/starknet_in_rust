@@ -36,7 +36,7 @@ use crate::{
         },
     },
     core::errors::state_errors::StateError,
-    definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::BlockContext},
+    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
     hash_utils::calculate_contract_address,
     services::api::contract_class_errors::ContractClassError,
     utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},

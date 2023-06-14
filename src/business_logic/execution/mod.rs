@@ -5,7 +5,7 @@ pub mod os_usage;
 use crate::{
     business_logic::{state::state_cache::StorageEntry, transaction::error::TransactionError},
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
+        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
     syscalls::syscall_handler_errors::SyscallHandlerError,

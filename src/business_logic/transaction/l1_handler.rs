@@ -17,7 +17,7 @@ use crate::{
     },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        constants::L1_HANDLER_VERSION, general_config::BlockContext,
+        block_context::BlockContext, constants::L1_HANDLER_VERSION,
         transaction_type::TransactionType,
     },
     utils::{calculate_tx_resources, Address},
@@ -182,7 +182,7 @@ mod test {
             },
             transaction::l1_handler::L1Handler,
         },
-        definitions::{general_config::BlockContext, transaction_type::TransactionType},
+        definitions::{block_context::BlockContext, transaction_type::TransactionType},
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         utils::Address,
     };

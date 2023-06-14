@@ -5,7 +5,7 @@ use crate::{
         state::{contract_storage_state::ContractStorageState, state_api::StateReader},
         transaction::error::TransactionError,
     },
-    definitions::{constants::DEFAULT_ENTRY_POINT_SELECTOR, general_config::BlockContext},
+    definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,

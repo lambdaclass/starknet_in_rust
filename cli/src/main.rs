@@ -23,8 +23,8 @@ use starknet_rs::{
         },
     },
     definitions::{
+        block_context::BlockContext,
         constants::{DECLARE_VERSION, TRANSACTION_VERSION},
-        general_config::BlockContext,
     },
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,

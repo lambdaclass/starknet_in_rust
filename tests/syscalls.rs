@@ -20,8 +20,8 @@ use starknet_rs::{
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     },
     definitions::{
+        block_context::{BlockContext, StarknetChainId},
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},
-        general_config::{BlockContext, StarknetChainId},
     },
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,

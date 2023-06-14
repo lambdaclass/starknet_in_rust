@@ -15,7 +15,7 @@ use business_logic::{
 };
 
 use cairo_vm::felt::Felt252;
-use definitions::general_config::BlockContext;
+use definitions::block_context::BlockContext;
 use starknet_contract_class::EntryPointType;
 use utils::Address;
 
@@ -114,7 +114,7 @@ mod test {
             cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
         },
         call_contract,
-        definitions::general_config::BlockContext,
+        definitions::block_context::BlockContext,
         utils::{Address, ClassHash},
     };
 

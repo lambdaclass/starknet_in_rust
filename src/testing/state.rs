@@ -14,7 +14,7 @@ use crate::{
             error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
         },
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::BlockContext},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::{
         contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
     },

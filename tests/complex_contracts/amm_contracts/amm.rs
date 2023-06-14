@@ -12,7 +12,7 @@ use starknet_rs::{
         state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
         transaction::error::TransactionError,
     },
-    definitions::general_config::BlockContext,
+    definitions::block_context::BlockContext,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{calculate_sn_keccak, Address},
 };

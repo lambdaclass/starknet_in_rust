@@ -7,7 +7,7 @@ use crate::{
         state::state_api::{State, StateReader},
         state::ExecutionResourcesManager,
     },
-    definitions::{constants::TRANSFER_ENTRY_POINT_SELECTOR, general_config::BlockContext},
+    definitions::{block_context::BlockContext, constants::TRANSFER_ENTRY_POINT_SELECTOR},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;
