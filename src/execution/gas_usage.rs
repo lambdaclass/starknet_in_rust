@@ -1,5 +1,5 @@
-use crate::business_logic::execution::L2toL1MessageInfo;
 use crate::definitions::constants::*;
+use crate::execution::L2toL1MessageInfo;
 use crate::services::eth_definitions::eth_gas_constans::*;
 
 /// Returns an estimation of the L1 gas amount that will be used (by StarkNet's update state and
@@ -130,7 +130,7 @@ pub fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) ->
 mod test {
     use super::get_event_emission_cost;
     use super::*;
-    use crate::{business_logic::execution::OrderedL2ToL1Message, utils::Address};
+    use crate::{execution::OrderedL2ToL1Message, utils::Address};
     use coverage_helper::test;
 
     #[test]

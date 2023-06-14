@@ -2,7 +2,6 @@
 
 use cairo_vm::felt::Felt252;
 use starknet_rs::{
-    business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, CallType, TransactionExecutionContext},
@@ -12,7 +11,6 @@ use starknet_rs::{
             structs::ExecutionResourcesManager,
         },
         state::cached_state::CachedState,
-    },
     definitions::{
         constants::TRANSACTION_VERSION,
         general_config::TransactionContext,

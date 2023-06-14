@@ -15,11 +15,9 @@ pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
 
 use crate::{
-    business_logic::{
-        execution::TransactionExecutionInfo,
-        state::state_api::{State, StateReader},
-    },
     definitions::general_config::TransactionContext,
+    execution::TransactionExecutionInfo,
+    state::state_api::{State, StateReader},
 };
 use error::TransactionError;
 

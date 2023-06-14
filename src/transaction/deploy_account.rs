@@ -1,17 +1,5 @@
 use super::invoke_function::verify_no_calls_to_other_contracts;
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        state::state_api::{State, StateReader},
-        state::ExecutionResourcesManager,
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        },
-    },
     core::{
         errors::state_errors::StateError,
         transaction_hash::calculate_deploy_account_transaction_hash,
@@ -21,9 +9,19 @@ use crate::{
         general_config::TransactionContext,
         transaction_type::TransactionType,
     },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
     hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+    },
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -353,11 +351,10 @@ mod tests {
 
     use super::*;
     use crate::{
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::general_config::StarknetChainId,
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         utils::felt_to_hash,
     };
 

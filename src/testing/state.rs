@@ -1,22 +1,20 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, Event,
-            TransactionExecutionContext, TransactionExecutionInfo,
-        },
-        state::{
-            cached_state::CachedState,
-            state_api::{State, StateReader},
-        },
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-        transaction::{
-            error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
-        },
-    },
     definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, Event, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
     services::api::{
         contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
+    },
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+    },
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    transaction::{
+        error::TransactionError, invoke_function::InvokeFunction, Declare, Deploy, Transaction,
     },
     utils::{Address, ClassHash},
 };
@@ -302,14 +300,12 @@ mod tests {
 
     use super::*;
     use crate::{
-        business_logic::{
-            execution::{CallType, OrderedL2ToL1Message},
-            state::state_cache::StorageEntry,
-        },
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
+        execution::{CallType, OrderedL2ToL1Message},
+        state::state_cache::StorageEntry,
         utils::{calculate_sn_keccak, felt_to_hash},
     };
 
