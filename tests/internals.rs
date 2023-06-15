@@ -17,7 +17,7 @@ use starknet_rs::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
 };
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
-use starknet_rs::transaction::DeclareV2;
+use starknet_rs::transaction::{DeclareV2, Deploy};
 use starknet_rs::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -58,6 +58,7 @@ lazy_static! {
     // Addresses.
     static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
     static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
+    static ref TEST_FIB_CONTRACT_ADDRESS: Address = Address(felt_str!("27728"));
     pub static ref TEST_SEQUENCER_ADDRESS: Address =
     Address(felt_str!("4096"));
     pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
@@ -594,6 +595,66 @@ fn expected_fee_transfer_info() -> CallInfo {
         ],
         accessed_storage_keys: HashSet::from([
             [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+            ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
+            ],
+            [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+            ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ],
+        ]),
+    }
+}
+
+fn expected_fib_fee_transfer_info() -> CallInfo {
+    CallInfo {
+        failure_flag: false,
+        gas_consumed: 0,
+        caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        call_type: Some(CallType::Call),
+        contract_address: Address(Felt252::from(4097)),
+        code_address: None,
+        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: vec![Felt252::from(4096), Felt252::zero(), Felt252::zero()],
+        retdata: vec![Felt252::from(1)],
+        execution_resources: ExecutionResources {
+            n_steps: 525,
+            n_memory_holes: 59,
+            builtin_instance_counter: HashMap::from([
+                ("range_check_builtin".to_string(), 21),
+                ("pedersen_builtin".to_string(), 4),
+            ]),
+        },
+        l2_to_l1_messages: vec![],
+        internal_calls: vec![],
+        events: vec![OrderedEvent {
+            order: 0,
+            keys: vec![TRANSFER_EVENT_SELECTOR.clone()],
+            data: vec![
+                Felt252::from(257),
+                Felt252::from(4096),
+                Felt252::zero(),
+                Felt252::zero(),
+            ],
+        }],
+        storage_read_values: vec![
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
+        ],
+        accessed_storage_keys: HashSet::from([
+            [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
             ],
@@ -644,6 +705,18 @@ fn declarev2_tx() -> DeclareV2 {
         compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
         sierra_contract_class,
         casm_class: Default::default(),
+    }
+}
+
+fn deploy_fib_syscall() -> Deploy {
+    Deploy {
+        hash_value: 0.into(),
+        version: 1.into(),
+        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
+        contract_address_salt: Address(0.into()),
+        contract_hash: felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()),
+        constructor_calldata: Vec::new(),
+        tx_type: TransactionType::Deploy,
     }
 }
 
@@ -849,6 +922,56 @@ fn expected_execute_call_info() -> CallInfo {
     }
 }
 
+fn expected_fib_execute_call_info() -> CallInfo {
+    CallInfo {
+        caller_address: Address(Felt252::zero()),
+        call_type: Some(CallType::Call),
+        contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        code_address: None,
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: vec![
+            Felt252::from(27728),
+            Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
+            Felt252::from(3),
+            Felt252::from(42),
+            Felt252::from(0),
+            Felt252::from(0),
+        ],
+        retdata: vec![Felt252::from(42)],
+        execution_resources: ExecutionResources {
+            n_steps: 160,
+            n_memory_holes: 1,
+            builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 4)]),
+        },
+        l2_to_l1_messages: vec![],
+        internal_calls: vec![CallInfo {
+            caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            call_type: Some(CallType::Call),
+            class_hash: Some(felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone())),
+            entry_point_selector: Some(Felt252::from_bytes_be(&calculate_sn_keccak(b"fib"))),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![Felt252::from(42), Felt252::from(0), Felt252::from(0)],
+            retdata: vec![Felt252::from(42)],
+            events: vec![],
+            l2_to_l1_messages: vec![],
+            internal_calls: vec![],
+            contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
+            code_address: None,
+            gas_consumed: 4710,
+            execution_resources: ExecutionResources {
+                n_steps: 121,
+                n_memory_holes: 1,
+                builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 3)]),
+            },
+            ..Default::default()
+        }],
+        events: vec![],
+        ..Default::default()
+    }
+}
+
 fn expected_validate_call_info_2() -> CallInfo {
     CallInfo {
         caller_address: Address(Felt252::zero()),
@@ -876,6 +999,31 @@ fn expected_validate_call_info_2() -> CallInfo {
     }
 }
 
+fn expected_fib_validate_call_info_2() -> CallInfo {
+    CallInfo {
+        caller_address: Address(Felt252::zero()),
+        call_type: Some(CallType::Call),
+        contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_type: Some(EntryPointType::External),
+        calldata: vec![
+            Felt252::from(27728),
+            Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
+            Felt252::from(3),
+            Felt252::from(42),
+            Felt252::from(0),
+            Felt252::from(0),
+        ],
+        execution_resources: ExecutionResources {
+            n_steps: 21,
+            n_memory_holes: 0,
+            builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 1)]),
+        },
+        ..Default::default()
+    }
+}
+
 fn expected_transaction_execution_info() -> TransactionExecutionInfo {
     TransactionExecutionInfo::new(
         Some(expected_validate_call_info_2()),
@@ -886,6 +1034,21 @@ fn expected_transaction_execution_info() -> TransactionExecutionInfo {
             ("pedersen_builtin".to_string(), 16),
             ("l1_gas_usage".to_string(), 0),
             ("range_check_builtin".to_string(), 72),
+        ]),
+        Some(TransactionType::InvokeFunction),
+    )
+}
+
+fn expected_fib_transaction_execution_info() -> TransactionExecutionInfo {
+    TransactionExecutionInfo::new(
+        Some(expected_fib_validate_call_info_2()),
+        Some(expected_fib_execute_call_info()),
+        Some(expected_fib_fee_transfer_info()),
+        0,
+        HashMap::from([
+            ("pedersen_builtin".to_string(), 16),
+            ("l1_gas_usage".to_string(), 0),
+            ("range_check_builtin".to_string(), 75),
         ]),
         Some(TransactionType::InvokeFunction),
     )
@@ -905,7 +1068,9 @@ fn test_invoke_tx() {
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
-    let result = invoke_tx.execute(state, starknet_general_context).unwrap();
+    let result = invoke_tx
+        .execute(state, starknet_general_context, 0)
+        .unwrap();
     let expected_execution_info = expected_transaction_execution_info();
 
     assert_eq!(result, expected_execution_info);
@@ -926,11 +1091,47 @@ fn test_invoke_tx_state() {
     ];
     let invoke_tx = invoke_tx(calldata);
 
-    invoke_tx.execute(state, starknet_general_context).unwrap();
+    invoke_tx
+        .execute(state, starknet_general_context, 0)
+        .unwrap();
 
     let expected_final_state = expected_state_after_tx();
 
     assert_eq!(*state, expected_final_state);
+}
+
+#[test]
+fn test_invoke_with_declarev2_tx() {
+    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let expected_initial_state = expected_state_before_tx();
+    assert_eq!(state, &expected_initial_state);
+
+    // Declare the fibonacci contract
+    let declare_tx = declarev2_tx();
+    declare_tx.execute(state, starknet_general_config).unwrap();
+
+    // Deploy the fibonacci contract
+    let deploy = deploy_fib_syscall();
+    deploy.execute(state, starknet_general_config).unwrap();
+
+    let Address(test_contract_address) = TEST_FIB_CONTRACT_ADDRESS.clone();
+    let calldata = vec![
+        test_contract_address,                                // CONTRACT ADDRESS
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(3),                                     // CONTRACT CALLDATA LEN
+        Felt252::from(42),                                    // a
+        Felt252::from(0),                                     // b
+        Felt252::from(0),                                     // n
+    ];
+    let invoke_tx = invoke_tx(calldata);
+
+    let expected_gas_consumed = 4710;
+    let result = invoke_tx
+        .execute(state, starknet_general_config, expected_gas_consumed)
+        .unwrap();
+
+    let expected_execution_info = expected_fib_transaction_execution_info();
+    assert_eq!(result, expected_execution_info);
 }
 
 #[test]
@@ -1409,7 +1610,7 @@ fn test_invoke_tx_wrong_call_data() {
     let invoke_tx = invoke_tx(calldata);
 
     // Execute transaction
-    let result = invoke_tx.execute(state, starknet_general_context);
+    let result = invoke_tx.execute(state, starknet_general_context, 0);
 
     // Assert error
     assert_matches!(
@@ -1449,7 +1650,7 @@ fn test_invoke_tx_wrong_entrypoint() {
     .unwrap();
 
     // Execute transaction
-    let result = invoke_tx.execute(state, starknet_general_context);
+    let result = invoke_tx.execute(state, starknet_general_context, 0);
 
     // Assert error
     assert_matches!(result, Err(TransactionError::EntryPointNotFound));

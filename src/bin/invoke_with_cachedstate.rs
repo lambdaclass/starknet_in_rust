@@ -65,7 +65,7 @@ fn main() {
             None,
         )
         .unwrap()
-        .execute(&mut cached_state, &block_context)
+        .execute(&mut cached_state, &block_context, 0)
         .unwrap();
 
         let tx_exec_info = InvokeFunction::new(
@@ -80,7 +80,7 @@ fn main() {
             None,
         )
         .unwrap()
-        .execute(&mut cached_state, &block_context)
+        .execute(&mut cached_state, &block_context, 0)
         .unwrap();
 
         assert_eq!(
