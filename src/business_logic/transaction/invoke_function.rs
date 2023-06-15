@@ -237,17 +237,19 @@ impl InvokeFunction {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
         }
-
+        println!("error in charge fee 0");
         let actual_fee = calculate_tx_fee(
             resources,
             general_config.starknet_os_config.gas_price,
             general_config,
         )?;
-
+        println!("actual_fee: {}", actual_fee);
+        println!("error in charge fee 1");
         let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
+        println!("error in charge fee 2");
         let fee_transfer_info =
             execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
-
+        println!("error in charge fee 3");
         Ok((Some(fee_transfer_info), actual_fee))
     }
 

@@ -192,6 +192,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             }
         }
         // II: FETCHING FROM STATE_READER
+        println!("class_hash get_contract_class: {:?}", class_hash);
         let contract = self.state_reader.get_contract_class(class_hash)?;
         match contract {
             CompiledClass::Casm(ref class) => {
@@ -203,6 +204,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
                     .and_then(|m| m.insert(compiled_class_hash, *class.clone()));
             }
             CompiledClass::Deprecated(ref contract) => {
+                println!("deprecated contract: {:?}", contract);
                 self.set_contract_class(class_hash, &contract.clone())?
             }
         }
@@ -216,11 +218,15 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &ClassHash,
         contract_class: &ContractClass,
     ) -> Result<(), StateError> {
-        self.contract_classes
-            .as_mut()
-            .ok_or(StateError::MissingContractClassCache)?
-            .insert(*class_hash, contract_class.clone());
-
+        match self.contract_classes.as_mut() {
+            Some(x) => {
+                x.insert(*class_hash, contract_class.clone());
+            }
+            None => {
+                self.contract_classes = Some(HashMap::new());
+                self.set_contract_class(class_hash, contract_class)?;
+            }
+        }
         Ok(())
     }
 
