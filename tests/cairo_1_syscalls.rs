@@ -2591,7 +2591,123 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(state_reader, Some(deprecated_contract_class_cache), Some(contract_class_cache));
+    let mut state = CachedState::new(
+        state_reader,
+        Some(deprecated_contract_class_cache),
+        Some(contract_class_cache),
+    );
+
+    // Create an execution entry point
+    let calldata = [25.into(), 50.into(), 75.into()].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata,
+        entrypoint_selector.clone().into(),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        1000000,
+    );
+
+    // Execute the entrypoint
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .unwrap();
+    let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
+    assert_eq!(
+        l1_to_l2_messages,
+        vec![
+            L2toL1MessageInfo::new(
+                OrderedL2ToL1Message {
+                    order: 0,
+                    to_address: Address(25.into()),
+                    payload: vec![50.into()]
+                },
+                address.clone()
+            ),
+            L2toL1MessageInfo::new(
+                OrderedL2ToL1Message {
+                    order: 1,
+                    to_address: Address(25.into()),
+                    payload: vec![75.into()]
+                },
+                address
+            )
+        ],
+    )
+}
+
+#[test]
+fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
+    //  Create program and entry point types for contract class
+    let path = PathBuf::from("starknet_programs/send_messages_contract_call.json");
+    let contract_class = ContractClass::try_from(path).unwrap();
+    let entrypoint_selector = &contract_class.entry_points_by_type()[&EntryPointType::External][0]
+        .selector()
+        .to_owned();
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+    let mut deprecated_contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    deprecated_contract_class_cache.insert(class_hash, contract_class);
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Add send_message_to_l1 contract to the state
+
+    let program_data = include_bytes!("../starknet_programs/cairo1/send_simple_message_to_l1.casm");
+    let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+    let send_msg_address = Address(1.into()); //Hardcoded in contract
+    let send_msg_class_hash: ClassHash = [2; 32];
+    let send_msg_nonce = Felt252::zero();
+
+    contract_class_cache.insert(send_msg_class_hash, send_msg_contract_class);
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(send_msg_address.clone(), send_msg_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(send_msg_address, send_msg_nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(
+        state_reader,
+        Some(deprecated_contract_class_cache),
+        Some(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
