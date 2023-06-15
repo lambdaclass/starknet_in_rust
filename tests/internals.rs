@@ -1785,9 +1785,9 @@ fn test_library_call_with_declare_v2() {
         .unwrap();
 
     let expected_internal_call_info = CallInfo {
-        caller_address: Address(0.into()),
+        caller_address: address.clone(),
         call_type: Some(CallType::Delegate),
-        contract_address: address.clone(),
+        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
         class_hash: Some(TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone().to_be_bytes()),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
