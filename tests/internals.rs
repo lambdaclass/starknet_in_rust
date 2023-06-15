@@ -1062,12 +1062,12 @@ fn test_invoke_with_declarev2_tx() {
 
     let Address(test_contract_address) = TEST_FIB_CONTRACT_ADDRESS.clone();
     let calldata = vec![
-        test_contract_address,                                  // CONTRACT ADDRESS
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),   // CONTRACT FUNCTION SELECTOR
-        Felt252::from(3),                                       // CONTRACT CALLDATA LEN
-        Felt252::from(42), // a
-        Felt252::from(0),  // b
-        Felt252::from(0),  // n
+        test_contract_address,                                // CONTRACT ADDRESS
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(3),                                     // CONTRACT CALLDATA LEN
+        Felt252::from(42),                                    // a
+        Felt252::from(0),                                     // b
+        Felt252::from(0),                                     // n
     ];
     let invoke_tx = invoke_tx(calldata);
 
@@ -1077,7 +1077,7 @@ fn test_invoke_with_declarev2_tx() {
 
     let expected_execution_info = expected_fib_transaction_execution_info();
     //assert_eq!(result, expected_execution_info);
-    assert_eq!(result.validate_info, expected_execution_info.validate_info);
+    assert_eq!(result.call_info, expected_execution_info.call_info);
 }
 
 #[test]

@@ -57,6 +57,11 @@ pub const DEFAULT_VALIDATE_MAX_N_STEPS: u64 = 1000000;
 pub const DECLARE_VERSION: u64 = 2;
 pub const TRANSACTION_VERSION: u64 = 1;
 
+/// Extracted from https://github.com/starkware-libs/blockifier
+pub const STEP_GAS_COST: u64 = 100;
+/// Extracted from https://github.com/starkware-libs/blockifier
+pub const INITIAL_GAS_COST: u128 = 10_u128.pow(8) * STEP_GAS_COST as u128;
+
 lazy_static! {
     /// Value generated from `get_selector_from_name('constructor')`.
     pub static ref CONSTRUCTOR_ENTRY_POINT_SELECTOR: Felt252 =

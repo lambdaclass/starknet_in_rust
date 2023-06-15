@@ -23,7 +23,8 @@ use crate::{
     },
     core::errors::state_errors::StateError,
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST},
+        general_config::StarknetGeneralConfig,
     },
     hash_utils::calculate_contract_address,
     services::api::{
@@ -425,7 +426,7 @@ where
             entry_point_type,
             Some(call_type),
             class_hash,
-            0,
+            INITIAL_GAS_COST,
         );
         entry_point.code_address = code_address;
 
