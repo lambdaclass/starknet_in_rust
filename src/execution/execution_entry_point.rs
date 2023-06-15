@@ -87,7 +87,7 @@ impl ExecutionEntryPoint {
         state: &mut T,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
-        tx_execution_context: &TransactionExecutionContext,
+        tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError>
     where
@@ -290,7 +290,7 @@ impl ExecutionEntryPoint {
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-        tx_execution_context: &TransactionExecutionContext,
+        tx_execution_context: &mut TransactionExecutionContext,
         contract_class: Box<ContractClass>,
         class_hash: [u8; 32],
     ) -> Result<CallInfo, TransactionError>
@@ -370,6 +370,12 @@ impl ExecutionEntryPoint {
             .resources_manager
             .clone();
 
+        *tx_execution_context = runner
+            .hint_processor
+            .syscall_handler
+            .tx_execution_context
+            .clone();
+
         // Update resources usage (for bouncer).
         resources_manager.cairo_usage += &runner.get_execution_resources()?;
 
@@ -391,7 +397,7 @@ impl ExecutionEntryPoint {
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-        tx_execution_context: &TransactionExecutionContext,
+        tx_execution_context: &mut TransactionExecutionContext,
         contract_class: Box<CasmContractClass>,
         class_hash: [u8; 32],
         support_reverted: bool,
@@ -508,6 +514,12 @@ impl ExecutionEntryPoint {
             .hint_processor
             .syscall_handler
             .resources_manager
+            .clone();
+
+        *tx_execution_context = runner
+            .hint_processor
+            .syscall_handler
+            .tx_execution_context
             .clone();
 
         // Update resources usage (for bouncer).

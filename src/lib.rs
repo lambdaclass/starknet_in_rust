@@ -83,7 +83,7 @@ pub fn call_contract<T: State + StateReader>(
         initial_gas,
     );
 
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         contract_address,
         transaction_hash,
         signature,
@@ -97,7 +97,7 @@ pub fn call_contract<T: State + StateReader>(
         state,
         &block_context,
         &mut ExecutionResourcesManager::default(),
-        &tx_execution_context,
+        &mut tx_execution_context,
         false,
     )?;
 

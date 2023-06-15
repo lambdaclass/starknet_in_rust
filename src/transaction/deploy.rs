@@ -155,7 +155,7 @@ impl Deploy {
             0,
         );
 
-        let tx_execution_context = TransactionExecutionContext::new(
+        let mut tx_execution_context = TransactionExecutionContext::new(
             Address(Felt252::zero()),
             self.hash_value.clone(),
             Vec::new(),
@@ -170,7 +170,7 @@ impl Deploy {
             state,
             block_context,
             &mut resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )?;
 

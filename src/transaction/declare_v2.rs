@@ -145,9 +145,10 @@ impl DeclareV2 {
             block_context,
         )?;
 
-        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps);
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -259,13 +260,14 @@ impl DeclareV2 {
             call_type: CallType::Call,
         };
 
-        let tx_execution_context = self.get_execution_context(block_context.validate_max_n_steps);
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.validate_max_n_steps);
 
         let call_info = entry_point.execute(
             state,
             block_context,
             resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )?;
 

@@ -193,7 +193,7 @@ impl Declare {
             state,
             block_context,
             resources_manager,
-            &self.get_execution_context(block_context.invoke_tx_max_n_steps),
+            &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
         )?;
 
@@ -220,9 +220,10 @@ impl Declare {
             block_context,
         )?;
 
-        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps);
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }

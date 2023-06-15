@@ -20,7 +20,7 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     state: &mut S,
     block_context: &BlockContext,
-    tx_execution_context: &TransactionExecutionContext,
+    tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_execution_context.max_fee {
