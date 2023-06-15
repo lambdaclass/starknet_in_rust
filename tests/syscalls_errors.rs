@@ -42,7 +42,7 @@ fn test_contract<'a>(
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
-    let tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
+    let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
@@ -120,7 +120,7 @@ fn test_contract<'a>(
         &mut state,
         &block_context,
         &mut resources_manager,
-        &tx_execution_context,
+        &mut tx_execution_context,
         false,
     );
 
