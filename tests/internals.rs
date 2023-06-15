@@ -1107,7 +1107,6 @@ fn test_invoke_tx_state() {
 
 #[test]
 fn test_invoke_with_declarev2_tx() {
-    let expected_gas_consumed = 4710;
     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(state, &expected_initial_state);
@@ -1131,12 +1130,12 @@ fn test_invoke_with_declarev2_tx() {
     ];
     let invoke_tx = invoke_tx(calldata);
 
+    let expected_gas_consumed = 4710;
     let result = invoke_tx
         .execute(state, starknet_general_config, expected_gas_consumed)
         .unwrap();
 
     let expected_execution_info = expected_fib_transaction_execution_info();
-    //assert_eq!(result, expected_execution_info);
     assert_eq!(result, expected_execution_info);
 }
 
@@ -1762,7 +1761,7 @@ fn test_library_call_with_declare_v2() {
 
     // Execute the entrypoint
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -1779,7 +1778,7 @@ fn test_library_call_with_declare_v2() {
             state,
             &block_context,
             &mut resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )
         .unwrap();
