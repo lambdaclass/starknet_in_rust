@@ -141,10 +141,12 @@ impl<T: StateReader> StateReader for CachedState<T> {
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         let hash = self.cache.class_hash_to_compiled_class_hash.get(class_hash);
+        println!("hash: {:?}", hash);
         if let Some(hash) = hash {
             Ok(*hash)
         } else {
             let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
+            println!("compiled_class_hash inside get_compiled_class_hash cached state: {:?}", compiled_class_hash);
             let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
             self.cache
                 .class_hash_initial_values
@@ -195,6 +197,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             CompiledClass::Casm(ref class) => {
                 // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
                 let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+                println!("compiled_class_hash: {:?}", compiled_class_hash);
                 self.casm_contract_classes
                     .as_mut()
                     .and_then(|m| m.insert(compiled_class_hash, *class.clone()));

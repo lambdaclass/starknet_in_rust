@@ -47,7 +47,7 @@ pub fn estimate_fee<T>(
     state: T,
 ) -> Result<(u128, usize), TransactionError>
 where
-    T: StateReader,
+    T: StateReader + std::fmt::Debug,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
     let mut cached_state = CachedState::<T> {
@@ -56,6 +56,8 @@ where
         contract_classes: Default::default(),
         casm_contract_classes: Default::default(),
     };
+
+    println!("cached state copy created: {:?}", cached_state);
 
     // Check if the contract is deployed.
     cached_state.get_class_hash_at(&transaction.contract_address())?;
@@ -172,7 +174,13 @@ mod test {
         state_reader
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
+
+        state_reader.class_hash_to_compiled_class_hash_mut().insert(class_hash, class_hash);
+        state_reader.casm_contract_classes_mut().extend(contract_class_cache.clone());
+
+        
         let state = CachedState::new(state_reader, None, Some(contract_class_cache));
+        println!("state: {:?}", state);
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let invoke_function = InvokeFunction::new(
             address,
@@ -182,7 +190,7 @@ mod test {
             calldata,
             vec![],
             StarknetChainId::TestNet.to_felt(),
-            Some(1.into()),
+            Some(0.into()),
             None,
         )
         .unwrap();
