@@ -12,7 +12,12 @@ use crate::{
         TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        },
+    },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
@@ -79,6 +84,20 @@ impl Deploy {
         self.contract_hash
     }
 
+    fn constructor_entry_points_empty(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
+        match contract_class {
+            CompiledClass::Deprecated(class) => Ok(class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .ok_or(ContractClassError::NoneEntryPointType)?
+                .is_empty()),
+            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+        }
+    }
+
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -86,16 +105,9 @@ impl Deploy {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
         let class_hash: ClassHash = self.contract_hash;
-        let contract_class: ContractClass = state
-            .get_contract_class(&class_hash)?
-            .try_into()
-            .map_err(StateError::from)?;
+        let contract_class = state.get_contract_class(&class_hash)?;
 
-        let constructors = contract_class
-            .entry_points_by_type()
-            .get(&EntryPointType::Constructor);
-
-        if constructors.map(Vec::is_empty).unwrap_or(true) {
+        if self.constructor_entry_points_empty(contract_class)? {
             // Contract has no constructors
             Ok(self.handle_empty_constructor(state)?)
         } else {
