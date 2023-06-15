@@ -1102,7 +1102,6 @@ fn test_invoke_tx_state() {
 
 #[test]
 fn test_invoke_with_declarev2_tx() {
-    let expected_gas_consumed = 4710;
     let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(state, &expected_initial_state);
@@ -1126,6 +1125,7 @@ fn test_invoke_with_declarev2_tx() {
     ];
     let invoke_tx = invoke_tx(calldata);
 
+    let expected_gas_consumed = 4710;
     let result = invoke_tx
         .execute(state, starknet_general_config, expected_gas_consumed)
         .unwrap();
