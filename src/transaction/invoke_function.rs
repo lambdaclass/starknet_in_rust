@@ -20,8 +20,9 @@ use crate::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
     },
-    utils::{calculate_tx_resources, Address, FunctionInvocation},
+    utils::{calculate_tx_resources, Address},
 };
+
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
@@ -319,24 +320,10 @@ impl InvokeFunction {
         &self,
         state: S,
         transaction_context: BlockContext,
-    ) -> Result<Vec<FunctionInvocation>, TransactionError> {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut cache_state = CachedState::new(state, None, None);
-        //  let fee_estimation_infos = Vec::new();
-
-        //  // init simulation
-        let execution_info = self.execute(&mut cache_state, &transaction_context)?;
-        let _traces = [
-            execution_info.validate_info.clone(),
-            execution_info.call_info.clone(),
-            execution_info.fee_transfer_info.clone(),
-        ]
-        .iter()
-        .map(|c| FunctionInvocation::new(&c))
-        .collect::<Vec<FunctionInvocation>>();
-
-        let _transaction_types = [self.tx_type].to_vec();
-
-        unimplemented!();
+        // init simulation
+        self.execute(&mut cache_state, &transaction_context)
     }
 }
 

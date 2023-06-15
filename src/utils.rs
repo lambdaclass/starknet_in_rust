@@ -2,7 +2,6 @@ use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
         gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
-        CallType, OrderedEvent,
     },
     state::ExecutionResourcesManager,
     state::{
@@ -12,9 +11,7 @@ use crate::{
     transaction::error::TransactionError,
 };
 use cairo_vm::{
-    felt::Felt252,
-    serde::deserialize_program::BuiltinName,
-    vm::runners::{builtin_runner, cairo_runner::ExecutionResources},
+    felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
@@ -36,46 +33,6 @@ pub type CompiledClassHash = [u8; 32];
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt252);
-
-//* -----------------------
-//*  FunctionInvocation
-//* -----------------------
-
-#[derive(Debug, Clone, Default)]
-pub struct FunctionInvocation {
-    pub caller_address: Address,
-    pub call_type: Option<CallType>,
-    pub contract_address: Address,
-    pub class_hash: Option<ClassHash>,
-    pub entry_point_selector: Option<Felt252>,
-    pub entry_point_type: Option<EntryPointType>,
-    pub calldata: Vec<Felt252>,
-    pub retdata: Vec<Felt252>,
-    pub execution_resources: ExecutionResources,
-    pub events: Vec<OrderedEvent>,
-    pub internal_calls: Vec<CallInfo>,
-}
-
-impl FunctionInvocation {
-    pub fn new(call_info: &Option<CallInfo>) -> Self {
-        match call_info {
-            None => FunctionInvocation::default(),
-            Some(c) => FunctionInvocation {
-                caller_address: c.caller_address.clone(),
-                call_type: c.call_type.clone(),
-                contract_address: c.contract_address.clone(),
-                class_hash: c.class_hash.clone(),
-                entry_point_selector: c.entry_point_selector.clone(),
-                entry_point_type: c.entry_point_type.clone(),
-                calldata: c.calldata.clone(),
-                retdata: c.retdata.clone(),
-                execution_resources: c.execution_resources.clone(),
-                events: c.events.clone(),
-                internal_calls: c.internal_calls.clone(),
-            },
-        }
-    }
-}
 
 //* -------------------
 //*  Helper Functions

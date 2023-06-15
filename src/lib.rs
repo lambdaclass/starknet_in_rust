@@ -48,10 +48,9 @@ pub fn simulate_transaction<S: StateReader>(
     state: S,
     transaction_context: BlockContext,
     skip_validate: bool,
-) -> Result<(), TransactionError> {
+) -> Result<TransactionExecutionInfo, TransactionError> {
     let tx_for_simulation = transaction.create_for_simulation(transaction.clone(), skip_validate);
-    let _invokes = tx_for_simulation.simulate_transaction(state, transaction_context)?;
-    Ok(())
+    tx_for_simulation.simulate_transaction(state, transaction_context)
 }
 
 pub fn call_contract<T: State + StateReader>(
