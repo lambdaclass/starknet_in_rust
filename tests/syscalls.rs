@@ -1475,7 +1475,7 @@ fn send_messages_to_l1_different_contract_calls() {
                     to_address: Address(Felt252::one()),
                     payload: vec![75.into()]
                 },
-                address.clone()
+                address
             )
         ],
     )
