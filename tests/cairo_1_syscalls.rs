@@ -2717,7 +2717,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone().into(),
+        entrypoint_selector.clone(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
