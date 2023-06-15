@@ -1,6 +1,5 @@
 // This module tests our code against the blockifier to ensure they work in the same way.
 use assert_matches::assert_matches;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::{felt_str, Felt252};
 use cairo_vm::vm::{
@@ -879,37 +878,31 @@ fn expected_fib_execute_call_info() -> CallInfo {
     CallInfo {
         caller_address: Address(Felt252::zero()),
         call_type: Some(CallType::Call),
-        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
+        contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
         class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
         entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt252::from(27728),
-            Felt252::from_str_radix(
-                "039a1491f76903a16feed0a6433bec78de4c73194944e1118e226820ad479701",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
             Felt252::from(3),
             Felt252::from(42),
             Felt252::from(0),
             Felt252::from(0),
         ],
         retdata: vec![Felt252::from(42)],
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_memory_holes: 1,
+            builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 3)]),
+            ..Default::default()
+        },
         l2_to_l1_messages: vec![],
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             call_type: Some(CallType::Call),
             class_hash: Some(felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone())),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "039a1491f76903a16feed0a6433bec78de4c73194944e1118e226820ad479701",
-                    16,
-                )
-                .unwrap(),
-            ),
+            entry_point_selector: Some(Felt252::from_bytes_be(&calculate_sn_keccak(b"fib"))),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![Felt252::from(42), Felt252::from(0), Felt252::from(0)],
             retdata: vec![Felt252::from(42)],
@@ -917,8 +910,9 @@ fn expected_fib_execute_call_info() -> CallInfo {
             l2_to_l1_messages: vec![],
             internal_calls: vec![],
             execution_resources: ExecutionResources::default(),
-            contract_address: TEST_CONTRACT_ADDRESS.clone(),
+            contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
             code_address: None,
+            gas_consumed: 4710,
             ..Default::default()
         }],
         events: vec![],
@@ -949,21 +943,21 @@ fn expected_validate_call_info_2() -> CallInfo {
 }
 
 fn expected_fib_validate_call_info_2() -> CallInfo {
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
-    let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let entrypoints = casm_contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).clone().unwrap().selector;
-
     CallInfo {
         caller_address: Address(Felt252::zero()),
         call_type: Some(CallType::Call),
-        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
-        class_hash: Some(felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone())),
-        entry_point_selector: Some(entrypoint_selector.into()),
+        contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
-        calldata: vec![Felt252::from(42), Felt252::from(0), Felt252::from(0)],
-        retdata: vec![Felt252::from(42)],
-        gas_consumed: 4710,
+        calldata: vec![
+            Felt252::from(27728),
+            Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
+            Felt252::from(3),
+            Felt252::from(42),
+            Felt252::from(0),
+            Felt252::from(0),
+        ],
         ..Default::default()
     }
 }
@@ -1077,7 +1071,7 @@ fn test_invoke_with_declarev2_tx() {
 
     let expected_execution_info = expected_fib_transaction_execution_info();
     //assert_eq!(result, expected_execution_info);
-    assert_eq!(result.call_info, expected_execution_info.call_info);
+    assert_eq!(result, expected_execution_info);
 }
 
 #[test]
