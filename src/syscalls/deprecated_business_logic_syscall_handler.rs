@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    definitions::{block_context::BlockContext, constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST}},
     execution::{execution_entry_point::ExecutionEntryPoint, *},
     hash_utils::calculate_contract_address,
     services::api::{
@@ -442,7 +442,7 @@ where
             entry_point_type,
             Some(call_type),
             class_hash,
-            0,
+            INITIAL_GAS_COST,
         );
         entry_point.code_address = code_address;
 
