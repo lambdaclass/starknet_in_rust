@@ -1464,7 +1464,7 @@ fn send_messages_to_l1_different_contract_calls() {
             L2toL1MessageInfo::new(
                 OrderedL2ToL1Message {
                     order: 0,
-                    to_address: Address(Felt252::one()),
+                    to_address: Address(25.into()),
                     payload: vec![50.into()]
                 },
                 address.clone()
@@ -1472,7 +1472,7 @@ fn send_messages_to_l1_different_contract_calls() {
             L2toL1MessageInfo::new(
                 OrderedL2ToL1Message {
                     order: 1,
-                    to_address: Address(Felt252::one()),
+                    to_address: Address(25.into()),
                     payload: vec![75.into()]
                 },
                 address
