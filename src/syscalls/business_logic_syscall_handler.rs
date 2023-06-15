@@ -659,8 +659,7 @@ where
             remaining_gas,
         );
 
-        let response = self.call_contract_helper(vm, remaining_gas, execution_entry_point);
-        response
+        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
     }
 
     fn storage_read(
