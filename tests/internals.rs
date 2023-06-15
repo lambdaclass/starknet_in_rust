@@ -544,26 +544,6 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
     .unwrap()
 }
 
-fn invoke_fib_tx(calldata: Vec<Felt252>) -> InvokeFunction {
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
-    let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let entrypoints = casm_contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).clone().unwrap().selector;
-
-    InvokeFunction::new(
-        TEST_FIB_CONTRACT_ADDRESS.clone(),
-        entrypoint_selector.into(),
-        9999,
-        TRANSACTION_VERSION,
-        calldata,
-        vec![],
-        StarknetChainId::TestNet.to_felt(),
-        Some(Felt252::zero()),
-        None,
-    )
-    .unwrap()
-}
-
 fn expected_fee_transfer_info() -> CallInfo {
     CallInfo {
         failure_flag: false,
@@ -1080,12 +1060,16 @@ fn test_invoke_with_declarev2_tx() {
     let deploy = deploy_fib_syscall();
     deploy.execute(state, starknet_general_config).unwrap();
 
+    let Address(test_contract_address) = TEST_FIB_CONTRACT_ADDRESS.clone();
     let calldata = vec![
+        test_contract_address,                                  // CONTRACT ADDRESS
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),   // CONTRACT FUNCTION SELECTOR
+        Felt252::from(3),                                       // CONTRACT CALLDATA LEN
         Felt252::from(42), // a
         Felt252::from(0),  // b
         Felt252::from(0),  // n
     ];
-    let invoke_tx = invoke_fib_tx(calldata);
+    let invoke_tx = invoke_tx(calldata);
 
     let result = invoke_tx
         .execute(state, starknet_general_config, 99999)
