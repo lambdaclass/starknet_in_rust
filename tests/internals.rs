@@ -1716,7 +1716,7 @@ fn test_library_call_with_declare_v2() {
     class_hash[0] = 1;
     let nonce = Felt252::zero();
 
-    let state_reader: &mut InMemoryStateReader = &mut state.state_reader_mut();
+    let state_reader: &mut InMemoryStateReader = state.state_reader_mut();
 
     state_reader
         .address_to_class_hash_mut()
@@ -1784,9 +1784,9 @@ fn test_library_call_with_declare_v2() {
         .unwrap();
 
     let expected_internal_call_info = CallInfo {
-        caller_address: address.clone(),
+        caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
-        contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
+        contract_address: address.clone(),
         class_hash: Some(TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone().to_be_bytes()),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
