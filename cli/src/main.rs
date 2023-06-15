@@ -253,7 +253,7 @@ fn call_parser(
         cached_state,
         &BlockContext::default(),
         &mut ExecutionResourcesManager::default(),
-        &TransactionExecutionContext::default(),
+        &mut TransactionExecutionContext::default(),
         false,
     )?;
     Ok(call_info.retdata)
