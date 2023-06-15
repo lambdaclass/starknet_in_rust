@@ -1131,7 +1131,6 @@ fn test_invoke_with_declarev2_tx() {
         .unwrap();
 
     let expected_execution_info = expected_fib_transaction_execution_info();
-    //assert_eq!(result, expected_execution_info);
     assert_eq!(result, expected_execution_info);
 }
 
