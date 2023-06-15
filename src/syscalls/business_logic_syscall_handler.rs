@@ -649,7 +649,8 @@ where
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         // Change own contract_address to the called one in order to interact with its storage
-        let previous_contract_address = std::mem::take(&mut self.contract_address);
+        let previous_caller_address = std::mem::take(&mut self.caller_address);
+        self.caller_address = std::mem::take(&mut self.contract_address);
         self.contract_address = request.contract_address;
         let execution_entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -664,7 +665,8 @@ where
 
         let response = self.call_contract_helper(vm, remaining_gas, execution_entry_point);
         // Restore contract address after call is finished
-        self.contract_address = previous_contract_address;
+        self.contract_address = std::mem::take(&mut self.caller_address);
+        self.caller_address = previous_caller_address;
         response
     }
 
