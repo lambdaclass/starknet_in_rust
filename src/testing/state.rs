@@ -147,12 +147,12 @@ impl StarknetState {
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let tx_execution_context = TransactionExecutionContext::default();
+        let mut tx_execution_context = TransactionExecutionContext::default();
         let call_info = call.execute(
             &mut self.state,
             &self.block_context,
             &mut resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )?;
 

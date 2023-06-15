@@ -22,7 +22,7 @@ fn test_internal_calls() {
             .expect("Could not load contract from JSON");
 
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::create_for_testing(
+    let mut tx_execution_context = TransactionExecutionContext::create_for_testing(
         Address(0.into()),
         10,
         0.into(),
@@ -70,7 +70,7 @@ fn test_internal_calls() {
             &mut state,
             &block_context,
             &mut resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )
         .expect("Could not execute contract");
