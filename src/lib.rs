@@ -1,5 +1,4 @@
-use crate::business_logic::transaction::InvokeFunction;
-use business_logic::{
+use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         TransactionExecutionInfo,
@@ -14,6 +13,7 @@ use business_logic::{
 use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
 use starknet_contract_class::EntryPointType;
+use transaction::InvokeFunction;
 use utils::Address;
 
 #[allow(warnings)]
@@ -46,7 +46,7 @@ pub mod utils;
 pub fn simulate_transaction<S: StateReader>(
     transaction: &InvokeFunction,
     state: S,
-    transaction_context: TransactionContext,
+    transaction_context: BlockContext,
     skip_validate: bool,
 ) -> Result<(), TransactionError> {
     let tx_for_simulation = transaction.create_for_simulation(transaction.clone(), skip_validate);

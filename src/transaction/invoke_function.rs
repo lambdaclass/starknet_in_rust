@@ -1,45 +1,26 @@
 use std::collections::HashMap;
 
 use crate::{
-<<<<<<< HEAD:src/business_logic/transaction/invoke_function.rs
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        state::ExecutionResourcesManager,
-        state::{
-            cached_state::CachedState,
-            state_api::{State, StateReader},
-        },
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        },
-    },
-=======
->>>>>>> main:src/transaction/invoke_function.rs
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::BlockContext,
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
     },
-<<<<<<< HEAD:src/business_logic/transaction/invoke_function.rs
-    utils::{calculate_tx_resources, Address, FunctionInvocation},
-=======
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+    },
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
     },
-    utils::{calculate_tx_resources, Address},
->>>>>>> main:src/transaction/invoke_function.rs
+    utils::{calculate_tx_resources, Address, FunctionInvocation},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
@@ -337,7 +318,7 @@ impl InvokeFunction {
     pub(crate) fn simulate_transaction<S: StateReader>(
         &self,
         state: S,
-        transaction_context: TransactionContext,
+        transaction_context: BlockContext,
     ) -> Result<Vec<FunctionInvocation>, TransactionError> {
         let mut cache_state = CachedState::new(state, None, None);
         //  let fee_estimation_infos = Vec::new();
@@ -431,6 +412,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -497,6 +479,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -559,6 +542,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -614,6 +598,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: None,
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -676,6 +661,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: None,
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -729,6 +715,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 1000,
             nonce: Some(0.into()),
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -788,6 +775,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 1000,
             nonce: Some(0.into()),
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -848,6 +836,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
         };
 
         // Instantiate CachedState
@@ -907,6 +896,7 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: None,
+            skip_validation: false,
         };
 
         // Instantiate CachedState
