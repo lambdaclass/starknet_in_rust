@@ -446,8 +446,6 @@ where
         );
         entry_point.code_address = code_address;
 
-        dbg!(self.tx_execution_context.n_sent_messages);
-
         entry_point
             .execute(
                 self.starknet_storage_state.state,
