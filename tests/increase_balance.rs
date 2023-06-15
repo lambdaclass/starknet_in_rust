@@ -95,7 +95,7 @@ fn hello_starknet_increase_balance() {
     //*   Execute contract
     //* ---------------------
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -135,7 +135,7 @@ fn hello_starknet_increase_balance() {
                 &mut state,
                 &block_context,
                 &mut resources_manager,
-                &tx_execution_context,
+                &mut tx_execution_context,
                 false,
             )
             .unwrap(),

@@ -229,7 +229,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
                 self.starknet_storage_state.state,
                 &self.block_context,
                 &mut self.resources_manager,
-                &self.tx_execution_context,
+                &mut self.tx_execution_context,
                 false,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
@@ -451,7 +451,7 @@ where
                 self.starknet_storage_state.state,
                 &self.block_context,
                 &mut self.resources_manager,
-                &self.tx_execution_context,
+                &mut self.tx_execution_context,
                 false,
             )
             .map(|x| {

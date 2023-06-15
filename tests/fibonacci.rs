@@ -86,7 +86,7 @@ fn integration_test() {
     //*   Execute contract
     //* ---------------------
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -119,7 +119,7 @@ fn integration_test() {
                 &mut state,
                 &block_context,
                 &mut resources_manager,
-                &tx_execution_context,
+                &mut tx_execution_context,
                 false,
             )
             .unwrap(),
@@ -172,7 +172,7 @@ fn integration_test_cairo1() {
 
     // Execute the entrypoint
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -208,7 +208,7 @@ fn integration_test_cairo1() {
                 &mut state,
                 &block_context,
                 &mut resources_manager,
-                &tx_execution_context,
+                &mut tx_execution_context,
                 false,
             )
             .unwrap(),

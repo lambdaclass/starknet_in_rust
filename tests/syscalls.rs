@@ -60,7 +60,7 @@ fn test_contract<'a>(
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
-    let tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
+    let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
@@ -140,7 +140,7 @@ fn test_contract<'a>(
                 &mut state,
                 &block_context,
                 &mut resources_manager,
-                &tx_execution_context,
+                &mut tx_execution_context,
                 false,
             )
             .expect("Could not execute contract"),
@@ -1112,7 +1112,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     // Execute the entrypoint
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -1127,7 +1127,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         &mut state,
         &block_context,
         &mut resources_manager,
-        &tx_execution_context,
+        &mut tx_execution_context,
         false,
     );
 
@@ -1210,7 +1210,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     // Execute the entrypoint
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -1226,7 +1226,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
             &mut state,
             &block_context,
             &mut resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )
         .unwrap();
@@ -1310,7 +1310,7 @@ fn deploy_cairo1_and_invoke() {
 
     // Execute the entrypoint
     let block_context = BlockContext::default();
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -1325,7 +1325,7 @@ fn deploy_cairo1_and_invoke() {
         &mut state,
         &block_context,
         &mut resources_manager,
-        &tx_execution_context,
+        &mut tx_execution_context,
         false,
     );
 
@@ -1363,7 +1363,7 @@ fn deploy_cairo1_and_invoke() {
             &mut state,
             &block_context,
             &mut resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )
         .unwrap();
