@@ -107,7 +107,7 @@ pub fn execute_entry_point(
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
@@ -121,7 +121,7 @@ pub fn execute_entry_point(
         call_config.state,
         call_config.block_context,
         call_config.resources_manager,
-        &tx_execution_context,
+        &mut tx_execution_context,
         false,
     )
 }
