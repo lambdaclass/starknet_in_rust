@@ -16,7 +16,7 @@ use starknet_contract_class::EntryPointType;
 use transaction::InvokeFunction;
 use utils::Address;
 
-#[allow(warnings)]
+#[deny(warnings)]
 #[forbid(unsafe_code)]
 #[cfg_attr(coverage_nightly, feature(no_coverage))]
 #[cfg(test)]
