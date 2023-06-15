@@ -1,25 +1,23 @@
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        },
-    },
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, general_config::StarknetGeneralConfig,
+        block_context::BlockContext, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
+    },
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -30,8 +28,6 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
-const VERSION_0: u64 = 0;
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
@@ -41,7 +37,7 @@ pub struct Declare {
     pub sender_address: Address,
     pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
-    pub version: u64,
+    pub version: Felt252,
     pub max_fee: u128,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
@@ -59,7 +55,7 @@ impl Declare {
         chain_id: Felt252,
         sender_address: Address,
         max_fee: u128,
-        version: u64,
+        version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
         hash_value: Option<Felt252>,
@@ -74,7 +70,7 @@ impl Declare {
                 chain_id,
                 &sender_address,
                 max_fee,
-                version,
+                version.clone(),
                 nonce.clone(),
             )?,
         };
@@ -115,7 +111,7 @@ impl Declare {
             }
         }
 
-        if self.version == VERSION_0 && !self.signature.len().is_zero() {
+        if self.version.is_zero() && !self.signature.len().is_zero() {
             return Err(TransactionError::InvalidSignature);
         }
         Ok(())
@@ -126,14 +122,14 @@ impl Declare {
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.verify_version()?;
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -166,7 +162,7 @@ impl Declare {
             self.max_fee,
             self.nonce.clone(),
             n_steps,
-            self.version,
+            self.version.clone(),
         )
     }
 
@@ -174,9 +170,9 @@ impl Declare {
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(None);
         }
 
@@ -195,9 +191,9 @@ impl Declare {
 
         let call_info = entry_point.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps),
+            &self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
         )?;
 
@@ -212,7 +208,7 @@ impl Declare {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -220,19 +216,19 @@ impl Declare {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            general_config.starknet_os_config.gas_price,
-            general_config,
+            block_context.starknet_os_config.gas_price,
+            block_context,
         )?;
 
-        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps);
+        let tx_execution_context = self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -255,9 +251,9 @@ impl Declare {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config)?;
+        let concurrent_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
@@ -272,11 +268,8 @@ impl Declare {
             }
         }
 
-        let (fee_transfer_info, actual_fee) = self.charge_fee(
-            state,
-            &concurrent_exec_info.actual_resources,
-            general_config,
-        )?;
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &concurrent_exec_info.actual_resources, block_context)?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -295,21 +288,23 @@ impl Declare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::felt::{felt_str, Felt252};
+    use cairo_vm::{
+        felt::{felt_str, Felt252},
+        vm::runners::cairo_runner::ExecutionResources,
+    };
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
-        business_logic::{
-            execution::CallType, fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
-        },
         definitions::{
+            block_context::{BlockContext, StarknetChainId},
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            general_config::{StarknetChainId, StarknetGeneralConfig},
             transaction_type::TransactionType,
         },
+        execution::CallType,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         utils::{felt_to_hash, Address},
     };
 
@@ -361,7 +356,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -392,6 +387,10 @@ mod tests {
             entry_point_type: Some(EntryPointType::External),
             calldata,
             class_hash: Some(expected_class_hash),
+            execution_resources: ExecutionResources {
+                n_steps: 12,
+                ..Default::default()
+            },
             ..Default::default()
         });
 
@@ -414,7 +413,7 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply(&mut state, &StarknetGeneralConfig::default())
+                .apply(&mut state, &BlockContext::default())
                 .unwrap(),
             transaction_exec_info
         );
@@ -460,7 +459,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
         let max_fee = 1000;
-        let version = 0;
+        let version = 0.into();
 
         // Declare tx should fail because max_fee > 0 and version == 0
         let internal_declare = Declare::new(
@@ -524,7 +523,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
         let nonce = Felt252::from(148);
-        let version = 0;
+        let version = 0.into();
 
         // Declare tx should fail because nonce > 0 and version == 0
         let internal_declare = Declare::new(
@@ -595,7 +594,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            0,
+            0.into(),
             signature,
             Felt252::zero(),
             None,
@@ -657,7 +656,7 @@ mod tests {
             chain_id.clone(),
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -669,7 +668,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::one(),
             None,
@@ -677,11 +676,10 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error =
-            internal_declare_error.execute(&mut state, &StarknetGeneralConfig::default());
+        let expected_error = internal_declare_error.execute(&mut state, &BlockContext::default());
 
         // ---------------------
         //      Comparison
@@ -739,7 +737,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -747,11 +745,10 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &StarknetGeneralConfig::default())
+            .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error =
-            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
+        let expected_error = internal_declare.execute(&mut state, &BlockContext::default());
 
         // ---------------------
         //      Comparison
@@ -784,15 +781,14 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             0,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
         )
         .unwrap();
 
-        let internal_declare_error =
-            internal_declare.execute(&mut state, &StarknetGeneralConfig::default());
+        let internal_declare_error = internal_declare.execute(&mut state, &BlockContext::default());
 
         assert!(internal_declare_error.is_err());
         assert_matches!(
@@ -847,7 +843,7 @@ mod tests {
             chain_id,
             Address(Felt252::one()),
             10,
-            1,
+            1.into(),
             Vec::new(),
             Felt252::zero(),
             None,
@@ -856,7 +852,7 @@ mod tests {
 
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
-            internal_declare.execute(&mut state, &StarknetGeneralConfig::default()),
+            internal_declare.execute(&mut state, &BlockContext::default()),
             Err(TransactionError::FeeError(e)) if e == "Fee transfer failure"
         );
     }

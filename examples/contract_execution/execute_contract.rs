@@ -2,23 +2,20 @@
 
 use cairo_vm::felt::Felt252;
 use starknet_rs::{
-    business_logic::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,
             objects::{CallInfo, CallType, TransactionExecutionContext},
         },
-        fact_state::{
+        state::{
             contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            state::ExecutionResourcesManager,
+            structs::ExecutionResourcesManager,
         },
         state::cached_state::CachedState,
-    },
     definitions::{
         constants::TRANSACTION_VERSION,
-        general_config::StarknetGeneralConfig,
+        block_context::BlockContext,
     },
     services::api::contract_class::{ContractClass, EntryPointType},
-    starknet_storage::dict_storage::DictStorage,
     utils::{calculate_sn_keccak, Address},
 };
 use std::path::Path;
@@ -45,14 +42,14 @@ fn test_contract(
     //*          Create default context
     //* --------------------------------------------
 
-    let general_config = StarknetGeneralConfig::default();
+    let block_context = BlockContext::default();
 
     let tx_execution_context =
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
             0.into(),
-            general_config.invoke_tx_max_n_steps(),
+            block_context.invoke_tx_max_n_steps(),
             TRANSACTION_VERSION,
         );
 
@@ -67,7 +64,7 @@ fn test_contract(
         tx_execution_context.nonce(),
         Default::default(),
     );
-    let mut state_reader = InMemoryStateReader::new(DictStorage::new(), DictStorage::new());
+    let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
     state_reader
         .contract_states_mut()
         .insert(contract_address, contract_state);
@@ -100,7 +97,7 @@ fn test_contract(
         entry_point
             .execute(
                 &mut state,
-                &general_config,
+                &block_context,
                 &mut resources_manager,
                 &tx_execution_context,
             )

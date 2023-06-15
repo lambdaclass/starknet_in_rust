@@ -1,12 +1,12 @@
 use crate::{
-    business_logic::state::state_cache::StorageEntry,
     services::api::contract_class_errors::ContractClassError,
+    state::state_cache::StorageEntry,
     storage::errors::storage_errors::StorageError,
     utils::{Address, ClassHash},
 };
 use thiserror::Error;
 
-#[derive(Debug, PartialEq, Eq, Error)]
+#[derive(Debug, Error)]
 pub enum StateError {
     #[error("Missing ContractClassCache")]
     MissingContractClassCache,
@@ -52,4 +52,6 @@ pub enum StateError {
     MissingClassHash(),
     #[error("Uninitializes class_hash")]
     UninitiaizedClassHash,
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }

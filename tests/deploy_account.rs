@@ -4,18 +4,16 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{CallInfo, CallType, TransactionExecutionInfo},
-        fact_state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, state_api::State},
-        transaction::DeployAccount,
-    },
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::StarknetChainId,
+        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
+    execution::{CallInfo, CallType, TransactionExecutionInfo},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::in_memory_state_reader::InMemoryStateReader,
+    state::{cached_state::CachedState, state_api::State},
+    transaction::DeployAccount,
     utils::{felt_to_hash, Address},
 };
 use std::path::PathBuf;
@@ -41,7 +39,7 @@ fn internal_deploy_account() {
     let internal_deploy_account = DeployAccount::new(
         class_hash,
         0,
-        0,
+        0.into(),
         Felt252::zero(),
         vec![],
         vec![

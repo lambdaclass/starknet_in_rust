@@ -3,21 +3,17 @@
 use cairo_vm::felt::Felt252;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
-        },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::{
-            cached_state::{CachedState, ContractClassCache},
-            state_api::State,
-        },
-    },
     core::errors::state_errors::StateError,
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
+    },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{
+        cached_state::{CachedState, ContractClassCache},
+        state_api::State,
+    },
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;
@@ -31,8 +27,8 @@ fn test_contract<'a>(
     class_hash: ClassHash,
     contract_address: Address,
     caller_address: Address,
-    general_config: StarknetGeneralConfig,
-    tx_context: Option<TransactionExecutionContext>,
+    block_context: BlockContext,
+    tx_execution_context_option: Option<TransactionExecutionContext>,
     extra_contracts: impl Iterator<
         Item = (
             ClassHash,
@@ -46,13 +42,13 @@ fn test_contract<'a>(
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
 
-    let tx_execution_context = tx_context.unwrap_or_else(|| {
+    let tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
             10,
             0.into(),
-            general_config.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION,
+            block_context.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION.clone(),
         )
     });
 
@@ -122,7 +118,7 @@ fn test_contract<'a>(
 
     let result = entry_point.execute(
         &mut state,
-        &general_config,
+        &block_context,
         &mut resources_manager,
         &tx_execution_context,
         false,
@@ -139,7 +135,7 @@ fn call_contract_with_extra_arguments() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        BlockContext::default(),
         None,
         [(
             [2u8; 32],
@@ -161,7 +157,7 @@ fn call_contract_not_deployed() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        BlockContext::default(),
         None,
         [(
             [2u8; 32],
@@ -182,7 +178,7 @@ fn library_call_not_declared_contract() {
         [1; 32],
         Address(1111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        BlockContext::default(),
         None,
         [].into_iter(),
         [],
@@ -199,7 +195,7 @@ fn deploy_not_declared_class_hash() {
         [1; 32],
         Address(11111.into()),
         Address(0.into()),
-        StarknetGeneralConfig::default(),
+        BlockContext::default(),
         None,
         [].into_iter(),
         [

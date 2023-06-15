@@ -32,6 +32,7 @@ pub fn get_deprecated_syscall_size_from_name(syscall_name: &str) -> usize {
         "storage_write" => 3,
         "replace_class" => 2,
         "delegate_call" => 7,
+        "delegate_l1_handler" => 7,
         _ => unreachable!(),
     }
 }

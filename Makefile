@@ -103,6 +103,8 @@ clean:
 	-rm -f cairo_programs/cairo_1_contracts/*.json
 	-rm -f cairo_programs/cairo_1_contracts/*.casm
 	-rm -f starknet_programs/*.json
+	-rm -f starknet_programs/cairo1/*.casm
+	-rm -f starknet_programs/cairo1/*.sierra
 	-rm -f tests/*.json
 	-rm -rf cairo/
 

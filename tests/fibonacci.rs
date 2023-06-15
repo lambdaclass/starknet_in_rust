@@ -1,23 +1,19 @@
 #![deny(warnings)]
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
+use starknet_rs::definitions::block_context::BlockContext;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-            TransactionExecutionContext,
-        },
-        fact_state::{
-            in_memory_state_reader::InMemoryStateReader, state::ExecutionResourcesManager,
-        },
-        state::cached_state::CachedState,
+    definitions::constants::TRANSACTION_VERSION,
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::StarknetGeneralConfig},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::cached_state::CachedState,
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
 use std::{collections::HashMap, path::PathBuf};
@@ -89,15 +85,15 @@ fn integration_test() {
     //* --------------------
     //*   Execute contract
     //* ---------------------
-    let general_config = StarknetGeneralConfig::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -109,8 +105,11 @@ fn integration_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
         class_hash: Some(class_hash),
+        execution_resources: ExecutionResources {
+            n_steps: 94,
+            ..Default::default()
+        },
         ..Default::default()
     };
 
@@ -118,7 +117,7 @@ fn integration_test() {
         exec_entry_point
             .execute(
                 &mut state,
-                &general_config,
+                &block_context,
                 &mut resources_manager,
                 &tx_execution_context,
                 false,
@@ -172,15 +171,15 @@ fn integration_test_cairo1() {
     );
 
     // Execute the entrypoint
-    let general_config = StarknetGeneralConfig::default();
+    let block_context = BlockContext::default();
     let tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
         Vec::new(),
         0,
         10.into(),
-        general_config.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION,
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -193,7 +192,11 @@ fn integration_test_cairo1() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources::default(),
+        execution_resources: ExecutionResources {
+            n_steps: 421,
+            n_memory_holes: 1,
+            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
+        },
         class_hash: Some(class_hash),
         gas_consumed: 35550,
         ..Default::default()
@@ -203,7 +206,7 @@ fn integration_test_cairo1() {
         exec_entry_point
             .execute(
                 &mut state,
-                &general_config,
+                &block_context,
                 &mut resources_manager,
                 &tx_execution_context,
                 false,

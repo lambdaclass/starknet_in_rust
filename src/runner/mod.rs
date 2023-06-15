@@ -1,6 +1,6 @@
-use crate::business_logic::execution::CallResult;
-use crate::business_logic::transaction::error::TransactionError;
+use crate::execution::CallResult;
 use crate::syscalls::syscall_handler::HintProcessorPostRun;
+use crate::transaction::error::TransactionError;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
@@ -393,15 +393,14 @@ where
 mod test {
     use super::StarknetRunner;
     use crate::{
-        business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState, transaction::error::TransactionError,
-        },
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
             deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
             syscall_handler::SyscallHintProcessor,
         },
+        transaction::error::TransactionError,
     };
     use cairo_vm::{
         types::relocatable::{MaybeRelocatable, Relocatable},

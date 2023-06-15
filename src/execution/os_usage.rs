@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 
-use crate::{
-    business_logic::transaction::error::TransactionError,
-    definitions::transaction_type::TransactionType,
-};
+use crate::{definitions::transaction_type::TransactionType, transaction::error::TransactionError};
 
 #[derive(Debug, Clone)]
 pub struct OsResources {
@@ -54,6 +51,17 @@ impl Default for OsResources {
                     builtin_instance_counter: HashMap::from([
                         ("pedersen_builtin".to_string(), 23),
                         ("range_check_builtin".to_string(), 74),
+                    ]),
+                },
+            ),
+            (
+                TransactionType::L1Handler,
+                ExecutionResources {
+                    n_steps: 1068,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::from([
+                        ("pedersen_builtin".to_string(), 11),
+                        ("range_check_builtin".to_string(), 17),
                     ]),
                 },
             ),

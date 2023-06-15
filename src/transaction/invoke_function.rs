@@ -1,23 +1,21 @@
 use std::collections::HashMap;
 
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        fact_state::state::ExecutionResourcesManager,
-        state::state_api::{State, StateReader},
-        transaction::{
-            error::TransactionError,
-            fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        },
-    },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
+        block_context::BlockContext,
         constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
-        general_config::StarknetGeneralConfig,
         transaction_type::TransactionType,
+    },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
+    state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
+    transaction::{
+        error::TransactionError,
+        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
     },
     utils::{calculate_tx_resources, Address},
 };
@@ -35,7 +33,7 @@ pub struct InvokeFunction {
     entry_point_type: EntryPointType,
     calldata: Vec<Felt252>,
     tx_type: TransactionType,
-    version: u64,
+    version: Felt252,
     validate_entry_point_selector: Felt252,
     #[getset(get = "pub")]
     hash_value: Felt252,
@@ -51,7 +49,7 @@ impl InvokeFunction {
         contract_address: Address,
         entry_point_selector: Felt252,
         max_fee: u128,
-        version: u64,
+        version: Felt252,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         chain_id: Felt252,
@@ -61,13 +59,13 @@ impl InvokeFunction {
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
-            version,
+            version.clone(),
         )?;
         let hash_value = match hash_value {
             Some(hash) => hash,
             None => calculate_transaction_hash_common(
                 TransactionHashPrefix::Invoke,
-                version,
+                version.clone(),
                 &contract_address,
                 entry_point_selector_field,
                 &calldata,
@@ -102,13 +100,13 @@ impl InvokeFunction {
             self.hash_value.clone(),
             self.signature.clone(),
             self.max_fee,
-            if self.version == 0 {
+            if self.version.is_zero() {
                 Felt252::zero()
             } else {
                 self.nonce.clone().ok_or(TransactionError::MissingNonce)?
             },
             n_steps,
-            self.version,
+            self.version.clone(),
         ))
     }
 
@@ -116,7 +114,7 @@ impl InvokeFunction {
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
         T: State + StateReader,
@@ -124,7 +122,7 @@ impl InvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(None);
         }
 
@@ -141,9 +139,9 @@ impl InvokeFunction {
 
         let call_info = call.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.validate_max_n_steps)?,
+            &self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
         )?;
 
@@ -158,7 +156,7 @@ impl InvokeFunction {
     fn run_execute_entrypoint<T>(
         &self,
         state: &mut T,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
     ) -> Result<CallInfo, TransactionError>
@@ -178,9 +176,9 @@ impl InvokeFunction {
 
         call.execute(
             state,
-            general_config,
+            block_context,
             resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps)?,
+            &self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
             false,
         )
     }
@@ -190,7 +188,7 @@ impl InvokeFunction {
     pub fn apply<S>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
@@ -199,11 +197,11 @@ impl InvokeFunction {
         let mut resources_manager = ExecutionResourcesManager::default();
 
         let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
         let call_info = self.run_execute_entrypoint(
             state,
-            general_config,
+            block_context,
             &mut resources_manager,
             remaining_gas,
         )?;
@@ -230,7 +228,7 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>
     where
         S: State + StateReader,
@@ -241,13 +239,14 @@ impl InvokeFunction {
 
         let actual_fee = calculate_tx_fee(
             resources,
-            general_config.starknet_os_config.gas_price,
-            general_config,
+            block_context.starknet_os_config.gas_price,
+            block_context,
         )?;
 
-        let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
+        let tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
         let fee_transfer_info =
-            execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
+            execute_fee_transfer(state, block_context, &tx_execution_context, actual_fee)?;
 
         Ok((Some(fee_transfer_info), actual_fee))
     }
@@ -257,17 +256,14 @@ impl InvokeFunction {
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
-        general_config: &StarknetGeneralConfig,
+        block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, general_config, remaining_gas)?;
+        let concurrent_exec_info = self.apply(state, block_context, remaining_gas)?;
         self.handle_nonce(state)?;
 
-        let (fee_transfer_info, actual_fee) = self.charge_fee(
-            state,
-            &concurrent_exec_info.actual_resources,
-            general_config,
-        )?;
+        let (fee_transfer_info, actual_fee) =
+            self.charge_fee(state, &concurrent_exec_info.actual_resources, block_context)?;
 
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
@@ -279,7 +275,7 @@ impl InvokeFunction {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version == 0 {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -327,9 +323,9 @@ pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), Tr
 pub(crate) fn preprocess_invoke_function_fields(
     entry_point_selector: Felt252,
     nonce: Option<Felt252>,
-    version: u64,
+    version: Felt252,
 ) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version == 0 || version == u64::MAX {
+    if version.is_zero() {
         match nonce {
             Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {
@@ -354,11 +350,8 @@ pub(crate) fn preprocess_invoke_function_fields(
 mod tests {
     use super::*;
     use crate::{
-        business_logic::{
-            fact_state::in_memory_state_reader::InMemoryStateReader,
-            state::cached_state::CachedState,
-        },
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
     };
     use num_traits::Num;
     use std::{collections::HashMap, path::PathBuf};
@@ -375,7 +368,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -410,7 +403,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default(), 0)
+            .apply(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -441,7 +434,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -476,7 +469,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .execute(&mut state, &StarknetGeneralConfig::default(), 0)
+            .execute(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -503,7 +496,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -538,7 +531,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default(), 0);
+            internal_invoke_function.apply(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -559,7 +552,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 0,
+            version: 0.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -594,7 +587,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &StarknetGeneralConfig::default(), 0)
+            .apply(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -621,7 +614,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -656,7 +649,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.apply(&mut state, &StarknetGeneralConfig::default(), 0);
+            internal_invoke_function.apply(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -675,7 +668,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -709,14 +702,14 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = StarknetGeneralConfig::default();
-        config.cairo_resource_fee_weights = HashMap::from([
+        let mut block_context = BlockContext::default();
+        block_context.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
             (String::from("range_check_builtin"), 70.into()),
         ]);
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config, 0);
+        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
         let error_msg = "Fee transfer failure".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
@@ -734,7 +727,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -768,15 +761,15 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = StarknetGeneralConfig::default();
-        config.cairo_resource_fee_weights = HashMap::from([
+        let mut block_context = BlockContext::default();
+        block_context.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
             (String::from("range_check_builtin"), 70.into()),
         ]);
-        config.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &config, 0);
+        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
         let error_msg = "Actual fee exceeded max fee.".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
@@ -794,7 +787,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -829,11 +822,11 @@ mod tests {
             .unwrap();
 
         internal_invoke_function
-            .execute(&mut state, &StarknetGeneralConfig::default(), 0)
+            .execute(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default(), 0);
+            internal_invoke_function.execute(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -854,7 +847,7 @@ mod tests {
             entry_point_type: EntryPointType::External,
             calldata: vec![1.into(), 1.into(), 10.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1,
+            version: 1.into(),
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
@@ -889,7 +882,7 @@ mod tests {
             .unwrap();
 
         let expected_error =
-            internal_invoke_function.execute(&mut state, &StarknetGeneralConfig::default(), 0);
+            internal_invoke_function.execute(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)
@@ -904,7 +897,7 @@ mod tests {
             )
             .unwrap(),
             Some(1.into()),
-            0,
+            0.into(),
         )
         .unwrap_err();
         assert_matches!(expected_error, TransactionError::InvokeFunctionZeroHasNonce)
@@ -938,7 +931,8 @@ mod tests {
             16,
         )
         .unwrap();
-        let result = preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0);
+        let result =
+            preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0.into());
 
         let expected_additional_data: Vec<Felt252> = Vec::new();
         let expected_entry_point_selector_field = entry_point_selector;
@@ -960,7 +954,7 @@ mod tests {
             )
             .unwrap(),
             None,
-            1,
+            1.into(),
         );
         assert!(expected_error.is_err());
         assert_matches!(

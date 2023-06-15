@@ -2,7 +2,7 @@
 
 mod cairo_1_syscalls;
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::{One, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
@@ -11,24 +11,25 @@ use starknet_rs::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+        ExecutionResourcesManager,
+    },
     utils::Address,
 };
 use std::{collections::HashMap, path::PathBuf};
 
 #[test]
-fn delegate_call() {
+fn delegate_l1_handler() {
     //* --------------------------------------------
     //*    Create state reader with class hash data
     //* --------------------------------------------
-
     let mut contract_class_cache = HashMap::new();
     let nonce = Felt252::zero();
 
     // Add get_number.cairo contract to the state
 
-    let path = PathBuf::from("starknet_programs/get_number.json");
+    let path = PathBuf::from("starknet_programs/get_number_l1_handler.json");
     let contract_class = ContractClass::try_from(path).unwrap();
 
     let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
@@ -47,18 +48,12 @@ fn delegate_call() {
     //  Create program and entry point types for contract class
     // ---------------------------------------------------------
 
-    let path = PathBuf::from("starknet_programs/delegate_call.json");
+    let path = PathBuf::from("starknet_programs/delegate_l1_handler.json");
     let contract_class = ContractClass::try_from(path).unwrap();
-    let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     // External entry point, delegate_call function delegate.cairo:L13
-    let test_delegate_call_selector = entry_points_by_type
-        .get(&EntryPointType::External)
-        .unwrap()
-        .get(0)
-        .unwrap()
-        .selector()
-        .clone();
+    let test_delegate_l1_handler_selector =
+        felt_str!("517623934924705024901038305335656287487647971342355715053765242809192309107");
 
     //  ------------ contract data --------------------
 
@@ -90,7 +85,7 @@ fn delegate_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        test_delegate_call_selector,
+        test_delegate_l1_handler_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -112,7 +107,6 @@ fn delegate_call() {
         TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-
     assert!(exec_entry_point
         .execute(
             &mut state,

@@ -3,11 +3,11 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
-    business_logic::fact_state::state::StateDiff,
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
+    state::StateDiff,
     storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
@@ -335,7 +335,7 @@ impl<T: StateReader> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::business_logic::fact_state::in_memory_state_reader::InMemoryStateReader;
+    use crate::state::in_memory_state_reader::InMemoryStateReader;
     use cairo_vm::types::program::Program;
     use num_traits::One;
     use starknet_contract_class::{ContractEntryPoint, EntryPointType};
@@ -370,17 +370,14 @@ mod tests {
         let mut cached_state = CachedState::new(state_reader, None, None);
 
         assert_eq!(
-            cached_state.get_class_hash_at(&contract_address),
-            Ok(class_hash)
+            cached_state.get_class_hash_at(&contract_address).unwrap(),
+            class_hash
         );
-        assert_eq!(
-            cached_state.get_nonce_at(&contract_address),
-            Ok(nonce.clone())
-        );
+        assert_eq!(cached_state.get_nonce_at(&contract_address).unwrap(), nonce);
         cached_state.increment_nonce(&contract_address).unwrap();
         assert_eq!(
-            cached_state.get_nonce_at(&contract_address),
-            Ok(nonce + Felt252::new(1))
+            cached_state.get_nonce_at(&contract_address).unwrap(),
+            nonce + Felt252::new(1)
         );
     }
 
@@ -415,8 +412,11 @@ mod tests {
         assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
-            cached_state.get_contract_class(&[1; 32]),
-            cached_state.state_reader.get_contract_class(&[1; 32])
+            cached_state.get_contract_class(&[1; 32]).unwrap(),
+            cached_state
+                .state_reader
+                .get_contract_class(&[1; 32])
+                .unwrap()
         );
     }
 
@@ -439,13 +439,13 @@ mod tests {
         let value = Felt252::new(10);
         cached_state.set_storage_at(&storage_entry, value.clone());
 
-        assert_eq!(cached_state.get_storage_at(&storage_entry), Ok(value));
+        assert_eq!(cached_state.get_storage_at(&storage_entry).unwrap(), value);
 
         let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
-        assert_eq!(
-            cached_state.get_storage_at(&storage_entry_2).unwrap(),
-            Felt252::zero(),
-        );
+        assert!(cached_state
+            .get_storage_at(&storage_entry_2)
+            .unwrap()
+            .is_zero());
     }
 
     #[test]
@@ -489,7 +489,7 @@ mod tests {
         cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
         let result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
 
-        assert_eq!(result, Ok(value.clone()));
+        assert_eq!(result.unwrap(), value);
 
         // rewrite storage_key
         let new_value = value + 3_usize;
@@ -498,7 +498,7 @@ mod tests {
 
         let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
 
-        assert_eq!(new_result, Ok(new_value));
+        assert_eq!(new_result.unwrap(), new_value);
     }
 
     #[test]
@@ -518,7 +518,7 @@ mod tests {
             .set_contract_classes(HashMap::new())
             .unwrap_err();
 
-        assert_eq!(result, StateError::AssignedContractClassCache);
+        assert_matches!(result, StateError::AssignedContractClassCache);
     }
 
     #[test]
@@ -540,9 +540,9 @@ mod tests {
             .deploy_contract(contract_address.clone(), [10; 32])
             .unwrap_err();
 
-        assert_eq!(
+        assert_matches!(
             result,
-            StateError::ContractAddressOutOfRangeAddress(contract_address)
+            StateError::ContractAddressOutOfRangeAddress(addr) if addr == contract_address
         );
     }
 
@@ -568,9 +568,9 @@ mod tests {
             .deploy_contract(contract_address.clone(), [10; 32])
             .unwrap_err();
 
-        assert_eq!(
+        assert_matches!(
             result,
-            StateError::ContractAddressUnavailable(contract_address)
+            StateError::ContractAddressUnavailable(addr) if addr == contract_address
         );
     }
 
