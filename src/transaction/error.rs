@@ -126,5 +126,5 @@ pub enum TransactionError {
     #[error("Invalid Block timestamp")]
     InvalidBlockTimestamp,
     #[error("{0:?}")]
-    TransactionError(String),
+    CustomError(String),
 }

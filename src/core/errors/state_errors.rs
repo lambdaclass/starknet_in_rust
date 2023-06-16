@@ -55,5 +55,5 @@ pub enum StateError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error("{0:?}")]
-    StateError(String),
+    CustomError(String),
 }
