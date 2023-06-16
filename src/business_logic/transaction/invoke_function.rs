@@ -164,7 +164,6 @@ impl InvokeFunction {
     where
         T: State + StateReader,
     {
-        println!("execution entry point creation");
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -175,7 +174,6 @@ impl InvokeFunction {
             None,
             0,
         );
-        println!("execution entry point creation done");
         call.execute(
             state,
             general_config,
@@ -195,18 +193,13 @@ impl InvokeFunction {
     where
         S: State + StateReader,
     {
-        println!("error before default");
         let mut resources_manager = ExecutionResourcesManager::default();
-        println!("error before run validate entrypoint");
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, general_config)?;
-        println!("error before run execute entrypoint");
         // Execute transaction
         let call_info =
             self.run_execute_entrypoint(state, general_config, &mut resources_manager)?;
-        println!("error before count actual storage changes");
         let changes = state.count_actual_storage_changes();
-        println!("error before calculate tx resources");
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![Some(call_info.clone()), validate_info.clone()],
@@ -214,7 +207,6 @@ impl InvokeFunction {
             changes,
             None,
         )?;
-        println!("error before create concurrent stage execution info");
         let transaction_execution_info =
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 validate_info,
@@ -237,19 +229,14 @@ impl InvokeFunction {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
         }
-        println!("error in charge fee 0");
         let actual_fee = calculate_tx_fee(
             resources,
             general_config.starknet_os_config.gas_price,
             general_config,
         )?;
-        println!("actual_fee: {}", actual_fee);
-        println!("error in charge fee 1");
         let tx_context = self.get_execution_context(general_config.invoke_tx_max_n_steps)?;
-        println!("error in charge fee 2");
         let fee_transfer_info =
             execute_fee_transfer(state, general_config, &tx_context, actual_fee)?;
-        println!("error in charge fee 3");
         Ok((Some(fee_transfer_info), actual_fee))
     }
 
@@ -260,17 +247,13 @@ impl InvokeFunction {
         state: &mut S,
         general_config: &TransactionContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        println!("error before apply");
         let concurrent_exec_info = self.apply(state, general_config)?;
-        println!("error before handle nonce");
         self.handle_nonce(state)?;
-        println!("error before charge fee");
         let (fee_transfer_info, actual_fee) = self.charge_fee(
             state,
             &concurrent_exec_info.actual_resources,
             general_config,
         )?;
-        println!("error before from concurrent state execution info");
         Ok(
             TransactionExecutionInfo::from_concurrent_state_execution_info(
                 concurrent_exec_info,

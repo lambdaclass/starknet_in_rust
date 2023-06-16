@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 
@@ -8,7 +8,6 @@ use business_logic::{
         TransactionExecutionInfo,
     },
     state::{
-        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
@@ -28,6 +27,8 @@ pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClas
 pub use cairo_vm::felt::Felt252;
 pub use starknet_contract_class::EntryPointType;
 
+use crate::business_logic::state::cached_state::CachedState;
+
 pub mod business_logic;
 pub mod core;
 pub mod definitions;
@@ -44,24 +45,20 @@ pub mod utils;
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
     transaction: &Transaction,
-    state: &mut T,
-    transaction_context: TransactionContext,
+    state: T,
+    transaction_context: &TransactionContext,
 ) -> Result<(u128, usize), TransactionError>
 where
-    T: StateReader + std::fmt::Debug + State,
+    T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    // let mut cached_state = CachedState::new(state, None, None);
-
-    // println!("cached state copy created: {:?}", cached_state);
+    let mut cached_state = CachedState::<T>::new(state, None, None);
 
     // Check if the contract is deployed.
-    state.get_class_hash_at(&transaction.contract_address())?;
+    cached_state.get_class_hash_at(&transaction.contract_address())?;
 
     // execute the transaction with the fake state.
-    let transaction_result =
-        transaction.execute(state, &transaction_context, 1_000_000)?;
-
+    let transaction_result = transaction.execute(&mut cached_state, transaction_context, 1_000_000)?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         let actual_fee = transaction_result.actual_fee;
         Ok((actual_fee, *gas_usage))
@@ -134,18 +131,14 @@ mod test {
     use std::collections::HashMap;
     use std::path::PathBuf;
 
+    use crate::business_logic::transaction::Transaction;
+    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
+    use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_vm::felt::{Felt252, felt_str};
+    use cairo_vm::felt::Felt252;
     use num_traits::Zero;
     use starknet_contract_class::EntryPointType;
 
-    use crate::business_logic::state::BlockInfo;
-    use crate::business_logic::state::state_cache::StorageEntry;
-    use crate::business_logic::transaction::Transaction;
-    use crate::definitions::constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS;
-    use crate::definitions::general_config::StarknetOsConfig;
-    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
-    use crate::utils::felt_to_hash;
     use crate::{
         business_logic::{
             state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
@@ -156,167 +149,17 @@ mod test {
         estimate_fee,
         utils::{Address, ClassHash},
     };
-    use lazy_static::lazy_static;
-
-    const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
-    const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
-    const TEST_CONTRACT_PATH: &str = "starknet_programs/fibonacci.json";
-
-    lazy_static! {
-        // Addresses.
-        static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
-        static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
-        pub static ref TEST_SEQUENCER_ADDRESS: Address =
-        Address(felt_str!("4096"));
-        pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
-        Address(felt_str!("4097"));
-
-
-        // Class hashes.
-        static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt252 = felt_str!("273");
-        static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
-        static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
-        static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str!("4112");
-        static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("27727");
-
-        // Storage keys.
-        static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt252 =
-            felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
-        static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt252 =
-            felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
-        static ref TEST_ERC20_BALANCE_KEY_1: Felt252 =
-            felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516");
-        static ref TEST_ERC20_BALANCE_KEY_2: Felt252 =
-            felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275");
-
-        static ref TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY: Felt252 =
-            felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
-
-        // Others.
-        // Blockifier had this value hardcoded to 2.
-        static ref ACTUAL_FEE: Felt252 = Felt252::zero();
-    }
-
-    pub fn new_starknet_general_config_for_testing() -> TransactionContext {
-        TransactionContext::new(
-            StarknetOsConfig::new(
-                StarknetChainId::TestNet,
-                TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                0,
-            ),
-            0,
-            0,
-            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
-            1_000_000,
-            0,
-            BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
-            HashMap::default(),
-            true,
-        )
-    }
-
-    fn get_contract_class<P>(path: P) -> Result<ContractClass, Box<dyn std::error::Error>>
-where
-    P: Into<PathBuf>,
-{
-    Ok(ContractClass::try_from(path.into())?)
-}
-
-    fn create_account_tx_test_state(
-    ) -> Result<(TransactionContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
-        let general_config = new_starknet_general_config_for_testing();
-    
-        let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
-        let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
-        let test_erc20_class_hash = felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone());
-        let class_hash_to_class = HashMap::from([
-            (
-                test_account_contract_class_hash,
-                get_contract_class(ACCOUNT_CONTRACT_PATH)?,
-            ),
-            (
-                test_contract_class_hash,
-                get_contract_class(TEST_CONTRACT_PATH)?,
-            ),
-            (
-                test_erc20_class_hash,
-                get_contract_class(ERC20_CONTRACT_PATH)?,
-            ),
-        ]);
-    
-        let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
-        let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
-        let test_erc20_address = general_config
-            .starknet_os_config()
-            .fee_token_address()
-            .clone();
-        let address_to_class_hash = HashMap::from([
-            (test_contract_address, test_contract_class_hash),
-            (
-                test_account_contract_address,
-                test_account_contract_class_hash,
-            ),
-            (test_erc20_address.clone(), test_erc20_class_hash),
-        ]);
-    
-        let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
-    
-        let storage_view = HashMap::from([(
-            (test_erc20_address, test_erc20_account_balance_key),
-            ACTUAL_FEE.clone(),
-        )]);
-    
-        let cached_state = CachedState::new(
-            {
-                let mut state_reader = InMemoryStateReader::default();
-                for (contract_address, class_hash) in address_to_class_hash {
-                    let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
-                        .iter()
-                        .filter_map(|((address, storage_key), storage_value)| {
-                            (address == &contract_address).then_some((
-                                (address.clone(), felt_to_hash(storage_key)),
-                                storage_value.clone(),
-                            ))
-                        })
-                        .collect();
-    
-                    let stored: HashMap<StorageEntry, Felt252> = storage_keys;
-    
-                    state_reader
-                        .address_to_class_hash_mut()
-                        .insert(contract_address.clone(), class_hash);
-    
-                    state_reader
-                        .address_to_nonce_mut()
-                        .insert(contract_address.clone(), Felt252::zero());
-                    state_reader.address_to_storage_mut().extend(stored);
-                }
-                for (class_hash, contract_class) in class_hash_to_class {
-                    state_reader
-                        .class_hash_to_contract_class_mut()
-                        .insert(class_hash, contract_class);
-                }
-                state_reader
-            },
-            Some(HashMap::new()),
-            Some(HashMap::new()),
-        );
-    
-        Ok((general_config, cached_state))
-    }
-    
 
     #[test]
     fn estimate_fee_test() {
-        let contract_class: ContractClass = ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap();
-    
+        let contract_class: ContractClass =
+            ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap();
+
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
-        println!("entrypoint selector: {:?}", entrypoint_selector);
 
-        let (transaction_context, mut state) = create_account_tx_test_state().unwrap();
-    
-        println!("state: {:?}", state);
+        let (transaction_context, state) = create_account_tx_test_state().unwrap();
+
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let invoke_function = InvokeFunction::new(
             TEST_CONTRACT_ADDRESS.clone(),
@@ -332,8 +175,8 @@ where
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
 
-        let estimated_fee = estimate_fee(&transaction, &mut state, transaction_context).unwrap();
-        assert_eq!(estimated_fee, (0, 0))
+        let estimated_fee = estimate_fee(&transaction, state, &transaction_context).unwrap();
+        assert_eq!(estimated_fee, (0, 0));
     }
 
     #[test]

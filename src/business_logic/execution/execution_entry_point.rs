@@ -94,11 +94,9 @@ impl ExecutionEntryPoint {
     ) -> Result<CallInfo, TransactionError>
     where
         T: State + StateReader,
-    {   
-        println!("it gets class hash");
+    {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
-        println!("returned class_hash: {:?}", class_hash);
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
@@ -269,20 +267,17 @@ impl ExecutionEntryPoint {
         state: &mut S,
     ) -> Result<[u8; 32], TransactionError> {
         if self.class_hash.is_some() {
-            println!("class_hash is some");
             match self.call_type {
                 CallType::Delegate => return Ok(self.class_hash.unwrap()),
                 _ => return Err(TransactionError::CallTypeIsNotDelegate),
             }
         }
-        println!("class_hash is none");
         let code_address = match self.call_type {
             CallType::Call => Some(self.contract_address.clone()),
             CallType::Delegate => {
                 if self.code_address.is_some() {
                     self.code_address.clone()
                 } else {
-                    println!("code_address is none");
                     return Err(TransactionError::AttempToUseNoneCodeAddress);
                 }
             }
