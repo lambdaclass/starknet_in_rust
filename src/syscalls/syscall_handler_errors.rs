@@ -22,8 +22,8 @@ pub enum SyscallHandlerError {
     Conversion(String, String),
     #[error("Couldn't compute hash")]
     FailToComputeHash,
-    #[error("Expected a struct of type: {0}")]
-    ExpectedStruct(String),
+    #[error("Expected a struct of type: {0:?}, received: {1:?}")]
+    ExpectedStruct(String, String),
     #[error("Unsopported address domain: {0}")]
     UnsopportedAddressDomain(Felt252),
     #[error("The deploy_from_zero field in the deploy system call must be 0 or 1, found: {0}")]
