@@ -58,7 +58,8 @@ where
     cached_state.get_class_hash_at(&transaction.contract_address())?;
 
     // execute the transaction with the fake state.
-    let transaction_result = transaction.execute(&mut cached_state, transaction_context, 1_000_000)?;
+    let transaction_result =
+        transaction.execute(&mut cached_state, transaction_context, 1_000_000)?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         let actual_fee = transaction_result.actual_fee;
         Ok((actual_fee, *gas_usage))
