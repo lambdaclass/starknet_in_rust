@@ -45,7 +45,10 @@ pub fn get_integer(
     vm.get_integer(syscall_ptr)?
         .as_ref()
         .to_usize()
-        .ok_or(SyscallHandlerError::FeltToUsizeFail)
+        .ok_or(SyscallHandlerError::Conversion(
+            "Felt252".to_string(),
+            "usize".to_string(),
+        ))
 }
 
 pub fn get_big_int(
