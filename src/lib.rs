@@ -148,14 +148,16 @@ mod test {
     use std::collections::HashMap;
     use std::path::PathBuf;
 
-    use crate::definitions::block_context::StarknetChainId;
+    use crate::core::contract_address::compute_deprecated_class_hash;
+    use crate::definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR;
     use crate::estimate_fee;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
     use crate::transaction::{InvokeFunction, Transaction};
+    use crate::utils::felt_to_hash;
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
-    use num_traits::Zero;
+    use num_traits::{One, Zero};
     use starknet_contract_class::EntryPointType;
 
     use crate::{
@@ -166,7 +168,6 @@ mod test {
             cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
             ExecutionResourcesManager,
         },
-        transaction::InvokeFunction,
         utils::{Address, ClassHash},
     };
 
@@ -290,29 +291,47 @@ mod test {
 
     #[test]
     fn test_skip_execute_flag() {
-        let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
-        let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-        let entrypoints = contract_class.clone().entry_points_by_type;
-        let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
 
-        let mut contract_class_cache = HashMap::new();
+        //  ------------ contract data --------------------
+        // hack store account contract
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let acc_class_hash = felt_to_hash(&hash);
+        let entrypoint_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+
+        // test with fibonacci
+        let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+        let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
         let nonce = Felt252::zero();
 
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        // casm_class_cache.insert(class_hash, casm_contract_class.clone());
         let mut state_reader = InMemoryStateReader::default();
+
+        // store data in the state reader
         state_reader
             .address_to_class_hash_mut()
-            .insert(address.clone(), class_hash);
+            .insert(address.clone(), acc_class_hash);
+
         state_reader
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
+
         // simulate deploy
         state_reader
+            .class_hash_to_contract_class_mut()
+            .insert(acc_class_hash, contract_class);
+
+        state_reader
+            .class_hash_to_compiled_class_hash_mut()
+            .insert(class_hash, class_hash);
+
+        state_reader
             .casm_contract_classes
-            .insert(class_hash, contract_class);
+            .insert(class_hash, casm_contract_class);
 
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
@@ -320,11 +339,11 @@ mod test {
             address,
             entrypoint_selector.into(),
             1000000,
-            Felt252::zero(),
+            Felt252::one(),
             calldata,
             vec![],
             StarknetChainId::TestNet.to_felt(),
-            None,
+            Some(1000000.into()),
             None,
         )
         .unwrap();
@@ -332,7 +351,7 @@ mod test {
         let block_context = BlockContext::default();
 
         let _context =
-            simulate_transaction(&invoke, state_reader, block_context, 1000, false, false).unwrap();
+            simulate_transaction(&invoke, state_reader, block_context, 1000, false, true).unwrap();
         // assert!(context.is_ok());
     }
 }

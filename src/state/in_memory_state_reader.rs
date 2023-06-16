@@ -27,7 +27,7 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub(crate) casm_contract_classes: CasmClassCache,
     #[getset(get_mut = "pub")]
-    class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
+    pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
 impl InMemoryStateReader {
@@ -103,10 +103,12 @@ impl StateReader for InMemoryStateReader {
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // Deprecated contract classes dont have a compiled_class_hash, we dont need to fetch it
+        dbg!("in memory state reader");
         if let Some(compiled_class) = self.class_hash_to_contract_class.get(class_hash) {
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
         }
         let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+        dbg!(&compiled_class_hash);
         if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
             let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
             Ok(compiled_class)

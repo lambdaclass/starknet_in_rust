@@ -127,6 +127,7 @@ impl InvokeFunction {
     where
         T: State + StateReader,
     {
+        dbg!("entered");
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
@@ -148,6 +149,7 @@ impl InvokeFunction {
             0,
         );
 
+        dbg!("before execute in validate");
         let call_info = call.execute(
             state,
             block_context,
@@ -155,6 +157,8 @@ impl InvokeFunction {
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
         )?;
+        dbg!("validate");
+        dbg!(&call_info);
 
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
@@ -205,6 +209,7 @@ impl InvokeFunction {
         S: State + StateReader,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
+        dbg!("before validate");
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
@@ -272,6 +277,7 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, block_context, remaining_gas)?;
+        dbg!(&concurrent_exec_info);
         self.handle_nonce(state)?;
 
         let (fee_transfer_info, actual_fee) =
@@ -335,7 +341,6 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut cache_state = CachedState::new(state, None, None);
-        dbg!(&cache_state.casm_contract_classes);
         // init simulation
         self.execute(&mut cache_state, &block_context, remaining_gas)
     }
