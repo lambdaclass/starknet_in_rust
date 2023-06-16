@@ -44,27 +44,23 @@ pub mod utils;
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
     transaction: &Transaction,
-    state: T,
+    state: &mut T,
+    transaction_context: TransactionContext,
 ) -> Result<(u128, usize), TransactionError>
 where
-    T: StateReader + std::fmt::Debug,
+    T: StateReader + std::fmt::Debug + State,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T> {
-        state_reader: state,
-        cache: Default::default(),
-        contract_classes: Default::default(),
-        casm_contract_classes: Default::default(),
-    };
+    // let mut cached_state = CachedState::new(state, None, None);
 
-    println!("cached state copy created: {:?}", cached_state);
+    // println!("cached state copy created: {:?}", cached_state);
 
     // Check if the contract is deployed.
-    cached_state.get_class_hash_at(&transaction.contract_address())?;
+    state.get_class_hash_at(&transaction.contract_address())?;
 
     // execute the transaction with the fake state.
     let transaction_result =
-        transaction.execute(&mut cached_state, &TransactionContext::default(), 1_000_000)?;
+        transaction.execute(state, &transaction_context, 1_000_000)?;
 
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         let actual_fee = transaction_result.actual_fee;
@@ -318,7 +314,7 @@ where
         let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
         println!("entrypoint selector: {:?}", entrypoint_selector);
 
-        let (_transaction_context, state) = create_account_tx_test_state().unwrap();
+        let (transaction_context, mut state) = create_account_tx_test_state().unwrap();
     
         println!("state: {:?}", state);
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
@@ -336,7 +332,7 @@ where
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
 
-        let estimated_fee = estimate_fee(&transaction, state).unwrap();
+        let estimated_fee = estimate_fee(&transaction, &mut state, transaction_context).unwrap();
         assert_eq!(estimated_fee, (0, 0))
     }
 
