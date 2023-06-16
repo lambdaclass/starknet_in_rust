@@ -167,6 +167,7 @@ impl InvokeFunction {
         state: &mut T,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
     ) -> Result<CallInfo, TransactionError>
     where
         T: State + StateReader,
@@ -179,7 +180,7 @@ impl InvokeFunction {
             EntryPointType::External,
             None,
             None,
-            0,
+            remaining_gas,
         );
 
         call.execute(
@@ -197,6 +198,7 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
         S: State + StateReader,
@@ -206,8 +208,12 @@ impl InvokeFunction {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
-        let call_info =
-            self.run_execute_entrypoint(state, block_context, &mut resources_manager)?;
+        let call_info = self.run_execute_entrypoint(
+            state,
+            block_context,
+            &mut resources_manager,
+            remaining_gas,
+        )?;
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -260,8 +266,9 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, block_context)?;
+        let concurrent_exec_info = self.apply(state, block_context, remaining_gas)?;
         self.handle_nonce(state)?;
 
         let (fee_transfer_info, actual_fee) =
@@ -429,7 +436,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &BlockContext::default())
+            .apply(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -496,7 +503,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .execute(&mut state, &BlockContext::default())
+            .execute(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -558,7 +565,8 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error = internal_invoke_function.apply(&mut state, &BlockContext::default());
+        let expected_error =
+            internal_invoke_function.apply(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -615,7 +623,7 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .apply(&mut state, &BlockContext::default())
+            .apply(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -677,7 +685,8 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error = internal_invoke_function.apply(&mut state, &BlockContext::default());
+        let expected_error =
+            internal_invoke_function.apply(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -738,7 +747,7 @@ mod tests {
             (String::from("range_check_builtin"), 70.into()),
         ]);
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context);
+        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
         let error_msg = "Fee transfer failure".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
@@ -799,7 +808,7 @@ mod tests {
         ]);
         block_context.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context);
+        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
         let error_msg = "Actual fee exceeded max fee.".to_string();
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
@@ -853,10 +862,11 @@ mod tests {
             .unwrap();
 
         internal_invoke_function
-            .execute(&mut state, &BlockContext::default())
+            .execute(&mut state, &BlockContext::default(), 0)
             .unwrap();
 
-        let expected_error = internal_invoke_function.execute(&mut state, &BlockContext::default());
+        let expected_error =
+            internal_invoke_function.execute(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -912,7 +922,8 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let expected_error = internal_invoke_function.execute(&mut state, &BlockContext::default());
+        let expected_error =
+            internal_invoke_function.execute(&mut state, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)

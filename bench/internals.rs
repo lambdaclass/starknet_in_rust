@@ -213,7 +213,7 @@ fn invoke() {
                 None,
             )
             .unwrap();
-            internal_invoke.execute(&mut state_copy, block_context)
+            internal_invoke.execute(&mut state_copy, block_context, 0)
         })
         .unwrap();
     }
