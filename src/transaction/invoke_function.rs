@@ -46,6 +46,7 @@ pub struct InvokeFunction {
     max_fee: u128,
     nonce: Option<Felt252>,
     skip_validation: bool,
+    skip_execute: bool,
 }
 
 impl InvokeFunction {
@@ -94,6 +95,7 @@ impl InvokeFunction {
             nonce,
             hash_value,
             skip_validation: false,
+            skip_execute: false,
         })
     }
 
@@ -204,20 +206,24 @@ impl InvokeFunction {
         S: State + StateReader,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
-
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
-        let call_info = self.run_execute_entrypoint(
-            state,
-            block_context,
-            &mut resources_manager,
-            remaining_gas,
-        )?;
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(self.run_execute_entrypoint(
+                state,
+                block_context,
+                &mut resources_manager,
+                remaining_gas,
+            )?)
+        };
+        dbg!(&call_info);
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &vec![Some(call_info.clone()), validate_info.clone()],
+            &vec![call_info.clone(), validate_info.clone()],
             self.tx_type,
             changes,
             None,
@@ -226,7 +232,7 @@ impl InvokeFunction {
         let transaction_execution_info =
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 validate_info,
-                Some(call_info),
+                call_info,
                 actual_resources,
                 Some(self.tx_type),
             );
@@ -316,9 +322,11 @@ impl InvokeFunction {
         &self,
         tx: InvokeFunction,
         skip_validation: bool,
+        skip_execute: bool,
     ) -> InvokeFunction {
         InvokeFunction {
             skip_validation,
+            skip_execute,
             ..tx
         }
     }
@@ -330,6 +338,7 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut cache_state = CachedState::new(state, None, None);
+        dbg!(&cache_state.casm_contract_classes);
         // init simulation
         self.execute(&mut cache_state, &block_context, remaining_gas)
     }
@@ -408,6 +417,7 @@ mod tests {
             max_fee: 0,
             nonce: Some(0.into()),
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -475,6 +485,7 @@ mod tests {
             max_fee: 0,
             nonce: Some(0.into()),
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -538,6 +549,7 @@ mod tests {
             max_fee: 0,
             nonce: Some(0.into()),
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -595,6 +607,7 @@ mod tests {
             max_fee: 0,
             nonce: None,
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -658,6 +671,7 @@ mod tests {
             max_fee: 0,
             nonce: None,
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -713,6 +727,7 @@ mod tests {
             max_fee: 1000,
             nonce: Some(0.into()),
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -773,6 +788,7 @@ mod tests {
             max_fee: 1000,
             nonce: Some(0.into()),
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -834,6 +850,7 @@ mod tests {
             max_fee: 0,
             nonce: Some(0.into()),
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -895,6 +912,7 @@ mod tests {
             max_fee: 0,
             nonce: None,
             skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState

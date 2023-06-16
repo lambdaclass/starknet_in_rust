@@ -53,10 +53,13 @@ impl InMemoryStateReader {
         &mut self,
         compiled_class_hash: &CompiledClassHash,
     ) -> Result<CompiledClass, StateError> {
+        dbg!("should enter here");
         if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
+            dbg!("and enter here");
             return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
         }
         if let Some(compiled_class) = self.class_hash_to_contract_class.get(compiled_class_hash) {
+            dbg!("should not enter here");
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
         }
         Err(StateError::NoneCompiledClass(*compiled_class_hash))

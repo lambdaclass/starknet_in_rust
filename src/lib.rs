@@ -49,8 +49,10 @@ pub fn simulate_transaction<S: StateReader>(
     transaction_context: BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
+    skip_execute: bool,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    let tx_for_simulation = transaction.create_for_simulation(transaction.clone(), skip_validate);
+    let tx_for_simulation =
+        transaction.create_for_simulation(transaction.clone(), skip_validate, skip_execute);
     tx_for_simulation.simulate_transaction(state, transaction_context, remaining_gas)
 }
 
@@ -125,6 +127,7 @@ mod test {
     use crate::{
         call_contract,
         definitions::block_context::{BlockContext, StarknetChainId},
+        simulate_transaction,
         state::{
             cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
             ExecutionResourcesManager,
@@ -209,7 +212,7 @@ mod test {
         .unwrap();
 
         let block_context = BlockContext::default();
-        let simul_invoke = invoke.create_for_simulation(invoke.clone(), true);
+        let simul_invoke = invoke.create_for_simulation(invoke.clone(), true, false);
 
         let call_info = simul_invoke
             .run_validate_entrypoint(
@@ -220,5 +223,53 @@ mod test {
             .unwrap();
 
         assert!(call_info.is_none());
+    }
+
+    #[test]
+    fn test_skip_execute_flag() {
+        let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+        let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+        let entrypoints = contract_class.clone().entry_points_by_type;
+        let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+        let mut contract_class_cache = HashMap::new();
+
+        let address = Address(1111.into());
+        let class_hash: ClassHash = [1; 32];
+        let nonce = Felt252::zero();
+
+        contract_class_cache.insert(class_hash, contract_class.clone());
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(address.clone(), nonce);
+        // simulate deploy
+        state_reader
+            .casm_contract_classes
+            .insert(class_hash, contract_class);
+
+        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+
+        let invoke = InvokeFunction::new(
+            address,
+            entrypoint_selector.into(),
+            1000000,
+            Felt252::zero(),
+            calldata,
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            None,
+            None,
+        )
+        .unwrap();
+
+        let block_context = BlockContext::default();
+
+        let _context =
+            simulate_transaction(&invoke, state_reader, block_context, 1000, false, false).unwrap();
+        // assert!(context.is_ok());
     }
 }
