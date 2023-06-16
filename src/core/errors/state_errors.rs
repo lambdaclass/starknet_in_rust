@@ -54,4 +54,6 @@ pub enum StateError {
     UninitiaizedClassHash,
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    #[error("{0:?}")]
+    CustomError(String),
 }

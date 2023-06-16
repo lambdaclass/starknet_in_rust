@@ -18,6 +18,7 @@ use crate::{
     definitions::block_context::BlockContext,
     execution::TransactionExecutionInfo,
     state::state_api::{State, StateReader},
+    utils::Address,
 };
 use error::TransactionError;
 
@@ -37,6 +38,17 @@ pub enum Transaction {
 }
 
 impl Transaction {
+    pub fn contract_address(&self) -> Address {
+        match self {
+            Transaction::Deploy(tx) => tx.contract_address.clone(),
+            Transaction::InvokeFunction(tx) => tx.contract_address().clone(),
+            Transaction::Declare(tx) => tx.sender_address.clone(),
+            Transaction::DeclareV2(tx) => tx.sender_address.clone(),
+            Transaction::DeployAccount(tx) => tx.contract_address().clone(),
+            Transaction::L1Handler(tx) => tx.contract_address().clone(),
+        }
+    }
+
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
