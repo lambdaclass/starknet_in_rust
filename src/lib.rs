@@ -156,7 +156,7 @@ mod test {
         let contract_class: ContractClass =
             ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap();
 
-        let entrypoints = contract_class.clone().entry_points_by_type;
+        let entrypoints = contract_class.entry_points_by_type;
         let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
 
         let (transaction_context, state) = create_account_tx_test_state().unwrap();
