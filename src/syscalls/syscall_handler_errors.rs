@@ -96,4 +96,6 @@ pub enum SyscallHandlerError {
     Hint(#[from] HintError),
     #[error("Unsupported address domain: {0}")]
     UnsupportedAddressDomain(String),
+    #[error("{0:?}")]
+    CustomError(String),
 }
