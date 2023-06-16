@@ -184,7 +184,6 @@ impl InvokeFunction {
             None,
             remaining_gas,
         );
-
         call.execute(
             state,
             block_context,
@@ -228,7 +227,6 @@ impl InvokeFunction {
             changes,
             None,
         )?;
-
         let transaction_execution_info =
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 validate_info,
@@ -251,7 +249,6 @@ impl InvokeFunction {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
         }
-
         let actual_fee = calculate_tx_fee(
             resources,
             block_context.starknet_os_config.gas_price,
