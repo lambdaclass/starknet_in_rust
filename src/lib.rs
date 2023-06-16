@@ -1,6 +1,6 @@
-#[deny(warnings)]
-#[forbid(unsafe_code)]
-#[cfg_attr(coverage_nightly, feature(no_coverage))]
+#![deny(warnings)]
+#![forbid(unsafe_code)]
+#![cfg_attr(coverage_nightly, feature(no_coverage))]
 use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
