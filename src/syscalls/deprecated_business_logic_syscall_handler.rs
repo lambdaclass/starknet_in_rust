@@ -303,12 +303,14 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<Address, SyscallHandlerError> {
-        let request = if let DeprecatedSyscallRequest::Deploy(request) =
-            self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedDeployRequestStruct);
+        let request = match self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)? {
+            DeprecatedSyscallRequest::Deploy(request) => request,
+            other_struct => {
+                return Err(SyscallHandlerError::ExpectedStruct(
+                    "DeployRequest".to_string(),
+                    format!("{:?}", other_struct),
+                ))
+            }
         };
 
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
@@ -317,14 +319,14 @@ where
             ));
         };
 
-        let constructor_calldata = get_integer_range(
-            vm,
-            request.constructor_calldata,
-            request
-                .constructor_calldata_size
-                .to_usize()
-                .ok_or(SyscallHandlerError::FeltToUsizeFail)?,
-        )?;
+        let constructor_calldata =
+            get_integer_range(
+                vm,
+                request.constructor_calldata,
+                request.constructor_calldata_size.to_usize().ok_or(
+                    SyscallHandlerError::Conversion("Felt252".to_string(), "usize".to_string()),
+                )?,
+            )?;
 
         let class_hash = &request.class_hash;
 
@@ -477,7 +479,12 @@ where
     ) -> Result<Address, SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_caller_address", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::GetCallerAddress(_) => {}
-            _ => return Err(SyscallHandlerError::ExpectedGetCallerAddressRequest),
+            request => {
+                return Err(SyscallHandlerError::ExpectedStruct(
+                    "GetCallerAddress".to_string(),
+                    format!("{:?}", request),
+                ))
+            }
         }
 
         Ok(self.caller_address.clone())
@@ -498,7 +505,12 @@ where
     ) -> Result<Address, SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_contract_address", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::GetContractAddress(_) => {}
-            _ => return Err(SyscallHandlerError::ExpectedGetContractAddressRequest),
+            request => {
+                return Err(SyscallHandlerError::ExpectedStruct(
+                    "GetContractAddressRequest".to_string(),
+                    format!("{:?}", request),
+                ))
+            }
         };
 
         Ok(self.contract_address.clone())
@@ -509,13 +521,16 @@ where
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let DeprecatedSyscallRequest::SendMessageToL1(request) =
-            self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedSendMessageToL1);
-        };
+        let request =
+            match self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)? {
+                DeprecatedSyscallRequest::SendMessageToL1(request) => request,
+                other_request => {
+                    return Err(SyscallHandlerError::ExpectedStruct(
+                        "SendMessageToL1".to_string(),
+                        format!("{:?}", other_request),
+                    ))
+                }
+            };
 
         let payload = get_integer_range(vm, request.payload_ptr, request.payload_size)?;
 
@@ -561,13 +576,16 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let DeprecatedSyscallRequest::StorageRead(request) =
-            self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
-        };
+        let request =
+            match self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)? {
+                DeprecatedSyscallRequest::StorageRead(request) => request,
+                other_request => {
+                    return Err(SyscallHandlerError::ExpectedStruct(
+                        "StorageRead".to_string(),
+                        format!("{:?}", other_request),
+                    ))
+                }
+            };
 
         let value = self.syscall_storage_read(request.address)?;
         let response = DeprecatedStorageReadResponse::new(value);
@@ -580,13 +598,16 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let request = if let DeprecatedSyscallRequest::StorageWrite(request) =
-            self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
-        };
+        let request =
+            match self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)? {
+                DeprecatedSyscallRequest::StorageWrite(request) => request,
+                other_request => {
+                    return Err(SyscallHandlerError::ExpectedStruct(
+                        "StorageWriteRequest".to_string(),
+                        format!("{:?}", other_request),
+                    ))
+                }
+            };
 
         self.syscall_storage_write(request.address, request.value)?;
 
@@ -679,7 +700,12 @@ where
     ) -> Result<(), SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::GetTxSignature(_) => {}
-            _ => return Err(SyscallHandlerError::ExpectedGetTxSignatureRequest),
+            other_request => {
+                return Err(SyscallHandlerError::ExpectedStruct(
+                    "GetTxSignatureRequest".to_string(),
+                    format!("{:?}", other_request),
+                ))
+            }
         }
 
         let tx_info_pr = self.syscall_get_tx_info_ptr(vm)?;
@@ -695,12 +721,14 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let _request = if let DeprecatedSyscallRequest::GetBlockTimestamp(request) =
-            self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetBlockTimestampRequest);
+        match self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)? {
+            DeprecatedSyscallRequest::GetBlockTimestamp(_) => {}
+            other_request => {
+                return Err(SyscallHandlerError::ExpectedStruct(
+                    "GetBlockTimestampRequest".to_string(),
+                    format!("{:?}", other_request),
+                ))
+            }
         };
 
         let block_timestamp = self.get_block_info().block_timestamp;
@@ -735,12 +763,14 @@ where
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
-        let _request = if let DeprecatedSyscallRequest::GetSequencerAddress(request) =
-            self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)?
-        {
-            request
-        } else {
-            return Err(SyscallHandlerError::ExpectedGetSequencerAddressRequest);
+        match self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)? {
+            DeprecatedSyscallRequest::GetSequencerAddress(_) => {}
+            other_request => {
+                return Err(SyscallHandlerError::ExpectedStruct(
+                    "GetSequencerAddressRequest".to_string(),
+                    format!("{:?}", other_request),
+                ))
+            }
         };
 
         let sequencer_address = self.get_block_info().sequencer_address.clone();

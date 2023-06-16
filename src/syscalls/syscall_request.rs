@@ -215,9 +215,9 @@ impl FromPtr for GetBlockHashRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         Ok(GetBlockHashRequest {
-            block_number: get_big_int(vm, syscall_ptr)?
-                .to_u64()
-                .ok_or(SyscallHandlerError::FeltToU64Fail)?,
+            block_number: get_big_int(vm, syscall_ptr)?.to_u64().ok_or(
+                SyscallHandlerError::Conversion("Felt252".to_string(), "u64".to_string()),
+            )?,
         }
         .into())
     }
