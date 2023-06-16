@@ -582,16 +582,13 @@ impl Default for OrderedL2ToL1Message {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct L2toL1MessageInfo {
-    pub(crate) from_address: Address,
-    pub(crate) to_address: Address,
-    pub(crate) payload: Vec<Felt252>,
+    pub from_address: Address,
+    pub to_address: Address,
+    pub payload: Vec<Felt252>,
 }
 
 impl L2toL1MessageInfo {
-    pub(crate) fn new(
-        message_content: OrderedL2ToL1Message,
-        sending_contract_address: Address,
-    ) -> Self {
+    pub fn new(message_content: OrderedL2ToL1Message, sending_contract_address: Address) -> Self {
         L2toL1MessageInfo {
             from_address: sending_contract_address,
             to_address: message_content.to_address,
