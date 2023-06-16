@@ -171,7 +171,7 @@ mod test {
     }
 
     #[test]
-    fn test_simulation() {
+    fn test_skip_validation_flag() {
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
