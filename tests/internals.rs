@@ -1716,13 +1716,14 @@ fn test_library_call_with_declare_v2() {
     class_hash[0] = 1;
     let nonce = Felt252::zero();
 
-    let state_reader: &mut InMemoryStateReader = state.state_reader_mut();
-
-    state_reader
-        .address_to_class_hash_mut()
+    state
+        .cache_mut()
+        .class_hash_initial_values_mut()
         .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
+
+    state
+        .cache_mut()
+        .nonce_initial_values_mut()
         .insert(address.clone(), nonce);
 
     state
