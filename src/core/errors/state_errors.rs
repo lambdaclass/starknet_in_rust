@@ -1,6 +1,6 @@
 use crate::{
-    business_logic::state::state_cache::StorageEntry,
     services::api::contract_class_errors::ContractClassError,
+    state::state_cache::StorageEntry,
     storage::errors::storage_errors::StorageError,
     utils::{Address, ClassHash},
 };

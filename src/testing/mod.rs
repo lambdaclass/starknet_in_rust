@@ -9,15 +9,15 @@ use lazy_static::lazy_static;
 use num_traits::Zero;
 
 use crate::{
-    business_logic::state::{
+    definitions::{
+        block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+        constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
+    },
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{
         cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
         state_cache::StorageEntry, BlockInfo,
     },
-    definitions::{
-        constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
-        general_config::{StarknetChainId, StarknetOsConfig, TransactionContext},
-    },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
     utils::{felt_to_hash, Address, ClassHash},
 };
 
@@ -60,8 +60,8 @@ lazy_static! {
     pub static ref ACTUAL_FEE: Felt252 = Felt252::zero();
 }
 
-pub fn new_starknet_general_config_for_testing() -> TransactionContext {
-    TransactionContext::new(
+pub fn new_starknet_general_config_for_testing() -> BlockContext {
+    BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet,
             TEST_ERC20_CONTRACT_ADDRESS.clone(),
@@ -86,7 +86,7 @@ where
 }
 
 pub fn create_account_tx_test_state(
-) -> Result<(TransactionContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let general_config = new_starknet_general_config_for_testing();
 
     let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());

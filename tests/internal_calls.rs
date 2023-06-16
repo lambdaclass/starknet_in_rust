@@ -4,15 +4,13 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
-        },
-        state::{cached_state::CachedState, state_cache::StorageEntry},
-        state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    definitions::{constants::TRANSACTION_VERSION, general_config::TransactionContext},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{cached_state::CachedState, state_cache::StorageEntry},
+    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::PathBuf;
@@ -23,12 +21,12 @@ fn test_internal_calls() {
         ContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
             .expect("Could not load contract from JSON");
 
-    let general_config = TransactionContext::default();
-    let tx_execution_context = TransactionExecutionContext::create_for_testing(
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::create_for_testing(
         Address(0.into()),
         10,
         0.into(),
-        general_config.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
     );
 
@@ -70,9 +68,9 @@ fn test_internal_calls() {
     let call_info = entry_point
         .execute(
             &mut state,
-            &general_config,
+            &block_context,
             &mut resources_manager,
-            &tx_execution_context,
+            &mut tx_execution_context,
             false,
         )
         .expect("Could not execute contract");

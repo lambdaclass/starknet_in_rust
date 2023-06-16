@@ -11,23 +11,23 @@ use super::{
     syscall_info::get_deprecated_syscall_size_from_name,
 };
 use crate::{
-    business_logic::{
-        execution::{execution_entry_point::ExecutionEntryPoint, *},
-        state::{
-            contract_storage_state::ContractStorageState,
-            state_api::{State, StateReader},
-            BlockInfo, ExecutionResourcesManager,
-        },
-        transaction::error::TransactionError,
-    },
     core::errors::state_errors::StateError,
     definitions::{
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, general_config::TransactionContext,
+        block_context::BlockContext,
+        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST},
     },
+    execution::{execution_entry_point::ExecutionEntryPoint, *},
     hash_utils::calculate_contract_address,
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
+    state::ExecutionResourcesManager,
+    state::{
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
+        BlockInfo,
+    },
+    transaction::error::TransactionError,
     utils::*,
 };
 use cairo_vm::felt::Felt252;
@@ -54,7 +54,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub(crate) general_config: TransactionContext,
+    pub(crate) block_context: BlockContext,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
     pub(crate) internal_calls: Vec<CallInfo>,
@@ -68,7 +68,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
-        general_config: TransactionContext,
+        block_context: BlockContext,
         syscall_ptr: Relocatable,
     ) -> Self {
         let events = Vec::new();
@@ -87,7 +87,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             contract_address,
             caller_address,
             l2_to_l1_messages,
-            general_config,
+            block_context,
             tx_info_ptr,
             starknet_storage_state,
             internal_calls,
@@ -128,8 +128,8 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
-        let mut general_config = TransactionContext::default();
-        general_config.block_info = block_info;
+        let mut block_context = BlockContext::default();
+        block_context.block_info = block_info;
         let tx_info_ptr = None;
         let starknet_storage_state = ContractStorageState::new(state, contract_address.clone());
 
@@ -144,7 +144,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             contract_address,
             caller_address,
             l2_to_l1_messages,
-            general_config,
+            block_context,
             tx_info_ptr,
             starknet_storage_state,
             internal_calls,
@@ -230,9 +230,9 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         let _call_info = call
             .execute(
                 self.starknet_storage_state.state,
-                &self.general_config,
+                &self.block_context,
                 &mut self.resources_manager,
-                &self.tx_execution_context,
+                &mut self.tx_execution_context,
                 false,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
@@ -373,9 +373,6 @@ where
         let call_data;
         let mut code_address = None;
 
-        // TODO: What about `delegate_l1_handler`?
-        //   The call to `self.read_and_validate_syscall_request()` will always fail in that
-        //   case.
         match request {
             DeprecatedSyscallRequest::LibraryCall(request) => {
                 entry_point_type = match syscall_name {
@@ -395,18 +392,33 @@ where
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
             }
             DeprecatedSyscallRequest::CallContract(request) => {
-                (code_address, caller_address, call_type, contract_address) = match syscall_name {
+                (
+                    code_address,
+                    caller_address,
+                    call_type,
+                    contract_address,
+                    entry_point_type,
+                ) = match syscall_name {
                     "call_contract" => (
                         None,
                         self.contract_address.clone(),
                         CallType::Call,
                         request.contract_address.clone(),
+                        EntryPointType::External,
                     ),
                     "delegate_call" => (
                         Some(request.contract_address),
                         self.caller_address.clone(),
                         CallType::Delegate,
                         self.contract_address.clone(),
+                        EntryPointType::External,
+                    ),
+                    "delegate_l1_handler" => (
+                        Some(request.contract_address),
+                        self.caller_address.clone(),
+                        CallType::Delegate,
+                        self.contract_address.clone(),
+                        EntryPointType::L1Handler,
                     ),
                     _ => {
                         return Err(SyscallHandlerError::UnknownSyscall(
@@ -414,7 +426,6 @@ where
                         ))
                     }
                 };
-                entry_point_type = EntryPointType::External;
                 function_selector = request.function_selector;
                 class_hash = None;
                 call_data = get_integer_range(vm, request.calldata, request.calldata_size)?;
@@ -434,16 +445,16 @@ where
             entry_point_type,
             Some(call_type),
             class_hash,
-            0,
+            INITIAL_GAS_COST,
         );
         entry_point.code_address = code_address;
 
         entry_point
             .execute(
                 self.starknet_storage_state.state,
-                &self.general_config,
+                &self.block_context,
                 &mut self.resources_manager,
-                &self.tx_execution_context,
+                &mut self.tx_execution_context,
                 false,
             )
             .map(|x| {
@@ -456,7 +467,7 @@ where
     }
 
     pub(crate) fn get_block_info(&self) -> &BlockInfo {
-        &self.general_config.block_info
+        &self.block_context.block_info
     }
 
     pub(crate) fn syscall_get_caller_address(
@@ -470,6 +481,14 @@ where
         }
 
         Ok(self.caller_address.clone())
+    }
+
+    pub(crate) fn delegate_l1_handler(
+        &mut self,
+        vm: &mut VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<(), SyscallHandlerError> {
+        self.call_contract_and_write_response("delegate_l1_handler", vm, syscall_ptr)
     }
 
     pub(crate) fn syscall_get_contract_address(
@@ -527,7 +546,7 @@ where
         let tx_info = TxInfoStruct::new(
             tx,
             signature,
-            self.general_config.starknet_os_config.chain_id,
+            self.block_context.starknet_os_config.chain_id,
         );
 
         let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
@@ -827,6 +846,7 @@ where
             "storage_write" => DeprecatedStorageWriteRequest::from_ptr(vm, syscall_ptr),
             "replace_class" => DeprecatedReplaceClassRequest::from_ptr(vm, syscall_ptr),
             "delegate_call" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
+            "delegate_l1_handler" => DeprecatedCallContractRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -874,9 +894,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        business_logic::{
-            state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        },
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };

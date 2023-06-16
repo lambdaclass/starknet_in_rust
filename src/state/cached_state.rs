@@ -3,11 +3,11 @@ use super::{
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
-    business_logic::state::StateDiff,
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
+    state::StateDiff,
     storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
@@ -339,7 +339,7 @@ impl<T: StateReader> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::business_logic::state::in_memory_state_reader::InMemoryStateReader;
+    use crate::state::in_memory_state_reader::InMemoryStateReader;
     use cairo_vm::types::program::Program;
     use num_traits::One;
     use starknet_contract_class::{ContractEntryPoint, EntryPointType};

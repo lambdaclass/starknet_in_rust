@@ -1,7 +1,7 @@
 use crate::{
-    business_logic::execution::os_usage::OsResources,
     core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
     definitions::transaction_type::TransactionType,
+    execution::os_usage::OsResources,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::ClassHash,
 };

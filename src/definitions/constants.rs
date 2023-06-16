@@ -1,4 +1,4 @@
-use super::general_config::{StarknetChainId, StarknetOsConfig};
+use super::block_context::{StarknetChainId, StarknetOsConfig};
 use crate::utils::Address;
 use cairo_vm::felt::{felt_str, Felt252};
 use lazy_static::lazy_static;

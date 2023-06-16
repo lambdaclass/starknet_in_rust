@@ -2,7 +2,7 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 
-use business_logic::{
+use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         TransactionExecutionInfo,
@@ -13,7 +13,11 @@ use business_logic::{
     },
     transaction::{error::TransactionError, Transaction},
 };
-use definitions::general_config::TransactionContext;
+
+use cairo_vm::felt::Felt252;
+use definitions::block_context::BlockContext;
+use starknet_contract_class::EntryPointType;
+use state::cached_state::CachedState;
 use utils::Address;
 
 #[cfg(test)]
@@ -24,29 +28,27 @@ extern crate assert_matches;
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-pub use cairo_vm::felt::Felt252;
-pub use starknet_contract_class::EntryPointType;
 
-use crate::business_logic::state::cached_state::CachedState;
-
-pub mod business_logic;
 pub mod core;
 pub mod definitions;
+pub mod execution;
 pub mod hash_utils;
 pub mod parser_errors;
 pub mod runner;
 pub mod serde_structs;
 pub mod services;
+pub mod state;
 pub mod storage;
 pub mod syscalls;
 pub mod testing;
+pub mod transaction;
 pub mod utils;
 
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
     transaction: &Transaction,
     state: T,
-    transaction_context: &TransactionContext,
+    transaction_context: &BlockContext,
 ) -> Result<(u128, usize), TransactionError>
 where
     T: StateReader,
@@ -72,7 +74,7 @@ pub fn call_contract<T: State + StateReader>(
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
     state: &mut T,
-    config: TransactionContext,
+    block_context: BlockContext,
 ) -> Result<Vec<Felt252>, TransactionError> {
     let contract_address = Address(contract_address);
     let class_hash = state.get_class_hash_at(&contract_address)?;
@@ -97,21 +99,21 @@ pub fn call_contract<T: State + StateReader>(
         initial_gas,
     );
 
-    let tx_execution_context = TransactionExecutionContext::new(
+    let mut tx_execution_context = TransactionExecutionContext::new(
         contract_address,
         transaction_hash,
         signature,
         max_fee,
         nonce,
-        config.invoke_tx_max_n_steps(),
+        block_context.invoke_tx_max_n_steps(),
         version.into(),
     );
 
     let call_info = execution_entrypoint.execute(
         state,
-        &config,
+        &block_context,
         &mut ExecutionResourcesManager::default(),
-        &tx_execution_context,
+        &mut tx_execution_context,
         false,
     )?;
 
@@ -121,10 +123,10 @@ pub fn call_contract<T: State + StateReader>(
 pub fn execute_transaction<T: State + StateReader>(
     tx: Transaction,
     state: &mut T,
-    config: TransactionContext,
+    block_context: BlockContext,
     remaining_gas: u128,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    tx.execute(state, &config, remaining_gas)
+    tx.execute(state, &block_context, remaining_gas)
 }
 
 #[cfg(test)]
@@ -132,22 +134,20 @@ mod test {
     use std::collections::HashMap;
     use std::path::PathBuf;
 
-    use crate::business_logic::transaction::Transaction;
+    use crate::definitions::block_context::StarknetChainId;
+    use crate::estimate_fee;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
+    use crate::transaction::{InvokeFunction, Transaction};
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
     use num_traits::Zero;
     use starknet_contract_class::EntryPointType;
 
     use crate::{
-        business_logic::{
-            state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
-            transaction::InvokeFunction,
-        },
         call_contract,
-        definitions::general_config::{StarknetChainId, TransactionContext},
-        estimate_fee,
+        definitions::block_context::BlockContext,
+        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
         utils::{Address, ClassHash},
     };
 
@@ -210,7 +210,7 @@ mod test {
             entrypoint_selector.into(),
             calldata,
             &mut state,
-            TransactionContext::default(),
+            BlockContext::default(),
         )
         .unwrap();
 

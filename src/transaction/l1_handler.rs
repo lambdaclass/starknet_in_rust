@@ -4,22 +4,20 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
 use crate::{
-    business_logic::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
-            TransactionExecutionInfo,
-        },
-        state::{
-            state_api::{State, StateReader},
-            ExecutionResourcesManager,
-        },
-        transaction::{error::TransactionError, fee::calculate_tx_fee},
-    },
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        constants::L1_HANDLER_VERSION, general_config::TransactionContext,
+        block_context::BlockContext, constants::L1_HANDLER_VERSION,
         transaction_type::TransactionType,
     },
+    execution::{
+        execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
+        TransactionExecutionInfo,
+    },
+    state::{
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    transaction::{error::TransactionError, fee::calculate_tx_fee},
     utils::{calculate_tx_resources, Address},
 };
 
@@ -70,7 +68,7 @@ impl L1Handler {
     pub fn execute<S>(
         &self,
         state: &mut S,
-        general_config: &TransactionContext,
+        block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
@@ -90,9 +88,9 @@ impl L1Handler {
 
         let call_info = entrypoint.execute(
             state,
-            general_config,
+            block_context,
             &mut resources_manager,
-            &self.get_execution_context(general_config.invoke_tx_max_n_steps)?,
+            &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
             false,
         )?;
 
@@ -106,15 +104,15 @@ impl L1Handler {
         )?;
 
         // Enforce L1 fees.
-        if general_config.enforce_l1_handler_fee {
+        if block_context.enforce_l1_handler_fee {
             // Backward compatibility; Continue running the transaction even when
             // L1 handler fee is enforced, and paid_fee_on_l1 is None; If this is the case,
             // the transaction is an old transaction.
             if let Some(paid_fee) = self.paid_fee_on_l1.clone() {
                 let required_fee = calculate_tx_fee(
                     &actual_resources,
-                    general_config.starknet_os_config.gas_price,
-                    general_config,
+                    block_context.starknet_os_config.gas_price,
+                    block_context,
                 )?;
                 // For now, assert only that any amount of fee was paid.
                 if paid_fee.is_zero() {
@@ -174,16 +172,14 @@ mod test {
     use starknet_contract_class::EntryPointType;
 
     use crate::{
-        business_logic::{
-            execution::{CallInfo, TransactionExecutionInfo},
-            state::{
-                cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-                state_api::State,
-            },
-            transaction::l1_handler::L1Handler,
-        },
-        definitions::{general_config::TransactionContext, transaction_type::TransactionType},
+        definitions::{block_context::BlockContext, transaction_type::TransactionType},
+        execution::{CallInfo, TransactionExecutionInfo},
         services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::{
+            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+            state_api::State,
+        },
+        transaction::l1_handler::L1Handler,
         utils::Address,
     };
 
@@ -233,15 +229,17 @@ mod test {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut config = TransactionContext::default();
-        config.cairo_resource_fee_weights = HashMap::from([
+        let mut block_context = BlockContext::default();
+        block_context.cairo_resource_fee_weights = HashMap::from([
             (String::from("l1_gas_usage"), 0.into()),
             (String::from("pedersen_builtin"), 16.into()),
             (String::from("range_check_builtin"), 70.into()),
         ]);
-        config.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = 1;
 
-        let tx_exec = l1_handler.execute(&mut state, &config, 100000).unwrap();
+        let tx_exec = l1_handler
+            .execute(&mut state, &block_context, 100000)
+            .unwrap();
 
         let expected_tx_exec = expected_tx_exec_info();
         assert_eq!(tx_exec, expected_tx_exec)
@@ -252,7 +250,7 @@ mod test {
             validate_info: None,
             call_info: Some(CallInfo {
                 caller_address: Address(0.into()),
-                call_type: Some(crate::business_logic::execution::CallType::Call),
+                call_type: Some(crate::execution::CallType::Call),
                 contract_address: Address(0.into()),
                 code_address: None,
                 class_hash: Some([
