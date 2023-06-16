@@ -116,7 +116,7 @@ impl InvokeFunction {
         ))
     }
 
-    fn run_validate_entrypoint<T>(
+    pub(crate) fn run_validate_entrypoint<T>(
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
@@ -326,11 +326,12 @@ impl InvokeFunction {
     pub(crate) fn simulate_transaction<S: StateReader>(
         &self,
         state: S,
-        transaction_context: BlockContext,
+        block_context: BlockContext,
+        remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut cache_state = CachedState::new(state, None, None);
         // init simulation
-        self.execute(&mut cache_state, &transaction_context)
+        self.execute(&mut cache_state, &block_context, remaining_gas)
     }
 }
 
