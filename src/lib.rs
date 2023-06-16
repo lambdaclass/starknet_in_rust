@@ -17,6 +17,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
 use starknet_contract_class::EntryPointType;
+use state::cached_state::CachedState;
 use utils::Address;
 
 #[cfg(test)]
@@ -43,6 +44,31 @@ pub mod testing;
 pub mod transaction;
 pub mod utils;
 
+/// Estimate the fee associated with transaction
+pub fn estimate_fee<T>(
+    transaction: &Transaction,
+    state: T,
+    transaction_context: &BlockContext,
+) -> Result<(u128, usize), TransactionError>
+where
+    T: StateReader,
+{
+    // This is used as a copy of the original state, we can update this cached state freely.
+    let mut cached_state = CachedState::<T>::new(state, None, None);
+
+    // Check if the contract is deployed.
+    cached_state.get_class_hash_at(&transaction.contract_address())?;
+
+    // execute the transaction with the fake state.
+    let transaction_result =
+        transaction.execute(&mut cached_state, transaction_context, 1_000_000)?;
+    if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
+        let actual_fee = transaction_result.actual_fee;
+        Ok((actual_fee, *gas_usage))
+    } else {
+        Err(TransactionError::ResourcesError)
+    }
+}
 pub fn call_contract<T: State + StateReader>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
@@ -106,10 +132,17 @@ pub fn execute_transaction<T: State + StateReader>(
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
+    use crate::definitions::block_context::StarknetChainId;
+    use crate::estimate_fee;
+    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
+    use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
+    use crate::transaction::{InvokeFunction, Transaction};
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
     use num_traits::Zero;
+    use starknet_contract_class::EntryPointType;
 
     use crate::{
         call_contract,
@@ -117,6 +150,35 @@ mod test {
         state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
         utils::{Address, ClassHash},
     };
+
+    #[test]
+    fn estimate_fee_test() {
+        let contract_class: ContractClass =
+            ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap();
+
+        let entrypoints = contract_class.entry_points_by_type;
+        let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
+
+        let (transaction_context, state) = create_account_tx_test_state().unwrap();
+
+        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let invoke_function = InvokeFunction::new(
+            TEST_CONTRACT_ADDRESS.clone(),
+            entrypoint_selector.clone(),
+            100_000_000,
+            1.into(),
+            calldata,
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            Some(0.into()),
+            None,
+        )
+        .unwrap();
+        let transaction = Transaction::InvokeFunction(invoke_function);
+
+        let estimated_fee = estimate_fee(&transaction, state, &transaction_context).unwrap();
+        assert_eq!(estimated_fee, (0, 0));
+    }
 
     #[test]
     fn call_contract_fibonacci_with_10_should_return_89() {

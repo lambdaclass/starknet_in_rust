@@ -213,11 +213,15 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &ClassHash,
         contract_class: &ContractClass,
     ) -> Result<(), StateError> {
-        self.contract_classes
-            .as_mut()
-            .ok_or(StateError::MissingContractClassCache)?
-            .insert(*class_hash, contract_class.clone());
-
+        match self.contract_classes.as_mut() {
+            Some(x) => {
+                x.insert(*class_hash, contract_class.clone());
+            }
+            None => {
+                self.contract_classes = Some(HashMap::new());
+                self.set_contract_class(class_hash, contract_class)?;
+            }
+        }
         Ok(())
     }
 
