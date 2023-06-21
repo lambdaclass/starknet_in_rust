@@ -3,7 +3,10 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
     felt::{felt_str, Felt252},
-    vm::runners::cairo_runner::ExecutionResources,
+    vm::runners::{
+        builtin_runner::{BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
+        cairo_runner::ExecutionResources,
+    },
 };
 use num_traits::{Num, One, Zero};
 use starknet_contract_class::EntryPointType;
@@ -24,7 +27,7 @@ use starknet_rs::{
         state_api::{State, StateReader},
     },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    utils::{calculate_sn_keccak, Address, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -49,7 +52,7 @@ fn test_contract<'a>(
         Item = (
             ClassHash,
             &'a Path,
-            Option<(Address, Vec<(&'a str, Felt252)>)>,
+            Option<(Address, Vec<([u8; 32], Felt252)>)>,
         ),
     >,
     arguments: impl Into<Vec<Felt252>>,
@@ -94,13 +97,10 @@ fn test_contract<'a>(
             contract_class_cache.insert(class_hash, contract_class.clone());
 
             if let Some((contract_address, data)) = contract_address {
-                storage_entries.extend(data.into_iter().map(|(name, value)| {
-                    (
-                        contract_address.clone(),
-                        calculate_sn_keccak(name.as_bytes()),
-                        value,
-                    )
-                }));
+                storage_entries.extend(
+                    data.into_iter()
+                        .map(|(name, value)| (contract_address.clone(), name, value)),
+                );
 
                 state_reader
                     .address_to_class_hash_mut()
@@ -134,34 +134,37 @@ fn test_contract<'a>(
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
+    let result = entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .expect("Could not execute contract");
+
+    assert_eq!(result.contract_address, contract_address);
+    assert_eq!(result.contract_address, contract_address);
+    assert_eq!(result.caller_address, caller_address);
+    assert_eq!(result.entry_point_type, EntryPointType::External.into());
+    assert_eq!(result.call_type, CallType::Delegate.into());
+    assert_eq!(result.class_hash, class_hash.into());
+    assert_eq!(result.entry_point_selector, Some(entry_point_selector));
+    assert_eq!(result.events, events.into());
+    assert_eq!(result.l2_to_l1_messages, l2_to_l1_messages.into());
+    assert_eq!(result.storage_read_values, storage_read_values.into());
     assert_eq!(
-        entry_point
-            .execute(
-                &mut state,
-                &block_context,
-                &mut resources_manager,
-                &mut tx_execution_context,
-                false,
-            )
-            .expect("Could not execute contract"),
-        CallInfo {
-            contract_address,
-            caller_address,
-            entry_point_type: EntryPointType::External.into(),
-            call_type: CallType::Delegate.into(),
-            class_hash: class_hash.into(),
-            entry_point_selector: Some(entry_point_selector),
-            events: events.into(),
-            l2_to_l1_messages: l2_to_l1_messages.into(),
-            storage_read_values: storage_read_values.into(),
-            accessed_storage_keys: accessed_storage_keys.collect(),
-            calldata,
-            retdata: return_data.into(),
-            internal_calls: internal_calls.into(),
-            execution_resources,
-            ..Default::default()
-        },
+        result.accessed_storage_keys,
+        accessed_storage_keys.collect()
     );
+    assert_eq!(result.calldata, calldata);
+    assert_eq!(result.retdata, return_data.into());
+    assert_eq!(result.internal_calls, internal_calls.into());
+    assert_eq!(result.execution_resources, execution_resources);
+
+    assert_eq!(result.gas_consumed, 0);
+    assert_eq!(result.failure_flag, false);
 }
 
 #[test]
@@ -181,7 +184,10 @@ fn call_contract_syscall() {
         [(
             [2u8; 32],
             Path::new("starknet_programs/syscalls-lib.json"),
-            Some((Address(2222.into()), vec![("lib_state", 10.into())])),
+            Some((
+                Address(2222.into()),
+                vec![(calculate_sn_keccak("lib_state".as_bytes()), 10.into())],
+            )),
         )]
         .into_iter(),
         [2222.into()],
@@ -1479,4 +1485,100 @@ fn send_messages_to_l1_different_contract_calls() {
             )
         ],
     )
+}
+
+#[test]
+fn run_rabbitx_withdraw() {
+    // Tx extracted from:
+    // https://starkscan.co/tx/0x0568988e97ba4be44fd345421a61026b64a2e759bd8a2c6568b6af97d8e91b29
+    let mut context = BlockContext::default();
+    context.block_info_mut().block_number = 68422;
+    context.block_info_mut().starknet_version = "0.11.2".to_owned();
+
+    let class_hash = felt_to_hash(&felt_str!(
+        "36e5b6081df2174189fb83800d2a09132286dcd1004ad960a0c8d69364e6e9a",
+        16
+    ));
+    let contract_address = Address(felt_str!(
+        "7ea517643afd3ad5adec2ed100526d150fe1c1a47f0d5b619c6a5a0d9dc8a4f",
+        16
+    ));
+    let caller_address = Address(felt_str!(
+        "26f4ac85c1beaca58892db37febc5966bec20348d28eb26e72d488cde4d33ba",
+        16
+    ));
+
+    let path = PathBuf::from("starknet_programs/rabbit.json");
+
+    let accessed_storage_keys = vec![
+        felt_to_hash(&felt_str!(
+            "1367069095827447039827047088548470265876654509711952295293583258706132856906"
+        )),
+        felt_to_hash(&felt_str!(
+            "572599358474361038141822261566078459352953201359689399281613308865211969583"
+        )),
+        felt_to_hash(&felt_str!(
+            "2833325496484508462806667236775853252972934682733721179164324551977103892769"
+        )),
+    ];
+
+    let storage_read_values = vec![
+        felt_str!("1101261852276144652095602730572450377483057153780879930360596579262965560250"),
+        0.into(),
+        felt_str!("1fffffffffffffffffffffffffffffffffffffffffff", 16),
+    ];
+
+    let storage = accessed_storage_keys
+        .iter()
+        .cloned()
+        .zip(storage_read_values.iter().cloned())
+        .collect();
+
+    let extra_contracts = [(
+        class_hash.clone(),
+        path.as_ref(),
+        Some((contract_address.clone(), storage)),
+    )];
+
+    let execution_resources = ExecutionResources {
+        n_steps: 1115,
+        n_memory_holes: 77,
+        builtin_instance_counter: HashMap::from([
+            (RANGE_CHECK_BUILTIN_NAME.to_owned(), 87),
+            (BITWISE_BUILTIN_NAME.to_owned(), 2),
+            (HASH_BUILTIN_NAME.to_owned(), 1),
+        ]),
+    };
+
+    test_contract(
+        "starknet_programs/rabbit.json",
+        "withdraw",
+        class_hash,
+        contract_address.clone(),
+        caller_address,
+        context,
+        None,
+        [OrderedEvent {
+            order: 0,
+            keys: vec![
+                8604536554778681719_u64.into(),
+                116775460801_u64.into(),
+                felt_str!("757168075437291671918614932549934236750872458288"),
+            ],
+            data: vec![42510000.into(), 1.into()],
+        }],
+        [],
+        storage_read_values,
+        accessed_storage_keys.into_iter(),
+        extra_contracts.into_iter(),
+        [
+            1.into(),
+            0x1b305c1fc1_u128.into(),
+            felt_str!("84a0973c3fb15ae69447e70f1134968855d23430", 16),
+            0x288a6b0_u128.into(),
+        ],
+        vec![],
+        [],
+        execution_resources,
+    );
 }
