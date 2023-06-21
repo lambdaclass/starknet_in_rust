@@ -53,10 +53,45 @@ fn starknet_keccak(data: &[u8]) -> Felt252 {
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
 fn compute_hinted_class_hash(_contract_class: &ContractClass) -> Felt252 {
+//     if len(dumped_program["attributes"]) == 0:
+//     # Remove attributes field from raw dictionary, for hash backward compatibility of
+//     # contracts deployed prior to adding this feature.
+//     del dumped_program["attributes"]
+// else:
+//     # Remove accessible_scopes and flow_tracking_data fields from raw dictionary, for hash
+//     # backward compatibility of contracts deployed prior to adding this feature.
+//     for attr in dumped_program["attributes"]:
+//         if len(attr["accessible_scopes"]) == 0:
+//             del attr["accessible_scopes"]
+//         if attr["flow_tracking_data"] is None:
+//             del attr["flow_tracking_data"]
     let keccak_input =
-        r#"{"abi": contract_class.abi, "program": contract_class.program}"#.as_bytes();
-    starknet_keccak(keccak_input)
+        r#"{"abi": contract_class.abi, "program": contract_class.program}"#;
+    let serialized = unicode_encode(keccak_input); 
+    starknet_keccak(serialized.as_bytes())
 }
+
+    // Temporary hack here because Python only emits ASCII to JSON.
+    fn unicode_encode(s: &str) -> String {
+        use std::fmt::Write;
+
+        let mut output = String::with_capacity(s.len());
+        let mut buf = [0, 0];
+
+        for c in s.chars() {
+            if c.is_ascii() {
+                output.push(c);
+            } else {
+                let buf = c.encode_utf16(&mut buf);
+                for i in buf {
+                    // Unwrapping should be safe here
+                    write!(output, r"\u{:4x}", i).unwrap();
+                }
+            }
+        }
+
+        output
+    }
 
 fn get_contract_entry_points_hashed(
     contract_class: &ContractClass,
@@ -297,6 +332,28 @@ mod tests {
             Felt252::from_str_radix(
                 "1703103364832599665802491695999915073351807236114175062140703903952998591438",
                 10
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_compute_class_hash_xxx() {
+        let contract_str = fs::read_to_string("starknet_programs/failing_class.json").unwrap();
+        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = ContractClass {
+            program: parsed_contract_class.program,
+            entry_points_by_type: parsed_contract_class.entry_points_by_type,
+            abi: parsed_contract_class.abi,
+        };
+
+        println!("contract_class: {:?}", contract_class);
+
+        assert_eq!(
+            compute_deprecated_class_hash(&contract_class).unwrap(),
+            Felt252::from_str_radix(
+                "1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4",
+                16
             )
             .unwrap()
         );
