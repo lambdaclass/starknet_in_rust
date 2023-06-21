@@ -14,7 +14,9 @@ use crate::{
         TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::{
+        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+    },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
@@ -132,6 +134,20 @@ impl DeployAccount {
         )
     }
 
+    fn constructor_entry_points_empty(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
+        match contract_class {
+            CompiledClass::Deprecated(class) => Ok(class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .ok_or(ContractClassError::NoneEntryPointType)?
+                .is_empty()),
+            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+        }
+    }
+
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     fn apply<S>(
@@ -142,10 +158,7 @@ impl DeployAccount {
     where
         S: State + StateReader,
     {
-        let contract_class: ContractClass = state
-            .get_contract_class(&self.class_hash)?
-            .try_into()
-            .map_err(StateError::from)?;
+        let contract_class = state.get_contract_class(&self.class_hash)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
@@ -177,7 +190,7 @@ impl DeployAccount {
 
     pub fn handle_constructor<S>(
         &self,
-        contract_class: ContractClass,
+        contract_class: CompiledClass,
         state: &mut S,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
@@ -185,25 +198,18 @@ impl DeployAccount {
     where
         S: State + StateReader,
     {
-        let num_constructors = contract_class
-            .entry_points_by_type
-            .get(&EntryPointType::Constructor)
-            .map(Vec::len)
-            .unwrap_or(0);
-
-        match num_constructors {
-            0 => {
-                if !self.constructor_calldata.is_empty() {
-                    return Err(TransactionError::EmptyConstructorCalldata);
-                }
-
-                Ok(CallInfo::empty_constructor_call(
-                    self.contract_address.clone(),
-                    Address(Felt252::zero()),
-                    Some(self.class_hash),
-                ))
+        if self.constructor_entry_points_empty(contract_class)? {
+            if !self.constructor_calldata.is_empty() {
+                return Err(TransactionError::EmptyConstructorCalldata);
             }
-            _ => self.run_constructor_entrypoint(state, block_context, resources_manager),
+
+            Ok(CallInfo::empty_constructor_call(
+                self.contract_address.clone(),
+                Address(Felt252::zero()),
+                Some(self.class_hash),
+            ))
+        } else {
+            self.run_constructor_entrypoint(state, block_context, resources_manager)
         }
     }
 
@@ -350,6 +356,7 @@ mod tests {
     use crate::{
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::block_context::StarknetChainId,
+        services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
         utils::felt_to_hash,
