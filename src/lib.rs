@@ -360,8 +360,11 @@ mod test {
 
         let block_context = BlockContext::default();
 
-        let _context =
+        let context =
             simulate_transaction(&invoke, state_reader, block_context, 1000, false, true).unwrap();
-        // assert!(context.is_ok());
+
+        assert!(context.validate_info.is_some());
+        assert!(context.call_info.is_none());
+        assert!(context.fee_transfer_info.is_none());
     }
 }
