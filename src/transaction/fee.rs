@@ -58,7 +58,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
             tx_execution_context,
             false,
         )
-        .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
+        .map_err(|e| TransactionError::FeeError(e.to_string()))
 }
 
 // ----------------------------------------------------------------------------------------

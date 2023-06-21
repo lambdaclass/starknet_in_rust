@@ -256,10 +256,18 @@ impl InvokeFunction {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
+        let fee_transfer_info = if self.skip_execute {
+            None
+        } else {
+            Some(execute_fee_transfer(
+                state,
+                block_context,
+                &mut tx_execution_context,
+                actual_fee,
+            )?)
+        };
 
-        Ok((Some(fee_transfer_info), actual_fee))
+        Ok((fee_transfer_info, actual_fee))
     }
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
@@ -293,16 +301,13 @@ impl InvokeFunction {
         let contract_address = self.contract_address();
 
         let current_nonce = state.get_nonce_at(contract_address)?;
-        dbg!(&current_nonce);
         match &self.nonce {
             None => {
                 // TODO: Remove this once we have a better way to handle the nonce.
                 Ok(())
             }
             Some(nonce) => {
-                dbg!(nonce);
                 if nonce != &current_nonce {
-                    dbg!("aosdsadjjsj");
                     return Err(TransactionError::InvalidTransactionNonce(
                         current_nonce.to_string(),
                         nonce.to_string(),

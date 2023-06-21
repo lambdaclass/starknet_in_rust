@@ -156,7 +156,7 @@ mod test {
     use crate::transaction::{InvokeFunction, Transaction};
     use crate::utils::felt_to_hash;
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::felt::{felt_str, Felt252};
     use num_traits::{One, Zero};
     use starknet_contract_class::EntryPointType;
 
@@ -324,12 +324,16 @@ mod test {
             .class_hash_to_contract_class_mut()
             .insert(acc_class_hash, contract_class);
 
+        let hash = felt_str!(
+            "134328839377938040543570691566621575472567895629741043448357033688476792132"
+        );
+        let fib_address = felt_to_hash(&hash);
         state_reader
             .class_hash_to_compiled_class_hash_mut()
-            .insert(class_hash, class_hash);
+            .insert(fib_address, class_hash);
         state_reader
             .casm_contract_classes
-            .insert(class_hash, casm_contract_class);
+            .insert(fib_address, casm_contract_class);
 
         let calldata = [
             address.0.clone(),
