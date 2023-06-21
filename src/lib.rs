@@ -367,4 +367,82 @@ mod test {
         assert!(context.call_info.is_none());
         assert!(context.fee_transfer_info.is_none());
     }
+    #[test]
+    fn test_skip_execute_and_validate_flags() {
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
+        let contract_class = ContractClass::try_from(path).unwrap();
+
+        //  ------------ contract data --------------------
+        // hack store account contract
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let acc_class_hash = felt_to_hash(&hash);
+        let entrypoint_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+
+        // test with fibonacci
+        let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+        let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+        let address = Address(1111.into());
+        let class_hash: ClassHash = [1; 32];
+        let nonce = Felt252::one();
+
+        let mut state_reader = InMemoryStateReader::default();
+
+        // store data in the state reader
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(address.clone(), acc_class_hash);
+
+        state_reader
+            .address_to_nonce_mut()
+            .insert(address.clone(), nonce);
+
+        // simulate deploy
+        state_reader
+            .class_hash_to_contract_class_mut()
+            .insert(acc_class_hash, contract_class);
+
+        let hash = felt_str!(
+            "134328839377938040543570691566621575472567895629741043448357033688476792132"
+        );
+        let fib_address = felt_to_hash(&hash);
+        state_reader
+            .class_hash_to_compiled_class_hash_mut()
+            .insert(fib_address, class_hash);
+        state_reader
+            .casm_contract_classes
+            .insert(fib_address, casm_contract_class);
+
+        let calldata = [
+            address.0.clone(),
+            entrypoint_selector.clone(),
+            3.into(),
+            1.into(),
+            1.into(),
+            10.into(),
+        ]
+        .to_vec();
+
+        let invoke = InvokeFunction::new(
+            address,
+            entrypoint_selector.into(),
+            1000000,
+            Felt252::one(),
+            calldata,
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            Some(1.into()),
+            None,
+        )
+        .unwrap();
+
+        let block_context = BlockContext::default();
+
+        let context =
+            simulate_transaction(&invoke, state_reader, block_context, 1000, true, true).unwrap();
+
+        assert!(context.validate_info.is_none());
+        assert!(context.call_info.is_none());
+        assert!(context.fee_transfer_info.is_none());
+    }
 }
