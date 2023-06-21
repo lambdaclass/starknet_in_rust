@@ -127,7 +127,6 @@ impl InvokeFunction {
     where
         T: State + StateReader,
     {
-        dbg!("entered");
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
@@ -149,7 +148,6 @@ impl InvokeFunction {
             0,
         );
 
-        dbg!("before execute in validate");
         let call_info = call.execute(
             state,
             block_context,
@@ -157,8 +155,6 @@ impl InvokeFunction {
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
         )?;
-        dbg!("validate");
-        dbg!(&call_info);
 
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
@@ -209,7 +205,6 @@ impl InvokeFunction {
         S: State + StateReader,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
-        dbg!("before validate");
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
@@ -223,7 +218,6 @@ impl InvokeFunction {
                 remaining_gas,
             )?)
         };
-        dbg!(&call_info);
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -277,7 +271,6 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let concurrent_exec_info = self.apply(state, block_context, remaining_gas)?;
-        dbg!(&concurrent_exec_info);
         self.handle_nonce(state)?;
 
         let (fee_transfer_info, actual_fee) =
@@ -300,14 +293,16 @@ impl InvokeFunction {
         let contract_address = self.contract_address();
 
         let current_nonce = state.get_nonce_at(contract_address)?;
-
+        dbg!(&current_nonce);
         match &self.nonce {
             None => {
                 // TODO: Remove this once we have a better way to handle the nonce.
                 Ok(())
             }
             Some(nonce) => {
+                dbg!(nonce);
                 if nonce != &current_nonce {
+                    dbg!("aosdsadjjsj");
                     return Err(TransactionError::InvalidTransactionNonce(
                         current_nonce.to_string(),
                         nonce.to_string(),

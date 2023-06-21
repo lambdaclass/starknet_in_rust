@@ -53,13 +53,10 @@ impl InMemoryStateReader {
         &mut self,
         compiled_class_hash: &CompiledClassHash,
     ) -> Result<CompiledClass, StateError> {
-        dbg!("should enter here");
         if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
-            dbg!("and enter here");
             return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
         }
         if let Some(compiled_class) = self.class_hash_to_contract_class.get(compiled_class_hash) {
-            dbg!("should not enter here");
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
         }
         Err(StateError::NoneCompiledClass(*compiled_class_hash))
@@ -103,12 +100,10 @@ impl StateReader for InMemoryStateReader {
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // Deprecated contract classes dont have a compiled_class_hash, we dont need to fetch it
-        dbg!("in memory state reader");
         if let Some(compiled_class) = self.class_hash_to_contract_class.get(class_hash) {
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
         }
         let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-        dbg!(&compiled_class_hash);
         if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
             let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
             Ok(compiled_class)

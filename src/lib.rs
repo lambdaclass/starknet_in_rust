@@ -306,9 +306,8 @@ mod test {
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
-        let nonce = Felt252::zero();
+        let nonce = Felt252::one();
 
-        // casm_class_cache.insert(class_hash, casm_contract_class.clone());
         let mut state_reader = InMemoryStateReader::default();
 
         // store data in the state reader
@@ -328,12 +327,19 @@ mod test {
         state_reader
             .class_hash_to_compiled_class_hash_mut()
             .insert(class_hash, class_hash);
-
         state_reader
             .casm_contract_classes
             .insert(class_hash, casm_contract_class);
 
-        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let calldata = [
+            address.0.clone(),
+            entrypoint_selector.clone(),
+            3.into(),
+            1.into(),
+            1.into(),
+            10.into(),
+        ]
+        .to_vec();
 
         let invoke = InvokeFunction::new(
             address,
@@ -343,7 +349,7 @@ mod test {
             calldata,
             vec![],
             StarknetChainId::TestNet.to_felt(),
-            Some(1000000.into()),
+            Some(1.into()),
             None,
         )
         .unwrap();
