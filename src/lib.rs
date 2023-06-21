@@ -47,14 +47,14 @@ pub mod utils;
 pub fn simulate_transaction<S: StateReader>(
     transaction: &InvokeFunction,
     state: S,
-    transaction_context: BlockContext,
+    block_context: BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
     let tx_for_simulation =
         transaction.create_for_simulation(transaction.clone(), skip_validate, skip_execute);
-    tx_for_simulation.simulate_transaction(state, transaction_context, remaining_gas)
+    tx_for_simulation.simulate_transaction(state, block_context, remaining_gas)
 }
 
 /// Estimate the fee associated with transaction
