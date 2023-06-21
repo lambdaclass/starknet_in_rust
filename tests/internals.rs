@@ -10,14 +10,19 @@ use cairo_vm::vm::{
     runners::cairo_runner::ExecutionResources,
 };
 use lazy_static::lazy_static;
+use num_bigint::BigUint;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_rs::core::errors::state_errors::StateError;
 use starknet_rs::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
 };
+use starknet_rs::execution::execution_entry_point::ExecutionEntryPoint;
+use starknet_rs::execution::TransactionExecutionContext;
 use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_rs::state::ExecutionResourcesManager;
 use starknet_rs::transaction::{DeclareV2, Deploy};
+use starknet_rs::CasmContractClass;
 use starknet_rs::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -1686,4 +1691,135 @@ fn test_deploy_undeclared_account() {
         result,
         Err(TransactionError::State(StateError::NoneCompiledHash(_)))
     );
+}
+
+#[test]
+fn test_library_call_with_declare_v2() {
+    let (block_context, state) = &mut create_account_tx_test_state().unwrap();
+
+    // Declare the fibonacci contract
+    let declare_tx = declarev2_tx();
+    declare_tx.execute(state, block_context).unwrap();
+
+    // Deploy the fibonacci contract
+    let deploy = deploy_fib_syscall();
+    deploy.execute(state, block_context).unwrap();
+
+    //  Create program and entry point types for contract class
+    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci_dispatcher.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    let address = Address(6666.into());
+    let mut class_hash: ClassHash = [0; 32];
+    class_hash[0] = 1;
+    let nonce = Felt252::zero();
+
+    state
+        .cache_mut()
+        .class_hash_initial_values_mut()
+        .insert(address.clone(), class_hash);
+
+    state
+        .cache_mut()
+        .nonce_initial_values_mut()
+        .insert(address.clone(), nonce);
+
+    state
+        .set_compiled_class(&Felt252::from_bytes_be(&class_hash), contract_class)
+        .unwrap();
+
+    let create_execute_extrypoint = |selector: &BigUint,
+                                     calldata: Vec<Felt252>,
+                                     entry_point_type: EntryPointType|
+     -> ExecutionEntryPoint {
+        ExecutionEntryPoint::new(
+            address.clone(),
+            calldata,
+            Felt252::new(selector.clone()),
+            Address(0000.into()),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            1000000000,
+        )
+    };
+
+    // Create an execution entry point
+    let calldata = vec![
+        TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
+        1.into(),
+        1.into(),
+        10.into(),
+    ];
+    let send_message_exec_entry_point = create_execute_extrypoint(
+        external_entrypoint_selector,
+        calldata.clone(),
+        EntryPointType::External,
+    );
+
+    // Execute the entrypoint
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        100000000,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // Run send_msg entrypoint
+    let call_info = send_message_exec_entry_point
+        .execute(
+            state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .unwrap();
+
+    let expected_internal_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: address.clone(),
+        class_hash: Some(TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone().to_be_bytes()),
+        entry_point_selector: Some(external_entrypoint_selector.into()),
+        entry_point_type: Some(EntryPointType::External),
+        gas_consumed: 30410,
+        calldata: vec![1.into(), 1.into(), 10.into()],
+        retdata: vec![89.into()], // fib(10)
+        execution_resources: ExecutionResources {
+            n_steps: 371,
+            n_memory_holes: 1,
+            builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 13)]),
+        },
+        ..Default::default()
+    };
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: address.clone(),
+        class_hash: Some(class_hash),
+        entry_point_selector: Some(external_entrypoint_selector.into()),
+        entry_point_type: Some(EntryPointType::External),
+        gas_consumed: 113480,
+        calldata,
+        retdata: vec![89.into()], // fib(10)
+        execution_resources: ExecutionResources {
+            n_steps: 587,
+            n_memory_holes: 3,
+            builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 16)]),
+        },
+        internal_calls: vec![expected_internal_call_info],
+        ..Default::default()
+    };
+
+    assert_eq!(call_info, expected_call_info);
 }

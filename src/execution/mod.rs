@@ -397,9 +397,13 @@ impl TxInfoStruct {
         let version = get_big_int(vm, tx_info_ptr)?;
 
         let account_contract_address = Address(get_big_int(vm, &tx_info_ptr + 1)?);
-        let max_fee = get_big_int(vm, &tx_info_ptr + 2)?
-            .to_u128()
-            .ok_or(SyscallHandlerError::FeltToU128Fail)?;
+        let max_fee =
+            get_big_int(vm, &tx_info_ptr + 2)?
+                .to_u128()
+                .ok_or(SyscallHandlerError::Conversion(
+                    "Felt252".to_string(),
+                    "u128".to_string(),
+                ))?;
         let signature_len = get_integer(vm, &tx_info_ptr + 3)?;
         let signature = get_relocatable(vm, &tx_info_ptr + 4)?;
         let transaction_hash = get_big_int(vm, &tx_info_ptr + 5)?;
