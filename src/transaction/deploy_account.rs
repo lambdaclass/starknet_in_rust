@@ -26,7 +26,7 @@ use crate::{
     },
     utils::{calculate_tx_resources, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{Felt252, felt_str};
 use getset::Getters;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
@@ -294,6 +294,7 @@ impl DeployAccount {
             [
                 Felt252::from_bytes_be(&self.class_hash),
                 self.contract_address_salt.0.clone(),
+                felt_str!("42"),
             ]
             .into_iter()
             .chain(self.constructor_calldata.iter().cloned())
