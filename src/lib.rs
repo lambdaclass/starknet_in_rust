@@ -283,7 +283,7 @@ mod test {
         let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
-        let contract_classes = HashMap::from([(class_hash, contract_class.clone())]);
+        let contract_classes = HashMap::from([(class_hash, contract_class)]);
         state.set_contract_classes(contract_classes).unwrap();
 
         let mut block_context = BlockContext::default();
