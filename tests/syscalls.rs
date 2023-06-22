@@ -50,8 +50,9 @@ fn test_contract<'a>(
     accessed_storage_keys: impl Iterator<Item = ClassHash>,
     extra_contracts: impl Iterator<
         Item = (
-            ClassHash,
-            &'a Path,
+            ClassHash, // the contract's class hash
+            &'a Path,  // path to the compiled contract
+            // optionally, an address to deploy to and a storage (keys are hashed)
             Option<(Address, Vec<([u8; 32], Felt252)>)>,
         ),
     >,
