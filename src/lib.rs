@@ -18,6 +18,7 @@ use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
 use starknet_contract_class::EntryPointType;
 use state::cached_state::CachedState;
+use transaction::L1Handler;
 use utils::Address;
 
 #[cfg(test)]
@@ -48,7 +49,7 @@ pub mod utils;
 pub fn estimate_fee<T>(
     transaction: &Transaction,
     state: T,
-    transaction_context: &BlockContext,
+    block_context: &BlockContext,
 ) -> Result<(u128, usize), TransactionError>
 where
     T: StateReader,
@@ -60,8 +61,7 @@ where
     cached_state.get_class_hash_at(&transaction.contract_address())?;
 
     // execute the transaction with the fake state.
-    let transaction_result =
-        transaction.execute(&mut cached_state, transaction_context, 1_000_000)?;
+    let transaction_result = transaction.execute(&mut cached_state, block_context, 1_000_000)?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         let actual_fee = transaction_result.actual_fee;
         Ok((actual_fee, *gas_usage))
@@ -69,6 +69,7 @@ where
         Err(TransactionError::ResourcesError)
     }
 }
+
 pub fn call_contract<T: State + StateReader>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
@@ -118,6 +119,31 @@ pub fn call_contract<T: State + StateReader>(
     )?;
 
     Ok(call_info.retdata)
+}
+
+/// Estimate the fee associated with L1Handler
+pub fn estimate_message_fee<T>(
+    l1_handler: &L1Handler,
+    state: T,
+    block_context: &BlockContext,
+) -> Result<(u128, usize), TransactionError>
+where
+    T: StateReader,
+{
+    // This is used as a copy of the original state, we can update this cached state freely.
+    let mut cached_state = CachedState::<T>::new(state, None, None);
+
+    // Check if the contract is deployed.
+    cached_state.get_class_hash_at(l1_handler.contract_address())?;
+
+    // execute the transaction with the fake state.
+    let transaction_result = l1_handler.execute(&mut cached_state, block_context, 1_000_000)?;
+    if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
+        let actual_fee = transaction_result.actual_fee;
+        Ok((actual_fee, *gas_usage))
+    } else {
+        Err(TransactionError::ResourcesError)
+    }
 }
 
 pub fn execute_transaction<T: State + StateReader>(
