@@ -347,7 +347,7 @@ mod test {
 
         let invoke = InvokeFunction::new(
             address,
-            entrypoint_selector.into(),
+            entrypoint_selector,
             1000000,
             Felt252::one(),
             calldata,
@@ -425,7 +425,7 @@ mod test {
 
         let invoke = InvokeFunction::new(
             address,
-            entrypoint_selector.into(),
+            entrypoint_selector,
             1000000,
             Felt252::one(),
             calldata,
