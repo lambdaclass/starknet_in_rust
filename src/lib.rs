@@ -161,13 +161,13 @@ mod test {
     use std::path::PathBuf;
 
     use crate::definitions::block_context::StarknetChainId;
-    use crate::estimate_fee;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
-    use crate::transaction::{InvokeFunction, Transaction};
+    use crate::transaction::{InvokeFunction, L1Handler, Transaction};
+    use crate::{estimate_fee, estimate_message_fee};
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
-    use num_traits::Zero;
+    use num_traits::{Num, Zero};
     use starknet_contract_class::EntryPointType;
 
     use crate::{
@@ -241,5 +241,60 @@ mod test {
         .unwrap();
 
         assert_eq!(retdata, vec![89.into()]);
+    }
+
+    #[test]
+    fn test_estimate_message_fee() {
+        let l1_handler = L1Handler::new(
+            Address(0.into()),
+            Felt252::from_str_radix(
+                "c73f681176fc7b3f9693986fd7b14581e8d540519e27400e88b8713932be01",
+                16,
+            )
+            .unwrap(),
+            vec![
+                Felt252::from_str_radix("8359E4B0152ed5A731162D3c7B0D8D56edB165A0", 16).unwrap(),
+                1.into(),
+                10.into(),
+            ],
+            0.into(),
+            0.into(),
+            Some(10000.into()),
+        )
+        .unwrap();
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class =
+            ContractClass::try_from(PathBuf::from("starknet_programs/l1l2.json")).unwrap();
+        // Set contact_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(state_reader.clone(), None, None);
+
+        // Initialize state.contract_classes
+        let contract_classes = HashMap::from([(class_hash, contract_class.clone())]);
+        state.set_contract_classes(contract_classes).unwrap();
+
+        let mut block_context = BlockContext::default();
+        block_context.cairo_resource_fee_weights = HashMap::from([
+            (String::from("l1_gas_usage"), 0.into()),
+            (String::from("pedersen_builtin"), 16.into()),
+            (String::from("range_check_builtin"), 70.into()),
+        ]);
+        block_context.starknet_os_config.gas_price = 1;
+
+        let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
+        assert_eq!(estimated_fee, (0, 18471));
     }
 }
