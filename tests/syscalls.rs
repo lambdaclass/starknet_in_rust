@@ -164,7 +164,7 @@ fn test_contract<'a>(
     assert_eq!(result.execution_resources, execution_resources);
 
     assert_eq!(result.gas_consumed, 0);
-    assert_eq!(result.failure_flag, false);
+    assert!(!result.failure_flag);
 }
 
 #[test]
@@ -1535,7 +1535,7 @@ fn run_rabbitx_withdraw() {
         .collect();
 
     let extra_contracts = [(
-        class_hash.clone(),
+        class_hash,
         path.as_ref(),
         Some((contract_address.clone(), storage)),
     )];
@@ -1554,7 +1554,7 @@ fn run_rabbitx_withdraw() {
         "starknet_programs/rabbit.json",
         "withdraw",
         class_hash,
-        contract_address.clone(),
+        contract_address,
         caller_address,
         context,
         None,
