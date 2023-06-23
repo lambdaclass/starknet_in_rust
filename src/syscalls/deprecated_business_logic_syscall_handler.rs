@@ -224,7 +224,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
-            0,
+            INITIAL_GAS_COST,
         );
 
         let _call_info = call

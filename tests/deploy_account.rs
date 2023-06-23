@@ -1,6 +1,10 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::{
+    felt::{felt_str, Felt252},
+    vm::runners::cairo_runner::ExecutionResources,
+};
+use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use starknet_rs::{
@@ -15,8 +19,13 @@ use starknet_rs::{
     state::{cached_state::CachedState, state_api::State},
     transaction::DeployAccount,
     utils::{felt_to_hash, Address},
+    CasmContractClass,
 };
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
+
+lazy_static! {
+    static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
+}
 
 #[test]
 fn internal_deploy_account() {
@@ -82,6 +91,140 @@ fn internal_deploy_account() {
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 74),
                 ("l1_gas_usage", 1224)
+            ]
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect(),
+            Some(TransactionType::DeployAccount),
+        ),
+    );
+}
+
+#[test]
+fn internal_deploy_account_cairo1() {
+    let state_reader = InMemoryStateReader::default();
+    let mut state = CachedState::new(state_reader, None, Some(Default::default()));
+
+    state.set_contract_classes(Default::default()).unwrap();
+
+    let program_data = include_bytes!("../starknet_programs/cairo1/hello_world_account.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+    state
+        .set_compiled_class(
+            &TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.clone(),
+            contract_class,
+        )
+        .unwrap();
+
+    let contract_address_salt =
+        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+
+    let internal_deploy_account = DeployAccount::new(
+        TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH
+            .clone()
+            .to_be_bytes(),
+        0,
+        1.into(),
+        Felt252::zero(),
+        vec![2.into()],
+        vec![
+            felt_str!(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
+            ),
+            felt_str!(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203"
+            ),
+        ],
+        Address(contract_address_salt),
+        StarknetChainId::TestNet.to_felt(),
+        None,
+    )
+    .unwrap();
+
+    let tx_info = internal_deploy_account
+        .execute(&mut state, &Default::default())
+        .unwrap();
+
+    let accessed_keys: [u8; 32] = [
+        3, 178, 128, 25, 204, 253, 189, 48, 255, 198, 89, 81, 217, 75, 184, 92, 158, 43, 132, 52,
+        17, 26, 0, 11, 90, 253, 83, 60, 230, 95, 87, 164,
+    ];
+    let keys: HashSet<[u8; 32]> = [accessed_keys].iter().copied().collect();
+
+    assert_eq!(
+        tx_info,
+        TransactionExecutionInfo::new(
+            Some(CallInfo {
+                caller_address: Address(0.into()),
+                call_type: Some(CallType::Call),
+                contract_address: Address(felt_str!(
+                    "397149464972449753182583229366244826403270781177748543857889179957856017275"
+                )),
+                code_address: None,
+                gas_consumed:17370 ,
+                class_hash: Some([
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 1
+                ]),
+                entry_point_selector: Some(felt_str!(
+                    "1554466106298962091002569854891683800203193677547440645928814916929210362005"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![
+                    1.into(),
+                   felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
+                    2.into()
+                ],
+                retdata: vec![felt_str!("370462705988")],
+                execution_resources: ExecutionResources {
+                    n_steps: 162,
+                    n_memory_holes: 17,
+                    builtin_instance_counter:
+                    [
+                    ("range_check_builtin", 2),
+                    ]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
+            },
+
+                ..Default::default() }),
+
+            Some(CallInfo {
+                call_type: Some(CallType::Call),
+                contract_address: Address(felt_str!(
+                    "397149464972449753182583229366244826403270781177748543857889179957856017275"
+                )),
+                class_hash: Some(
+                    TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH
+                        .clone()
+                        .to_be_bytes()
+                ),
+                entry_point_selector: Some(felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
+                entry_point_type: Some(EntryPointType::Constructor),
+                gas_consumed: 14350,
+                calldata: vec![2.into()],
+                accessed_storage_keys: keys,
+                execution_resources: ExecutionResources {
+                    n_steps: 93,
+                    n_memory_holes: 1,
+                    builtin_instance_counter:
+                    [
+                        ("range_check_builtin", 2),
+                    ]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
+            },
+                ..Default::default()
+            }),
+            None,
+            0,
+            [
+                ("pedersen_builtin", 23),
+                ("range_check_builtin", 78),
+                ("l1_gas_usage", 3672)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
