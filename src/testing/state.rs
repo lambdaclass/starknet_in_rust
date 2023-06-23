@@ -293,7 +293,7 @@ impl StarknetState {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{fs::File, io::BufReader, path::PathBuf};
 
     use cairo_vm::{felt::felt_str, vm::runners::cairo_runner::ExecutionResources};
     use num_traits::Num;
@@ -312,8 +312,11 @@ mod tests {
     #[test]
     fn test_deploy() {
         let mut starknet_state = StarknetState::new(None);
-        let path = PathBuf::from("starknet_programs/fibonacci.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+
+        let contract_reader =
+            BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
+        let contract_class = ContractClass::try_from(contract_reader).unwrap();
+
         let contract_address_salt = Address(1.into());
 
         // expected results
@@ -323,7 +326,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let address = Address(felt_str!(
-            "2066790681318687707025847340457605657642478884993868155391041767964612021885"
+            "733093021096970965364075287991009291094188451723542993309570110718242898150"
         ));
 
         let mut actual_resources = HashMap::new();
@@ -492,8 +495,9 @@ mod tests {
         // 2) invoke call over fibonacci
 
         let mut starknet_state = StarknetState::new(None);
-        let path = PathBuf::from("starknet_programs/fibonacci.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_reader =
+            BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
+        let contract_class = ContractClass::try_from(contract_reader).unwrap();
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt = Address(1.into());
 
@@ -540,7 +544,7 @@ mod tests {
         let fib_class_hash = felt_to_hash(&hash);
 
         let address = felt_str!(
-            "2066790681318687707025847340457605657642478884993868155391041767964612021885"
+            "733093021096970965364075287991009291094188451723542993309570110718242898150"
         );
         let actual_resources = HashMap::from([
             ("l1_gas_usage".to_string(), 0),

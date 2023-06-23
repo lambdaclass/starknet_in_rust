@@ -1,12 +1,8 @@
 use crate::{
-    core::{
-        contract_address::compute_deprecated_class_hash,
-    },
-    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    hash_utils::compute_hash_on_elements,
+    core::contract_address::compute_deprecated_class_hash,
+    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    syscalls::syscall_handler_errors::SyscallHandlerError,
-    utils::Address,
+    syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address,
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::{felt_str, Felt252};

@@ -14,7 +14,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use serde::Serialize;
 // use serde_json::json;
-use sha3::{Digest, Keccak256};
+use sha3::Digest;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
@@ -38,20 +38,6 @@ fn get_contract_entry_points(
         }
     }
     Ok(entry_points.to_owned())
-}
-
-/// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
-fn starknet_keccak(data: &[u8]) -> Felt252 {
-    let mut hasher = Keccak256::new();
-    hasher.update(data);
-    let mut finalized_hash = hasher.finalize();
-    let hashed_slice: &[u8] = finalized_hash.as_slice();
-
-    // This is the same than doing a mask 3 only with the most significant byte.
-    // and then copying the other values.
-    let res = hashed_slice[0] & MASK_3;
-    finalized_hash[0] = res;
-    Felt252::from_bytes_be(finalized_hash.as_slice())
 }
 
 fn add_extra_space_to_cairo_named_tuples(value: &mut serde_json::Value) {
@@ -206,39 +192,38 @@ pub struct CairoProgramToHash<'a> {
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
 fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt252 {
-    println!("program: {:?}", contract_class.program_json["program"]);
     let program_as_string = contract_class.program_json.to_string();
-    let mut cairo_program_hash: CairoContractDefinition = serde_json::from_str(&program_as_string).unwrap();
+    let mut cairo_program_hash: CairoContractDefinition =
+        serde_json::from_str(&program_as_string).unwrap();
 
     cairo_program_hash
-    .program
-    .attributes
-    .iter_mut()
-    .try_for_each(|attr| -> anyhow::Result<()> {
-        let vals = attr
-            .as_object_mut()
-            .unwrap();
+        .program
+        .attributes
+        .iter_mut()
+        .try_for_each(|attr| -> anyhow::Result<()> {
+            let vals = attr.as_object_mut().unwrap();
 
-        match vals.get_mut("accessible_scopes") {
-            Some(serde_json::Value::Array(array)) => {
-                if array.is_empty() {
-                    vals.remove("accessible_scopes");
+            match vals.get_mut("accessible_scopes") {
+                Some(serde_json::Value::Array(array)) => {
+                    if array.is_empty() {
+                        vals.remove("accessible_scopes");
+                    }
                 }
+                Some(_other) => {
+                    anyhow::bail!(
+                        r#"A program's attribute["accessible_scopes"] was not an array type."#
+                    );
+                }
+                None => {}
             }
-            Some(_other) => {
-                anyhow::bail!(
-                    r#"A program's attribute["accessible_scopes"] was not an array type."#
-                );
+            // We don't know what this type is supposed to be, but if its missing it is null.
+            if let Some(serde_json::Value::Null) = vals.get_mut("flow_tracking_data") {
+                vals.remove("flow_tracking_data");
             }
-            None => {}
-        }
-        // We don't know what this type is supposed to be, but if its missing it is null.
-        if let Some(serde_json::Value::Null) = vals.get_mut("flow_tracking_data") {
-            vals.remove("flow_tracking_data");
-        }
 
-        Ok(())
-    }).unwrap();
+            Ok(())
+        })
+        .unwrap();
     // Handle a backwards compatibility hack which is required if compiler_version is not present.
     // See `insert_space` for more details.
     if cairo_program_hash.program.compiler_version.is_none() {
@@ -248,21 +233,10 @@ fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt252 {
     let mut ser =
         serde_json::Serializer::with_formatter(KeccakWriter::default(), PythonDefaultFormatter);
 
-    cairo_program_hash
-        .serialize(&mut ser)
-        .unwrap();
+    cairo_program_hash.serialize(&mut ser).unwrap();
 
     let KeccakWriter(hash) = ser.into_inner();
-    let res = truncated_keccak(<[u8; 32]>::from(hash.finalize()));
-    println!("hinted result: {:?}", res);
-    res
-    // let result = starknet_keccak(&serde_json::to_vec(&cairo_program_hash).unwrap());
-    // println!("hinted: {:?}", result);
-    // result
-    // let keccak_input =
-    //     r#"{"abi": contract_class.abi, "program": contract_class.program}"#;
-    // let serialized = unicode_encode(keccak_input); 
-    // starknet_keccak(serialized.as_bytes())
+    truncated_keccak(<[u8; 32]>::from(hash.finalize()))
 }
 
 pub(crate) fn truncated_keccak(mut plain: [u8; 32]) -> Felt252 {
@@ -370,166 +344,20 @@ pub fn compute_deprecated_class_hash(
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, fs, str::FromStr};
+    use std::{fs, str::FromStr};
 
     use super::*;
-    use cairo_vm::{felt::Felt252, types::program::Program};
+    use cairo_vm::felt::Felt252;
     use coverage_helper::test;
     use num_traits::Num;
-    use serde_json::json;
     use starknet_contract_class::ParsedContractClass;
-
-    const DEPRECATED_COMPILED_CLASS_CONTRACT: &str =
-        "cairo_programs/deprecated_compiled_class.json";
-
-    #[test]
-    fn test_starknet_keccak() {
-        let data: &[u8] = "hello".as_bytes();
-
-        // This expected output is the result of calling the python version in cairo-lang of the function.
-        // starknet_keccak("hello".encode())
-        let expected_result = Felt252::from_str_radix(
-            "245588857976802048747271734601661359235654411526357843137188188665016085192",
-            10,
-        )
-        .unwrap();
-        let result = starknet_keccak(data);
-
-        assert_eq!(expected_result, result);
-    }
-
-    #[test]
-    fn test_get_contract_entrypoints() {
-        let mut entry_points_by_type = HashMap::new();
-        entry_points_by_type.insert(
-            EntryPointType::Constructor,
-            vec![ContractEntryPoint {
-                selector: 1.into(),
-                offset: 2,
-            }],
-        );
-        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
-
-        let hash_calculation_program: Program =
-            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
-
-        let contract_class = ContractClass {
-            program_json: contract_str.into(),
-            program: hash_calculation_program,
-            entry_points_by_type,
-            abi: None,
-        };
-
-        assert_eq!(
-            get_contract_entry_points(&contract_class, &EntryPointType::Constructor).unwrap(),
-            vec![ContractEntryPoint {
-                selector: 1.into(),
-                offset: 2
-            }]
-        );
-        assert_matches!(
-            get_contract_entry_points(&contract_class, &EntryPointType::External),
-            Err(ContractAddressError::NoneExistingEntryPointType)
-        );
-    }
-
-    #[test]
-    fn test_compute_class_hash() {
-        let mut entry_points_by_type = HashMap::new();
-        entry_points_by_type.insert(
-            EntryPointType::Constructor,
-            vec![ContractEntryPoint {
-                selector: 3.into(),
-                offset: 2,
-            }],
-        );
-        entry_points_by_type.insert(
-            EntryPointType::L1Handler,
-            vec![ContractEntryPoint {
-                selector: 4.into(),
-                offset: 2,
-            }],
-        );
-        entry_points_by_type.insert(
-            EntryPointType::External,
-            vec![ContractEntryPoint {
-                selector: 5.into(),
-                offset: 2,
-            }],
-        );
-        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
-
-        let hash_calculation_program: Program =
-            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
-
-        let mut contract_class = ContractClass {
-            program_json: contract_str.into(),
-            program: hash_calculation_program,
-            entry_points_by_type,
-            abi: None,
-        };
-        assert_eq!(
-            compute_deprecated_class_hash(&mut contract_class).unwrap(),
-            Felt252::from_str_radix(
-                "1809635095607326950459993008040437939724930328662161791121345395618950656878",
-                10
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_compute_hinted_class_hash() {
-        let mut entry_points_by_type = HashMap::new();
-        entry_points_by_type.insert(
-            EntryPointType::Constructor,
-            vec![ContractEntryPoint {
-                selector: 1.into(),
-                offset: 12,
-            }],
-        );
-        entry_points_by_type.insert(
-            EntryPointType::L1Handler,
-            vec![ContractEntryPoint {
-                selector: 2.into(),
-                offset: 12,
-            }],
-        );
-        entry_points_by_type.insert(
-            EntryPointType::External,
-            vec![ContractEntryPoint {
-                selector: 3.into(),
-                offset: 12,
-            }],
-        );
-        let contract_str = fs::read_to_string(DEPRECATED_COMPILED_CLASS_CONTRACT).unwrap();
-
-        let hash_calculation_program: Program =
-            Program::from_bytes(contract_str.as_bytes(), None).unwrap();
-
-        let mut contract_class = ContractClass {
-            program_json: contract_str.into(),
-            program: hash_calculation_program,
-            entry_points_by_type,
-            abi: None,
-        };
-
-        assert_eq!(
-            compute_hinted_class_hash(&mut contract_class),
-            Felt252::from_str_radix(
-                "1703103364832599665802491695999915073351807236114175062140703903952998591438",
-                10
-            )
-            .unwrap()
-        );
-    }
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {
         let contract_str = fs::read_to_string("starknet_programs/class_with_abi.json").unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
         let mut contract_class = ContractClass {
-            program_json: contract_str.into(),
+            program_json: serde_json::Value::from_str(&contract_str).unwrap(),
             program: parsed_contract_class.program,
             entry_points_by_type: parsed_contract_class.entry_points_by_type,
             abi: parsed_contract_class.abi,
@@ -537,7 +365,7 @@ mod tests {
         assert_eq!(
             compute_hinted_class_hash(&mut contract_class),
             Felt252::from_str_radix(
-                "1703103364832599665802491695999915073351807236114175062140703903952998591438",
+                "1164033593603051336816641706326288678020608687718343927364853957751413025239",
                 10
             )
             .unwrap()

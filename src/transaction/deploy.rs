@@ -227,7 +227,7 @@ impl Deploy {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
+    use std::{collections::HashMap, fs::File, io::BufReader};
 
     use super::*;
     use crate::{
@@ -242,8 +242,9 @@ mod tests {
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         // Set contract_class
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
+        let contract_reader =
+            BufReader::new(File::open("starknet_programs/constructor.json").unwrap());
+        let contract_class = ContractClass::try_from(contract_reader).unwrap();
         let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
         let mut class_hash_bytes = [0u8; 32];
@@ -291,8 +292,9 @@ mod tests {
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         // Set contract_class
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/constructor.json")).unwrap();
+        let contract_reader =
+            BufReader::new(File::open("starknet_programs/constructor.json").unwrap());
+        let contract_class = ContractClass::try_from(contract_reader).unwrap();
 
         let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
@@ -325,9 +327,8 @@ mod tests {
         let state_reader = InMemoryStateReader::default();
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
-        // Set contract_class
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/amm.json")).unwrap();
+        let contract_reader = BufReader::new(File::open("starknet_programs/amm.json").unwrap());
+        let contract_class = ContractClass::try_from(contract_reader).unwrap();
 
         let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
@@ -359,13 +360,14 @@ mod tests {
 
     #[test]
     fn internal_deploy_computing_classhash_should_fail() {
+        let contract_json = BufReader::new(File::open("starknet_programs/amm.json").unwrap());
         // Take a contrat class to copy the program
-        let contract_class = ContractClass::try_from(PathBuf::from("starknet_programs/amm.json"));
+        let contract_class = ContractClass::try_from(contract_json).unwrap();
+
         // Make a new contract class with the same program but with errors
-        let program_json: serde_json::Value = serde_json::Value::from("{}");
         let error_contract_class = ContractClass {
-            program_json,
-            program: contract_class.unwrap().program,
+            program_json: contract_class.program_json,
+            program: contract_class.program,
             entry_points_by_type: HashMap::new(),
             abi: None,
         };

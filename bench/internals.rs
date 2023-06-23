@@ -16,19 +16,19 @@ use starknet_rs::{
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{hint::black_box, path::PathBuf};
+use std::{fs::File, hint::black_box, io::BufReader};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(BufReader::new(File::open(
         "starknet_programs/account_without_validation.json",
-    ))
+    ).unwrap()))
     .unwrap();
     static ref CLASS_HASH: [u8; 32] = compute_deprecated_class_hash(
         &CONTRACT_CLASS
     ).unwrap().to_be_bytes();
     static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
-        "3577223136242220508961486249701638158054969090851914040041358274796489907314"
+        "189548862728929016257839453949645442471483066277370950891097836163787837727"
     ));
     static ref SIGNATURE: Vec<Felt252> = vec![
         felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),

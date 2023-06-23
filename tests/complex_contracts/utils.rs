@@ -17,7 +17,8 @@ use starknet_rs::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    fs::File,
+    io::BufReader,
 };
 
 pub struct CallConfig<'a> {
@@ -133,8 +134,8 @@ pub fn deploy(
     block_context: &BlockContext,
     hash_value: Option<Felt252>,
 ) -> Result<(Address, [u8; 32]), TransactionError> {
-    let path = PathBuf::from(path);
-    let contract_class = ContractClass::try_from(path).unwrap();
+    let contract_reader = BufReader::new(File::open(path).unwrap());
+    let contract_class = ContractClass::try_from(contract_reader).unwrap();
 
     let internal_deploy = Deploy::new(
         Address(0.into()),
