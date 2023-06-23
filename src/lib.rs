@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 

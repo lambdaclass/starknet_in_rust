@@ -3619,6 +3619,7 @@ dependencies = [
 name = "starknet-rs"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert_matches",
  "awc",
  "cairo-lang-casm 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",

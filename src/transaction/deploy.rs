@@ -362,7 +362,9 @@ mod tests {
         // Take a contrat class to copy the program
         let contract_class = ContractClass::try_from(PathBuf::from("starknet_programs/amm.json"));
         // Make a new contract class with the same program but with errors
+        let program_json: serde_json::Value = serde_json::Value::from("{}");
         let error_contract_class = ContractClass {
+            program_json,
             program: contract_class.unwrap().program,
             entry_points_by_type: HashMap::new(),
             abi: None,

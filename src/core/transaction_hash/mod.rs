@@ -1,7 +1,6 @@
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
-        contract_address::v2::sierra_contract_address::compute_sierra_class_hash,
     },
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
     hash_utils::compute_hash_on_elements,
@@ -12,6 +11,8 @@ use crate::{
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
+
+use super::contract_address::v2::sierra_contract_address::compute_sierra_class_hash;
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
