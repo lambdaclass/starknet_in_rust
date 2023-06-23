@@ -191,17 +191,17 @@ pub struct CairoProgramToHash<'a> {
 
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
-fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt252 {
+fn compute_hinted_class_hash(contract_class: &ContractClass) -> Result<Felt252, ContractAddressError> {
     let program_as_string = contract_class.program_json.to_string();
     let mut cairo_program_hash: CairoContractDefinition =
-        serde_json::from_str(&program_as_string).unwrap();
+        serde_json::from_str(&program_as_string).map_err(|err| ContractAddressError::InvalidProgramJson(err.to_string()))?;
 
     cairo_program_hash
         .program
         .attributes
         .iter_mut()
         .try_for_each(|attr| -> anyhow::Result<()> {
-            let vals = attr.as_object_mut().unwrap();
+            let vals = attr.as_object_mut().ok_or(ContractAddressError::InvalidProgramJson("value not object".to_string()))?;
 
             match vals.get_mut("accessible_scopes") {
                 Some(serde_json::Value::Array(array)) => {
@@ -222,8 +222,7 @@ fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt252 {
             }
 
             Ok(())
-        })
-        .unwrap();
+        }).map_err(|err| ContractAddressError::InvalidProgramJson(err.to_string()))?;
     // Handle a backwards compatibility hack which is required if compiler_version is not present.
     // See `insert_space` for more details.
     if cairo_program_hash.program.compiler_version.is_none() {
@@ -233,10 +232,10 @@ fn compute_hinted_class_hash(contract_class: &ContractClass) -> Felt252 {
     let mut ser =
         serde_json::Serializer::with_formatter(KeccakWriter::default(), PythonDefaultFormatter);
 
-    cairo_program_hash.serialize(&mut ser).unwrap();
+    cairo_program_hash.serialize(&mut ser).map_err(|err| ContractAddressError::InvalidProgramJson(err.to_string()))?;
 
     let KeccakWriter(hash) = ser.into_inner();
-    truncated_keccak(<[u8; 32]>::from(hash.finalize()))
+    Ok(truncated_keccak(<[u8; 32]>::from(hash.finalize())))
 }
 
 pub(crate) fn truncated_keccak(mut plain: [u8; 32]) -> Felt252 {
@@ -315,7 +314,7 @@ pub fn compute_deprecated_class_hash(
 
     let builtin_list = compute_hash_on_elements(&builtin_list_vec)?;
 
-    let hinted_class_hash = compute_hinted_class_hash(&mut contract_class);
+    let hinted_class_hash = compute_hinted_class_hash(&mut contract_class)?;
 
     let mut bytecode_vector = Vec::new();
 
@@ -363,7 +362,7 @@ mod tests {
             abi: parsed_contract_class.abi,
         };
         assert_eq!(
-            compute_hinted_class_hash(&mut contract_class),
+            compute_hinted_class_hash(&mut contract_class).unwrap(),
             Felt252::from_str_radix(
                 "1164033593603051336816641706326288678020608687718343927364853957751413025239",
                 10
