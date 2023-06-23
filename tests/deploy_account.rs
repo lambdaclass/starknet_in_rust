@@ -150,7 +150,7 @@ fn internal_deploy_account_cairo1() {
         3, 178, 128, 25, 204, 253, 189, 48, 255, 198, 89, 81, 217, 75, 184, 92, 158, 43, 132, 52,
         17, 26, 0, 11, 90, 253, 83, 60, 230, 95, 87, 164,
     ];
-    let keys: HashSet<[u8; 32]> = [accessed_keys].to_vec().into_iter().collect();
+    let keys: HashSet<[u8; 32]> = [accessed_keys].iter().copied().collect();
 
     assert_eq!(
         tx_info,
