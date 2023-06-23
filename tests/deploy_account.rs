@@ -124,7 +124,7 @@ fn internal_deploy_account_cairo1() {
         0,
         1.into(),
         Felt252::zero(),
-        vec![2.into()],
+        vec![],
         vec![
             felt_str!(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
