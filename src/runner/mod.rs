@@ -84,7 +84,7 @@ where
         self.cairo_runner.run_from_entrypoint(
             entrypoint,
             &args,
-            &mut None,
+            &mut Default::default(),
             verify_secure,
             program_segment_size,
             &mut self.vm,
@@ -139,7 +139,7 @@ where
         self.cairo_runner.run_from_entrypoint(
             entrypoint_offset,
             &entrypoint_args,
-            &mut None,
+            &mut Default::default(),
             true,
             Some(self.cairo_runner.get_program().data_len() + program_extra_data.len()),
             &mut self.vm,

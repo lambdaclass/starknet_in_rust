@@ -5,6 +5,7 @@ use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
+use cairo_vm::vm::runners::cairo_runner::RunResources;
 use cairo_vm::{
     felt::Felt252,
     hint_processor::{
@@ -55,6 +56,7 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         _constants: &HashMap<String, Felt252>,
+        _run_resources: &mut RunResources,
     ) -> Result<(), HintError> {
         let hints: &Vec<Hint> = hint_data.downcast_ref().ok_or(HintError::WrongHintData)?;
         for hint in hints {
@@ -94,7 +96,7 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
         //(may contain other variables aside from those used by the hint)
         reference_ids: &HashMap<String, usize>,
         //List of all references (key corresponds to element of the previous dictionary)
-        references: &HashMap<usize, HintReference>,
+        references: &[HintReference],
     ) -> Result<Box<dyn Any>, VirtualMachineError> {
         self.cairo1_hint_processor.compile_hint(
             hint_code,

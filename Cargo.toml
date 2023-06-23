@@ -11,15 +11,15 @@ with_mimalloc = ["mimalloc"]
 members = ["crates/starknet-contract-class", "fuzzer", "cli"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.5.2", features = ["cairo-1-hints"]}
-starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev="a891109ecc9c269e91b1afd2d44bc597728e1172", features = [
+cairo-vm = { version = "0.6.0", features = ["cairo-1-hints"] }
+starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "a891109ecc9c269e91b1afd2d44bc597728e1172", features = [
     "testing",
 ] }
 
 [dependencies]
 cairo-lang-starknet = "1.1.0"
 cairo-lang-casm = "1.1.0"
-cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
+cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
@@ -28,7 +28,7 @@ num-traits = "0.2.15"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 sha3 = "0.10.1"
-starknet_api = { workspace = true}
+starknet_api = { workspace = true }
 starknet-crypto = "0.4.3"
 thiserror = "1.0.32"
 awc = "3.1.1"

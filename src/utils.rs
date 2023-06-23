@@ -479,6 +479,7 @@ pub mod test_utils {
                 exec_scopes_ref!(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
         }};
     }

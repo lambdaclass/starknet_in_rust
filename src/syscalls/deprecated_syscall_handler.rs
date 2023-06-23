@@ -6,7 +6,7 @@ use crate::{
     state::state_api::{State, StateReader},
     syscalls::syscall_handler_errors::SyscallHandlerError,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::RunResources};
 use cairo_vm::{
     hint_processor::{
         builtin_hint_processor::{
@@ -41,10 +41,13 @@ impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, Felt252>,
     ) -> Result<bool, HintError> {
-        match self
-            .builtin_hint_processor
-            .execute_hint(vm, exec_scopes, hint_data, constants)
-        {
+        match self.builtin_hint_processor.execute_hint(
+            vm,
+            exec_scopes,
+            hint_data,
+            constants,
+            &mut Default::default(),
+        ) {
             Ok(()) => Ok(false),
             Err(HintError::UnknownHint(_)) => Ok(true),
             Err(e) => Err(e),
@@ -150,6 +153,7 @@ impl<'a, T: State + StateReader> HintProcessor for DeprecatedSyscallHintProcesso
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, Felt252>,
+        _run_resources: &mut RunResources,
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
             self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
@@ -308,6 +312,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .unwrap();
 
@@ -339,6 +344,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .unwrap();
 
@@ -390,6 +396,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .unwrap();
 
@@ -461,6 +468,7 @@ mod tests {
             &mut ExecutionScopes::new(),
             &any_box!(hint_data),
             &HashMap::new(),
+            &mut Default::default(),
         );
 
         assert_matches!(result, Ok(()));
@@ -555,6 +563,7 @@ mod tests {
             &mut ExecutionScopes::new(),
             &any_box!(hint_data),
             &HashMap::new(),
+            &mut Default::default(),
         );
 
         assert_matches!(result, Ok(()));
@@ -590,6 +599,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .unwrap();
 
@@ -635,6 +645,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .unwrap();
 
@@ -684,6 +695,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             ),
             Ok(())
         );
@@ -714,6 +726,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .unwrap();
 
@@ -768,6 +781,7 @@ mod tests {
             &mut ExecutionScopes::new(),
             &any_box!(hint_data),
             &HashMap::new(),
+            &mut Default::default(),
         );
 
         assert!(result.is_ok());
@@ -835,6 +849,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .is_ok());
 
@@ -896,6 +911,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             )
             .is_ok());
 
@@ -970,6 +986,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             ),
             Ok(())
         );
@@ -1068,6 +1085,7 @@ mod tests {
                 &mut ExecutionScopes::new(),
                 &any_box!(hint_data),
                 &HashMap::new(),
+                &mut Default::default(),
             ),
             Ok(())
         );
