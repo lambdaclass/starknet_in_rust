@@ -11,20 +11,24 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+    },
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
     },
     utils::{calculate_tx_resources, Address},
 };
+
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
     #[getset(get = "pub")]
     contract_address: Address,
@@ -41,6 +45,8 @@ pub struct InvokeFunction {
     signature: Vec<Felt252>,
     max_fee: u128,
     nonce: Option<Felt252>,
+    skip_validation: bool,
+    skip_execute: bool,
 }
 
 impl InvokeFunction {
@@ -88,6 +94,8 @@ impl InvokeFunction {
             validate_entry_point_selector,
             nonce,
             hash_value,
+            skip_validation: false,
+            skip_execute: false,
         })
     }
 
@@ -110,7 +118,7 @@ impl InvokeFunction {
         ))
     }
 
-    fn run_validate_entrypoint<T>(
+    pub(crate) fn run_validate_entrypoint<T>(
         &self,
         state: &mut T,
         resources_manager: &mut ExecutionResourcesManager,
@@ -123,6 +131,9 @@ impl InvokeFunction {
             return Ok(None);
         }
         if self.version.is_zero() {
+            return Ok(None);
+        }
+        if self.skip_validation {
             return Ok(None);
         }
 
@@ -197,16 +208,20 @@ impl InvokeFunction {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
-        let call_info = self.run_execute_entrypoint(
-            state,
-            block_context,
-            &mut resources_manager,
-            remaining_gas,
-        )?;
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(self.run_execute_entrypoint(
+                state,
+                block_context,
+                &mut resources_manager,
+                remaining_gas,
+            )?)
+        };
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &vec![Some(call_info.clone()), validate_info.clone()],
+            &vec![call_info.clone(), validate_info.clone()],
             self.tx_type,
             changes,
             None,
@@ -214,7 +229,7 @@ impl InvokeFunction {
         let transaction_execution_info =
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 validate_info,
-                Some(call_info),
+                call_info,
                 actual_resources,
                 Some(self.tx_type),
             );
@@ -241,10 +256,18 @@ impl InvokeFunction {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
+        let fee_transfer_info = if self.skip_execute {
+            None
+        } else {
+            Some(execute_fee_transfer(
+                state,
+                block_context,
+                &mut tx_execution_context,
+                actual_fee,
+            )?)
+        };
 
-        Ok((Some(fee_transfer_info), actual_fee))
+        Ok((fee_transfer_info, actual_fee))
     }
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
@@ -278,7 +301,6 @@ impl InvokeFunction {
         let contract_address = self.contract_address();
 
         let current_nonce = state.get_nonce_at(contract_address)?;
-
         match &self.nonce {
             None => {
                 // TODO: Remove this once we have a better way to handle the nonce.
@@ -295,6 +317,32 @@ impl InvokeFunction {
                 Ok(())
             }
         }
+    }
+
+    // Simulation function
+
+    pub(crate) fn create_for_simulation(
+        &self,
+        tx: InvokeFunction,
+        skip_validation: bool,
+        skip_execute: bool,
+    ) -> InvokeFunction {
+        InvokeFunction {
+            skip_validation,
+            skip_execute,
+            ..tx
+        }
+    }
+
+    pub(crate) fn simulate_transaction<S: StateReader>(
+        &self,
+        state: S,
+        block_context: BlockContext,
+        remaining_gas: u128,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let mut cache_state = CachedState::new(state, None, None);
+        // init simulation
+        self.execute(&mut cache_state, &block_context, remaining_gas)
     }
 }
 
@@ -370,6 +418,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -436,6 +486,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -498,6 +550,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -554,6 +608,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: None,
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -616,6 +672,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: None,
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -670,6 +728,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 1000,
             nonce: Some(0.into()),
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -729,6 +789,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 1000,
             nonce: Some(0.into()),
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -789,6 +851,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: Some(0.into()),
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
@@ -849,6 +913,8 @@ mod tests {
             signature: Vec::new(),
             max_fee: 0,
             nonce: None,
+            skip_validation: false,
+            skip_execute: false,
         };
 
         // Instantiate CachedState
