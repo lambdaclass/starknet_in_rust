@@ -295,7 +295,7 @@ fn get_contract_entry_points_hashed(
 }
 
 pub fn compute_deprecated_class_hash(
-    mut contract_class: &ContractClass,
+    contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {
     // Deprecated API version.
     let api_version = Felt252::zero();
@@ -323,7 +323,7 @@ pub fn compute_deprecated_class_hash(
 
     let builtin_list = compute_hash_on_elements(&builtin_list_vec)?;
 
-    let hinted_class_hash = compute_hinted_class_hash(&mut contract_class)?;
+    let hinted_class_hash = compute_hinted_class_hash(contract_class)?;
 
     let mut bytecode_vector = Vec::new();
 
@@ -364,14 +364,14 @@ mod tests {
     fn test_compute_hinted_class_hash_with_abi() {
         let contract_str = fs::read_to_string("starknet_programs/class_with_abi.json").unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let mut contract_class = ContractClass {
+        let contract_class = ContractClass {
             program_json: serde_json::Value::from_str(&contract_str).unwrap(),
             program: parsed_contract_class.program,
             entry_points_by_type: parsed_contract_class.entry_points_by_type,
             abi: parsed_contract_class.abi,
         };
         assert_eq!(
-            compute_hinted_class_hash(&mut contract_class).unwrap(),
+            compute_hinted_class_hash(&contract_class).unwrap(),
             Felt252::from_str_radix(
                 "1164033593603051336816641706326288678020608687718343927364853957751413025239",
                 10
@@ -384,7 +384,7 @@ mod tests {
     fn test_compute_class_hash_1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4() {
         let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4.json").unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let mut contract_class = ContractClass {
+        let contract_class = ContractClass {
             program_json: serde_json::Value::from_str(&contract_str).unwrap(),
             program: parsed_contract_class.program,
             entry_points_by_type: parsed_contract_class.entry_points_by_type,
@@ -392,7 +392,7 @@ mod tests {
         };
 
         assert_eq!(
-            compute_deprecated_class_hash(&mut contract_class).unwrap(),
+            compute_deprecated_class_hash(&contract_class).unwrap(),
             Felt252::from_str_radix(
                 "1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4",
                 16
@@ -406,7 +406,7 @@ mod tests {
     {
         let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e.json").unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let mut contract_class = ContractClass {
+        let contract_class = ContractClass {
             program_json: serde_json::Value::from_str(&contract_str).unwrap(),
             program: parsed_contract_class.program,
             entry_points_by_type: parsed_contract_class.entry_points_by_type,
@@ -414,7 +414,7 @@ mod tests {
         };
 
         assert_eq!(
-            compute_deprecated_class_hash(&mut contract_class).unwrap(),
+            compute_deprecated_class_hash(&contract_class).unwrap(),
             Felt252::from_str_radix(
                 "03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e",
                 16
@@ -428,7 +428,7 @@ mod tests {
     {
         let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918.json").unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let mut contract_class = ContractClass {
+        let contract_class = ContractClass {
             program_json: serde_json::Value::from_str(&contract_str).unwrap(),
             program: parsed_contract_class.program,
             entry_points_by_type: parsed_contract_class.entry_points_by_type,
@@ -436,7 +436,7 @@ mod tests {
         };
 
         assert_eq!(
-            compute_deprecated_class_hash(&mut contract_class).unwrap(),
+            compute_deprecated_class_hash(&contract_class).unwrap(),
             Felt252::from_str_radix(
                 "025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
                 16
@@ -450,7 +450,7 @@ mod tests {
     {
         let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33.json").unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let mut contract_class = ContractClass {
+        let contract_class = ContractClass {
             program_json: serde_json::Value::from_str(&contract_str).unwrap(),
             program: parsed_contract_class.program,
             entry_points_by_type: parsed_contract_class.entry_points_by_type,
@@ -458,7 +458,7 @@ mod tests {
         };
 
         assert_eq!(
-            compute_deprecated_class_hash(&mut contract_class).unwrap(),
+            compute_deprecated_class_hash(&contract_class).unwrap(),
             Felt252::from_str_radix(
                 "02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33",
                 16
