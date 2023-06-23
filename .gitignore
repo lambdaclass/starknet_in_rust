@@ -53,3 +53,4 @@ lcov.info
 !starknet_programs/class_with_abi.json
 !starknet_programs/program_without_attributes.json
 !starknet_programs/program_without_attributes_2.json
+!starknet_programs/raw_contract_classes/*.json
