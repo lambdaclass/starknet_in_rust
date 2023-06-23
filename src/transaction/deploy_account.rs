@@ -6,7 +6,10 @@ use crate::{
     },
     definitions::{
         block_context::BlockContext,
-        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
+        constants::{
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
+            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
+        },
         transaction_type::TransactionType,
     },
     execution::{
@@ -248,7 +251,7 @@ impl DeployAccount {
             EntryPointType::Constructor,
             None,
             None,
-            10000000,
+            INITIAL_GAS_COST,
         );
 
         let call_info = entry_point.execute(
@@ -303,7 +306,7 @@ impl DeployAccount {
             EntryPointType::External,
             None,
             None,
-            10000000,
+            INITIAL_GAS_COST,
         );
 
         let call_info = call.execute(

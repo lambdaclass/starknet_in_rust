@@ -1,6 +1,9 @@
 use super::error::TransactionError;
 use crate::{
-    definitions::{block_context::BlockContext, constants::TRANSFER_ENTRY_POINT_SELECTOR},
+    definitions::{
+        block_context::BlockContext,
+        constants::{INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
+    },
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
     },
@@ -46,7 +49,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         EntryPointType::External,
         None,
         None,
-        10000000,
+        INITIAL_GAS_COST,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
