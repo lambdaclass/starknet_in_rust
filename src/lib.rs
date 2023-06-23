@@ -13,7 +13,6 @@ use crate::{
     transaction::{error::TransactionError, Transaction},
 };
 
-use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
 use starknet_contract_class::EntryPointType;
 use state::cached_state::CachedState;
@@ -25,6 +24,7 @@ use utils::Address;
 extern crate assert_matches;
 
 // Re-exports
+pub use cairo_vm::felt::Felt252;
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
