@@ -142,8 +142,7 @@ fn internal_deploy_account_cairo1() {
     let tx_info = internal_deploy_account
         .execute(&mut state, &Default::default())
         .unwrap();
-    let bytes = felt_str!("1979706721653833758925397712865600297316042839304765459608024204080243")
-        .to_be_bytes();
+    let bytes = felt_str!("24944740430830204917365432020251520094789").to_be_bytes();
     let ret = std::str::from_utf8(&bytes).unwrap();
     let s = String::from(ret);
     dbg!(s);

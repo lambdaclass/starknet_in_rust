@@ -289,17 +289,15 @@ impl DeployAccount {
             return Ok(None);
         }
 
-        let mut calldata = [
-            Felt252::from_bytes_be(&self.class_hash),
-            self.contract_address_salt.0.clone(),
-        ]
-        .to_vec();
-
-        calldata.extend(self.constructor_calldata.clone());
-
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
-            calldata,
+            [
+                Felt252::from_bytes_be(&self.class_hash),
+                self.contract_address_salt.0.clone(),
+            ]
+            .into_iter()
+            .chain(self.constructor_calldata.iter().cloned())
+            .collect(),
             VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
             Address(Felt252::zero()),
             EntryPointType::External,
