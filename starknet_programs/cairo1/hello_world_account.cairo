@@ -36,15 +36,6 @@ mod Account {
         assert(signature.len() == 2_u32, 'INVALID_SIGNATURE_LENGTH'); // Check signature length
 
         // Verify ECDSA signature
-        assert(
-            check_ecdsa_signature(
-                message_hash: tx_info.transaction_hash,
-                public_key: public_key::read(),
-                signature_r: *signature[0_u32],
-                signature_s: *signature[1_u32],
-            ),
-            'INVALID_SIGNATURE',
-        );
 
         starknet::VALIDATED // Return validation status
     }

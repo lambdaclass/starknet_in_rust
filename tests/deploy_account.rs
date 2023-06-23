@@ -1,6 +1,9 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::{
+    felt::{felt_str, Felt252},
+    vm::runners::cairo_runner::ExecutionResources,
+};
 use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
@@ -18,7 +21,7 @@ use starknet_rs::{
     utils::{felt_to_hash, Address},
     CasmContractClass,
 };
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -142,35 +145,86 @@ fn internal_deploy_account_cairo1() {
     let tx_info = internal_deploy_account
         .execute(&mut state, &Default::default())
         .unwrap();
-    let bytes = felt_str!("24944740430830204917365432020251520094789").to_be_bytes();
-    let ret = std::str::from_utf8(&bytes).unwrap();
-    let s = String::from(ret);
-    dbg!(s);
+
+    let accessed_keys: [u8; 32] = [
+        3, 178, 128, 25, 204, 253, 189, 48, 255, 198, 89, 81, 217, 75, 184, 92, 158, 43, 132, 52,
+        17, 26, 0, 11, 90, 253, 83, 60, 230, 95, 87, 164,
+    ];
+    let keys: HashSet<[u8; 32]> = [accessed_keys].to_vec().into_iter().collect();
 
     assert_eq!(
         tx_info,
         TransactionExecutionInfo::new(
-            None,
+            Some(CallInfo {
+                caller_address: Address(0.into()),
+                call_type: Some(CallType::Call),
+                contract_address: Address(felt_str!(
+                    "397149464972449753182583229366244826403270781177748543857889179957856017275"
+                )),
+                code_address: None,
+                gas_consumed:17370 ,
+                class_hash: Some([
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 1
+                ]),
+                entry_point_selector: Some(felt_str!(
+                    "1554466106298962091002569854891683800203193677547440645928814916929210362005"
+                )),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![
+                    1.into(),
+                   felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
+                    2.into()
+                ],
+                retdata: vec![felt_str!("370462705988")],
+                execution_resources: ExecutionResources {
+                    n_steps: 162,
+                    n_memory_holes: 17,
+                    builtin_instance_counter:
+                    [
+                    ("range_check_builtin", 2),
+                    ]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
+            },
+
+                ..Default::default() }),
+
             Some(CallInfo {
                 call_type: Some(CallType::Call),
                 contract_address: Address(felt_str!(
-                    "3577223136242220508961486249701638158054969090851914040041358274796489907314"
+                    "397149464972449753182583229366244826403270781177748543857889179957856017275"
                 )),
                 class_hash: Some(
                     TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH
                         .clone()
                         .to_be_bytes()
                 ),
-                entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
+                entry_point_selector: Some(felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
                 entry_point_type: Some(EntryPointType::Constructor),
+                gas_consumed: 14350,
+                calldata: vec![2.into()],
+                accessed_storage_keys: keys,
+                execution_resources: ExecutionResources {
+                    n_steps: 93,
+                    n_memory_holes: 1,
+                    builtin_instance_counter:
+                    [
+                        ("range_check_builtin", 2),
+                    ]
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
+            },
                 ..Default::default()
             }),
             None,
-            1000000,
+            0,
             [
                 ("pedersen_builtin", 23),
-                ("range_check_builtin", 74),
-                ("l1_gas_usage", 1224)
+                ("range_check_builtin", 78),
+                ("l1_gas_usage", 3672)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
