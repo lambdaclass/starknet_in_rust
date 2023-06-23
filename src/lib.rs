@@ -14,7 +14,6 @@ use crate::{
 };
 
 use definitions::block_context::BlockContext;
-use starknet_contract_class::EntryPointType;
 use state::cached_state::CachedState;
 use transaction::InvokeFunction;
 use utils::Address;
@@ -24,10 +23,11 @@ use utils::Address;
 extern crate assert_matches;
 
 // Re-exports
-pub use cairo_vm::felt::Felt252;
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+pub use cairo_vm::felt::Felt252;
+pub use starknet_contract_class::EntryPointType;
 
 pub mod core;
 pub mod definitions;
