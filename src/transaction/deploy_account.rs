@@ -26,7 +26,7 @@ use crate::{
     },
     utils::{calculate_tx_resources, Address, ClassHash},
 };
-use cairo_vm::felt::{Felt252, felt_str};
+use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
@@ -248,7 +248,7 @@ impl DeployAccount {
             EntryPointType::Constructor,
             None,
             None,
-            0,
+            10000000,
         );
 
         let call_info = entry_point.execute(
@@ -289,22 +289,23 @@ impl DeployAccount {
             return Ok(None);
         }
 
+        let mut calldata = [
+            Felt252::from_bytes_be(&self.class_hash),
+            self.contract_address_salt.0.clone(),
+        ]
+        .to_vec();
+
+        calldata.extend(self.constructor_calldata.clone());
+
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
-            [
-                Felt252::from_bytes_be(&self.class_hash),
-                self.contract_address_salt.0.clone(),
-                felt_str!("42"),
-            ]
-            .into_iter()
-            .chain(self.constructor_calldata.iter().cloned())
-            .collect(),
+            calldata,
             VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
             Address(Felt252::zero()),
             EntryPointType::External,
             None,
             None,
-            0,
+            10000000,
         );
 
         let call_info = call.execute(

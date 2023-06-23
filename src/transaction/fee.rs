@@ -46,7 +46,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         EntryPointType::External,
         None,
         None,
-        0,
+        10000000,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

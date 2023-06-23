@@ -124,7 +124,7 @@ fn internal_deploy_account_cairo1() {
         0,
         1.into(),
         Felt252::zero(),
-        vec![],
+        vec![2.into()],
         vec![
             felt_str!(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
@@ -142,11 +142,11 @@ fn internal_deploy_account_cairo1() {
     let tx_info = internal_deploy_account
         .execute(&mut state, &Default::default())
         .unwrap();
-
-    let bytes = felt_str!("370462705988")
+    let bytes = felt_str!("1979706721653833758925397712865600297316042839304765459608024204080243")
         .to_be_bytes();
     let ret = std::str::from_utf8(&bytes).unwrap();
-    dbg!(ret);
+    let s = String::from(ret);
+    dbg!(s);
 
     assert_eq!(
         tx_info,
@@ -167,7 +167,7 @@ fn internal_deploy_account_cairo1() {
                 ..Default::default()
             }),
             None,
-            0,
+            1000000,
             [
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 74),
