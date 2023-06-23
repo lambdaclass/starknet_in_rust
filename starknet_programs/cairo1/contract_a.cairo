@@ -1,7 +1,7 @@
 #[contract]
 mod ContractA {
     use traits::Into;
-    use starknet::info::get_contract_address;
+    //use starknet::info::get_contract_address;
     struct Storage {
         value: u128, 
     }
