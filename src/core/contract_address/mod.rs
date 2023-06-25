@@ -361,7 +361,9 @@ mod tests {
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {
-        let contract_str = fs::read_to_string("starknet_programs/class_with_abi.json").unwrap();
+        let contract_str =
+            fs::read_to_string("starknet_programs/raw_contract_classes/class_with_abi.json")
+                .unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
         let contract_class = ContractClass {
             program_json: serde_json::Value::from_str(&contract_str).unwrap(),

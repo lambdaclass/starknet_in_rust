@@ -282,7 +282,7 @@ mod tests {
 
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x068dd0dd8a54ebdaa10563fbe193e6be1e0f7c423c0c3ce1e91c0b682a86b5f9
         File::open(PathBuf::from(
-            "../../starknet_programs/program_without_attributes.json",
+            "../../starknet_programs/raw_contract_classes/program_without_attributes.json",
         ))
         .and_then(|mut f| f.read_to_string(&mut serialized))
         .expect("should be able to read file");
@@ -298,7 +298,7 @@ mod tests {
 
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x071b7f73b5e2b4f81f7cf01d4d1569ccba2921b3fa3170cf11cff3720dfe918e
         File::open(PathBuf::from(
-            "../../starknet_programs/program_without_attributes_2.json",
+            "../../starknet_programs/raw_contract_classes/program_without_attributes_2.json",
         ))
         .and_then(|mut f| f.read_to_string(&mut serialized))
         .expect("should be able to read file");
