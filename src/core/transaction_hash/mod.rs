@@ -1,14 +1,14 @@
 use crate::{
-    core::contract_address::compute_deprecated_class_hash,
-    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
+    core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash},
+    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+    hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
+    utils::Address,
 };
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
-
-use super::contract_address::v2::sierra_contract_address::compute_sierra_class_hash;
 
 #[derive(Debug)]
 pub enum TransactionHashPrefix {
@@ -24,9 +24,7 @@ impl TransactionHashPrefix {
         match self {
             TransactionHashPrefix::Declare => felt_str!("28258975365558885"),
             TransactionHashPrefix::Deploy => felt_str!("110386840629113"),
-            TransactionHashPrefix::DeployAccount => {
-                felt_str!("2036277798190617858034555652763252")
-            }
+            TransactionHashPrefix::DeployAccount => felt_str!("2036277798190617858034555652763252"),
             TransactionHashPrefix::Invoke => felt_str!("115923154332517"),
             TransactionHashPrefix::L1Handler => felt_str!("510926345461491391292786"),
         }

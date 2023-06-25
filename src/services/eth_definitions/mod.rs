@@ -1,1 +1,1 @@
-pub mod eth_gas_constans;
+pub mod eth_gas_constants;

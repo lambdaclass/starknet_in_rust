@@ -78,7 +78,7 @@ fn internal_deploy_account() {
             Some(CallInfo {
                 call_type: Some(CallType::Call),
                 contract_address: Address(felt_str!(
-                    "189548862728929016257839453949645442471483066277370950891097836163787837727"
+                    "2334515353736376396592811097415578721845071065790050485104424090769207806454"
                 )),
                 class_hash: Some(class_hash),
                 entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
