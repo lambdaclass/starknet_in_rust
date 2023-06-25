@@ -6,11 +6,11 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
 use cairo_vm::felt::Felt252;
-use std::{collections::BTreeMap, borrow::Cow};
 use num_traits::Zero;
 use serde::Serialize;
 use sha3::Digest;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
+use std::{borrow::Cow, collections::BTreeMap};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 0x03;
