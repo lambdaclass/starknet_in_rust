@@ -6,12 +6,11 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
 use cairo_vm::felt::Felt252;
-
+use std::{collections::BTreeMap, borrow::Cow};
 use num_traits::Zero;
 use serde::Serialize;
 use sha3::Digest;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
-use std::{borrow::Cow, collections::BTreeMap};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 0x03;
@@ -95,7 +94,7 @@ impl std::io::Write for KeccakWriter {
     }
 }
 
-/// Starknet doesn't use compact formatting for JSON but default python formatting.
+/// Starkware doesn't use compact formatting for JSON but default python formatting.
 /// This is required to hash to the same value after sorted serialization.
 struct PythonDefaultFormatter;
 
@@ -250,6 +249,29 @@ pub(crate) fn truncated_keccak(mut plain: [u8; 32]) -> Felt252 {
     Felt252::from_bytes_be(&plain)
 }
 
+// Temporary hack here because Python only emits ASCII to JSON.
+#[allow(unused)]
+fn unicode_encode(s: &str) -> String {
+    use std::fmt::Write;
+
+    let mut output = String::with_capacity(s.len());
+    let mut buf = [0, 0];
+
+    for c in s.chars() {
+        if c.is_ascii() {
+            output.push(c);
+        } else {
+            let buf = c.encode_utf16(&mut buf);
+            for i in buf {
+                // Unwrapping should be safe here
+                write!(output, r"\u{:4x}", i).unwrap();
+            }
+        }
+    }
+
+    output
+}
+
 fn get_contract_entry_points_hashed(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
@@ -335,7 +357,9 @@ mod tests {
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {
-        let contract_str = fs::read_to_string("starknet_programs/class_with_abi.json").unwrap();
+        let contract_str =
+            fs::read_to_string("starknet_programs/raw_contract_classes/class_with_abi.json")
+                .unwrap();
         let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
         let contract_class = ContractClass {
             program_json: serde_json::Value::from_str(&contract_str).unwrap(),
