@@ -13,7 +13,6 @@ use cairo_vm::felt::Felt252;
 
 use num_traits::Zero;
 use serde::Serialize;
-// use serde_json::json;
 use sha3::Digest;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
