@@ -327,7 +327,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let address = calculate_contract_address(
-            &contract_address_salt.clone(),
+            &contract_address_salt,
             &hash,
             &[],
             Address(Felt252::zero()),
