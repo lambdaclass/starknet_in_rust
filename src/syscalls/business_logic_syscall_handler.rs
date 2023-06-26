@@ -1,3 +1,4 @@
+#![allow(clippy::absurd_extreme_comparisons)]
 #![allow(dead_code)] // TODO: Remove this!
 
 use std::collections::HashMap;
