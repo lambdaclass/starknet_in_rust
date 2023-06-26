@@ -49,6 +49,7 @@ starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 	cd starknet_programs/ && \
 	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
 	../$< \
+	--no_debug_info \
 	--output ./$*.json \
 	--abi ./$*_abi.json \
 	|| rm ./$*.json ./$*_abi.json
@@ -76,7 +77,7 @@ cairo-repo-dir = cairo
 build-cairo-1-compiler: | $(cairo-repo-dir)
 
 $(cairo-repo-dir):
-	git clone --depth 1 -b v1.0.0-rc0 https://github.com/starkware-libs/cairo.git
+	git clone --depth 1 -b v1.1.0 https://github.com/starkware-libs/cairo.git
 	cd cairo; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
 
 

@@ -10,26 +10,27 @@ use starknet_rs::{
         block_context::StarknetChainId,
         constants::{TRANSACTION_VERSION, VALIDATE_ENTRY_POINT_SELECTOR},
     },
+    hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{hint::black_box, path::PathBuf};
+use std::{fs::File, hint::black_box, io::BufReader};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(BufReader::new(File::open(
         "starknet_programs/account_without_validation.json",
-    ))
+    ).unwrap()))
     .unwrap();
-    static ref CLASS_HASH: [u8; 32] = compute_deprecated_class_hash(
-        &CONTRACT_CLASS
-    ).unwrap().to_be_bytes();
-    static ref CONTRACT_ADDRESS: Address = Address(felt_str!(
-        "3577223136242220508961486249701638158054969090851914040041358274796489907314"
-    ));
+    static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
+    static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
+    static ref SALT: Felt252 = felt_str!(
+        "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+    );
+    static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
     static ref SIGNATURE: Vec<Felt252> = vec![
         felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
         felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
@@ -64,17 +65,14 @@ fn deploy_account() {
     let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
-        .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
+        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
         .unwrap();
 
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
-        let salt = Address(felt_str!(
-            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
-        ));
-        let class_hash = *CLASS_HASH;
+        let class_hash = *CLASS_HASH_BYTES;
         let signature = SIGNATURE.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
@@ -85,7 +83,7 @@ fn deploy_account() {
                 Felt252::zero(),
                 vec![],
                 signature,
-                salt,
+                SALT.clone(),
                 StarknetChainId::TestNet.to_felt(),
                 None,
             )
@@ -137,16 +135,16 @@ fn deploy() {
     let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
-        .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
+        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
         .unwrap();
 
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
-        let salt = Address(felt_str!(
+        let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
-        ));
+        );
         let class = CONTRACT_CLASS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
@@ -173,16 +171,15 @@ fn invoke() {
     let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
-        .set_contract_class(&CLASS_HASH, &CONTRACT_CLASS)
+        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
         .unwrap();
 
     let block_context = &Default::default();
 
-    let salt = Address(felt_str!(
-        "2669425616857739096022668060305620640217901643963991674344872184515580705509"
-    ));
+    let salt =
+        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
     let class = CONTRACT_CLASS.clone();
-    let internal_deploy = Deploy::new(
+    let deploy = Deploy::new(
         salt,
         class,
         vec![],
@@ -191,7 +188,8 @@ fn invoke() {
         None,
     )
     .unwrap();
-    internal_deploy.execute(&mut state, block_context).unwrap();
+
+    let _deploy_exec_info = deploy.execute(&mut state, block_context).unwrap();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
@@ -213,7 +211,7 @@ fn invoke() {
                 None,
             )
             .unwrap();
-            internal_invoke.execute(&mut state_copy, block_context, 0)
+            internal_invoke.execute(&mut state_copy, block_context, 2_000_000)
         })
         .unwrap();
     }
