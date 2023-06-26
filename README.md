@@ -51,7 +51,7 @@ It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust im
 
 ### Dependencies
 - Rust 1.70
-- A working installation of cairo-lang 0.11.2 (for compiling the cairo files)
+- A working installation of cairo-lang 0.12 (for compiling the cairo files)
 - [Optional, for testing purposes] Heaptrack 
 
 ### Installation
