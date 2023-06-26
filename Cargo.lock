@@ -3639,7 +3639,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "starknet-contract-class",
- "starknet-crypto 0.4.3",
+ "starknet-crypto 0.5.1",
  "starknet_api",
  "thiserror",
 ]

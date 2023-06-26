@@ -30,7 +30,7 @@ lazy_static! {
     static ref SALT: Felt252 = felt_str!(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     );
-    static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &vec![], Address(0.into())).unwrap());
+    static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
     static ref SIGNATURE: Vec<Felt252> = vec![
         felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
         felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
