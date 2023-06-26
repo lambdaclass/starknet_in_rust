@@ -46,7 +46,7 @@ pub struct DeployAccount {
     #[getset(get = "pub")]
     contract_address: Address,
     #[getset(get = "pub")]
-    contract_address_salt: Address,
+    contract_address_salt: Felt252,
     #[getset(get = "pub")]
     class_hash: ClassHash,
     #[getset(get = "pub")]
@@ -69,7 +69,7 @@ impl DeployAccount {
         nonce: Felt252,
         constructor_calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
-        contract_address_salt: Address,
+        contract_address_salt: Felt252,
         chain_id: Felt252,
         hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
@@ -89,7 +89,7 @@ impl DeployAccount {
                 &constructor_calldata,
                 max_fee,
                 nonce.clone(),
-                contract_address_salt.0.clone(),
+                contract_address_salt.clone(),
                 chain_id,
             )?,
         };
@@ -296,7 +296,7 @@ impl DeployAccount {
             self.contract_address.clone(),
             [
                 Felt252::from_bytes_be(&self.class_hash),
-                self.contract_address_salt.0.clone(),
+                self.contract_address_salt.clone(),
             ]
             .into_iter()
             .chain(self.constructor_calldata.iter().cloned())
@@ -387,7 +387,7 @@ mod tests {
             0.into(),
             vec![10.into()],
             Vec::new(),
-            Address(0.into()),
+            0.into(),
             StarknetChainId::TestNet2.to_felt(),
             None,
         )
@@ -424,7 +424,7 @@ mod tests {
             0.into(),
             vec![10.into()],
             Vec::new(),
-            Address(0.into()),
+            0.into(),
             StarknetChainId::TestNet2.to_felt(),
             None,
         )
@@ -437,7 +437,7 @@ mod tests {
             0.into(),
             vec![10.into()],
             Vec::new(),
-            Address(0.into()),
+            0.into(),
             StarknetChainId::TestNet2.to_felt(),
             None,
         )
@@ -478,7 +478,7 @@ mod tests {
             0.into(),
             Vec::new(),
             Vec::new(),
-            Address(0.into()),
+            0.into(),
             StarknetChainId::TestNet2.to_felt(),
             None,
         )

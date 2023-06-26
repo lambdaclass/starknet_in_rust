@@ -59,9 +59,7 @@ fn internal_deploy_account() {
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],
-        Address(felt_str!(
-            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
-        )),
+        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
         StarknetChainId::TestNet.to_felt(),
         None,
     )
@@ -136,7 +134,7 @@ fn internal_deploy_account_cairo1() {
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],
-        Address(contract_address_salt),
+        contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
         None,
     )

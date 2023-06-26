@@ -138,7 +138,7 @@ pub fn deploy(
     let contract_class = ContractClass::try_from(contract_reader).unwrap();
 
     let internal_deploy = Deploy::new(
-        Address(0.into()),
+        0.into(),
         contract_class.clone(),
         calldata.to_vec(),
         0.into(),

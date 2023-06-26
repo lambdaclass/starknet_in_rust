@@ -128,7 +128,7 @@ fn deploy_parser(
         None => Vec::new(),
     };
     let address = calculate_contract_address(
-        &Address(args.salt.into()),
+        &args.salt.into(),
         &Felt252::from_str_radix(&args.class_hash[2..], 16)
             .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
         &constructor_calldata,

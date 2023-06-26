@@ -37,7 +37,7 @@ lazy_static! {
 fn main() {
     const RUNS: usize = 10000;
     let mut starknet_state = StarknetState::new(None);
-    let contract_address_salt = Address(1.into());
+    let contract_address_salt = 1.into();
 
     let (contract_address, _exec_info) = starknet_state
         .deploy(

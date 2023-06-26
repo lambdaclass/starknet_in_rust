@@ -716,7 +716,7 @@ where
         };
 
         let contract_address = Address(calculate_contract_address(
-            &Address(request.salt),
+            &request.salt,
             class_hash,
             &constructor_calldata,
             deployer_address,

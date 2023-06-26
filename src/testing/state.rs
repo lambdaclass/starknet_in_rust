@@ -171,7 +171,7 @@ impl StarknetState {
         &mut self,
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt252>,
-        contract_address_salt: Address,
+        contract_address_salt: Felt252,
         hash_value: Option<Felt252>,
         remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
@@ -317,7 +317,7 @@ mod tests {
             BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
         let contract_class = ContractClass::try_from(contract_reader).unwrap();
 
-        let contract_address_salt = Address(1.into());
+        let contract_address_salt = 1.into();
 
         // expected results
 
@@ -499,7 +499,7 @@ mod tests {
             BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
         let contract_class = ContractClass::try_from(contract_reader).unwrap();
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
-        let contract_address_salt = Address(1.into());
+        let contract_address_salt = 1.into();
 
         let (contract_address, _exec_info) = starknet_state
             .deploy(
@@ -584,7 +584,7 @@ mod tests {
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::try_from(path).unwrap();
-        let contract_address_salt = Address(1.into());
+        let contract_address_salt = 1.into();
 
         let (contract_address, _exec_info) = starknet_state
             .deploy(contract_class, vec![], contract_address_salt, None, 0)

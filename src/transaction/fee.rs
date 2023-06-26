@@ -53,15 +53,15 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
-    fee_transfer_call
-        .execute(
-            state,
-            block_context,
-            &mut resources_manager,
-            tx_execution_context,
-            false,
-        )
-        .map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
+    let fee_transfer_exec = fee_transfer_call.execute(
+        state,
+        block_context,
+        &mut resources_manager,
+        tx_execution_context,
+        false,
+    );
+    // TODO: Avoid masking the error from the fee transfer.
+    fee_transfer_exec.map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
 }
 
 // ----------------------------------------------------------------------------------------

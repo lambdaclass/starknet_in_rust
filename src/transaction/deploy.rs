@@ -33,7 +33,7 @@ pub struct Deploy {
     pub hash_value: Felt252,
     pub version: Felt252,
     pub contract_address: Address,
-    pub contract_address_salt: Address,
+    pub contract_address_salt: Felt252,
     pub contract_hash: ClassHash,
     pub constructor_calldata: Vec<Felt252>,
     pub tx_type: TransactionType,
@@ -41,7 +41,7 @@ pub struct Deploy {
 
 impl Deploy {
     pub fn new(
-        contract_address_salt: Address,
+        contract_address_salt: Felt252,
         contract_class: ContractClass,
         constructor_calldata: Vec<Felt252>,
         chain_id: Felt252,
@@ -254,7 +254,7 @@ mod tests {
             .unwrap();
 
         let internal_deploy = Deploy::new(
-            Address(0.into()),
+            0.into(),
             contract_class,
             vec![10.into()],
             0.into(),
@@ -304,7 +304,7 @@ mod tests {
             .unwrap();
 
         let internal_deploy = Deploy::new(
-            Address(0.into()),
+            0.into(),
             contract_class,
             Vec::new(),
             0.into(),
@@ -338,7 +338,7 @@ mod tests {
             .unwrap();
 
         let internal_deploy = Deploy::new(
-            Address(0.into()),
+            0.into(),
             contract_class,
             vec![10.into()],
             0.into(),
@@ -372,7 +372,7 @@ mod tests {
 
         // Should fail when compouting the hash due to a failed contract class
         let internal_deploy_error = Deploy::new(
-            Address(0.into()),
+            0.into(),
             error_contract_class,
             Vec::new(),
             0.into(),
