@@ -20,6 +20,7 @@ use super::{
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
 use crate::definitions::block_context::BlockContext;
+use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::BlockInfo;
 use crate::transaction::error::TransactionError;
@@ -469,12 +470,10 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
             Felt252::zero()
         } else {
-            // Fetch hash from block header
-            self.block_context
-                .blocks()
-                .get(&block_number)
-                .map(|block| Felt252::from_bytes_be(block.header.block_hash.0.bytes()))
-                .unwrap_or_default()
+            self.starknet_storage_state.state.get_storage_at(&(
+                BLOCK_HASH_CONTRACT_ADDRESS.clone(),
+                Felt252::new(block_number).to_be_bytes(),
+            ))?
         };
 
         Ok(SyscallResponse {

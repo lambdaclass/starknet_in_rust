@@ -91,4 +91,6 @@ lazy_static! {
 
     pub static ref VALIDATE_ENTRY_POINT_SELECTOR: Felt252 =
         felt_str!("626969833899987279399947180575486623810258720106406659648356883742278317941");
+
+    pub static ref BLOCK_HASH_CONTRACT_ADDRESS: Address = Address(1.into());
 }
