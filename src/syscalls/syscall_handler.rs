@@ -5,11 +5,12 @@ use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
+use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
     felt::Felt252,
     hint_processor::{
         cairo_1_hint_processor::hint_processor::Cairo1HintProcessor,
-        hint_processor_definition::{HintProcessor, HintReference},
+        hint_processor_definition::{HintProcessorLogic, HintReference},
     },
     types::{
         errors::math_errors::MathError, exec_scope::ExecutionScopes, relocatable::Relocatable,
@@ -34,21 +35,24 @@ pub(crate) trait HintProcessorPostRun {
 pub(crate) struct SyscallHintProcessor<'a, T: State + StateReader> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, T>,
+    pub(crate) run_resources: RunResources,
 }
 
 impl<'a, T: State + StateReader> SyscallHintProcessor<'a, T> {
     pub fn new(
         syscall_handler: BusinessLogicSyscallHandler<'a, T>,
         hints: &[(usize, Vec<Hint>)],
+        run_resources: RunResources,
     ) -> Self {
         SyscallHintProcessor {
-            cairo1_hint_processor: Cairo1HintProcessor::new(hints),
+            cairo1_hint_processor: Cairo1HintProcessor::new(hints, run_resources),
             syscall_handler,
+            run_resources,
         }
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
+impl<'a, T: State + StateReader> HintProcessorLogic for SyscallHintProcessor<'a, T> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -94,7 +98,7 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
         //(may contain other variables aside from those used by the hint)
         reference_ids: &HashMap<String, usize>,
         //List of all references (key corresponds to element of the previous dictionary)
-        references: &HashMap<usize, HintReference>,
+        references: &[HintReference],
     ) -> Result<Box<dyn Any>, VirtualMachineError> {
         self.cairo1_hint_processor.compile_hint(
             hint_code,
@@ -102,6 +106,24 @@ impl<'a, T: State + StateReader> HintProcessor for SyscallHintProcessor<'a, T> {
             reference_ids,
             references,
         )
+    }
+}
+
+impl<'a, T: State + StateReader> ResourceTracker for SyscallHintProcessor<'a, T> {
+    fn consumed(&self) -> bool {
+        self.run_resources.consumed()
+    }
+
+    fn consume_step(&mut self) {
+        self.run_resources.consume_step()
+    }
+
+    fn get_n_steps(&self) -> Option<usize> {
+        self.run_resources.get_n_steps()
+    }
+
+    fn run_resources(&self) -> &RunResources {
+        &self.run_resources
     }
 }
 

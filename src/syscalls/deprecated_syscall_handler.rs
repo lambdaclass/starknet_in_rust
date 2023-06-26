@@ -6,14 +6,14 @@ use crate::{
     state::state_api::{State, StateReader},
     syscalls::syscall_handler_errors::SyscallHandlerError,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::{felt::Felt252, hint_processor::hint_processor_definition::HintProcessorLogic};
 use cairo_vm::{
     hint_processor::{
         builtin_hint_processor::{
             builtin_hint_processor_definition::{BuiltinHintProcessor, HintProcessorData},
             hint_utils::get_relocatable_from_var_name,
         },
-        hint_processor_definition::{HintProcessor, HintReference},
+        hint_processor_definition::HintReference,
     },
     serde::deserialize_program::ApTracking,
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
@@ -143,7 +143,7 @@ impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessor for DeprecatedSyscallHintProcessor<'a, T> {
+impl<'a, T: State + StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'a, T> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
