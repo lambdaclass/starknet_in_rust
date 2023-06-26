@@ -668,9 +668,9 @@ dependencies = [
 
 [[package]]
 name = "cairo-felt"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab22205843aeeac09632a6770f0cefa5702e57a7e93bc326b9cbf1d2298ed08f"
+checksum = "5f15e4c3ddcf0c3dc5f223554a51bf478409154f648a9ec4cebefb2c66246923"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -1457,25 +1457,25 @@ dependencies = [
 
 [[package]]
 name = "cairo-take_until_unbalanced"
-version = "0.31.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea823cd361d11419f786a24037435e565c8f66b0a1cae065dac6227c9224dfb8"
+checksum = "08bee61bf2d27af1cfca0b96a2d5676209b11d8859140fdbf6ec1ebfe9f9bf8a"
 dependencies = [
  "nom",
 ]
 
 [[package]]
 name = "cairo-vm"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6b0bbfd8fc59fd66351225412e4891e9cdaa0bedcbb8b31dc39c1ba29f8a047"
+checksum = "059f3d9e32dbf1637be656aad20ff724ecefd102a22c606499b281d15a930396"
 dependencies = [
  "anyhow",
  "ark-ff 0.4.2",
  "ark-std 0.3.0",
  "bincode",
  "bitvec",
- "cairo-felt 0.7.0",
+ "cairo-felt 0.8.0",
  "cairo-lang-casm 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cairo-lang-starknet 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cairo-take_until_unbalanced",
