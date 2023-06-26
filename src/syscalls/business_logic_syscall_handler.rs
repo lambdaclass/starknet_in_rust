@@ -1,4 +1,4 @@
-#![allow(dead_code)] // TODO: Remove this!
+#![allow(clippy::absurd_extreme_comparisons)]
 
 use std::collections::HashMap;
 use std::ops::Add;
@@ -20,6 +20,7 @@ use super::{
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
 use crate::definitions::block_context::BlockContext;
+use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::BlockInfo;
 use crate::transaction::error::TransactionError;
@@ -435,33 +436,52 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             SyscallRequest::GetBlockTimestamp(req) => {
                 self.get_block_timestamp(vm, req, remaining_gas)
             }
-            SyscallRequest::GetBlockHash(req) => Ok(self.get_block_hash(req, remaining_gas)),
+            SyscallRequest::GetBlockHash(req) => self.get_block_hash(vm, req, remaining_gas),
             SyscallRequest::ReplaceClass(req) => self.replace_class(vm, req, remaining_gas),
         }
     }
 
-    fn get_block_hash(&self, request: GetBlockHashRequest, remaining_gas: u128) -> SyscallResponse {
+    fn get_block_hash(
+        &mut self,
+        vm: &mut VirtualMachine,
+        request: GetBlockHashRequest,
+        remaining_gas: u128,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
         let block_number = request.block_number;
         let current_block_number = self.block_context.block_info.block_number;
-        let block_hash = if block_number < current_block_number - 1024
-            || block_number > current_block_number - 10
-        {
+
+        if block_number > current_block_number - 10 {
+            let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
+            let retdata_start =
+                self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_range_felt)])?;
+            let failure = FailureReason {
+                retdata_start,
+                retdata_end: (retdata_start + 1)?,
+            };
+
+            return Ok(SyscallResponse {
+                gas: remaining_gas,
+                body: Some(ResponseBody::Failure(failure)),
+            });
+        }
+
+        // FIXME: Update this after release.
+        const V_0_12_0_FIRST_BLOCK: u64 = 0;
+        let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
             Felt252::zero()
         } else {
-            // Fetch hash from block header
-            self.block_context
-                .blocks()
-                .get(&block_number)
-                .map(|block| Felt252::from_bytes_be(block.header.block_hash.0.bytes()))
-                .unwrap_or_default()
+            self.starknet_storage_state.state.get_storage_at(&(
+                BLOCK_HASH_CONTRACT_ADDRESS.clone(),
+                Felt252::new(block_number).to_be_bytes(),
+            ))?
         };
 
-        SyscallResponse {
+        Ok(SyscallResponse {
             gas: remaining_gas,
             body: Some(ResponseBody::GetBlockHash(GetBlockHashResponse {
                 block_hash,
             })),
-        }
+        })
     }
 
     pub(crate) fn post_run(
