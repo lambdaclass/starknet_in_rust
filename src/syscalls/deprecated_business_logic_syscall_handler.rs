@@ -930,12 +930,10 @@ mod tests {
         utils::{test_utils::*, Address},
     };
     use cairo_vm::felt::Felt252;
+    use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
     use cairo_vm::{
-        hint_processor::{
-            builtin_hint_processor::builtin_hint_processor_definition::{
-                BuiltinHintProcessor, HintProcessorData,
-            },
-            hint_processor_definition::HintProcessor,
+        hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
+            BuiltinHintProcessor, HintProcessorData,
         },
         relocatable,
         types::{

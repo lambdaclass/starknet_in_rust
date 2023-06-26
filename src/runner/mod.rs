@@ -402,7 +402,10 @@ mod test {
     };
     use cairo_vm::{
         types::relocatable::{MaybeRelocatable, Relocatable},
-        vm::{runners::cairo_runner::CairoRunner, vm_core::VirtualMachine},
+        vm::{
+            runners::cairo_runner::{CairoRunner, RunResources},
+            vm_core::VirtualMachine,
+        },
     };
 
     #[test]
@@ -428,6 +431,7 @@ mod test {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
+            RunResources::default(),
         );
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -443,6 +447,7 @@ mod test {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
+            RunResources::default(),
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -461,6 +466,7 @@ mod test {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
+            RunResources::default(),
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -482,6 +488,7 @@ mod test {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
+            RunResources::default(),
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -503,6 +510,7 @@ mod test {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
+            RunResources::default(),
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -524,6 +532,7 @@ mod test {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
+            RunResources::default(),
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -546,6 +555,7 @@ mod test {
         let mut state = CachedState::<InMemoryStateReader>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
+            RunResources::default(),
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);

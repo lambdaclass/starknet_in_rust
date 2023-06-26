@@ -27,7 +27,7 @@ use cairo_vm::{
         relocatable::{MaybeRelocatable, Relocatable},
     },
     vm::{
-        runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources},
+        runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
         vm_core::VirtualMachine,
     },
 };
@@ -330,7 +330,8 @@ impl ExecutionEntryPoint {
             block_context.clone(),
             initial_syscall_ptr,
         );
-        let hint_processor = DeprecatedSyscallHintProcessor::new(syscall_handler);
+        let hint_processor =
+            DeprecatedSyscallHintProcessor::new(syscall_handler, RunResources::default());
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
@@ -446,7 +447,11 @@ impl ExecutionEntryPoint {
             self.entry_point_selector.clone(),
         );
         // create and attach a syscall hint processor to the starknet runner.
-        let hint_processor = SyscallHintProcessor::new(syscall_handler, &contract_class.hints);
+        let hint_processor = SyscallHintProcessor::new(
+            syscall_handler,
+            &contract_class.hints,
+            RunResources::default(),
+        );
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // TODO: handle error cases
