@@ -1,4 +1,4 @@
-#![allow(dead_code)] // TODO: Remove this!
+#![allow(clippy::absurd_extreme_comparisons)]
 
 use std::collections::HashMap;
 use std::ops::Add;
