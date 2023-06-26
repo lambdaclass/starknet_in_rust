@@ -17,8 +17,8 @@ starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev="a8
 ] }
 
 [dependencies]
-cairo-lang-starknet = "1.1.0"
-cairo-lang-casm = "1.1.0"
+cairo-lang-starknet = "2.0.0-rc4"
+cairo-lang-casm = "2.0.0-rc4"
 cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
 getset = "0.1.2"
 lazy_static = "1.4.0"
