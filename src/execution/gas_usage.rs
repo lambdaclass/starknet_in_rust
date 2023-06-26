@@ -1,6 +1,6 @@
 use crate::definitions::constants::*;
 use crate::execution::L2toL1MessageInfo;
-use crate::services::eth_definitions::eth_gas_constans::*;
+use crate::services::eth_definitions::eth_gas_constants::*;
 
 /// Returns an estimation of the L1 gas amount that will be used (by StarkNet's update state and
 /// the verifier) following the addition of a transaction with the given parameters to a batch;

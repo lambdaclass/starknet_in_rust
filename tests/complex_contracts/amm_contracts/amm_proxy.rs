@@ -281,7 +281,7 @@ fn amm_proxy_add_demo_token_test() {
     let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"add_demo_token"));
 
     let mut felt_slice: [u8; 32] = [0; 32];
-    felt_slice[0..32].copy_from_slice(proxy_address.0.clone().to_bytes_be().get(0..32).unwrap());
+    felt_slice[0..32].copy_from_slice(&proxy_address.0.clone().to_bytes_be());
     let proxy_addres_felt = FieldElement::from_bytes_be(&felt_slice).unwrap();
 
     let accessed_storage_keys = get_accessed_keys(

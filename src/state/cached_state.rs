@@ -396,7 +396,9 @@ mod tests {
             HashMap::new(),
         );
 
+        let program_json: serde_json::Value = serde_json::Value::from("{}");
         let contract_class = ContractClass::new(
+            program_json,
             Program::default(),
             HashMap::from([(
                 EntryPointType::Constructor,

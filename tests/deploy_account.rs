@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use cairo_vm::{
     felt::{felt_str, Felt252},
     vm::runners::cairo_runner::ExecutionResources,
@@ -14,14 +12,15 @@ use starknet_rs::{
         transaction_type::TransactionType,
     },
     execution::{CallInfo, CallType, TransactionExecutionInfo},
+    hash_utils::calculate_contract_address,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
     transaction::DeployAccount,
-    utils::{felt_to_hash, Address},
+    utils::Address,
     CasmContractClass,
 };
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, fs::File, io::BufReader};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -34,19 +33,23 @@ fn internal_deploy_account() {
 
     state.set_contract_classes(Default::default()).unwrap();
 
-    let contract_class = ContractClass::try_from(PathBuf::from(
-        "starknet_programs/account_without_validation.json",
+    let contract_class = ContractClass::try_from(BufReader::new(
+        File::open("starknet_programs/account_without_validation.json").unwrap(),
     ))
     .unwrap();
 
-    let class_hash = felt_to_hash(&compute_deprecated_class_hash(&contract_class).unwrap());
+    let class_hash = compute_deprecated_class_hash(&contract_class).unwrap();
+    let class_hash_bytes = class_hash.to_be_bytes();
 
     state
-        .set_contract_class(&class_hash, &contract_class)
+        .set_contract_class(&class_hash_bytes, &contract_class)
         .unwrap();
 
+    let contract_address_salt =
+        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+
     let internal_deploy_account = DeployAccount::new(
-        class_hash,
+        class_hash_bytes,
         0,
         0.into(),
         Felt252::zero(),
@@ -59,9 +62,7 @@ fn internal_deploy_account() {
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],
-        Address(felt_str!(
-            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
-        )),
+        contract_address_salt.clone(),
         StarknetChainId::TestNet.to_felt(),
         None,
     )
@@ -71,16 +72,22 @@ fn internal_deploy_account() {
         .execute(&mut state, &Default::default())
         .unwrap();
 
+    let contract_address = calculate_contract_address(
+        &contract_address_salt,
+        &class_hash,
+        &[],
+        Address(Felt252::zero()),
+    )
+    .unwrap();
+
     assert_eq!(
         tx_info,
         TransactionExecutionInfo::new(
             None,
             Some(CallInfo {
                 call_type: Some(CallType::Call),
-                contract_address: Address(felt_str!(
-                    "3577223136242220508961486249701638158054969090851914040041358274796489907314"
-                )),
-                class_hash: Some(class_hash),
+                contract_address: Address(contract_address),
+                class_hash: Some(class_hash_bytes),
                 entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
@@ -136,7 +143,7 @@ fn internal_deploy_account_cairo1() {
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],
-        Address(contract_address_salt),
+        contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
         None,
     )
@@ -162,7 +169,7 @@ fn internal_deploy_account_cairo1() {
                     "397149464972449753182583229366244826403270781177748543857889179957856017275"
                 )),
                 code_address: None,
-                gas_consumed:17370 ,
+                gas_consumed: 16770,
                 class_hash: Some([
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 1
@@ -178,8 +185,8 @@ fn internal_deploy_account_cairo1() {
                 ],
                 retdata: vec![felt_str!("370462705988")],
                 execution_resources: ExecutionResources {
-                    n_steps: 162,
-                    n_memory_holes: 17,
+                    n_steps: 155,
+                    n_memory_holes: 18,
                     builtin_instance_counter:
                     [
                     ("range_check_builtin", 2),

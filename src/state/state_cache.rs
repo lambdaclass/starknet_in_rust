@@ -193,8 +193,9 @@ mod tests {
     fn state_chache_set_initial_values() {
         let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [8; 32])]);
+        let program_json: serde_json::Value = serde_json::Value::from("{}");
         let compiled_class = CompiledClass::Deprecated(Box::new(
-            ContractClass::new(Program::default(), HashMap::new(), None).unwrap(),
+            ContractClass::new(program_json, Program::default(), HashMap::new(), None).unwrap(),
         ));
         let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);

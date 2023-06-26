@@ -41,4 +41,6 @@ pub enum ContractAddressError {
     Cast(String, String),
     #[error("MaybeRelocatable is not an Int variant")]
     NoneIntMaybeRelocatable,
+    #[error("Invalid program JSON, message: {0}")]
+    InvalidProgramJson(String),
 }

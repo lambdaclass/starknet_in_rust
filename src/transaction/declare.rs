@@ -294,7 +294,7 @@ mod tests {
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{One, Zero};
-    use std::{collections::HashMap, path::PathBuf};
+    use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use crate::{
         definitions::{
@@ -314,15 +314,17 @@ mod tests {
     #[test]
     fn declare_fibonacci() {
         // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_reader = BufReader::new(
+            File::open("starknet_programs/account_without_validation.json").unwrap(),
+        );
+        let contract_class = ContractClass::try_from(contract_reader).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
+        let class_hash = hash.to_be_bytes();
 
         contract_class_cache.insert(class_hash, contract_class.clone());
 
@@ -346,8 +348,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_reader = BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
+        let fib_contract_class = ContractClass::try_from(fib_reader).unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
@@ -376,7 +378,7 @@ mod tests {
 
         // Calldata is the class hash represented as a Felt252
         let calldata = [felt_str!(
-            "3263750508471340057496742110279857589794844827005189048727502686976772849721"
+            "151449101692423517761547521693863750221386499114738230243355039033913267347"
         )]
         .to_vec();
 

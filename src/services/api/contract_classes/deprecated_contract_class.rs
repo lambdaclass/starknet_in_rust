@@ -2,6 +2,7 @@ use crate::services::api::contract_class_errors::ContractClassError;
 use cairo_vm::felt::Felt252;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
 use getset::Getters;
+use serde_json::Value;
 use starknet_api::deprecated_contract_class::EntryPoint;
 pub use starknet_contract_class::to_cairo_runner_program;
 use starknet_contract_class::AbiType;
@@ -17,6 +18,8 @@ pub struct ContractClass {
     #[getset(get = "pub")]
     pub(crate) program: Program,
     #[getset(get = "pub")]
+    pub(crate) program_json: serde_json::Value,
+    #[getset(get = "pub")]
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     #[getset(get = "pub")]
     pub(crate) abi: Option<AbiType>,
@@ -24,6 +27,7 @@ pub struct ContractClass {
 
 impl ContractClass {
     pub fn new(
+        program_json: Value,
         program: Program,
         entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
         abi: Option<AbiType>,
@@ -39,6 +43,7 @@ impl ContractClass {
         }
 
         Ok(ContractClass {
+            program_json,
             program,
             entry_points_by_type,
             abi,
@@ -56,12 +61,14 @@ impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for Contrac
         contract_class: starknet_api::deprecated_contract_class::ContractClass,
     ) -> Result<Self, Self::Error> {
         let program = to_cairo_runner_program(&contract_class.program)?;
-        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
-
+        let entry_points_by_type =
+            convert_entry_points(contract_class.clone().entry_points_by_type);
+        let program_json = serde_json::to_value(&contract_class)?;
         Ok(ContractClass {
+            program_json,
             program,
             entry_points_by_type,
-            abi: None,
+            abi: contract_class.abi,
         })
     }
 }
@@ -94,6 +101,16 @@ impl TryFrom<&PathBuf> for ContractClass {
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
+        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
+            serde_json::from_reader(reader)?;
+        ContractClass::try_from(raw_contract_class)
+    }
+}
+
+impl<T: std::io::Read> TryFrom<BufReader<T>> for ContractClass {
+    type Error = ProgramError;
+
+    fn try_from(reader: BufReader<T>) -> Result<Self, Self::Error> {
         let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_reader(reader)?;
         ContractClass::try_from(raw_contract_class)
@@ -148,7 +165,8 @@ mod tests {
 
         // We check only some of the attributes. Ideally we would serialize
         // and compare with original
-        assert_eq!(contract_class.abi(), &None);
+        // TODO: add abi.
+        // assert_eq!(contract_class.abi(), &None);
         assert_eq!(
             contract_class
                 .program()

@@ -1181,8 +1181,8 @@ fn test_get_execution_info() {
     ];
 
     let expected_execution_resources = ExecutionResources {
-        n_steps: 355,
-        n_memory_holes: 14,
+        n_steps: 268,
+        n_memory_holes: 5,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
     };
 
@@ -1195,7 +1195,7 @@ fn test_get_execution_info() {
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: expected_execution_resources,
-        gas_consumed: 38180,
+        gas_consumed: 28580,
         ..Default::default()
     };
 

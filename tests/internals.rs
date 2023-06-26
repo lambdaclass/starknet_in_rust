@@ -718,7 +718,7 @@ fn deploy_fib_syscall() -> Deploy {
         hash_value: 0.into(),
         version: 1.into(),
         contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
-        contract_address_salt: Address(0.into()),
+        contract_address_salt: 0.into(),
         contract_hash: felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()),
         constructor_calldata: Vec::new(),
         tx_type: TransactionType::Deploy,
@@ -1187,7 +1187,7 @@ fn test_deploy_account() {
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
         [
             Felt252::from_bytes_be(deploy_account_tx.class_hash()),
-            deploy_account_tx.contract_address_salt().0.clone(),
+            deploy_account_tx.contract_address_salt().clone(),
         ]
         .into_iter()
         .chain(deploy_account_tx.constructor_calldata().clone())
