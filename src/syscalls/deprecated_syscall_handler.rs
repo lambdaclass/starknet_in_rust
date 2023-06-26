@@ -6,7 +6,11 @@ use crate::{
     state::state_api::{State, StateReader},
     syscalls::syscall_handler_errors::SyscallHandlerError,
 };
-use cairo_vm::{felt::Felt252, hint_processor::hint_processor_definition::HintProcessorLogic};
+use cairo_vm::{
+    felt::Felt252,
+    hint_processor::hint_processor_definition::HintProcessorLogic,
+    vm::runners::cairo_runner::{ResourceTracker, RunResources},
+};
 use cairo_vm::{
     hint_processor::{
         builtin_hint_processor::{
@@ -24,13 +28,18 @@ use std::{any::Any, collections::HashMap};
 pub(crate) struct DeprecatedSyscallHintProcessor<'a, T: State + StateReader> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, T>,
+    run_resources: RunResources,
 }
 
 impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
-    pub fn new(syscall_handler: DeprecatedBLSyscallHandler<'a, T>) -> Self {
+    pub fn new(
+        syscall_handler: DeprecatedBLSyscallHandler<'a, T>,
+        run_resources: RunResources,
+    ) -> Self {
         DeprecatedSyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler,
+            run_resources,
         }
     }
 
@@ -162,6 +171,24 @@ impl<'a, T: State + StateReader> HintProcessorLogic for DeprecatedSyscallHintPro
                 })?;
         }
         Ok(())
+    }
+}
+
+impl<'a, T: State + StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, T> {
+    fn consumed(&self) -> bool {
+        self.run_resources.consumed()
+    }
+
+    fn consume_step(&mut self) {
+        self.run_resources.consume_step()
+    }
+
+    fn get_n_steps(&self) -> Option<usize> {
+        self.run_resources.get_n_steps()
+    }
+
+    fn run_resources(&self) -> &RunResources {
+        &self.run_resources
     }
 }
 
