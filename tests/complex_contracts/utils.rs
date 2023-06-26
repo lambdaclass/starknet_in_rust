@@ -5,7 +5,10 @@ use num_traits::Zero;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_rs::{
-    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    definitions::{
+        block_context::{BlockContext, StarknetChainId},
+        constants::TRANSACTION_VERSION,
+    },
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
@@ -84,7 +87,7 @@ pub fn get_entry_points(
             *entry_point_type,
             Some(CallType::Delegate),
             Some(*class_hash),
-            0,
+            300000,
         ),
         entrypoint_selector,
     )
@@ -141,7 +144,7 @@ pub fn deploy(
         0.into(),
         contract_class.clone(),
         calldata.to_vec(),
-        0.into(),
+        StarknetChainId::TestNet.to_felt(),
         0.into(),
         hash_value,
     )?;

@@ -295,7 +295,7 @@ impl StarknetState {
 mod tests {
     use std::{fs::File, io::BufReader, path::PathBuf};
 
-    use cairo_vm::{felt::felt_str, vm::runners::cairo_runner::ExecutionResources};
+    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use num_traits::Num;
 
     use super::*;
@@ -305,6 +305,7 @@ mod tests {
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
         execution::{CallType, OrderedL2ToL1Message},
+        hash_utils::calculate_contract_address,
         state::state_cache::StorageEntry,
         utils::{calculate_sn_keccak, felt_to_hash},
     };
@@ -317,7 +318,7 @@ mod tests {
             BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
         let contract_class = ContractClass::try_from(contract_reader).unwrap();
 
-        let contract_address_salt = 1.into();
+        let contract_address_salt: Felt252 = 1.into();
 
         // expected results
 
@@ -325,9 +326,13 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        let address = Address(felt_str!(
-            "733093021096970965364075287991009291094188451723542993309570110718242898150"
-        ));
+        let address = calculate_contract_address(
+            &contract_address_salt.clone(),
+            &hash,
+            &[],
+            Address(Felt252::zero()),
+        )
+        .unwrap();
 
         let mut actual_resources = HashMap::new();
         actual_resources.insert("l1_gas_usage".to_string(), 1224);
@@ -337,7 +342,7 @@ mod tests {
             call_info: Some(CallInfo {
                 caller_address: Address(0.into()),
                 call_type: Some(CallType::Call),
-                contract_address: address.clone(),
+                contract_address: Address(address.clone()),
                 code_address: None,
                 class_hash: Some(class_hash),
                 entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
@@ -351,7 +356,7 @@ mod tests {
         };
 
         // check result is correct
-        let exec = (address, transaction_exec_info);
+        let exec = (Address(address), transaction_exec_info);
         assert_eq!(
             starknet_state
                 .deploy(
@@ -499,13 +504,13 @@ mod tests {
             BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
         let contract_class = ContractClass::try_from(contract_reader).unwrap();
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
-        let contract_address_salt = 1.into();
+        let contract_address_salt: Felt252 = 1.into();
 
         let (contract_address, _exec_info) = starknet_state
             .deploy(
                 contract_class.clone(),
                 vec![],
-                contract_address_salt,
+                contract_address_salt.clone(),
                 None,
                 0,
             )
@@ -543,9 +548,13 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let fib_class_hash = felt_to_hash(&hash);
 
-        let address = felt_str!(
-            "733093021096970965364075287991009291094188451723542993309570110718242898150"
-        );
+        let address = calculate_contract_address(
+            &contract_address_salt,
+            &hash,
+            &[],
+            Address(Felt252::zero()),
+        )
+        .unwrap();
         let actual_resources = HashMap::from([
             ("l1_gas_usage".to_string(), 0),
             ("range_check_builtin".to_string(), 70),

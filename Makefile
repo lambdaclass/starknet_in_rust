@@ -49,6 +49,7 @@ starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 	cd starknet_programs/ && \
 	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
 	../$< \
+	--no_debug_info \
 	--output ./$*.json \
 	--abi ./$*_abi.json \
 	|| rm ./$*.json ./$*_abi.json
