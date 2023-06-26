@@ -13,8 +13,6 @@ mod multy_syscall {
     use option::OptionTrait;
     use starknet::syscalls::deploy_syscall;
     use starknet::class_hash::ClassHash;
-    // use starknet::function_selector::F;
-    use traits::TryInto;
    
     #[external]
     fn caller_address() {
@@ -41,8 +39,8 @@ mod multy_syscall {
         replace_class_syscall(new_class_hash);
     }
 
-    #[external]
-    fn library_call_syscall_test(class_hash: ClassHash, function_selector: felt252, calldata: Span<felt252>) {
-        library_call_syscall(class_hash, function_selector, calldata);
-    }
+    // #[external]
+    // fn library_call_syscall_test(class_hash: ClassHash, function_selector: felt252, calldata: array::Span<felt252>) {
+    //     library_call_syscall(class_hash, function_selector, calldata);
+    // }
 }
