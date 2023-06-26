@@ -326,7 +326,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let address = Address(felt_str!(
-            "1513621570972601890966709855181054938598679387329692711096541587912772662749"
+            "733093021096970965364075287991009291094188451723542993309570110718242898150"
         ));
 
         let mut actual_resources = HashMap::new();
@@ -544,7 +544,7 @@ mod tests {
         let fib_class_hash = felt_to_hash(&hash);
 
         let address = felt_str!(
-            "1513621570972601890966709855181054938598679387329692711096541587912772662749"
+            "733093021096970965364075287991009291094188451723542993309570110718242898150"
         );
         let actual_resources = HashMap::from([
             ("l1_gas_usage".to_string(), 0),

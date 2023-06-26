@@ -247,8 +247,7 @@ mod tests {
         let contract_class = ContractClass::try_from(contract_reader).unwrap();
         let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
-        let mut class_hash_bytes = [0u8; 32];
-        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
+        let class_hash_bytes = class_hash.to_be_bytes();
 
         state
             .set_contract_class(&class_hash_bytes, &contract_class)
@@ -298,8 +297,7 @@ mod tests {
 
         let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
-        let mut class_hash_bytes = [0u8; 32];
-        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
+        let class_hash_bytes = class_hash.to_be_bytes();
 
         state
             .set_contract_class(&class_hash_bytes, &contract_class)
