@@ -4,7 +4,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use starknet_crypto::{pedersen_hash, FieldElement};
-use starknet_rs::{
+use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::TRANSACTION_VERSION,

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use lazy_static::lazy_static;
-use starknet_rs::{
+use starknet_in_rust::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     testing::state::StarknetState,
 };
