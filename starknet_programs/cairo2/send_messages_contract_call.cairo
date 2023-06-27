@@ -1,14 +1,10 @@
 #[starknet::interface]
 trait SendMessageToL1<TContractState> {
-
-    #[external]
     fn send_simple_message_to_l1(ref self: TContractState, to_address: felt252, message: felt252);
-
 }
 
 #[starknet::interface]
 trait ISendMessages<TContractState> {
-
     fn send_sequential_messages(ref self: TContractState, to_address: felt252, message1: felt252, message2: felt252);
 }
 
