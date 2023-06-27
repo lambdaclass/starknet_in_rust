@@ -1,10 +1,16 @@
 use starknet::ClassHash;
 
 #[starknet::interface]
+trait GetNumber<TContractState> {
+    fn get_number(self: @TContractState) -> felt252;
+    fn upgrade(self: @TContractState, new_class_hash: ClassHash);
+}
+
+#[starknet::interface]
 trait IGetNumber<TContractState> {
     fn get_number(self: @TContractState) -> felt252;
     fn upgrade(self: @TContractState, new_class_hash: ClassHash);
-    fn get_numbers_old_new(self: @TContractState, new_class_hash: ClassHash) -> (felt252, felt252)
+    fn get_numbers_old_new(self: @TContractState, new_class_hash: ClassHash) -> (felt252, felt252);
 }
 
 #[starknet::contract]
