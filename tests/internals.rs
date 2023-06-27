@@ -827,49 +827,49 @@ fn test_declare_tx() {
     assert_eq!(result, expected_execution_info);
 }
 
-// #[test]
-// fn test_declarev2_tx() {
-//     let (block_context, mut state) = create_account_tx_test_state().unwrap();
-//     assert_eq!(state, expected_state_before_tx());
-//     let declare_tx = declarev2_tx();
-//     // Check ContractClass is not set before the declare_tx
-//     assert!(state
-//         .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
-//         .is_err());
-//     // Execute declare_tx
-//     let result = declare_tx.execute(&mut state, &block_context).unwrap();
-//     // Check ContractClass is set after the declare_tx
-//     assert!(state
-//         .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
-//         .is_ok());
+#[test]
+fn test_declarev2_tx() {
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
+    assert_eq!(state, expected_state_before_tx());
+    let declare_tx = declarev2_tx();
+    // Check ContractClass is not set before the declare_tx
+    assert!(state
+        .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
+        .is_err());
+    // Execute declare_tx
+    let result = declare_tx.execute(&mut state, &block_context).unwrap();
+    // Check ContractClass is set after the declare_tx
+    assert!(state
+        .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
+        .is_ok());
 
-//     let expected_execution_info = TransactionExecutionInfo::new(
-//         Some(CallInfo {
-//             call_type: Some(CallType::Call),
-//             contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-//             class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
-//             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
-//             entry_point_type: Some(EntryPointType::External),
-//             calldata: vec![TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()],
-//             execution_resources: ExecutionResources {
-//                 n_steps: 12,
-//                 ..Default::default()
-//             },
-//             ..Default::default()
-//         }),
-//         None,
-//         Some(expected_declare_fee_transfer_info()),
-//         0,
-//         HashMap::from([
-//             ("range_check_builtin".to_string(), 57),
-//             ("pedersen_builtin".to_string(), 15),
-//             ("l1_gas_usage".to_string(), 0),
-//         ]),
-//         Some(TransactionType::Declare),
-//     );
+    let expected_execution_info = TransactionExecutionInfo::new(
+        Some(CallInfo {
+            call_type: Some(CallType::Call),
+            contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+            entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()],
+            execution_resources: ExecutionResources {
+                n_steps: 12,
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
+        None,
+        Some(expected_declare_fee_transfer_info()),
+        0,
+        HashMap::from([
+            ("range_check_builtin".to_string(), 57),
+            ("pedersen_builtin".to_string(), 15),
+            ("l1_gas_usage".to_string(), 0),
+        ]),
+        Some(TransactionType::Declare),
+    );
 
-//     assert_eq!(result, expected_execution_info);
-// }
+    assert_eq!(result, expected_execution_info);
+}
 
 fn expected_execute_call_info() -> CallInfo {
     CallInfo {
