@@ -3221,19 +3221,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-contract-class"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70b4f336705886ab6837b40298237f8f2c77d7a9604474a96e7103e98ca9126b"
-dependencies = [
- "cairo-vm",
- "getset",
- "lambda_starknet_api",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "starknet-crypto"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3309,7 +3296,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
- "starknet-contract-class 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-contract-class",
  "starknet-crypto",
  "thiserror",
 ]
