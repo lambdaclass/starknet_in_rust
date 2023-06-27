@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
-use starknet_rs::{
+use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::TRANSACTION_VERSION,

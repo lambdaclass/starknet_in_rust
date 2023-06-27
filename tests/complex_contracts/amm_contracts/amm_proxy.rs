@@ -3,9 +3,9 @@ use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
-use starknet_rs::definitions::block_context::BlockContext;
-use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
-use starknet_rs::{
+use starknet_in_rust::definitions::block_context::BlockContext;
+use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_in_rust::{
     execution::{CallInfo, CallType},
     state::{cached_state::CachedState, state_api::StateReader},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},

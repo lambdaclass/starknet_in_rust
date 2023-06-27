@@ -3,7 +3,7 @@ use cairo_vm::felt::Felt252;
 use clap::{Args, Parser, Subcommand};
 use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
-use starknet_rs::{
+use starknet_in_rust::{
     core::{
         contract_address::compute_deprecated_class_hash,
         errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
