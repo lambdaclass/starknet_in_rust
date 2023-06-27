@@ -42,6 +42,8 @@ starknet-venv/
 cairo_programs/cairo_1_contracts/*.sierra
 starknet_programs/cairo1/*.casm
 starknet_programs/cairo1/*.sierra
+starknet_programs/cairo2/*.casm
+starknet_programs/cairo2/*.sierra
 default.profraw
 **.DS_Store
 /scripts/reports
