@@ -45,10 +45,3 @@ coverage-helper = "0.1.0"
 path = "bench/internals.rs"
 name = "internals"
 harness = false
-
-[profile.release.package.fuzzer]
-strip = "debuginfo"
-overflow-checks = true
-opt-level = 3
-debug = true
-debug-assertions = true
