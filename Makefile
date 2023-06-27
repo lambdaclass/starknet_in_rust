@@ -21,9 +21,11 @@ STARKNET_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(STARKNET_SOURCES))
 BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
 BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
 
-STARKNET_COMPILE:=cairo/target/release/starknet-compile
-STARKNET_SIERRA_COMPILE:=cairo/target/release/starknet-sierra-compile
+STARKNET_COMPILE_CAIRO_1:=cairo1/target/release/starknet-compile
+STARKNET_SIERRA_COMPILE_CAIRO_1:=cairo1/target/release/starknet-sierra-compile
 
+STARKNET_COMPILE_CAIRO_2:=cairo2/target/release/starknet-compile
+STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/target/release/starknet-sierra-compile
 
 #
 # VENV rules.
@@ -55,30 +57,53 @@ starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 	|| rm ./$*.json ./$*_abi.json
 # Compiles .cairo files into .json files. if the command fails, then it removes all of the .json files
 
-
 # ======================
 # Test Cairo 1 Contracts
 # ======================
 
+CAIRO_1_CONTRACTS_TEST_DIR=starknet_programs/cairo1
+CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
+CAIRO_1_COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
+CAIRO_1_COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(CAIRO_1_COMPILED_SIERRA_CONTRACTS))
+
+$(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo
+	$(STARKNET_COMPILE_CAIRO_1) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
+
+$(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra
+	$(STARKNET_SIERRA_COMPILE_CAIRO_1) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
+
+
+cairo-repo-1-dir = cairo1
+
+build-cairo-1-compiler: | $(cairo-repo-1-dir)
+
+$(cairo-repo-1-dir):
+	git clone --depth 1 -b v1.1.0 https://github.com/starkware-libs/cairo.git $(cairo-repo-1-dir)
+	cd cairo1; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
+
+# ======================
+# Test Cairo 2 Contracts
+# ======================
+
 CAIRO_2_CONTRACTS_TEST_DIR=starknet_programs/cairo2
-CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_2_CONTRACTS_TEST_DIR)/*.cairo)
-COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
-COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
+CAIRO_2_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_2_CONTRACTS_TEST_DIR)/*.cairo)
+CAIRO_2_COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_2_CONTRACTS_TEST_CAIRO_FILES))
+CAIRO_2_COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm, $(CAIRO_2_COMPILED_SIERRA_CONTRACTS))
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo
-	$(STARKNET_COMPILE) $< $@
+	$(STARKNET_COMPILE_CAIRO_2) $< $@
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
-	$(STARKNET_SIERRA_COMPILE) $< $@
+	$(STARKNET_SIERRA_COMPILE_CAIRO_2) $< $@
 
 
-cairo-repo-dir = cairo
+cairo-repo-2-dir = cairo2
 
-build-cairo-2-compiler: | $(cairo-repo-dir)
+build-cairo-2-compiler: | $(cairo-repo-2-dir)
 
-$(cairo-repo-dir):
-	git clone --depth 1 -b v2.0.0-rc5 https://github.com/starkware-libs/cairo.git
-	cd cairo; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
+$(cairo-repo-2-dir):
+	git clone --depth 1 -b v2.0.0-rc5 https://github.com/starkware-libs/cairo.git $(cairo-repo-2-dir)
+	cd cairo2; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
 
 
 # =================
@@ -91,7 +116,7 @@ build: compile-cairo compile-starknet
 check: compile-cairo compile-starknet
 	cargo check --all --all-targets
 
-deps: check-python-version build-cairo-2-compiler
+deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	rustup toolchain install nightly
@@ -109,15 +134,16 @@ clean:
 	-rm -f starknet_programs/cairo2/*.casm
 	-rm -f starknet_programs/cairo2/*.sierra
 	-rm -f tests/*.json
-	-rm -rf cairo/
+	-rm -rf cairo1/
+	-rm -rf cairo2/
 
-clippy: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS)
+clippy: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 	cargo clippy --all --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS) $(COMPILED_SIERRA_CONTRACTS)
+test: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_1_COMPILED_SIERRA_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 	cargo test --all --all-targets
 
-coverage: compile-cairo compile-starknet compile-abi $(COMPILED_CASM_CONTRACTS)
+coverage: compile-cairo compile-starknet compile-abi $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs'
 	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
