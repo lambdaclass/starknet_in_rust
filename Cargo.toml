@@ -11,12 +11,12 @@ with_mimalloc = ["mimalloc"]
 members = ["crates/starknet-contract-class"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.8.0", features = ["cairo-1-hints"]}
+cairo-vm = { path = "../cairo-vm/vm", features = ["cairo-1-hints"]}
 lambda_starknet_api = "0.1.0"
 
 [dependencies]
-cairo-lang-starknet = "1.1.0"
-cairo-lang-casm = "1.1.0"
+cairo-lang-starknet = "2.0.0-rc5"
+cairo-lang-casm = "2.0.0-rc5"
 cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
 getset = "0.1.2"
 lazy_static = "1.4.0"

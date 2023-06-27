@@ -293,59 +293,59 @@ mod tests {
     use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
 
-    // #[test]
-    // fn create_declare_v2_test() {
-    //     // read file to create sierra contract class
+    #[test]
+    fn create_declare_v2_test() {
+        // read file to create sierra contract class
 
-    //     let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
-    //     let file = File::open(path).unwrap();
-    //     let reader = BufReader::new(file);
-    //     let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
-    //         serde_json::from_reader(reader).unwrap();
-    //     let chain_id = StarknetChainId::TestNet.to_felt();
+        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let chain_id = StarknetChainId::TestNet.to_felt();
 
-    //     let sender_address = Address(1.into());
+        let sender_address = Address(1.into());
 
-    //     // create internal declare v2
+        // create internal declare v2
 
-    //     let internal_declare = DeclareV2::new(
-    //         &sierra_contract_class,
-    //         Felt252::one(),
-    //         chain_id,
-    //         sender_address,
-    //         0,
-    //         0.into(),
-    //         [1.into()].to_vec(),
-    //         Felt252::zero(),
-    //         Some(Felt252::one()),
-    //     )
-    //     .unwrap();
+        let internal_declare = DeclareV2::new(
+            &sierra_contract_class,
+            Felt252::one(),
+            chain_id,
+            sender_address,
+            0,
+            0.into(),
+            [1.into()].to_vec(),
+            Felt252::zero(),
+            Some(Felt252::one()),
+        )
+        .unwrap();
 
-    //     // crate state to store casm contract class
-    //     let casm_contract_class_cache = HashMap::new();
-    //     let state_reader = InMemoryStateReader::default();
-    //     let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+        // crate state to store casm contract class
+        let casm_contract_class_cache = HashMap::new();
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
 
-    //     // call compile and store
-    //     assert!(internal_declare
-    //         .compile_and_store_casm_class(&mut state)
-    //         .is_ok());
+        // call compile and store
+        assert!(internal_declare
+            .compile_and_store_casm_class(&mut state)
+            .is_ok());
 
-    //     // test we  can retreive the data
-    //     let expected_casm_class = CasmContractClass::from_contract_class(
-    //         internal_declare.sierra_contract_class.clone(),
-    //         true,
-    //     )
-    //     .unwrap();
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            internal_declare.sierra_contract_class.clone(),
+            true,
+        )
+        .unwrap();
 
-    //     let casm_class = match state
-    //         .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
-    //         .unwrap()
-    //     {
-    //         CompiledClass::Casm(casm) => *casm,
-    //         _ => unreachable!(),
-    //     };
+        let casm_class = match state
+            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .unwrap()
+        {
+            CompiledClass::Casm(casm) => *casm,
+            _ => unreachable!(),
+        };
 
-    //     assert_eq!(expected_casm_class, casm_class);
-    // }
+        assert_eq!(expected_casm_class, casm_class);
+    }
 }
