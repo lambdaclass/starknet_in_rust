@@ -60,21 +60,21 @@ starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 # Test Cairo 1 Contracts
 # ======================
 
-CAIRO_1_CONTRACTS_TEST_DIR=starknet_programs/cairo1
-CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
-COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
-COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
+CAIRO_2_CONTRACTS_TEST_DIR=starknet_programs/cairo2
+CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_2_CONTRACTS_TEST_DIR)/*.cairo)
+COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
+COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm, $(COMPILED_SIERRA_CONTRACTS))
 
-$(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo
-	$(STARKNET_COMPILE) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
+$(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo
+	$(STARKNET_COMPILE) $< $@
 
-$(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra
-	$(STARKNET_SIERRA_COMPILE) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
+$(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
+	$(STARKNET_SIERRA_COMPILE) $< $@
 
 
 cairo-repo-dir = cairo
 
-build-cairo-1-compiler: | $(cairo-repo-dir)
+build-cairo-2-compiler: | $(cairo-repo-dir)
 
 $(cairo-repo-dir):
 	git clone --depth 1 -b v2.0.0-rc5 https://github.com/starkware-libs/cairo.git
@@ -91,7 +91,7 @@ build: compile-cairo compile-starknet
 check: compile-cairo compile-starknet
 	cargo check --all --all-targets
 
-deps: check-python-version build-cairo-1-compiler
+deps: check-python-version build-cairo-2-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	rustup toolchain install nightly
@@ -106,6 +106,8 @@ clean:
 	-rm -f starknet_programs/*.json
 	-rm -f starknet_programs/cairo1/*.casm
 	-rm -f starknet_programs/cairo1/*.sierra
+	-rm -f starknet_programs/cairo2/*.casm
+	-rm -f starknet_programs/cairo2/*.sierra
 	-rm -f tests/*.json
 	-rm -rf cairo/
 

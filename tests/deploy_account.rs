@@ -114,7 +114,7 @@ fn internal_deploy_account_cairo1() {
 
     state.set_contract_classes(Default::default()).unwrap();
 
-    let program_data = include_bytes!("../starknet_programs/cairo1/hello_world_account.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     state
@@ -169,7 +169,7 @@ fn internal_deploy_account_cairo1() {
                     "397149464972449753182583229366244826403270781177748543857889179957856017275"
                 )),
                 code_address: None,
-                gas_consumed: 16770,
+                gas_consumed: 16440,
                 class_hash: Some([
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 1
@@ -185,7 +185,7 @@ fn internal_deploy_account_cairo1() {
                 ],
                 retdata: vec![felt_str!("370462705988")],
                 execution_resources: ExecutionResources {
-                    n_steps: 155,
+                    n_steps: 152,
                     n_memory_holes: 18,
                     builtin_instance_counter:
                     [
@@ -210,11 +210,11 @@ fn internal_deploy_account_cairo1() {
                 ),
                 entry_point_selector: Some(felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
                 entry_point_type: Some(EntryPointType::Constructor),
-                gas_consumed: 14350,
+                gas_consumed: 14240,
                 calldata: vec![2.into()],
                 accessed_storage_keys: keys,
                 execution_resources: ExecutionResources {
-                    n_steps: 93,
+                    n_steps: 92,
                     n_memory_holes: 1,
                     builtin_instance_counter:
                     [

@@ -1068,7 +1068,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let salt = Felt252::zero();
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
-    let program_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
@@ -1166,7 +1166,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let salt = Felt252::zero();
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
@@ -1266,7 +1266,7 @@ fn deploy_cairo1_and_invoke() {
     let salt = Felt252::zero();
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
-    let program_data = include_bytes!("../starknet_programs/cairo1/factorial.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/factorial.casm");
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data

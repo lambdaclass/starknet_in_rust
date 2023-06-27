@@ -130,7 +130,7 @@ fn integration_test() {
 #[test]
 fn integration_test_cairo1() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let fib_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -193,12 +193,12 @@ fn integration_test_cairo1() {
         calldata,
         retdata: [144.into()].to_vec(),
         execution_resources: ExecutionResources {
-            n_steps: 421,
+            n_steps: 418,
             n_memory_holes: 1,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
         },
         class_hash: Some(class_hash),
-        gas_consumed: 35550,
+        gas_consumed: 35220,
         ..Default::default()
     };
 

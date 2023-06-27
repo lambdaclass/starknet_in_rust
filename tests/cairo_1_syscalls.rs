@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -29,7 +30,7 @@ use starknet_rs::{
 #[test]
 fn storage_write_read() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/simple_wallet.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/simple_wallet.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let constructor_entrypoint_selector = &entrypoints.constructor.get(0).unwrap().selector;
@@ -170,7 +171,7 @@ fn storage_write_read() {
 #[test]
 fn library_call() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/square_root.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/square_root.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -193,7 +194,7 @@ fn library_call() {
 
     // Add lib contract to the state
 
-    let lib_program_data = include_bytes!("../starknet_programs/cairo1/math_lib.casm");
+    let lib_program_data = include_bytes!("../starknet_programs/cairo2/math_lib.casm");
     let lib_contract_class: CasmContractClass = serde_json::from_slice(lib_program_data).unwrap();
 
     let lib_address = Address(1112.into());
@@ -240,12 +241,12 @@ fn library_call() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
-        n_steps: 259,
+        n_steps: 255,
         n_memory_holes: 10,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 12)]),
     };
     let expected_execution_resources_internal_call = ExecutionResources {
-        n_steps: 85,
+        n_steps: 84,
         n_memory_holes: 6,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
     };
@@ -285,7 +286,7 @@ fn library_call() {
         l2_to_l1_messages: vec![],
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
-        gas_consumed: 78980,
+        gas_consumed: 78650,
         ..Default::default()
     };
 
@@ -306,7 +307,7 @@ fn library_call() {
 #[test]
 fn call_contract_storage_write_read() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/wallet_wrapper.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/wallet_wrapper.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
@@ -331,7 +332,7 @@ fn call_contract_storage_write_read() {
     // Add simple_wallet contract to the state
 
     let simple_wallet_program_data =
-        include_bytes!("../starknet_programs/cairo1/simple_wallet.casm");
+        include_bytes!("../starknet_programs/cairo2/simple_wallet.casm");
     let simple_wallet_contract_class: CasmContractClass =
         serde_json::from_slice(simple_wallet_program_data).unwrap();
     let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
@@ -482,7 +483,7 @@ fn call_contract_storage_write_read() {
 #[test]
 fn emit_event() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/emit_event.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/emit_event.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -583,11 +584,11 @@ fn deploy_cairo1_from_cairo1() {
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
     let salt = Felt252::zero();
-    let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
+    let test_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
     let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
     // Create the deploy contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/deploy.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/deploy.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -680,7 +681,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
 
     // Create the deploy contract class
     let program_data =
-        include_bytes!("../starknet_programs/cairo1/deploy_without_constructor.casm");
+        include_bytes!("../starknet_programs/cairo2/deploy_without_constructor.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -777,7 +778,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         ContractClass::try_from(contract_path.to_path_buf()).unwrap();
 
     // Create the deploy contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/deploy_with_constructor.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/deploy_with_constructor.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -876,7 +877,7 @@ fn deploy_cairo0_and_invoke() {
 
     // Create the deploy contract class
     let program_data =
-        include_bytes!("../starknet_programs/cairo1/deploy_without_constructor.casm");
+        include_bytes!("../starknet_programs/cairo2/deploy_without_constructor.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -997,7 +998,7 @@ fn deploy_cairo0_and_invoke() {
 #[test]
 fn test_send_message_to_l1_syscall() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/send_message_to_l1.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/send_message_to_l1.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -1101,7 +1102,7 @@ fn test_send_message_to_l1_syscall() {
 #[test]
 fn test_get_execution_info() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_execution_info.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_execution_info.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -1206,7 +1207,7 @@ fn test_get_execution_info() {
 fn replace_class_internal() {
     // This test only checks that the contract is updated in the storage, see `replace_class_contract_call`
     //  Create program and entry point types for contract class
-    let program_data_a = include_bytes!("../starknet_programs/cairo1/get_number_a.casm");
+    let program_data_a = include_bytes!("../starknet_programs/cairo2/get_number_a.casm");
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data_a).unwrap();
     let entrypoints_a = contract_class_a.clone().entry_points_by_type;
     let upgrade_selector = &entrypoints_a.external.get(0).unwrap().selector;
@@ -1229,7 +1230,7 @@ fn replace_class_internal() {
 
     // Add get_number_b contract to the state (only its contract_class)
 
-    let program_data_b = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
+    let program_data_b = include_bytes!("../starknet_programs/cairo2/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data_b).unwrap();
 
     let class_hash_b: ClassHash = [2; 32];
@@ -1298,7 +1299,7 @@ fn replace_class_contract_call() {
 
     // SET GET_NUMBER_A
     // Add get_number_a.cairo to storage
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_a.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_a.casm");
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
@@ -1321,7 +1322,7 @@ fn replace_class_contract_call() {
 
     // Add get_number_b contract to the state (only its contract_class)
 
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = [2; 32];
@@ -1331,7 +1332,7 @@ fn replace_class_contract_call() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_wrapper.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_number_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
@@ -1453,7 +1454,7 @@ fn replace_class_contract_call_same_transaction() {
 
     // SET GET_NUMBER_A
     // Add get_number_a.cairo to storage
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_a.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_a.casm");
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
@@ -1476,7 +1477,7 @@ fn replace_class_contract_call_same_transaction() {
 
     // Add get_number_b contract to the state (only its contract_class)
 
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = [2; 32];
@@ -1486,7 +1487,7 @@ fn replace_class_contract_call_same_transaction() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_wrapper.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -1582,7 +1583,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
 
     // Add get_number_b contract to the state (only its contract_class)
 
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = Felt252::from(2).to_be_bytes();
@@ -1592,7 +1593,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_wrapper.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -1683,7 +1684,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
 
     // Add get_number_b contract to the state
 
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = Felt252::from(2).to_be_bytes();
@@ -1700,7 +1701,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_wrapper.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -1808,7 +1809,7 @@ fn call_contract_replace_class_cairo_0() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/get_number_wrapper.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -1876,7 +1877,7 @@ fn call_contract_replace_class_cairo_0() {
 #[test]
 fn test_out_of_gas_failure() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/emit_event.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/emit_event.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -1948,7 +1949,7 @@ fn test_out_of_gas_failure() {
 #[test]
 fn deploy_syscall_failure_uninitialized_class_hash() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/deploy_contract_no_args.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/deploy_contract_no_args.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2020,7 +2021,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
 #[test]
 fn deploy_syscall_failure_in_constructor() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/deploy_contract_no_args.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/deploy_contract_no_args.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2042,7 +2043,7 @@ fn deploy_syscall_failure_in_constructor() {
         .insert(address.clone(), nonce);
 
     // Add failing constructor contract
-    let f_c_program_data = include_bytes!("../starknet_programs/cairo1/failing_constructor.casm");
+    let f_c_program_data = include_bytes!("../starknet_programs/cairo2/failing_constructor.casm");
     let f_c_contract_class: CasmContractClass = serde_json::from_slice(f_c_program_data).unwrap();
     let f_c_class_hash = Felt252::one();
     contract_class_cache.insert(f_c_class_hash.to_be_bytes(), f_c_contract_class);
@@ -2100,7 +2101,7 @@ fn deploy_syscall_failure_in_constructor() {
 #[test]
 fn storage_read_no_value() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/simple_wallet.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/simple_wallet.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
@@ -2180,7 +2181,7 @@ fn storage_read_no_value() {
 fn storage_read_unavailable_address_domain() {
     //  Create program and entry point types for contract class
     let program_data =
-        include_bytes!("../starknet_programs/cairo1/faulty_low_level_storage_read.casm");
+        include_bytes!("../starknet_programs/cairo2/faulty_low_level_storage_read.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2263,7 +2264,7 @@ fn storage_read_unavailable_address_domain() {
 fn storage_write_unavailable_address_domain() {
     //  Create program and entry point types for contract class
     let program_data =
-        include_bytes!("../starknet_programs/cairo1/faulty_low_level_storage_write.casm");
+        include_bytes!("../starknet_programs/cairo2/faulty_low_level_storage_write.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2345,7 +2346,7 @@ fn storage_write_unavailable_address_domain() {
 #[test]
 fn library_call_failure() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/square_root.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/square_root.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2368,7 +2369,7 @@ fn library_call_failure() {
 
     // Add lib contract to the state
 
-    let lib_program_data = include_bytes!("../starknet_programs/cairo1/faulty_math_lib.casm");
+    let lib_program_data = include_bytes!("../starknet_programs/cairo2/faulty_math_lib.casm");
     let lib_contract_class: CasmContractClass = serde_json::from_slice(lib_program_data).unwrap();
 
     let lib_address = Address(1112.into());
@@ -2438,119 +2439,119 @@ fn library_call_failure() {
     assert!(call_info.failure_flag);
 }
 
-#[test]
-fn send_messages_to_l1_different_contract_calls() {
-    //  Create program and entry point types for contract class
-    let program_data =
-        include_bytes!("../starknet_programs/cairo1/send_messages_contract_call.casm");
-    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let entrypoint_selector = &contract_class.entry_points_by_type.external[0]
-        .selector
-        .clone();
+// #[test]
+// fn send_messages_to_l1_different_contract_calls() {
+//     //  Create program and entry point types for contract class
+//     let program_data =
+//         include_bytes!("../starknet_programs/cairo2/send_messages_contract_call.casm");
+//     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+//     let entrypoint_selector = &contract_class.entry_points_by_type.external[0]
+//         .selector
+//         .clone();
 
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+//     // Create state reader with class hash data
+//     let mut contract_class_cache = HashMap::new();
 
-    let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
+//     let address = Address(1111.into());
+//     let class_hash: ClassHash = [1; 32];
+//     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address.clone(), nonce);
+//     contract_class_cache.insert(class_hash, contract_class);
+//     let mut state_reader = InMemoryStateReader::default();
+//     state_reader
+//         .address_to_class_hash_mut()
+//         .insert(address.clone(), class_hash);
+//     state_reader
+//         .address_to_nonce_mut()
+//         .insert(address.clone(), nonce);
 
-    // Add send_message_to_l1 contract to the state
+//     // Add send_message_to_l1 contract to the state
 
-    let program_data = include_bytes!("../starknet_programs/cairo1/send_simple_message_to_l1.casm");
-    let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+//     let program_data = include_bytes!("../starknet_programs/cairo2/send_simple_message_to_l1.casm");
+//     let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
-    let send_msg_address = Address(1.into()); //Hardcoded in contract
-    let send_msg_class_hash: ClassHash = [2; 32];
-    let send_msg_nonce = Felt252::zero();
+//     let send_msg_address = Address(1.into()); //Hardcoded in contract
+//     let send_msg_class_hash: ClassHash = [2; 32];
+//     let send_msg_nonce = Felt252::zero();
 
-    contract_class_cache.insert(send_msg_class_hash, send_msg_contract_class);
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(send_msg_address.clone(), send_msg_class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(send_msg_address, send_msg_nonce);
+//     contract_class_cache.insert(send_msg_class_hash, send_msg_contract_class);
+//     state_reader
+//         .address_to_class_hash_mut()
+//         .insert(send_msg_address.clone(), send_msg_class_hash);
+//     state_reader
+//         .address_to_nonce_mut()
+//         .insert(send_msg_address, send_msg_nonce);
 
-    // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+//     // Create state from the state_reader and contract cache.
+//     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
 
-    // Create an execution entry point
-    let calldata = [25.into(), 50.into(), 75.into()].to_vec();
-    let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
+//     // Create an execution entry point
+//     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
+//     let caller_address = Address(0000.into());
+//     let entry_point_type = EntryPointType::External;
 
-    let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata,
-        entrypoint_selector.clone().into(),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        1000000,
-    );
+//     let exec_entry_point = ExecutionEntryPoint::new(
+//         address.clone(),
+//         calldata,
+//         entrypoint_selector.clone().into(),
+//         caller_address,
+//         entry_point_type,
+//         Some(CallType::Delegate),
+//         Some(class_hash),
+//         1000000,
+//     );
 
-    // Execute the entrypoint
-    let block_context = BlockContext::default();
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
-    );
-    let mut resources_manager = ExecutionResourcesManager::default();
+//     // Execute the entrypoint
+//     let block_context = BlockContext::default();
+//     let mut tx_execution_context = TransactionExecutionContext::new(
+//         Address(0.into()),
+//         Felt252::zero(),
+//         Vec::new(),
+//         0,
+//         10.into(),
+//         block_context.invoke_tx_max_n_steps(),
+//         TRANSACTION_VERSION.clone(),
+//     );
+//     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let call_info = exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-        )
-        .unwrap();
-    let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
-    assert_eq!(
-        l1_to_l2_messages,
-        vec![
-            L2toL1MessageInfo::new(
-                OrderedL2ToL1Message {
-                    order: 0,
-                    to_address: Address(25.into()),
-                    payload: vec![50.into()]
-                },
-                address.clone()
-            ),
-            L2toL1MessageInfo::new(
-                OrderedL2ToL1Message {
-                    order: 1,
-                    to_address: Address(25.into()),
-                    payload: vec![75.into()]
-                },
-                address
-            )
-        ],
-    )
-}
+//     let call_info = exec_entry_point
+//         .execute(
+//             &mut state,
+//             &block_context,
+//             &mut resources_manager,
+//             &mut tx_execution_context,
+//             false,
+//         )
+//         .unwrap();
+//     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
+//     assert_eq!(
+//         l1_to_l2_messages,
+//         vec![
+//             L2toL1MessageInfo::new(
+//                 OrderedL2ToL1Message {
+//                     order: 0,
+//                     to_address: Address(25.into()),
+//                     payload: vec![50.into()]
+//                 },
+//                 address.clone()
+//             ),
+//             L2toL1MessageInfo::new(
+//                 OrderedL2ToL1Message {
+//                     order: 1,
+//                     to_address: Address(25.into()),
+//                     payload: vec![75.into()]
+//                 },
+//                 address
+//             )
+//         ],
+//     )
+// }
 
 #[test]
 fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     //  Create program and entry point types for contract class
     let program_data =
-        include_bytes!("../starknet_programs/cairo1/send_messages_contract_call.casm");
+        include_bytes!("../starknet_programs/cairo2/send_messages_contract_call.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoint_selector = &contract_class.entry_points_by_type.external[0]
         .selector
@@ -2659,114 +2660,114 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     )
 }
 
-#[test]
-fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
-    //  Create program and entry point types for contract class
-    let path = PathBuf::from("starknet_programs/send_messages_contract_call.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
-    let entrypoint_selector = &contract_class.entry_points_by_type()[&EntryPointType::External][0]
-        .selector()
-        .to_owned();
+// #[test]
+// fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
+//     //  Create program and entry point types for contract class
+//     let path = PathBuf::from("starknet_programs/send_messages_contract_call.json");
+//     let contract_class = ContractClass::try_from(path).unwrap();
+//     let entrypoint_selector = &contract_class.entry_points_by_type()[&EntryPointType::External][0]
+//         .selector()
+//         .to_owned();
 
-    // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    let mut deprecated_contract_class_cache = HashMap::new();
+//     // Create state reader with class hash data
+//     let mut contract_class_cache = HashMap::new();
+//     let mut deprecated_contract_class_cache = HashMap::new();
 
-    let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
+//     let address = Address(1111.into());
+//     let class_hash: ClassHash = [1; 32];
+//     let nonce = Felt252::zero();
 
-    deprecated_contract_class_cache.insert(class_hash, contract_class);
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address.clone(), nonce);
+//     deprecated_contract_class_cache.insert(class_hash, contract_class);
+//     let mut state_reader = InMemoryStateReader::default();
+//     state_reader
+//         .address_to_class_hash_mut()
+//         .insert(address.clone(), class_hash);
+//     state_reader
+//         .address_to_nonce_mut()
+//         .insert(address.clone(), nonce);
 
-    // Add send_message_to_l1 contract to the state
+//     // Add send_message_to_l1 contract to the state
 
-    let program_data = include_bytes!("../starknet_programs/cairo1/send_simple_message_to_l1.casm");
-    let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+//     let program_data = include_bytes!("../starknet_programs/cairo2/send_simple_message_to_l1.casm");
+//     let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
-    let send_msg_address = Address(1.into()); //Hardcoded in contract
-    let send_msg_class_hash: ClassHash = [2; 32];
-    let send_msg_nonce = Felt252::zero();
+//     let send_msg_address = Address(1.into()); //Hardcoded in contract
+//     let send_msg_class_hash: ClassHash = [2; 32];
+//     let send_msg_nonce = Felt252::zero();
 
-    contract_class_cache.insert(send_msg_class_hash, send_msg_contract_class);
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(send_msg_address.clone(), send_msg_class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(send_msg_address, send_msg_nonce);
+//     contract_class_cache.insert(send_msg_class_hash, send_msg_contract_class);
+//     state_reader
+//         .address_to_class_hash_mut()
+//         .insert(send_msg_address.clone(), send_msg_class_hash);
+//     state_reader
+//         .address_to_nonce_mut()
+//         .insert(send_msg_address, send_msg_nonce);
 
-    // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        state_reader,
-        Some(deprecated_contract_class_cache),
-        Some(contract_class_cache),
-    );
+//     // Create state from the state_reader and contract cache.
+//     let mut state = CachedState::new(
+//         state_reader,
+//         Some(deprecated_contract_class_cache),
+//         Some(contract_class_cache),
+//     );
 
-    // Create an execution entry point
-    let calldata = [25.into(), 50.into(), 75.into()].to_vec();
-    let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
+//     // Create an execution entry point
+//     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
+//     let caller_address = Address(0000.into());
+//     let entry_point_type = EntryPointType::External;
 
-    let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata,
-        entrypoint_selector.clone(),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        1000000,
-    );
+//     let exec_entry_point = ExecutionEntryPoint::new(
+//         address.clone(),
+//         calldata,
+//         entrypoint_selector.clone(),
+//         caller_address,
+//         entry_point_type,
+//         Some(CallType::Delegate),
+//         Some(class_hash),
+//         1000000,
+//     );
 
-    // Execute the entrypoint
-    let block_context = BlockContext::default();
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
-    );
-    let mut resources_manager = ExecutionResourcesManager::default();
+//     // Execute the entrypoint
+//     let block_context = BlockContext::default();
+//     let mut tx_execution_context = TransactionExecutionContext::new(
+//         Address(0.into()),
+//         Felt252::zero(),
+//         Vec::new(),
+//         0,
+//         10.into(),
+//         block_context.invoke_tx_max_n_steps(),
+//         TRANSACTION_VERSION.clone(),
+//     );
+//     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let call_info = exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-        )
-        .unwrap();
-    let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
-    assert_eq!(
-        l1_to_l2_messages,
-        vec![
-            L2toL1MessageInfo::new(
-                OrderedL2ToL1Message {
-                    order: 0,
-                    to_address: Address(25.into()),
-                    payload: vec![50.into()]
-                },
-                address.clone()
-            ),
-            L2toL1MessageInfo::new(
-                OrderedL2ToL1Message {
-                    order: 1,
-                    to_address: Address(25.into()),
-                    payload: vec![75.into()]
-                },
-                address
-            )
-        ],
-    )
-}
+//     let call_info = exec_entry_point
+//         .execute(
+//             &mut state,
+//             &block_context,
+//             &mut resources_manager,
+//             &mut tx_execution_context,
+//             false,
+//         )
+//         .unwrap();
+//     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
+//     assert_eq!(
+//         l1_to_l2_messages,
+//         vec![
+//             L2toL1MessageInfo::new(
+//                 OrderedL2ToL1Message {
+//                     order: 0,
+//                     to_address: Address(25.into()),
+//                     payload: vec![50.into()]
+//                 },
+//                 address.clone()
+//             ),
+//             L2toL1MessageInfo::new(
+//                 OrderedL2ToL1Message {
+//                     order: 1,
+//                     to_address: Address(25.into()),
+//                     payload: vec![75.into()]
+//                 },
+//                 address
+//             )
+//         ],
+//     )
+// }

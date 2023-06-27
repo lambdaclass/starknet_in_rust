@@ -20,6 +20,7 @@ mod WalletWrapper {
     struct Storage{
     }
 
+    #[external(v0)]
     impl WalletWrapper of super::IWalletWrapper<ContractState> {
         fn get_balance(self: @ContractState, simple_wallet_contract_address: ContractAddress) -> felt252 {
             SimpleWalletDispatcher {contract_address: simple_wallet_contract_address}.get_balance()

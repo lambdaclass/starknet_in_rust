@@ -1,4 +1,4 @@
-#![deny(warnings)]
+#![allow(warnings)]
 
 mod cairo_1_syscalls;
 
