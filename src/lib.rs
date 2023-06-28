@@ -46,41 +46,55 @@ pub mod transaction;
 pub mod utils;
 
 pub fn simulate_transaction<S: StateReader>(
-    transaction: &InvokeFunction,
+    transactions: &[InvokeFunction],
     state: S,
     block_context: BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
-) -> Result<TransactionExecutionInfo, TransactionError> {
-    let tx_for_simulation =
-        transaction.create_for_simulation(transaction.clone(), skip_validate, skip_execute);
-    tx_for_simulation.simulate_transaction(state, block_context, remaining_gas)
+) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
+    let mut cache_state = CachedState::new(state, None, None);
+
+    let mut result = Vec::with_capacity(transactions.len());
+    for transaction in transactions {
+        let tx_for_simulation =
+            transaction.create_for_simulation(transaction.clone(), skip_validate, skip_execute);
+        let tx_result =
+            tx_for_simulation.execute(&mut cache_state, &block_context, remaining_gas)?;
+        result.push(tx_result);
+    }
+
+    Ok(result)
 }
 
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
-    transaction: &Transaction,
+    transactions: &[Transaction],
     state: T,
     block_context: &BlockContext,
-) -> Result<(u128, usize), TransactionError>
+) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
     let mut cached_state = CachedState::<T>::new(state, None, None);
 
-    // Check if the contract is deployed.
-    cached_state.get_class_hash_at(&transaction.contract_address())?;
+    let mut result = Vec::with_capacity(transactions.len());
+    for transaction in transactions {
+        // Check if the contract is deployed.
+        cached_state.get_class_hash_at(&transaction.contract_address())?;
+        // execute the transaction with the fake state.
 
-    // execute the transaction with the fake state.
-    let transaction_result = transaction.execute(&mut cached_state, block_context, 1_000_000)?;
-    if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
-        let actual_fee = transaction_result.actual_fee;
-        Ok((actual_fee, *gas_usage))
-    } else {
-        Err(TransactionError::ResourcesError)
+        let transaction_result =
+            transaction.execute(&mut cached_state, block_context, 1_000_000)?;
+        if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
+            result.push((transaction_result.actual_fee, *gas_usage));
+        } else {
+            return Err(TransactionError::ResourcesError);
+        };
     }
+
+    Ok(result)
 }
 
 pub fn call_contract<T: State + StateReader>(
@@ -223,8 +237,8 @@ mod test {
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
 
-        let estimated_fee = estimate_fee(&transaction, state, &transaction_context).unwrap();
-        assert_eq!(estimated_fee, (0, 0));
+        let estimated_fee = estimate_fee(&[transaction], state, &transaction_context).unwrap();
+        assert_eq!(estimated_fee, vec![(0, 0)]);
     }
 
     #[test]
@@ -443,11 +457,12 @@ mod test {
         let block_context = BlockContext::default();
 
         let context =
-            simulate_transaction(&invoke, state_reader, block_context, 1000, false, true).unwrap();
+            simulate_transaction(&[invoke], state_reader, block_context, 1000, false, true)
+                .unwrap();
 
-        assert!(context.validate_info.is_some());
-        assert!(context.call_info.is_none());
-        assert!(context.fee_transfer_info.is_none());
+        assert!(context[0].validate_info.is_some());
+        assert!(context[0].call_info.is_none());
+        assert!(context[0].fee_transfer_info.is_none());
     }
     #[test]
     fn test_skip_execute_and_validate_flags() {
@@ -521,10 +536,10 @@ mod test {
         let block_context = BlockContext::default();
 
         let context =
-            simulate_transaction(&invoke, state_reader, block_context, 1000, true, true).unwrap();
+            simulate_transaction(&[invoke], state_reader, block_context, 1000, true, true).unwrap();
 
-        assert!(context.validate_info.is_none());
-        assert!(context.call_info.is_none());
-        assert!(context.fee_transfer_info.is_none());
+        assert!(context[0].validate_info.is_none());
+        assert!(context[0].call_info.is_none());
+        assert!(context[0].fee_transfer_info.is_none());
     }
 }

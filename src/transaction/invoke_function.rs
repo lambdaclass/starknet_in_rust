@@ -11,11 +11,8 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
+    state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-    },
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -332,17 +329,6 @@ impl InvokeFunction {
             skip_execute,
             ..tx
         }
-    }
-
-    pub(crate) fn simulate_transaction<S: StateReader>(
-        &self,
-        state: S,
-        block_context: BlockContext,
-        remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut cache_state = CachedState::new(state, None, None);
-        // init simulation
-        self.execute(&mut cache_state, &block_context, remaining_gas)
     }
 }
 
