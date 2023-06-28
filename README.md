@@ -134,7 +134,7 @@ And don't forget to give the project a star! ⭐ Thank you again for your suppor
 ## 🌞 Related Projects
 
 - [cairo-vm](https://github.com/lambdaclass/cairo-vm): A fast implementation of the Cairo VM in Rust.
-- [cairo-rs-py](https://github.com/lambdaclass/cairo-rs-py): Bindings for using cairo-vm from Python code.
+- [cairo-vm-py](https://github.com/lambdaclass/cairo-vm-py): Bindings for using cairo-vm from Python code.
 
 ## 📚 Documentation
 
