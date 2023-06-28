@@ -127,6 +127,6 @@ pub enum TransactionError {
     InvalidBlockTimestamp,
     #[error("{0:?}")]
     CustomError(String),
-    #[error("call info es None")]
+    #[error("call info is None")]
     CallInfoIsNone,
 }
