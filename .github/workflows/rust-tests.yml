@@ -87,7 +87,6 @@ jobs:
       uses: dtolnay/rust-toolchain@nightly
       with:
           toolchain: 1.72.0
-          override: true
           components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
       with:
