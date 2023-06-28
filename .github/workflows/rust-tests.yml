@@ -86,7 +86,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/toolchain@nightly
       with:
-          toolchain: nightly
+          toolchain: 1.72.0
           components: rustfmt, clippy
     - name: Checkout
       uses: actions/checkout@v3
