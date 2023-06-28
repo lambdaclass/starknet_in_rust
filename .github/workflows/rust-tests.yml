@@ -89,10 +89,6 @@ jobs:
           toolchain: nightly
           override: true
           components: rustfmt, clippy
-    - name: Run cargo check
-      uses: actions-rs/cargo@v1
-      with:
-          command: check
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
