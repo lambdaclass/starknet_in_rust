@@ -84,11 +84,15 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      uses: actions-rs/toolchain@v1
       with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          toolchain: nightly
           override: true
           components: rustfmt, clippy
+    - name: Run cargo check
+      uses: actions-rs/cargo@v1
+      with:
+          command: check
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
