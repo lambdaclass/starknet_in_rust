@@ -282,16 +282,19 @@ impl DeclareV2 {
         let mut tx_execution_context =
             self.get_execution_context(block_context.validate_max_n_steps);
 
-        let call_info = entry_point.execute(
-            state,
-            block_context,
-            resources_manager,
-            &mut tx_execution_context,
-            false,
-        )?;
-
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(entry_point.execute(
+                state,
+                block_context,
+                resources_manager,
+                &mut tx_execution_context,
+                false,
+            )?)
+        };
+        let call_info = verify_no_calls_to_other_contracts(&call_info)?;
         remaining_gas -= call_info.gas_consumed;
-        verify_no_calls_to_other_contracts(&call_info)?;
 
         Ok((call_info, remaining_gas))
     }

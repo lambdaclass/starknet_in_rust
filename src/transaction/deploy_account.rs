@@ -261,15 +261,19 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = entry_point.execute(
-            state,
-            block_context,
-            resources_manager,
-            &mut self.get_execution_context(block_context.validate_max_n_steps),
-            false,
-        )?;
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(entry_point.execute(
+                state,
+                block_context,
+                resources_manager,
+                &mut self.get_execution_context(block_context.validate_max_n_steps),
+                false,
+            )?)
+        };
 
-        verify_no_calls_to_other_contracts(&call_info)
+        let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
         Ok(call_info)
     }
@@ -316,18 +320,22 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = call.execute(
-            state,
-            block_context,
-            resources_manager,
-            &mut self.get_execution_context(block_context.validate_max_n_steps),
-            false,
-        )?;
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(call.execute(
+                state,
+                block_context,
+                resources_manager,
+                &mut self.get_execution_context(block_context.validate_max_n_steps),
+                false,
+            )?)
+        };
 
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
 
-        Ok(Some(call_info))
+        Ok(call_info)
     }
 
     fn charge_fee<S>(
