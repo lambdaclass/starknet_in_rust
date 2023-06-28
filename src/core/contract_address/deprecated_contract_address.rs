@@ -1,5 +1,9 @@
 /// Contains functionality for computing class hashes for deprecated Declare transactions
 /// (ie, declarations that do not correspond to Cairo 1 contracts)
+/// The code used for hinted class hash computation was extracted from the Pathfinder and xJonathanLEI implementations
+/// and can be found here:
+/// https://github.com/eqlabs/pathfinder/
+/// https://github.com/xJonathanLEI/starknet-rs/
 use crate::{
     core::errors::contract_address_errors::ContractAddressError,
     hash_utils::compute_hash_on_elements,
@@ -10,7 +14,7 @@ use num_traits::Zero;
 use serde::Serialize;
 use sha3::Digest;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
-use std::{borrow::Cow, collections::BTreeMap};
+use std::{borrow::Cow, collections::BTreeMap, io};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 0x03;
@@ -126,6 +130,27 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
         W: ?Sized + std::io::Write,
     {
         writer.write_all(b": ")
+    }
+
+    #[inline]
+    fn write_string_fragment<W>(&mut self, writer: &mut W, fragment: &str) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        let mut buf = [0, 0];
+
+        for c in fragment.chars() {
+            if c.is_ascii() {
+                writer.write_all(&[c as u8])?;
+            } else {
+                let buf = c.encode_utf16(&mut buf);
+                for i in buf {
+                    write!(writer, r"\u{:4x}", i)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -249,29 +274,6 @@ pub(crate) fn truncated_keccak(mut plain: [u8; 32]) -> Felt252 {
     Felt252::from_bytes_be(&plain)
 }
 
-// Temporary hack here because Python only emits ASCII to JSON.
-#[allow(unused)]
-fn unicode_encode(s: &str) -> String {
-    use std::fmt::Write;
-
-    let mut output = String::with_capacity(s.len());
-    let mut buf = [0, 0];
-
-    for c in s.chars() {
-        if c.is_ascii() {
-            output.push(c);
-        } else {
-            let buf = c.encode_utf16(&mut buf);
-            for i in buf {
-                // Unwrapping should be safe here
-                write!(output, r"\u{:4x}", i).unwrap();
-            }
-        }
-    }
-
-    output
-}
-
 fn get_contract_entry_points_hashed(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
@@ -350,7 +352,7 @@ mod tests {
     use std::{fs, str::FromStr};
 
     use super::*;
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::felt::{felt_str, Felt252};
     use coverage_helper::test;
     use num_traits::Num;
     use starknet_contract_class::ParsedContractClass;
@@ -461,6 +463,28 @@ mod tests {
                 16
             )
             .unwrap()
+        );
+    }
+
+    // This was the contract class that caused an outage in Mainnet.
+    // More info in EqLabs report: https://eqlabs.github.io/pathfinder/blog/2023-06-17_mainnet_incident.html
+    #[test]
+    fn test_compute_class_hash_0x00801ad5dc7c995addf7fbce1c4c74413586acb44f9ff44ba903a08a6153fa80()
+    {
+        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x00801ad5dc7c995addf7fbce1c4c74413586acb44f9ff44ba903a08a6153fa80.json").unwrap();
+        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = ContractClass {
+            program_json: serde_json::Value::from_str(&contract_str).unwrap(),
+            program: parsed_contract_class.program,
+            entry_points_by_type: parsed_contract_class.entry_points_by_type,
+            abi: parsed_contract_class.abi,
+        };
+
+        assert_eq!(
+            compute_deprecated_class_hash(&contract_class).unwrap(),
+            felt_str!(
+                "226341635385251092193534262877925620859725853394183386505497817801290939008"
+            )
         );
     }
 }
