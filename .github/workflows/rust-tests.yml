@@ -84,9 +84,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: Install Rust
-      uses: dtolnay/toolchain@nightly
+      uses: dtolnay/rust-toolchain@nightly
       with:
-          toolchain: 1.72.0
+          toolchain: nightly
           components: rustfmt, clippy
     - name: Checkout
       uses: actions/checkout@v3
