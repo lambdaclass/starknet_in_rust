@@ -3,7 +3,7 @@
 
 ### 🦀 Starknet in Rust 🦀
 
-Starknet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdaclass/cairo-rs) VM
+Starknet library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdaclass/cairo-vm)
 
 [Report Bug](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+) · [Request Feature](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+)
 
@@ -45,7 +45,7 @@ Starknet library in Rust, featuring [⚡cairo-rs⚡](https://github.com/lambdacl
 ## 📖 About
 
 `starknet_in_rust` is an implementation of [Starknet](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/starknet) in Rust.
-It makes use of [cairo-rs](https://github.com/lambdaclass/cairo-rs), the Rust implementation of the Cairo virtual machine.
+It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust implementation of the Cairo virtual machine.
 
 ## 🌅 Getting Started
 
@@ -133,8 +133,8 @@ And don't forget to give the project a star! ⭐ Thank you again for your suppor
 
 ## 🌞 Related Projects
 
-- [cairo-rs](https://github.com/lambdaclass/cairo-rs): A fast implementation of the Cairo VM in Rust.
-- [cairo-rs-py](https://github.com/lambdaclass/cairo-rs-py): Bindings for using cairo-rs from Python code.
+- [cairo-vm](https://github.com/lambdaclass/cairo-vm): A fast implementation of the Cairo VM in Rust.
+- [cairo-rs-py](https://github.com/lambdaclass/cairo-rs-py): Bindings for using cairo-vm from Python code.
 
 ## 📚 Documentation
 

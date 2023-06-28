@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
-use starknet_rs::{
+use starknet_in_rust::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     testing::state::StarknetState, utils::Address,
 };

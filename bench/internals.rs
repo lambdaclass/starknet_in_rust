@@ -4,7 +4,7 @@ use cairo_vm::felt;
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
 use num_traits::Zero;
-use starknet_rs::{
+use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
         block_context::StarknetChainId,
