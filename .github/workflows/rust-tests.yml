@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
           toolchain: nightly
           override: true
