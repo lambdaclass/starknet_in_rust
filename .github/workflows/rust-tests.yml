@@ -80,18 +80,16 @@ jobs:
     - name: Run tests
       run: make test
 
+  # 28.06.2023: This job uses unmaintained actions-rs because dtolnay is giving linking errors with nightly
   coverage:
     runs-on: ubuntu-20.04
     steps:
     - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      uses: actions-rs/toolchain@v1
       with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          toolchain: nightly
           override: true
           components: rustfmt, clippy
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
     - uses: actions/setup-python@v2
