@@ -76,11 +76,15 @@ impl Transaction {
             Transaction::Deploy(tx) => {
                 tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
             }
-            Transaction::DeployAccount(_) => todo!(),
+            Transaction::DeployAccount(tx) => {
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+            }
             Transaction::InvokeFunction(tx) => {
                 tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
             }
-            Transaction::L1Handler(_) => todo!(),
+            Transaction::L1Handler(tx) => {
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+            }
         }
     }
 
@@ -94,11 +98,13 @@ impl Transaction {
             Transaction::Declare(tx) => tx.simulate_transaction(state, block_context),
             Transaction::DeclareV2(tx) => tx.simulate_transaction(state, block_context),
             Transaction::Deploy(tx) => tx.simulate_transaction(state, block_context),
-            Transaction::DeployAccount(_) => todo!(),
+            Transaction::DeployAccount(tx) => tx.simulate_transaction(state, block_context),
             Transaction::InvokeFunction(tx) => {
                 tx.simulate_transaction(state, block_context, remaining_gas)
             }
-            Transaction::L1Handler(_) => todo!(),
+            Transaction::L1Handler(tx) => {
+                tx.simulate_transaction(state, block_context, remaining_gas)
+            }
         }
     }
 }

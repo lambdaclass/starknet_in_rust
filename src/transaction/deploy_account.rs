@@ -1,4 +1,4 @@
-use super::invoke_function::verify_no_calls_to_other_contracts;
+use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -21,7 +21,7 @@ use crate::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
     state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{cached_state::CachedState, ExecutionResourcesManager},
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::{
         error::TransactionError,
@@ -363,6 +363,31 @@ impl DeployAccount {
         };
 
         Ok((fee_transfer_info, actual_fee))
+    }
+
+    pub(crate) fn create_for_simulation(
+        &self,
+        tx: DeployAccount,
+        skip_validate: bool,
+        skip_execute: bool,
+    ) -> Transaction {
+        let tx = DeployAccount {
+            skip_validate,
+            skip_execute,
+            ..tx
+        };
+
+        Transaction::DeployAccount(tx)
+    }
+
+    pub(crate) fn simulate_transaction<S: StateReader>(
+        &self,
+        state: S,
+        block_context: BlockContext,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let mut cache_state = CachedState::new(state, None, None);
+        // init simulation
+        self.execute(&mut cache_state, &block_context)
     }
 }
 
