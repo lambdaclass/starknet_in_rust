@@ -19,7 +19,7 @@ use crate::{
         },
     },
     state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{cached_state::CachedState, ExecutionResourcesManager},
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
@@ -230,6 +230,9 @@ impl Deploy {
         )
     }
 
+// ---------------
+//   Simulation
+// ---------------
     pub(crate) fn create_for_simulation(
         &self,
         tx: Deploy,
@@ -243,6 +246,16 @@ impl Deploy {
         };
 
         Transaction::Deploy(tx)
+    }
+
+    pub(crate) fn simulate_transaction<S: StateReader>(
+        &self,
+        state: S,
+        block_context: BlockContext,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let mut cache_state = CachedState::new(state, None, None);
+        // init simulation
+        self.execute(&mut cache_state, &block_context)
     }
 }
 

@@ -89,9 +89,9 @@ impl Transaction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Declare(_) => todo!(),
+            Transaction::Declare(tx) => tx.simulate_transaction(state, block_context),
             Transaction::DeclareV2(_) => todo!(),
-            Transaction::Deploy(_) => todo!(),
+            Transaction::Deploy(tx) => tx.simulate_transaction(state, block_context),
             Transaction::DeployAccount(_) => todo!(),
             Transaction::InvokeFunction(tx) => {
                 tx.simulate_transaction(state, block_context, remaining_gas)
