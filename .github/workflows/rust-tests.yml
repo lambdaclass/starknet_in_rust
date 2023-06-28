@@ -107,3 +107,25 @@ jobs:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
         files: lcov.info
+
+  build-cli:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          override: true
+          components: rustfmt, clippy
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+    - name: Checkout
+      uses: actions/checkout@v3
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+    - name: Deps
+      run: make deps
+    - name: Build CLI
+      run: cd cli && cargo build
