@@ -28,6 +28,8 @@ use getset::Getters;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
+use super::Transaction;
+
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
     #[getset(get = "pub")]
@@ -326,12 +328,14 @@ impl InvokeFunction {
         tx: InvokeFunction,
         skip_validation: bool,
         skip_execute: bool,
-    ) -> InvokeFunction {
-        InvokeFunction {
+    ) -> Transaction {
+        let tx = InvokeFunction {
             skip_validation,
             skip_execute,
             ..tx
-        }
+        };
+
+        Transaction::InvokeFunction(tx)
     }
 
     pub(crate) fn simulate_transaction<S: StateReader>(

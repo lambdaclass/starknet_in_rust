@@ -64,4 +64,39 @@ impl Transaction {
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
+
+    pub fn create_for_simulation(&self, skip_validate: bool, skip_execute: bool) -> Self {
+        match self {
+            Transaction::Declare(tx) => {
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+            }
+            Transaction::DeclareV2(_) => todo!(),
+            Transaction::Deploy(tx) => {
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+            }
+            Transaction::DeployAccount(_) => todo!(),
+            Transaction::InvokeFunction(tx) => {
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+            }
+            Transaction::L1Handler(_) => todo!(),
+        }
+    }
+
+    pub fn simulate_transaction<S: StateReader>(
+        &self,
+        state: S,
+        block_context: BlockContext,
+        remaining_gas: u128,
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
+        match self {
+            Transaction::Declare(_) => todo!(),
+            Transaction::DeclareV2(_) => todo!(),
+            Transaction::Deploy(_) => todo!(),
+            Transaction::DeployAccount(_) => todo!(),
+            Transaction::InvokeFunction(tx) => {
+                tx.simulate_transaction(state, block_context, remaining_gas)
+            }
+            Transaction::L1Handler(_) => todo!(),
+        }
+    }
 }

@@ -15,7 +15,6 @@ use crate::{
 
 use definitions::block_context::BlockContext;
 use state::cached_state::CachedState;
-use transaction::InvokeFunction;
 use transaction::L1Handler;
 use utils::Address;
 
@@ -46,15 +45,14 @@ pub mod transaction;
 pub mod utils;
 
 pub fn simulate_transaction<S: StateReader>(
-    transaction: &InvokeFunction,
+    transaction: &Transaction,
     state: S,
     block_context: BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    let tx_for_simulation =
-        transaction.create_for_simulation(transaction.clone(), skip_validate, skip_execute);
+    let tx_for_simulation = transaction.create_for_simulation(skip_validate, skip_execute);
     tx_for_simulation.simulate_transaction(state, block_context, remaining_gas)
 }
 
