@@ -1,3 +1,4 @@
+#![cfg(not(feature = "cairo_1_tests"))]
 #![deny(warnings)]
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -130,7 +131,11 @@ fn integration_test() {
 #[test]
 fn integration_test_cairo1() {
     //  Create program and entry point types for contract class
+    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+    #[cfg(feature = "cairo_1_tests")]
+    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let fib_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;

@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
+cairo_1_tests = []
 
 [workspace]
 members = ["crates/starknet-contract-class"]

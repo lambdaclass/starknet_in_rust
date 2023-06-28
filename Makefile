@@ -141,6 +141,9 @@ clippy: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIR
 	cargo clippy --all --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_1_COMPILED_SIERRA_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
+	echo "Cairo1 tests"
+	cargo test --all --all-targets --features=cairo_1_tests
+	echo "Cairo2 tests"
 	cargo test --all --all-targets
 
 coverage: compile-cairo compile-starknet compile-abi $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
