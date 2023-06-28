@@ -13,17 +13,17 @@ use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_contract_class::EntryPointType;
-use starknet_rs::core::errors::state_errors::StateError;
-use starknet_rs::definitions::constants::{
+use starknet_in_rust::core::errors::state_errors::StateError;
+use starknet_in_rust::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
 };
-use starknet_rs::execution::execution_entry_point::ExecutionEntryPoint;
-use starknet_rs::execution::TransactionExecutionContext;
-use starknet_rs::services::api::contract_classes::deprecated_contract_class::ContractClass;
-use starknet_rs::state::ExecutionResourcesManager;
-use starknet_rs::transaction::{DeclareV2, Deploy};
-use starknet_rs::CasmContractClass;
-use starknet_rs::{
+use starknet_in_rust::execution::execution_entry_point::ExecutionEntryPoint;
+use starknet_in_rust::execution::TransactionExecutionContext;
+use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_in_rust::state::ExecutionResourcesManager;
+use starknet_in_rust::transaction::{DeclareV2, Deploy};
+use starknet_in_rust::CasmContractClass;
+use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::{

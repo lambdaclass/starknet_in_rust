@@ -12,7 +12,7 @@ use cairo_vm::{
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use starknet_contract_class::EntryPointType;
-use starknet_rs::{
+use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, L2toL1MessageInfo,

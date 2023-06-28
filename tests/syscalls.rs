@@ -11,7 +11,7 @@ use cairo_vm::{
 };
 use num_traits::{Num, One, Zero};
 use starknet_contract_class::EntryPointType;
-use starknet_rs::{
+use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION},

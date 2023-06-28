@@ -3,7 +3,7 @@
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
-use starknet_rs::{
+use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
