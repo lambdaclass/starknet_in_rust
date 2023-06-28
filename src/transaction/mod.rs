@@ -70,7 +70,9 @@ impl Transaction {
             Transaction::Declare(tx) => {
                 tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
             }
-            Transaction::DeclareV2(_) => todo!(),
+            Transaction::DeclareV2(tx) => {
+                tx.create_for_simulation(tx.as_ref().clone(), skip_validate, skip_execute)
+            }
             Transaction::Deploy(tx) => {
                 tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
             }
@@ -90,7 +92,7 @@ impl Transaction {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Declare(tx) => tx.simulate_transaction(state, block_context),
-            Transaction::DeclareV2(_) => todo!(),
+            Transaction::DeclareV2(tx) => tx.simulate_transaction(state, block_context),
             Transaction::Deploy(tx) => tx.simulate_transaction(state, block_context),
             Transaction::DeployAccount(_) => todo!(),
             Transaction::InvokeFunction(tx) => {

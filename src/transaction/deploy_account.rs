@@ -58,6 +58,8 @@ pub struct DeployAccount {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
+    skip_validate: bool,
+    skip_execute: bool,
 }
 
 impl DeployAccount {
@@ -104,6 +106,8 @@ impl DeployAccount {
             max_fee,
             hash_value,
             signature,
+            skip_execute: false,
+            skip_validate: false,
         })
     }
 
@@ -169,8 +173,11 @@ impl DeployAccount {
         let constructor_call_info =
             self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
 
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
+        let validate_info = if self.skip_validate {
+            None
+        } else {
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+        };
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -344,10 +351,18 @@ impl DeployAccount {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
+        let fee_transfer_info = if self.skip_execute {
+            None
+        } else {
+            Some(execute_fee_transfer(
+                state,
+                block_context,
+                &mut tx_execution_context,
+                actual_fee,
+            )?)
+        };
 
-        Ok((Some(fee_transfer_info), actual_fee))
+        Ok((fee_transfer_info, actual_fee))
     }
 }
 

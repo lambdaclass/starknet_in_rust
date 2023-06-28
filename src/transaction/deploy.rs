@@ -230,9 +230,9 @@ impl Deploy {
         )
     }
 
-// ---------------
-//   Simulation
-// ---------------
+    // ---------------
+    //   Simulation
+    // ---------------
     pub(crate) fn create_for_simulation(
         &self,
         tx: Deploy,
