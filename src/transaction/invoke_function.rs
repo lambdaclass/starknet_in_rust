@@ -49,6 +49,7 @@ pub struct InvokeFunction {
     nonce: Option<Felt252>,
     skip_validation: bool,
     skip_execute: bool,
+    skip_fee_transfer: bool,
 }
 
 impl InvokeFunction {
@@ -98,6 +99,7 @@ impl InvokeFunction {
             hash_value,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         })
     }
 
@@ -262,7 +264,7 @@ impl InvokeFunction {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let fee_transfer_info = if self.skip_execute {
+        let fee_transfer_info = if self.skip_fee_transfer {
             None
         } else {
             Some(execute_fee_transfer(
@@ -332,10 +334,12 @@ impl InvokeFunction {
         tx: InvokeFunction,
         skip_validation: bool,
         skip_execute: bool,
+        skip_fee_transfer: bool,
     ) -> Transaction {
         let tx = InvokeFunction {
             skip_validation,
             skip_execute,
+            skip_fee_transfer,
             ..tx
         };
 
@@ -434,6 +438,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -502,6 +507,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -566,6 +572,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -624,6 +631,7 @@ mod tests {
             nonce: None,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -688,6 +696,7 @@ mod tests {
             nonce: None,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -744,6 +753,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -805,6 +815,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -867,6 +878,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -929,6 +941,7 @@ mod tests {
             nonce: None,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState

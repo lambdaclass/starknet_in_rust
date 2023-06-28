@@ -47,6 +47,7 @@ pub struct Declare {
     pub contract_class: ContractClass,
     pub skip_validate: bool,
     pub skip_execute: bool,
+    pub skip_fee_transfer: bool,
 }
 
 // ------------------------------------------------------------
@@ -94,6 +95,7 @@ impl Declare {
             contract_class,
             skip_execute: false,
             skip_validate: false,
+            skip_fee_transfer: false,
         };
 
         internal_declare.verify_version()?;
@@ -230,7 +232,7 @@ impl Declare {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info = if self.skip_execute {
+        let fee_transfer_info = if self.skip_fee_transfer {
             None
         } else {
             Some(execute_fee_transfer(
@@ -301,10 +303,12 @@ impl Declare {
         tx: Declare,
         skip_validate: bool,
         skip_execute: bool,
+        skip_fee_transfer: bool,
     ) -> Transaction {
         let tx = Declare {
             skip_validate,
             skip_execute,
+            skip_fee_transfer,
             ..tx
         };
 

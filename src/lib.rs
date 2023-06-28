@@ -51,8 +51,10 @@ pub fn simulate_transaction<S: StateReader>(
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
+    skip_fee_transfer: bool,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    let tx_for_simulation = transaction.create_for_simulation(skip_validate, skip_execute);
+    let tx_for_simulation =
+        transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
     tx_for_simulation.simulate_transaction(state, block_context, remaining_gas)
 }
 
@@ -356,7 +358,10 @@ mod test {
         .unwrap();
 
         let block_context = BlockContext::default();
-        let simul_invoke = invoke.create_for_simulation(invoke.clone(), true, false);
+        let Transaction::InvokeFunction(simul_invoke) =
+            invoke.create_for_simulation(invoke.clone(), true, false, false) else {
+                unreachable!()
+            };
 
         let call_info = simul_invoke
             .run_validate_entrypoint(
@@ -440,8 +445,16 @@ mod test {
 
         let block_context = BlockContext::default();
 
-        let context =
-            simulate_transaction(&invoke, state_reader, block_context, 1000, false, true).unwrap();
+        let context = simulate_transaction(
+            &Transaction::InvokeFunction(invoke),
+            state_reader,
+            block_context,
+            1000,
+            false,
+            true,
+            true,
+        )
+        .unwrap();
 
         assert!(context.validate_info.is_some());
         assert!(context.call_info.is_none());
@@ -518,8 +531,16 @@ mod test {
 
         let block_context = BlockContext::default();
 
-        let context =
-            simulate_transaction(&invoke, state_reader, block_context, 1000, true, true).unwrap();
+        let context = simulate_transaction(
+            &Transaction::InvokeFunction(invoke),
+            state_reader,
+            block_context,
+            1000,
+            true,
+            true,
+            true,
+        )
+        .unwrap();
 
         assert!(context.validate_info.is_none());
         assert!(context.call_info.is_none());

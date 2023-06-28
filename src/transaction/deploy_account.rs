@@ -60,6 +60,7 @@ pub struct DeployAccount {
     signature: Vec<Felt252>,
     skip_validate: bool,
     skip_execute: bool,
+    skip_fee_transfer: bool,
 }
 
 impl DeployAccount {
@@ -108,6 +109,7 @@ impl DeployAccount {
             signature,
             skip_execute: false,
             skip_validate: false,
+            skip_fee_transfer: false,
         })
     }
 
@@ -359,7 +361,7 @@ impl DeployAccount {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info = if self.skip_execute {
+        let fee_transfer_info = if self.skip_fee_transfer {
             None
         } else {
             Some(execute_fee_transfer(
@@ -378,10 +380,12 @@ impl DeployAccount {
         tx: DeployAccount,
         skip_validate: bool,
         skip_execute: bool,
+        skip_fee_transfer: bool,
     ) -> Transaction {
         let tx = DeployAccount {
             skip_validate,
             skip_execute,
+            skip_fee_transfer,
             ..tx
         };
 

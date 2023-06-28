@@ -65,22 +65,30 @@ impl Transaction {
         }
     }
 
-    pub fn create_for_simulation(&self, skip_validate: bool, skip_execute: bool) -> Self {
+    pub fn create_for_simulation(
+        &self,
+        skip_validate: bool,
+        skip_execute: bool,
+        skip_fee_transfer: bool,
+    ) -> Self {
         match self {
             Transaction::Declare(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
             }
-            Transaction::DeclareV2(tx) => {
-                tx.create_for_simulation(tx.as_ref().clone(), skip_validate, skip_execute)
-            }
+            Transaction::DeclareV2(tx) => tx.create_for_simulation(
+                tx.as_ref().clone(),
+                skip_validate,
+                skip_execute,
+                skip_fee_transfer,
+            ),
             Transaction::Deploy(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
             }
             Transaction::DeployAccount(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
             }
             Transaction::InvokeFunction(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
+                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
             }
             Transaction::L1Handler(tx) => {
                 tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
