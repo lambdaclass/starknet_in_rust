@@ -102,7 +102,7 @@ cairo-repo-2-dir = cairo2
 build-cairo-2-compiler: | $(cairo-repo-2-dir)
 
 $(cairo-repo-2-dir):
-	git clone --depth 1 -b v2.0.0-rc5 https://github.com/starkware-libs/cairo.git $(cairo-repo-2-dir)
+	git clone --depth 1 -b v2.0.0-rc6 https://github.com/starkware-libs/cairo.git $(cairo-repo-2-dir)
 	cd cairo2; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
 
 
