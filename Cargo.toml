@@ -10,7 +10,7 @@ default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
 
 [workspace]
-members = ["crates/starknet-contract-class"]
+members = ["crates/starknet-contract-class", "cli", "fuzzer"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.0", features = ["cairo-1-hints"]}
