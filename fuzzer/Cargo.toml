@@ -9,7 +9,7 @@ edition = "2021"
 honggfuzz = "0.5.55"
 starknet_in_rust = { path = "../" }
 num-traits = "0.2.15"
-lambda_starknet_api = "0.1.0"
+starknet_api = "0.1.0"
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 tempfile = "3.2.0"
 cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
