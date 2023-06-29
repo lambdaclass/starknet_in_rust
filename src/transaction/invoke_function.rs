@@ -319,15 +319,14 @@ impl InvokeFunction {
     // Simulation function
 
     pub(crate) fn create_for_simulation(
-        &self,
-        tx: InvokeFunction,
+        self,
         skip_validation: bool,
         skip_execute: bool,
     ) -> InvokeFunction {
         InvokeFunction {
             skip_validation,
             skip_execute,
-            ..tx
+            ..self
         }
     }
 }

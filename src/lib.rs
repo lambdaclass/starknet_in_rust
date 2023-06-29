@@ -54,11 +54,11 @@ pub fn simulate_transaction<S: StateReader>(
     skip_execute: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
     let mut cache_state = CachedState::new(state, None, None);
-
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
-        let tx_for_simulation =
-            transaction.create_for_simulation(transaction.clone(), skip_validate, skip_execute);
+        let tx_for_simulation = transaction
+            .clone()
+            .create_for_simulation(skip_validate, skip_execute);
         let tx_result =
             tx_for_simulation.execute(&mut cache_state, &block_context, remaining_gas)?;
         result.push(tx_result);
@@ -372,7 +372,7 @@ mod test {
         .unwrap();
 
         let block_context = BlockContext::default();
-        let simul_invoke = invoke.create_for_simulation(invoke.clone(), true, false);
+        let simul_invoke = invoke.clone().create_for_simulation(true, false);
 
         let call_info = simul_invoke
             .run_validate_entrypoint(
@@ -441,12 +441,12 @@ mod test {
         ]
         .to_vec();
 
-        let invoke = InvokeFunction::new(
-            address,
-            entrypoint_selector,
+        let invoke_1 = InvokeFunction::new(
+            address.clone(),
+            entrypoint_selector.clone(),
             1000000,
             Felt252::one(),
-            calldata,
+            calldata.clone(),
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(1.into()),
@@ -454,16 +454,54 @@ mod test {
         )
         .unwrap();
 
+        let invoke_2 = InvokeFunction::new(
+            address.clone(),
+            entrypoint_selector.clone(),
+            1000000,
+            Felt252::one(),
+            calldata.clone(),
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            Some(2.into()),
+            None,
+        )
+        .unwrap();
+
+        let invoke_3 = InvokeFunction::new(
+            address.clone(),
+            entrypoint_selector.clone(),
+            1000000,
+            Felt252::one(),
+            calldata.clone(),
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            Some(3.into()),
+            None,
+        )
+        .unwrap();
         let block_context = BlockContext::default();
 
-        let context =
-            simulate_transaction(&[invoke], state_reader, block_context, 1000, false, true)
-                .unwrap();
+        let context = simulate_transaction(
+            &[invoke_1, invoke_2, invoke_3],
+            state_reader,
+            block_context,
+            1000,
+            false,
+            true,
+        )
+        .unwrap();
 
         assert!(context[0].validate_info.is_some());
         assert!(context[0].call_info.is_none());
         assert!(context[0].fee_transfer_info.is_none());
+        assert!(context[1].validate_info.is_some());
+        assert!(context[1].call_info.is_none());
+        assert!(context[1].fee_transfer_info.is_none());
+        assert!(context[2].validate_info.is_some());
+        assert!(context[2].call_info.is_none());
+        assert!(context[2].fee_transfer_info.is_none());
     }
+
     #[test]
     fn test_skip_execute_and_validate_flags() {
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
