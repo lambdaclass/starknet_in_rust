@@ -107,10 +107,10 @@ impl ExecutionResourcesManager {
 
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct StateDiff {
-    pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
-    pub(crate) address_to_nonce: HashMap<Address, Felt252>,
-    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
-    pub(crate) storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
+    pub address_to_class_hash: HashMap<Address, ClassHash>,
+    pub address_to_nonce: HashMap<Address, Felt252>,
+    pub class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+    pub storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
 }
 
 impl StateDiff {
