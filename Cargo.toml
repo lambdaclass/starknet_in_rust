@@ -11,7 +11,7 @@ with_mimalloc = ["mimalloc"]
 cairo_1_tests = []
 
 [workspace]
-members = ["crates/starknet-contract-class"]
+members = ["crates/starknet-contract-class", "cli", "fuzzer"]
 
 [workspace.dependencies]
 cairo-vm = { path = "../cairo-vm/vm", features = ["cairo-1-hints"]}
