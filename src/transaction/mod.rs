@@ -75,12 +75,9 @@ impl Transaction {
             Transaction::Declare(tx) => {
                 tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
             }
-            Transaction::DeclareV2(tx) => tx.create_for_simulation(
-                tx.as_ref().clone(),
-                skip_validate,
-                skip_execute,
-                skip_fee_transfer,
-            ),
+            Transaction::DeclareV2(tx) => {
+                tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
+            }
             Transaction::Deploy(tx) => {
                 tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
             }

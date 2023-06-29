@@ -11,8 +11,8 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::ExecutionResourcesManager,
     state::state_api::{State, StateReader},
+    state::ExecutionResourcesManager,
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},

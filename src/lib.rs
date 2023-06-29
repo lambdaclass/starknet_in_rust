@@ -172,15 +172,23 @@ pub fn execute_transaction<T: State + StateReader>(
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
+    use std::fs::File;
+    use std::io::BufReader;
     use std::path::PathBuf;
 
     use crate::core::contract_address::compute_deprecated_class_hash;
     use crate::definitions::block_context::StarknetChainId;
     use crate::definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR;
+    use crate::definitions::constants::VALIDATE_ENTRY_POINT_SELECTOR;
     use crate::estimate_fee;
     use crate::estimate_message_fee;
+    use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
+    use crate::state::state_api::State;
     use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
+    use crate::transaction::Declare;
+    use crate::transaction::Deploy;
+    use crate::transaction::DeployAccount;
     use crate::transaction::{InvokeFunction, L1Handler, Transaction};
     use crate::utils::felt_to_hash;
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -198,6 +206,27 @@ mod test {
         },
         utils::{Address, ClassHash},
     };
+
+    use lazy_static::lazy_static;
+
+    lazy_static! {
+        // include_str! doesn't seem to work in CI
+        static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(BufReader::new(File::open(
+            "starknet_programs/account_without_validation.json",
+        ).unwrap()))
+        .unwrap();
+        static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
+        static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
+        static ref SALT: Felt252 = felt_str!(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+        );
+        static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
+        static ref SIGNATURE: Vec<Felt252> = vec![
+            felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
+            felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
+        ];
+        pub static ref TRANSACTION_VERSION: Felt252 = 1.into();
+    }
 
     #[test]
     fn estimate_fee_test() {
@@ -461,6 +490,7 @@ mod test {
         assert!(context.call_info.is_none());
         assert!(context.fee_transfer_info.is_none());
     }
+
     #[test]
     fn test_skip_execute_and_validate_flags() {
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
@@ -547,4 +577,184 @@ mod test {
         assert!(context.call_info.is_none());
         assert!(context.fee_transfer_info.is_none());
     }
+
+    #[test]
+    fn test_simulate_deploy() {
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+
+        state
+            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .unwrap();
+
+        let block_context = Default::default();
+        let salt = felt_str!(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+        );
+        // new consumes more execution time than raw struct instantiation
+        let internal_deploy = Transaction::Deploy(
+            Deploy::new(
+                salt,
+                CONTRACT_CLASS.clone(),
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                0.into(),
+                None,
+            )
+            .unwrap(),
+        );
+
+        simulate_transaction(
+            &internal_deploy,
+            state,
+            block_context,
+            100_000_000,
+            false,
+            false,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_simulate_declare() {
+        let state_reader = InMemoryStateReader::default();
+        let state = CachedState::new(state_reader, Some(Default::default()), None);
+
+        let block_context = Default::default();
+
+        let class = CONTRACT_CLASS.clone();
+        let address = CONTRACT_ADDRESS.clone();
+        // new consumes more execution time than raw struct instantiation
+        let declare_tx = Transaction::Declare(
+            Declare::new(
+                class,
+                StarknetChainId::TestNet.to_felt(),
+                address,
+                0,
+                0.into(),
+                vec![],
+                Felt252::zero(),
+                None,
+            )
+            .expect("couldn't create transaction"),
+        );
+
+        simulate_transaction(
+            &declare_tx,
+            state,
+            block_context,
+            100_000_000,
+            false,
+            false,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_simulate_invoke() {
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+
+        state
+            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .unwrap();
+
+        let block_context = Default::default();
+
+        let salt = felt_str!(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+        );
+        let class = CONTRACT_CLASS.clone();
+        let deploy = Deploy::new(
+            salt,
+            class,
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            0.into(),
+            None,
+        )
+        .unwrap();
+
+        let _deploy_exec_info = deploy.execute(&mut state, &block_context).unwrap();
+
+        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let calldata = vec![
+            CONTRACT_ADDRESS.0.clone(),
+            selector.clone(),
+            Felt252::zero(),
+        ];
+        // new consumes more execution time than raw struct instantiation
+        let invoke_tx = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                CONTRACT_ADDRESS.clone(),
+                selector,
+                0,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                SIGNATURE.clone(),
+                StarknetChainId::TestNet.to_felt(),
+                Some(Felt252::zero()),
+                None,
+            )
+            .unwrap(),
+        );
+
+        simulate_transaction(
+            &invoke_tx,
+            state,
+            block_context,
+            100_000_000,
+            false,
+            false,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_simulate_deploy_account() {
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+
+        state
+            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .unwrap();
+
+        let block_context = Default::default();
+
+        // new consumes more execution time than raw struct instantiation
+        let deploy_account_tx = &Transaction::DeployAccount(
+            DeployAccount::new(
+                *CLASS_HASH_BYTES,
+                0,
+                0.into(),
+                Felt252::zero(),
+                vec![],
+                SIGNATURE.clone(),
+                SALT.clone(),
+                StarknetChainId::TestNet.to_felt(),
+                None,
+            )
+            .unwrap(),
+        );
+
+        simulate_transaction(
+            deploy_account_tx,
+            state,
+            block_context,
+            100_000_000,
+            false,
+            false,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_simulate_declare_v2() {}
+
+    #[test]
+    fn test_simulate_l1_handler() {}
 }

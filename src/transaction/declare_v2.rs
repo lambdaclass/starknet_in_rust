@@ -306,7 +306,6 @@ impl DeclareV2 {
     // ---------------
     pub(crate) fn create_for_simulation(
         &self,
-        tx: DeclareV2,
         skip_validate: bool,
         skip_execute: bool,
         skip_fee_transfer: bool,
@@ -315,7 +314,7 @@ impl DeclareV2 {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            ..tx
+            ..self.clone()
         };
 
         Transaction::DeclareV2(Box::new(tx))
