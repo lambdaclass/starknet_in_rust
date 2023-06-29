@@ -2,8 +2,8 @@ use crate::services::api::contract_class_errors::ContractClassError;
 use cairo_vm::felt::Felt252;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
 use getset::Getters;
-use starknet_api::deprecated_contract_class::EntryPoint;
 use serde_json::Value;
+use starknet_api::deprecated_contract_class::EntryPoint;
 pub use starknet_contract_class::to_cairo_runner_program;
 use starknet_contract_class::AbiType;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
@@ -118,10 +118,7 @@ impl<T: std::io::Read> TryFrom<BufReader<T>> for ContractClass {
 }
 
 fn convert_entry_points(
-    entry_points: HashMap<
-        starknet_api::deprecated_contract_class::EntryPointType,
-        Vec<EntryPoint>,
-    >,
+    entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
     for (entry_type, vec) in entry_points {

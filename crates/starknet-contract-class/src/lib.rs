@@ -11,8 +11,8 @@ use cairo_vm::{
     },
 };
 use getset::{CopyGetters, Getters};
-use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use serde::Deserialize;
+use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 pub type AbiType = Vec<ContractClassAbiEntry>;
@@ -76,9 +76,7 @@ impl From<starknet_api::deprecated_contract_class::EntryPointType> for EntryPoin
     }
 }
 
-impl TryFrom<starknet_api::deprecated_contract_class::ContractClass>
-    for ParsedContractClass
-{
+impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for ParsedContractClass {
     type Error = ProgramError;
 
     fn try_from(
@@ -130,10 +128,7 @@ impl TryFrom<&PathBuf> for ParsedContractClass {
 }
 
 fn convert_entry_points(
-    entry_points: HashMap<
-        starknet_api::deprecated_contract_class::EntryPointType,
-        Vec<EntryPoint>,
-    >,
+    entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
     for (entry_type, vec) in entry_points {
