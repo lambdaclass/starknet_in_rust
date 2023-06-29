@@ -372,7 +372,7 @@ mod test {
         .unwrap();
 
         let block_context = BlockContext::default();
-        let simul_invoke = invoke.clone().create_for_simulation(true, false);
+        let simul_invoke = invoke.create_for_simulation(true, false);
 
         let call_info = simul_invoke
             .run_validate_entrypoint(
@@ -468,11 +468,11 @@ mod test {
         .unwrap();
 
         let invoke_3 = InvokeFunction::new(
-            address.clone(),
-            entrypoint_selector.clone(),
+            address,
+            entrypoint_selector,
             1000000,
             Felt252::one(),
-            calldata.clone(),
+            calldata,
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(3.into()),
