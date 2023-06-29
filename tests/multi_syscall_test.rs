@@ -160,17 +160,17 @@ fn test_multiple_syscall() {
             TRANSACTION_VERSION.clone(),
         );
         let mut resources_manager = ExecutionResourcesManager::default();
-        // let call_info = exec_entry_point
-        //         .execute(
-        //             &mut state,
-        //             &block_context,
-        //             &mut resources_manager,
-        //             &mut tx_execution_context,
-        //             false,
-        //         )
-        //         .unwrap();
-        //     assert_eq!(
-        //         call_info.events, vec![]);
+        let call_info = exec_entry_point
+                .execute(
+                    &mut state,
+                    &block_context,
+                    &mut resources_manager,
+                    &mut tx_execution_context,
+                    false,
+                )
+                .unwrap();
+            assert_eq!(
+                call_info.events, vec![]);
        
     }
 
@@ -211,5 +211,43 @@ fn test_multiple_syscall() {
          .unwrap();
          assert_eq!(call_info.events, vec![])
      }
+
+     // Block for call_contract_syscall
+    //  {
+    //     let entrypoint_selector = &entrypoints.external.get(5).unwrap().selector;
+    //     let exec_entry_point = ExecutionEntryPoint::new(
+    //         address.clone(),
+    //         calldata.clone(),
+    //         Felt252::new(entrypoint_selector.clone()),
+    //         caller_address.clone(),
+    //         entry_point_type,
+    //         Some(CallType::Delegate),
+    //         Some(class_hash),
+    //         100000,
+    //     );
+
+    //     // Execute the entrypoint
+    //     let block_context = BlockContext::default();
+    //     let mut tx_execution_context = TransactionExecutionContext::new(
+    //         Address(0.into()),
+    //         Felt252::zero(),
+    //         Vec::new(),
+    //         0,
+    //         10.into(),
+    //         block_context.invoke_tx_max_n_steps(),
+    //         TRANSACTION_VERSION.clone(),
+    //     );
+    //     let mut resources_manager = ExecutionResourcesManager::default();
+    //     let call_info = exec_entry_point
+    //     .execute(
+    //         &mut state,
+    //         &block_context,
+    //         &mut resources_manager,
+    //         &mut tx_execution_context,
+    //         false,
+    //     )
+    //     .unwrap();
+    //     assert_eq!(call_info.events, vec![])
+    // }
 }
 
