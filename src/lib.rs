@@ -179,24 +179,26 @@ mod test {
     use std::path::PathBuf;
 
     use crate::core::contract_address::compute_deprecated_class_hash;
-    use crate::definitions::block_context::StarknetChainId;
-    use crate::definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR;
-    use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
-    use crate::definitions::constants::VALIDATE_ENTRY_POINT_SELECTOR;
-    use crate::definitions::transaction_type::TransactionType;
+    use crate::definitions::{
+        block_context::StarknetChainId,
+        constants::{
+            EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
+            VALIDATE_ENTRY_POINT_SELECTOR,
+        },
+        transaction_type::TransactionType,
+    };
     use crate::estimate_fee;
     use crate::estimate_message_fee;
     use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::state::state_api::State;
-    use crate::testing::TEST_ACCOUNT_CONTRACT_ADDRESS;
-    use crate::testing::TEST_FIB_COMPILED_CONTRACT_CLASS_HASH;
-    use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
-    use crate::transaction::Declare;
-    use crate::transaction::DeclareV2;
-    use crate::transaction::Deploy;
-    use crate::transaction::DeployAccount;
-    use crate::transaction::{InvokeFunction, L1Handler, Transaction};
+    use crate::testing::{
+        create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
+        TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+    };
+    use crate::transaction::{
+        Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
+    };
     use crate::utils::felt_to_hash;
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
