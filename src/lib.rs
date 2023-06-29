@@ -1,6 +1,8 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
+use std::collections::HashMap;
+
 use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
@@ -53,7 +55,7 @@ pub fn simulate_transaction<S: StateReader>(
     skip_execute: bool,
     skip_fee_transfer: bool,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    let mut cached_state = CachedState::new(state, None, None);
+    let mut cached_state = CachedState::new(state, None, Some(HashMap::new()));
     let tx_for_simulation =
         transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
     tx_for_simulation.execute(&mut cached_state, &block_context, remaining_gas)
@@ -179,19 +181,25 @@ mod test {
     use crate::core::contract_address::compute_deprecated_class_hash;
     use crate::definitions::block_context::StarknetChainId;
     use crate::definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR;
+    use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
     use crate::definitions::constants::VALIDATE_ENTRY_POINT_SELECTOR;
+    use crate::definitions::transaction_type::TransactionType;
     use crate::estimate_fee;
     use crate::estimate_message_fee;
     use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::state::state_api::State;
+    use crate::testing::TEST_ACCOUNT_CONTRACT_ADDRESS;
+    use crate::testing::TEST_FIB_COMPILED_CONTRACT_CLASS_HASH;
     use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
     use crate::transaction::Declare;
+    use crate::transaction::DeclareV2;
     use crate::transaction::Deploy;
     use crate::transaction::DeployAccount;
     use crate::transaction::{InvokeFunction, L1Handler, Transaction};
     use crate::utils::felt_to_hash;
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+    use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
     use cairo_vm::felt::{felt_str, Felt252};
     use num_traits::{Num, One, Zero};
     use starknet_contract_class::EntryPointType;
@@ -752,8 +760,45 @@ mod test {
         .unwrap();
     }
 
+    fn declarev2_tx() -> DeclareV2 {
+        let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+        let sierra_contract_class: SierraContractClass =
+            serde_json::from_slice(program_data).unwrap();
+
+        DeclareV2 {
+            sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            tx_type: TransactionType::Declare,
+            validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
+            version: 1.into(),
+            max_fee: 2,
+            signature: vec![],
+            nonce: 0.into(),
+            hash_value: 0.into(),
+            compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
+            sierra_contract_class,
+            casm_class: Default::default(),
+            skip_execute: false,
+            skip_fee_transfer: false,
+            skip_validate: false,
+        }
+    }
+
     #[test]
-    fn test_simulate_declare_v2() {}
+    fn test_simulate_declare_v2() {
+        let (block_context, state) = create_account_tx_test_state().unwrap();
+        let declare_tx = Transaction::DeclareV2(Box::new(declarev2_tx()));
+
+        simulate_transaction(
+            &declare_tx,
+            state,
+            block_context,
+            100_000_000,
+            false,
+            false,
+            false,
+        )
+        .unwrap();
+    }
 
     #[test]
     fn test_simulate_l1_handler() {}
