@@ -19,7 +19,7 @@ use crate::{
         },
     },
     state::state_api::{State, StateReader},
-    state::{cached_state::CachedState, ExecutionResourcesManager},
+    state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},

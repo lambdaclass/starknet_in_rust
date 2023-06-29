@@ -13,7 +13,7 @@ use crate::{
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::state_api::{State, StateReader},
-    state::{cached_state::CachedState, ExecutionResourcesManager},
+    state::ExecutionResourcesManager,
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},

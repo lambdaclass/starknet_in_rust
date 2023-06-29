@@ -21,7 +21,7 @@ use crate::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
     state::state_api::{State, StateReader},
-    state::{cached_state::CachedState, ExecutionResourcesManager},
+    state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::{
         error::TransactionError,

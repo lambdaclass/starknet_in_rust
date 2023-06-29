@@ -12,10 +12,7 @@ use crate::{
         TransactionExecutionInfo,
     },
     state::ExecutionResourcesManager,
-    state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-    },
+    state::state_api::{State, StateReader},
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},

@@ -14,7 +14,6 @@ use crate::{
         TransactionExecutionInfo,
     },
     state::{
-        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
