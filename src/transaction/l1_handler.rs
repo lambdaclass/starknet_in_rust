@@ -168,28 +168,16 @@ impl L1Handler {
     }
     pub(crate) fn create_for_simulation(
         &self,
-        tx: L1Handler,
         skip_validate: bool,
         skip_execute: bool,
     ) -> Transaction {
         let tx = L1Handler {
             skip_validate,
             skip_execute,
-            ..tx
+            ..self.clone()
         };
 
         Transaction::L1Handler(tx)
-    }
-
-    pub(crate) fn simulate_transaction<S: StateReader>(
-        &self,
-        state: S,
-        block_context: BlockContext,
-        remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut cache_state = CachedState::new(state, None, None);
-        // init simulation
-        self.execute(&mut cache_state, &block_context, remaining_gas)
     }
 }
 

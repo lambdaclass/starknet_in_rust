@@ -327,7 +327,6 @@ impl InvokeFunction {
 
     pub(crate) fn create_for_simulation(
         &self,
-        tx: InvokeFunction,
         skip_validation: bool,
         skip_execute: bool,
         skip_fee_transfer: bool,
@@ -336,21 +335,10 @@ impl InvokeFunction {
             skip_validation,
             skip_execute,
             skip_fee_transfer,
-            ..tx
+            ..self.clone()
         };
 
         Transaction::InvokeFunction(tx)
-    }
-
-    pub(crate) fn simulate_transaction<S: StateReader>(
-        &self,
-        state: S,
-        block_context: BlockContext,
-        remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut cache_state = CachedState::new(state, None, None);
-        // init simulation
-        self.execute(&mut cache_state, &block_context, remaining_gas)
     }
 }
 

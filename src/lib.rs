@@ -53,9 +53,10 @@ pub fn simulate_transaction<S: StateReader>(
     skip_execute: bool,
     skip_fee_transfer: bool,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
+    let mut cached_state = CachedState::new(state, None, None);
     let tx_for_simulation =
         transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
-    tx_for_simulation.simulate_transaction(state, block_context, remaining_gas)
+    tx_for_simulation.execute(&mut cached_state, &block_context, remaining_gas)
 }
 
 /// Estimate the fee associated with transaction
@@ -359,7 +360,7 @@ mod test {
 
         let block_context = BlockContext::default();
         let Transaction::InvokeFunction(simul_invoke) =
-            invoke.create_for_simulation(invoke.clone(), true, false, false) else {
+            invoke.create_for_simulation(true, false, false) else {
                 unreachable!()
             };
 

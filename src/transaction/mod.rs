@@ -73,7 +73,7 @@ impl Transaction {
     ) -> Self {
         match self {
             Transaction::Declare(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
+                tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
             }
             Transaction::DeclareV2(tx) => tx.create_for_simulation(
                 tx.as_ref().clone(),
@@ -82,37 +82,15 @@ impl Transaction {
                 skip_fee_transfer,
             ),
             Transaction::Deploy(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
+                tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
             }
             Transaction::DeployAccount(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
+                tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
             }
             Transaction::InvokeFunction(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute, skip_fee_transfer)
+                tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
             }
-            Transaction::L1Handler(tx) => {
-                tx.create_for_simulation(tx.clone(), skip_validate, skip_execute)
-            }
-        }
-    }
-
-    pub fn simulate_transaction<S: StateReader>(
-        &self,
-        state: S,
-        block_context: BlockContext,
-        remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        match self {
-            Transaction::Declare(tx) => tx.simulate_transaction(state, block_context),
-            Transaction::DeclareV2(tx) => tx.simulate_transaction(state, block_context),
-            Transaction::Deploy(tx) => tx.simulate_transaction(state, block_context),
-            Transaction::DeployAccount(tx) => tx.simulate_transaction(state, block_context),
-            Transaction::InvokeFunction(tx) => {
-                tx.simulate_transaction(state, block_context, remaining_gas)
-            }
-            Transaction::L1Handler(tx) => {
-                tx.simulate_transaction(state, block_context, remaining_gas)
-            }
+            Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
         }
     }
 }

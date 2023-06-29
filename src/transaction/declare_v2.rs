@@ -320,16 +320,6 @@ impl DeclareV2 {
 
         Transaction::DeclareV2(Box::new(tx))
     }
-
-    pub(crate) fn simulate_transaction<S: StateReader>(
-        &self,
-        state: S,
-        block_context: BlockContext,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut cache_state = CachedState::new(state, None, None);
-        // init simulation
-        self.execute(&mut cache_state, &block_context)
-    }
 }
 
 #[cfg(test)]

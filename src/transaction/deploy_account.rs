@@ -377,7 +377,6 @@ impl DeployAccount {
 
     pub(crate) fn create_for_simulation(
         &self,
-        tx: DeployAccount,
         skip_validate: bool,
         skip_execute: bool,
         skip_fee_transfer: bool,
@@ -386,20 +385,10 @@ impl DeployAccount {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            ..tx
+            ..self.clone()
         };
 
         Transaction::DeployAccount(tx)
-    }
-
-    pub(crate) fn simulate_transaction<S: StateReader>(
-        &self,
-        state: S,
-        block_context: BlockContext,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut cache_state = CachedState::new(state, None, None);
-        // init simulation
-        self.execute(&mut cache_state, &block_context)
     }
 }
 
