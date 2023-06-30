@@ -116,8 +116,8 @@ test: compile-cairo compile-starknet $(COMPILED_CASM_CONTRACTS) $(COMPILED_SIERR
 	cargo test --all --all-targets
 
 coverage: compile-cairo compile-starknet compile-abi $(COMPILED_CASM_CONTRACTS)
-	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs'
-	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
+	cargo llvm-cov --ignore-filename-regex 'main.rs'
+	cargo llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh
