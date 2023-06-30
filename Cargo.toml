@@ -15,7 +15,7 @@ members = ["crates/starknet-contract-class", "cli", "fuzzer"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"]}
-lambda_starknet_api = "0.1.0"
+starknet_api = "0.1.0"
 num-traits = "0.2.15"
 
 [dependencies]
@@ -30,7 +30,7 @@ num-traits = { workspace = true }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision", "raw_value"] }
 sha3 = "0.10.1"
-lambda_starknet_api = { workspace = true }
+starknet_api = { workspace = true }
 starknet-crypto = "0.5.1"
 thiserror = "1.0.32"
 awc = "3.1.1"
