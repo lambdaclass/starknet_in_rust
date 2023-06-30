@@ -1,4 +1,4 @@
-use super::invoke_function::verify_no_calls_to_other_contracts;
+use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -58,6 +58,9 @@ pub struct DeployAccount {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
+    skip_validate: bool,
+    skip_execute: bool,
+    skip_fee_transfer: bool,
 }
 
 impl DeployAccount {
@@ -104,6 +107,9 @@ impl DeployAccount {
             max_fee,
             hash_value,
             signature,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
         })
     }
 
@@ -169,8 +175,11 @@ impl DeployAccount {
         let constructor_call_info =
             self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
 
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
+        let validate_info = if self.skip_validate {
+            None
+        } else {
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+        };
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -254,15 +263,19 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = entry_point.execute(
-            state,
-            block_context,
-            resources_manager,
-            &mut self.get_execution_context(block_context.validate_max_n_steps),
-            false,
-        )?;
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(entry_point.execute(
+                state,
+                block_context,
+                resources_manager,
+                &mut self.get_execution_context(block_context.validate_max_n_steps),
+                false,
+            )?)
+        };
 
-        verify_no_calls_to_other_contracts(&call_info)
+        let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
         Ok(call_info)
     }
@@ -309,18 +322,22 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = call.execute(
-            state,
-            block_context,
-            resources_manager,
-            &mut self.get_execution_context(block_context.validate_max_n_steps),
-            false,
-        )?;
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(call.execute(
+                state,
+                block_context,
+                resources_manager,
+                &mut self.get_execution_context(block_context.validate_max_n_steps),
+                false,
+            )?)
+        };
 
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
 
-        Ok(Some(call_info))
+        Ok(call_info)
     }
 
     fn charge_fee<S>(
@@ -344,10 +361,34 @@ impl DeployAccount {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
+        let fee_transfer_info = if self.skip_fee_transfer {
+            None
+        } else {
+            Some(execute_fee_transfer(
+                state,
+                block_context,
+                &mut tx_execution_context,
+                actual_fee,
+            )?)
+        };
 
-        Ok((Some(fee_transfer_info), actual_fee))
+        Ok((fee_transfer_info, actual_fee))
+    }
+
+    pub(crate) fn create_for_simulation(
+        &self,
+        skip_validate: bool,
+        skip_execute: bool,
+        skip_fee_transfer: bool,
+    ) -> Transaction {
+        let tx = DeployAccount {
+            skip_validate,
+            skip_execute,
+            skip_fee_transfer,
+            ..self.clone()
+        };
+
+        Transaction::DeployAccount(tx)
     }
 }
 

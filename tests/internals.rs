@@ -691,6 +691,9 @@ fn declare_tx() -> Declare {
         signature: vec![],
         nonce: 0.into(),
         hash_value: 0.into(),
+        skip_execute: false,
+        skip_fee_transfer: false,
+        skip_validate: false,
     }
 }
 
@@ -713,6 +716,9 @@ fn declarev2_tx() -> DeclareV2 {
         compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
         sierra_contract_class,
         casm_class: Default::default(),
+        skip_execute: false,
+        skip_fee_transfer: false,
+        skip_validate: false,
     }
 }
 
@@ -725,6 +731,9 @@ fn deploy_fib_syscall() -> Deploy {
         contract_hash: felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone()),
         constructor_calldata: Vec::new(),
         tx_type: TransactionType::Deploy,
+        skip_execute: false,
+        skip_fee_transfer: false,
+        skip_validate: false,
     }
 }
 

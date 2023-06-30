@@ -11,11 +11,8 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
+    state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-    },
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -27,6 +24,8 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
+
+use super::Transaction;
 
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
@@ -47,6 +46,7 @@ pub struct InvokeFunction {
     nonce: Option<Felt252>,
     skip_validation: bool,
     skip_execute: bool,
+    skip_fee_transfer: bool,
 }
 
 impl InvokeFunction {
@@ -96,6 +96,7 @@ impl InvokeFunction {
             hash_value,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         })
     }
 
@@ -148,15 +149,15 @@ impl InvokeFunction {
             0,
         );
 
-        let call_info = call.execute(
+        let call_info = Some(call.execute(
             state,
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
-        )?;
+        )?);
 
-        verify_no_calls_to_other_contracts(&call_info)
+        let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
 
         Ok(Some(call_info))
@@ -256,7 +257,7 @@ impl InvokeFunction {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let fee_transfer_info = if self.skip_execute {
+        let fee_transfer_info = if self.skip_fee_transfer {
             None
         } else {
             Some(execute_fee_transfer(
@@ -323,26 +324,18 @@ impl InvokeFunction {
 
     pub(crate) fn create_for_simulation(
         &self,
-        tx: InvokeFunction,
         skip_validation: bool,
         skip_execute: bool,
-    ) -> InvokeFunction {
-        InvokeFunction {
+        skip_fee_transfer: bool,
+    ) -> Transaction {
+        let tx = InvokeFunction {
             skip_validation,
             skip_execute,
-            ..tx
-        }
-    }
+            skip_fee_transfer,
+            ..self.clone()
+        };
 
-    pub(crate) fn simulate_transaction<S: StateReader>(
-        &self,
-        state: S,
-        block_context: BlockContext,
-        remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut cache_state = CachedState::new(state, None, None);
-        // init simulation
-        self.execute(&mut cache_state, &block_context, remaining_gas)
+        Transaction::InvokeFunction(tx)
     }
 }
 
@@ -350,14 +343,17 @@ impl InvokeFunction {
 //  Invoke internal functions utils
 // ------------------------------------
 
-pub fn verify_no_calls_to_other_contracts(call_info: &CallInfo) -> Result<(), TransactionError> {
+pub fn verify_no_calls_to_other_contracts(
+    call_info: &Option<CallInfo>,
+) -> Result<CallInfo, TransactionError> {
+    let call_info = call_info.clone().ok_or(TransactionError::CallInfoIsNone)?;
     let invoked_contract_address = call_info.contract_address.clone();
     for internal_call in call_info.gen_call_topology() {
         if internal_call.contract_address != invoked_contract_address {
             return Err(TransactionError::UnauthorizedActionOnValidate);
         }
     }
-    Ok(())
+    Ok(call_info)
 }
 
 // Performs validation on fields related to function invocation transaction.
@@ -420,6 +416,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -488,6 +485,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -552,6 +550,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -610,6 +609,7 @@ mod tests {
             nonce: None,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -674,6 +674,7 @@ mod tests {
             nonce: None,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -730,6 +731,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -791,6 +793,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -853,6 +856,7 @@ mod tests {
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -915,6 +919,7 @@ mod tests {
             nonce: None,
             skip_validation: false,
             skip_execute: false,
+            skip_fee_transfer: false,
         };
 
         // Instantiate CachedState
@@ -977,7 +982,7 @@ mod tests {
         internal_calls.push(internal_call);
         call_info.internal_calls = internal_calls;
 
-        let expected_error = verify_no_calls_to_other_contracts(&call_info);
+        let expected_error = verify_no_calls_to_other_contracts(&Some(call_info));
 
         assert!(expected_error.is_err());
         assert_matches!(
