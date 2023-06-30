@@ -84,20 +84,27 @@ jobs:
   coverage:
     runs-on: ubuntu-20.04
     steps:
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-          profile: minimal
-          toolchain: nightly-2023-06-29
-          default: true
-          override: true
     - name: Checkout
       uses: actions/checkout@v3
     - uses: actions/setup-python@v2
       with:
         python-version: '3.9'
+    - name: Install Rust stable # for compiling cairo repo
+      uses: actions-rs/toolchain@v1
+      with:
+          profile: minimal
+          toolchain: stable
+          default: true
+          override: true
     - name: Deps
       run: make deps
+    - name: Install Rust nightly # for running tests
+      uses: actions-rs/toolchain@v1
+      with:
+          profile: minimal
+          toolchain: nightly
+          default: true
+          override: true
     - name: Coverage
       run: make coverage
     - name: Upload coverage to codecov.io
