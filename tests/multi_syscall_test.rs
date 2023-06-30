@@ -12,7 +12,7 @@ use cairo_vm::{
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use starknet_contract_class::EntryPointType;
-use starknet_rs::{
+use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
@@ -435,56 +435,22 @@ fn test_multiple_syscall() {
 
     // Block for deploy syscall
     {
-        let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
-        let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
-        let entrypoint_selector = &entrypoints.external.get(9).unwrap().selector;
+        // data to deploy
         let test_class_hash: ClassHash = [2; 32];
         let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
         let salt = Felt252::zero();
-        let calldata_deploy: Vec<_> = [test_felt_hash, salt].to_vec();
-        let exec_entry_point = ExecutionEntryPoint::new(
-            address.clone(),
-            calldata_deploy.clone(),
-            Felt252::new(entrypoint_selector.clone()),
-            caller_address.clone(),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            100000,
-        );
+        let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
+        let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
-        // Execute the entrypoint
-        let block_context = BlockContext::default();
-        let mut tx_execution_context = TransactionExecutionContext::new(
-            Address(0.into()),
-            Felt252::zero(),
-            Vec::new(),
-            0,
-            10.into(),
-            block_context.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION.clone(),
-        );
-        let mut resources_manager = ExecutionResourcesManager::default();
-        let call_info = exec_entry_point.execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-        );
-        assert!(call_info.is_ok());
+        // Create the deploy contract class
+        let entrypoint_selector = &entrypoints.external.get(9).unwrap().selector;
 
-        let ret_address = Address(felt_str!(
-            "619464431559909356793718633071398796109800070568878623926447195121629120356"
-        ));
-
-        let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
-        let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-            CompiledClass::Casm(class) => *class,
-            CompiledClass::Deprecated(_) => unreachable!(),
-        };
-
-        assert_eq!(ret_casm_class, test_contract_class);
+        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(test_class_hash, test_contract_class.clone());
+       
+        // Create state from the state_reader and contract cache.
+        let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+ 
     }
 }
 

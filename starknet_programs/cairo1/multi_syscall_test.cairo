@@ -17,6 +17,9 @@ mod multy_syscall {
     use result::ResultTrait;
     use option::OptionTrait;
     use starknet::class_hash::ClassHash;
+    use traits::TryInto;
+    use starknet::class_hash::Felt252TryIntoClassHash;
+
    
     #[external]
     fn caller_address() {
