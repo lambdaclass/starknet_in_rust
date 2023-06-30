@@ -346,10 +346,7 @@ impl InvokeFunction {
 pub fn verify_no_calls_to_other_contracts(
     call_info: &Option<CallInfo>,
 ) -> Result<CallInfo, TransactionError> {
-    if call_info.is_none() {
-        return Err(TransactionError::CallInfoIsNone);
-    };
-    let call_info = call_info.clone().unwrap();
+    let call_info = call_info.clone().ok_or(TransactionError::CallInfoIsNone)?;
     let invoked_contract_address = call_info.contract_address.clone();
     for internal_call in call_info.gen_call_topology() {
         if internal_call.contract_address != invoked_contract_address {
