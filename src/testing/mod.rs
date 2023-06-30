@@ -57,15 +57,15 @@ lazy_static! {
 
     // Others.
     // Blockifier had this value hardcoded to 2.
-    pub static ref ACTUAL_FEE: Felt252 = Felt252::zero();
+    pub static ref ACTUAL_FEE: Felt252 = Felt252::from(10000000);
 }
 
-pub fn new_starknet_general_config_for_testing() -> BlockContext {
+pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet,
             TEST_ERC20_CONTRACT_ADDRESS.clone(),
-            0,
+            1,
         ),
         0,
         0,
@@ -87,7 +87,7 @@ where
 
 pub fn create_account_tx_test_state(
 ) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
-    let general_config = new_starknet_general_config_for_testing();
+    let block_context = new_starknet_block_context_for_testing();
 
     let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
     let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
@@ -109,7 +109,7 @@ pub fn create_account_tx_test_state(
 
     let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
     let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
-    let test_erc20_address = general_config
+    let test_erc20_address = block_context
         .starknet_os_config()
         .fee_token_address()
         .clone();
@@ -165,5 +165,5 @@ pub fn create_account_tx_test_state(
         Some(HashMap::new()),
     );
 
-    Ok((general_config, cached_state))
+    Ok((block_context, cached_state))
 }

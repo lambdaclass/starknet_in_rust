@@ -178,8 +178,11 @@ mod test {
     use crate::definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR;
     use crate::estimate_fee;
     use crate::estimate_message_fee;
+    use crate::execution::execution_entry_point::ExecutionEntryPoint;
+    use crate::execution::TransactionExecutionContext;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
-    use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH};
+    use crate::testing::TEST_CONTRACT_PATH;
+    use crate::testing::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS};
     use crate::transaction::{InvokeFunction, L1Handler, Transaction};
     use crate::utils::felt_to_hash;
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -206,8 +209,35 @@ mod test {
         let entrypoints = contract_class.entry_points_by_type;
         let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
 
-        let (transaction_context, state) = create_account_tx_test_state().unwrap();
+        let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
+        // Add balance to account
+        let calldata = [TEST_CONTRACT_ADDRESS.0.clone(), 0.into(), 1000.into()].to_vec();
+
+        let fee_transfer_call = ExecutionEntryPoint::new(
+            block_context.starknet_os_config.fee_token_address.clone(),
+            calldata,
+            felt_str!("37313232031488507829243159589199778096432170431839144894988167447577083165"), // mint entrypoint
+            block_context.starknet_os_config.fee_token_address.clone(),
+            EntryPointType::External,
+            None,
+            None,
+            100000,
+        );
+
+        let mut tx_execution_context = TransactionExecutionContext::default();
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let _fee_transfer_exec = fee_transfer_call
+            .execute(
+                &mut state,
+                &block_context,
+                &mut resources_manager,
+                &mut tx_execution_context,
+                false,
+            )
+            .unwrap();
+
+        // Fibonacci
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let invoke_function = InvokeFunction::new(
             TEST_CONTRACT_ADDRESS.clone(),
@@ -223,8 +253,8 @@ mod test {
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
 
-        let estimated_fee = estimate_fee(&transaction, state, &transaction_context).unwrap();
-        assert_eq!(estimated_fee, (0, 0));
+        let estimated_fee = estimate_fee(&transaction, state, &block_context).unwrap();
+        assert_eq!(estimated_fee, (12, 0));
     }
 
     #[test]
