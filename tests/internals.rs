@@ -695,6 +695,9 @@ fn declare_tx() -> Declare {
 }
 
 fn declarev2_tx() -> DeclareV2 {
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
+    #[cfg(feature = "cairo_1_tests")]
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
 
@@ -946,6 +949,9 @@ fn expected_fib_execute_call_info() -> CallInfo {
         ],
         retdata: vec![Felt252::from(42)],
         execution_resources: ExecutionResources {
+            #[cfg(not(feature = "cairo_1_tests"))]
+            n_steps: 157,
+            #[cfg(feature = "cairo_1_tests")]
             n_steps: 160,
             n_memory_holes: 1,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 4)]),
@@ -964,8 +970,14 @@ fn expected_fib_execute_call_info() -> CallInfo {
             internal_calls: vec![],
             contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
             code_address: None,
+            #[cfg(not(feature = "cairo_1_tests"))]
+            gas_consumed: 4380,
+            #[cfg(feature = "cairo_1_tests")]
             gas_consumed: 4710,
             execution_resources: ExecutionResources {
+                #[cfg(not(feature = "cairo_1_tests"))]
+                n_steps: 118,
+                #[cfg(feature = "cairo_1_tests")]
                 n_steps: 121,
                 n_memory_holes: 1,
                 builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 3)]),
@@ -1130,7 +1142,7 @@ fn test_invoke_with_declarev2_tx() {
     ];
     let invoke_tx = invoke_tx(calldata);
 
-    let expected_gas_consumed = 4710;
+    let expected_gas_consumed = 4380;
     let result = invoke_tx
         .execute(state, starknet_general_config, expected_gas_consumed)
         .unwrap();
@@ -1706,6 +1718,9 @@ fn test_library_call_with_declare_v2() {
     deploy.execute(state, block_context).unwrap();
 
     //  Create program and entry point types for contract class
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci_dispatcher.casm");
+    #[cfg(feature = "cairo_1_tests")]
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci_dispatcher.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
@@ -1791,10 +1806,16 @@ fn test_library_call_with_declare_v2() {
         class_hash: Some(TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone().to_be_bytes()),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
+        #[cfg(not(feature = "cairo_1_tests"))]
+        gas_consumed: 30080,
+        #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 30410,
         calldata: vec![1.into(), 1.into(), 10.into()],
         retdata: vec![89.into()], // fib(10)
         execution_resources: ExecutionResources {
+            #[cfg(not(feature = "cairo_1_tests"))]
+            n_steps: 368,
+            #[cfg(feature = "cairo_1_tests")]
             n_steps: 371,
             n_memory_holes: 1,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 13)]),
@@ -1809,10 +1830,16 @@ fn test_library_call_with_declare_v2() {
         class_hash: Some(class_hash),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
+        #[cfg(not(feature = "cairo_1_tests"))]
+        gas_consumed: 112490,
+        #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 113480,
         calldata,
         retdata: vec![89.into()], // fib(10)
         execution_resources: ExecutionResources {
+            #[cfg(not(feature = "cairo_1_tests"))]
+            n_steps: 578,
+            #[cfg(feature = "cairo_1_tests")]
             n_steps: 587,
             n_memory_holes: 3,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 16)]),
