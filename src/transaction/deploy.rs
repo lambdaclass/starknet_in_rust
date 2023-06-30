@@ -28,7 +28,9 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 
-#[derive(Debug)]
+use super::Transaction;
+
+#[derive(Debug, Clone)]
 pub struct Deploy {
     pub hash_value: Felt252,
     pub version: Felt252,
@@ -37,6 +39,9 @@ pub struct Deploy {
     pub contract_hash: ClassHash,
     pub constructor_calldata: Vec<Felt252>,
     pub tx_type: TransactionType,
+    pub skip_validate: bool,
+    pub skip_execute: bool,
+    pub skip_fee_transfer: bool,
 }
 
 impl Deploy {
@@ -77,6 +82,9 @@ impl Deploy {
             contract_hash,
             constructor_calldata,
             tx_type: TransactionType::Deploy,
+            skip_validate: false,
+            skip_execute: false,
+            skip_fee_transfer: false,
         })
     }
 
@@ -222,6 +230,25 @@ impl Deploy {
                 fee_transfer_info,
             ),
         )
+    }
+
+    // ---------------
+    //   Simulation
+    // ---------------
+    pub(crate) fn create_for_simulation(
+        &self,
+        skip_validate: bool,
+        skip_execute: bool,
+        skip_fee_transfer: bool,
+    ) -> Transaction {
+        let tx = Deploy {
+            skip_validate,
+            skip_execute,
+            skip_fee_transfer,
+            ..self.clone()
+        };
+
+        Transaction::Deploy(tx)
     }
 }
 

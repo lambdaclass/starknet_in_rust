@@ -28,10 +28,12 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
+use super::Transaction;
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Declare {
     pub class_hash: ClassHash,
     pub sender_address: Address,
@@ -43,6 +45,9 @@ pub struct Declare {
     pub nonce: Felt252,
     pub hash_value: Felt252,
     pub contract_class: ContractClass,
+    pub skip_validate: bool,
+    pub skip_execute: bool,
+    pub skip_fee_transfer: bool,
 }
 
 // ------------------------------------------------------------
@@ -88,6 +93,9 @@ impl Declare {
             nonce,
             hash_value,
             contract_class,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
         };
 
         internal_declare.verify_version()?;
@@ -128,9 +136,11 @@ impl Declare {
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
-
+        let validate_info = if self.skip_validate {
+            None
+        } else {
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+        };
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -222,10 +232,17 @@ impl Declare {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
-
-        Ok((Some(fee_transfer_info), actual_fee))
+        let fee_transfer_info = if self.skip_fee_transfer {
+            None
+        } else {
+            Some(execute_fee_transfer(
+                state,
+                block_context,
+                &mut tx_execution_context,
+                actual_fee,
+            )?)
+        };
+        Ok((fee_transfer_info, actual_fee))
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
@@ -279,6 +296,22 @@ impl Declare {
                 fee_transfer_info,
             ),
         )
+    }
+
+    pub(crate) fn create_for_simulation(
+        &self,
+        skip_validate: bool,
+        skip_execute: bool,
+        skip_fee_transfer: bool,
+    ) -> Transaction {
+        let tx = Declare {
+            skip_validate,
+            skip_execute,
+            skip_fee_transfer,
+            ..self.clone()
+        };
+
+        Transaction::Declare(tx)
     }
 }
 
