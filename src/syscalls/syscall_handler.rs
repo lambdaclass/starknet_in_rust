@@ -79,7 +79,9 @@ impl<'a, T: State + StateReader> HintProcessorLogic for SyscallHintProcessor<'a,
                             })?;
                     }
                     other => {
-                        return Err(HintError::UnknownHint(other.to_string().into_boxed_str()))
+                        return Err(HintError::UnknownHint(
+                            format!("{:?}", other).into_boxed_str(),
+                        ))
                     }
                 },
             };
