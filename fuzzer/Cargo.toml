@@ -7,10 +7,10 @@ edition = "2021"
 
 [dependencies]
 honggfuzz = "0.5.55"
-starknet_in_rust = { path = "../" }
+starknet_in_rust = { path = "../", version = "0.1.0" }
 num-traits = "0.2.15"
 lambda_starknet_api = "0.1.0"
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 tempfile = "3.2.0"
 cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
-starknet-contract-class = { path = "../crates/starknet-contract-class/" }
+starknet-contract-class = { path = "../crates/starknet-contract-class/", version = "0.1.0" }
