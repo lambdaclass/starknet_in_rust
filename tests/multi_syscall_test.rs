@@ -176,7 +176,7 @@ fn test_multiple_syscall() {
 
      // Block for library_call_syscall
      {
-         let entrypoint_selector = &entrypoints.external.get(4).unwrap().selector;
+         let entrypoint_selector = &entrypoints.external.get(3).unwrap().selector;
          let exec_entry_point = ExecutionEntryPoint::new(
              address.clone(),
              calldata.clone(),
@@ -213,41 +213,278 @@ fn test_multiple_syscall() {
      }
 
      // Block for call_contract_syscall
-    //  {
-    //     let entrypoint_selector = &entrypoints.external.get(5).unwrap().selector;
-    //     let exec_entry_point = ExecutionEntryPoint::new(
-    //         address.clone(),
-    //         calldata.clone(),
-    //         Felt252::new(entrypoint_selector.clone()),
-    //         caller_address.clone(),
-    //         entry_point_type,
-    //         Some(CallType::Delegate),
-    //         Some(class_hash),
-    //         100000,
-    //     );
+     {
+        let entrypoint_selector = &entrypoints.external.get(4).unwrap().selector;
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address.clone(),
+            calldata.clone(),
+            Felt252::new(entrypoint_selector.clone()),
+            caller_address.clone(),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        );
 
-    //     // Execute the entrypoint
-    //     let block_context = BlockContext::default();
-    //     let mut tx_execution_context = TransactionExecutionContext::new(
-    //         Address(0.into()),
-    //         Felt252::zero(),
-    //         Vec::new(),
-    //         0,
-    //         10.into(),
-    //         block_context.invoke_tx_max_n_steps(),
-    //         TRANSACTION_VERSION.clone(),
-    //     );
-    //     let mut resources_manager = ExecutionResourcesManager::default();
-    //     let call_info = exec_entry_point
-    //     .execute(
-    //         &mut state,
-    //         &block_context,
-    //         &mut resources_manager,
-    //         &mut tx_execution_context,
-    //         false,
-    //     )
-    //     .unwrap();
-    //     assert_eq!(call_info.events, vec![])
-    // }
+        // Execute the entrypoint
+        let block_context = BlockContext::default();
+        let mut tx_execution_context = TransactionExecutionContext::new(
+            Address(0.into()),
+            Felt252::zero(),
+            Vec::new(),
+            0,
+            10.into(),
+            block_context.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION.clone(),
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .unwrap();
+        assert_eq!(call_info.events, vec![])
+    }
+
+    // Block for send_message_to_l1_syscall
+    {
+        let entrypoint_selector = &entrypoints.external.get(5).unwrap().selector;
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address.clone(),
+            calldata.clone(),
+            Felt252::new(entrypoint_selector.clone()),
+            caller_address.clone(),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        );
+
+        // Execute the entrypoint
+        let block_context = BlockContext::default();
+        let mut tx_execution_context = TransactionExecutionContext::new(
+            Address(0.into()),
+            Felt252::zero(),
+            Vec::new(),
+            0,
+            10.into(),
+            block_context.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION.clone(),
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .unwrap();
+        assert_eq!(call_info.events, vec![])
+    }
+
+    // Block for replace_class_syscall
+    {
+        let entrypoint_selector = &entrypoints.external.get(6).unwrap().selector;
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address.clone(),
+            calldata.clone(),
+            Felt252::new(entrypoint_selector.clone()),
+            caller_address.clone(),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        );
+
+        // Execute the entrypoint
+        let block_context = BlockContext::default();
+        let mut tx_execution_context = TransactionExecutionContext::new(
+            Address(0.into()),
+            Felt252::zero(),
+            Vec::new(),
+            0,
+            10.into(),
+            block_context.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION.clone(),
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .unwrap();
+        assert_eq!(call_info.events, vec![])
+    }
+
+    // Block for read write
+    {
+        let entrypoint_selector = &entrypoints.external.get(7).unwrap().selector;
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address.clone(),
+            calldata.clone(),
+            Felt252::new(entrypoint_selector.clone()),
+            caller_address.clone(),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        );
+
+        // Execute the entrypoint
+        let block_context = BlockContext::default();
+        let mut tx_execution_context = TransactionExecutionContext::new(
+            Address(0.into()),
+            Felt252::zero(),
+            Vec::new(),
+            0,
+            10.into(),
+            block_context.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION.clone(),
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .unwrap();
+        assert_eq!(call_info.events, vec![])
+    }
+
+    // Block for emit
+    {
+        let entrypoint_selector = &entrypoints.external.get(8).unwrap().selector;
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address.clone(),
+            calldata.clone(),
+            Felt252::new(entrypoint_selector.clone()),
+            caller_address.clone(),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        );
+
+        // Execute the entrypoint
+        let block_context = BlockContext::default();
+        let mut tx_execution_context = TransactionExecutionContext::new(
+            Address(0.into()),
+            Felt252::zero(),
+            Vec::new(),
+            0,
+            10.into(),
+            block_context.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION.clone(),
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        )
+        .unwrap();
+    assert_eq!(
+        call_info.events,
+        vec![
+            OrderedEvent {
+                order: 0,
+                keys: vec![Felt252::from_str_radix(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
+                    10
+                )
+                .unwrap()],
+                data: vec![1.into()]
+            },
+            OrderedEvent {
+                order: 1,
+                keys: vec![Felt252::from_str_radix(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
+                    10
+                )
+                .unwrap()],
+                data: vec![2.into()]
+            },
+            OrderedEvent {
+                order: 2,
+                keys: vec![Felt252::from_str_radix(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
+                    10
+                )
+                .unwrap()],
+                data: vec![3.into()]
+            }
+        ]
+    )
+    }
+
+    // Block for deploy syscall
+    {
+        let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
+        let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
+        let entrypoint_selector = &entrypoints.external.get(9).unwrap().selector;
+        let test_class_hash: ClassHash = [2; 32];
+        let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+        let salt = Felt252::zero();
+        let calldata_deploy: Vec<_> = [test_felt_hash, salt].to_vec();
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address.clone(),
+            calldata_deploy.clone(),
+            Felt252::new(entrypoint_selector.clone()),
+            caller_address.clone(),
+            entry_point_type,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            100000,
+        );
+
+        // Execute the entrypoint
+        let block_context = BlockContext::default();
+        let mut tx_execution_context = TransactionExecutionContext::new(
+            Address(0.into()),
+            Felt252::zero(),
+            Vec::new(),
+            0,
+            10.into(),
+            block_context.invoke_tx_max_n_steps(),
+            TRANSACTION_VERSION.clone(),
+        );
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let call_info = exec_entry_point.execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+        );
+        assert!(call_info.is_ok());
+
+        let ret_address = Address(felt_str!(
+            "619464431559909356793718633071398796109800070568878623926447195121629120356"
+        ));
+
+        let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
+        let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
+            CompiledClass::Casm(class) => *class,
+            CompiledClass::Deprecated(_) => unreachable!(),
+        };
+
+        assert_eq!(ret_casm_class, test_contract_class);
+    }
 }
 
