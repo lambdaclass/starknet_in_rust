@@ -243,7 +243,11 @@ mod test {
 
     #[test]
     fn call_contract_fibonacci_with_10_should_return_89() {
+        #[cfg(not(feature = "cairo_1_tests"))]
+        let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+        #[cfg(feature = "cairo_1_tests")]
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -335,6 +339,9 @@ mod test {
 
     #[test]
     fn test_skip_validation_flag() {
+        #[cfg(not(feature = "cairo_1_tests"))]
+        let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+        #[cfg(feature = "cairo_1_tests")]
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
@@ -397,7 +404,11 @@ mod test {
         let entrypoint_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
 
         // test with fibonacci
+        #[cfg(not(feature = "cairo_1_tests"))]
+        let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+        #[cfg(feature = "cairo_1_tests")]
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+
         let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
         let address = Address(1111.into());
@@ -514,7 +525,11 @@ mod test {
         let entrypoint_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
 
         // test with fibonacci
+        #[cfg(not(feature = "cairo_1_tests"))]
+        let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+        #[cfg(feature = "cairo_1_tests")]
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+
         let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
         let address = Address(1111.into());
