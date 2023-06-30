@@ -8,23 +8,25 @@ license = "Apache-2.0"
 [features]
 default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
+cairo_1_tests = []
 
 [workspace]
 members = ["crates/starknet-contract-class", "cli", "fuzzer"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.8.0", features = ["cairo-1-hints"]}
+cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"]}
 starknet_api = "0.1.0"
+num-traits = "0.2.15"
 
 [dependencies]
-cairo-lang-starknet = "1.1.0"
-cairo-lang-casm = "1.1.0"
+cairo-lang-starknet = "2.0.0-rc6"
+cairo-lang-casm = "2.0.0-rc6"
 cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
 num-integer = "0.1.45"
-num-traits = "0.2.15"
+num-traits = { workspace = true }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0", features = ["arbitrary_precision", "raw_value"] }
 sha3 = "0.10.1"
