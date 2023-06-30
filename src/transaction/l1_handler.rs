@@ -21,8 +21,10 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 
+use super::Transaction;
+
 #[allow(dead_code)]
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, Clone)]
 pub struct L1Handler {
     #[getset(get = "pub")]
     hash_value: Felt252,
@@ -32,6 +34,8 @@ pub struct L1Handler {
     calldata: Vec<Felt252>,
     nonce: Option<Felt252>,
     paid_fee_on_l1: Option<Felt252>,
+    skip_validate: bool,
+    skip_execute: bool,
 }
 
 impl L1Handler {
@@ -61,6 +65,8 @@ impl L1Handler {
             calldata,
             nonce: Some(nonce),
             paid_fee_on_l1,
+            skip_execute: false,
+            skip_validate: false,
         })
     }
 
@@ -86,18 +92,22 @@ impl L1Handler {
             remaining_gas,
         );
 
-        let call_info = entrypoint.execute(
-            state,
-            block_context,
-            &mut resources_manager,
-            &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
-            false,
-        )?;
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(entrypoint.execute(
+                state,
+                block_context,
+                &mut resources_manager,
+                &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
+                false,
+            )?)
+        };
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(call_info.clone())],
+            &[call_info.clone()],
             TransactionType::L1Handler,
             changes,
             Some(self.get_payload_size()),
@@ -126,7 +136,7 @@ impl L1Handler {
         Ok(
             TransactionExecutionInfo::create_concurrent_stage_execution_info(
                 None,
-                Some(call_info),
+                call_info,
                 actual_resources,
                 Some(TransactionType::L1Handler),
             ),
@@ -154,6 +164,19 @@ impl L1Handler {
             n_steps,
             L1_HANDLER_VERSION.into(),
         ))
+    }
+    pub(crate) fn create_for_simulation(
+        &self,
+        skip_validate: bool,
+        skip_execute: bool,
+    ) -> Transaction {
+        let tx = L1Handler {
+            skip_validate,
+            skip_execute,
+            ..self.clone()
+        };
+
+        Transaction::L1Handler(tx)
     }
 }
 
