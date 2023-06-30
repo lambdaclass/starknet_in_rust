@@ -89,6 +89,7 @@ jobs:
       with:
           profile: minimal
           toolchain: nightly-2023-06-29
+          default: true
           override: true
     - name: Checkout
       uses: actions/checkout@v3
