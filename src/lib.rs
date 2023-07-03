@@ -73,11 +73,15 @@ where
     // This is used as a copy of the original state, we can update this cached state freely.
     let mut cached_state = CachedState::<T>::new(state, None, None);
 
+    // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
+    let tx_for_simulation = transaction.create_for_simulation(false, false, true);
+
     // Check if the contract is deployed.
     cached_state.get_class_hash_at(&transaction.contract_address())?;
 
     // execute the transaction with the fake state.
-    let transaction_result = transaction.execute(&mut cached_state, block_context, 1_000_000)?;
+    let transaction_result =
+        tx_for_simulation.execute(&mut cached_state, block_context, 1_000_000)?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         let actual_fee = transaction_result.actual_fee;
         Ok((actual_fee, *gas_usage))
