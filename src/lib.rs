@@ -47,47 +47,58 @@ pub mod transaction;
 pub mod utils;
 
 pub fn simulate_transaction<S: StateReader>(
-    transaction: &Transaction,
+    transactions: &[&Transaction],
     state: S,
-    block_context: BlockContext,
+    block_context: &BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
-) -> Result<TransactionExecutionInfo, TransactionError> {
-    let mut cached_state = CachedState::new(state, None, Some(HashMap::new()));
-    let tx_for_simulation =
-        transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
-    tx_for_simulation.execute(&mut cached_state, &block_context, remaining_gas)
+) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
+    let mut cache_state = CachedState::new(state, None, Some(HashMap::new()));
+    let mut result = Vec::with_capacity(transactions.len());
+    for transaction in transactions {
+        let tx_for_simulation =
+            transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
+        let tx_result =
+            tx_for_simulation.execute(&mut cache_state, block_context, remaining_gas)?;
+        result.push(tx_result);
+    }
+
+    Ok(result)
 }
 
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
-    transaction: &Transaction,
+    transactions: &[Transaction],
     state: T,
     block_context: &BlockContext,
-) -> Result<(u128, usize), TransactionError>
+) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
     let mut cached_state = CachedState::<T>::new(state, None, None);
 
-    // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
-    let tx_for_simulation = transaction.create_for_simulation(false, false, true);
+    let mut result = Vec::with_capacity(transactions.len());
+    for transaction in transactions {
+        // Check if the contract is deployed.
+        cached_state.get_class_hash_at(&transaction.contract_address())?;
+        // execute the transaction with the fake state.
 
-    // Check if the contract is deployed.
-    cached_state.get_class_hash_at(&transaction.contract_address())?;
+        // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
+        let tx_for_simulation = transaction.create_for_simulation(false, false, true);
 
-    // execute the transaction with the fake state.
-    let transaction_result =
-        tx_for_simulation.execute(&mut cached_state, block_context, 1_000_000)?;
-    if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
-        let actual_fee = transaction_result.actual_fee;
-        Ok((actual_fee, *gas_usage))
-    } else {
-        Err(TransactionError::ResourcesError)
+        let transaction_result =
+            tx_for_simulation.execute(&mut cached_state, block_context, 1_000_000)?;
+        if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
+            result.push((transaction_result.actual_fee, *gas_usage));
+        } else {
+            return Err(TransactionError::ResourcesError);
+        };
     }
+
+    Ok(result)
 }
 
 pub fn call_contract<T: State + StateReader>(
@@ -193,6 +204,8 @@ mod test {
     };
     use crate::estimate_fee;
     use crate::estimate_message_fee;
+    use crate::execution::execution_entry_point::ExecutionEntryPoint;
+    use crate::execution::TransactionExecutionContext;
     use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::state::state_api::State;
@@ -250,8 +263,35 @@ mod test {
         let entrypoints = contract_class.entry_points_by_type;
         let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
 
-        let (transaction_context, state) = create_account_tx_test_state().unwrap();
+        let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
+        // Add balance to account
+        let calldata = [TEST_CONTRACT_ADDRESS.0.clone(), 0.into(), 1000.into()].to_vec();
+
+        let fee_transfer_call = ExecutionEntryPoint::new(
+            block_context.starknet_os_config.fee_token_address.clone(),
+            calldata,
+            felt_str!("37313232031488507829243159589199778096432170431839144894988167447577083165"), // mint entrypoint
+            block_context.starknet_os_config.fee_token_address.clone(),
+            EntryPointType::External,
+            None,
+            None,
+            100000,
+        );
+
+        let mut tx_execution_context = TransactionExecutionContext::default();
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let _fee_transfer_exec = fee_transfer_call
+            .execute(
+                &mut state,
+                &block_context,
+                &mut resources_manager,
+                &mut tx_execution_context,
+                false,
+            )
+            .unwrap();
+
+        // Fibonacci
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let invoke_function = InvokeFunction::new(
             TEST_CONTRACT_ADDRESS.clone(),
@@ -267,8 +307,8 @@ mod test {
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
 
-        let estimated_fee = estimate_fee(&transaction, state, &transaction_context).unwrap();
-        assert_eq!(estimated_fee, (0, 0));
+        let estimated_fee = estimate_fee(&[transaction], state, &block_context).unwrap();
+        assert_eq!(estimated_fee[0], (12, 0));
     }
 
     #[test]
@@ -485,25 +525,56 @@ mod test {
         ]
         .to_vec();
 
-        let invoke = InvokeFunction::new(
-            address,
-            entrypoint_selector,
-            1000000,
-            Felt252::one(),
-            calldata,
-            vec![],
-            StarknetChainId::TestNet.to_felt(),
-            Some(1.into()),
-            None,
-        )
-        .unwrap();
+        let invoke_1 = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                address.clone(),
+                entrypoint_selector.clone(),
+                1000000,
+                Felt252::one(),
+                calldata.clone(),
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                Some(1.into()),
+                None,
+            )
+            .unwrap(),
+        );
 
+        let invoke_2 = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                address.clone(),
+                entrypoint_selector.clone(),
+                1000000,
+                Felt252::one(),
+                calldata.clone(),
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                Some(2.into()),
+                None,
+            )
+            .unwrap(),
+        );
+
+        let invoke_3 = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                address,
+                entrypoint_selector,
+                1000000,
+                Felt252::one(),
+                calldata,
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                Some(3.into()),
+                None,
+            )
+            .unwrap(),
+        );
         let block_context = BlockContext::default();
 
         let context = simulate_transaction(
-            &Transaction::InvokeFunction(invoke),
+            &[&invoke_1, &invoke_2, &invoke_3],
             state_reader,
-            block_context,
+            &block_context,
             1000,
             false,
             true,
@@ -511,9 +582,15 @@ mod test {
         )
         .unwrap();
 
-        assert!(context.validate_info.is_some());
-        assert!(context.call_info.is_none());
-        assert!(context.fee_transfer_info.is_none());
+        assert!(context[0].validate_info.is_some());
+        assert!(context[0].call_info.is_none());
+        assert!(context[0].fee_transfer_info.is_none());
+        assert!(context[1].validate_info.is_some());
+        assert!(context[1].call_info.is_none());
+        assert!(context[1].fee_transfer_info.is_none());
+        assert!(context[2].validate_info.is_some());
+        assert!(context[2].call_info.is_none());
+        assert!(context[2].fee_transfer_info.is_none());
     }
 
     #[test]
@@ -576,25 +653,27 @@ mod test {
         ]
         .to_vec();
 
-        let invoke = InvokeFunction::new(
-            address,
-            entrypoint_selector,
-            1000000,
-            Felt252::one(),
-            calldata,
-            vec![],
-            StarknetChainId::TestNet.to_felt(),
-            Some(1.into()),
-            None,
-        )
-        .unwrap();
+        let invoke = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                address,
+                entrypoint_selector,
+                1000000,
+                Felt252::one(),
+                calldata,
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                Some(1.into()),
+                None,
+            )
+            .unwrap(),
+        );
 
         let block_context = BlockContext::default();
 
         let context = simulate_transaction(
-            &Transaction::InvokeFunction(invoke),
+            &[&invoke],
             state_reader,
-            block_context,
+            &block_context,
             1000,
             true,
             true,
@@ -602,9 +681,9 @@ mod test {
         )
         .unwrap();
 
-        assert!(context.validate_info.is_none());
-        assert!(context.call_info.is_none());
-        assert!(context.fee_transfer_info.is_none());
+        assert!(context[0].validate_info.is_none());
+        assert!(context[0].call_info.is_none());
+        assert!(context[0].fee_transfer_info.is_none());
     }
 
     #[test]
@@ -616,7 +695,7 @@ mod test {
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
             .unwrap();
 
-        let block_context = Default::default();
+        let block_context = &Default::default();
         let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
@@ -634,7 +713,7 @@ mod test {
         );
 
         simulate_transaction(
-            &internal_deploy,
+            &[&internal_deploy],
             state,
             block_context,
             100_000_000,
@@ -650,7 +729,7 @@ mod test {
         let state_reader = InMemoryStateReader::default();
         let state = CachedState::new(state_reader, Some(Default::default()), None);
 
-        let block_context = Default::default();
+        let block_context = &Default::default();
 
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
@@ -670,7 +749,7 @@ mod test {
         );
 
         simulate_transaction(
-            &declare_tx,
+            &[&declare_tx],
             state,
             block_context,
             100_000_000,
@@ -731,9 +810,9 @@ mod test {
         );
 
         simulate_transaction(
-            &invoke_tx,
+            &[&invoke_tx],
             state,
-            block_context,
+            &block_context,
             100_000_000,
             false,
             false,
@@ -751,10 +830,10 @@ mod test {
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
             .unwrap();
 
-        let block_context = Default::default();
+        let block_context = &Default::default();
 
         // new consumes more execution time than raw struct instantiation
-        let deploy_account_tx = &Transaction::DeployAccount(
+        let deploy_account_tx = Transaction::DeployAccount(
             DeployAccount::new(
                 *CLASS_HASH_BYTES,
                 0,
@@ -770,7 +849,7 @@ mod test {
         );
 
         simulate_transaction(
-            deploy_account_tx,
+            &[&deploy_account_tx],
             state,
             block_context,
             100_000_000,
@@ -810,13 +889,13 @@ mod test {
         let declare_tx = Transaction::DeclareV2(Box::new(declarev2_tx()));
 
         simulate_transaction(
-            &declare_tx,
+            &[&declare_tx],
             state,
-            block_context,
+            &block_context,
             100_000_000,
             false,
             false,
-            false,
+            true,
         )
         .unwrap();
     }
@@ -879,9 +958,9 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         simulate_transaction(
-            &l1_handler_tx,
+            &[&l1_handler_tx],
             state,
-            block_context,
+            &block_context,
             100_000_000,
             false,
             false,
@@ -899,21 +978,23 @@ mod test {
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
             .unwrap();
 
-        let block_context = Default::default();
+        let block_context = &Default::default();
 
         let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
         let class = CONTRACT_CLASS.clone();
-        let deploy = Transaction::Deploy(Deploy::new(
-            salt,
-            class,
-            vec![],
-            StarknetChainId::TestNet.to_felt(),
-            0.into(),
-            None,
-        )
-        .unwrap());
+        let deploy = Transaction::Deploy(
+            Deploy::new(
+                salt,
+                class,
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                0.into(),
+                None,
+            )
+            .unwrap(),
+        );
 
         let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
         let calldata = vec![
@@ -938,8 +1019,8 @@ mod test {
         );
 
         simulate_transaction(
-            [deploy, invoke_tx],
-            state,
+            &[&deploy, &invoke_tx],
+            state.clone(),
             block_context,
             100_000_000,
             false,
@@ -947,5 +1028,10 @@ mod test {
             false,
         )
         .unwrap();
+
+        assert_eq!(
+            estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
+            [(0, 1224), (0, 0)]
+        );
     }
 }

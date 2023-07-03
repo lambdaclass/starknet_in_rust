@@ -60,7 +60,7 @@ impl Transaction {
             Transaction::DeclareV2(tx) => tx.execute(state, block_context),
             Transaction::Deploy(tx) => tx.execute(state, block_context),
             Transaction::DeployAccount(tx) => tx.execute(state, block_context),
-            Transaction::InvokeFunction(tx) => tx.execute(state, block_context, 0),
+            Transaction::InvokeFunction(tx) => tx.execute(state, block_context, remaining_gas),
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
