@@ -1128,17 +1128,17 @@ fn test_invoke_tx_state() {
 
 #[test]
 fn test_invoke_with_declarev2_tx() {
-    let (starknet_general_config, state) = &mut create_account_tx_test_state().unwrap();
+    let (block_context, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(state, &expected_initial_state);
 
     // Declare the fibonacci contract
     let declare_tx = declarev2_tx();
-    declare_tx.execute(state, starknet_general_config).unwrap();
+    declare_tx.execute(state, block_context).unwrap();
 
     // Deploy the fibonacci contract
     let deploy = deploy_fib_syscall();
-    deploy.execute(state, starknet_general_config).unwrap();
+    deploy.execute(state, block_context).unwrap();
 
     let Address(test_contract_address) = TEST_FIB_CONTRACT_ADDRESS.clone();
     let calldata = vec![
@@ -1153,7 +1153,7 @@ fn test_invoke_with_declarev2_tx() {
 
     let expected_gas_consumed = 4380;
     let result = invoke_tx
-        .execute(state, starknet_general_config, expected_gas_consumed)
+        .execute(state, block_context, expected_gas_consumed)
         .unwrap();
 
     let expected_execution_info = expected_fib_transaction_execution_info();
