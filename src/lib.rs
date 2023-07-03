@@ -889,4 +889,63 @@ mod test {
         )
         .unwrap();
     }
+
+    #[test]
+    fn test_deploy_and_invoke_simulation() {
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+
+        state
+            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .unwrap();
+
+        let block_context = Default::default();
+
+        let salt = felt_str!(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+        );
+        let class = CONTRACT_CLASS.clone();
+        let deploy = Transaction::Deploy(Deploy::new(
+            salt,
+            class,
+            vec![],
+            StarknetChainId::TestNet.to_felt(),
+            0.into(),
+            None,
+        )
+        .unwrap());
+
+        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let calldata = vec![
+            CONTRACT_ADDRESS.0.clone(),
+            selector.clone(),
+            Felt252::zero(),
+        ];
+        // new consumes more execution time than raw struct instantiation
+        let invoke_tx = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                CONTRACT_ADDRESS.clone(),
+                selector,
+                0,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                SIGNATURE.clone(),
+                StarknetChainId::TestNet.to_felt(),
+                Some(Felt252::zero()),
+                None,
+            )
+            .unwrap(),
+        );
+
+        simulate_transaction(
+            [deploy, invoke_tx],
+            state,
+            block_context,
+            100_000_000,
+            false,
+            false,
+            false,
+        )
+        .unwrap();
+    }
 }
