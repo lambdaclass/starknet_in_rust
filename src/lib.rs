@@ -841,7 +841,7 @@ mod test {
             100_000_000,
             false,
             false,
-            false,
+            true,
         )
         .unwrap();
     }
