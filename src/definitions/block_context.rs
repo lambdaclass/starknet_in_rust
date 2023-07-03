@@ -1,7 +1,7 @@
 use crate::{state::BlockInfo, utils::Address};
 use cairo_vm::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
-use lambda_starknet_api::block::Block;
+use starknet_api::block::Block;
 use std::collections::HashMap;
 
 use super::constants::{
