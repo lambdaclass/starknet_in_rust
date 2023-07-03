@@ -204,8 +204,6 @@ mod test {
     };
     use crate::estimate_fee;
     use crate::estimate_message_fee;
-    use crate::execution::execution_entry_point::ExecutionEntryPoint;
-    use crate::execution::TransactionExecutionContext;
     use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::state::state_api::State;
@@ -263,33 +261,7 @@ mod test {
         let entrypoints = contract_class.entry_points_by_type;
         let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
 
-        let (block_context, mut state) = create_account_tx_test_state().unwrap();
-
-        // Add balance to account
-        let calldata = [TEST_CONTRACT_ADDRESS.0.clone(), 0.into(), 1000.into()].to_vec();
-
-        let fee_transfer_call = ExecutionEntryPoint::new(
-            block_context.starknet_os_config.fee_token_address.clone(),
-            calldata,
-            felt_str!("37313232031488507829243159589199778096432170431839144894988167447577083165"), // mint entrypoint
-            block_context.starknet_os_config.fee_token_address.clone(),
-            EntryPointType::External,
-            None,
-            None,
-            100000,
-        );
-
-        let mut tx_execution_context = TransactionExecutionContext::default();
-        let mut resources_manager = ExecutionResourcesManager::default();
-        let _fee_transfer_exec = fee_transfer_call
-            .execute(
-                &mut state,
-                &block_context,
-                &mut resources_manager,
-                &mut tx_execution_context,
-                false,
-            )
-            .unwrap();
+        let (block_context, state) = create_account_tx_test_state().unwrap();
 
         // Fibonacci
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
