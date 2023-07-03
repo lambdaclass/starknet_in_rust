@@ -490,7 +490,7 @@ impl TransactionExecutionInfo {
         }
     }
 
-    pub fn create_concurrent_stage_execution_info(
+    pub fn new_without_fee_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         actual_resources: HashMap<String, usize>,
@@ -506,16 +506,9 @@ impl TransactionExecutionInfo {
         }
     }
 
-    pub fn from_concurrent_state_execution_info(
-        concurrent_execution_info: TransactionExecutionInfo,
-        actual_fee: u128,
-        fee_transfer_info: Option<CallInfo>,
-    ) -> Self {
-        TransactionExecutionInfo {
-            actual_fee,
-            fee_transfer_info,
-            ..concurrent_execution_info
-        }
+    pub fn set_fee_info(&mut self, actual_fee: u128, fee_transfer_call_info: Option<CallInfo>) {
+        self.actual_fee = actual_fee;
+        self.fee_transfer_info = fee_transfer_call_info;
     }
 
     pub fn get_visited_storage_entries_of_many(

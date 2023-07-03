@@ -149,14 +149,12 @@ impl Deploy {
             None,
         )?;
 
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                None,
-                Some(call_info),
-                actual_resources,
-                Some(self.tx_type),
-            ),
-        )
+        Ok(TransactionExecutionInfo::new_without_fee_info(
+            None,
+            Some(call_info),
+            actual_resources,
+            Some(self.tx_type),
+        ))
     }
 
     pub fn invoke_constructor<S: State + StateReader>(
@@ -203,14 +201,12 @@ impl Deploy {
             None,
         )?;
 
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                None,
-                Some(call_info),
-                actual_resources,
-                Some(self.tx_type),
-            ),
-        )
+        Ok(TransactionExecutionInfo::new_without_fee_info(
+            None,
+            Some(call_info),
+            actual_resources,
+            Some(self.tx_type),
+        ))
     }
 
     /// Calculates actual fee used by the transaction using the execution
@@ -220,16 +216,11 @@ impl Deploy {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, block_context)?;
+        let mut tx_exec_info = self.apply(state, block_context)?;
         let (fee_transfer_info, actual_fee) = (None, 0);
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
-        Ok(
-            TransactionExecutionInfo::from_concurrent_state_execution_info(
-                concurrent_exec_info,
-                actual_fee,
-                fee_transfer_info,
-            ),
-        )
+        Ok(tx_exec_info)
     }
 
     // ---------------
