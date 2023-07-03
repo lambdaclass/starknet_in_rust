@@ -8,7 +8,7 @@ default = ["with_mimalloc"]
 with_mimalloc = ["mimalloc"]
 
 [dependencies]
-starknet_in_rust = { path = "../" }
+starknet_in_rust = { path = "../", version = "0.1.0" }
 num-traits = "0.2.15"
 serde = { version = "1.0.152", features = ["derive"] }
 cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
