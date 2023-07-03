@@ -14,7 +14,6 @@ use num_bigint::BigUint;
 use num_traits::{Num, One, ToPrimitive, Zero};
 use starknet_contract_class::EntryPointType;
 use starknet_in_rust::core::errors::state_errors::StateError;
-use starknet_in_rust::definitions::block_context;
 use starknet_in_rust::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
 };
