@@ -151,14 +151,12 @@ impl Declare {
         )
         .map_err(|_| TransactionError::ResourcesCalculation)?;
 
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                validate_info,
-                None,
-                actual_resources,
-                Some(self.tx_type),
-            ),
-        )
+        Ok(TransactionExecutionInfo::new_without_fee_info(
+            validate_info,
+            None,
+            actual_resources,
+            Some(self.tx_type),
+        ))
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,7 +269,7 @@ impl Declare {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, block_context)?;
+        let mut tx_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
         // Set contract class
         match state.get_contract_class(&self.class_hash) {
@@ -287,15 +285,10 @@ impl Declare {
         }
 
         let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &concurrent_exec_info.actual_resources, block_context)?;
+            self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
-        Ok(
-            TransactionExecutionInfo::from_concurrent_state_execution_info(
-                concurrent_exec_info,
-                actual_fee,
-                fee_transfer_info,
-            ),
-        )
+        Ok(tx_exec_info)
     }
 
     pub(crate) fn create_for_simulation(

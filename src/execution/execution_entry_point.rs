@@ -50,7 +50,6 @@ pub struct ExecutionEntryPoint {
     pub(crate) caller_address: Address,
     pub(crate) entry_point_selector: Felt252,
     pub(crate) entry_point_type: EntryPointType,
-    #[allow(unused)]
     pub(crate) initial_gas: u128,
 }
 #[allow(clippy::too_many_arguments)]
