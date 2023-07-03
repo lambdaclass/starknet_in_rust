@@ -90,7 +90,7 @@ where
         let tx_for_simulation = transaction.create_for_simulation(false, false, true);
 
         let transaction_result =
-            tx_for_simulation.execute(&mut cached_state, block_context, 1_000_000)?;
+            tx_for_simulation.execute(&mut cached_state, block_context, 100_000_000)?;
         if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
             result.push((transaction_result.actual_fee, *gas_usage));
         } else {
