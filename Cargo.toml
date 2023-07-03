@@ -1,6 +1,6 @@
 [package]
 name = "starknet_in_rust"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "A Rust implementation of Starknet execution logic"
 license = "Apache-2.0"
@@ -38,7 +38,7 @@ mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 anyhow = "1.0.66"
-starknet-contract-class = { path = "./crates/starknet-contract-class", version = "0.1.0" }
+starknet-contract-class = { path = "./crates/starknet-contract-class", version = "0.2.0" }
 once_cell = "1.17.1"
 
 [dev-dependencies]
