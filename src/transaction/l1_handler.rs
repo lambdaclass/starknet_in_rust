@@ -133,14 +133,12 @@ impl L1Handler {
             }
         }
 
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                None,
-                call_info,
-                actual_resources,
-                Some(TransactionType::L1Handler),
-            ),
-        )
+        Ok(TransactionExecutionInfo::new_without_fee_info(
+            None,
+            call_info,
+            actual_resources,
+            Some(TransactionType::L1Handler),
+        ))
     }
 
     /// Returns the payload size of the corresponding L1-to-L2 message.

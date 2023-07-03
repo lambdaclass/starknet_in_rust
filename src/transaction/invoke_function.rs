@@ -227,13 +227,12 @@ impl InvokeFunction {
             changes,
             None,
         )?;
-        let transaction_execution_info =
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                validate_info,
-                call_info,
-                actual_resources,
-                Some(self.tx_type),
-            );
+        let transaction_execution_info = TransactionExecutionInfo::new_without_fee_info(
+            validate_info,
+            call_info,
+            actual_resources,
+            Some(self.tx_type),
+        );
         Ok(transaction_execution_info)
     }
 
@@ -279,19 +278,14 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let concurrent_exec_info = self.apply(state, block_context, remaining_gas)?;
+        let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
         self.handle_nonce(state)?;
 
         let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &concurrent_exec_info.actual_resources, block_context)?;
+            self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
-        Ok(
-            TransactionExecutionInfo::from_concurrent_state_execution_info(
-                concurrent_exec_info,
-                actual_fee,
-                fee_transfer_info,
-            ),
-        )
+        Ok(tx_exec_info)
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
@@ -397,7 +391,7 @@ mod tests {
     use std::{collections::HashMap, path::PathBuf};
 
     #[test]
-    fn test_apply_specific_concurrent_changes() {
+    fn test_invoke_apply_without_fees() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
@@ -466,7 +460,7 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_specific_concurrent_changes() {
+    fn test_invoke_execute() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(

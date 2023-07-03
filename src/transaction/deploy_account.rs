@@ -128,19 +128,14 @@ impl DeployAccount {
     where
         S: State + StateReader,
     {
-        let tx_info = self.apply(state, block_context)?;
+        let mut tx_info = self.apply(state, block_context)?;
 
         self.handle_nonce(state)?;
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_info.actual_resources, block_context)?;
+        tx_info.set_fee_info(actual_fee, fee_transfer_info);
 
-        Ok(
-            TransactionExecutionInfo::from_concurrent_state_execution_info(
-                tx_info,
-                actual_fee,
-                fee_transfer_info,
-            ),
-        )
+        Ok(tx_info)
     }
 
     fn constructor_entry_points_empty(
@@ -190,14 +185,12 @@ impl DeployAccount {
         )
         .map_err::<TransactionError, _>(|_| TransactionError::ResourcesCalculation)?;
 
-        Ok(
-            TransactionExecutionInfo::create_concurrent_stage_execution_info(
-                validate_info,
-                Some(constructor_call_info),
-                actual_resources,
-                Some(TransactionType::DeployAccount),
-            ),
-        )
+        Ok(TransactionExecutionInfo::new_without_fee_info(
+            validate_info,
+            Some(constructor_call_info),
+            actual_resources,
+            Some(TransactionType::DeployAccount),
+        ))
     }
 
     pub fn handle_constructor<S>(

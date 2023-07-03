@@ -112,10 +112,7 @@ lazy_static! {
     };
 }
 
-//TODO Remove allow dead_code after merging to 0.11
-#[allow(dead_code)]
 #[derive(Debug)]
-
 pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) expected_syscall_ptr: Relocatable,
