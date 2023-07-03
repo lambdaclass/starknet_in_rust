@@ -36,8 +36,8 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
 
     let calldata = [
         block_context.block_info.sequencer_address.0.clone(),
-        Felt252::from(actual_fee),
         0.into(),
+        Felt252::from(actual_fee),
     ]
     .to_vec();
 

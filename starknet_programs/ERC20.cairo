@@ -157,7 +157,7 @@ func permissionedMint{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
     recipient: felt, amount: Uint256
 ) {
     alloc_locals;
-    permitted_minter_only();
+    //permitted_minter_only(); <- We remove this to make testing easier
     local syscall_ptr: felt* = syscall_ptr;
 
     ERC20_mint(recipient=recipient, amount=amount);
