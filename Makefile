@@ -21,11 +21,11 @@ STARKNET_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(STARKNET_SOURCES))
 BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
 BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
 
-STARKNET_COMPILE_CAIRO_1:=cairo1/target/release/starknet-compile
-STARKNET_SIERRA_COMPILE_CAIRO_1:=cairo1/target/release/starknet-sierra-compile
+STARKNET_COMPILE_CAIRO_1:=cairo1/bin/starknet-compile
+STARKNET_SIERRA_COMPILE_CAIRO_1:=cairo1/bin/starknet-sierra-compile
 
-STARKNET_COMPILE_CAIRO_2:=cairo2/target/release/starknet-compile
-STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/target/release/starknet-sierra-compile
+STARKNET_COMPILE_CAIRO_2:=cairo2/bin/starknet-compile
+STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/bin/starknet-sierra-compile
 
 #
 # VENV rules.
@@ -74,12 +74,21 @@ $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra
 
 
 cairo-repo-1-dir = cairo1
+cairo-repo-1-dir-macos = cairo1-macos
+
+build-cairo-1-compiler-macos: | $(cairo-repo-1-dir-macos)
+
+$(cairo-repo-1-dir-macos):
+	curl -L -o cairo-1.1.1.tar https://github.com/starkware-libs/cairo/releases/download/v1.1.1/release-aarch64-apple-darwin.tar \
+	&& tar -xzvf cairo-1.1.1.tar \
+	&& mv cairo/ cairo1/
 
 build-cairo-1-compiler: | $(cairo-repo-1-dir)
 
 $(cairo-repo-1-dir):
-	git clone --depth 1 -b v1.1.1 https://github.com/starkware-libs/cairo.git $(cairo-repo-1-dir)
-	cd cairo1; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
+	curl -L -o cairo-1.1.1.tar https://github.com/starkware-libs/cairo/releases/download/v1.1.1/release-x86_64-unknown-linux-musl.tar.gz \
+	&& tar -xzvf cairo-1.1.1.tar \
+	&& mv cairo/ cairo1/
 
 # ======================
 # Test Cairo 2 Contracts
@@ -98,12 +107,21 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 
 
 cairo-repo-2-dir = cairo2
+cairo-repo-2-dir-macos = cairo2-macos
+
+build-cairo-2-compiler-macos: | $(cairo-repo-2-dir-macos)
+
+$(cairo-repo-2-dir-macos):
+	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0-rc6/release-aarch64-apple-darwin.tar \
+	&& tar -xzvf cairo-2.0.0.tar \
+	&& mv cairo/ cairo2/
 
 build-cairo-2-compiler: | $(cairo-repo-2-dir)
 
 $(cairo-repo-2-dir):
-	git clone --depth 1 -b v2.0.0-rc6 https://github.com/starkware-libs/cairo.git $(cairo-repo-2-dir)
-	cd cairo2; cargo b --release --bin starknet-compile --bin starknet-sierra-compile
+	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0-rc6/release-x86_64-unknown-linux-musl.tar.gz \
+	&& tar -xzvf cairo-2.0.0.tar \
+	&& mv cairo/ cairo2/
 
 
 # =================
@@ -122,6 +140,12 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 
+deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
+	cargo install flamegraph --version 0.6.2
+	cargo install cargo-llvm-cov --version 0.5.14
+	python3.9 -m venv starknet-venv
+	. starknet-venv/bin/activate && $(MAKE) deps-venv
+
 clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
@@ -135,6 +159,8 @@ clean:
 	-rm -f tests/*.json
 	-rm -rf cairo1/
 	-rm -rf cairo2/
+	-rm -rf cairo-2.0.0.tar
+	-rm -rf cairo-1.1.1.tar
 
 clippy: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 	cargo clippy --all --all-targets -- -D warnings
