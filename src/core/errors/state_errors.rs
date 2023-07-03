@@ -1,7 +1,6 @@
 use crate::{
     services::api::contract_class_errors::ContractClassError,
     state::state_cache::StorageEntry,
-    storage::errors::storage_errors::StorageError,
     utils::{Address, ClassHash},
 };
 use thiserror::Error;
@@ -32,8 +31,6 @@ pub enum StateError {
     ContractAddressOutOfRangeAddress(Address),
     #[error("Requested contract address {} is unavailable for deployment", (.0).0)]
     ContractAddressUnavailable(Address),
-    #[error(transparent)]
-    Storage(#[from] StorageError),
     #[error(transparent)]
     ContractClass(#[from] ContractClassError),
     #[error("Missing CasmClassCache")]
