@@ -1,6 +1,6 @@
 [package]
 name = "starknet-contract-class"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Crate that parses a Starknet contract class from API"
 license = "Apache-2.0"
