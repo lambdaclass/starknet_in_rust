@@ -12,6 +12,7 @@ use crate::{
     },
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
+use getset::Getters;
 use std::collections::HashMap;
 
 use crate::{
@@ -105,7 +106,8 @@ impl ExecutionResourcesManager {
     }
 }
 
-#[derive(Default, Clone, PartialEq, Debug)]
+#[derive(Default, Clone, PartialEq, Debug, Getters)]
+#[getset(get = "pub")]
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
