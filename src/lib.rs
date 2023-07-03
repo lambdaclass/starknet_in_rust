@@ -40,7 +40,6 @@ pub mod runner;
 pub mod serde_structs;
 pub mod services;
 pub mod state;
-pub mod storage;
 pub mod syscalls;
 pub mod testing;
 pub mod transaction;

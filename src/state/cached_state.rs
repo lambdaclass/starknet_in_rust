@@ -8,7 +8,6 @@ use crate::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::StateDiff,
-    storage::errors::storage_errors::StorageError,
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -119,8 +118,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             let value = match self.state_reader.get_storage_at(storage_entry) {
                 Ok(x) => x,
                 Err(
-                    StateError::Storage(StorageError::ErrorFetchingData)
-                    | StateError::EmptyKeyInStorage
+                    StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
                     | StateError::NoneStorage(_)
                     | StateError::NoneContractState(_),
