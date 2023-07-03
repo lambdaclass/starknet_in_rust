@@ -1,8 +1,6 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 
-// TODO: remove once used.
-#[allow(dead_code)]
 pub(crate) enum ResponseBody {
     StorageReadResponse { value: Option<Felt252> },
     GetBlockNumber { number: Felt252 },

@@ -227,20 +227,15 @@ impl DeclareV2 {
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &actual_resources, block_context)?;
 
-        let concurrent_exec_info = TransactionExecutionInfo::create_concurrent_stage_execution_info(
+        let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             None,
             actual_resources,
             Some(self.tx_type),
         );
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
-        Ok(
-            TransactionExecutionInfo::from_concurrent_state_execution_info(
-                concurrent_exec_info,
-                actual_fee,
-                fee_transfer_info,
-            ),
-        )
+        Ok(tx_exec_info)
     }
 
     pub(crate) fn compile_and_store_casm_class<S: State + StateReader>(
