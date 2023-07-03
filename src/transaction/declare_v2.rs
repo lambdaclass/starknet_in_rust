@@ -24,7 +24,9 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
-#[derive(Debug)]
+
+use super::Transaction;
+#[derive(Debug, Clone)]
 pub struct DeclareV2 {
     pub sender_address: Address,
     pub tx_type: TransactionType,
@@ -37,6 +39,9 @@ pub struct DeclareV2 {
     pub sierra_contract_class: SierraContractClass,
     pub hash_value: Felt252,
     pub casm_class: once_cell::unsync::OnceCell<CasmContractClass>,
+    pub skip_validate: bool,
+    pub skip_execute: bool,
+    pub skip_fee_transfer: bool,
 }
 
 impl DeclareV2 {
@@ -79,6 +84,9 @@ impl DeclareV2 {
             compiled_class_hash,
             hash_value,
             casm_class: Default::default(),
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
         };
 
         internal_declare.verify_version()?;
@@ -147,10 +155,18 @@ impl DeclareV2 {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info =
-            execute_fee_transfer(state, block_context, &mut tx_execution_context, actual_fee)?;
+        let fee_transfer_info = if self.skip_fee_transfer {
+            None
+        } else {
+            Some(execute_fee_transfer(
+                state,
+                block_context,
+                &mut tx_execution_context,
+                actual_fee,
+            )?)
+        };
 
-        Ok((Some(fee_transfer_info), actual_fee))
+        Ok((fee_transfer_info, actual_fee))
     }
 
     // TODO: delete once used
@@ -185,17 +201,22 @@ impl DeclareV2 {
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let (validate_info, _remaining_gas) = self.run_validate_entrypoint(
-            initial_gas,
-            state,
-            &mut resources_manager,
-            block_context,
-        )?;
+        let (validate_info, _remaining_gas) = if self.skip_validate {
+            (None, 0)
+        } else {
+            let (info, gas) = self.run_validate_entrypoint(
+                initial_gas,
+                state,
+                &mut resources_manager,
+                block_context,
+            )?;
+            (Some(info), gas)
+        };
 
         let storage_changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(validate_info.clone())],
+            &[validate_info.clone()],
             self.tx_type,
             storage_changes,
             None,
@@ -207,7 +228,7 @@ impl DeclareV2 {
             self.charge_fee(state, &actual_resources, block_context)?;
 
         let concurrent_exec_info = TransactionExecutionInfo::create_concurrent_stage_execution_info(
-            Some(validate_info),
+            validate_info,
             None,
             actual_resources,
             Some(self.tx_type),
@@ -263,18 +284,40 @@ impl DeclareV2 {
         let mut tx_execution_context =
             self.get_execution_context(block_context.validate_max_n_steps);
 
-        let call_info = entry_point.execute(
-            state,
-            block_context,
-            resources_manager,
-            &mut tx_execution_context,
-            false,
-        )?;
-
+        let call_info = if self.skip_execute {
+            None
+        } else {
+            Some(entry_point.execute(
+                state,
+                block_context,
+                resources_manager,
+                &mut tx_execution_context,
+                false,
+            )?)
+        };
+        let call_info = verify_no_calls_to_other_contracts(&call_info)?;
         remaining_gas -= call_info.gas_consumed;
-        verify_no_calls_to_other_contracts(&call_info)?;
 
         Ok((call_info, remaining_gas))
+    }
+
+    // ---------------
+    //   Simulation
+    // ---------------
+    pub(crate) fn create_for_simulation(
+        &self,
+        skip_validate: bool,
+        skip_execute: bool,
+        skip_fee_transfer: bool,
+    ) -> Transaction {
+        let tx = DeclareV2 {
+            skip_validate,
+            skip_execute,
+            skip_fee_transfer,
+            ..self.clone()
+        };
+
+        Transaction::DeclareV2(Box::new(tx))
     }
 }
 
