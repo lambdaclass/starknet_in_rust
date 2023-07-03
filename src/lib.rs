@@ -47,9 +47,9 @@ pub mod transaction;
 pub mod utils;
 
 pub fn simulate_transaction<S: StateReader>(
-    transactions: &[Transaction],
+    transactions: &[&Transaction],
     state: S,
-    block_context: BlockContext,
+    block_context: &BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
@@ -61,7 +61,7 @@ pub fn simulate_transaction<S: StateReader>(
         let tx_for_simulation =
             transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
         let tx_result =
-            tx_for_simulation.execute(&mut cache_state, &block_context, remaining_gas)?;
+            tx_for_simulation.execute(&mut cache_state, block_context, remaining_gas)?;
         result.push(tx_result);
     }
 
@@ -86,8 +86,11 @@ where
         cached_state.get_class_hash_at(&transaction.contract_address())?;
         // execute the transaction with the fake state.
 
+        // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
+        let tx_for_simulation = transaction.create_for_simulation(false, false, true);
+
         let transaction_result =
-            transaction.execute(&mut cached_state, block_context, 1_000_000)?;
+            tx_for_simulation.execute(&mut cached_state, block_context, 100_000_000)?;
         if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
             result.push((transaction_result.actual_fee, *gas_usage));
         } else {
@@ -201,8 +204,6 @@ mod test {
     };
     use crate::estimate_fee;
     use crate::estimate_message_fee;
-    use crate::execution::execution_entry_point::ExecutionEntryPoint;
-    use crate::execution::TransactionExecutionContext;
     use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::state::state_api::State;
@@ -260,33 +261,7 @@ mod test {
         let entrypoints = contract_class.entry_points_by_type;
         let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
 
-        let (block_context, mut state) = create_account_tx_test_state().unwrap();
-
-        // Add balance to account
-        let calldata = [TEST_CONTRACT_ADDRESS.0.clone(), 0.into(), 1000.into()].to_vec();
-
-        let fee_transfer_call = ExecutionEntryPoint::new(
-            block_context.starknet_os_config.fee_token_address.clone(),
-            calldata,
-            felt_str!("37313232031488507829243159589199778096432170431839144894988167447577083165"), // mint entrypoint
-            block_context.starknet_os_config.fee_token_address.clone(),
-            EntryPointType::External,
-            None,
-            None,
-            100000,
-        );
-
-        let mut tx_execution_context = TransactionExecutionContext::default();
-        let mut resources_manager = ExecutionResourcesManager::default();
-        let _fee_transfer_exec = fee_transfer_call
-            .execute(
-                &mut state,
-                &block_context,
-                &mut resources_manager,
-                &mut tx_execution_context,
-                false,
-            )
-            .unwrap();
+        let (block_context, state) = create_account_tx_test_state().unwrap();
 
         // Fibonacci
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
@@ -569,9 +544,9 @@ mod test {
         let block_context = BlockContext::default();
 
         let context = simulate_transaction(
-            &[invoke_1, invoke_2, invoke_3],
+            &[&invoke_1, &invoke_2, &invoke_3],
             state_reader,
-            block_context,
+            &block_context,
             1000,
             false,
             true,
@@ -668,9 +643,9 @@ mod test {
         let block_context = BlockContext::default();
 
         let context = simulate_transaction(
-            &[invoke],
+            &[&invoke],
             state_reader,
-            block_context,
+            &block_context,
             1000,
             true,
             true,
@@ -692,7 +667,7 @@ mod test {
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
             .unwrap();
 
-        let block_context = Default::default();
+        let block_context = &Default::default();
         let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
@@ -710,7 +685,7 @@ mod test {
         );
 
         simulate_transaction(
-            &[internal_deploy],
+            &[&internal_deploy],
             state,
             block_context,
             100_000_000,
@@ -726,7 +701,7 @@ mod test {
         let state_reader = InMemoryStateReader::default();
         let state = CachedState::new(state_reader, Some(Default::default()), None);
 
-        let block_context = Default::default();
+        let block_context = &Default::default();
 
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
@@ -746,7 +721,7 @@ mod test {
         );
 
         simulate_transaction(
-            &[declare_tx],
+            &[&declare_tx],
             state,
             block_context,
             100_000_000,
@@ -807,9 +782,9 @@ mod test {
         );
 
         simulate_transaction(
-            &[invoke_tx],
+            &[&invoke_tx],
             state,
-            block_context,
+            &block_context,
             100_000_000,
             false,
             false,
@@ -827,7 +802,7 @@ mod test {
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
             .unwrap();
 
-        let block_context = Default::default();
+        let block_context = &Default::default();
 
         // new consumes more execution time than raw struct instantiation
         let deploy_account_tx = Transaction::DeployAccount(
@@ -846,7 +821,7 @@ mod test {
         );
 
         simulate_transaction(
-            &[deploy_account_tx],
+            &[&deploy_account_tx],
             state,
             block_context,
             100_000_000,
@@ -886,9 +861,9 @@ mod test {
         let declare_tx = Transaction::DeclareV2(Box::new(declarev2_tx()));
 
         simulate_transaction(
-            &[declare_tx],
+            &[&declare_tx],
             state,
-            block_context,
+            &block_context,
             100_000_000,
             false,
             false,
@@ -955,8 +930,69 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         simulate_transaction(
-            &[l1_handler_tx],
+            &[&l1_handler_tx],
             state,
+            &block_context,
+            100_000_000,
+            false,
+            false,
+            false,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_deploy_and_invoke_simulation() {
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+
+        state
+            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .unwrap();
+
+        let block_context = &Default::default();
+
+        let salt = felt_str!(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
+        );
+        let class = CONTRACT_CLASS.clone();
+        let deploy = Transaction::Deploy(
+            Deploy::new(
+                salt,
+                class,
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                0.into(),
+                None,
+            )
+            .unwrap(),
+        );
+
+        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let calldata = vec![
+            CONTRACT_ADDRESS.0.clone(),
+            selector.clone(),
+            Felt252::zero(),
+        ];
+        // new consumes more execution time than raw struct instantiation
+        let invoke_tx = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                CONTRACT_ADDRESS.clone(),
+                selector,
+                0,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                SIGNATURE.clone(),
+                StarknetChainId::TestNet.to_felt(),
+                Some(Felt252::zero()),
+                None,
+            )
+            .unwrap(),
+        );
+
+        simulate_transaction(
+            &[&deploy, &invoke_tx],
+            state.clone(),
             block_context,
             100_000_000,
             false,
@@ -964,5 +1000,10 @@ mod test {
             false,
         )
         .unwrap();
+
+        assert_eq!(
+            estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
+            [(0, 1224), (0, 0)]
+        );
     }
 }
