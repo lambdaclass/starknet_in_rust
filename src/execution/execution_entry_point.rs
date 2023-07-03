@@ -302,7 +302,7 @@ impl ExecutionEntryPoint {
 
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
-        let mut cairo_runner = CairoRunner::new(&contract_class.program, "all_cairo", false)?;
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, "starknet", false)?;
         cairo_runner.initialize_function_runner(&mut vm)?;
 
         validate_contract_deployed(state, &self.contract_address)?;
@@ -415,7 +415,7 @@ impl ExecutionEntryPoint {
         // get a program from the casm contract class
         let program: Program = contract_class.as_ref().clone().try_into()?;
         // create and initialize a cairo runner for running cairo 1 programs.
-        let mut cairo_runner = CairoRunner::new(&program, "all_cairo", false)?;
+        let mut cairo_runner = CairoRunner::new(&program, "starknet", false)?;
 
         cairo_runner.initialize_function_runner_cairo_1(
             &mut vm,
