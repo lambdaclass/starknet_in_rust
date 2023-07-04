@@ -181,6 +181,8 @@ fn deploy_erc20_cairo2_without_constructor() {
     let account_address_2 = internal_deploy_account
         .execute(&mut state, &Default::default())
         .unwrap().validate_info.unwrap().contract_address;
+
+    println!("Account address 2: {:?}", account_address_2);
     
     // END OF ACCOUNTS
 
@@ -190,32 +192,25 @@ fn deploy_erc20_cairo2_without_constructor() {
     let decimals_ = Felt252::from(24);
     let initial_supply = Felt252::from(1000);
     let recipient = account_address_1.clone().0;
-    let calldata = vec![name_, symbol_, decimals_, initial_supply, recipient];
+    // let calldata = vec![name_, symbol_, decimals_, initial_supply, recipient];
 
     // CONSTRUCTOR
-    let _internal_deploy_account = DeployAccount::new(
-        class_hash
-            .clone(),
-        0,
-        1.into(),
-        Felt252::zero(),
-        calldata.clone(),
-        vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
-        ],
-        felt_str!("123123123123123"),
-        StarknetChainId::TestNet.to_felt(),
-        None,
+    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"deploy"));
+    let erc20_salt = felt_str!("1234");
+    let calldata = vec![Felt252::from_bytes_be(&class_hash), erc20_salt.clone(), name_.clone(), symbol_.clone(), decimals_.clone(), initial_supply.clone(), recipient.clone()];
+    let erc20_account_address = call_contract(
+        account_address_1.clone().0,
+        entrypoint_selector.clone().into(),
+        calldata,
+        &mut state,
+        BlockContext::default(),
+        account_address_1.clone().into(),
     )
-    .unwrap().execute(&mut state, &Default::default());
+    .unwrap();
+    
 
-    println!("deploying contract: {:?}", _internal_deploy_account);
-
+    println!("erc20 contract address: {:?}", erc20_account_address);
+    println!("message: {:?}", std::str::from_utf8(&Felt252::to_be_bytes(&erc20_account_address[0])));
     // let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"fake_constructor"));
     // let _retdata = call_contract(
     //     address.0.clone(),
