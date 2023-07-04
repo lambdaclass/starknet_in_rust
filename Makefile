@@ -112,14 +112,14 @@ cairo-repo-2-dir-macos = cairo2-macos
 build-cairo-2-compiler-macos: | $(cairo-repo-2-dir-macos)
 
 $(cairo-repo-2-dir-macos):
-	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0-rc6/release-aarch64-apple-darwin.tar \
+	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0/release-aarch64-apple-darwin.tar \
 	&& tar -xzvf cairo-2.0.0.tar \
 	&& mv cairo/ cairo2/
 
 build-cairo-2-compiler: | $(cairo-repo-2-dir)
 
 $(cairo-repo-2-dir):
-	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0-rc6/release-x86_64-unknown-linux-musl.tar.gz \
+	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0/release-x86_64-unknown-linux-musl.tar.gz \
 	&& tar -xzvf cairo-2.0.0.tar \
 	&& mv cairo/ cairo2/
 

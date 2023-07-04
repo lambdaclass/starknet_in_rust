@@ -13,7 +13,7 @@ mod SimpleWallet {
     }
 
     #[constructor]
-    fn init(ref self: ContractState, initial_balance: felt252) {
+    fn constructor(ref self: ContractState, initial_balance: felt252) {
         self.balance.write(initial_balance);
     }
 
