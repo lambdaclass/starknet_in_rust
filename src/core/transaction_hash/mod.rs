@@ -128,8 +128,9 @@ pub fn calculate_declare_transaction_hash(
 ) -> Result<Felt252, SyscallHandlerError> {
     let class_hash = compute_deprecated_class_hash(contract_class)
         .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+    dbg!(&class_hash);
 
-    let (calldata, additional_data) = if version.is_zero() {
+    let (calldata, additional_data) = if !version.is_zero() {
         (vec![class_hash], vec![nonce])
     } else {
         (Vec::new(), vec![class_hash])
@@ -183,6 +184,8 @@ mod tests {
     use cairo_vm::felt::felt_str;
     use coverage_helper::test;
 
+    use crate::definitions::block_context::StarknetChainId;
+
     use super::*;
 
     #[test]
@@ -214,5 +217,47 @@ mod tests {
         .unwrap();
 
         assert_eq!(result, expected);
+    }
+
+    // contract_class: &ContractClass,
+    // chain_id: Felt252,
+    // sender_address: &Address,
+    // max_fee: u128,
+    // version: Felt252,
+    // nonce: Felt252,
+
+    #[test]
+    fn calculate_declare_hash_test() {
+        let chain_id = StarknetChainId::MainNet;
+        let sender_address = Address(felt_str!(
+            "78963962122521774108119849325604561253807220406669671815499681746608877924"
+        ));
+        let max_fee = 30580718124600;
+        let version = 1.into();
+        let nonce = 3746.into();
+        let class_hash = felt_str!(
+            "1935775813346111469198021973672033051732472907985289186515250543849860001197"
+        );
+
+        let (calldata, additional_data) = (vec![class_hash], vec![nonce]);
+
+        let tx = calculate_transaction_hash_common(
+            TransactionHashPrefix::Declare,
+            version,
+            &sender_address,
+            Felt252::zero(),
+            &calldata,
+            max_fee,
+            chain_id.to_felt(),
+            &additional_data,
+        )
+        .unwrap();
+
+        assert_eq!(
+            tx,
+            felt_str!(
+                "446404108171603570739811156347043235876209711235222547918688109133687877504"
+            )
+        )
     }
 }
