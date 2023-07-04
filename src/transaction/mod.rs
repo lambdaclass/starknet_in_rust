@@ -80,7 +80,7 @@ impl Transaction {
         }
     }
     /// It creates a new transaction structure modificating the skip flags.
-    ///## parameters:
+    ///## Parameters:
     ///- skip_validate: the transaction will not be verificated
     ///- skip_execute: the transaction will not be execute in the cairo vm
     ///- skip_fee_transfer: the transaction will not consume gas
