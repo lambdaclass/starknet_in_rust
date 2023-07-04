@@ -5,17 +5,17 @@ trait IERC20<TContractState> {
     fn get_name(self: @TContractState) -> felt252;
     fn get_symbol(self: @TContractState) -> felt252;
     fn get_decimals(self: @TContractState) -> u8;
-    fn get_total_supply(self: @TContractState) -> u256;
-    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
-    fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
-    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256);
+    fn get_total_supply(self: @TContractState) -> felt252;
+    fn balance_of(self: @TContractState, account: ContractAddress) -> felt252;
+    fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> felt252;
+    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: felt252);
     fn transfer_from(
-        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: felt252
     );
-    fn approve(ref self: TContractState, spender: ContractAddress, amount: u256);
-    fn increase_allowance(ref self: TContractState, spender: ContractAddress, added_value: u256);
+    fn approve(ref self: TContractState, spender: ContractAddress, amount: felt252);
+    fn increase_allowance(ref self: TContractState, spender: ContractAddress, added_value: felt252);
     fn decrease_allowance(
-        ref self: TContractState, spender: ContractAddress, subtracted_value: u256
+        ref self: TContractState, spender: ContractAddress, subtracted_value: felt252
     );
 }
 
@@ -31,9 +31,9 @@ mod erc_20 {
         name: felt252,
         symbol: felt252,
         decimals: u8,
-        total_supply: u256,
-        balances: LegacyMap::<ContractAddress, u256>,
-        allowances: LegacyMap::<(ContractAddress, ContractAddress), u256>,
+        total_supply: felt252,
+        balances: LegacyMap::<ContractAddress, felt252>,
+        allowances: LegacyMap::<(ContractAddress, ContractAddress), felt252>,
     }
 
     #[event]
@@ -46,27 +46,27 @@ mod erc_20 {
     struct Transfer {
         from: ContractAddress,
         to: ContractAddress,
-        value: u256,
+        value: felt252,
     }
     #[derive(Drop, starknet::Event)]
     struct Approval {
         owner: ContractAddress,
         spender: ContractAddress,
-        value: u256,
+        value: felt252,
     }
 
     #[constructor]
     fn constructor(
         ref self: ContractState,
-        name_: felt252,
-        symbol_: felt252,
-        decimals_: u8,
-        initial_supply: u256,
-        recipient: ContractAddress
+        recipient: ContractAddress,
+        name: felt252,
+        decimals: u8,
+        initial_supply: felt252,
+        symbol: felt252
     ) {
-        self.name.write(name_);
-        self.symbol.write(symbol_);
-        self.decimals.write(decimals_);
+        self.name.write(name);
+        self.symbol.write(symbol);
+        self.decimals.write(decimals);
         assert(!recipient.is_zero(), 'ERC20: mint to the 0 address');
         self.total_supply.write(initial_supply);
         self.balances.write(recipient, initial_supply);
@@ -94,21 +94,21 @@ mod erc_20 {
             self.decimals.read()
         }
 
-        fn get_total_supply(self: @ContractState) -> u256 {
+        fn get_total_supply(self: @ContractState) -> felt252 {
             self.total_supply.read()
         }
 
-        fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
+        fn balance_of(self: @ContractState, account: ContractAddress) -> felt252 {
             self.balances.read(account)
         }
 
         fn allowance(
             self: @ContractState, owner: ContractAddress, spender: ContractAddress
-        ) -> u256 {
+        ) -> felt252 {
             self.allowances.read((owner, spender))
         }
 
-        fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) {
+        fn transfer(ref self: ContractState, recipient: ContractAddress, amount: felt252) {
             let sender = get_caller_address();
             self.transfer_helper(sender, recipient, amount);
         }
@@ -117,20 +117,20 @@ mod erc_20 {
             ref self: ContractState,
             sender: ContractAddress,
             recipient: ContractAddress,
-            amount: u256
+            amount: felt252
         ) {
             let caller = get_caller_address();
             self.spend_allowance(sender, caller, amount);
             self.transfer_helper(sender, recipient, amount);
         }
 
-        fn approve(ref self: ContractState, spender: ContractAddress, amount: u256) {
+        fn approve(ref self: ContractState, spender: ContractAddress, amount: felt252) {
             let caller = get_caller_address();
             self.approve_helper(caller, spender, amount);
         }
 
         fn increase_allowance(
-            ref self: ContractState, spender: ContractAddress, added_value: u256
+            ref self: ContractState, spender: ContractAddress, added_value: felt252
         ) {
             let caller = get_caller_address();
             self
@@ -140,7 +140,7 @@ mod erc_20 {
         }
 
         fn decrease_allowance(
-            ref self: ContractState, spender: ContractAddress, subtracted_value: u256
+            ref self: ContractState, spender: ContractAddress, subtracted_value: felt252
         ) {
             let caller = get_caller_address();
             self
@@ -156,7 +156,7 @@ mod erc_20 {
             ref self: ContractState,
             sender: ContractAddress,
             recipient: ContractAddress,
-            amount: u256
+            amount: felt252
         ) {
             assert(!sender.is_zero(), 'ERC20: transfer from 0');
             assert(!recipient.is_zero(), 'ERC20: transfer to 0');
@@ -166,19 +166,19 @@ mod erc_20 {
         }
 
         fn spend_allowance(
-            ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256
+            ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: felt252
         ) {
             let current_allowance = self.allowances.read((owner, spender));
             let ONES_MASK = 0xffffffffffffffffffffffffffffffff_u128;
-            let is_unlimited_allowance = current_allowance.low == ONES_MASK
-                && current_allowance.high == ONES_MASK;
-            if !is_unlimited_allowance {
-                self.approve_helper(owner, spender, current_allowance - amount);
-            }
+            // let is_unlimited_allowance = current_allowance.low == ONES_MASK
+            //     && current_allowance.high == ONES_MASK;
+            // if !is_unlimited_allowance {
+            //     self.approve_helper(owner, spender, current_allowance - amount);
+            // }
         }
 
         fn approve_helper(
-            ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: u256
+            ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: felt252
         ) {
             assert(!spender.is_zero(), 'ERC20: approve from 0');
             self.allowances.write((owner, spender), amount);
