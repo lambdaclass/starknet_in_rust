@@ -290,15 +290,8 @@ impl Declare {
         self.handle_nonce(state)?;
 
         let (fee_transfer_info, actual_fee) =
-            match self.charge_fee(state, &tx_exec_info.actual_resources, block_context) {
-                Ok(value) => {
-                    self.set_contract_class(state)?;
-                    value
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            };
+            self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+        self.set_contract_class(state)?;
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
