@@ -212,7 +212,7 @@ fn deploy_erc20_cairo2_without_constructor() {
         StarknetChainId::TestNet.to_felt(),
         None,
     )
-    .unwrap();
+    .unwrap().execute(&mut state, &Default::default());
 
     println!("deploying contract: {:?}", _internal_deploy_account);
 
