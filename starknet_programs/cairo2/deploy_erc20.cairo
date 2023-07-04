@@ -29,6 +29,7 @@ mod DeployTest {
             calldata.append(decimals);
             calldata.append(initial_supply);
             calldata.append(recipient);
+            assert(calldata.len() == 5, 'Wrong calldata length');
             let (address0, _) = deploy_syscall(class_hash.try_into().unwrap(), contract_address_salt, calldata.span(), false).unwrap();
             address0
         }

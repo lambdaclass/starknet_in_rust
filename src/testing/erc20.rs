@@ -118,11 +118,11 @@ fn deploy_erc20_cairo2_without_constructor() {
         let recipient = felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
         let erc20_salt = felt_str!("1234");
         // arguments of deploy contract
-        let calldata = vec![Felt252::from_bytes_be(&class_hash), erc20_salt.clone(), name_.clone(), symbol_.clone(), decimals_.clone(), initial_supply.clone(), recipient.clone()];
+        let calldata = vec![Felt252::from_bytes_be(&erc20_class_hash), erc20_salt.clone(), name_.clone(), symbol_.clone(), decimals_.clone(), initial_supply.clone(), recipient.clone()];
     
         // set up remaining structures
     
-        let caller_address = Address(0000.into());
+        let caller_address = Address(recipient.clone());
         let entry_point_type = EntryPointType::External;
     
         let exec_entry_point = ExecutionEntryPoint::new(
