@@ -28,6 +28,7 @@ use std::collections::HashMap;
 
 /// Represents a declare transaction in the starknet network.
 /// Declares creates a blueprint of a contract class that is used to deploy an instances of the contract
+/// DeclareV2 is meant to be used with the new cairo contract sintax
 #[derive(Debug, Clone)]
 pub struct DeclareV2 {
     pub sender_address: Address,
@@ -53,7 +54,7 @@ impl DeclareV2 {
     /// - compiled_class_hash: the class hash of the contract compiled with cairo 1.
     /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
     /// - sender_address: The address of the account declaring the contract.
-    /// - max_fee: The max amount of fee that the contract could use.
+    /// - max_fee: refers to max amount of fee that a declare takes.
     /// - version: The version of cairo contract being declare.
     /// - signature: Array of felts with the signatures of the contract.
     /// - nonce: The nonce of the contract.
@@ -215,9 +216,9 @@ impl DeclareV2 {
         Ok(())
     }
 
-    /// Execute the contract in the cairo-vm. Returns a TransactionExecutionContext if succesful.
+    /// Execute the validation of the contract in the cairo-vm. Returns a TransactionExecutionInfo if succesful.
     /// ## Parameter:
-    /// - resources: the resources that are in use by the contract
+    /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
     pub fn execute<S: State + StateReader>(
         &self,
