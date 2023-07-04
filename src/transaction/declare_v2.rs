@@ -1,3 +1,4 @@
+use super::Transaction;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
@@ -25,7 +26,8 @@ use num_traits::Zero;
 use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
-use super::Transaction;
+/// Represents a declare transaction in the starknet network.
+/// Declares creates a blueprint of a contract class that is used to deploy an instances of the contract
 #[derive(Debug, Clone)]
 pub struct DeclareV2 {
     pub sender_address: Address,
@@ -45,6 +47,17 @@ pub struct DeclareV2 {
 }
 
 impl DeclareV2 {
+    // creates a new instance of a declare.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - compiled_class_hash: the class hash of the contract compiled with cairo 1.
+    /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: The max amount of fee that the contract could use.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
+    /// - hash_value: The transaction hash_value.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sierra_contract_class: &SierraContractClass,
@@ -94,6 +107,9 @@ impl DeclareV2 {
         Ok(internal_declare)
     }
 
+    /// checks which version of declare is being executed. If it is an older version
+    /// the transaction is rejected.
+    ///  Same case if max_fee, nonce or signature are not zero or empty for a greater version
     pub fn verify_version(&self) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             if self.sender_address != Address(1.into()) {
@@ -119,6 +135,10 @@ impl DeclareV2 {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     //  Account Functions
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    /// creates the a new TransactionExecutionContexts which represent the state of the net after executing the contract.
+    /// ## Parameter:
+    /// n_steps: the number of steps that are required to execute the contract.
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
@@ -131,12 +151,17 @@ impl DeclareV2 {
         )
     }
 
+    /// returns the calldata with which the contract is executed
     pub fn get_calldata(&self) -> Vec<Felt252> {
         let bytes = self.compiled_class_hash.clone();
         Vec::from([bytes])
     }
 
     /// Calculates and charges the actual fee.
+    /// ## Parameter:
+    /// - state: An state that implements the State and StateReader traits.
+    /// - resources: the resources that are in use by the contract
+    /// - block_context: The block that contains the execution context
     pub fn charge_fee<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -190,6 +215,7 @@ impl DeclareV2 {
         Ok(())
     }
 
+    /// Execute the contract in the cairo-vm. Returns a TransactionExecutionContext if succesful.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
