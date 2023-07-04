@@ -15,6 +15,8 @@ use serde::Deserialize;
 use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
+// TODO: move this crate's functionality into SiR and remove the crate
+
 pub type AbiType = Vec<ContractClassAbiEntry>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -131,15 +133,15 @@ fn convert_entry_points(
     entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
-    for (entry_type, vec) in entry_points {
+    for (entry_type, entry_points) in entry_points {
         let en_type = entry_type.into();
 
-        let contracts_entry_points = vec
+        let contracts_entry_points = entry_points
             .into_iter()
             .map(|e| {
                 let selector = Felt252::from_bytes_be(e.selector.0.bytes());
                 let offset = e.offset.0;
-                ContractEntryPoint { selector, offset }
+                ContractEntryPoint::new(selector, offset)
             })
             .collect::<Vec<ContractEntryPoint>>();
 
