@@ -111,7 +111,7 @@ fn test_erc20_cairo2() {
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, contract_class);
-    contract_class_cache.insert(erc20_class_hash, test_contract_class.clone());
+    contract_class_cache.insert(erc20_class_hash, test_contract_class);
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -132,17 +132,15 @@ fn test_erc20_cairo2() {
         felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
     let erc20_salt = felt_str!("1234");
     // arguments of deploy contract
-    //let calldata = vec![Felt252::from_bytes_be(&erc20_class_hash), erc20_salt.clone(), name_.clone(), symbol_.clone(), decimals_.clone(), initial_supply.clone(), recipient.clone()];
     let calldata = vec![
         Felt252::from_bytes_be(&erc20_class_hash),
-        erc20_salt.clone(),
-        recipient.clone(),
-        name_.clone(),
-        decimals_.clone(),
-        initial_supply.clone(),
-        symbol_.clone(),
+        erc20_salt,
+        recipient,
+        name_,
+        decimals_,
+        initial_supply,
+        symbol_,
     ];
-    //let calldata = vec![Felt252::from_bytes_be(&erc20_class_hash), erc20_salt.clone(), felt_str!("1")];
     // set up remaining structures
 
     let caller_address = Address(0000.into());
@@ -181,7 +179,7 @@ fn test_erc20_cairo2() {
             false,
         )
         .unwrap();
-    let erc20_address = call_info.clone().retdata.get(0).unwrap().clone();
+    let erc20_address = call_info.retdata.get(0).unwrap().clone();
 
     // ACCOUNT 1
     let program_data_account =
@@ -197,7 +195,7 @@ fn test_erc20_cairo2() {
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
 
     let internal_deploy_account = DeployAccount::new(
-        felt_str!("1").clone().to_be_bytes(),
+        felt_str!("1").to_be_bytes(),
         0,
         1.into(),
         Felt252::zero(),
@@ -236,7 +234,7 @@ fn test_erc20_cairo2() {
     let contract_address_salt = felt_str!("123123123123123");
 
     let internal_deploy_account = DeployAccount::new(
-        felt_str!("1").clone().to_be_bytes(),
+        felt_str!("1").to_be_bytes(),
         0,
         1.into(),
         Felt252::zero(),
@@ -268,11 +266,11 @@ fn test_erc20_cairo2() {
 
     let _retdata = call_contract(
         erc20_address.clone(),
-        entrypoint_selector.clone().into(),
+        entrypoint_selector,
         calldata,
         &mut state,
         BlockContext::default(),
-        account_address_1.clone().into(),
+        account_address_1.clone(),
     )
     .unwrap();
 
@@ -282,11 +280,11 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"balance_of"));
     let retdata = call_contract(
         erc20_address.clone(),
-        entrypoint_selector.clone().into(),
+        entrypoint_selector,
         vec![account_address_1.clone().0],
         &mut state,
         BlockContext::default(),
-        account_address_1.clone().into(),
+        account_address_1.clone(),
     )
     .unwrap();
 
@@ -295,12 +293,12 @@ fn test_erc20_cairo2() {
     // GET BALANCE ACCOUNT 2
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"balance_of"));
     let retdata = call_contract(
-        erc20_address.clone(),
-        entrypoint_selector.clone().into(),
-        vec![account_address_2.clone().0],
+        erc20_address,
+        entrypoint_selector,
+        vec![account_address_2.0],
         &mut state,
         BlockContext::default(),
-        account_address_1.clone().into(),
+        account_address_1,
     )
     .unwrap();
 
