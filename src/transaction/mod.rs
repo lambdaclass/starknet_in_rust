@@ -24,7 +24,7 @@ use error::TransactionError;
 
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
-/// ## Transactions
+/// it can be one of:
 /// - Declare
 /// - DeclareV2
 /// - Deploy
@@ -47,7 +47,7 @@ pub enum Transaction {
 }
 
 impl Transaction {
-    /// returns the contract address of the transaction being executed.
+    /// returns the contract address of the transaction.
     pub fn contract_address(&self) -> Address {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
@@ -80,7 +80,7 @@ impl Transaction {
         }
     }
     /// It creates a new transaction structure modificating the skip flags.
-    ///## parameter:
+    ///## parameters:
     ///- skip_validate: the transaction will not be verificated
     ///- skip_execute: the transaction will not be execute in the cairo vm
     ///- skip_fee_transfer: the transaction will not consume gas
