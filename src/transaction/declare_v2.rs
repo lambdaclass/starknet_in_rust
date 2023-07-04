@@ -1,4 +1,4 @@
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{

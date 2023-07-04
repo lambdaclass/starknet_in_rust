@@ -2,7 +2,7 @@ pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
 
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{
         block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,

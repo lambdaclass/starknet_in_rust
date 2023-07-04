@@ -1,17 +1,70 @@
 use crate::services::api::contract_class_errors::ContractClassError;
-use crate::EntryPointType;
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{Felt252, PRIME_STR};
+use cairo_vm::serde::deserialize_program::{
+    deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
+    ReferenceManager,
+};
+use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
-use getset::Getters;
+use getset::{CopyGetters, Getters};
 use serde_json::Value;
-use starknet_api::deprecated_contract_class::EntryPoint;
+use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::collections::HashMap;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 
-use super::deprecated_parsed_contract_class::{
-    to_cairo_runner_program, AbiType, ContractEntryPoint,
-};
+pub type AbiType = Vec<ContractClassAbiEntry>;
+
+// -------------------------------
+//       Entry Point types
+// -------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EntryPointType {
+    External,
+    L1Handler,
+    Constructor,
+}
+
+#[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq)]
+pub struct ContractEntryPoint {
+    #[getset(get = "pub")]
+    selector: Felt252,
+    #[getset(get_copy = "pub")]
+    offset: usize,
+}
+
+impl ContractEntryPoint {
+    pub fn new(selector: Felt252, offset: usize) -> ContractEntryPoint {
+        ContractEntryPoint { selector, offset }
+    }
+}
+
+// -------------------------------
+//         From traits
+// -------------------------------
+
+impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
+    fn from(entry_point: &ContractEntryPoint) -> Self {
+        vec![
+            MaybeRelocatable::from(entry_point.selector.clone()),
+            MaybeRelocatable::from(entry_point.offset),
+        ]
+    }
+}
+
+impl From<starknet_api::deprecated_contract_class::EntryPointType> for EntryPointType {
+    fn from(entry_type: starknet_api::deprecated_contract_class::EntryPointType) -> Self {
+        type ApiEPT = starknet_api::deprecated_contract_class::EntryPointType;
+        type StarknetEPT = EntryPointType;
+
+        match entry_type {
+            ApiEPT::Constructor => StarknetEPT::Constructor,
+            ApiEPT::External => StarknetEPT::External,
+            ApiEPT::L1Handler => StarknetEPT::L1Handler,
+        }
+    }
+}
 
 // -------------------------------
 //         Contract Class
@@ -121,7 +174,7 @@ impl<T: std::io::Read> TryFrom<BufReader<T>> for ContractClass {
 //  Helper Functions
 // -------------------
 
-fn convert_entry_points(
+pub(crate) fn convert_entry_points(
     entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
@@ -143,29 +196,54 @@ fn convert_entry_points(
     converted_entries
 }
 
+pub(crate) fn to_cairo_runner_program(
+    program: &starknet_api::deprecated_contract_class::Program,
+) -> Result<Program, ProgramError> {
+    let program = program.clone();
+    let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
+
+    if program.prime != *PRIME_STR {
+        return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
+    };
+
+    let error_message_attributes = serde_json::from_value::<Vec<Attribute>>(program.attributes)
+        .unwrap_or(Vec::new())
+        .into_iter()
+        .filter(|attr| attr.name == "error_message")
+        .collect();
+
+    let program = Program::new(
+        serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
+        deserialize_array_of_bigint_hex(program.data)?,
+        None,
+        serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
+        serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
+        identifiers,
+        error_message_attributes,
+        None,
+    )?;
+
+    Ok(program)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::core::contract_address::compute_deprecated_class_hash;
 
     use super::*;
-    use crate::services::api::contract_classes::deprecated_parsed_contract_class::ParsedContractClass;
     use cairo_vm::{
         felt::{felt_str, PRIME_STR},
         serde::deserialize_program::BuiltinName,
     };
-    use std::{fs, str::FromStr};
+    use starknet_api::deprecated_contract_class::{
+        FunctionAbiEntry, FunctionAbiEntryType, FunctionAbiEntryWithType, TypedParameter,
+    };
 
     #[test]
     fn deserialize_contract_class() {
         // This specific contract compiles with --no_debug_info
-        let serialized = fs::read_to_string("starknet_programs/AccountPreset.json")
+        let contract_class = ContractClass::new_from_path("starknet_programs/AccountPreset.json")
             .expect("should be able to read file");
-
-        let res = ContractClass::try_from(serialized.as_str());
-
-        assert!(res.is_ok());
-
-        let contract_class = res.unwrap();
 
         // We check only some of the attributes. Ideally we would serialize
         // and compare with original
@@ -207,34 +285,9 @@ mod tests {
     }
 
     #[test]
-    fn test_contract_class_new_equals_raw_instantiation() {
-        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
-
-        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let contract_class = ContractClass {
-            program_json: serde_json::Value::from_str(&contract_str).unwrap(),
-            program: parsed_contract_class.program.clone(),
-            entry_points_by_type: parsed_contract_class.entry_points_by_type.clone(),
-            abi: parsed_contract_class.abi.clone(),
-        };
-
-        let contract_class_new = ContractClass::new(
-            serde_json::Value::from_str(&contract_str).unwrap(),
-            parsed_contract_class.program,
-            parsed_contract_class.entry_points_by_type,
-            parsed_contract_class.abi,
-        )
-        .unwrap();
-
-        assert_eq!(contract_class, contract_class_new);
-    }
-
-    #[test]
     fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad_try_from(
     ) {
-        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
-
-        let contract_class = ContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").expect("should be able to read file");
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
@@ -246,71 +299,96 @@ mod tests {
     }
 
     #[test]
-    fn test_new_equals_try_from() {
-        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
+    fn parse_abi_is_correct() {
+        // This specific contract compiles with --no_debug_info
+        let res = ContractClass::new_from_path("starknet_programs/fibonacci.json");
+        let contract_class = res.expect("should be able to read file");
 
-        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+        let expected_abi = Some(vec![ContractClassAbiEntry::Function(
+            FunctionAbiEntryWithType {
+                r#type: FunctionAbiEntryType::Function,
+                entry: FunctionAbiEntry {
+                    name: "fib".to_string(),
+                    inputs: vec![
+                        TypedParameter {
+                            name: "first_element".to_string(),
+                            r#type: "felt".to_string(),
+                        },
+                        TypedParameter {
+                            name: "second_element".to_string(),
+                            r#type: "felt".to_string(),
+                        },
+                        TypedParameter {
+                            name: "n".to_string(),
+                            r#type: "felt".to_string(),
+                        },
+                    ],
+                    outputs: vec![TypedParameter {
+                        name: "res".to_string(),
+                        r#type: "felt".to_string(),
+                    }],
+                },
+            },
+        )]);
+        assert_eq!(contract_class.abi, expected_abi);
+    }
 
-        let contract_class_new = ContractClass::new(
-            serde_json::Value::from_str(&contract_str).unwrap(),
-            parsed_contract_class.program,
-            parsed_contract_class.entry_points_by_type,
-            parsed_contract_class.abi,
-        )
-        .unwrap();
+    #[test]
+    fn parse_without_debug_info() {
+        // This specific contract compiles with --no_debug_info
+        let res = ContractClass::new_from_path("starknet_programs/AccountPreset.json");
 
-        let contract_class = ContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = res.expect("should be able to read file");
 
-        assert_eq!(contract_class.abi, contract_class_new.abi);
-        assert_eq!(contract_class.program, contract_class_new.program);
-        assert_eq!(contract_class.program_json, contract_class_new.program_json);
+        let program_builtins: Vec<BuiltinName> =
+            contract_class.program.iter_builtins().cloned().collect();
         assert_eq!(
-            contract_class.entry_points_by_type,
-            contract_class_new.entry_points_by_type
+            program_builtins,
+            vec![
+                BuiltinName::pedersen,
+                BuiltinName::range_check,
+                BuiltinName::ecdsa,
+                BuiltinName::bitwise
+            ]
+        );
+        assert_eq!(
+            contract_class
+                .entry_points_by_type
+                .get(&EntryPointType::L1Handler)
+                .unwrap(),
+            &vec![]
+        );
+        assert_eq!(
+            contract_class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .unwrap(),
+            &vec![ContractEntryPoint {
+                selector: felt_str!(
+                    "1159040026212278395030414237414753050475174923702621880048416706425641521556"
+                ),
+                offset: 366
+            }]
         );
     }
 
     #[test]
-    fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad_new(
-    ) {
-        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
-
-        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let contract_class = ContractClass::new(
-            serde_json::Value::from_str(&contract_str).unwrap(),
-            parsed_contract_class.program,
-            parsed_contract_class.entry_points_by_type,
-            parsed_contract_class.abi,
-        )
-        .unwrap();
-
-        assert_eq!(
-            compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad",
-                16
-            )
+    fn parse_without_program_attributes() {
+        // This specific contract was extracted from: https://testnet.starkscan.co/class/0x068dd0dd8a54ebdaa10563fbe193e6be1e0f7c423c0c3ce1e91c0b682a86b5f9
+        let res = ContractClass::new_from_path(
+            "starknet_programs/raw_contract_classes/program_without_attributes.json",
         );
+
+        res.expect("should be able to read file");
     }
 
     #[test]
-    fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad() {
-        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
-
-        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
-        let contract_class = ContractClass {
-            program_json: serde_json::Value::from_str(&contract_str).unwrap(),
-            program: parsed_contract_class.program,
-            entry_points_by_type: parsed_contract_class.entry_points_by_type,
-            abi: parsed_contract_class.abi,
-        };
-
-        assert_eq!(
-            compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad",
-                16
-            )
+    fn parse_without_program_attributes_2() {
+        // This specific contract was extracted from: https://testnet.starkscan.co/class/0x071b7f73b5e2b4f81f7cf01d4d1569ccba2921b3fa3170cf11cff3720dfe918e
+        let res = ContractClass::new_from_path(
+            "starknet_programs/raw_contract_classes/program_without_attributes_2.json",
         );
+
+        res.expect("should be able to read file");
     }
 }

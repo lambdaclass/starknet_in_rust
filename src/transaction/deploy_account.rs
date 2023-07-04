@@ -1,5 +1,5 @@
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
         errors::state_errors::StateError,

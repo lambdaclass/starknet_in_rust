@@ -1,4 +1,4 @@
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::{
+use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
 use crate::{

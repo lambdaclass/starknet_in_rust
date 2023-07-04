@@ -1,5 +1,5 @@
 use super::error::TransactionError;
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{
         block_context::BlockContext,

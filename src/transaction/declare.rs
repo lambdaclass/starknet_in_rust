@@ -1,4 +1,4 @@
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,

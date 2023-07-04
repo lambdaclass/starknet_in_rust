@@ -215,7 +215,7 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{

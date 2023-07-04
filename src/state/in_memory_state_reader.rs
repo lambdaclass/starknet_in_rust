@@ -116,7 +116,7 @@ impl StateReader for InMemoryStateReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_classes::deprecated_parsed_contract_class::{
+    use crate::services::api::contract_classes::deprecated_contract_class::{
         ContractEntryPoint, EntryPointType,
     };
     use cairo_vm::types::program::Program;

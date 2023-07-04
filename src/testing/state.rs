@@ -1,5 +1,5 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{

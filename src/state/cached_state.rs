@@ -337,7 +337,7 @@ impl<T: StateReader> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_classes::deprecated_parsed_contract_class::{
+    use crate::services::api::contract_classes::deprecated_contract_class::{
         ContractEntryPoint, EntryPointType,
     };
     use crate::state::in_memory_state_reader::InMemoryStateReader;

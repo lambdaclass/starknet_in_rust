@@ -1,4 +1,4 @@
-use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
@@ -185,7 +185,7 @@ mod test {
         path::PathBuf,
     };
 
-    use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,

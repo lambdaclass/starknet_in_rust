@@ -25,7 +25,7 @@ use utils::Address;
 extern crate assert_matches;
 
 // Re-exports
-pub use crate::services::api::contract_classes::deprecated_parsed_contract_class::{
+pub use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -207,7 +207,7 @@ mod test {
     use crate::estimate_message_fee;
     use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
-    use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
+    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::state::state_api::State;
     use crate::testing::{
         create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
