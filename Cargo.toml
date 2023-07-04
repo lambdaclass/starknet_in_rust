@@ -11,24 +11,27 @@ with_mimalloc = ["mimalloc"]
 cairo_1_tests = []
 
 [workspace]
-members = ["crates/starknet-contract-class", "cli", "fuzzer"]
+members = ["cli", "fuzzer"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"]}
+cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"] }
 starknet_api = "0.1.0"
 num-traits = "0.2.15"
 
 [dependencies]
 cairo-lang-starknet = "2.0.0"
 cairo-lang-casm = "2.0.0"
-cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
+cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }
 num-integer = "0.1.45"
 num-traits = { workspace = true }
 serde = { version = "1.0.152", features = ["derive"] }
-serde_json = { version = "1.0", features = ["arbitrary_precision", "raw_value"] }
+serde_json = { version = "1.0", features = [
+    "arbitrary_precision",
+    "raw_value",
+] }
 sha3 = "0.10.1"
 starknet_api = { workspace = true }
 starknet-crypto = "0.5.1"
@@ -38,7 +41,6 @@ mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 cargo-llvm-cov = "0.5.14"
 anyhow = "1.0.66"
-starknet-contract-class = { path = "./crates/starknet-contract-class", version = "0.2.0" }
 once_cell = "1.17.1"
 
 [dev-dependencies]

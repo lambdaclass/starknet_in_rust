@@ -2,7 +2,6 @@
 
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_in_rust::{
     definitions::{
@@ -18,6 +17,7 @@ use starknet_in_rust::{
     transaction::{error::TransactionError, Deploy},
     utils::{calculate_sn_keccak, Address},
 };
+use starknet_in_rust::{ContractEntryPoint, EntryPointType};
 use std::{
     collections::{HashMap, HashSet},
     fs::File,

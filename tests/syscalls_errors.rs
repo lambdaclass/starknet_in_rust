@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
-use starknet_contract_class::EntryPointType;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},

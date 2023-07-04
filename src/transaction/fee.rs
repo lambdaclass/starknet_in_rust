@@ -1,4 +1,5 @@
 use super::error::TransactionError;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{
         block_context::BlockContext,
@@ -12,7 +13,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::ToPrimitive;
-use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses
