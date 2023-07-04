@@ -218,13 +218,6 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    // contract_class: &ContractClass,
-    // chain_id: Felt252,
-    // sender_address: &Address,
-    // max_fee: u128,
-    // version: Felt252,
-    // nonce: Felt252,
-
     #[test]
     fn calculate_declare_hash_test() {
         let chain_id = StarknetChainId::MainNet;
