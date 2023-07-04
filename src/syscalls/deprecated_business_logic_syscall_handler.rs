@@ -10,6 +10,7 @@ use super::{
     syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_deprecated_syscall_size_from_name,
 };
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{
@@ -36,7 +37,6 @@ use cairo_vm::{
     vm::vm_core::VirtualMachine,
 };
 use num_traits::{One, ToPrimitive, Zero};
-use starknet_contract_class::EntryPointType;
 use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------

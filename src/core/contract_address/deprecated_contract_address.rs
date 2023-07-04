@@ -1,3 +1,6 @@
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::{
+    ContractEntryPoint, EntryPointType,
+};
 /// Contains functionality for computing class hashes for deprecated Declare transactions
 /// (ie, declarations that do not correspond to Cairo 1 contracts)
 /// The code used for hinted class hash computation was extracted from the Pathfinder and xJonathanLEI implementations
@@ -13,7 +16,6 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use serde::Serialize;
 use sha3::Digest;
-use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use std::{borrow::Cow, collections::BTreeMap, io};
 
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
@@ -352,10 +354,10 @@ mod tests {
     use std::{fs, str::FromStr};
 
     use super::*;
+    use crate::services::api::contract_classes::deprecated_parsed_contract_class::ParsedContractClass;
     use cairo_vm::felt::{felt_str, Felt252};
     use coverage_helper::test;
     use num_traits::Num;
-    use starknet_contract_class::ParsedContractClass;
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {

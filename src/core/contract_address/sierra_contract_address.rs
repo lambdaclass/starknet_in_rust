@@ -1,9 +1,11 @@
 use crate::core::errors::contract_address_errors::ContractAddressError;
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::{
+    ContractEntryPoint, EntryPointType,
+};
 use cairo_lang_starknet::{
     contract::starknet_keccak, contract_class::ContractClass as SierraContractClass,
 };
 use cairo_vm::felt::Felt252;
-use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";

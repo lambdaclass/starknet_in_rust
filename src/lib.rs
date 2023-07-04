@@ -25,11 +25,13 @@ use utils::Address;
 extern crate assert_matches;
 
 // Re-exports
+pub use crate::services::api::contract_classes::deprecated_parsed_contract_class::{
+    ContractEntryPoint, EntryPointType,
+};
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 pub use cairo_vm::felt::Felt252;
-pub use starknet_contract_class::EntryPointType;
 
 pub mod core;
 pub mod definitions;
@@ -205,6 +207,7 @@ mod test {
     use crate::estimate_message_fee;
     use crate::hash_utils::calculate_contract_address;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
+    use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
     use crate::state::state_api::State;
     use crate::testing::{
         create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
@@ -218,7 +221,6 @@ mod test {
     use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
     use cairo_vm::felt::{felt_str, Felt252};
     use num_traits::{Num, One, Zero};
-    use starknet_contract_class::EntryPointType;
 
     use crate::{
         call_contract,
@@ -258,7 +260,7 @@ mod test {
             ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap();
 
         let entrypoints = contract_class.entry_points_by_type;
-        let entrypoint_selector = &entrypoints.get(&EntryPointType::External).unwrap()[0].selector;
+        let entrypoint_selector = entrypoints.get(&EntryPointType::External).unwrap()[0].selector();
 
         let (block_context, state) = create_account_tx_test_state().unwrap();
 

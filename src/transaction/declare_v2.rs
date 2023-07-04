@@ -1,3 +1,4 @@
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
@@ -22,7 +23,6 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 use super::Transaction;

@@ -1,15 +1,17 @@
 use crate::services::api::contract_class_errors::ContractClassError;
+use crate::EntryPointType;
 use cairo_vm::felt::Felt252;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
 use getset::Getters;
 use serde_json::Value;
 use starknet_api::deprecated_contract_class::EntryPoint;
-pub use starknet_contract_class::to_cairo_runner_program;
-use starknet_contract_class::AbiType;
-use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 use std::collections::HashMap;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
+
+use super::deprecated_parsed_contract_class::{
+    to_cairo_runner_program, AbiType, ContractEntryPoint,
+};
 
 // -------------------------------
 //         Contract Class
@@ -146,11 +148,11 @@ mod tests {
     use crate::core::contract_address::compute_deprecated_class_hash;
 
     use super::*;
+    use crate::services::api::contract_classes::deprecated_parsed_contract_class::ParsedContractClass;
     use cairo_vm::{
         felt::{felt_str, PRIME_STR},
         serde::deserialize_program::BuiltinName,
     };
-    use starknet_contract_class::ParsedContractClass;
     use std::{fs, str::FromStr};
 
     #[test]

@@ -1,5 +1,3 @@
-#![deny(warnings)]
-
 use cairo_vm::felt::{Felt252, PRIME_STR};
 use cairo_vm::{
     serde::deserialize_program::{
@@ -15,8 +13,6 @@ use serde::Deserialize;
 use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
-// TODO: move this crate's functionality into SiR and remove the crate
-
 pub type AbiType = Vec<ContractClassAbiEntry>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -29,9 +25,9 @@ pub enum EntryPointType {
 #[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq)]
 pub struct ContractEntryPoint {
     #[getset(get = "pub")]
-    pub selector: Felt252,
+    selector: Felt252,
     #[getset(get_copy = "pub")]
-    pub offset: usize,
+    offset: usize,
 }
 
 impl ContractEntryPoint {
@@ -46,10 +42,10 @@ impl ContractEntryPoint {
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
 #[serde(try_from = "starknet_api::deprecated_contract_class::ContractClass")]
-pub struct ParsedContractClass {
-    pub program: Program,
-    pub entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
-    pub abi: Option<AbiType>,
+pub(crate) struct ParsedContractClass {
+    pub(crate) program: Program,
+    pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+    pub(crate) abi: Option<AbiType>,
 }
 
 // -------------------------------
@@ -129,7 +125,7 @@ impl TryFrom<&PathBuf> for ParsedContractClass {
     }
 }
 
-fn convert_entry_points(
+pub(crate) fn convert_entry_points(
     entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
@@ -151,7 +147,7 @@ fn convert_entry_points(
     converted_entries
 }
 
-pub fn to_cairo_runner_program(
+pub(crate) fn to_cairo_runner_program(
     program: &starknet_api::deprecated_contract_class::Program,
 ) -> Result<Program, ProgramError> {
     let program = program.clone();
@@ -196,7 +192,7 @@ mod tests {
         let mut serialized = String::new();
 
         // This specific contract compiles with --no_debug_info
-        File::open(PathBuf::from("../../starknet_programs/fibonacci.json"))
+        File::open(PathBuf::from("starknet_programs/fibonacci.json"))
             .and_then(|mut f| f.read_to_string(&mut serialized))
             .expect("should be able to read file");
 
@@ -238,7 +234,7 @@ mod tests {
         let mut serialized = String::new();
 
         // This specific contract compiles with --no_debug_info
-        File::open(PathBuf::from("../../starknet_programs/AccountPreset.json"))
+        File::open(PathBuf::from("starknet_programs/AccountPreset.json"))
             .and_then(|mut f| f.read_to_string(&mut serialized))
             .expect("should be able to read file");
 
@@ -284,7 +280,7 @@ mod tests {
 
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x068dd0dd8a54ebdaa10563fbe193e6be1e0f7c423c0c3ce1e91c0b682a86b5f9
         File::open(PathBuf::from(
-            "../../starknet_programs/raw_contract_classes/program_without_attributes.json",
+            "starknet_programs/raw_contract_classes/program_without_attributes.json",
         ))
         .and_then(|mut f| f.read_to_string(&mut serialized))
         .expect("should be able to read file");
@@ -300,7 +296,7 @@ mod tests {
 
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x071b7f73b5e2b4f81f7cf01d4d1569ccba2921b3fa3170cf11cff3720dfe918e
         File::open(PathBuf::from(
-            "../../starknet_programs/raw_contract_classes/program_without_attributes_2.json",
+            "starknet_programs/raw_contract_classes/program_without_attributes_2.json",
         ))
         .and_then(|mut f| f.read_to_string(&mut serialized))
         .expect("should be able to read file");
@@ -315,7 +311,7 @@ mod tests {
         let mut serialized = String::new();
 
         // This specific contract compiles with --no_debug_info
-        File::open(PathBuf::from("../../starknet_programs/AccountPreset.json"))
+        File::open(PathBuf::from("starknet_programs/AccountPreset.json"))
             .and_then(|mut f| f.read_to_string(&mut serialized))
             .expect("should be able to read file");
 

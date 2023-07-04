@@ -11,7 +11,7 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
-use starknet_contract_class::EntryPointType;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{

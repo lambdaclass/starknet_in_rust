@@ -1,3 +1,4 @@
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
@@ -17,7 +18,6 @@ use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
-use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
 use std::{
     collections::{HashMap, HashSet},

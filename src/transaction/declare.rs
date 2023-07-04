@@ -1,3 +1,4 @@
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
@@ -25,7 +26,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 use super::Transaction;

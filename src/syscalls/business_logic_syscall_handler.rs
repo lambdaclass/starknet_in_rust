@@ -51,8 +51,8 @@ use cairo_vm::{
 };
 use lazy_static::lazy_static;
 
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use num_traits::{One, ToPrimitive, Zero};
-use starknet_contract_class::EntryPointType;
 
 const STEP: u128 = 100;
 const SYSCALL_BASE: u128 = 100 * STEP;

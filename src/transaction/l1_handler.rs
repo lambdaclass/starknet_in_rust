@@ -1,7 +1,7 @@
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
 
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
@@ -185,12 +185,12 @@ mod test {
         path::PathBuf,
     };
 
+    use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{Num, Zero};
-    use starknet_contract_class::EntryPointType;
 
     use crate::{
         definitions::{block_context::BlockContext, transaction_type::TransactionType},

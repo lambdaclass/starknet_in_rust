@@ -1,9 +1,9 @@
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use crate::{
     core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
-use starknet_contract_class::EntryPointType;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -1,4 +1,5 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
+use crate::services::api::contract_classes::deprecated_parsed_contract_class::EntryPointType;
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -20,7 +21,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
-use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
