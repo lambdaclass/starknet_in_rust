@@ -22,7 +22,15 @@ use crate::{
 };
 use error::TransactionError;
 
-/// Stores the transaction types that are currently supported in starknet.
+/// Represents a transaction inside the starknet network.
+/// The transaction are actions that may modified the state of the network.
+/// ## Transactions
+/// - Declare
+/// - DeclareV2
+/// - Deploy
+/// - DeployAccount
+/// - InvokeFunction
+/// - L1Handler
 pub enum Transaction {
     /// A declare transaction.
     Declare(Declare),
@@ -52,10 +60,10 @@ impl Transaction {
     }
 
     /// execute the transaction in cairo-vm and returns a TransactionExecutionInfo structure.
-    /// parameters:
-    /// state: a structure that implements State and StateReader traits.
-    /// block_context: The block context of the transaction that is about to be executed.
-    /// remaining_gas: The gas supplied to execute the transaction.
+    ///## Parameters:
+    ///- state: a structure that implements State and StateReader traits.
+    ///- block_context: The block context of the transaction that is about to be executed.
+    ///- remaining_gas: The gas supplied to execute the transaction.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -72,10 +80,10 @@ impl Transaction {
         }
     }
     /// It creates a new transaction structure modificating the skip flags.
-    /// parameter:
-    /// skip_validate: the transaction will not be verificated
-    /// skip_execute: the transaction will not be execute in the cairo vm
-    /// skip_fee_transfer: the transaction will not consume gas
+    ///## parameter:
+    ///- skip_validate: the transaction will not be verificated
+    ///- skip_execute: the transaction will not be execute in the cairo vm
+    ///- skip_fee_transfer: the transaction will not consume gas
     pub fn create_for_simulation(
         &self,
         skip_validate: bool,
