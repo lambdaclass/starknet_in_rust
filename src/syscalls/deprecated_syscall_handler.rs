@@ -215,6 +215,7 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{
@@ -242,7 +243,6 @@ mod tests {
     };
     use cairo_vm::relocatable;
     use num_traits::Num;
-    use starknet_contract_class::EntryPointType;
     use std::path::PathBuf;
 
     type DeprecatedBLSyscallHandler<'a> =

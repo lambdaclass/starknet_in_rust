@@ -5,12 +5,12 @@ use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME};
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::cached_state::CachedState;
 use starknet_in_rust::transaction::error::TransactionError;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType, OrderedEvent},
     state::state_api::StateReader,

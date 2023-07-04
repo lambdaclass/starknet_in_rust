@@ -1,4 +1,5 @@
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -32,7 +33,6 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
