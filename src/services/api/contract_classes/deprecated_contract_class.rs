@@ -7,7 +7,9 @@ use starknet_api::deprecated_contract_class::EntryPoint;
 pub use starknet_contract_class::to_cairo_runner_program;
 use starknet_contract_class::AbiType;
 use starknet_contract_class::{ContractEntryPoint, EntryPointType};
-use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
+use std::collections::HashMap;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
 
 // -------------------------------
 //         Contract Class
@@ -33,12 +35,10 @@ impl ContractClass {
         abi: Option<AbiType>,
     ) -> Result<Self, ContractClassError> {
         for entry_points in entry_points_by_type.values() {
-            let mut index = 1;
-            while let Some(entry_point) = entry_points.get(index) {
-                if entry_point.selector() > entry_points[index - 1].selector() {
+            for i in 1..entry_points.len() {
+                if entry_points[i - 1].selector() > entry_points[i].selector() {
                     return Err(ContractClassError::EntrypointError(entry_points.clone()));
                 }
-                index += 1;
             }
         }
 
@@ -49,21 +49,29 @@ impl ContractClass {
             abi,
         })
     }
+
+    pub fn new_from_path<F>(path: F) -> Result<Self, ProgramError>
+    where
+        F: AsRef<Path>,
+    {
+        Self::try_from(std::fs::read_to_string(path)?.as_str())
+    }
 }
 
 // -------------------------------
 //         From traits
 // -------------------------------
-impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for ContractClass {
+
+impl TryFrom<&str> for ContractClass {
     type Error = ProgramError;
 
-    fn try_from(
-        contract_class: starknet_api::deprecated_contract_class::ContractClass,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(s: &str) -> Result<Self, ProgramError> {
+        let contract_class: starknet_api::deprecated_contract_class::ContractClass =
+            serde_json::from_str(s)?;
         let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type =
             convert_entry_points(contract_class.clone().entry_points_by_type);
-        let program_json = serde_json::to_value(&contract_class)?;
+        let program_json = serde_json::from_str(s)?;
         Ok(ContractClass {
             program_json,
             program,
@@ -73,17 +81,11 @@ impl TryFrom<starknet_api::deprecated_contract_class::ContractClass> for Contrac
     }
 }
 
-// -------------------
-//  Helper Functions
-// -------------------
-
-impl TryFrom<&str> for ContractClass {
+impl TryFrom<&Path> for ContractClass {
     type Error = ProgramError;
 
-    fn try_from(s: &str) -> Result<Self, ProgramError> {
-        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
-            serde_json::from_str(s)?;
-        ContractClass::try_from(raw_contract_class)
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        Self::new_from_path(path)
     }
 }
 
@@ -91,7 +93,7 @@ impl TryFrom<PathBuf> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        ContractClass::try_from(&path)
+        Self::new_from_path(path)
     }
 }
 
@@ -99,32 +101,32 @@ impl TryFrom<&PathBuf> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
-            serde_json::from_reader(reader)?;
-        ContractClass::try_from(raw_contract_class)
+        Self::new_from_path(path)
     }
 }
 
 impl<T: std::io::Read> TryFrom<BufReader<T>> for ContractClass {
     type Error = ProgramError;
 
-    fn try_from(reader: BufReader<T>) -> Result<Self, Self::Error> {
-        let raw_contract_class: starknet_api::deprecated_contract_class::ContractClass =
-            serde_json::from_reader(reader)?;
-        ContractClass::try_from(raw_contract_class)
+    fn try_from(mut reader: BufReader<T>) -> Result<Self, Self::Error> {
+        let mut s = String::new();
+        reader.read_to_string(&mut s)?;
+        Self::try_from(s.as_str())
     }
 }
+
+// -------------------
+//  Helper Functions
+// -------------------
 
 fn convert_entry_points(
     entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
 ) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
     let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
-    for (entry_type, vec) in entry_points {
+    for (entry_type, entry_points) in entry_points {
         let en_type = entry_type.into();
 
-        let contracts_entry_points = vec
+        let contracts_entry_points = entry_points
             .into_iter()
             .map(|e| {
                 let selector = Felt252::from_bytes_be(e.selector.0.bytes());
@@ -141,20 +143,20 @@ fn convert_entry_points(
 
 #[cfg(test)]
 mod tests {
+    use crate::core::contract_address::compute_deprecated_class_hash;
+
     use super::*;
     use cairo_vm::{
         felt::{felt_str, PRIME_STR},
         serde::deserialize_program::BuiltinName,
     };
-    use std::io::Read;
+    use starknet_contract_class::ParsedContractClass;
+    use std::{fs, str::FromStr};
 
     #[test]
     fn deserialize_contract_class() {
-        let mut serialized = String::new();
-
         // This specific contract compiles with --no_debug_info
-        File::open(PathBuf::from("starknet_programs/AccountPreset.json"))
-            .and_then(|mut f| f.read_to_string(&mut serialized))
+        let serialized = fs::read_to_string("starknet_programs/AccountPreset.json")
             .expect("should be able to read file");
 
         let res = ContractClass::try_from(serialized.as_str());
@@ -199,6 +201,114 @@ mod tests {
                 ),
                 366
             )]
+        );
+    }
+
+    #[test]
+    fn test_contract_class_new_equals_raw_instantiation() {
+        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
+
+        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = ContractClass {
+            program_json: serde_json::Value::from_str(&contract_str).unwrap(),
+            program: parsed_contract_class.program.clone(),
+            entry_points_by_type: parsed_contract_class.entry_points_by_type.clone(),
+            abi: parsed_contract_class.abi.clone(),
+        };
+
+        let contract_class_new = ContractClass::new(
+            serde_json::Value::from_str(&contract_str).unwrap(),
+            parsed_contract_class.program,
+            parsed_contract_class.entry_points_by_type,
+            parsed_contract_class.abi,
+        )
+        .unwrap();
+
+        assert_eq!(contract_class, contract_class_new);
+    }
+
+    #[test]
+    fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad_try_from(
+    ) {
+        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
+
+        let contract_class = ContractClass::try_from(contract_str.as_str()).unwrap();
+
+        assert_eq!(
+            compute_deprecated_class_hash(&contract_class).unwrap(),
+            felt_str!(
+                "4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad",
+                16
+            )
+        );
+    }
+
+    #[test]
+    fn test_new_equals_try_from() {
+        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
+
+        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+
+        let contract_class_new = ContractClass::new(
+            serde_json::Value::from_str(&contract_str).unwrap(),
+            parsed_contract_class.program,
+            parsed_contract_class.entry_points_by_type,
+            parsed_contract_class.abi,
+        )
+        .unwrap();
+
+        let contract_class = ContractClass::try_from(contract_str.as_str()).unwrap();
+
+        assert_eq!(contract_class.abi, contract_class_new.abi);
+        assert_eq!(contract_class.program, contract_class_new.program);
+        assert_eq!(contract_class.program_json, contract_class_new.program_json);
+        assert_eq!(
+            contract_class.entry_points_by_type,
+            contract_class_new.entry_points_by_type
+        );
+    }
+
+    #[test]
+    fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad_new(
+    ) {
+        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
+
+        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = ContractClass::new(
+            serde_json::Value::from_str(&contract_str).unwrap(),
+            parsed_contract_class.program,
+            parsed_contract_class.entry_points_by_type,
+            parsed_contract_class.abi,
+        )
+        .unwrap();
+
+        assert_eq!(
+            compute_deprecated_class_hash(&contract_class).unwrap(),
+            felt_str!(
+                "4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad",
+                16
+            )
+        );
+    }
+
+    #[test]
+    fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad() {
+        let contract_str = fs::read_to_string("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").unwrap();
+
+        let parsed_contract_class = ParsedContractClass::try_from(contract_str.as_str()).unwrap();
+        let contract_class = ContractClass {
+            program_json: serde_json::Value::from_str(&contract_str).unwrap(),
+            program: parsed_contract_class.program,
+            entry_points_by_type: parsed_contract_class.entry_points_by_type,
+            abi: parsed_contract_class.abi,
+        };
+
+        assert_eq!(
+            compute_deprecated_class_hash(&contract_class).unwrap(),
+            felt_str!(
+                "4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad",
+                16
+            )
         );
     }
 }
