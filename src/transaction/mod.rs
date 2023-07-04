@@ -79,11 +79,11 @@ impl Transaction {
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
-    /// It creates a new transaction structure modificating the skip flags.
+    /// It creates a new transaction structure modificating the skip flags. It is meant to be used only to run a simulation
     ///## Parameters:
-    ///- skip_validate: the transaction will not be verificated
-    ///- skip_execute: the transaction will not be execute in the cairo vm
-    ///- skip_fee_transfer: the transaction will not consume gas
+    ///- skip_validate: the transaction will not be verificatedi.
+    ///- skip_execute: the transaction will not be executed in the cairo vmi.
+    ///- skip_fee_transfer: the transaction will not consume gas as it will skip fee_transfer.
     pub fn create_for_simulation(
         &self,
         skip_validate: bool,
