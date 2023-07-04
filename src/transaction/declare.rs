@@ -272,10 +272,10 @@ impl Declare {
                 state.set_contract_class(&self.class_hash, &self.contract_class)?;
                 Ok(())
             }
-            Err(error) => return Err(error.into()),
+            Err(error) => Err(error.into()),
             Ok(_) => {
                 // Class is already declared; cannot redeclare.
-                return Err(TransactionError::ClassAlreadyDeclared(self.class_hash));
+                Err(TransactionError::ClassAlreadyDeclared(self.class_hash))
             }
         }
     }
