@@ -128,7 +128,6 @@ pub fn calculate_declare_transaction_hash(
 ) -> Result<Felt252, SyscallHandlerError> {
     let class_hash = compute_deprecated_class_hash(contract_class)
         .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
-    dbg!(&class_hash);
 
     let (calldata, additional_data) = if !version.is_zero() {
         (vec![class_hash], vec![nonce])
