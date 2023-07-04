@@ -22,6 +22,7 @@ use crate::{
 };
 use error::TransactionError;
 
+/// Stores the transaction types that are currently supported in starknet.
 pub enum Transaction {
     /// A declare transaction.
     Declare(Declare),
@@ -38,6 +39,7 @@ pub enum Transaction {
 }
 
 impl Transaction {
+    /// returns the contract address of the transaction being executed.
     pub fn contract_address(&self) -> Address {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
@@ -49,6 +51,11 @@ impl Transaction {
         }
     }
 
+    /// execute the transaction in cairo-vm and returns a TransactionExecutionInfo structure.
+    /// parameters:
+    /// state: a structure that implements State and StateReader traits.
+    /// block_context: The block context of the transaction that is about to be executed.
+    /// remaining_gas: The gas supplied to execute the transaction.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -64,7 +71,11 @@ impl Transaction {
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
-
+    /// It creates a new transaction structure with the skip flags setted as needed.
+    /// parameter:
+    /// skip_validate: the transaction will not be verificated
+    /// skip_ : the transaction will not be execute in the cairo vm
+    /// skip_ : the transaction will not consume gas
     pub fn create_for_simulation(
         &self,
         skip_validate: bool,
