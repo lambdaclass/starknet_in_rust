@@ -216,6 +216,9 @@ impl DeclareV2 {
     }
 
     /// Execute the contract in the cairo-vm. Returns a TransactionExecutionContext if succesful.
+    /// ## Parameter:
+    /// - resources: the resources that are in use by the contract
+    /// - block_context: The block that contains the execution context
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
