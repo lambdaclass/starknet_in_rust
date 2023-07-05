@@ -89,13 +89,14 @@ impl DeclareV2 {
             skip_fee_transfer: false,
         };
 
-        internal_declare.verify_version()?;
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
 
         Ok(internal_declare)
-    }
-
-    pub fn verify_version(&self) -> Result<(), TransactionError> {
-        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -177,7 +178,7 @@ impl DeclareV2 {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.verify_version()?;
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
 
         let initial_gas = INITIAL_GAS_COST;
 

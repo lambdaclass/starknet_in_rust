@@ -98,7 +98,12 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        internal_declare.verify_version()?;
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
 
         Ok(internal_declare)
     }
@@ -108,10 +113,6 @@ impl Declare {
         Vec::from([bytes])
     }
 
-    pub fn verify_version(&self) -> Result<(), TransactionError> {
-        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)
-    }
-
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     pub fn apply<S: State + StateReader>(
@@ -119,7 +120,7 @@ impl Declare {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.verify_version()?;
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
