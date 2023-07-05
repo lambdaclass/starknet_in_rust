@@ -1,7 +1,7 @@
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
-        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
+        contract_address::compute_deprecated_class_hash,
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
@@ -271,18 +271,8 @@ impl Declare {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
-        // Set contract class
-        match state.get_contract_class(&self.class_hash) {
-            Err(StateError::NoneCompiledHash(_)) => {
-                // Class is undeclared; declare it.
-                state.set_contract_class(&self.class_hash, &self.contract_class)?;
-            }
-            Err(error) => return Err(error.into()),
-            Ok(_) => {
-                // Class is already declared; cannot redeclare.
-                return Err(TransactionError::ClassAlreadyDeclared(self.class_hash));
-            }
-        }
+
+        state.set_contract_class(&self.class_hash, &self.contract_class)?;
 
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
@@ -640,7 +630,7 @@ mod tests {
     }
 
     #[test]
-    fn execute_class_already_declared_should_fail() {
+    fn execute_class_already_declared_should_redeclare() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
@@ -692,7 +682,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error = Declare::new(
+        let second_internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -708,16 +698,13 @@ mod tests {
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error = internal_declare_error.execute(&mut state, &BlockContext::default());
+        assert!(state.get_contract_class(&class_hash).is_ok());
 
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::ClassAlreadyDeclared(..)
-        );
+        second_internal_declare
+            .execute(&mut state, &BlockContext::default())
+            .unwrap();
+
+        assert!(state.get_contract_class(&class_hash).is_ok());
     }
 
     #[test]
