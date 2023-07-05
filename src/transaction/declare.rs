@@ -1,7 +1,7 @@
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
-        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
+        contract_address::compute_deprecated_class_hash,
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
@@ -250,23 +250,6 @@ impl Declare {
         Ok(())
     }
 
-    fn set_contract_class<S: State + StateReader>(
-        &self,
-        state: &mut S,
-    ) -> Result<(), TransactionError> {
-        match state.get_contract_class(&self.class_hash) {
-            Err(StateError::NoneCompiledHash(_)) => {
-                // Class is undeclared; declare it.
-                state.set_contract_class(&self.class_hash, &self.contract_class)?;
-                Ok(())
-            }
-            Err(error) => Err(error.into()),
-            Ok(_) => {
-                // Class is already declared; cannot redeclare.
-                Err(TransactionError::ClassAlreadyDeclared(self.class_hash))
-            }
-        }
-    }
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: State + StateReader>(
@@ -279,7 +262,9 @@ impl Declare {
 
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
-        self.set_contract_class(state)?;
+
+        state.set_contract_class(&self.class_hash, &self.contract_class)?;
+
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
@@ -634,7 +619,7 @@ mod tests {
     }
 
     #[test]
-    fn execute_class_already_declared_should_fail() {
+    fn execute_class_already_declared_should_redeclare() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract_class = ContractClass::try_from(path).unwrap();
@@ -686,7 +671,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error = Declare::new(
+        let second_internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -702,16 +687,13 @@ mod tests {
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error = internal_declare_error.execute(&mut state, &BlockContext::default());
+        assert!(state.get_contract_class(&class_hash).is_ok());
 
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::ClassAlreadyDeclared(..)
-        );
+        second_internal_declare
+            .execute(&mut state, &BlockContext::default())
+            .unwrap();
+
+        assert!(state.get_contract_class(&class_hash).is_ok());
     }
 
     #[test]
