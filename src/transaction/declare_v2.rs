@@ -28,7 +28,7 @@ use num_traits::Zero;
 use std::collections::HashMap;
 
 /// Represents a declare transaction in the starknet network.
-/// Declares creates a blueprint of a contract class that is used to deploy an instances of the contract
+/// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
 /// DeclareV2 is meant to be used with the new cairo contract sintax, starting from Cairo1.
 #[derive(Debug, Clone)]
 pub struct DeclareV2 {
