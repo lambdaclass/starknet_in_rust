@@ -52,7 +52,7 @@ impl DeclareV2 {
     // creates a new instance of a declare.
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
-    /// - compiled_class_hash: the class hash of the contract compiled with cairo 1.
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
     /// - sender_address: The address of the account declaring the contract.
     /// - max_fee: refers to max amount of fee that a declare takes.
