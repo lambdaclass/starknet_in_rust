@@ -108,6 +108,7 @@ pub fn call_contract<T: State + StateReader>(
     calldata: Vec<Felt252>,
     state: &mut T,
     block_context: BlockContext,
+    caller_address: Address,
 ) -> Result<Vec<Felt252>, TransactionError> {
     let contract_address = Address(contract_address);
     let class_hash = state.get_class_hash_at(&contract_address)?;
@@ -118,7 +119,6 @@ pub fn call_contract<T: State + StateReader>(
     let signature = vec![];
     let max_fee = 1000000000;
     let initial_gas = 1000000000;
-    let caller_address = Address(0.into());
     let version = 0;
 
     let execution_entrypoint = ExecutionEntryPoint::new(
@@ -319,6 +319,7 @@ mod test {
             calldata,
             &mut state,
             BlockContext::default(),
+            Address(0.into()),
         )
         .unwrap();
 
