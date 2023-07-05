@@ -256,7 +256,7 @@ fn library_call() {
         n_steps: 255,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 259,
-        n_memory_holes: 10,
+        n_memory_holes: 8,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 12)]),
     };
     let expected_execution_resources_internal_call = ExecutionResources {
@@ -264,7 +264,7 @@ fn library_call() {
         n_steps: 84,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
-        n_memory_holes: 6,
+        n_memory_holes: 5,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
     };
 
@@ -1130,7 +1130,7 @@ fn test_send_message_to_l1_syscall() {
 
     let expected_execution_resources = ExecutionResources {
         n_steps: 50,
-        n_memory_holes: 1,
+        n_memory_holes: 0,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
     };
 
@@ -1237,7 +1237,7 @@ fn test_get_execution_info() {
 
     let expected_execution_resources = ExecutionResources {
         n_steps: 268,
-        n_memory_holes: 5,
+        n_memory_holes: 4,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
     };
 

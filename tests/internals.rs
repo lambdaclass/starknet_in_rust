@@ -962,7 +962,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
             n_steps: 157,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 160,
-            n_memory_holes: 1,
+            n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 4)]),
         },
         l2_to_l1_messages: vec![],
@@ -988,7 +988,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
                 n_steps: 118,
                 #[cfg(feature = "cairo_1_tests")]
                 n_steps: 121,
-                n_memory_holes: 1,
+                n_memory_holes: 0,
                 builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 3)]),
             },
             ..Default::default()
@@ -1826,7 +1826,7 @@ fn test_library_call_with_declare_v2() {
             n_steps: 368,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 371,
-            n_memory_holes: 1,
+            n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 13)]),
         },
         ..Default::default()
@@ -1850,7 +1850,7 @@ fn test_library_call_with_declare_v2() {
             n_steps: 578,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 587,
-            n_memory_holes: 3,
+            n_memory_holes: 1,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 16)]),
         },
         internal_calls: vec![expected_internal_call_info],
