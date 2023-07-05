@@ -5,6 +5,54 @@ use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::vec;
 
+/// Computes the contract address.
+///
+/// It is calculated using the following formula:
+/// ```text
+/// contract_address := pedersen(
+///    “STARKNET_CONTRACT_ADDRESS”,
+///    caller_address,
+///    salt,
+///    class_hash,
+///    pedersen(constructor_calldata))
+///```
+///
+/// # Arguments
+///
+/// * `salt` - Part of the deploy transaction
+/// * `class_hash` - The hash value of the contract class.
+/// * `constructor_calldata` - A slice of `Felt252` elements representing the constructor calldata.
+/// * `deployer_address` - The address of the deployer/caller of the contract.
+///
+/// # Returns
+///
+/// Returns a `Result` containing the computed contract address.
+/// If any errors occur during the hash computation or other operations, an `Err` variant containing
+/// a `SyscallHandlerError` is returned.
+///
+/// # Examples
+///
+/// ```
+/// use starknet_in_rust::{hash_utils::calculate_contract_address, utils::Address, Felt252};
+///
+/// let salt = Felt252::from(123_u16);
+/// let class_hash = Felt252::from(456_u16);
+/// let constructor_calldata = vec![
+///     Felt252::from(10_u16),
+///     Felt252::from(20_u16),
+///     Felt252::from(30_u16),
+/// ];
+/// let deployer_address = Address(Felt252::from(789_u16));
+///
+/// match calculate_contract_address(&salt, &class_hash, &constructor_calldata, deployer_address) {
+///     Ok(contract_address) => {
+///         println!("Computed contract address: {:?}", contract_address);
+///     }
+///     Err(err) => {
+///         println!("Error occurred: {:?}", err);
+///     }
+/// }
+/// ```
 pub fn calculate_contract_address(
     salt: &Felt252,
     class_hash: &Felt252,
@@ -28,7 +76,40 @@ pub fn calculate_contract_address(
     Ok(raw_address.mod_floor(&l2_address_upper_bound))
 }
 
-pub(crate) fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandlerError> {
+/// Computes Pedersen hash for a slice of `Felt252` elements.
+///
+/// # Arguments
+///
+/// * `vec` - A slice of `Felt252` elements representing the input vector.
+///
+/// # Returns
+///
+/// Returns a `Result` containing the computed Pedersen hash value as `Felt252`.
+/// If any errors occur during the conversion or hash computation, an `Err` variant containing a `SyscallHandlerError`
+/// is returned.
+///
+/// # Examples
+///
+/// ```
+/// use starknet_in_rust::Felt252;
+/// use starknet_in_rust::hash_utils::compute_hash_on_elements;
+///
+/// let input_vec = vec![
+///     Felt252::from(10_u16),
+///     Felt252::from(20_u16),
+///     Felt252::from(30_u16),
+/// ];
+///
+/// match compute_hash_on_elements(&input_vec) {
+///     Ok(hash_value) => {
+///         println!("Computed hash value: {:?}", hash_value);
+///     }
+///     Err(err) => {
+///         println!("Error occurred: {:?}", err);
+///     }
+/// }
+/// ```
+pub fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandlerError> {
     let mut felt_vec = vec
         .iter()
         .map(|num| {
