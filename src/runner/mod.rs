@@ -19,6 +19,7 @@ use cairo_vm::{
 use num_traits::{ToPrimitive, Zero};
 use std::{borrow::Cow, collections::HashMap};
 
+/// Returns a vector that holds the names of the builtins that the contract class uses
 pub fn get_casm_contract_builtins(
     contract_class: &CasmContractClass,
     entrypoint_offset: usize,
@@ -51,6 +52,7 @@ pub fn get_casm_contract_builtins(
         .collect()
 }
 
+/// Creates a wrapper over CairoRunner, the Cairo vm and the Hint Processor
 pub(crate) struct StarknetRunner<H>
 where
     H: HintProcessor + HintProcessorPostRun,
@@ -72,6 +74,7 @@ where
         }
     }
 
+    /// Executes the entry point in the cairo vm.
     pub fn run_from_entrypoint(
         &mut self,
         entrypoint: usize,
@@ -92,6 +95,7 @@ where
         Ok(())
     }
 
+    /// Creates the data structures required to execute the call on the cairo vm according to the entry_point_offset provided
     #[allow(dead_code)]
     pub fn run_from_cairo1_entrypoint(
         &mut self,
@@ -151,6 +155,7 @@ where
         Ok(self.cairo_runner.get_execution_resources(&self.vm)?)
     }
 
+    /// Return a vector that holds the data and pointers used to build the CallResult
     pub fn get_return_values(&self) -> Result<Vec<Felt252>, TransactionError> {
         let ret_data = self.vm.get_return_values(2)?;
 
@@ -171,6 +176,7 @@ where
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }
 
+    /// returns a CallResult that holds the gas consumed, if the execution was succesfull and the retdata of the call.
     pub fn get_call_result(&self, initial_gas: u128) -> Result<CallResult, TransactionError> {
         let return_values = self.vm.get_return_values(5)?;
         let remaining_gas = return_values[0]
@@ -201,6 +207,7 @@ where
         })
     }
 
+    /// Returns a vector of pointers to the initial stack of the builtins invoked by the contract besides the gas and the syscall_segment pointer.
     pub fn prepare_os_context_cairo1(
         cairo_runner: &CairoRunner,
         vm: &mut VirtualMachine,
@@ -234,6 +241,7 @@ where
         os_context
     }
 
+    /// Returns a vector of pointers to the initial stack of the builtins invoked by the contract
     pub fn prepare_os_context_cairo0(
         cairo_runner: &CairoRunner,
         vm: &mut VirtualMachine,
