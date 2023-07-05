@@ -12,5 +12,4 @@ num-traits = { workspace = true }
 starknet_api = { workspace = true }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 tempfile = "3.2.0"
-cairo-vm = { workspace=true, features = ["cairo-1-hints"]}
-starknet-contract-class = { path = "../crates/starknet-contract-class/", version = "0.2.0" }
+cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
