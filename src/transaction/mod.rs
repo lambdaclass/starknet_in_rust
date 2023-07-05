@@ -22,6 +22,15 @@ use crate::{
 };
 use error::TransactionError;
 
+/// Represents a transaction inside the starknet network.
+/// The transaction are actions that may modified the state of the network.
+/// it can be one of:
+/// - Declare
+/// - DeclareV2
+/// - Deploy
+/// - DeployAccount
+/// - InvokeFunction
+/// - L1Handler
 pub enum Transaction {
     /// A declare transaction.
     Declare(Declare),
@@ -38,6 +47,7 @@ pub enum Transaction {
 }
 
 impl Transaction {
+    /// returns the contract address of the transaction.
     pub fn contract_address(&self) -> Address {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
@@ -49,6 +59,11 @@ impl Transaction {
         }
     }
 
+    /// execute the transaction in cairo-vm and returns a TransactionExecutionInfo structure.
+    ///## Parameters:
+    ///- state: a structure that implements State and StateReader traits.
+    ///- block_context: The block context of the transaction that is about to be executed.
+    ///- remaining_gas: The gas supplied to execute the transaction.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -64,7 +79,11 @@ impl Transaction {
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
-
+    /// It creates a new transaction structure modificating the skip flags. It is meant to be used only to run a simulation
+    ///## Parameters:
+    ///- skip_validate: the transaction will not be verified.
+    ///- skip_execute: the transaction will not be executed in the cairo vm.
+    ///- skip_fee_transfer: the transaction will not pay the fee.
     pub fn create_for_simulation(
         &self,
         skip_validate: bool,
