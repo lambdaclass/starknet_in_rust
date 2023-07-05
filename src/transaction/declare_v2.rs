@@ -253,10 +253,9 @@ impl DeclareV2 {
             None,
         )?;
 
-        self.compile_and_store_casm_class(state)?;
-
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &actual_resources, block_context)?;
+        self.compile_and_store_casm_class(state)?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,

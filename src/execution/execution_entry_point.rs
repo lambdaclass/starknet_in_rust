@@ -501,6 +501,10 @@ impl ExecutionEntryPoint {
             Some(program.data_len() + program_extra_data.len()),
         )?;
 
+        runner
+            .vm
+            .mark_address_range_as_accessed(core_program_end_ptr, program_extra_data.len())?;
+
         runner.validate_and_process_os_context(os_context)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
