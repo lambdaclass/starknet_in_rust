@@ -273,7 +273,7 @@ fn test_erc20_cairo2() {
     )
     .unwrap();
 
-    assert_eq!(_retdata, []);
+    assert!(retdata.is_empty());
 
     // GET BALANCE ACCOUNT 1
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"balance_of"));
