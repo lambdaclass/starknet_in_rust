@@ -213,10 +213,10 @@ pub struct CairoProgramToHash<'a> {
 
 /// Computes the hash of the contract class, including hints.
 /// We are not supporting backward compatibility now.
-fn compute_hinted_class_hash(
-    contract_class: &ContractClass,
+pub(crate) fn compute_hinted_class_hash(
+    contract_class: &serde_json::Value,
 ) -> Result<Felt252, ContractAddressError> {
-    let program_as_string = contract_class.program_json.to_string();
+    let program_as_string = contract_class.to_string();
     let mut cairo_program_hash: CairoContractDefinition = serde_json::from_str(&program_as_string)
         .map_err(|err| ContractAddressError::InvalidProgramJson(err.to_string()))?;
 
@@ -322,7 +322,7 @@ pub fn compute_deprecated_class_hash(
 
     let builtin_list = compute_hash_on_elements(&builtin_list_vec)?;
 
-    let hinted_class_hash = compute_hinted_class_hash(contract_class)?;
+    let hinted_class_hash = contract_class.hinted_class_hash();
 
     let mut bytecode_vector = Vec::new();
 
@@ -342,7 +342,7 @@ pub fn compute_deprecated_class_hash(
         l1_handlers,
         constructors,
         builtin_list,
-        hinted_class_hash,
+        hinted_class_hash.clone(),
         bytecode,
     ];
 
@@ -364,8 +364,8 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            compute_hinted_class_hash(&contract_class).unwrap(),
-            Felt252::from_str_radix(
+            contract_class.hinted_class_hash(),
+            &Felt252::from_str_radix(
                 "1164033593603051336816641706326288678020608687718343927364853957751413025239",
                 10
             )
