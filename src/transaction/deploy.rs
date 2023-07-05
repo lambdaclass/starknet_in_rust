@@ -382,7 +382,7 @@ mod tests {
 
         // Make a new contract class with the same program but with errors
         let error_contract_class = ContractClass {
-            program_json: contract_class.program_json,
+            hinted_class_hash: contract_class.hinted_class_hash,
             program: contract_class.program,
             entry_points_by_type: HashMap::new(),
             abi: None,

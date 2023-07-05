@@ -337,11 +337,9 @@ impl<T: StateReader> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_classes::deprecated_contract_class::{
-        ContractEntryPoint, EntryPointType,
-    };
+
     use crate::state::in_memory_state_reader::InMemoryStateReader;
-    use cairo_vm::types::program::Program;
+
     use num_traits::One;
 
     #[test]
@@ -395,18 +393,10 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
         );
-
-        let program_json: serde_json::Value = serde_json::Value::from("{}");
-        let contract_class = ContractClass::new(
-            program_json,
-            Program::default(),
-            HashMap::from([(
-                EntryPointType::Constructor,
-                vec![ContractEntryPoint::default()],
-            )]),
-            None,
+        let contract_class = ContractClass::new_from_path(
+            "starknet_programs/raw_contract_classes/class_with_abi.json",
         )
-        .expect("Error creating contract class");
+        .unwrap();
 
         state_reader
             .class_hash_to_contract_class
