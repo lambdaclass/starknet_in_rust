@@ -4,7 +4,7 @@ use cairo_vm::{
 };
 use lazy_static::lazy_static;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{

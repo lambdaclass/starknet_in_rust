@@ -1,3 +1,6 @@
+use crate::services::api::contract_classes::deprecated_contract_class::{
+    ContractEntryPoint, EntryPointType,
+};
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -31,7 +34,6 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
-use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,

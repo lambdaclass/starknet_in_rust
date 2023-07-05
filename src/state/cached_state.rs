@@ -337,10 +337,12 @@ impl<T: StateReader> State for CachedState<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::services::api::contract_classes::deprecated_contract_class::{
+        ContractEntryPoint, EntryPointType,
+    };
     use crate::state::in_memory_state_reader::InMemoryStateReader;
     use cairo_vm::types::program::Program;
     use num_traits::One;
-    use starknet_contract_class::{ContractEntryPoint, EntryPointType};
 
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
