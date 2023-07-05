@@ -54,7 +54,6 @@ pub fn call_contract<T: State + StateReader>(
     let signature = vec![];
     let max_fee = 1000000000;
     let initial_gas = 1000000000;
-    let caller_address = caller_address;
     let version = 0;
 
     let execution_entrypoint = ExecutionEntryPoint::new(
