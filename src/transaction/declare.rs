@@ -262,6 +262,23 @@ impl Declare {
         Ok(())
     }
 
+    fn set_contract_class<S: State + StateReader>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        match state.get_contract_class(&self.class_hash) {
+            Err(StateError::NoneCompiledHash(_)) => {
+                // Class is undeclared; declare it.
+                state.set_contract_class(&self.class_hash, &self.contract_class)?;
+                Ok(())
+            }
+            Err(error) => Err(error.into()),
+            Ok(_) => {
+                // Class is already declared; cannot redeclare.
+                Err(TransactionError::ClassAlreadyDeclared(self.class_hash))
+            }
+        }
+    }
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: State + StateReader>(
@@ -271,21 +288,10 @@ impl Declare {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
-        // Set contract class
-        match state.get_contract_class(&self.class_hash) {
-            Err(StateError::NoneCompiledHash(_)) => {
-                // Class is undeclared; declare it.
-                state.set_contract_class(&self.class_hash, &self.contract_class)?;
-            }
-            Err(error) => return Err(error.into()),
-            Ok(_) => {
-                // Class is already declared; cannot redeclare.
-                return Err(TransactionError::ClassAlreadyDeclared(self.class_hash));
-            }
-        }
 
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+        self.set_contract_class(state)?;
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
