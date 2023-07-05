@@ -25,7 +25,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-use super::Transaction;
+use super::{verify_version, Transaction};
 #[derive(Debug, Clone)]
 pub struct DeclareV2 {
     pub sender_address: Address,
@@ -95,25 +95,7 @@ impl DeclareV2 {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            if self.sender_address != Address(1.into()) {
-                return Err(TransactionError::InvalidSenderAddress);
-            }
-
-            if self.max_fee != 0 {
-                return Err(TransactionError::InvalidMaxFee);
-            }
-
-            if self.nonce != 0.into() {
-                return Err(TransactionError::InvalidNonce);
-            }
-
-            if self.signature.is_empty() {
-                return Err(TransactionError::InvalidSignature);
-            }
-        }
-
-        Ok(())
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -355,7 +337,7 @@ mod tests {
             chain_id,
             sender_address,
             0,
-            0.into(),
+            1.into(),
             [1.into()].to_vec(),
             Felt252::zero(),
             Some(Felt252::one()),

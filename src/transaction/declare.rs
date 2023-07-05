@@ -28,7 +28,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-use super::Transaction;
+use super::{verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -109,20 +109,7 @@ impl Declare {
     }
 
     pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            if !self.max_fee.is_zero() {
-                return Err(TransactionError::InvalidMaxFee);
-            }
-
-            if !self.nonce.is_zero() {
-                return Err(TransactionError::InvalidNonce);
-            }
-        }
-
-        if self.version.is_zero() && !self.signature.len().is_zero() {
-            return Err(TransactionError::InvalidSignature);
-        }
-        Ok(())
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)
     }
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate

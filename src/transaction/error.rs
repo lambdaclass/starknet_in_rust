@@ -25,7 +25,7 @@ pub enum TransactionError {
     InvalidMaxFee,
     #[error("The nonce field in Declare transactions of version 0 must be 0.")]
     InvalidNonce,
-    #[error("The signature field in Declare transactions must be an empty list.")]
+    #[error("The signature field in Declare transactions of version 0 must be an empty list.")]
     InvalidSignature,
     #[error("An InvokeFunction transaction (version != 0) must have a nonce.")]
     InvokeFunctionNonZeroMissingNonce,
@@ -129,4 +129,6 @@ pub enum TransactionError {
     CustomError(String),
     #[error("call info is None")]
     CallInfoIsNone,
+    #[error("Unsupported version {0:?}")]
+    UnsupportedVersion(String),
 }
