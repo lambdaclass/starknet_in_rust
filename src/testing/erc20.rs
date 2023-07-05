@@ -18,13 +18,12 @@ use crate::{
     },
     transaction::{error::TransactionError, DeployAccount, InvokeFunction},
     utils::calculate_sn_keccak,
-    Felt252,
+    EntryPointType, Felt252,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::felt_str;
 use lazy_static::lazy_static;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
 pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/cairo2/ERC20.casm";
 use crate::{
     state::state_cache::StorageEntry,
