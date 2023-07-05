@@ -199,7 +199,7 @@ fn integration_test_cairo1() {
         retdata: [144.into()].to_vec(),
         execution_resources: ExecutionResources {
             n_steps: 418,
-            n_memory_holes: 1,
+            n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
         },
         class_hash: Some(class_hash),

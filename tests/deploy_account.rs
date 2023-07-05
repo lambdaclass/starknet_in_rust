@@ -195,7 +195,7 @@ fn internal_deploy_account_cairo1() {
                     n_steps: 152,
                     #[cfg(feature="cairo_1_tests")]
                     n_steps: 155,
-                    n_memory_holes: 18,
+                    n_memory_holes: 17,
                     builtin_instance_counter:
                     [
                     ("range_check_builtin", 2),
@@ -230,7 +230,7 @@ fn internal_deploy_account_cairo1() {
                     n_steps: 92,
                     #[cfg(feature="cairo_1_tests")]
                     n_steps: 93,
-                    n_memory_holes: 1,
+                    n_memory_holes: 0,
                     builtin_instance_counter:
                     [
                         ("range_check_builtin", 2),
