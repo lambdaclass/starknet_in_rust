@@ -22,7 +22,6 @@ mod DeployTest {
 
     #[external(v0)]
     impl DeployTest of super::IDeployTest<ContractState> {
-        // fn deploy_test(self: @ContractState, class_hash: ClassHash, contract_address_salt: felt252, name_: felt252, symbol_: felt252, decimals: felt252, initial_supply: felt252, recipient: felt252) -> ContractAddress {
         fn deploy_test(self: @ContractState, class_hash: ClassHash, contract_address_salt: felt252, recipient: felt252, name: felt252, decimals: felt252, initial_supply: felt252, symbol: felt252) -> (core::starknet::contract_address::ContractAddress, core::array::Span::<core::felt252>) {
             let mut calldata = ArrayTrait::new();
             calldata.append(recipient);
