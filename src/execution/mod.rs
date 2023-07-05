@@ -2,6 +2,7 @@ pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
 
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{
         block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
@@ -19,7 +20,6 @@ use cairo_vm::{
 };
 use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
-use starknet_contract_class::EntryPointType;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

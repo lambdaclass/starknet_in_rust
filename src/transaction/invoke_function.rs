@@ -20,10 +20,10 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use starknet_contract_class::EntryPointType;
 
 use super::Transaction;
 

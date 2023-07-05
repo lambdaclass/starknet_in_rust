@@ -1,10 +1,10 @@
 use crate::complex_contracts::utils::*;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use starknet_contract_class::EntryPointType;
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType},
     state::{cached_state::CachedState, state_api::StateReader},
@@ -427,8 +427,8 @@ fn amm_proxy_get_account_token_balance() {
         retdata: [200.into()].to_vec(),
         storage_read_values: [200.into()].to_vec(),
         execution_resources: ExecutionResources {
-            n_steps: 94,
-            n_memory_holes: 10,
+            n_steps: 92,
+            n_memory_holes: 11,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 3),
@@ -448,8 +448,8 @@ fn amm_proxy_get_account_token_balance() {
         calldata: calldata.clone(),
         retdata: [200.into()].to_vec(),
         execution_resources: ExecutionResources {
-            n_steps: 153,
-            n_memory_holes: 10,
+            n_steps: 151,
+            n_memory_holes: 11,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 3),
@@ -561,8 +561,8 @@ fn amm_proxy_swap() {
         storage_read_values: [100.into(), 1000.into(), 1000.into(), 100.into(), 200.into()]
             .to_vec(),
         execution_resources: ExecutionResources {
-            n_steps: 824,
-            n_memory_holes: 93,
+            n_steps: 826,
+            n_memory_holes: 92,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 14),
                 ("range_check_builtin".to_string(), 41),
@@ -582,8 +582,8 @@ fn amm_proxy_swap() {
         calldata: calldata.clone(),
         retdata: expected_result,
         execution_resources: ExecutionResources {
-            n_steps: 883,
-            n_memory_holes: 93,
+            n_steps: 885,
+            n_memory_holes: 92,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 14),
                 ("range_check_builtin".to_string(), 41),

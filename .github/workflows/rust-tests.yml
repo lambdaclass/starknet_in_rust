@@ -19,7 +19,6 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          override: true
           components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
       with:
@@ -41,7 +40,6 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          override: true
           components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
       with:
@@ -65,7 +63,6 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          override: true
           components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
       with:
