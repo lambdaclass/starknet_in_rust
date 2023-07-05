@@ -82,8 +82,8 @@ impl Transaction {
     /// It creates a new transaction structure modificating the skip flags. It is meant to be used only to run a simulation
     ///## Parameters:
     ///- skip_validate: the transaction will not be verified.
-    ///- skip_execute: the transaction will not be executed in the cairo vmi.
-    ///- skip_fee_transfer: the transaction will not consume gas as it will skip fee_transfer.
+    ///- skip_execute: the transaction will not be executed in the cairo vm.
+    ///- skip_fee_transfer: the transaction will not pay the fee.
     pub fn create_for_simulation(
         &self,
         skip_validate: bool,
