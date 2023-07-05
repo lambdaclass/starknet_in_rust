@@ -1,3 +1,4 @@
+use crate::core::contract_address::compute_hinted_class_hash;
 use crate::services::api::contract_class_errors::ContractClassError;
 use cairo_vm::felt::{Felt252, PRIME_STR};
 use cairo_vm::serde::deserialize_program::{
@@ -75,7 +76,7 @@ pub struct ContractClass {
     #[getset(get = "pub")]
     pub(crate) program: Program,
     #[getset(get = "pub")]
-    pub(crate) program_json: serde_json::Value,
+    pub(crate) hinted_class_hash: Felt252,
     #[getset(get = "pub")]
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     #[getset(get = "pub")]
@@ -96,9 +97,9 @@ impl ContractClass {
                 }
             }
         }
-
+        let hinted_class_hash = compute_hinted_class_hash(&program_json).unwrap();
         Ok(ContractClass {
-            program_json,
+            hinted_class_hash,
             program,
             entry_points_by_type,
             abi,
@@ -126,9 +127,9 @@ impl TryFrom<&str> for ContractClass {
         let program = to_cairo_runner_program(&contract_class.program)?;
         let entry_points_by_type =
             convert_entry_points(contract_class.clone().entry_points_by_type);
-        let program_json = serde_json::from_str(s)?;
+        let hinted_class_hash = compute_hinted_class_hash(&serde_json::from_str(s)?).unwrap();
         Ok(ContractClass {
-            program_json,
+            hinted_class_hash,
             program,
             entry_points_by_type,
             abi: contract_class.abi,
