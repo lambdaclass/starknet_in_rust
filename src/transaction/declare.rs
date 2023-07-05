@@ -272,10 +272,11 @@ impl Declare {
         let mut tx_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
 
-        state.set_contract_class(&self.class_hash, &self.contract_class)?;
-
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+
+        state.set_contract_class(&self.class_hash, &self.contract_class)?;
+
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
