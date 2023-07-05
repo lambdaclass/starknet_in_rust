@@ -262,7 +262,7 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
     let calldata = vec![account_address_2.clone().0, Felt252::from(123)];
 
-    let _retdata = call_contract(
+    let retdata = call_contract(
         erc20_address.clone(),
         entrypoint_selector,
         calldata,
