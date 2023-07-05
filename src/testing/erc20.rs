@@ -2,6 +2,7 @@
 use std::{collections::HashMap, io::Bytes, path::Path, vec};
 
 use crate::{
+    call_contract,
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
@@ -36,57 +37,6 @@ use super::{
     TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH, TEST_ERC20_ACCOUNT_BALANCE_KEY,
     TEST_ERC20_CONTRACT_CLASS_HASH,
 };
-
-pub fn call_contract<T: State + StateReader>(
-    contract_address: Felt252,
-    entrypoint_selector: Felt252,
-    calldata: Vec<Felt252>,
-    state: &mut T,
-    block_context: BlockContext,
-    caller_address: Address,
-) -> Result<Vec<Felt252>, TransactionError> {
-    let contract_address = Address(contract_address);
-    let class_hash = state.get_class_hash_at(&contract_address)?;
-    let nonce = state.get_nonce_at(&contract_address)?;
-
-    // TODO: Revisit these parameters
-    let transaction_hash = 0.into();
-    let signature = vec![];
-    let max_fee = 1000000000;
-    let initial_gas = 1000000000;
-    let version = 0;
-
-    let execution_entrypoint = ExecutionEntryPoint::new(
-        contract_address.clone(),
-        calldata,
-        entrypoint_selector,
-        caller_address,
-        EntryPointType::External,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        initial_gas,
-    );
-
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        contract_address,
-        transaction_hash,
-        signature,
-        max_fee,
-        nonce,
-        block_context.invoke_tx_max_n_steps(),
-        version.into(),
-    );
-
-    let call_info = execution_entrypoint.execute(
-        state,
-        &block_context,
-        &mut ExecutionResourcesManager::default(),
-        &mut tx_execution_context,
-        false,
-    )?;
-
-    Ok(call_info.retdata)
-}
 
 #[test]
 fn test_erc20_cairo2() {
