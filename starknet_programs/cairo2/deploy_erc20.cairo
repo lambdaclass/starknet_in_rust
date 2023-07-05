@@ -30,7 +30,6 @@ mod DeployTest {
             calldata.append(decimals);
             calldata.append(initial_supply);
             calldata.append(symbol);
-            // assert(calldata.len() == 5, 'Wrong calldata length');
             deploy_syscall(class_hash, contract_address_salt, calldata.span(), false).unwrap()
         }
     }
