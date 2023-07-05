@@ -1,5 +1,7 @@
 use cairo_vm::felt::Felt252;
 
+use crate::definitions::constants::SUPPORTED_VERSIONS;
+
 use super::error::TransactionError;
 
 pub fn verify_version(
@@ -8,8 +10,7 @@ pub fn verify_version(
     nonce: &Felt252,
     signature: &Vec<Felt252>,
 ) -> Result<(), TransactionError> {
-    let supported_versions = vec![0.into(), 1.into(), 2.into()];
-    if !supported_versions.contains(version) {
+    if !SUPPORTED_VERSIONS.contains(version) {
         return Err(TransactionError::UnsupportedVersion(version.to_string()));
     }
 
