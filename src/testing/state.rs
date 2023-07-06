@@ -293,7 +293,7 @@ impl StarknetState {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::BufReader, path::PathBuf};
+    use std::path::PathBuf;
 
     use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use num_traits::Num;
@@ -314,9 +314,7 @@ mod tests {
     fn test_deploy() {
         let mut starknet_state = StarknetState::new(None);
 
-        let contract_reader =
-            BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
-        let contract_class = ContractClass::try_from(contract_reader).unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let contract_address_salt: Felt252 = 1.into();
 
@@ -386,7 +384,7 @@ mod tests {
     #[test]
     fn test_declare() {
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -454,8 +452,8 @@ mod tests {
         // --------------------------------------------
         //      Test declare with starknet state
         // --------------------------------------------
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let (ret_class_hash, _exec_info) = starknet_state
             .declare(fib_contract_class.clone(), None)
@@ -500,9 +498,7 @@ mod tests {
         // 2) invoke call over fibonacci
 
         let mut starknet_state = StarknetState::new(None);
-        let contract_reader =
-            BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
-        let contract_class = ContractClass::try_from(contract_reader).unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt: Felt252 = 1.into();
 
@@ -592,7 +588,7 @@ mod tests {
     fn test_execute_entry_point_raw() {
         let mut starknet_state = StarknetState::new(None);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
         let contract_address_salt = 1.into();
 
         let (contract_address, _exec_info) = starknet_state

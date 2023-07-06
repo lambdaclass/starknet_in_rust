@@ -18,11 +18,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address},
 };
 use starknet_in_rust::{ContractEntryPoint, EntryPointType};
-use std::{
-    collections::{HashMap, HashSet},
-    fs::File,
-    io::BufReader,
-};
+use std::collections::{HashMap, HashSet};
 
 pub struct CallConfig<'a> {
     pub state: &'a mut CachedState<InMemoryStateReader>,
@@ -137,8 +133,7 @@ pub fn deploy(
     block_context: &BlockContext,
     hash_value: Option<Felt252>,
 ) -> Result<(Address, [u8; 32]), TransactionError> {
-    let contract_reader = BufReader::new(File::open(path).unwrap());
-    let contract_class = ContractClass::try_from(contract_reader).unwrap();
+    let contract_class = ContractClass::from_path(path).unwrap();
 
     let internal_deploy = Deploy::new(
         0.into(),

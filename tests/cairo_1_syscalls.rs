@@ -1,8 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
-    vec,
-};
+use std::collections::{HashMap, HashSet};
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
@@ -712,9 +708,8 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
     let salt = Felt252::zero();
-    let contract_path = Path::new("starknet_programs/fibonacci.json");
-    let test_contract_class: ContractClass =
-        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+    let contract_path = "starknet_programs/fibonacci.json";
+    let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
 
     // Create the deploy contract class
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -814,9 +809,8 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
     let salt = Felt252::zero();
-    let contract_path = Path::new("starknet_programs/test_contract.json");
-    let test_contract_class: ContractClass =
-        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+    let contract_path = "starknet_programs/test_contract.json";
+    let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
 
     // Create the deploy contract class
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -915,9 +909,8 @@ fn deploy_cairo0_and_invoke() {
     let test_class_hash: ClassHash = [2; 32];
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
     let salt = Felt252::zero();
-    let contract_path = Path::new("starknet_programs/factorial.json");
-    let test_contract_class: ContractClass =
-        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+    let contract_path = "starknet_programs/factorial.json";
+    let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
 
     // Create the deploy contract class
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -1636,8 +1629,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
 
     // Add get_number_a.cairo to storage
 
-    let path = PathBuf::from("starknet_programs/get_number_c.json");
-    let contract_class_c = ContractClass::try_from(path).unwrap();
+    let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
     let mut casm_contract_class_cache = HashMap::new();
@@ -1750,8 +1742,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
 
     // SET GET_NUMBER_C
     // Add get_number_a.cairo to the state (only its contract_class)
-    let path = PathBuf::from("starknet_programs/get_number_c.json");
-    let contract_class_c = ContractClass::try_from(path).unwrap();
+    let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
     let mut casm_contract_class_cache = HashMap::new();
@@ -1864,8 +1855,7 @@ fn call_contract_replace_class_cairo_0() {
 
     // SET GET_NUMBER_C
     // Add get_number_a.cairo to the state (only its contract_class)
-    let path = PathBuf::from("starknet_programs/get_number_c.json");
-    let contract_class_c = ContractClass::try_from(path).unwrap();
+    let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
     let mut casm_contract_class_cache = HashMap::new();
@@ -1881,8 +1871,7 @@ fn call_contract_replace_class_cairo_0() {
 
     // Add get_number_b contract to the state
 
-    let path = PathBuf::from("starknet_programs/get_number_d.json");
-    let contract_class_d = ContractClass::try_from(path).unwrap();
+    let contract_class_d = ContractClass::from_path("starknet_programs/get_number_d.json").unwrap();
 
     let class_hash_d: ClassHash = Felt252::from(2).to_be_bytes();
 
@@ -2708,8 +2697,8 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
 
     // Add send_message_to_l1 contract to the state
 
-    let path = PathBuf::from("starknet_programs/send_message_to_l1.json");
-    let send_msg_contract_class = ContractClass::try_from(path).unwrap();
+    let send_msg_contract_class =
+        ContractClass::from_path("starknet_programs/send_message_to_l1.json").unwrap();
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
     let send_msg_class_hash: ClassHash = [2; 32];
@@ -2795,8 +2784,8 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
 #[test]
 fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     //  Create program and entry point types for contract class
-    let path = PathBuf::from("starknet_programs/send_messages_contract_call.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
+    let contract_class =
+        ContractClass::from_path("starknet_programs/send_messages_contract_call.json").unwrap();
     let entrypoint_selector = &contract_class.entry_points_by_type()[&EntryPointType::External][0]
         .selector()
         .to_owned();

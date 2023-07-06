@@ -52,8 +52,8 @@ fn test_contract(
     //* --------------------------------------------
     //*          Read contract from file
     //* --------------------------------------------
-    let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
-        .expect("Could not load contract from JSON");
+    let contract_class =
+        ContractClass::from_path(contract_path).expect("Could not load contract from JSON");
 
     //* --------------------------------------------
     //*        Declare new contract class

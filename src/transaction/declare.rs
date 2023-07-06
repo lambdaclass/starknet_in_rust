@@ -28,7 +28,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-use super::Transaction;
+use super::{verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -98,7 +98,12 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        internal_declare.verify_version()?;
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
 
         Ok(internal_declare)
     }
@@ -108,23 +113,6 @@ impl Declare {
         Vec::from([bytes])
     }
 
-    pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            if !self.max_fee.is_zero() {
-                return Err(TransactionError::InvalidMaxFee);
-            }
-
-            if !self.nonce.is_zero() {
-                return Err(TransactionError::InvalidNonce);
-            }
-        }
-
-        if self.version.is_zero() && !self.signature.len().is_zero() {
-            return Err(TransactionError::InvalidSignature);
-        }
-        Ok(())
-    }
-
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     pub fn apply<S: State + StateReader>(
@@ -132,7 +120,7 @@ impl Declare {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.verify_version()?;
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
@@ -311,7 +299,7 @@ mod tests {
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{One, Zero};
-    use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
+    use std::{collections::HashMap, path::PathBuf};
 
     use crate::{
         definitions::{
@@ -331,10 +319,8 @@ mod tests {
     #[test]
     fn declare_fibonacci() {
         // accounts contract class must be stored before running declaration of fibonacci
-        let contract_reader = BufReader::new(
-            File::open("starknet_programs/account_without_validation.json").unwrap(),
-        );
-        let contract_class = ContractClass::try_from(contract_reader).unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -365,8 +351,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_reader = BufReader::new(File::open("starknet_programs/fibonacci.json").unwrap());
-        let fib_contract_class = ContractClass::try_from(fib_reader).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
@@ -443,7 +429,7 @@ mod tests {
     fn verify_version_zero_should_fail_max_fee() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -474,8 +460,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
         let max_fee = 1000;
@@ -507,7 +493,7 @@ mod tests {
     fn verify_version_zero_should_fail_nonce() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -538,8 +524,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
         let nonce = Felt252::from(148);
@@ -571,7 +557,7 @@ mod tests {
     fn verify_signature_should_fail_not_empty_list() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -602,8 +588,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
         let signature = vec![1.into(), 2.into()];
@@ -634,7 +620,7 @@ mod tests {
     fn execute_class_already_declared_should_redeclare() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -665,8 +651,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
@@ -712,7 +698,7 @@ mod tests {
     fn execute_transaction_twice_should_fail() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -743,8 +729,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
@@ -788,8 +774,8 @@ mod tests {
         let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         // There are no account contracts in the state, so the transaction should fail
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
@@ -818,7 +804,7 @@ mod tests {
     fn execute_transaction_charge_fee_should_fail() {
         // accounts contract class must be stored before running declaration of fibonacci
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
         let mut contract_class_cache = HashMap::new();
@@ -849,8 +835,8 @@ mod tests {
         //*    Test declare with previous data
         //* ---------------------------------------
 
-        let fib_path = PathBuf::from("starknet_programs/fibonacci.json");
-        let fib_contract_class = ContractClass::try_from(fib_path).unwrap();
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 

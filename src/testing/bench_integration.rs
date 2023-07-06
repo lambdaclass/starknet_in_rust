@@ -4,18 +4,18 @@ use felt::{felt_str, Felt};
 use num_traits::Zero;
 
 use crate::{
-        state::in_memory_state_reader::InMemoryStateReader, state::cached_state::CachedState,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    utils::Address, testing::starknet_state::StarknetState,
+    state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+    testing::starknet_state::StarknetState, utils::Address,
 };
 
 use lazy_static::lazy_static;
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::new_from_path(
         "starknet_programs/first_contract.json",
-    )).unwrap();
+    ).unwrap();
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/first_contract.json");
 
@@ -52,7 +52,7 @@ fn main() {
                 vec![1000.into()],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from(i*2)),
+                Some(Felt::from(i * 2)),
             )
             .unwrap();
 
@@ -63,14 +63,14 @@ fn main() {
                 vec![],
                 0,
                 Some(Vec::new()),
-                Some(Felt::from((i*2) + 1)),
+                Some(Felt::from((i * 2) + 1)),
             )
             .unwrap();
 
-            assert_eq!(
-                tx_exec_info.call_info.unwrap().retdata,
-                vec![((1000 * i) + 1000).into()]
-            );
+        assert_eq!(
+            tx_exec_info.call_info.unwrap().retdata,
+            vec![((1000 * i) + 1000).into()]
+        );
     }
 }
 
