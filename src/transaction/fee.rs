@@ -27,8 +27,9 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_execution_context.max_fee {
-        return Err(TransactionError::FeeError(
-            "Actual fee exceeded max fee.".to_string(),
+        return Err(TransactionError::ActualFeeExceedsMaxFee(
+            actual_fee,
+            tx_execution_context.max_fee,
         ));
     }
 

@@ -825,10 +825,12 @@ mod tests {
         ]);
         block_context.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
-        let error_msg = "Actual fee exceeded max fee.".to_string();
-        assert!(expected_error.is_err());
-        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
+        let error = internal_invoke_function.execute(&mut state, &block_context, 0);
+        assert!(error.is_err());
+        assert_matches!(
+            error.unwrap_err(),
+            TransactionError::ActualFeeExceedsMaxFee(_, _)
+        );
     }
 
     #[test]

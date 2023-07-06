@@ -33,6 +33,8 @@ pub enum TransactionError {
     InvokeFunctionZeroHasNonce,
     #[error("Invalid transaction nonce. Expected: {0} got {1}")]
     InvalidTransactionNonce(String, String),
+    #[error("Actual fee exceeds max fee. Actual: {0}, Max: {1}")]
+    ActualFeeExceedsMaxFee(u128, u128),
     #[error("{0}")]
     FeeError(String),
     #[error("Cairo resource names must be contained in fee weights dict")]
