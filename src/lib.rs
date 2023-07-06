@@ -15,6 +15,7 @@ use crate::{
     transaction::{error::TransactionError, Transaction},
 };
 
+use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
 use state::cached_state::CachedState;
 use transaction::L1Handler;
@@ -31,7 +32,7 @@ pub use crate::services::api::contract_classes::deprecated_contract_class::{
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-pub use cairo_vm::felt::Felt252;
+pub use cairo_vm::felt;
 
 pub mod core;
 pub mod definitions;
