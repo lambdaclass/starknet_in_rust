@@ -106,6 +106,8 @@ impl ContractClass {
         })
     }
 
+    /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
+    /// at the given file path.
     pub fn from_path<F>(path: F) -> Result<Self, ProgramError>
     where
         F: AsRef<Path>,
@@ -113,6 +115,8 @@ impl ContractClass {
         Self::from_str(std::fs::read_to_string(path)?.as_str())
     }
 
+    /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
+    /// given by a reader.
     pub fn from_reader<R>(mut reader: R) -> Result<Self, ProgramError>
     where
         R: std::io::Read,
@@ -130,6 +134,7 @@ impl ContractClass {
 impl FromStr for ContractClass {
     type Err = ProgramError;
 
+    /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON.
     fn from_str(program_json: &str) -> Result<Self, ProgramError> {
         let contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_str(program_json)?;
