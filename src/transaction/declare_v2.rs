@@ -344,11 +344,19 @@ mod tests {
     #[test]
     fn create_declare_v2_test() {
         // read file to create sierra contract class
+        let version;
+        let path;
         #[cfg(not(feature = "cairo_1_tests"))]
-        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
 
         #[cfg(feature = "cairo_1_tests")]
-        let path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
@@ -366,7 +374,7 @@ mod tests {
             chain_id,
             sender_address,
             0,
-            1.into(),
+            version,
             [1.into()].to_vec(),
             Felt252::zero(),
             Some(Felt252::one()),
