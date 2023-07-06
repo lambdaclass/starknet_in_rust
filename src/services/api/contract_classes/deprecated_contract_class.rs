@@ -11,8 +11,7 @@ use getset::{CopyGetters, Getters};
 use serde_json::Value;
 use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::collections::HashMap;
-use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub type AbiType = Vec<ContractClassAbiEntry>;
 
@@ -110,24 +109,16 @@ impl ContractClass {
     where
         F: AsRef<Path>,
     {
-        Self::try_from(std::fs::read_to_string(path)?.as_str())
+        Self::from_str(std::fs::read_to_string(path)?.as_str())
     }
-}
 
-// -------------------------------
-//         From traits
-// -------------------------------
-
-impl TryFrom<&str> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(s: &str) -> Result<Self, ProgramError> {
+    pub fn from_str(program_json: &str) -> Result<Self, ProgramError> {
         let contract_class: starknet_api::deprecated_contract_class::ContractClass =
-            serde_json::from_str(s)?;
+            serde_json::from_str(program_json)?;
         let program = to_cairo_runner_program(&contract_class.program)?;
-        let entry_points_by_type =
-            convert_entry_points(contract_class.clone().entry_points_by_type);
-        let hinted_class_hash = compute_hinted_class_hash(&serde_json::from_str(s)?).unwrap();
+        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
+        let hinted_class_hash =
+            compute_hinted_class_hash(&serde_json::from_str(program_json)?).unwrap();
         Ok(ContractClass {
             hinted_class_hash,
             program,
@@ -135,31 +126,14 @@ impl TryFrom<&str> for ContractClass {
             abi: contract_class.abi,
         })
     }
-}
 
-impl TryFrom<&Path> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        Self::from_path(path)
-    }
-}
-
-impl TryFrom<&PathBuf> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
-        Self::from_path(path)
-    }
-}
-
-impl<T: std::io::Read> TryFrom<BufReader<T>> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(mut reader: BufReader<T>) -> Result<Self, Self::Error> {
+    pub fn from_reader<R>(mut reader: R) -> Result<Self, ProgramError>
+    where
+        R: std::io::Read,
+    {
         let mut s = String::new();
         reader.read_to_string(&mut s)?;
-        Self::try_from(s.as_str())
+        Self::from_str(s.as_str())
     }
 }
 
