@@ -28,7 +28,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-use super::Transaction;
+use super::{verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -98,7 +98,12 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        internal_declare.verify_version()?;
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
 
         Ok(internal_declare)
     }
@@ -108,23 +113,6 @@ impl Declare {
         Vec::from([bytes])
     }
 
-    pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            if !self.max_fee.is_zero() {
-                return Err(TransactionError::InvalidMaxFee);
-            }
-
-            if !self.nonce.is_zero() {
-                return Err(TransactionError::InvalidNonce);
-            }
-        }
-
-        if self.version.is_zero() && !self.signature.len().is_zero() {
-            return Err(TransactionError::InvalidSignature);
-        }
-        Ok(())
-    }
-
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     pub fn apply<S: State + StateReader>(
@@ -132,7 +120,7 @@ impl Declare {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.verify_version()?;
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();

@@ -24,6 +24,10 @@ pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
 pub(crate) const L1_HANDLER_VERSION: u64 = 0;
 
 lazy_static! {
+    pub static ref SUPPORTED_VERSIONS: [Felt252; 3] = [0.into(), 1.into(), 2.into()];
+}
+
+lazy_static! {
     // Ratios are taken from the `starknet_instance` CairoLayout object in cairo-lang.
     pub static ref DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS: HashMap<String, f64> =
         HashMap::from([
