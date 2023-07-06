@@ -7,12 +7,12 @@ use cairo_vm::serde::deserialize_program::{
 };
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
+use core::str::FromStr;
 use getset::{CopyGetters, Getters};
 use serde_json::Value;
 use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
 use std::collections::HashMap;
-use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub type AbiType = Vec<ContractClassAbiEntry>;
 
@@ -106,11 +106,24 @@ impl ContractClass {
         })
     }
 
-    pub fn new_from_path<F>(path: F) -> Result<Self, ProgramError>
+    /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
+    /// at the given file path.
+    pub fn from_path<F>(path: F) -> Result<Self, ProgramError>
     where
         F: AsRef<Path>,
     {
-        Self::try_from(std::fs::read_to_string(path)?.as_str())
+        Self::from_str(std::fs::read_to_string(path)?.as_str())
+    }
+
+    /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
+    /// given by a reader.
+    pub fn from_reader<R>(mut reader: R) -> Result<Self, ProgramError>
+    where
+        R: std::io::Read,
+    {
+        let mut s = String::new();
+        reader.read_to_string(&mut s)?;
+        Self::from_str(s.as_str())
     }
 }
 
@@ -118,56 +131,23 @@ impl ContractClass {
 //         From traits
 // -------------------------------
 
-impl TryFrom<&str> for ContractClass {
-    type Error = ProgramError;
+impl FromStr for ContractClass {
+    type Err = ProgramError;
 
-    fn try_from(s: &str) -> Result<Self, ProgramError> {
+    /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON.
+    fn from_str(program_json: &str) -> Result<Self, ProgramError> {
         let contract_class: starknet_api::deprecated_contract_class::ContractClass =
-            serde_json::from_str(s)?;
+            serde_json::from_str(program_json)?;
         let program = to_cairo_runner_program(&contract_class.program)?;
-        let entry_points_by_type =
-            convert_entry_points(contract_class.clone().entry_points_by_type);
-        let hinted_class_hash = compute_hinted_class_hash(&serde_json::from_str(s)?).unwrap();
+        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
+        let hinted_class_hash =
+            compute_hinted_class_hash(&serde_json::from_str(program_json)?).unwrap();
         Ok(ContractClass {
             hinted_class_hash,
             program,
             entry_points_by_type,
             abi: contract_class.abi,
         })
-    }
-}
-
-impl TryFrom<&Path> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        Self::new_from_path(path)
-    }
-}
-
-impl TryFrom<PathBuf> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        Self::new_from_path(path)
-    }
-}
-
-impl TryFrom<&PathBuf> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
-        Self::new_from_path(path)
-    }
-}
-
-impl<T: std::io::Read> TryFrom<BufReader<T>> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(mut reader: BufReader<T>) -> Result<Self, Self::Error> {
-        let mut s = String::new();
-        reader.read_to_string(&mut s)?;
-        Self::try_from(s.as_str())
     }
 }
 
@@ -243,7 +223,7 @@ mod tests {
     #[test]
     fn deserialize_contract_class() {
         // This specific contract compiles with --no_debug_info
-        let contract_class = ContractClass::new_from_path("starknet_programs/AccountPreset.json")
+        let contract_class = ContractClass::from_path("starknet_programs/AccountPreset.json")
             .expect("should be able to read file");
 
         // We check only some of the attributes. Ideally we would serialize
@@ -288,7 +268,7 @@ mod tests {
     #[test]
     fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad_try_from(
     ) {
-        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").expect("should be able to read file");
+        let contract_class = ContractClass::from_path("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").expect("should be able to read file");
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
@@ -302,7 +282,7 @@ mod tests {
     #[test]
     fn parse_abi_is_correct() {
         // This specific contract compiles with --no_debug_info
-        let res = ContractClass::new_from_path("starknet_programs/fibonacci.json");
+        let res = ContractClass::from_path("starknet_programs/fibonacci.json");
         let contract_class = res.expect("should be able to read file");
 
         let expected_abi = Some(vec![ContractClassAbiEntry::Function(
@@ -337,7 +317,7 @@ mod tests {
     #[test]
     fn parse_without_debug_info() {
         // This specific contract compiles with --no_debug_info
-        let res = ContractClass::new_from_path("starknet_programs/AccountPreset.json");
+        let res = ContractClass::from_path("starknet_programs/AccountPreset.json");
 
         let contract_class = res.expect("should be able to read file");
 
@@ -376,7 +356,7 @@ mod tests {
     #[test]
     fn parse_without_program_attributes() {
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x068dd0dd8a54ebdaa10563fbe193e6be1e0f7c423c0c3ce1e91c0b682a86b5f9
-        let res = ContractClass::new_from_path(
+        let res = ContractClass::from_path(
             "starknet_programs/raw_contract_classes/program_without_attributes.json",
         );
 
@@ -386,7 +366,7 @@ mod tests {
     #[test]
     fn parse_without_program_attributes_2() {
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x071b7f73b5e2b4f81f7cf01d4d1569ccba2921b3fa3170cf11cff3720dfe918e
-        let res = ContractClass::new_from_path(
+        let res = ContractClass::from_path(
             "starknet_programs/raw_contract_classes/program_without_attributes_2.json",
         );
 

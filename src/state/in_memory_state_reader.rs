@@ -167,10 +167,9 @@ mod tests {
         );
 
         let contract_class_key = [0; 32];
-        let contract_class = ContractClass::new_from_path(
-            "starknet_programs/raw_contract_classes/class_with_abi.json",
-        )
-        .unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
+                .unwrap();
 
         state_reader
             .class_hash_to_contract_class

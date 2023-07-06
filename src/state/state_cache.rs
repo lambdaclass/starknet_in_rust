@@ -190,10 +190,9 @@ mod tests {
     fn state_chache_set_initial_values() {
         let mut state_cache = StateCache::default();
         let address_to_class_hash = HashMap::from([(Address(10.into()), [8; 32])]);
-        let contract_class = ContractClass::new_from_path(
-            "starknet_programs/raw_contract_classes/class_with_abi.json",
-        )
-        .unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
+                .unwrap();
         let compiled_class = CompiledClass::Deprecated(Box::new(contract_class));
         let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
