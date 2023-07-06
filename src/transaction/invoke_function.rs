@@ -763,9 +763,8 @@ mod tests {
         ]);
 
         let result = internal_invoke_function.execute(&mut state, &block_context, 0);
-        let error_msg = "Fee transfer failure".to_string();
         assert!(result.is_err());
-        assert_matches!(result.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
+        assert_matches!(result.unwrap_err(), TransactionError::FeeTransferError(_));
     }
 
     #[test]

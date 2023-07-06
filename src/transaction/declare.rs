@@ -870,7 +870,7 @@ mod tests {
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
             internal_declare.execute(&mut state, &BlockContext::default()),
-            Err(TransactionError::FeeError(e)) if e == "Fee transfer failure"
+            Err(TransactionError::FeeTransferError(_))
         );
     }
 }

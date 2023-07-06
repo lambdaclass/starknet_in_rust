@@ -62,7 +62,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         false,
     );
     // TODO: Avoid masking the error from the fee transfer.
-    fee_transfer_exec.map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
+    fee_transfer_exec.map_err(|e| TransactionError::FeeTransferError(Box::new(e)))
 }
 
 // ----------------------------------------------------------------------------------------

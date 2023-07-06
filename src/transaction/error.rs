@@ -35,6 +35,8 @@ pub enum TransactionError {
     InvalidTransactionNonce(String, String),
     #[error("Actual fee exceeds max fee. Actual: {0}, Max: {1}")]
     ActualFeeExceedsMaxFee(u128, u128),
+    #[error("Fee transfer failure: {0}")]
+    FeeTransferError(Box<TransactionError>),
     #[error("{0}")]
     FeeError(String),
     #[error("Cairo resource names must be contained in fee weights dict")]
