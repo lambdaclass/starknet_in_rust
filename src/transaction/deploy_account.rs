@@ -402,7 +402,7 @@ mod tests {
     #[test]
     fn get_state_selector() {
         let path = PathBuf::from("starknet_programs/constructor.json");
-        let contract = ContractClass::try_from(path).unwrap();
+        let contract = ContractClass::from_path(path).unwrap();
 
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
@@ -439,7 +439,7 @@ mod tests {
     #[test]
     fn deploy_account_twice_should_fail() {
         let path = PathBuf::from("starknet_programs/constructor.json");
-        let contract = ContractClass::try_from(path).unwrap();
+        let contract = ContractClass::from_path(path).unwrap();
 
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);
@@ -493,7 +493,7 @@ mod tests {
     // Should panic at no calldata for constructor. Error managment not implemented yet.
     fn deploy_account_constructor_should_fail() {
         let path = PathBuf::from("starknet_programs/constructor.json");
-        let contract = ContractClass::try_from(path).unwrap();
+        let contract = ContractClass::from_path(path).unwrap();
 
         let hash = compute_deprecated_class_hash(&contract).unwrap();
         let class_hash = felt_to_hash(&hash);

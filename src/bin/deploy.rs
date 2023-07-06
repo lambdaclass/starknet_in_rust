@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use lazy_static::lazy_static;
 use starknet_in_rust::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
@@ -15,9 +13,9 @@ static ALLOC: MiMalloc = MiMalloc;
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::from_path(
         "starknet_programs/first_contract.json",
-    )).unwrap();
+    ).unwrap();
 }
 
 fn main() {

@@ -50,10 +50,7 @@ use starknet_in_rust::{
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
@@ -97,13 +94,6 @@ lazy_static! {
     static ref GAS_PRICE: u128 = 1;
 }
 
-fn get_contract_class<P>(path: P) -> Result<ContractClass, Box<dyn std::error::Error>>
-where
-    P: Into<PathBuf>,
-{
-    Ok(ContractClass::try_from(path.into())?)
-}
-
 pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
@@ -132,15 +122,15 @@ fn create_account_tx_test_state(
     let class_hash_to_class = HashMap::from([
         (
             test_account_contract_class_hash,
-            get_contract_class(ACCOUNT_CONTRACT_PATH)?,
+            ContractClass::from_path(ACCOUNT_CONTRACT_PATH)?,
         ),
         (
             test_contract_class_hash,
-            get_contract_class(TEST_CONTRACT_PATH)?,
+            ContractClass::from_path(TEST_CONTRACT_PATH)?,
         ),
         (
             test_erc20_class_hash,
-            get_contract_class(ERC20_CONTRACT_PATH)?,
+            ContractClass::from_path(ERC20_CONTRACT_PATH)?,
         ),
     ]);
 
@@ -223,15 +213,15 @@ fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
     let contract_classes_cache = ContractClassCache::from([
         (
             felt_to_hash(&TEST_CLASS_HASH.clone()),
-            get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+            ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
         ),
         (
             felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
-            get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+            ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
         ),
         (
             felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
-            get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+            ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
         ),
     ]);
 
@@ -376,15 +366,15 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
         HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                get_contract_class(ERC20_CONTRACT_PATH).unwrap(),
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
             ),
             (
                 felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap(),
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
             ),
             (
                 felt_to_hash(&TEST_CLASS_HASH),
-                get_contract_class(TEST_CONTRACT_PATH).unwrap(),
+                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
             ),
         ]),
         HashMap::new(),
@@ -545,7 +535,7 @@ fn test_create_account_tx_test_state() {
         .unwrap();
     assert_eq!(
         contract_class,
-        get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+        ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
     );
 }
 
@@ -686,7 +676,7 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
 
 fn declare_tx() -> Declare {
     Declare {
-        contract_class: get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap(),
+        contract_class: ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         tx_type: TransactionType::Declare,
@@ -1315,15 +1305,15 @@ fn expected_deploy_account_states() -> (
             HashMap::from([
                 (
                     felt_to_hash(&0x110.into()),
-                    ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap(),
+                    ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
                 ),
                 (
                     felt_to_hash(&0x111.into()),
-                    ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap(),
+                    ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
                 ),
                 (
                     felt_to_hash(&0x1010.into()),
-                    ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap(),
+                    ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
                 ),
             ]),
             HashMap::new(),
@@ -1428,13 +1418,13 @@ fn expected_deploy_account_states() -> (
     state_after
         .set_contract_class(
             &felt_to_hash(&0x1010.into()),
-            &ContractClass::try_from(PathBuf::from(ERC20_CONTRACT_PATH)).unwrap(),
+            &ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
         )
         .unwrap();
     state_after
         .set_contract_class(
             &felt_to_hash(&0x111.into()),
-            &ContractClass::try_from(PathBuf::from(ACCOUNT_CONTRACT_PATH)).unwrap(),
+            &ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
         )
         .unwrap();
 
@@ -1505,15 +1495,15 @@ fn test_state_for_declare_tx() {
         &mut HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
             ),
             (
                 felt_to_hash(&TEST_CLASS_HASH),
-                get_contract_class(TEST_CONTRACT_PATH).unwrap()
+                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap()
             ),
             (
                 felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap()
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap()
             ),
         ])
     );
@@ -1609,15 +1599,15 @@ fn test_state_for_declare_tx() {
         &Some(HashMap::from([
             (
                 felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
-                get_contract_class(TEST_EMPTY_CONTRACT_PATH).unwrap()
+                ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap()
             ),
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                get_contract_class(ERC20_CONTRACT_PATH).unwrap()
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
             ),
             (
                 felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                get_contract_class(ACCOUNT_CONTRACT_PATH).unwrap()
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap()
             ),
         ]))
     );

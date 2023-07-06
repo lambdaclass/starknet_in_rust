@@ -40,8 +40,8 @@ fn test_contract<'a>(
     arguments: impl Into<Vec<Felt252>>,
     error_msg: &str,
 ) {
-    let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
-        .expect("Could not load contract from JSON");
+    let contract_class =
+        ContractClass::from_path(contract_path).expect("Could not load contract from JSON");
 
     let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
@@ -71,7 +71,7 @@ fn test_contract<'a>(
         let mut contract_class_cache = ContractClassCache::new();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
-            let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+            let contract_class = ContractClass::from_path(contract_path)
                 .expect("Could not load extra contract from JSON");
 
             contract_class_cache.insert(class_hash, contract_class.clone());

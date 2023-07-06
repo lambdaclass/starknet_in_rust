@@ -20,7 +20,7 @@ use starknet_in_rust::{
     utils::Address,
     CasmContractClass,
 };
-use std::{collections::HashSet, fs::File, io::BufReader};
+use std::collections::HashSet;
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -33,10 +33,8 @@ fn internal_deploy_account() {
 
     state.set_contract_classes(Default::default()).unwrap();
 
-    let contract_class = ContractClass::try_from(BufReader::new(
-        File::open("starknet_programs/account_without_validation.json").unwrap(),
-    ))
-    .unwrap();
+    let contract_class =
+        ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
     let class_hash = compute_deprecated_class_hash(&contract_class).unwrap();
     let class_hash_bytes = class_hash.to_be_bytes();
