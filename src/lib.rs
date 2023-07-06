@@ -191,8 +191,6 @@ pub fn execute_transaction<T: State + StateReader>(
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
-    use std::fs::File;
-    use std::io::BufReader;
     use std::path::PathBuf;
 
     use crate::core::contract_address::compute_deprecated_class_hash;
@@ -238,9 +236,9 @@ mod test {
 
     lazy_static! {
         // include_str! doesn't seem to work in CI
-        static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(BufReader::new(File::open(
+        static ref CONTRACT_CLASS: ContractClass = ContractClass::from_path(
             "starknet_programs/account_without_validation.json",
-        ).unwrap()))
+        )
         .unwrap();
         static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
         static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
@@ -257,8 +255,7 @@ mod test {
 
     #[test]
     fn estimate_fee_test() {
-        let contract_class: ContractClass =
-            ContractClass::try_from(PathBuf::from(TEST_CONTRACT_PATH)).unwrap();
+        let contract_class: ContractClass = ContractClass::from_path(TEST_CONTRACT_PATH).unwrap();
 
         let entrypoints = contract_class.entry_points_by_type;
         let entrypoint_selector = entrypoints.get(&EntryPointType::External).unwrap()[0].selector();
@@ -351,8 +348,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash = [1; 32];
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/l1l2.json")).unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
@@ -443,7 +439,7 @@ mod test {
     #[test]
     fn test_skip_execute_flag() {
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         //  ------------ contract data --------------------
         // hack store account contract
@@ -571,7 +567,7 @@ mod test {
     #[test]
     fn test_skip_execute_and_validate_flags() {
         let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::try_from(path).unwrap();
+        let contract_class = ContractClass::from_path(path).unwrap();
 
         //  ------------ contract data --------------------
         // hack store account contract
@@ -902,8 +898,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash = [1; 32];
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/l1l2.json")).unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();

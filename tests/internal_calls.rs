@@ -13,13 +13,11 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
-use std::path::PathBuf;
 
 #[test]
 fn test_internal_calls() {
-    let contract_class =
-        ContractClass::try_from(PathBuf::from("starknet_programs/internal_calls.json"))
-            .expect("Could not load contract from JSON");
+    let contract_class = ContractClass::from_path("starknet_programs/internal_calls.json")
+        .expect("Could not load contract from JSON");
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::create_for_testing(

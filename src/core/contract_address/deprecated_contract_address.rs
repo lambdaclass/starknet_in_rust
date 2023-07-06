@@ -25,14 +25,13 @@ fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
 ) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
-    let program_length = contract_class.program().iter_data().count();
-
     let entry_points = contract_class
         .entry_points_by_type()
         .get(entry_point_type)
         .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
 
-    let program_len = program_length;
+    let program_len = contract_class.program().iter_data().count();
+
     for entry_point in entry_points {
         if entry_point.offset() > program_len {
             return Err(ContractAddressError::InvalidOffset(entry_point.offset()));
@@ -358,10 +357,9 @@ mod tests {
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {
-        let contract_class = ContractClass::new_from_path(
-            "starknet_programs/raw_contract_classes/class_with_abi.json",
-        )
-        .unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
+                .unwrap();
 
         assert_eq!(
             contract_class.hinted_class_hash(),
@@ -375,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_compute_class_hash_1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4() {
-        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4.json").unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/raw_contract_classes/0x1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4.json").unwrap();
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
@@ -390,7 +388,7 @@ mod tests {
     #[test]
     fn test_compute_class_hash_0x03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e()
     {
-        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e.json").unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/raw_contract_classes/0x03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e.json").unwrap();
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
@@ -405,7 +403,7 @@ mod tests {
     #[test]
     fn test_compute_class_hash_0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918()
     {
-        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918.json").unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/raw_contract_classes/0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918.json").unwrap();
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
@@ -420,7 +418,7 @@ mod tests {
     #[test]
     fn test_compute_class_hash_0x02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33()
     {
-        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33.json").unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/raw_contract_classes/0x02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33.json").unwrap();
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
@@ -437,7 +435,7 @@ mod tests {
     #[test]
     fn test_compute_class_hash_0x00801ad5dc7c995addf7fbce1c4c74413586acb44f9ff44ba903a08a6153fa80()
     {
-        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x00801ad5dc7c995addf7fbce1c4c74413586acb44f9ff44ba903a08a6153fa80.json").unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/raw_contract_classes/0x00801ad5dc7c995addf7fbce1c4c74413586acb44f9ff44ba903a08a6153fa80.json").unwrap();
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
