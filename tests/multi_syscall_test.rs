@@ -7,9 +7,9 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
     felt::Felt252,
 };
+use starknet_in_rust::EntryPointType;
 use num_bigint::BigUint;
 use num_traits::{Num, Zero};
-use starknet_contract_class::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
