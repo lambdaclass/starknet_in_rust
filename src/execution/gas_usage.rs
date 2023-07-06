@@ -7,11 +7,11 @@ use crate::services::eth_definitions::eth_gas_constants::*;
 /// For information about the fee calculation visit the [starknet documentation](https://docs.starknet.io/documentation/architecture_and_concepts/Fees/fee-mechanism/).
 ///
 /// # Parameters:
-/// - `l2_to_l1_messages`: A vector of `L2toL1MessageInfo` objects representing the messages from L2 to L1.
+/// - `l2_to_l1_messages`: A vector of [`L2toL1MessageInfo`] objects representing the messages from L2 to L1.
 /// - `n_modified_contracts`: The number of contracts modified by the transaction.
 /// - `n_storage_changes`: The number of storage changes made by the transaction.
 /// - `l1_handler_payload_size`: The payload size of the L1 to L2 message if and only if the gas usage is being
-/// calculated for an InternalInvokeFunction of type L1 handler. Otherwise, it should be `None`.
+/// calculated for an InvokeFunction of type L1 handler. Otherwise, it should be `None`.
 /// - `n_deployments`: The number of contracts deployed by the transaction.
 ///
 /// # Returns:
@@ -74,9 +74,9 @@ fn starknet_gas_usage(
 /// Calculates the amount of `felt252` added to the output message's segment by the given messages.
 ///
 /// # Parameters:
-/// - `l2_to_l1_messages`: A slice of `L2toL1MessageInfo` objects representing the messages from L2 to L1.
+/// - `l2_to_l1_messages`: A slice of [`L2toL1MessageInfo`] objects representing the messages from L2 to L1.
 /// - `l1_handler_payload_size`: The payload size of the L1 to L2 message if and only if the gas usage is being
-/// calculated for an InternalInvokeFunction of type L1 handler. Otherwise, it should be `None`.
+/// calculated for an `InvokeFunction` of type L1 handler. Otherwise, it should be `None`.
 ///
 /// # Returns:
 /// The length of the message segment.
@@ -118,7 +118,7 @@ pub fn get_onchain_data_segment_length(
 ///
 /// # Parameters:
 /// - `l1_handler_payload_size`: The payload size of the L1 to L2 message if and only if the gas usage is being
-/// calculated for an InternalInvokeFunction of type L1 handler. Otherwise, it should be `None`.
+/// calculated for an InvokeFunction of type L1 handler. Otherwise, it should be `None`.
 ///
 /// # Returns:
 ///
@@ -136,7 +136,7 @@ pub fn get_consumed_message_to_l2_emissions_cost(l1_handler: Option<usize>) -> u
 /// Calculates the cost of LogMessageToL1 event emissions caused by the given messages.
 ///
 /// # Parameters:
-/// - `l2_to_l1_messages`: A slice of `L2toL1MessageInfo` objects representing the messages from L2 to L1.
+/// - `l2_to_l1_messages`: A slice of [`L2toL1MessageInfo`] objects representing the messages from L2 to L1.
 ///
 /// # Returns:
 ///
