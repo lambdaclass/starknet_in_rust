@@ -245,7 +245,7 @@ impl Deploy {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf};
+    use std::collections::HashMap;
 
     use super::*;
     use crate::{
@@ -340,8 +340,8 @@ mod tests {
         let state_reader = InMemoryStateReader::default();
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
-        let contract_path = PathBuf::from("starknet_programs/amm.json");
-        let contract_class = ContractClass::try_from(contract_path.as_path()).unwrap();
+        let contract_path = "starknet_programs/amm.json";
+        let contract_class = ContractClass::from_path(contract_path).unwrap();
 
         let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
@@ -373,9 +373,9 @@ mod tests {
 
     #[test]
     fn internal_deploy_computing_classhash_should_fail() {
-        let contract_path = PathBuf::from("starknet_programs/amm.json");
+        let contract_path = "starknet_programs/amm.json";
         // Take a contrat class to copy the program
-        let contract_class = ContractClass::try_from(contract_path.as_path()).unwrap();
+        let contract_class = ContractClass::from_path(contract_path).unwrap();
 
         // Make a new contract class with the same program but with errors
         let error_contract_class = ContractClass {

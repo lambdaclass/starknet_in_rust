@@ -7,6 +7,7 @@ use cairo_vm::serde::deserialize_program::{
 };
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
+use core::str::FromStr;
 use getset::{CopyGetters, Getters};
 use serde_json::Value;
 use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
@@ -112,7 +113,24 @@ impl ContractClass {
         Self::from_str(std::fs::read_to_string(path)?.as_str())
     }
 
-    pub fn from_str(program_json: &str) -> Result<Self, ProgramError> {
+    pub fn from_reader<R>(mut reader: R) -> Result<Self, ProgramError>
+    where
+        R: std::io::Read,
+    {
+        let mut s = String::new();
+        reader.read_to_string(&mut s)?;
+        Self::from_str(s.as_str())
+    }
+}
+
+// -------------------------------
+//         From traits
+// -------------------------------
+
+impl FromStr for ContractClass {
+    type Err = ProgramError;
+
+    fn from_str(program_json: &str) -> Result<Self, ProgramError> {
         let contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_str(program_json)?;
         let program = to_cairo_runner_program(&contract_class.program)?;
@@ -125,15 +143,6 @@ impl ContractClass {
             entry_points_by_type,
             abi: contract_class.abi,
         })
-    }
-
-    pub fn from_reader<R>(mut reader: R) -> Result<Self, ProgramError>
-    where
-        R: std::io::Read,
-    {
-        let mut s = String::new();
-        reader.read_to_string(&mut s)?;
-        Self::from_str(s.as_str())
     }
 }
 
