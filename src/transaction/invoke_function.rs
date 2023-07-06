@@ -706,6 +706,7 @@ mod tests {
 
     #[test]
     // Test fee calculation is done correctly but payment to sequencer fails due to been WIP.
+    // TODO: update this test
     fn test_execute_invoke_fee_payment_to_sequencer_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
@@ -761,10 +762,10 @@ mod tests {
             (String::from("range_check_builtin"), 70.into()),
         ]);
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
+        let result = internal_invoke_function.execute(&mut state, &block_context, 0);
         let error_msg = "Fee transfer failure".to_string();
-        assert!(expected_error.is_err());
-        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
+        assert!(result.is_err());
+        assert_matches!(result.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
     }
 
     #[test]
