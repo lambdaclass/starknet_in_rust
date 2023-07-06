@@ -3,7 +3,7 @@ pub mod state;
 pub mod state_error;
 pub mod type_utils;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
 use cairo_vm::felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -79,13 +79,6 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
     )
 }
 
-pub fn get_contract_class<P>(path: P) -> Result<ContractClass, Box<dyn std::error::Error>>
-where
-    P: Into<PathBuf>,
-{
-    Ok(ContractClass::try_from(path.into())?)
-}
-
 pub fn create_account_tx_test_state(
 ) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
     let block_context = new_starknet_block_context_for_testing();
@@ -96,15 +89,15 @@ pub fn create_account_tx_test_state(
     let class_hash_to_class = HashMap::from([
         (
             test_account_contract_class_hash,
-            get_contract_class(ACCOUNT_CONTRACT_PATH)?,
+            ContractClass::from_path(ACCOUNT_CONTRACT_PATH)?,
         ),
         (
             test_contract_class_hash,
-            get_contract_class(TEST_CONTRACT_PATH)?,
+            ContractClass::from_path(TEST_CONTRACT_PATH)?,
         ),
         (
             test_erc20_class_hash,
-            get_contract_class(ERC20_CONTRACT_PATH)?,
+            ContractClass::from_path(ERC20_CONTRACT_PATH)?,
         ),
     ]);
 

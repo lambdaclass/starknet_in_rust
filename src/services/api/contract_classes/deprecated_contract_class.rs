@@ -106,7 +106,7 @@ impl ContractClass {
         })
     }
 
-    pub fn new_from_path<F>(path: F) -> Result<Self, ProgramError>
+    pub fn from_path<F>(path: F) -> Result<Self, ProgramError>
     where
         F: AsRef<Path>,
     {
@@ -141,15 +141,7 @@ impl TryFrom<&Path> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        Self::new_from_path(path)
-    }
-}
-
-impl TryFrom<PathBuf> for ContractClass {
-    type Error = ProgramError;
-
-    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        Self::new_from_path(path)
+        Self::from_path(path)
     }
 }
 
@@ -157,7 +149,7 @@ impl TryFrom<&PathBuf> for ContractClass {
     type Error = ProgramError;
 
     fn try_from(path: &PathBuf) -> Result<Self, Self::Error> {
-        Self::new_from_path(path)
+        Self::from_path(path)
     }
 }
 
@@ -243,7 +235,7 @@ mod tests {
     #[test]
     fn deserialize_contract_class() {
         // This specific contract compiles with --no_debug_info
-        let contract_class = ContractClass::new_from_path("starknet_programs/AccountPreset.json")
+        let contract_class = ContractClass::from_path("starknet_programs/AccountPreset.json")
             .expect("should be able to read file");
 
         // We check only some of the attributes. Ideally we would serialize
@@ -288,7 +280,7 @@ mod tests {
     #[test]
     fn test_compute_class_hash_0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad_try_from(
     ) {
-        let contract_class = ContractClass::new_from_path("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").expect("should be able to read file");
+        let contract_class = ContractClass::from_path("starknet_programs/raw_contract_classes/0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad.json").expect("should be able to read file");
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
@@ -302,7 +294,7 @@ mod tests {
     #[test]
     fn parse_abi_is_correct() {
         // This specific contract compiles with --no_debug_info
-        let res = ContractClass::new_from_path("starknet_programs/fibonacci.json");
+        let res = ContractClass::from_path("starknet_programs/fibonacci.json");
         let contract_class = res.expect("should be able to read file");
 
         let expected_abi = Some(vec![ContractClassAbiEntry::Function(
@@ -337,7 +329,7 @@ mod tests {
     #[test]
     fn parse_without_debug_info() {
         // This specific contract compiles with --no_debug_info
-        let res = ContractClass::new_from_path("starknet_programs/AccountPreset.json");
+        let res = ContractClass::from_path("starknet_programs/AccountPreset.json");
 
         let contract_class = res.expect("should be able to read file");
 
@@ -376,7 +368,7 @@ mod tests {
     #[test]
     fn parse_without_program_attributes() {
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x068dd0dd8a54ebdaa10563fbe193e6be1e0f7c423c0c3ce1e91c0b682a86b5f9
-        let res = ContractClass::new_from_path(
+        let res = ContractClass::from_path(
             "starknet_programs/raw_contract_classes/program_without_attributes.json",
         );
 
@@ -386,7 +378,7 @@ mod tests {
     #[test]
     fn parse_without_program_attributes_2() {
         // This specific contract was extracted from: https://testnet.starkscan.co/class/0x071b7f73b5e2b4f81f7cf01d4d1569ccba2921b3fa3170cf11cff3720dfe918e
-        let res = ContractClass::new_from_path(
+        let res = ContractClass::from_path(
             "starknet_programs/raw_contract_classes/program_without_attributes_2.json",
         );
 
