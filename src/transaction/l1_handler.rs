@@ -181,10 +181,7 @@ impl L1Handler {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        path::PathBuf,
-    };
+    use std::collections::{HashMap, HashSet};
 
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use cairo_vm::{
@@ -229,8 +226,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash = [1; 32];
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/l1l2.json")).unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();

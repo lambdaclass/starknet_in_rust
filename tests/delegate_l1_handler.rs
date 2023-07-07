@@ -30,7 +30,7 @@ fn delegate_l1_handler() {
     // Add get_number.cairo contract to the state
 
     let path = PathBuf::from("starknet_programs/get_number_l1_handler.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
+    let contract_class = ContractClass::from_path(path).unwrap();
 
     let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
     let class_hash = [2; 32];
@@ -49,7 +49,7 @@ fn delegate_l1_handler() {
     // ---------------------------------------------------------
 
     let path = PathBuf::from("starknet_programs/delegate_l1_handler.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
+    let contract_class = ContractClass::from_path(path).unwrap();
 
     // External entry point, delegate_call function delegate.cairo:L13
     let test_delegate_l1_handler_selector =

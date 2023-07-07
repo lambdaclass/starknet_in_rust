@@ -19,9 +19,9 @@ static ALLOC: MiMalloc = MiMalloc;
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(PathBuf::from(
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::from_path(
         "starknet_programs/fibonacci.json",
-    )).unwrap();
+    ).unwrap();
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/fibonacci.json");
 

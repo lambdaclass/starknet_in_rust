@@ -17,14 +17,13 @@ use starknet_in_rust::{
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{fs::File, hint::black_box, io::BufReader};
+use std::hint::black_box;
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
-    static ref CONTRACT_CLASS: ContractClass = ContractClass::try_from(BufReader::new(File::open(
+    static ref CONTRACT_CLASS: ContractClass = ContractClass::from_path(
         "starknet_programs/account_without_validation.json",
-    ).unwrap()))
-    .unwrap();
+    ).unwrap();
     static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
     static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
     static ref SALT: Felt252 = felt_str!(
