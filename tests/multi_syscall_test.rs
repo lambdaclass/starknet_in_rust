@@ -37,7 +37,7 @@ fn test_multiple_syscall() {
         .insert(address.clone(), class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
@@ -225,12 +225,12 @@ fn test_multiple_syscall() {
         // Create the deploy contract class
         let entrypoint_selector = &entrypoints.external.get(9).unwrap().selector;
         contract_class_cache.insert(class_hash, contract_class);
-        contract_class_cache.insert(test_class_hash, test_contract_class.clone());
+        contract_class_cache.insert(test_class_hash, test_contract_class);
         let call_info = test_syscall(
             entrypoint_selector,
-            address.clone(),
-            calldata.clone(),
-            caller_address.clone(),
+            address,
+            calldata,
+            caller_address,
             entry_point_type,
             class_hash,
             &mut state,
@@ -249,10 +249,10 @@ fn test_syscall(
     state: &mut CachedState<InMemoryStateReader>,
 ) -> CallInfo {
     let exec_entry_point = ExecutionEntryPoint::new(
-        address.clone(),
-        calldata.clone(),
-        Felt252::new(entrypoint_selector.clone()),
-        caller_address.clone(),
+        address,
+        calldata,
+        Felt252::new(entrypoint_selector),
+        caller_address,
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
@@ -271,7 +271,7 @@ fn test_syscall(
         TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-    let call_info = exec_entry_point
+    exec_entry_point
         .execute(
             state,
             &block_context,
@@ -279,6 +279,5 @@ fn test_syscall(
             &mut tx_execution_context,
             false,
         )
-        .unwrap();
-    call_info
+        .unwrap()
 }
