@@ -11,7 +11,7 @@ use cairo_vm::vm::{
 };
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
-use num_traits::{Num, One, ToPrimitive, Zero};
+use num_traits::{FromPrimitive, Num, One, Zero};
 use starknet_in_rust::core::errors::state_errors::StateError;
 use starknet_in_rust::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -20,6 +20,7 @@ use starknet_in_rust::execution::execution_entry_point::ExecutionEntryPoint;
 use starknet_in_rust::execution::TransactionExecutionContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::ExecutionResourcesManager;
+use starknet_in_rust::transaction::fee::calculate_tx_fee;
 use starknet_in_rust::transaction::{DeclareV2, Deploy};
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
@@ -75,6 +76,7 @@ lazy_static! {
     static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("27727");
 
     // Storage keys.
+    // NOTE: this key corresponds to the lower 128 bits of an U256
     static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt252 =
         felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
     static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt252 =
@@ -88,8 +90,8 @@ lazy_static! {
         felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
 
     // Others.
-    // Blockifier had this value hardcoded to 2.
-    static ref ACTUAL_FEE: Felt252 = Felt252::zero();
+    static ref INITIAL_BALANCE: Felt252 = Felt252::from_u128(100000).unwrap();
+    static ref GAS_PRICE: u128 = 1;
 }
 
 pub fn new_starknet_block_context_for_testing() -> BlockContext {
@@ -97,7 +99,7 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
         StarknetOsConfig::new(
             StarknetChainId::TestNet,
             TEST_ERC20_CONTRACT_ADDRESS.clone(),
-            0,
+            *GAS_PRICE,
         ),
         0,
         0,
@@ -151,7 +153,7 @@ fn create_account_tx_test_state(
 
     let storage_view = HashMap::from([(
         (test_erc20_address, test_erc20_account_balance_key),
-        ACTUAL_FEE.clone(),
+        INITIAL_BALANCE.clone(),
     )]);
 
     let cached_state = CachedState::new(
@@ -205,7 +207,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
     )
 }
 
-fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
+fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
     let contract_classes_cache = ContractClassCache::from([
@@ -226,12 +228,12 @@ fn expected_state_after_tx() -> CachedState<InMemoryStateReader> {
     CachedState::new_for_testing(
         in_memory_state_reader,
         Some(contract_classes_cache),
-        state_cache_after_invoke_tx(),
+        state_cache_after_invoke_tx(fee),
         Some(HashMap::new()),
     )
 }
 
-fn state_cache_after_invoke_tx() -> StateCache {
+fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
     let class_hash_initial_values = HashMap::from([
         (
             TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -263,7 +265,7 @@ fn state_cache_after_invoke_tx() -> StateCache {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
             ),
-            Felt252::zero(),
+            INITIAL_BALANCE.clone(),
         ),
         (
             (
@@ -291,14 +293,14 @@ fn state_cache_after_invoke_tx() -> StateCache {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
             ),
-            Felt252::from(0),
+            Felt252::from(fee),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
             ),
-            Felt252::from(0),
+            INITIAL_BALANCE.clone() - Felt252::from(fee),
         ),
         (
             (
@@ -359,7 +361,7 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
             ),
-            Felt252::from(0),
+            INITIAL_BALANCE.clone(),
         )]),
         HashMap::from([
             (
@@ -455,7 +457,7 @@ fn expected_fee_transfer_call_info(
             ],
         ]),
         storage_read_values: vec![
-            Felt252::zero(),
+            INITIAL_BALANCE.clone(),
             Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
@@ -475,8 +477,8 @@ fn expected_fee_transfer_call_info(
 fn validate_final_balances<S>(
     state: &mut S,
     block_context: &BlockContext,
-    expected_sequencer_balance: Felt252,
     erc20_account_balance_storage_key: &ClassHash,
+    fee: u128,
 ) where
     S: State + StateReader,
 {
@@ -489,7 +491,10 @@ fn validate_final_balances<S>(
             *erc20_account_balance_storage_key,
         ))
         .unwrap();
-    assert_eq!(account_balance, Felt252::zero());
+    assert_eq!(
+        account_balance,
+        INITIAL_BALANCE.clone() - Felt252::from(fee)
+    );
 
     let sequencer_balance = state
         .get_storage_at(&(
@@ -500,7 +505,7 @@ fn validate_final_balances<S>(
             felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
         ))
         .unwrap();
-    assert_eq!(sequencer_balance, expected_sequencer_balance);
+    assert_eq!(sequencer_balance, fee.into());
 }
 
 #[test]
@@ -518,7 +523,7 @@ fn test_create_account_tx_test_state() {
             felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
         ))
         .unwrap();
-    assert_eq!(value, *ACTUAL_FEE);
+    assert_eq!(value, *INITIAL_BALANCE);
 
     let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
     assert_eq!(class_hash, felt_to_hash(&TEST_CLASS_HASH));
@@ -538,7 +543,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        2,
+        5000,
         TRANSACTION_VERSION.clone(),
         calldata,
         vec![],
@@ -549,7 +554,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
     .unwrap()
 }
 
-fn expected_fee_transfer_info() -> CallInfo {
+fn expected_fee_transfer_info(fee: u128) -> CallInfo {
     CallInfo {
         failure_flag: false,
         gas_consumed: 0,
@@ -560,7 +565,7 @@ fn expected_fee_transfer_info() -> CallInfo {
         class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
         entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
-        calldata: vec![Felt252::from(4096), Felt252::zero(), Felt252::zero()],
+        calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
         execution_resources: ExecutionResources {
             n_steps: 525,
@@ -578,12 +583,12 @@ fn expected_fee_transfer_info() -> CallInfo {
             data: vec![
                 Felt252::from(257),
                 Felt252::from(4096),
-                Felt252::zero(),
+                Felt252::from(fee),
                 Felt252::zero(),
             ],
         }],
         storage_read_values: vec![
-            Felt252::zero(),
+            INITIAL_BALANCE.clone(),
             Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
@@ -609,7 +614,7 @@ fn expected_fee_transfer_info() -> CallInfo {
     }
 }
 
-fn expected_fib_fee_transfer_info() -> CallInfo {
+fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
     CallInfo {
         failure_flag: false,
         gas_consumed: 0,
@@ -620,7 +625,7 @@ fn expected_fib_fee_transfer_info() -> CallInfo {
         class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
         entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
-        calldata: vec![Felt252::from(4096), Felt252::zero(), Felt252::zero()],
+        calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
         execution_resources: ExecutionResources {
             n_steps: 525,
@@ -638,14 +643,14 @@ fn expected_fib_fee_transfer_info() -> CallInfo {
             data: vec![
                 Felt252::from(257),
                 Felt252::from(4096),
-                Felt252::zero(),
+                Felt252::from(fee),
                 Felt252::zero(),
             ],
         }],
         storage_read_values: vec![
+            INITIAL_BALANCE.clone() - Felt252::from(10),
             Felt252::zero(),
-            Felt252::zero(),
-            Felt252::zero(),
+            Felt252::from(10),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
@@ -677,7 +682,7 @@ fn declare_tx() -> Declare {
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
-        max_fee: 2,
+        max_fee: 100000,
         signature: vec![],
         nonce: 0.into(),
         hash_value: 0.into(),
@@ -699,7 +704,7 @@ fn declarev2_tx() -> DeclareV2 {
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
-        max_fee: 2,
+        max_fee: 5000,
         signature: vec![],
         nonce: 0.into(),
         hash_value: 0.into(),
@@ -727,7 +732,7 @@ fn deploy_fib_syscall() -> Deploy {
     }
 }
 
-fn expected_declare_fee_transfer_info() -> CallInfo {
+fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
     CallInfo {
         caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         call_type: Some(CallType::Call),
@@ -737,7 +742,7 @@ fn expected_declare_fee_transfer_info() -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             TEST_SEQUENCER_ADDRESS.0.clone(),
-            Felt252::zero(),
+            Felt252::from(fee),
             Felt252::zero(),
         ],
         retdata: vec![1.into()],
@@ -749,12 +754,12 @@ fn expected_declare_fee_transfer_info() -> CallInfo {
             vec![
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone().0,
                 TEST_SEQUENCER_ADDRESS.clone().0,
-                0.into(),
+                Felt252::from(fee),
                 0.into(),
             ],
         )],
         storage_read_values: vec![
-            Felt252::zero(),
+            INITIAL_BALANCE.clone(),
             Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
@@ -801,6 +806,13 @@ fn test_declare_tx() {
     // Check ContractClass is set after the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
+    let resources = HashMap::from([
+        ("range_check_builtin".to_string(), 57),
+        ("pedersen_builtin".to_string(), 15),
+        ("l1_gas_usage".to_string(), 0),
+    ]);
+    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+
     let expected_execution_info = TransactionExecutionInfo::new(
         Some(CallInfo {
             call_type: Some(CallType::Call),
@@ -816,13 +828,9 @@ fn test_declare_tx() {
             ..Default::default()
         }),
         None,
-        Some(expected_declare_fee_transfer_info()),
-        0,
-        HashMap::from([
-            ("range_check_builtin".to_string(), 57),
-            ("pedersen_builtin".to_string(), 15),
-            ("l1_gas_usage".to_string(), 0),
-        ]),
+        Some(expected_declare_fee_transfer_info(fee)),
+        fee,
+        resources,
         Some(TransactionType::Declare),
     );
 
@@ -845,6 +853,13 @@ fn test_declarev2_tx() {
         .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
         .is_ok());
 
+    let resources = HashMap::from([
+        ("range_check_builtin".to_string(), 57),
+        ("pedersen_builtin".to_string(), 15),
+        ("l1_gas_usage".to_string(), 0),
+    ]);
+    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+
     let expected_execution_info = TransactionExecutionInfo::new(
         Some(CallInfo {
             call_type: Some(CallType::Call),
@@ -860,13 +875,9 @@ fn test_declarev2_tx() {
             ..Default::default()
         }),
         None,
-        Some(expected_declare_fee_transfer_info()),
-        0,
-        HashMap::from([
-            ("range_check_builtin".to_string(), 57),
-            ("pedersen_builtin".to_string(), 15),
-            ("l1_gas_usage".to_string(), 0),
-        ]),
+        Some(expected_declare_fee_transfer_info(fee)),
+        fee,
+        resources,
         Some(TransactionType::Declare),
     );
 
@@ -1040,39 +1051,45 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
     }
 }
 
-fn expected_transaction_execution_info() -> TransactionExecutionInfo {
+fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
+    let resources = HashMap::from([
+        ("pedersen_builtin".to_string(), 16),
+        ("l1_gas_usage".to_string(), 0),
+        ("range_check_builtin".to_string(), 72),
+    ]);
+    let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
         Some(expected_validate_call_info_2()),
         Some(expected_execute_call_info()),
-        Some(expected_fee_transfer_info()),
-        0,
-        HashMap::from([
-            ("pedersen_builtin".to_string(), 16),
-            ("l1_gas_usage".to_string(), 0),
-            ("range_check_builtin".to_string(), 72),
-        ]),
+        Some(expected_fee_transfer_info(fee)),
+        fee,
+        resources,
         Some(TransactionType::InvokeFunction),
     )
 }
 
-fn expected_fib_transaction_execution_info() -> TransactionExecutionInfo {
+fn expected_fib_transaction_execution_info(
+    block_context: &BlockContext,
+) -> TransactionExecutionInfo {
+    let resources = HashMap::from([
+        ("l1_gas_usage".to_string(), 4896),
+        ("pedersen_builtin".to_string(), 16),
+        ("range_check_builtin".to_string(), 75),
+    ]);
+    let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
         Some(expected_fib_validate_call_info_2()),
         Some(expected_fib_execute_call_info()),
-        Some(expected_fib_fee_transfer_info()),
-        0,
-        HashMap::from([
-            ("pedersen_builtin".to_string(), 16),
-            ("l1_gas_usage".to_string(), 0),
-            ("range_check_builtin".to_string(), 75),
-        ]),
+        Some(expected_fib_fee_transfer_info(fee)),
+        fee,
+        resources,
         Some(TransactionType::InvokeFunction),
     )
 }
 
 #[test]
 fn test_invoke_tx() {
-    let (starknet_general_context, state) = &mut create_account_tx_test_state().unwrap();
+    let (block_context, state) = &mut create_account_tx_test_state().unwrap();
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
         test_contract_address, // CONTRACT_ADDRESS
@@ -1084,10 +1101,8 @@ fn test_invoke_tx() {
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
-    let result = invoke_tx
-        .execute(state, starknet_general_context, 0)
-        .unwrap();
-    let expected_execution_info = expected_transaction_execution_info();
+    let result = invoke_tx.execute(state, block_context, 0).unwrap();
+    let expected_execution_info = expected_transaction_execution_info(block_context);
 
     assert_eq!(result, expected_execution_info);
 }
@@ -1107,11 +1122,11 @@ fn test_invoke_tx_state() {
     ];
     let invoke_tx = invoke_tx(calldata);
 
-    invoke_tx
+    let result = invoke_tx
         .execute(state, starknet_general_context, 0)
         .unwrap();
 
-    let expected_final_state = expected_state_after_tx();
+    let expected_final_state = expected_state_after_tx(result.actual_fee);
 
     assert_eq!(*state, expected_final_state);
 }
@@ -1141,12 +1156,12 @@ fn test_invoke_with_declarev2_tx() {
     ];
     let invoke_tx = invoke_tx(calldata);
 
-    let expected_gas_consumed = 4380;
+    let expected_gas_consumed = 4908;
     let result = invoke_tx
         .execute(state, block_context, expected_gas_consumed)
         .unwrap();
 
-    let expected_execution_info = expected_fib_transaction_execution_info();
+    let expected_execution_info = expected_fib_transaction_execution_info(block_context);
     assert_eq!(result, expected_execution_info);
 }
 
@@ -1154,9 +1169,11 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
+    let expected_fee = 3684;
+
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-        2,
+        expected_fee,
         TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
@@ -1173,9 +1190,9 @@ fn test_deploy_account() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes(),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
         ),
-        ACTUAL_FEE.clone(),
+        INITIAL_BALANCE.clone(),
     );
 
     let (state_before, state_after) = expected_deploy_account_states();
@@ -1221,24 +1238,27 @@ fn test_deploy_account() {
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
         deploy_account_tx.contract_address(),
-        ACTUAL_FEE.to_u64().unwrap(),
+        expected_fee as u64,
     );
+
+    let resources = HashMap::from([
+        ("range_check_builtin".to_string(), 74),
+        ("pedersen_builtin".to_string(), 23),
+        ("l1_gas_usage".to_string(), 3672),
+    ]);
+
+    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+
+    assert_eq!(fee, expected_fee);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
         expected_execute_call_info.into(),
         expected_fee_transfer_call_info.into(),
-        ACTUAL_FEE.to_u128().unwrap(),
+        fee,
         // Entry **not** in blockifier.
         // Default::default(),
-        [
-            ("l1_gas_usage", 3672),
-            ("range_check_builtin", 74),
-            ("pedersen_builtin", 23),
-        ]
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect(),
+        resources,
         TransactionType::DeployAccount.into(),
     );
     assert_eq!(tx_info, expected_execution_info);
@@ -1250,7 +1270,7 @@ fn test_deploy_account() {
 
     let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
-    validate_final_balances(&mut state, &block_context, Felt252::zero(), &hash);
+    validate_final_balances(&mut state, &block_context, &hash, fee);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -1262,61 +1282,52 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader>,
     CachedState<InMemoryStateReader>,
 ) {
+    let fee = Felt252::from(3684);
     let mut state_before = CachedState::new(
         InMemoryStateReader::new(
             HashMap::from([
-                (
-                    Address(0x101.into()),
-                    felt_to_hash(&0x111.into()),
-                ),
-                (
-                    Address(0x100.into()),
-                    felt_to_hash(&0x110.into()),
-                ),
+                (Address(0x101.into()), felt_to_hash(&0x111.into())),
+                (Address(0x100.into()), felt_to_hash(&0x110.into())),
+                (Address(0x1001.into()), felt_to_hash(&0x1010.into())),
+            ]),
+            HashMap::from([
+                (Address(0x101.into()), Default::default()),
+                (Address(0x100.into()), Default::default()),
+                (Address(0x1001.into()), Default::default()),
+            ]),
+            HashMap::from([(
                 (
                     Address(0x1001.into()),
-                    felt_to_hash(&0x1010.into()),
-                )]),
-
-                HashMap::from([
-                    (
-                        Address(0x101.into()),
-                        Default::default(),
-                    ),
-                    (
-                        Address(0x100.into()),
-                        Default::default(),
-                    ),
-                    (
-                        Address(0x1001.into()),
-                        Default::default(),
-                    )]),
-                HashMap::from([
-                    (
-                        (Address(0x1001.into()),
-                        felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515"))),
-                        Felt252::zero(),
-                    ),
-                        ]),
+                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
+                ),
+                INITIAL_BALANCE.clone(),
+            )]),
             HashMap::from([
-                (felt_to_hash(&0x110.into()), ContractClass::from_path(TEST_CONTRACT_PATH).unwrap()),
-                (felt_to_hash(&0x111.into()), ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap()),
-                (felt_to_hash(&0x1010.into()), ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()),
+                (
+                    felt_to_hash(&0x110.into()),
+                    ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                ),
+                (
+                    felt_to_hash(&0x111.into()),
+                    ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                ),
+                (
+                    felt_to_hash(&0x1010.into()),
+                    ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                ),
             ]),
             HashMap::new(),
-            HashMap::new()
+            HashMap::new(),
         ),
         Some(ContractClassCache::new()),
-        Some(HashMap::new())
+        Some(HashMap::new()),
     );
     state_before.set_storage_at(
         &(
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "2542253978940891427830343982984992363331567580652119103860970381451088310289"
-            )),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
         ),
-        0.into(),
+        INITIAL_BALANCE.clone(),
     );
 
     let mut state_after = state_before.clone();
@@ -1358,9 +1369,7 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "3229073099929281304021185011369329892856197542079132996799046100564060768274"
-            )),
+            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
         ),
         Felt252::zero(),
     );
@@ -1388,11 +1397,9 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "2542253978940891427830343982984992363331567580652119103860970381451088310289"
-            )),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
         ),
-        Felt252::zero(),
+        INITIAL_BALANCE.clone() - &fee,
     );
     state_after.cache_mut().storage_writes_mut().insert(
         (
@@ -1404,11 +1411,9 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "3229073099929281304021185011369329892856197542079132996799046100564060768274"
-            )),
+            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
         ),
-        Felt252::zero(),
+        fee,
     );
     state_after
         .set_contract_class(
@@ -1481,7 +1486,7 @@ fn test_state_for_declare_tx() {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
             ),
-            Felt252::zero()
+            INITIAL_BALANCE.clone()
         ),]),
     );
 
@@ -1503,6 +1508,8 @@ fn test_state_for_declare_tx() {
         ])
     );
 
+    let fee = Felt252::from(10);
+
     // Check state.cache
     assert_eq!(
         state.cache(),
@@ -1518,74 +1525,68 @@ fn test_state_for_declare_tx() {
                 )
             ]),
             HashMap::new(),
-            HashMap::from([(
-                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                0.into()
-            )]),
+            HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), 0.into())]),
             HashMap::from([
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_2)
                     ),
                     0.into()
                 ),
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516"))
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_1)
                     ),
                     0.into()
                 ),
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
                     ),
                     0.into()
                 ),
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
                     ),
-                    0.into()
+                    INITIAL_BALANCE.clone()
                 )
             ]),
             HashMap::new(),
             HashMap::new(),
-            HashMap::from([(
-                TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                1.into()
-            )]),
+            HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), 1.into())]),
             HashMap::from([
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275"))
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_2)
                     ),
                     0.into()
                 ),
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516"))
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_1)
                     ),
                     0.into()
                 ),
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
                     ),
-                    0.into() //Fee, 2 in blockifier
+                    fee.clone(),
                 ),
                 (
                     (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                        felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
                     ),
-                    0.into()
+                    INITIAL_BALANCE.clone() - &fee,
                 ),
             ]),
             HashMap::new()
