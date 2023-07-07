@@ -26,18 +26,15 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-pub struct StarknetState<'a, T: StateReader> {
-    pub state: TransactionalState<'a, T>,
+pub struct StarknetState<'a> {
+    pub state: TransactionalState<'a, InMemoryStateReader>,
     pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
-impl<'a, T> StarknetState<'a, T>
-where
-    T: StateReader,
-{
+impl<'a> StarknetState<'a> {
     pub fn new(context: Option<BlockContext>) -> Self {
         let block_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
@@ -65,6 +62,12 @@ where
         block_context: Option<BlockContext>,
         state: CachedState<InMemoryStateReader>,
     ) -> Self {
+        let mut state = state.clone();
+        let state = TransactionalState::new(
+            MutRefState::new(&mut state),
+            Some(Default::default()),
+            Some(Default::default()),
+        );
         let block_context = block_context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
