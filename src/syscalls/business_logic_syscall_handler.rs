@@ -22,8 +22,8 @@ use super::{
 use crate::definitions::block_context::BlockContext;
 use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::state::BlockInfo;
 use crate::state::mut_ref_state::TransactionalState;
+use crate::state::BlockInfo;
 use crate::transaction::error::TransactionError;
 use crate::utils::calculate_sn_keccak;
 use crate::{
@@ -245,7 +245,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
-                self.block_context.invoke_tx_max_n_steps() as u32,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
@@ -347,7 +347,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
-                self.block_context.invoke_tx_max_n_steps() as u32,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
