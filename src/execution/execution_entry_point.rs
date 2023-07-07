@@ -415,8 +415,15 @@ impl ExecutionEntryPoint {
         let mut vm = VirtualMachine::new(false);
         // get a program from the casm contract class
         let program: Program = contract_class.as_ref().clone().try_into()?;
+        // use with_keccak layout if entrypoint uses keccak builtin
+        // TODO: add test for this
+        let layout = if entry_point.builtins.contains(&"keccak".to_string()) {
+            "starknet_with_keccak"
+        } else {
+            "starknet"
+        };
         // create and initialize a cairo runner for running cairo 1 programs.
-        let mut cairo_runner = CairoRunner::new(&program, "starknet", false)?;
+        let mut cairo_runner = CairoRunner::new(&program, layout, false)?;
 
         cairo_runner.initialize_function_runner_cairo_1(
             &mut vm,
