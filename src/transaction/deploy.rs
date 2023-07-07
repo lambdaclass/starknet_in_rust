@@ -190,6 +190,7 @@ impl Deploy {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.validate_max_n_steps,
         )?;
 
         let changes = state.count_actual_storage_changes();
