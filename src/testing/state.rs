@@ -1,6 +1,6 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::mut_ref_state::{TransactionalState, MutRefState};
+use crate::state::mut_ref_state::{MutRefState, TransactionalState};
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -26,22 +26,25 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-pub struct StarknetState<'a, T: StateReader + State> {
-    pub state: TransactionalState<'a, T>,
+pub struct StarknetState<'a, S: StateReader + State> {
+    pub state: TransactionalState<'a, S>,
     pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
-impl<'a, T> StarknetState<'a, T>
-where T: StateReader + State, {
+impl<'a, S: StateReader + State> StarknetState<'a, S> {
     pub fn new(context: Option<BlockContext>) -> Self {
         let block_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
         let mut state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
-        let state = TransactionalState::new(MutRefState::new(&mut state), Some(Default::default()),Some(Default::default()));
+        let state = TransactionalState::new(
+            MutRefState::new(&mut state),
+            Some(Default::default()),
+            Some(Default::default()),
+        );
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 
@@ -55,10 +58,7 @@ where T: StateReader + State, {
         }
     }
 
-    pub fn new_with_states(
-        block_context: Option<BlockContext>,
-        state: CachedState<InMemoryStateReader>,
-    ) -> Self {
+    pub fn new_with_states(block_context: Option<BlockContext>, state: CachedState<S>) -> Self {
         let block_context = block_context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
