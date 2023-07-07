@@ -1,5 +1,6 @@
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::mut_ref_state::TransactionalState;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -122,11 +123,11 @@ impl DeployAccount {
 
     pub fn execute<S>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         let mut tx_info = self.apply(state, block_context)?;
 
@@ -156,11 +157,11 @@ impl DeployAccount {
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     fn apply<S>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
@@ -196,12 +197,12 @@ impl DeployAccount {
     pub fn handle_constructor<S>(
         &self,
         contract_class: CompiledClass,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         if self.constructor_entry_points_empty(contract_class)? {
             if !self.constructor_calldata.is_empty() {
@@ -238,12 +239,12 @@ impl DeployAccount {
 
     pub fn run_constructor_entrypoint<S>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -288,12 +289,12 @@ impl DeployAccount {
 
     pub fn run_validate_entrypoint<S>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         if self.version.is_zero() {
             return Ok(None);
@@ -337,12 +338,12 @@ impl DeployAccount {
 
     fn charge_fee<S>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         if self.max_fee.is_zero() {
             return Ok((None, 0));

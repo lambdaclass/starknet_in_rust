@@ -91,10 +91,10 @@ impl ExecutionEntryPoint {
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
-        max_steps: u32,
+        max_steps: u64,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader,
+        T: StateReader,
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
@@ -128,11 +128,11 @@ impl ExecutionEntryPoint {
                     Ok(call_info) => {
                         execution_state.commit();
                         Ok(call_info)
-                    },
+                    }
                     Err(_) => {
                         execution_state.abort();
-                        let n_reverted_steps = (max_steps as usize)
-                            - resources_manager.cairo_usage.n_steps;
+                        let n_reverted_steps =
+                            (max_steps as usize) - resources_manager.cairo_usage.n_steps;
                         Ok(CallInfo::default())
                     }
                 }
@@ -315,7 +315,7 @@ impl ExecutionEntryPoint {
         class_hash: [u8; 32],
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader,
+        T: StateReader,
     {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
         // fetch selected entry point

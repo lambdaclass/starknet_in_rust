@@ -1,5 +1,6 @@
 use super::error::TransactionError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::mut_ref_state::TransactionalState;
 use crate::{
     definitions::{
         block_context::BlockContext,
@@ -8,7 +9,7 @@ use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
     },
-    state::state_api::{State, StateReader},
+    state::state_api::StateReader,
     state::ExecutionResourcesManager,
 };
 use cairo_vm::felt::Felt252;
@@ -20,8 +21,8 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-pub(crate) fn execute_fee_transfer<S: State + StateReader>(
-    state: &mut S,
+pub(crate) fn execute_fee_transfer<S: StateReader>(
+    state: &mut TransactionalState<'_, S>,
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,
@@ -60,6 +61,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         &mut resources_manager,
         tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps,
     );
     // TODO: Avoid masking the error from the fee transfer.
     fee_transfer_exec.map_err(|e| TransactionError::FeeTransferError(Box::new(e)))

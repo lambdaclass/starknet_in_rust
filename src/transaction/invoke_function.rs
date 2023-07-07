@@ -12,7 +12,7 @@ use crate::{
         TransactionExecutionInfo,
     },
     state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{mut_ref_state::TransactionalState, ExecutionResourcesManager},
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -119,14 +119,14 @@ impl InvokeFunction {
         ))
     }
 
-    pub(crate) fn run_validate_entrypoint<T>(
+    pub(crate) fn run_validate_entrypoint<S>(
         &self,
-        state: &mut T,
+        state: &mut TransactionalState<'_, S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
     where
-        T: State + StateReader,
+        S: StateReader,
     {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
@@ -166,15 +166,15 @@ impl InvokeFunction {
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    fn run_execute_entrypoint<T>(
+    fn run_execute_entrypoint<S>(
         &self,
-        state: &mut T,
+        state: &mut TransactionalState<'_, S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader,
+        S: StateReader,
     {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -200,12 +200,12 @@ impl InvokeFunction {
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     pub fn apply<S>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
@@ -240,12 +240,12 @@ impl InvokeFunction {
 
     fn charge_fee<S>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
@@ -274,9 +274,9 @@ impl InvokeFunction {
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
     /// then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut TransactionalState<'_, S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
