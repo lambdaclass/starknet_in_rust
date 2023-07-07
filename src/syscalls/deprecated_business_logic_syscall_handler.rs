@@ -10,7 +10,6 @@ use super::{
     syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_deprecated_syscall_size_from_name,
 };
-use crate::{services::api::contract_classes::deprecated_contract_class::EntryPointType, state::mut_ref_state::TransactionalState};
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{
@@ -31,20 +30,23 @@ use crate::{
     transaction::error::TransactionError,
     utils::*,
 };
+use crate::{
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::mut_ref_state::TransactionalState,
+};
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
 use num_traits::{One, ToPrimitive, Zero};
-use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
 //* -----------------------------------
 /// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
-pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
+pub struct DeprecatedBLSyscallHandler<'a, T: StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -61,7 +63,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
+impl<'a, T: StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut TransactionalState<'a, T>,
@@ -234,28 +236,10 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
-                self.block_context.invoke_tx_max_n_steps() as u32,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
-    }
-}
-
-impl<'a, T> Borrow<T> for DeprecatedBLSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
-    fn borrow(&self) -> &T {
-        self.starknet_storage_state.state
-    }
-}
-
-impl<'a, T> BorrowMut<T> for DeprecatedBLSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
-    fn borrow_mut(&mut self) -> &mut T {
-        self.starknet_storage_state.state
     }
 }
 
@@ -459,7 +443,7 @@ where
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
-                self.block_context.invoke_tx_max_n_steps() as u32,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map(|x| {
                 let retdata = x.retdata.clone();

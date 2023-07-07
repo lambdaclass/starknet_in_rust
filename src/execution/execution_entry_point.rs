@@ -331,7 +331,7 @@ impl ExecutionEntryPoint {
         // prepare OS context
         //let os_context = runner.prepare_os_context();
         let os_context =
-            StarknetRunner::<DeprecatedSyscallHintProcessor<T>>::prepare_os_context_cairo0(
+            StarknetRunner::<DeprecatedSyscallHintProcessor<TransactionalState<'_, T>>>::prepare_os_context_cairo0(
                 &cairo_runner,
                 &mut vm,
             );

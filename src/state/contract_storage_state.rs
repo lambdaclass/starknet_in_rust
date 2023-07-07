@@ -1,4 +1,7 @@
-use super::{state_api::{State, StateReader}, mut_ref_state::TransactionalState};
+use super::{
+    mut_ref_state::TransactionalState,
+    state_api::{State, StateReader},
+};
 use crate::{
     core::errors::state_errors::StateError,
     utils::{Address, ClassHash},
@@ -7,15 +10,15 @@ use cairo_vm::felt::Felt252;
 use std::collections::HashSet;
 
 #[derive(Debug)]
-pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
-    pub(crate) state: &'a mut  TransactionalState<'a, T>,
+pub(crate) struct ContractStorageState<'a, T: StateReader> {
+    pub(crate) state: &'a mut TransactionalState<'a, T>,
     pub(crate) contract_address: Address,
     /// Maintain all read request values in chronological order
     pub(crate) read_values: Vec<Felt252>,
     pub(crate) accessed_keys: HashSet<ClassHash>,
 }
 
-impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
+impl<'a, T: StateReader> ContractStorageState<'a, T> {
     pub(crate) fn new(state: &'a mut TransactionalState<'a, T>, contract_address: Address) -> Self {
         Self {
             state,
