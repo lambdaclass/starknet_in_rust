@@ -320,24 +320,14 @@ impl DeclareV2 {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-<<<<<<< Updated upstream
-        let casm_class = self
-            .casm_class
-            .get_or_try_init(|| {
-                CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
-            })
-            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
-
-        state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
-=======
         let casm_class = if self.casm_class.is_some() {
             self.casm_class.as_ref().unwrap().clone()
         } else {
             CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
                 .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
         };
+
         state.set_compiled_class_hash(&self.hash_value, &self.compiled_class_hash)?;
->>>>>>> Stashed changes
         state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
 
         Ok(())
