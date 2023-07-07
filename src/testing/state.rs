@@ -26,25 +26,28 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-pub struct StarknetState<'a, S: StateReader> {
-    pub state: TransactionalState<'a, S>,
+pub struct StarknetState<'a, T: StateReader> {
+    pub state: TransactionalState<'a, T>,
     pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
-impl<'a, S: StateReader> StarknetState<'a, S> {
+impl<'a, T> StarknetState<'a, T>
+where
+    T: StateReader,
+{
     pub fn new(context: Option<BlockContext>) -> Self {
         let block_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
-        let mut state = MutRefState::<'a, CachedState<InMemoryStateReader>>::new(
-            &mut CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new())),
+        let mut state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
+        let state = TransactionalState::new(
+            MutRefState::new(&mut state),
+            Some(Default::default()),
+            Some(Default::default()),
         );
-
-        let state =
-            TransactionalState::new(state, Some(Default::default()), Some(Default::default()));
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 
