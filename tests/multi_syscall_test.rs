@@ -167,14 +167,18 @@ fn test_multiple_syscall() {
         let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
         // Create the deploy contract class
-        let _entrypoint_selector = &entrypoints.external.get(9).unwrap().selector;
+        let entrypoint_selector = &entrypoints.external.get(9).unwrap().selector;
 
         contract_class_cache.insert(class_hash, contract_class);
         contract_class_cache.insert(test_class_hash, test_contract_class.clone());
        
         // Create state from the state_reader and contract cache.
-        let _state = CachedState::new(state_reader, None, Some(contract_class_cache));
- 
+
+        let call_info = test_syscall(entrypoint_selector,
+            address.clone(), calldata.clone(),  caller_address.clone(), entry_point_type, class_hash, &mut state);
+        assert_eq!(call_info.events, vec![])
+
+    
     }
 }
 
