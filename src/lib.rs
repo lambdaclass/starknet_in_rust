@@ -17,7 +17,7 @@ use crate::{
 
 use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
-use state::{cached_state::CachedState, mut_ref_state::TransactionalState};
+use state::mut_ref_state::TransactionalState;
 use transaction::L1Handler;
 use utils::Address;
 
@@ -50,20 +50,19 @@ pub mod utils;
 
 pub fn simulate_transaction<S: StateReader>(
     transactions: &[&Transaction],
-    state: S,
+    state: &mut TransactionalState<'_, S>,
     block_context: &BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
-    let mut cache_state = CachedState::new(state, None, Some(HashMap::new()));
+    let mut tmp_state = TransactionalState::new(state.state_reader, None, Some(HashMap::new()));
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         let tx_for_simulation =
             transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
-        let tx_result =
-            tx_for_simulation.execute(&mut cache_state, block_context, remaining_gas)?;
+        let tx_result = tx_for_simulation.execute(&mut tmp_state, block_context, remaining_gas)?;
         result.push(tx_result);
     }
 
@@ -71,28 +70,25 @@ pub fn simulate_transaction<S: StateReader>(
 }
 
 /// Estimate the fee associated with transaction
-pub fn estimate_fee<T>(
+pub fn estimate_fee<S: StateReader>(
     transactions: &[Transaction],
-    state: T,
+    state: &mut TransactionalState<'_, S>,
     block_context: &BlockContext,
-) -> Result<Vec<(u128, usize)>, TransactionError>
-where
-    T: StateReader,
-{
+) -> Result<Vec<(u128, usize)>, TransactionError> {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(state, None, None);
+    let mut tmp_state = TransactionalState::new(state.state_reader, None, Some(HashMap::new()));
 
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         // Check if the contract is deployed.
-        cached_state.get_class_hash_at(&transaction.contract_address())?;
+        tmp_state.get_class_hash_at(&transaction.contract_address())?;
         // execute the transaction with the fake state.
 
         // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
         let tx_for_simulation = transaction.create_for_simulation(false, false, true);
 
         let transaction_result =
-            tx_for_simulation.execute(&mut cached_state, block_context, 100_000_000)?;
+            tx_for_simulation.execute(&mut tmp_state, block_context, 100_000_000)?;
         if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
             result.push((transaction_result.actual_fee, *gas_usage));
         } else {
@@ -103,11 +99,11 @@ where
     Ok(result)
 }
 
-pub fn call_contract<T: State + StateReader>(
+pub fn call_contract<S: State + StateReader>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
-    state: &mut TransactionalState<'_, T>,
+    state: &mut TransactionalState<'_, S>,
     block_context: BlockContext,
     caller_address: Address,
 ) -> Result<Vec<Felt252>, TransactionError> {
@@ -149,29 +145,26 @@ pub fn call_contract<T: State + StateReader>(
         &mut ExecutionResourcesManager::default(),
         &mut tx_execution_context,
         false,
-        block_context.invoke_tx_max_n_steps() as u32,
+        block_context.invoke_tx_max_n_steps,
     )?;
 
     Ok(call_info.retdata)
 }
 
 /// Estimate the fee associated with L1Handler
-pub fn estimate_message_fee<T>(
+pub fn estimate_message_fee<S: StateReader>(
     l1_handler: &L1Handler,
-    state: T,
+    state: &mut TransactionalState<'_, S>,
     block_context: &BlockContext,
-) -> Result<(u128, usize), TransactionError>
-where
-    T: StateReader,
-{
+) -> Result<(u128, usize), TransactionError> {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(state, None, None);
+    let mut tmp_state = TransactionalState::new(state.state_reader, None, Some(HashMap::new()));
 
     // Check if the contract is deployed.
-    cached_state.get_class_hash_at(l1_handler.contract_address())?;
+    tmp_state.get_class_hash_at(l1_handler.contract_address())?;
 
     // execute the transaction with the fake state.
-    let transaction_result = l1_handler.execute(&mut cached_state, block_context, 1_000_000)?;
+    let transaction_result = l1_handler.execute(&mut tmp_state, block_context, 1_000_000)?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         let actual_fee = transaction_result.actual_fee;
         Ok((actual_fee, *gas_usage))
@@ -180,9 +173,9 @@ where
     }
 }
 
-pub fn execute_transaction<T: State + StateReader>(
+pub fn execute_transaction<S: StateReader>(
     tx: Transaction,
-    state: &mut T,
+    state: &mut TransactionalState<'_, S>,
     block_context: BlockContext,
     remaining_gas: u128,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
