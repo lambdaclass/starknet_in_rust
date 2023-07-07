@@ -24,7 +24,7 @@ pub type CasmClassCache = HashMap<ClassHash, CasmContractClass>;
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
 #[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
-pub struct CachedState<T: State + StateReader> {
+pub struct CachedState<T: StateReader> {
     #[get = "pub"]
     pub(crate) state_reader: T,
     #[getset(get = "pub", get_mut = "pub")]
@@ -35,7 +35,7 @@ pub struct CachedState<T: State + StateReader> {
     pub(crate) casm_contract_classes: Option<CasmClassCache>,
 }
 
-impl<T: StateReader + State> CachedState<T> {
+impl<T: StateReader> CachedState<T> {
     /// Creates a transactional instance from the given cached state.
     /// It allows performing buffered modifying actions on the given state, which
     /// will either all happen (will be committed) or none of them (will be discarded).
@@ -92,7 +92,7 @@ impl<T: StateReader + State> CachedState<T> {
     }
 }
 
-impl<T: StateReader + State> StateReader for CachedState<T> {
+impl<T: StateReader> StateReader for CachedState<T> {
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
@@ -216,7 +216,7 @@ impl<T: StateReader + State> StateReader for CachedState<T> {
     }
 }
 
-impl<T: StateReader + State> State for CachedState<T> {
+impl<T: StateReader> State for CachedState<T> {
     fn set_contract_class(
         &mut self,
         class_hash: &ClassHash,
