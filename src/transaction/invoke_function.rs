@@ -700,10 +700,28 @@ mod tests {
     }
 
     #[test]
-    // Test fee calculation is done correctly but payment to sequencer fails due to been WIP.
-    fn test_execute_invoke_fee_payment_to_sequencer_should_fail() {
+    // Test fee calculation is done correctly but payment to sequencer fails due
+    // to the token contract not being deployed
+    fn test_invoke_with_non_deployed_fee_token_should_fail() {
+        let contract_address = Address(0.into());
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+        // Set contact_state
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address.clone(), nonce);
+
         let internal_invoke_function = InvokeFunction {
-            contract_address: Address(0.into()),
+            contract_address,
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
                 16,
@@ -723,22 +741,6 @@ mod tests {
             skip_fee_transfer: false,
         };
 
-        // Instantiate CachedState
-        let mut state_reader = InMemoryStateReader::default();
-        // Set contract_class
-        let class_hash = [1; 32];
-        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
-        let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
-
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(contract_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce
-            .insert(contract_address, nonce);
-
         let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
@@ -755,10 +757,9 @@ mod tests {
             (String::from("range_check_builtin"), 70.into()),
         ]);
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
-        let error_msg = "Fee transfer failure".to_string();
-        assert!(expected_error.is_err());
-        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
+        let result = internal_invoke_function.execute(&mut state, &block_context, 0);
+        assert!(result.is_err());
+        assert_matches!(result.unwrap_err(), TransactionError::FeeTransferError(_));
     }
 
     #[test]
@@ -817,10 +818,12 @@ mod tests {
         ]);
         block_context.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
-        let error_msg = "Actual fee exceeded max fee.".to_string();
-        assert!(expected_error.is_err());
-        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
+        let error = internal_invoke_function.execute(&mut state, &block_context, 0);
+        assert!(error.is_err());
+        assert_matches!(
+            error.unwrap_err(),
+            TransactionError::ActualFeeExceedsMaxFee(_, _)
+        );
     }
 
     #[test]
