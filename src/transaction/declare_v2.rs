@@ -176,8 +176,6 @@ impl DeclareV2 {
         Ok((fee_transfer_info, actual_fee))
     }
 
-    // TODO: delete once used
-    #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             return Ok(());
@@ -236,6 +234,8 @@ impl DeclareV2 {
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &actual_resources, block_context)?;
         self.compile_and_store_casm_class(state)?;
+
+        self.handle_nonce(state)?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
