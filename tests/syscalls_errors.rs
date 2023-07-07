@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
+use starknet_in_rust::utils::felt_to_hash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
@@ -39,8 +40,8 @@ fn test_contract<'a>(
     arguments: impl Into<Vec<Felt252>>,
     error_msg: &str,
 ) {
-    let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
-        .expect("Could not load contract from JSON");
+    let contract_class =
+        ContractClass::from_path(contract_path).expect("Could not load contract from JSON");
 
     let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
@@ -70,7 +71,7 @@ fn test_contract<'a>(
         let mut contract_class_cache = ContractClassCache::new();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
-            let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+            let contract_class = ContractClass::from_path(contract_path)
                 .expect("Could not load extra contract from JSON");
 
             contract_class_cache.insert(class_hash, contract_class.clone());
@@ -151,6 +152,11 @@ fn call_contract_with_extra_arguments() {
 #[test]
 fn call_contract_not_deployed() {
     let contract_address = Address(2222.into());
+    let wrong_address = contract_address.0.clone() - Felt252::new(2); // another address
+    let error_msg = format!(
+        "Contract address {:?} is not deployed",
+        felt_to_hash(&wrong_address)
+    );
     test_contract(
         "starknet_programs/syscalls.json",
         "test_call_contract",
@@ -162,11 +168,11 @@ fn call_contract_not_deployed() {
         [(
             [2u8; 32],
             Path::new("starknet_programs/syscalls-lib.json"),
-            Some((contract_address.clone(), vec![("lib_state", 10.into())])),
+            Some((contract_address, vec![("lib_state", 10.into())])),
         )]
         .into_iter(),
-        [contract_address.0 - Felt252::new(2)], // Wrong address
-        "Contract address [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] is not deployed",
+        [wrong_address],
+        &error_msg,
     );
 }
 

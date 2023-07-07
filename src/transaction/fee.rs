@@ -27,8 +27,9 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_execution_context.max_fee {
-        return Err(TransactionError::FeeError(
-            "Actual fee exceeded max fee.".to_string(),
+        return Err(TransactionError::ActualFeeExceedsMaxFee(
+            actual_fee,
+            tx_execution_context.max_fee,
         ));
     }
 
@@ -36,8 +37,8 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
 
     let calldata = [
         block_context.block_info.sequencer_address.0.clone(),
-        0.into(),
-        Felt252::from(actual_fee),
+        Felt252::from(actual_fee), // U256.low
+        0.into(),                  // U256.high
     ]
     .to_vec();
 
@@ -61,7 +62,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         false,
     );
     // TODO: Avoid masking the error from the fee transfer.
-    fee_transfer_exec.map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
+    fee_transfer_exec.map_err(|e| TransactionError::FeeTransferError(Box::new(e)))
 }
 
 // ----------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-use super::Transaction;
+use super::{verify_version, Transaction};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::{
@@ -104,34 +104,14 @@ impl DeclareV2 {
             skip_fee_transfer: false,
         };
 
-        internal_declare.verify_version()?;
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
 
         Ok(internal_declare)
-    }
-
-    /// checks which version of declare is being executed. If it is an older version
-    /// the transaction is rejected.
-    ///  Same case if max_fee, nonce or signature are not zero or empty for a greater version
-    pub fn verify_version(&self) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            if self.sender_address != Address(1.into()) {
-                return Err(TransactionError::InvalidSenderAddress);
-            }
-
-            if self.max_fee != 0 {
-                return Err(TransactionError::InvalidMaxFee);
-            }
-
-            if self.nonce != 0.into() {
-                return Err(TransactionError::InvalidNonce);
-            }
-
-            if self.signature.is_empty() {
-                return Err(TransactionError::InvalidSignature);
-            }
-        }
-
-        Ok(())
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,7 +206,7 @@ impl DeclareV2 {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.verify_version()?;
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
 
         let initial_gas = INITIAL_GAS_COST;
 
@@ -364,11 +344,19 @@ mod tests {
     #[test]
     fn create_declare_v2_test() {
         // read file to create sierra contract class
+        let version;
+        let path;
         #[cfg(not(feature = "cairo_1_tests"))]
-        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
 
         #[cfg(feature = "cairo_1_tests")]
-        let path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
@@ -386,7 +374,7 @@ mod tests {
             chain_id,
             sender_address,
             0,
-            0.into(),
+            version,
             [1.into()].to_vec(),
             Felt252::zero(),
             Some(Felt252::one()),

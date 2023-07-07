@@ -243,7 +243,6 @@ mod tests {
     };
     use cairo_vm::relocatable;
     use num_traits::Num;
-    use std::path::PathBuf;
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
@@ -1007,8 +1006,7 @@ mod tests {
             .unwrap();
 
         // Set contract class
-        let contract_class =
-            ContractClass::try_from(PathBuf::from("starknet_programs/fibonacci.json")).unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
@@ -1105,10 +1103,8 @@ mod tests {
             .unwrap();
 
         // Set contract class
-        let contract_class = ContractClass::try_from(PathBuf::from(
-            "starknet_programs/storage_var_and_constructor.json",
-        ))
-        .unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/storage_var_and_constructor.json").unwrap();
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state

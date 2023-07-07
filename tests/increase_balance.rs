@@ -28,7 +28,7 @@ fn hello_starknet_increase_balance() {
     // ---------------------------------------------------------
 
     let path = PathBuf::from("starknet_programs/increase_balance.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
+    let contract_class = ContractClass::from_path(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     // External entry point, increase_balance function increase_balance.cairo:L13
