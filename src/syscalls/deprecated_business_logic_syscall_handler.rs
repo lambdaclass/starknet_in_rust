@@ -243,10 +243,7 @@ impl<'a, T: StateReader> DeprecatedBLSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T> DeprecatedBLSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
+impl<'a, T: StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub(crate) fn emit_event(
         &mut self,
         vm: &VirtualMachine,

@@ -114,7 +114,7 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
+pub struct BusinessLogicSyscallHandler<'a, T: StateReader> {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) expected_syscall_ptr: Relocatable,
     pub(crate) resources_manager: ExecutionResourcesManager,
@@ -133,7 +133,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, T: StateReader> BusinessLogicSyscallHandler<'a, T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
@@ -524,10 +524,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T> BusinessLogicSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
+impl<'a, T: StateReader> BusinessLogicSyscallHandler<'a, T> {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,

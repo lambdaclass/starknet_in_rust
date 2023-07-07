@@ -32,7 +32,7 @@ pub(crate) trait HintProcessorPostRun {
 }
 
 #[allow(unused)]
-pub(crate) struct SyscallHintProcessor<'a, T: State + StateReader> {
+pub(crate) struct SyscallHintProcessor<'a, T: StateReader> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, T>,
     pub(crate) run_resources: RunResources,

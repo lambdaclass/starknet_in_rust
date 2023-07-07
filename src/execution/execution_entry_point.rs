@@ -131,7 +131,7 @@ impl ExecutionEntryPoint {
                     }
                     Err(_) => {
                         execution_state.abort();
-                        let n_reverted_steps =
+                        let _n_reverted_steps =
                             (max_steps as usize) - resources_manager.cairo_usage.n_steps;
                         Ok(CallInfo::default())
                     }
@@ -215,7 +215,7 @@ impl ExecutionEntryPoint {
         retdata: Vec<Felt252>,
     ) -> Result<CallInfo, TransactionError>
     where
-        S: State + StateReader,
+        S: StateReader,
     {
         let execution_resources = &resources_manager.cairo_usage - &previous_cairo_usage;
 

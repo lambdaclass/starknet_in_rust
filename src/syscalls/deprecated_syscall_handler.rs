@@ -2,10 +2,7 @@ use super::{
     deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, hint_code::*,
     other_syscalls, syscall_handler::HintProcessorPostRun,
 };
-use crate::{
-    state::state_api::{State, StateReader},
-    syscalls::syscall_handler_errors::SyscallHandlerError,
-};
+use crate::{state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError};
 use cairo_vm::{
     felt::Felt252,
     hint_processor::hint_processor_definition::HintProcessorLogic,
@@ -25,13 +22,13 @@ use cairo_vm::{
 };
 use std::{any::Any, collections::HashMap};
 
-pub(crate) struct DeprecatedSyscallHintProcessor<'a, T: State + StateReader> {
+pub(crate) struct DeprecatedSyscallHintProcessor<'a, T: StateReader> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, T>,
     run_resources: RunResources,
 }
 
-impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> DeprecatedSyscallHintProcessor<'a, T> {
     pub fn new(
         syscall_handler: DeprecatedBLSyscallHandler<'a, T>,
         run_resources: RunResources,
@@ -152,7 +149,7 @@ impl<'a, T: State + StateReader> DeprecatedSyscallHintProcessor<'a, T> {
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'a, T> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -174,7 +171,7 @@ impl<'a, T: State + StateReader> HintProcessorLogic for DeprecatedSyscallHintPro
     }
 }
 
-impl<'a, T: State + StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, T> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -192,7 +189,7 @@ impl<'a, T: State + StateReader> ResourceTracker for DeprecatedSyscallHintProces
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor<'a, T> {
     fn post_run(
         &self,
         runner: &mut VirtualMachine,
