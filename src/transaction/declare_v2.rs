@@ -44,7 +44,7 @@ pub struct DeclareV2 {
     pub sierra_contract_class: SierraContractClass,
     pub sierra_class_hash: Felt252,
     pub hash_value: Felt252,
-    pub casm_class: once_cell::unsync::OnceCell<CasmContractClass>,
+    pub casm_class: Option<CasmContractClass>,
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
@@ -107,7 +107,66 @@ impl DeclareV2 {
             nonce,
             compiled_class_hash,
             hash_value,
-            casm_class: Default::default(),
+            casm_class: None,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
+        };
+
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
+
+        Ok(internal_declare)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_casm(
+        sierra_contract_class: &SierraContractClass,
+        compiled_class_hash: Felt252,
+        casm_contract_class: CasmContractClass,
+        chain_id: Felt252,
+        sender_address: Address,
+        max_fee: u128,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+        hash_value: Option<Felt252>,
+    ) -> Result<Self, TransactionError> {
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+
+        // if casm_contract_class.to_felt() != compiled_class_hash {
+        //     return Err(invalid_casm);
+        // }
+
+        let hash_value = match hash_value {
+            Some(hash) => hash,
+            None => calculate_declare_v2_transaction_hash(
+                sierra_contract_class,
+                compiled_class_hash.clone(),
+                chain_id,
+                &sender_address,
+                max_fee,
+                version.clone(),
+                nonce.clone(),
+            )?,
+        };
+
+        let internal_declare = DeclareV2 {
+            sierra_contract_class: sierra_contract_class.to_owned(),
+            sender_address,
+            tx_type: TransactionType::Declare,
+            validate_entry_point_selector,
+            version,
+            max_fee,
+            signature,
+            nonce,
+            compiled_class_hash,
+            hash_value,
+            casm_class: Some(casm_contract_class),
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
@@ -261,6 +320,7 @@ impl DeclareV2 {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
+<<<<<<< Updated upstream
         let casm_class = self
             .casm_class
             .get_or_try_init(|| {
@@ -269,6 +329,15 @@ impl DeclareV2 {
             .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
+=======
+        let casm_class = if self.casm_class.is_some() {
+            self.casm_class.as_ref().unwrap().clone()
+        } else {
+            CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
+                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
+        };
+        state.set_compiled_class_hash(&self.hash_value, &self.compiled_class_hash)?;
+>>>>>>> Stashed changes
         state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
 
         Ok(())
