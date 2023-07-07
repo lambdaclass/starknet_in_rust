@@ -1,4 +1,4 @@
-use super::state_api::{State, StateReader};
+use super::{state_api::{State, StateReader}, mut_ref_state::TransactionalState};
 use crate::{
     core::errors::state_errors::StateError,
     utils::{Address, ClassHash},
@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 #[derive(Debug)]
 pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
-    pub(crate) state: &'a mut T,
+    pub(crate) state: &'a mut  TransactionalState<'a, T>,
     pub(crate) contract_address: Address,
     /// Maintain all read request values in chronological order
     pub(crate) read_values: Vec<Felt252>,
@@ -16,7 +16,7 @@ pub(crate) struct ContractStorageState<'a, T: State + StateReader> {
 }
 
 impl<'a, T: State + StateReader> ContractStorageState<'a, T> {
-    pub(crate) fn new(state: &'a mut T, contract_address: Address) -> Self {
+    pub(crate) fn new(state: &'a mut TransactionalState<'a, T>, contract_address: Address) -> Self {
         Self {
             state,
             contract_address,

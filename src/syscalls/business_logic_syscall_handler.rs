@@ -23,6 +23,7 @@ use crate::definitions::block_context::BlockContext;
 use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::BlockInfo;
+use crate::state::mut_ref_state::TransactionalState;
 use crate::transaction::error::TransactionError;
 use crate::utils::calculate_sn_keccak;
 use crate::{
@@ -136,7 +137,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut T,
+        state: &'a mut TransactionalState<'a, T>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -168,7 +169,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
-    pub fn default_with_state(state: &'a mut T) -> Self {
+    pub fn default_with_state(state: &'a mut TransactionalState<'a, T>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
             Default::default(),
@@ -179,7 +180,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut T,
+        state: &'a mut TransactionalState<'a, T>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -244,6 +245,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
+                self.block_context.invoke_tx_max_n_steps() as u32,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
@@ -345,6 +347,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
+                self.block_context.invoke_tx_max_n_steps() as u32,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 

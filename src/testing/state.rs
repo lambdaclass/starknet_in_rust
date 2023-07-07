@@ -1,5 +1,6 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::mut_ref_state::{TransactionalState, MutRefState};
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -25,21 +26,22 @@ use std::collections::HashMap;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-pub struct StarknetState {
-    pub state: CachedState<InMemoryStateReader>,
+pub struct StarknetState<'a, T: StateReader + State> {
+    pub state: TransactionalState<'a, T>,
     pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
-impl StarknetState {
+impl<'a, T> StarknetState<'a, T>
+where T: StateReader + State, {
     pub fn new(context: Option<BlockContext>) -> Self {
         let block_context = context.unwrap_or_default();
         let state_reader = InMemoryStateReader::default();
 
-        let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
-
+        let mut state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
+        let state = TransactionalState::new(MutRefState::new(&mut state), Some(Default::default()),Some(Default::default()));
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
 
@@ -154,6 +156,7 @@ impl StarknetState {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            self.block_context.invoke_tx_max_n_steps(),
         )?;
 
         let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));

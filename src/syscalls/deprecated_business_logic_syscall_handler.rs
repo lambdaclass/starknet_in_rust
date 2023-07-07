@@ -10,7 +10,7 @@ use super::{
     syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_deprecated_syscall_size_from_name,
 };
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::{services::api::contract_classes::deprecated_contract_class::EntryPointType, state::mut_ref_state::TransactionalState};
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{
@@ -64,7 +64,7 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
 impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut T,
+        state: &'a mut TransactionalState<'a, T>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -95,7 +95,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         }
     }
 
-    pub fn default_with(state: &'a mut T) -> Self {
+    pub fn default_with(state: &'a mut TransactionalState<'a, T>) -> Self {
         DeprecatedBLSyscallHandler::new_for_testing(BlockInfo::default(), Default::default(), state)
     }
 
@@ -108,7 +108,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut T,
+        state: &'a mut TransactionalState<'a, T>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -234,6 +234,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
+                self.block_context.invoke_tx_max_n_steps() as u32,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
@@ -458,6 +459,7 @@ where
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
+                self.block_context.invoke_tx_max_n_steps() as u32,
             )
             .map(|x| {
                 let retdata = x.retdata.clone();

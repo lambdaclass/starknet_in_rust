@@ -16,7 +16,7 @@ use crate::{
 };
 
 use definitions::block_context::BlockContext;
-use state::cached_state::CachedState;
+use state::{cached_state::CachedState, mut_ref_state::TransactionalState};
 use transaction::L1Handler;
 use utils::Address;
 
@@ -106,7 +106,7 @@ pub fn call_contract<T: State + StateReader>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
-    state: &mut T,
+    state: &mut TransactionalState<'_, T>,
     block_context: BlockContext,
     caller_address: Address,
 ) -> Result<Vec<Felt252>, TransactionError> {
@@ -148,6 +148,7 @@ pub fn call_contract<T: State + StateReader>(
         &mut ExecutionResourcesManager::default(),
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps() as u32,
     )?;
 
     Ok(call_info.retdata)

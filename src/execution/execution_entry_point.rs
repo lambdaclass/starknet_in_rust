@@ -1,6 +1,8 @@
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
+use crate::state::cached_state::CachedState;
+use crate::state::mut_ref_state::{MutRefState, TransactionalState};
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -40,7 +42,6 @@ use super::{
 };
 
 /// Represents a Cairo entry point execution of a StarkNet contract.
-
 // TODO:initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
 #[derive(Debug, Clone)]
 pub struct ExecutionEntryPoint {
@@ -85,11 +86,12 @@ impl ExecutionEntryPoint {
     /// Returns a CallInfo object that represents the execution.
     pub fn execute<T>(
         &self,
-        state: &mut T,
+        state: &mut TransactionalState<'_, T>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
+        max_steps: u32,
     ) -> Result<CallInfo, TransactionError>
     where
         T: State + StateReader,
@@ -108,15 +110,33 @@ impl ExecutionEntryPoint {
                 contract_class,
                 class_hash,
             ),
-            CompiledClass::Casm(contract_class) => self._execute(
-                state,
-                resources_manager,
-                block_context,
-                tx_execution_context,
-                contract_class,
-                class_hash,
-                support_reverted,
-            ),
+            CompiledClass::Casm(contract_class) => {
+                let mut execution_state = CachedState::new(
+                    MutRefState::new(state),
+                    Some(Default::default()),
+                    Some(Default::default()),
+                );
+                match self._execute(
+                    &mut execution_state,
+                    resources_manager,
+                    block_context,
+                    tx_execution_context,
+                    contract_class,
+                    class_hash,
+                    support_reverted,
+                ) {
+                    Ok(call_info) => {
+                        execution_state.commit();
+                        Ok(call_info)
+                    },
+                    Err(_) => {
+                        execution_state.abort();
+                        let n_reverted_steps = (max_steps as usize)
+                            - resources_manager.cairo_usage.n_steps;
+                        Ok(CallInfo::default())
+                    }
+                }
+            }
         }
     }
 
@@ -287,7 +307,7 @@ impl ExecutionEntryPoint {
 
     fn _execute_version0_class<T>(
         &self,
-        state: &mut T,
+        state: &mut TransactionalState<'_, T>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -395,7 +415,7 @@ impl ExecutionEntryPoint {
 
     fn _execute<T>(
         &self,
-        state: &mut T,
+        state: &mut TransactionalState<'_, T>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,

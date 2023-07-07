@@ -1,4 +1,5 @@
 use super::{
+    mut_ref_state::{MutRefState, TransactionalState},
     state_api::{State, StateReader},
     state_cache::{StateCache, StorageEntry},
 };
@@ -35,6 +36,16 @@ pub struct CachedState<T: StateReader> {
 }
 
 impl<T: StateReader> CachedState<T> {
+    /// Creates a transactional instance from the given cached state.
+    /// It allows performing buffered modifying actions on the given state, which
+    /// will either all happen (will be committed) or none of them (will be discarded).
+    pub fn create_transactional(state: &mut CachedState<T>) -> TransactionalState<'_, T> {
+        CachedState::new(
+            MutRefState::new(state),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+    }
     pub fn new(
         state_reader: T,
         contract_class_cache: Option<ContractClassCache>,
