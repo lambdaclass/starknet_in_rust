@@ -163,8 +163,6 @@ fn test_multiple_syscall() {
     {
         // data to deploy
         let test_class_hash: ClassHash = [2; 32];
-        // let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
-        // let salt = Felt252::zero();
         let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
         let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
