@@ -1,4 +1,5 @@
 use super::{verify_version, Transaction};
+use crate::core::contract_address::compute_sierra_class_hash;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::{
@@ -41,6 +42,7 @@ pub struct DeclareV2 {
     pub nonce: Felt252,
     pub compiled_class_hash: Felt252,
     pub sierra_contract_class: SierraContractClass,
+    pub sierra_class_hash: Felt252,
     pub hash_value: Felt252,
     pub casm_class: once_cell::unsync::OnceCell<CasmContractClass>,
     pub skip_validate: bool,
@@ -63,6 +65,7 @@ impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sierra_contract_class: &SierraContractClass,
+        sierra_class_hash: Option<Felt252>,
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
@@ -74,10 +77,15 @@ impl DeclareV2 {
     ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
+        let sierra_class_hash = match sierra_class_hash {
+            Some(h) => h,
+            None => compute_sierra_class_hash(sierra_contract_class)?,
+        };
+
         let hash_value = match hash_value {
             Some(hash) => hash,
             None => calculate_declare_v2_transaction_hash(
-                sierra_contract_class,
+                sierra_class_hash.clone(),
                 compiled_class_hash.clone(),
                 chain_id,
                 &sender_address,
@@ -89,6 +97,7 @@ impl DeclareV2 {
 
         let internal_declare = DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
+            sierra_class_hash,
             sender_address,
             tx_type: TransactionType::Declare,
             validate_entry_point_selector,
@@ -331,6 +340,7 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::DeclareV2;
+    use crate::core::contract_address::compute_sierra_class_hash;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
@@ -362,6 +372,7 @@ mod tests {
         let reader = BufReader::new(file);
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
             serde_json::from_reader(reader).unwrap();
+        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         let sender_address = Address(1.into());
@@ -370,6 +381,7 @@ mod tests {
 
         let internal_declare = DeclareV2::new(
             &sierra_contract_class,
+            Some(sierra_class_hash),
             Felt252::one(),
             chain_id,
             sender_address,
