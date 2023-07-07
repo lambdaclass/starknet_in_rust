@@ -819,6 +819,7 @@ fn test_declare_tx() {
         Some(expected_declare_fee_transfer_info()),
         0,
         HashMap::from([
+            ("n_steps".to_string(), 2348),
             ("range_check_builtin".to_string(), 57),
             ("pedersen_builtin".to_string(), 15),
             ("l1_gas_usage".to_string(), 0),
@@ -863,6 +864,7 @@ fn test_declarev2_tx() {
         Some(expected_declare_fee_transfer_info()),
         0,
         HashMap::from([
+            ("n_steps".to_string(), 2348),
             ("range_check_builtin".to_string(), 57),
             ("pedersen_builtin".to_string(), 15),
             ("l1_gas_usage".to_string(), 0),
@@ -1047,6 +1049,7 @@ fn expected_transaction_execution_info() -> TransactionExecutionInfo {
         Some(expected_fee_transfer_info()),
         0,
         HashMap::from([
+            ("n_steps".to_string(), 2921),
             ("pedersen_builtin".to_string(), 16),
             ("l1_gas_usage".to_string(), 0),
             ("range_check_builtin".to_string(), 72),
@@ -1056,12 +1059,22 @@ fn expected_transaction_execution_info() -> TransactionExecutionInfo {
 }
 
 fn expected_fib_transaction_execution_info() -> TransactionExecutionInfo {
+    let n_steps;
+    #[cfg(not(feature = "cairo_1_tests"))]
+    {
+        n_steps = 3017;
+    }
+    #[cfg(feature = "cairo_1_tests")]
+    {
+        n_steps = 3020;
+    }
     TransactionExecutionInfo::new(
         Some(expected_fib_validate_call_info_2()),
         Some(expected_fib_execute_call_info()),
         Some(expected_fib_fee_transfer_info()),
         0,
         HashMap::from([
+            ("n_steps".to_string(), n_steps),
             ("pedersen_builtin".to_string(), 16),
             ("l1_gas_usage".to_string(), 0),
             ("range_check_builtin".to_string(), 75),
@@ -1232,6 +1245,7 @@ fn test_deploy_account() {
         // Entry **not** in blockifier.
         // Default::default(),
         [
+            ("n_steps", 3111),
             ("l1_gas_usage", 3672),
             ("range_check_builtin", 74),
             ("pedersen_builtin", 23),

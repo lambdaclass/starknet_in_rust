@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::{cmp::min, collections::HashMap};
 
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::BlockContext,
-        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
+        constants::{EXECUTE_ENTRY_POINT_SELECTOR, FEE_FACTOR, VALIDATE_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
     },
     execution::{
@@ -226,6 +226,7 @@ impl InvokeFunction {
             self.tx_type,
             changes,
             None,
+            0,
         )?;
         let transaction_execution_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
@@ -253,6 +254,7 @@ impl InvokeFunction {
             block_context.starknet_os_config.gas_price,
             block_context,
         )?;
+        let actual_fee = min(actual_fee, self.max_fee) * FEE_FACTOR;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
@@ -748,12 +750,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut block_context = BlockContext::default();
-        block_context.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
+        let block_context = BlockContext::default();
 
         let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
         let error_msg = "Fee transfer failure".to_string();
@@ -762,7 +759,8 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_fail() {
+    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_charge_max_fee() {
+        let max_fee = 5;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
@@ -777,11 +775,11 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 1000,
+            max_fee,
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
-            skip_fee_transfer: false,
+            skip_fee_transfer: true,
         };
 
         // Instantiate CachedState
@@ -810,17 +808,12 @@ mod tests {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
         block_context.starknet_os_config.gas_price = 1;
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
-        let error_msg = "Actual fee exceeded max fee.".to_string();
-        assert!(expected_error.is_err());
-        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(actual_error_msg) if actual_error_msg == error_msg);
+        let tx = internal_invoke_function
+            .execute(&mut state, &block_context, 0)
+            .unwrap();
+        assert_eq!(tx.actual_fee, max_fee);
     }
 
     #[test]

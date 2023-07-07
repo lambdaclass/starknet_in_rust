@@ -111,6 +111,7 @@ impl L1Handler {
             TransactionType::L1Handler,
             changes,
             Some(self.get_payload_size()),
+            0,
         )?;
 
         // Enforce L1 fees.
@@ -247,11 +248,6 @@ mod test {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
         block_context.starknet_os_config.gas_price = 1;
 
         let tx_exec = l1_handler
@@ -306,6 +302,7 @@ mod test {
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources: HashMap::from([
+                ("n_steps".to_string(), 1229),
                 ("pedersen_builtin".to_string(), 13),
                 ("range_check_builtin".to_string(), 23),
                 ("l1_gas_usage".to_string(), 18471),

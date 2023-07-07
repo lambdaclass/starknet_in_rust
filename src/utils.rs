@@ -11,6 +11,7 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
+use cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME;
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
@@ -166,6 +167,7 @@ pub fn calculate_tx_resources(
     tx_type: TransactionType,
     storage_changes: (usize, usize),
     l1_handler_payload_size: Option<usize>,
+    n_reverted_steps: usize,
 ) -> Result<HashMap<String, usize>, TransactionError> {
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
@@ -192,10 +194,21 @@ pub fn calculate_tx_resources(
     // Add additional Cairo resources needed for the OS to run the transaction.
     let additional_resources = get_additional_os_resources(tx_syscall_counter, &tx_type)?;
     let new_resources = &cairo_usage + &additional_resources;
-    let filtered_builtins = new_resources.filter_unused_builtins();
+    let mut filtered_builtins = new_resources.filter_unused_builtins();
+
+    let n_steps = new_resources.n_steps
+        + n_reverted_steps
+        + 10 * filtered_builtins
+            .builtin_instance_counter
+            .remove(SEGMENT_ARENA_BUILTIN_NAME)
+            .unwrap_or(0);
 
     let mut resources: HashMap<String, usize> = HashMap::new();
     resources.insert("l1_gas_usage".to_string(), l1_gas_usage);
+    resources.insert(
+        "n_steps".to_string(),
+        n_steps + filtered_builtins.n_memory_holes,
+    );
     for (builtin, value) in filtered_builtins.builtin_instance_counter {
         resources.insert(builtin, value);
     }

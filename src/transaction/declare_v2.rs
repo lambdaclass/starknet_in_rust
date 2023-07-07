@@ -1,4 +1,5 @@
 use super::{verify_version, Transaction};
+use crate::definitions::constants::FEE_FACTOR;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::{
@@ -25,6 +26,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::cmp::min;
 use std::collections::HashMap;
 
 /// Represents a declare transaction in the starknet network.
@@ -159,6 +161,7 @@ impl DeclareV2 {
             block_context.starknet_os_config.gas_price,
             block_context,
         )?;
+        let actual_fee = min(actual_fee, self.max_fee) * FEE_FACTOR;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
@@ -231,6 +234,7 @@ impl DeclareV2 {
             self.tx_type,
             storage_changes,
             None,
+            0,
         )?;
 
         let (fee_transfer_info, actual_fee) =

@@ -147,6 +147,7 @@ impl Deploy {
             self.tx_type,
             changes,
             None,
+            0,
         )?;
 
         Ok(TransactionExecutionInfo::new_without_fee_info(
@@ -199,6 +200,7 @@ impl Deploy {
             self.tx_type,
             changes,
             None,
+            0,
         )?;
 
         Ok(TransactionExecutionInfo::new_without_fee_info(

@@ -1,3 +1,4 @@
+use crate::definitions::constants::FEE_FACTOR;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
@@ -26,6 +27,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::cmp::min;
 use std::collections::HashMap;
 
 use super::{verify_version, Transaction};
@@ -136,6 +138,7 @@ impl Declare {
             TransactionType::Declare,
             changes,
             None,
+            0,
         )
         .map_err(|_| TransactionError::ResourcesCalculation)?;
 
@@ -215,6 +218,7 @@ impl Declare {
             block_context.starknet_os_config.gas_price,
             block_context,
         )?;
+        let actual_fee = min(actual_fee, self.max_fee) * FEE_FACTOR;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
@@ -401,6 +405,7 @@ mod tests {
         });
 
         let actual_resources = HashMap::from([
+            ("n_steps".to_string(), 2348),
             ("l1_gas_usage".to_string(), 0),
             ("range_check_builtin".to_string(), 57),
             ("pedersen_builtin".to_string(), 15),
