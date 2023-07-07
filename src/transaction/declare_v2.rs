@@ -268,7 +268,7 @@ impl DeclareV2 {
             })
             .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
-        state.set_compiled_class_hash(&self.hash_value, &self.compiled_class_hash)?;
+        state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
         state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
 
         Ok(())
