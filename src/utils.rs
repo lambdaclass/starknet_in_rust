@@ -282,7 +282,9 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
         .to_owned();
 
     if class_hash == *UNINITIALIZED_CLASS_HASH {
-        return Err(TransactionError::NotDeployedContract(class_hash));
+        return Err(TransactionError::NotDeployedContract(felt_to_hash(
+            &contract_address.0,
+        )));
     }
     Ok(class_hash)
 }

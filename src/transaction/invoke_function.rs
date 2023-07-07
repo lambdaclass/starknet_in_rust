@@ -1,10 +1,8 @@
-use std::{cmp::min, collections::HashMap};
-
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::BlockContext,
-        constants::{EXECUTE_ENTRY_POINT_SELECTOR, FEE_FACTOR, VALIDATE_ENTRY_POINT_SELECTOR},
+        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
     },
     execution::{
@@ -13,10 +11,7 @@ use crate::{
     },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-    },
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
 
@@ -25,7 +20,7 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
-use super::Transaction;
+use super::{fee::charge_fee, Transaction};
 
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
@@ -237,41 +232,6 @@ impl InvokeFunction {
         Ok(transaction_execution_info)
     }
 
-    fn charge_fee<S>(
-        &self,
-        state: &mut S,
-        resources: &HashMap<String, usize>,
-        block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
-        if self.max_fee.is_zero() {
-            return Ok((None, 0));
-        }
-        let actual_fee = calculate_tx_fee(
-            resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
-        let actual_fee = min(actual_fee, self.max_fee) * FEE_FACTOR;
-
-        let mut tx_execution_context =
-            self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let fee_transfer_info = if self.skip_fee_transfer {
-            None
-        } else {
-            Some(execute_fee_transfer(
-                state,
-                block_context,
-                &mut tx_execution_context,
-                actual_fee,
-            )?)
-        };
-
-        Ok((fee_transfer_info, actual_fee))
-    }
-
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
     /// then updates the transaction execution info with the data of the fee.
     pub fn execute<S: State + StateReader>(
@@ -283,8 +243,17 @@ impl InvokeFunction {
         let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
         self.handle_nonce(state)?;
 
-        let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            &tx_exec_info.actual_resources,
+            block_context,
+            self.max_fee,
+            &mut tx_execution_context,
+            self.skip_fee_transfer,
+        )?;
+
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
@@ -702,10 +671,28 @@ mod tests {
     }
 
     #[test]
-    // Test fee calculation is done correctly but payment to sequencer fails due to been WIP.
-    fn test_execute_invoke_fee_payment_to_sequencer_should_fail() {
+    // Test fee calculation is done correctly but payment to sequencer fails due
+    // to the token contract not being deployed
+    fn test_invoke_with_non_deployed_fee_token_should_fail() {
+        let contract_address = Address(0.into());
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash = [1; 32];
+        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+        // Set contact_state
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address.clone(), nonce);
+
         let internal_invoke_function = InvokeFunction {
-            contract_address: Address(0.into()),
+            contract_address,
             entry_point_selector: Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
                 16,
@@ -725,22 +712,6 @@ mod tests {
             skip_fee_transfer: false,
         };
 
-        // Instantiate CachedState
-        let mut state_reader = InMemoryStateReader::default();
-        // Set contract_class
-        let class_hash = [1; 32];
-        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
-        let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
-
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(contract_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce
-            .insert(contract_address, nonce);
-
         let mut state = CachedState::new(state_reader.clone(), None, None);
 
         // Initialize state.contract_classes
@@ -752,10 +723,9 @@ mod tests {
 
         let block_context = BlockContext::default();
 
-        let expected_error = internal_invoke_function.execute(&mut state, &block_context, 0);
-        let error_msg = "Fee transfer failure".to_string();
-        assert!(expected_error.is_err());
-        assert_matches!(expected_error.unwrap_err(), TransactionError::FeeError(msg) if msg == error_msg);
+        let result = internal_invoke_function.execute(&mut state, &block_context, 0);
+        assert!(result.is_err());
+        assert_matches!(result.unwrap_err(), TransactionError::FeeTransferError(_));
     }
 
     #[test]

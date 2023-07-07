@@ -1,4 +1,5 @@
 use super::error::TransactionError;
+use crate::definitions::constants::FEE_FACTOR;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{
@@ -12,7 +13,8 @@ use crate::{
     state::ExecutionResourcesManager,
 };
 use cairo_vm::felt::Felt252;
-use num_traits::ToPrimitive;
+use num_traits::{ToPrimitive, Zero};
+use std::cmp::min;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses
@@ -27,8 +29,9 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_execution_context.max_fee {
-        return Err(TransactionError::FeeError(
-            "Actual fee exceeded max fee.".to_string(),
+        return Err(TransactionError::ActualFeeExceedsMaxFee(
+            actual_fee,
+            tx_execution_context.max_fee,
         ));
     }
 
@@ -36,8 +39,8 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
 
     let calldata = [
         block_context.block_info.sequencer_address.0.clone(),
-        0.into(),
-        Felt252::from(actual_fee),
+        Felt252::from(actual_fee), // U256.low
+        0.into(),                  // U256.high
     ]
     .to_vec();
 
@@ -61,7 +64,7 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
         false,
     );
     // TODO: Avoid masking the error from the fee transfer.
-    fee_transfer_exec.map_err(|_| TransactionError::FeeError("Fee transfer failure".to_string()))
+    fee_transfer_exec.map_err(|e| TransactionError::FeeTransferError(Box::new(e)))
 }
 
 // ----------------------------------------------------------------------------------------
@@ -115,4 +118,36 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
         max = f64::max(max, val * v);
     }
     max
+}
+
+pub fn charge_fee<S: State + StateReader>(
+    state: &mut S,
+    resources: &HashMap<String, usize>,
+    block_context: &BlockContext,
+    max_fee: u128,
+    tx_execution_context: &mut TransactionExecutionContext,
+    skip_fee_transfer: bool,
+) -> Result<FeeInfo, TransactionError> {
+    if max_fee.is_zero() {
+        return Ok((None, 0));
+    }
+
+    let actual_fee = calculate_tx_fee(
+        resources,
+        block_context.starknet_os_config.gas_price,
+        block_context,
+    )?;
+    let actual_fee = min(actual_fee, max_fee) * FEE_FACTOR;
+
+    let fee_transfer_info = if skip_fee_transfer {
+        None
+    } else {
+        Some(execute_fee_transfer(
+            state,
+            block_context,
+            tx_execution_context,
+            actual_fee,
+        )?)
+    };
+    Ok((fee_transfer_info, actual_fee))
 }
