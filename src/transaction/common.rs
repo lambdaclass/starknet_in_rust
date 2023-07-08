@@ -45,7 +45,7 @@ pub fn handle_nonce<S: State + StateReader>(
     }
 
     // retrieve the contract's current nonce from the state
-    let actual = state.get_nonce_at(&address)?;
+    let actual = state.get_nonce_at(address)?;
     let expected = transaction_nonce.clone();
 
     // check that the transaction nonce is the same as the one from the state
@@ -59,7 +59,7 @@ pub fn handle_nonce<S: State + StateReader>(
     }
 
     // increment the nonce for this contract.
-    state.increment_nonce(&address)?;
+    state.increment_nonce(address)?;
 
     Ok(())
 }
