@@ -3,9 +3,10 @@ use crate::{
     definitions::transaction_type::TransactionType,
     execution::os_usage::OsResources,
     syscalls::syscall_handler_errors::SyscallHandlerError,
-    utils::ClassHash,
+    utils::{Address, ClassHash},
 };
 use cairo_vm::{
+    felt::Felt252,
     types::{
         errors::{math_errors::MathError, program_errors::ProgramError},
         relocatable::Relocatable,
@@ -31,8 +32,12 @@ pub enum TransactionError {
     InvokeFunctionNonZeroMissingNonce,
     #[error("An InvokeFunction transaction (version = 0) cannot have a nonce.")]
     InvokeFunctionZeroHasNonce,
-    #[error("Invalid transaction nonce. Expected: {0} got {1}")]
-    InvalidTransactionNonce(String, String),
+    #[error("Invalid transaction nonce. Expected: {expected} got {actual} for contract at address: {address:?}")]
+    InvalidTransactionNonce {
+        address: Address,
+        actual: Felt252,
+        expected: Felt252,
+    },
     #[error("Actual fee exceeds max fee. Actual: {0}, Max: {1}")]
     ActualFeeExceedsMaxFee(u128, u128),
     #[error("Fee transfer failure: {0}")]

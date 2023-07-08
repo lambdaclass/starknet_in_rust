@@ -1,6 +1,11 @@
 use cairo_vm::felt::Felt252;
+use num_traits::Zero;
 
-use crate::definitions::constants::SUPPORTED_VERSIONS;
+use crate::{
+    definitions::constants::SUPPORTED_VERSIONS,
+    state::state_api::{State, StateReader},
+    utils::Address,
+};
 
 use super::error::TransactionError;
 
@@ -25,6 +30,36 @@ pub fn verify_version(
             return Err(TransactionError::InvalidSignature);
         }
     }
+
+    Ok(())
+}
+
+pub fn handle_nonce<S: State + StateReader>(
+    transaction_nonce: &Felt252,
+    version: &Felt252,
+    address: &Address,
+    state: &mut S,
+) -> Result<(), TransactionError> {
+    if version.is_zero() {
+        return Ok(());
+    }
+
+    // retrieve the contract's current nonce from the state
+    let actual = state.get_nonce_at(&address)?;
+    let expected = transaction_nonce.clone();
+
+    // check that the transaction nonce is the same as the one from the state
+    if actual != expected {
+        let address = address.clone();
+        return Err(TransactionError::InvalidTransactionNonce {
+            address,
+            actual,
+            expected,
+        });
+    }
+
+    // increment the nonce for this contract.
+    state.increment_nonce(&address)?;
 
     Ok(())
 }

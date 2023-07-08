@@ -25,7 +25,7 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
-use super::Transaction;
+use super::{handle_nonce, Transaction};
 
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
@@ -279,7 +279,13 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
-        self.handle_nonce(state)?;
+
+        handle_nonce(
+            &self.nonce.clone().unwrap_or(0.into()),
+            &self.version,
+            self.contract_address(),
+            state,
+        )?;
 
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
@@ -288,34 +294,7 @@ impl InvokeFunction {
         Ok(tx_exec_info)
     }
 
-    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            return Ok(());
-        }
-
-        let contract_address = self.contract_address();
-
-        let current_nonce = state.get_nonce_at(contract_address)?;
-        match &self.nonce {
-            None => {
-                // TODO: Remove this once we have a better way to handle the nonce.
-                Ok(())
-            }
-            Some(nonce) => {
-                if nonce != &current_nonce {
-                    return Err(TransactionError::InvalidTransactionNonce(
-                        current_nonce.to_string(),
-                        nonce.to_string(),
-                    ));
-                }
-                state.increment_nonce(contract_address)?;
-                Ok(())
-            }
-        }
-    }
-
     // Simulation function
-
     pub(crate) fn create_for_simulation(
         &self,
         skip_validation: bool,
@@ -884,7 +863,7 @@ mod tests {
         assert!(expected_error.is_err());
         assert_matches!(
             expected_error.unwrap_err(),
-            TransactionError::InvalidTransactionNonce(..)
+            TransactionError::InvalidTransactionNonce { .. }
         )
     }
 

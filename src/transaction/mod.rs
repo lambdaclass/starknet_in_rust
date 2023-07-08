@@ -1,3 +1,4 @@
+mod common;
 pub mod declare;
 pub mod declare_v2;
 pub mod deploy;
@@ -6,15 +7,14 @@ pub mod error;
 pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
-mod verify_version;
 
+pub use common::{handle_nonce, verify_version};
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
 pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
-pub use verify_version::verify_version;
 
 use crate::{
     definitions::block_context::BlockContext,

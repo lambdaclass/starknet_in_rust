@@ -185,27 +185,6 @@ impl DeclareV2 {
         Ok((fee_transfer_info, actual_fee))
     }
 
-    // TODO: delete once used
-    #[allow(dead_code)]
-    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            return Ok(());
-        }
-
-        let contract_address = &self.sender_address;
-        let current_nonce = state.get_nonce_at(contract_address)?;
-        if current_nonce != self.nonce {
-            return Err(TransactionError::InvalidTransactionNonce(
-                current_nonce.to_string(),
-                self.nonce.to_string(),
-            ));
-        }
-
-        state.increment_nonce(contract_address)?;
-
-        Ok(())
-    }
-
     /// Execute the validation of the contract in the cairo-vm. Returns a TransactionExecutionInfo if succesful.
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.

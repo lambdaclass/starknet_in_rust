@@ -1,3 +1,4 @@
+use super::handle_nonce;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
@@ -130,7 +131,8 @@ impl DeployAccount {
     {
         let mut tx_info = self.apply(state, block_context)?;
 
-        self.handle_nonce(state)?;
+        handle_nonce(&self.nonce, &self.version, self.contract_address(), state)?;
+
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_info.actual_resources, block_context)?;
         tx_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -216,24 +218,6 @@ impl DeployAccount {
         } else {
             self.run_constructor_entrypoint(state, block_context, resources_manager)
         }
-    }
-
-    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            return Ok(());
-        }
-
-        let current_nonce = state.get_nonce_at(&self.contract_address)?;
-        if current_nonce != self.nonce {
-            return Err(TransactionError::InvalidTransactionNonce(
-                current_nonce.to_string(),
-                self.nonce.to_string(),
-            ));
-        }
-
-        state.increment_nonce(&self.contract_address)?;
-
-        Ok(())
     }
 
     pub fn run_constructor_entrypoint<S>(

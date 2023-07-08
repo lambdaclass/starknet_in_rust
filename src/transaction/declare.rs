@@ -28,7 +28,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 
-use super::{verify_version, Transaction};
+use super::{handle_nonce, verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -231,25 +231,6 @@ impl Declare {
         Ok((fee_transfer_info, actual_fee))
     }
 
-    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            return Ok(());
-        }
-
-        let contract_address = &self.sender_address;
-        let current_nonce = state.get_nonce_at(contract_address)?;
-        if current_nonce != self.nonce {
-            return Err(TransactionError::InvalidTransactionNonce(
-                current_nonce.to_string(),
-                self.nonce.to_string(),
-            ));
-        }
-
-        state.increment_nonce(contract_address)?;
-
-        Ok(())
-    }
-
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: State + StateReader>(
@@ -258,7 +239,8 @@ impl Declare {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;
-        self.handle_nonce(state)?;
+
+        handle_nonce(&self.nonce, &self.version, &self.sender_address, state)?;
 
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
@@ -760,7 +742,7 @@ mod tests {
         assert!(expected_error.is_err());
         assert_matches!(
             expected_error.unwrap_err(),
-            TransactionError::InvalidTransactionNonce(..)
+            TransactionError::InvalidTransactionNonce { .. }
         )
     }
 
