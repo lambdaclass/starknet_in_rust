@@ -193,7 +193,7 @@ mod test {
     use std::collections::HashMap;
     use std::path::PathBuf;
 
-    use crate::core::contract_address::compute_deprecated_class_hash;
+    use crate::core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash};
     use crate::definitions::{
         block_context::StarknetChainId,
         constants::{
@@ -831,6 +831,8 @@ mod test {
         let sierra_contract_class: SierraContractClass =
             serde_json::from_slice(program_data).unwrap();
 
+        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
+
         DeclareV2 {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             tx_type: TransactionType::Declare,
@@ -842,6 +844,7 @@ mod test {
             hash_value: 0.into(),
             compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
             sierra_contract_class,
+            sierra_class_hash,
             casm_class: Default::default(),
             skip_execute: false,
             skip_fee_transfer: false,

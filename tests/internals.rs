@@ -12,6 +12,7 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, Num, One, Zero};
+use starknet_in_rust::core::contract_address::compute_sierra_class_hash;
 use starknet_in_rust::core::errors::state_errors::StateError;
 use starknet_in_rust::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -698,6 +699,7 @@ fn declarev2_tx() -> DeclareV2 {
     #[cfg(feature = "cairo_1_tests")]
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
+    let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
 
     DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -710,6 +712,7 @@ fn declarev2_tx() -> DeclareV2 {
         hash_value: 0.into(),
         compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
         sierra_contract_class,
+        sierra_class_hash,
         casm_class: Default::default(),
         skip_execute: false,
         skip_fee_transfer: false,
