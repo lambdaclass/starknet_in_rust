@@ -115,7 +115,6 @@ fn declare() {
                 0.into(),
                 vec![],
                 Felt252::zero(),
-                None,
             )
             .expect("couldn't create transaction");
 

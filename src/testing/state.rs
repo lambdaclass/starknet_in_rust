@@ -79,7 +79,6 @@ impl StarknetState {
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
-        hash_value: Option<Felt252>,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = Declare::new(
             contract_class,
@@ -89,7 +88,6 @@ impl StarknetState {
             0.into(),
             Vec::new(),
             0.into(),
-            hash_value,
         )?;
 
         let tx_execution_info = tx.execute(&mut self.state, &self.block_context)?;
@@ -466,9 +464,8 @@ mod tests {
         let fib_contract_class =
             ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
-        let (ret_class_hash, _exec_info) = starknet_state
-            .declare(fib_contract_class.clone(), None)
-            .unwrap();
+        let (ret_class_hash, _exec_info) =
+            starknet_state.declare(fib_contract_class.clone()).unwrap();
 
         //* ---------------------------------------
         //              Expected result
