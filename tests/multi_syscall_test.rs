@@ -1,5 +1,6 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
+use starknet_in_rust::core::contract_address;
 use std::{collections::HashMap, vec};
 
 use num_bigint::BigUint;
@@ -77,7 +78,7 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![]);
+        assert_eq!(call_info.retdata, vec![Felt252::from(contract_address.clone().0)])
     }
     // Block for get_execution_info_syscall.
     {
