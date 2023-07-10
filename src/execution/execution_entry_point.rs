@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
-use crate::state::mut_ref_state::TransactionalState;
+use crate::state::cached_state::CachedState;
+use crate::state::mut_ref_state::{MutRefState, TransactionalState};
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -82,9 +85,9 @@ impl ExecutionEntryPoint {
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
-    pub fn execute<'a, S: StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &'a mut TransactionalState<'a, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -96,9 +99,16 @@ impl ExecutionEntryPoint {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
+
+        let mut transactional_state = TransactionalState::new(
+            MutRefState::new(state),
+            Some(HashMap::new()),
+            Some(HashMap::new()),
+        );
+
         match contract_class {
             CompiledClass::Deprecated(contract_class) => self._execute_version0_class(
-                state,
+                &mut transactional_state,
                 resources_manager,
                 block_context,
                 tx_execution_context,
@@ -107,7 +117,7 @@ impl ExecutionEntryPoint {
             ),
             CompiledClass::Casm(contract_class) => {
                 match self._execute(
-                    state,
+                    &mut transactional_state,
                     resources_manager,
                     block_context,
                     tx_execution_context,
@@ -116,11 +126,10 @@ impl ExecutionEntryPoint {
                     support_reverted,
                 ) {
                     Ok(call_info) => {
-                        state.commit();
+                        transactional_state.commit();
                         Ok(call_info)
                     }
                     Err(_) => {
-                        state.abort();
                         let _n_reverted_steps =
                             (max_steps as usize) - resources_manager.cairo_usage.n_steps;
                         Ok(CallInfo::default())
