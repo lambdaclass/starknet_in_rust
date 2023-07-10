@@ -46,10 +46,8 @@ impl L1Handler {
         nonce: Felt252,
         chain_id: Felt252,
         paid_fee_on_l1: Option<Felt252>,
-        hash_value: Option<Felt252>,
     ) -> Result<L1Handler, TransactionError> {
-        let hash_value = match hash_value {
-            None => calculate_transaction_hash_common(
+        let hash_value = calculate_transaction_hash_common(
                 TransactionHashPrefix::L1Handler,
                 L1_HANDLER_VERSION.into(),
                 &contract_address,
@@ -58,9 +56,7 @@ impl L1Handler {
                 0,
                 chain_id,
                 &[nonce.clone()],
-            )?,
-            Some(hash_value) => hash_value,
-        };
+            )?;
 
         Ok(L1Handler {
             hash_value,
@@ -73,6 +69,27 @@ impl L1Handler {
             skip_validate: false,
         })
     }
+
+    pub fn new_with_tx_hash(
+        contract_address: Address,
+        entry_point_selector: Felt252,
+        calldata: Vec<Felt252>,
+        nonce: Felt252,
+        paid_fee_on_l1: Option<Felt252>,
+        tx_hash: Felt252
+    ) -> Result<L1Handler, TransactionError> {
+        Ok(L1Handler {
+            hash_value: tx_hash,
+            contract_address,
+            entry_point_selector,
+            calldata,
+            nonce: Some(nonce),
+            paid_fee_on_l1,
+            skip_execute: false,
+            skip_validate: false,
+        })
+    }
+
 
     /// Applies self to 'state' by executing the L1-handler entry point.
     pub fn execute<S>(
@@ -222,7 +239,6 @@ mod test {
             0.into(),
             0.into(),
             Some(10000.into()),
-            None,
         )
         .unwrap();
 

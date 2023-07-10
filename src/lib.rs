@@ -341,7 +341,6 @@ mod test {
             0.into(),
             0.into(),
             Some(10000.into()),
-            None,
         )
         .unwrap();
 
@@ -894,7 +893,6 @@ mod test {
                 0.into(),
                 0.into(),
                 Some(10000.into()),
-                None,
             )
             .unwrap(),
         );
