@@ -139,9 +139,6 @@ impl DeclareV2 {
     ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
-        // if casm_contract_class.to_felt() != compiled_class_hash {
-        //     return Err(invalid_casm);
-        // }
         let sierra_class_hash = match sierra_class_hash {
             Some(h) => h,
             None => compute_sierra_class_hash(sierra_contract_class)?,
