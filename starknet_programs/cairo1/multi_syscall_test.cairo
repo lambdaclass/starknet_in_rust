@@ -22,13 +22,13 @@ mod multy_syscall {
 
    
     #[external]
-    fn caller_address() {
-        get_caller_address();
+    fn caller_address() -> ContractAddress {
+        get_caller_address()
     }
 
      #[external]
-    fn contract_address() {
-        get_contract_address();
+    fn contract_address() ->  ContractAddress {
+        get_contract_address()
     }
 
      #[external]
