@@ -324,7 +324,7 @@ impl DeclareV2 {
         state: &mut S,
     ) -> Result<(), TransactionError> {
         let casm_class = match self.casm_class.clone() {
-            Some(class) => class.clone(),
+            Some(class) => class,
             None => {
                 CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
                     .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
