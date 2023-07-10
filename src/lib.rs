@@ -17,7 +17,10 @@ use crate::{
 
 use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
-use state::mut_ref_state::TransactionalState;
+use state::{
+    cached_state::CachedState,
+    mut_ref_state::{MutRefState, TransactionalState},
+};
 use transaction::L1Handler;
 use utils::Address;
 
@@ -50,14 +53,19 @@ pub mod utils;
 
 pub fn simulate_transaction<S: StateReader>(
     transactions: &[&Transaction],
-    state: &mut TransactionalState<'_, S>,
+    state: S,
     block_context: &BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
-    let mut tmp_state = TransactionalState::new(state.state_reader, None, Some(HashMap::new()));
+    let mut tmp_cached_state = CachedState::new(state, None, None);
+    let mut tmp_state = TransactionalState::new(
+        MutRefState::new(&mut tmp_cached_state),
+        None,
+        Some(HashMap::new()),
+    );
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         let tx_for_simulation =
@@ -65,6 +73,8 @@ pub fn simulate_transaction<S: StateReader>(
         let tx_result = tx_for_simulation.execute(&mut tmp_state, block_context, remaining_gas)?;
         result.push(tx_result);
     }
+
+    tmp_state.abort();
 
     Ok(result)
 }
