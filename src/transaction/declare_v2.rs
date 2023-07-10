@@ -119,6 +119,15 @@ impl DeclareV2 {
         Ok(internal_declare)
     }
 
+    // creates a new instance of a declare but without the computation of the transaction hash.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: refers to max amount of fee that a declare takes.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
         sierra_contract_class: &SierraContractClass,
