@@ -672,7 +672,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 0.into(),
-                None,
             )
             .unwrap(),
         );
@@ -745,7 +744,6 @@ mod test {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             0.into(),
-            None,
         )
         .unwrap();
 
@@ -955,7 +953,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 0.into(),
-                None,
             )
             .unwrap(),
         );

@@ -151,7 +151,6 @@ fn deploy() {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 0.into(),
-                None,
             )
             .unwrap();
             internal_deploy.execute(&mut state_copy, block_context)
@@ -182,7 +181,6 @@ fn invoke() {
         vec![],
         StarknetChainId::TestNet.to_felt(),
         0.into(),
-        None,
     )
     .unwrap();
 

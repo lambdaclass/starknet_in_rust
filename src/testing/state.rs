@@ -174,14 +174,22 @@ impl StarknetState {
         remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.block_context.starknet_os_config.chain_id.to_felt();
-        let deploy = Deploy::new(
-            contract_address_salt,
-            contract_class.clone(),
-            constructor_calldata,
-            chain_id,
-            TRANSACTION_VERSION.clone(),
-            hash_value,
-        )?;
+        let deploy = match hash_value {
+            None => Deploy::new(
+                contract_address_salt,
+                contract_class.clone(),
+                constructor_calldata,
+                chain_id,
+                TRANSACTION_VERSION.clone(),
+            )?,
+            Some(hash_value) => Deploy::new_with_tx_hash(
+                contract_address_salt,
+                contract_class.clone(),
+                constructor_calldata,
+                TRANSACTION_VERSION.clone(),
+                hash_value,
+            )?,
+        };
         let contract_address = deploy.contract_address.clone();
         let contract_hash = deploy.contract_hash;
         let mut tx = Transaction::Deploy(deploy);
