@@ -25,7 +25,7 @@ pub enum TransactionError {
     InvalidMaxFee,
     #[error("The nonce field in Declare transactions of version 0 must be 0.")]
     InvalidNonce,
-    #[error("The signature field in Declare transactions must be an empty list.")]
+    #[error("The signature field in Declare transactions of version 0 must be an empty list.")]
     InvalidSignature,
     #[error("An InvokeFunction transaction (version != 0) must have a nonce.")]
     InvokeFunctionNonZeroMissingNonce,
@@ -33,6 +33,10 @@ pub enum TransactionError {
     InvokeFunctionZeroHasNonce,
     #[error("Invalid transaction nonce. Expected: {0} got {1}")]
     InvalidTransactionNonce(String, String),
+    #[error("Actual fee exceeds max fee. Actual: {0}, Max: {1}")]
+    ActualFeeExceedsMaxFee(u128, u128),
+    #[error("Fee transfer failure: {0}")]
+    FeeTransferError(Box<TransactionError>),
     #[error("{0}")]
     FeeError(String),
     #[error("Cairo resource names must be contained in fee weights dict")]
@@ -129,4 +133,6 @@ pub enum TransactionError {
     CustomError(String),
     #[error("call info is None")]
     CallInfoIsNone,
+    #[error("Unsupported version {0:?}")]
+    UnsupportedVersion(String),
 }

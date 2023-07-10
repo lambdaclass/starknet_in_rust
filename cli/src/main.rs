@@ -104,7 +104,7 @@ fn declare_parser(
     args: &DeclareArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_class =
-        ContractClass::try_from(&args.contract).map_err(ContractAddressError::Program)?;
+        ContractClass::from_path(&args.contract).map_err(ContractAddressError::Program)?;
     let class_hash = compute_deprecated_class_hash(&contract_class)?;
     cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
 

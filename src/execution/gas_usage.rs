@@ -2,16 +2,21 @@ use crate::definitions::constants::*;
 use crate::execution::L2toL1MessageInfo;
 use crate::services::eth_definitions::eth_gas_constants::*;
 
-/// Returns an estimation of the L1 gas amount that will be used (by StarkNet's update state and
-/// the verifier) following the addition of a transaction with the given parameters to a batch;
-/// e.g., a message from L2 to L1 is followed by a storage write operation in StarkNet L1 contract
-/// which requires gas.
-/// Arguments:
-/// l1_handler_payload_size should be an int if and only if we calculate the gas usage of an
-/// InternalInvokeFunction of type L1 handler. Otherwise the payload size is irrelevant, and should
-/// be None.
-/// n_deployments is the number of the contracts deployed by the transaction.
-
+/// Estimates L1 gas usage by Starknet's update state and the verifier
+///
+/// For information about the fee calculation visit the [starknet documentation](https://docs.starknet.io/documentation/architecture_and_concepts/Fees/fee-mechanism/).
+///
+/// # Parameters:
+/// - `l2_to_l1_messages`: A vector of [`L2toL1MessageInfo`] objects representing the messages from L2 to L1.
+/// - `n_modified_contracts`: The number of contracts modified by the transaction.
+/// - `n_storage_changes`: The number of storage changes made by the transaction.
+/// - `l1_handler_payload_size`: The payload size of the L1 to L2 message if and only if the gas usage is being
+/// calculated for an InvokeFunction of type L1 handler. Otherwise, it should be `None`.
+/// - `n_deployments`: The number of contracts deployed by the transaction.
+///
+/// # Returns:
+///
+/// The estimation of L1 gas usage as a `usize` value.
 pub fn calculate_tx_gas_usage(
     l2_to_l1_messages: Vec<L2toL1MessageInfo>,
     n_modified_contracts: usize,
@@ -66,10 +71,15 @@ fn starknet_gas_usage(
         + l1_log_emissions_cost
 }
 
-/// Returns the number of felts added to the output messages segment as a result of adding
-/// a transaction with the given parameters to a batch. Note that constant cells - such as the one
-/// that holds the segment size - are not counted.
-
+/// Calculates the amount of `felt252` added to the output message's segment by the given messages.
+///
+/// # Parameters:
+/// - `l2_to_l1_messages`: A slice of [`L2toL1MessageInfo`] objects representing the messages from L2 to L1.
+/// - `l1_handler_payload_size`: The payload size of the L1 to L2 message if and only if the gas usage is being
+/// calculated for an `InvokeFunction` of type L1 handler. Otherwise, it should be `None`.
+///
+/// # Returns:
+/// The length of the message segment.
 pub fn get_message_segment_lenght(
     l2_to_l1_messages: &[L2toL1MessageInfo],
     l1_handler_payload_size: Option<usize>,
@@ -84,12 +94,17 @@ pub fn get_message_segment_lenght(
     }
 }
 
-/// Returns the number of felts added to the output data availability segment as a result of adding
-/// a transaction to a batch. Note that constant cells - such as the one that holds the number of
-/// modified contracts - are not counted.
-/// This segment consists of deployment info (of contracts deployed by the transaction) and
-/// storage updates.
-
+/// Calculates the amount of `felt252` added to the output message's segment by the given operations.
+///
+/// # Parameters:
+///
+/// - `n_modified_contracts`: The number of contracts modified by the transaction.
+/// - `n_storage_changes`: The number of storage changes made by the transaction.
+/// - `n_deployments`: The number of contracts deployed by the transaction.
+///
+/// # Returns:
+///
+/// The on-chain data segment length
 pub fn get_onchain_data_segment_length(
     n_modified_contracts: usize,
     n_storage_changes: usize,
@@ -98,8 +113,16 @@ pub fn get_onchain_data_segment_length(
     n_modified_contracts * 2 + n_storage_changes * 2 + n_deployments * DEPLOYMENT_INFO_SIZE
 }
 
-/// Returns the cost of ConsumedMessageToL2 event emissions caused by an L1 handler with the given
+/// Calculates the cost of ConsumedMessageToL2 event emissions caused by an L1 handler with the given
 /// payload size.
+///
+/// # Parameters:
+/// - `l1_handler_payload_size`: The payload size of the L1 to L2 message if and only if the gas usage is being
+/// calculated for an InvokeFunction of type L1 handler. Otherwise, it should be `None`.
+///
+/// # Returns:
+///
+/// The cost of ConsumedMessageToL2 event emissions.
 pub fn get_consumed_message_to_l2_emissions_cost(l1_handler: Option<usize>) -> usize {
     match l1_handler {
         None => 0,
@@ -110,7 +133,14 @@ pub fn get_consumed_message_to_l2_emissions_cost(l1_handler: Option<usize>) -> u
     }
 }
 
-/// Returns the cost of LogMessageToL1 event emissions caused by the given messages.
+/// Calculates the cost of LogMessageToL1 event emissions caused by the given messages.
+///
+/// # Parameters:
+/// - `l2_to_l1_messages`: A slice of [`L2toL1MessageInfo`] objects representing the messages from L2 to L1.
+///
+/// # Returns:
+///
+/// The cost of LogMessageToL1 event emissions.
 pub fn get_log_message_to_l1_emissions_cost(l2_to_l1_messages: &[L2toL1MessageInfo]) -> usize {
     l2_to_l1_messages.iter().fold(0, |acc, msg| {
         acc + get_event_emission_cost(
@@ -120,6 +150,15 @@ pub fn get_log_message_to_l1_emissions_cost(l2_to_l1_messages: &[L2toL1MessageIn
     })
 }
 
+/// Calculates the cost of event emissions.
+///
+/// # Parameters:
+/// - `topics`: The number of topics in the event.
+/// - `l1_handler_payload_size`: The payload size of the L1 to L2 message.
+///
+/// # Returns:
+///
+/// The cost of event emissions.
 pub fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) -> usize {
     GAS_PER_LOG
         + (topics + N_DEFAULT_TOPICS) * GAS_PER_LOG_TOPIC

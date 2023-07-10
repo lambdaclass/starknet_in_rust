@@ -62,8 +62,8 @@ fn test_contract<'a>(
     return_data: impl Into<Vec<Felt252>>,
     execution_resources: ExecutionResources,
 ) {
-    let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
-        .expect("Could not load contract from JSON");
+    let contract_class =
+        ContractClass::from_path(contract_path).expect("Could not load contract from JSON");
 
     let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
@@ -93,7 +93,7 @@ fn test_contract<'a>(
         let mut contract_class_cache = ContractClassCache::new();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
-            let contract_class = ContractClass::try_from(contract_path.to_path_buf())
+            let contract_class = ContractClass::from_path(contract_path)
                 .expect("Could not load extra contract from JSON");
 
             contract_class_cache.insert(class_hash, contract_class.clone());
@@ -1058,9 +1058,8 @@ fn test_deploy_and_call_contract_syscall() {
 #[test]
 fn deploy_cairo1_from_cairo0_with_constructor() {
     // Create the deploy contract class
-    let contract_path = Path::new("starknet_programs/syscalls.json");
-    let contract_class: ContractClass =
-        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+    let contract_path = "starknet_programs/syscalls.json";
+    let contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(
         "test_deploy_with_constructor".as_bytes(),
     ));
@@ -1160,9 +1159,8 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 #[test]
 fn deploy_cairo1_from_cairo0_without_constructor() {
     // Create the deploy contract class
-    let contract_path = Path::new("starknet_programs/syscalls.json");
-    let contract_class: ContractClass =
-        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+    let contract_path = "starknet_programs/syscalls.json";
+    let contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
     let entrypoint_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak("test_deploy".as_bytes()));
 
@@ -1263,9 +1261,8 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 #[test]
 fn deploy_cairo1_and_invoke() {
     // Create the deploy contract class
-    let contract_path = Path::new("starknet_programs/syscalls.json");
-    let contract_class: ContractClass =
-        ContractClass::try_from(contract_path.to_path_buf()).unwrap();
+    let contract_path = "starknet_programs/syscalls.json";
+    let contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
     let entrypoint_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak("test_deploy".as_bytes()));
 
@@ -1395,7 +1392,7 @@ fn deploy_cairo1_and_invoke() {
 fn send_messages_to_l1_different_contract_calls() {
     //  Create program and entry point types for contract class
     let path = PathBuf::from("starknet_programs/send_messages_contract_call.json");
-    let contract_class = ContractClass::try_from(path).unwrap();
+    let contract_class = ContractClass::from_path(path).unwrap();
     let entrypoint_selector = &contract_class.entry_points_by_type()[&EntryPointType::External][0]
         .selector()
         .to_owned();
@@ -1419,7 +1416,7 @@ fn send_messages_to_l1_different_contract_calls() {
     // Add send_message_to_l1 contract to the state
 
     let path = PathBuf::from("starknet_programs/send_message_to_l1.json");
-    let send_msg_contract_class = ContractClass::try_from(path).unwrap();
+    let send_msg_contract_class = ContractClass::from_path(path).unwrap();
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
     let send_msg_class_hash: ClassHash = [2; 32];
