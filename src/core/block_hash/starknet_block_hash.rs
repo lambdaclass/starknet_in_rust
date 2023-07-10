@@ -5,12 +5,8 @@ use cairo_vm::felt::Felt252;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::iter::zip;
 
-// --------------------------------------------------------------
-// TODO:
-//  * calculate_block_hash
-//  * calculate_patricia_root
-//  there are missing structures to implement this functions yet
-// -------------------------------------------------------------
+/// Hashes the signatures with the given transaction hashes, to get hashes that take into account the
+/// entire transactions, as the original hashes do not include the signatures.
 
 pub fn calculate_tx_hashes_with_signatures(
     tx_hashes: Vec<Felt252>,
