@@ -84,9 +84,9 @@ impl ExecutionEntryPoint {
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
-    pub fn execute<T>(
+    pub fn execute<'a, T>(
         &self,
-        state: &mut TransactionalState<'_, T>,
+        state: &'a mut TransactionalState<'a, T>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -305,9 +305,9 @@ impl ExecutionEntryPoint {
         get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
     }
 
-    fn _execute_version0_class<T>(
+    fn _execute_version0_class<'a, T>(
         &self,
-        state: &mut TransactionalState<'_, T>,
+        state: &'a mut TransactionalState<'a, T>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -413,9 +413,9 @@ impl ExecutionEntryPoint {
         )
     }
 
-    fn _execute<T>(
+    fn _execute<'a, T>(
         &self,
-        state: &mut TransactionalState<'_, T>,
+        state: &'a mut TransactionalState<'a, T>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
