@@ -122,7 +122,7 @@ impl InvokeFunction {
 
     /// Execute the validation entrypoint of the contract and returns the call info.
     /// ## Parameters:
-    /// - state: An state that implements the State and StateReader traits.
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - resources_manager: the resources that are in use by the contract
     /// - block_context: The block's execution context
     pub(crate) fn run_validate_entrypoint<T>(
