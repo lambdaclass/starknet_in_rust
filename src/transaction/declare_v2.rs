@@ -126,6 +126,7 @@ impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_casm(
         sierra_contract_class: &SierraContractClass,
+        sierra_class_hash: Option<Felt252>,
         compiled_class_hash: Felt252,
         casm_contract_class: CasmContractClass,
         chain_id: Felt252,
@@ -141,11 +142,15 @@ impl DeclareV2 {
         // if casm_contract_class.to_felt() != compiled_class_hash {
         //     return Err(invalid_casm);
         // }
+        let sierra_class_hash = match sierra_class_hash {
+            Some(h) => h,
+            None => compute_sierra_class_hash(sierra_contract_class)?,
+        };
 
         let hash_value = match hash_value {
             Some(hash) => hash,
             None => calculate_declare_v2_transaction_hash(
-                sierra_contract_class,
+                sierra_class_hash.clone(),
                 compiled_class_hash.clone(),
                 chain_id,
                 &sender_address,
@@ -158,6 +163,7 @@ impl DeclareV2 {
         let internal_declare = DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sender_address,
+            sierra_class_hash,
             tx_type: TransactionType::Declare,
             validate_entry_point_selector,
             version,
