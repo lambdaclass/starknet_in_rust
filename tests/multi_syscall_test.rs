@@ -62,7 +62,7 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![])
+        assert_eq!(call_info.retdata, vec![Felt252::from(caller_address.clone().0)])
     }
 
     // Block for get_contact_address.
