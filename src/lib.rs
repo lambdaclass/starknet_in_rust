@@ -82,11 +82,16 @@ pub fn simulate_transaction<S: StateReader>(
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<S: StateReader>(
     transactions: &[Transaction],
-    state: &mut TransactionalState<'_, S>,
+    state: S,
     block_context: &BlockContext,
 ) -> Result<Vec<(u128, usize)>, TransactionError> {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut tmp_state = TransactionalState::new(state.state_reader, None, Some(HashMap::new()));
+    let mut tmp_cached_state = CachedState::new(state, None, None);
+    let mut tmp_state = TransactionalState::new(
+        MutRefState::new(&mut tmp_cached_state),
+        None,
+        Some(HashMap::new()),
+    );
 
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
@@ -105,6 +110,8 @@ pub fn estimate_fee<S: StateReader>(
             return Err(TransactionError::ResourcesError);
         };
     }
+
+    tmp_state.abort();
 
     Ok(result)
 }
