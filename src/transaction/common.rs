@@ -59,9 +59,7 @@ pub fn handle_nonce<S: State + StateReader>(
     }
 
     // increment the nonce for this contract.
-    state.increment_nonce(address)?;
-
-    Ok(())
+    Ok(state.increment_nonce(address)?)
 }
 
 #[cfg(test)]

@@ -82,7 +82,7 @@ impl Declare {
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
-        let internal_declare = Declare {
+        let declare = Declare {
             class_hash,
             sender_address,
             tx_type: TransactionType::Declare,
@@ -99,23 +99,18 @@ impl Declare {
         };
 
         verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
+            &declare.version,
+            declare.max_fee,
+            &declare.nonce,
+            &declare.signature,
         )?;
 
-        Ok(internal_declare)
-    }
-
-    pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(&self.class_hash);
-        Vec::from([bytes])
+        Ok(declare)
     }
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: State + StateReader>(
+    fn validate<S: State + StateReader>(
         &self,
         state: &mut S,
         block_context: &BlockContext,
@@ -136,8 +131,9 @@ impl Declare {
             TransactionType::Declare,
             changes,
             None,
-        )
-        .map_err(|_| TransactionError::ResourcesCalculation)?;
+        )?;
+
+        handle_nonce(&self.nonce, &self.version, &self.sender_address, state)?;
 
         Ok(TransactionExecutionInfo::new_without_fee_info(
             validate_info,
@@ -147,9 +143,6 @@ impl Declare {
         ))
     }
 
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    // Internal Account Functions
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
@@ -162,7 +155,7 @@ impl Declare {
         )
     }
 
-    pub fn run_validate_entrypoint<S: State + StateReader>(
+    fn run_validate_entrypoint<S: State + StateReader>(
         &self,
         state: &mut S,
         resources_manager: &mut ExecutionResourcesManager,
@@ -172,11 +165,13 @@ impl Declare {
             return Ok(None);
         }
 
-        let calldata = self.get_calldata();
+        // the calldata for the validation entrypoint is just the class_hash
+        let validate_calldata = vec![Felt252::from_bytes_be(&self.class_hash)];
 
+        // create an entrypoint for executing the validation
         let entry_point = ExecutionEntryPoint::new(
             self.sender_address.clone(),
-            calldata,
+            validate_calldata,
             self.validate_entry_point_selector.clone(),
             Address(Felt252::zero()),
             EntryPointType::External,
@@ -200,7 +195,7 @@ impl Declare {
     }
 
     /// Calculates and charges the actual fee.
-    pub fn charge_fee<S: State + StateReader>(
+    fn charge_fee<S: State + StateReader>(
         &self,
         state: &mut S,
         resources: &HashMap<String, usize>,
@@ -238,9 +233,7 @@ impl Declare {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_exec_info = self.apply(state, block_context)?;
-
-        handle_nonce(&self.nonce, &self.version, &self.sender_address, state)?;
+        let mut tx_exec_info = self.validate(state, block_context)?;
 
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
@@ -314,7 +307,7 @@ mod tests {
         contract_class_cache.insert(class_hash, contract_class.clone());
 
         // store sender_address
-        let sender_address = Address(1.into());
+        let sender_address = Address(1234.into());
         // this is not conceptually correct as the sender address would be an
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
@@ -325,7 +318,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
+            .insert(sender_address.clone(), Felt252::new(1));
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
@@ -339,10 +332,10 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            sender_address.clone(),
             0,
             1.into(),
             Vec::new(),
@@ -367,10 +360,10 @@ mod tests {
         )]
         .to_vec();
 
-        let validate_info = Some(CallInfo {
+        let expected_validate_info = Some(CallInfo {
             caller_address: Address(0.into()),
             call_type: Some(CallType::Call),
-            contract_address: Address(Felt252::one()),
+            contract_address: sender_address.clone(),
             entry_point_selector,
             entry_point_type: Some(EntryPointType::External),
             calldata,
@@ -388,7 +381,7 @@ mod tests {
             ("pedersen_builtin".to_string(), 15),
         ]);
         let transaction_exec_info = TransactionExecutionInfo {
-            validate_info,
+            expected_validate_info,
             call_info: None,
             fee_transfer_info: None,
             actual_fee: 0,
@@ -396,12 +389,9 @@ mod tests {
             tx_type: Some(TransactionType::Declare),
         };
 
-        // ---------------------
-        //      Comparison
-        // ---------------------
         assert_eq!(
-            internal_declare
-                .apply(&mut state, &BlockContext::default())
+            declare
+                .validate(&mut state, &BlockContext::default())
                 .unwrap(),
             transaction_exec_info
         );
@@ -450,7 +440,7 @@ mod tests {
         let version = 0.into();
 
         // Declare tx should fail because max_fee > 0 and version == 0
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -464,11 +454,8 @@ mod tests {
         // ---------------------
         //      Comparison
         // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidMaxFee
-        );
+        assert!(declare.is_err());
+        assert_matches!(declare.unwrap_err(), TransactionError::InvalidMaxFee);
     }
 
     #[test]
@@ -514,7 +501,7 @@ mod tests {
         let version = 0.into();
 
         // Declare tx should fail because nonce > 0 and version == 0
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -528,11 +515,8 @@ mod tests {
         // ---------------------
         //      Comparison
         // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidNonce
-        );
+        assert!(declare.is_err());
+        assert_matches!(declare.unwrap_err(), TransactionError::InvalidNonce);
     }
 
     #[test]
@@ -577,7 +561,7 @@ mod tests {
         let signature = vec![1.into(), 2.into()];
 
         // Declare tx should fail because signature is not empty
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -591,11 +575,8 @@ mod tests {
         // ---------------------
         //      Comparison
         // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidSignature
-        );
+        assert!(declare.is_err());
+        assert_matches!(declare.unwrap_err(), TransactionError::InvalidSignature);
     }
 
     #[test]
@@ -639,7 +620,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class.clone(),
             chain_id.clone(),
             Address(Felt252::one()),
@@ -651,7 +632,7 @@ mod tests {
         )
         .unwrap();
 
-        let second_internal_declare = Declare::new(
+        let second_declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -663,13 +644,13 @@ mod tests {
         )
         .unwrap();
 
-        internal_declare
+        declare
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
         assert!(state.get_contract_class(&class_hash).is_ok());
 
-        second_internal_declare
+        second_declare
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
@@ -717,7 +698,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -729,11 +710,11 @@ mod tests {
         )
         .unwrap();
 
-        internal_declare
+        declare
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        let expected_error = internal_declare.execute(&mut state, &BlockContext::default());
+        let expected_error = declare.execute(&mut state, &BlockContext::default());
 
         // ---------------------
         //      Comparison
@@ -761,7 +742,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -773,11 +754,11 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error = internal_declare.execute(&mut state, &BlockContext::default());
+        let declare = declare.execute(&mut state, &BlockContext::default());
 
-        assert!(internal_declare_error.is_err());
+        assert!(declare.is_err());
         assert_matches!(
-            internal_declare_error.unwrap_err(),
+            declare.unwrap_err(),
             TransactionError::NotDeployedContract(..)
         );
     }
@@ -823,7 +804,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Use non-zero value so that the actual fee calculation is done
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -837,7 +818,7 @@ mod tests {
 
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
-            internal_declare.execute(&mut state, &BlockContext::default()),
+            declare.execute(&mut state, &BlockContext::default()),
             Err(TransactionError::FeeTransferError(_))
         );
     }
