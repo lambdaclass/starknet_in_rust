@@ -1,5 +1,5 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use crate::state::state_api::{State, StateReader};
+use crate::state::state_api::StateReader;
 use crate::transaction::error::TransactionError;
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
@@ -38,7 +38,7 @@ pub(crate) struct SyscallHintProcessor<'a, T: StateReader> {
     pub(crate) run_resources: RunResources,
 }
 
-impl<'a, T: State + StateReader> SyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> SyscallHintProcessor<'a, T> {
     pub fn new(
         syscall_handler: BusinessLogicSyscallHandler<'a, T>,
         hints: &[(usize, Vec<Hint>)],
@@ -52,7 +52,7 @@ impl<'a, T: State + StateReader> SyscallHintProcessor<'a, T> {
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessorLogic for SyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, T> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -111,7 +111,7 @@ impl<'a, T: State + StateReader> HintProcessorLogic for SyscallHintProcessor<'a,
     }
 }
 
-impl<'a, T: State + StateReader> ResourceTracker for SyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> ResourceTracker for SyscallHintProcessor<'a, T> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -129,7 +129,7 @@ impl<'a, T: State + StateReader> ResourceTracker for SyscallHintProcessor<'a, T>
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, T> {
+impl<'a, T: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, T> {
     fn post_run(
         &self,
         runner: &mut VirtualMachine,
