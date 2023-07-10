@@ -171,11 +171,16 @@ pub fn call_contract<S: State + StateReader>(
 /// Estimate the fee associated with L1Handler
 pub fn estimate_message_fee<S: StateReader>(
     l1_handler: &L1Handler,
-    state: &mut TransactionalState<'_, S>,
+    state: S,
     block_context: &BlockContext,
 ) -> Result<(u128, usize), TransactionError> {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut tmp_state = TransactionalState::new(state.state_reader, None, Some(HashMap::new()));
+    let mut tmp_cached_state = CachedState::new(state, None, None);
+    let mut tmp_state = TransactionalState::new(
+        MutRefState::new(&mut tmp_cached_state),
+        None,
+        Some(HashMap::new()),
+    );
 
     // Check if the contract is deployed.
     tmp_state.get_class_hash_at(l1_handler.contract_address())?;
@@ -184,8 +189,10 @@ pub fn estimate_message_fee<S: StateReader>(
     let transaction_result = l1_handler.execute(&mut tmp_state, block_context, 1_000_000)?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         let actual_fee = transaction_result.actual_fee;
+        tmp_state.abort();
         Ok((actual_fee, *gas_usage))
     } else {
+        tmp_state.abort();
         Err(TransactionError::ResourcesError)
     }
 }
