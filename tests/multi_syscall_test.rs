@@ -1,10 +1,7 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
-use starknet_in_rust::core::contract_address;
-use std::{collections::HashMap, vec};
-
-use num_bigint::BigUint;
 use num_traits::{Num, Zero};
+use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -16,13 +13,13 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use std::{collections::HashMap, vec};
 
 #[test]
 fn test_multiple_syscall() {
     //  Create program and entry point types for contract class
     let program_data = include_bytes!("../starknet_programs/cairo1/multi_syscall_test.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let entrypoints = contract_class.clone().entry_points_by_type;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -53,9 +50,8 @@ fn test_multiple_syscall() {
 
     // Block for get_caller_address.
     {
-        let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "caller_address",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -63,14 +59,13 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.retdata, vec![Felt252::from(caller_address.clone().0)])
+        assert_eq!(call_info.retdata, vec![caller_address.clone().0])
     }
 
     // Block for get_contact_address.
     {
-        let entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "contract_address",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -82,9 +77,8 @@ fn test_multiple_syscall() {
     }
     // Block for get_execution_info_syscall.
     {
-        let entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "execution_info_syscall",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -97,9 +91,8 @@ fn test_multiple_syscall() {
 
     // Block for library_call_syscall
     {
-        let entrypoint_selector = &entrypoints.external.get(3).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "replace_class_syscall_test",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -112,9 +105,8 @@ fn test_multiple_syscall() {
 
     // Block for call_contract_syscall
     {
-        let entrypoint_selector = &entrypoints.external.get(4).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "test_library_call_syscall_test",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -127,9 +119,8 @@ fn test_multiple_syscall() {
 
     // Block for send_message_to_l1_syscall
     {
-        let entrypoint_selector = &entrypoints.external.get(5).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "test_call_contract_syscall",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -142,9 +133,8 @@ fn test_multiple_syscall() {
 
     // Block for replace_class_syscall
     {
-        let entrypoint_selector = &entrypoints.external.get(6).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "test_send_message_to_l1",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -157,9 +147,8 @@ fn test_multiple_syscall() {
 
     // Block for read write
     {
-        let entrypoint_selector = &entrypoints.external.get(7).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "read",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -172,9 +161,8 @@ fn test_multiple_syscall() {
 
     // Block for emit
     {
-        let entrypoint_selector = &entrypoints.external.get(8).unwrap().selector;
         let call_info = test_syscall(
-            entrypoint_selector,
+            "trigger_events",
             address.clone(),
             calldata.clone(),
             caller_address.clone(),
@@ -224,11 +212,10 @@ fn test_multiple_syscall() {
         let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
         // Create the deploy contract class
-        let entrypoint_selector = &entrypoints.external.get(9).unwrap().selector;
         contract_class_cache.insert(class_hash, contract_class);
         contract_class_cache.insert(test_class_hash, test_contract_class);
         let call_info = test_syscall(
-            entrypoint_selector,
+            "deploy_test",
             address,
             calldata,
             caller_address,
@@ -241,7 +228,7 @@ fn test_multiple_syscall() {
 }
 
 fn test_syscall(
-    entrypoint_selector: &BigUint,
+    entrypoint_selector: &str,
     address: Address,
     calldata: Vec<Felt252>,
     caller_address: Address,
@@ -249,6 +236,8 @@ fn test_syscall(
     class_hash: [u8; 32],
     state: &mut CachedState<InMemoryStateReader>,
 ) -> CallInfo {
+    let entrypoint_selector =
+        Felt252::from_bytes_be(&calculate_sn_keccak(entrypoint_selector.as_bytes()));
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
