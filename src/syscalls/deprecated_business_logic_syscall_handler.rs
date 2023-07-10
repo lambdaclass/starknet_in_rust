@@ -1012,7 +1012,9 @@ mod tests {
 
     #[test]
     fn test_get_contract_address_ok() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 

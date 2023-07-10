@@ -126,7 +126,7 @@ impl ExecutionEntryPoint {
                     support_reverted,
                 ) {
                     Ok(call_info) => {
-                        //transactional_state.commit();
+                        transactional_state.commit();
                         Ok(call_info)
                     }
                     Err(_) => {

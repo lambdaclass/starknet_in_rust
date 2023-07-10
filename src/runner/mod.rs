@@ -426,7 +426,10 @@ mod test {
     use super::StarknetRunner;
     use crate::{
         state::cached_state::CachedState,
-        state::{in_memory_state_reader::InMemoryStateReader, mut_ref_state::MutRefState},
+        state::{
+            in_memory_state_reader::InMemoryStateReader,
+            mut_ref_state::{MutRefState, TransactionalState},
+        },
         syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
             deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
@@ -462,7 +465,9 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -587,7 +592,11 @@ mod test {
         vm.compute_segments_effective_sizes();
 
         let mut state = CachedState::<InMemoryStateReader>::default();
-        let mut state = CachedState::new(MutRefState::new(&mut state), Some(Default::default()), Some(Default::default()));
+        let mut state = CachedState::new(
+            MutRefState::new(&mut state),
+            Some(Default::default()),
+            Some(Default::default()),
+        );
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),

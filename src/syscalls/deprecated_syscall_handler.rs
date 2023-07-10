@@ -213,6 +213,7 @@ fn get_syscall_ptr(
 mod tests {
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+    use crate::state::mut_ref_state::{MutRefState, TransactionalState};
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{
@@ -250,7 +251,9 @@ mod tests {
 
     #[test]
     fn read_send_message_to_l1_request() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 3);
@@ -272,7 +275,9 @@ mod tests {
 
     #[test]
     fn read_deploy_syscall_request() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
@@ -304,7 +309,9 @@ mod tests {
 
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
@@ -744,7 +751,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -785,7 +794,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -989,7 +1000,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(DEPLOY.to_string(), ids_data);
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -1086,7 +1099,9 @@ mod tests {
         );
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),

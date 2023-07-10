@@ -304,7 +304,10 @@ mod tests {
     use crate::{
         add_segments,
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            in_memory_state_reader::InMemoryStateReader,
+            mut_ref_state::{MutRefState, TransactionalState},
+        },
         utils::{get_integer, test_utils::vm},
     };
     use cairo_vm::relocatable;
@@ -317,7 +320,9 @@ mod tests {
 
     #[test]
     fn write_get_caller_address_response() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state =
+            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
