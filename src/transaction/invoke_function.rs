@@ -120,11 +120,11 @@ impl InvokeFunction {
         ))
     }
 
-    /// Run the validation of the contract in the CairoVM
-    /// ## Parameter:
+    /// Execute the validation entrypoint of the contract and returns the call info.
+    /// ## Parameters:
     /// - state: An state that implements the State and StateReader traits.
-    /// - resources: the resources that are in use by the contract
-    /// - block_context: The block that contains the execution context
+    /// - resources_manager: the resources that are in use by the contract
+    /// - block_context: The block's execution context
     pub(crate) fn run_validate_entrypoint<T>(
         &self,
         state: &mut T,
@@ -203,9 +203,9 @@ impl InvokeFunction {
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     /// ## Parameters
-    /// - state: An state that implements the State and StateReader traits.
-    /// - block_context: The block that contains the execution context.
-    /// - remaining_gas: The amount of gas that the users dispose.
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
+    /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn apply<S>(
         &self,
         state: &mut S,
@@ -283,9 +283,9 @@ impl InvokeFunction {
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
     /// then updates the transaction execution info with the data of the fee.
     /// ## Parameters
-    /// - state: An state that implements the State and StateReader traits.
-    /// - block_context: The block that contains the execution context.
-    /// - remaining_gas: The amount of gas that the users dispose.
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
+    /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
