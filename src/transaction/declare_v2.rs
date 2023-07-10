@@ -331,7 +331,7 @@ impl DeclareV2 {
         };
 
         state.set_compiled_class_hash(&self.hash_value, &self.compiled_class_hash)?;
-        state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
+        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
 
         Ok(())
     }
