@@ -78,7 +78,7 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.retdata, vec![Felt252::from(contract_address.clone().0)])
+        assert_eq!(call_info.events, vec![])
     }
     // Block for get_execution_info_syscall.
     {
