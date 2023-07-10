@@ -1,5 +1,5 @@
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::mut_ref_state::TransactionalState;
+use crate::state::cached_state::CachedState;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
@@ -118,7 +118,7 @@ impl Declare {
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     pub fn apply<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
@@ -165,7 +165,7 @@ impl Declare {
 
     pub fn run_validate_entrypoint<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
@@ -204,7 +204,7 @@ impl Declare {
     /// Calculates and charges the actual fee.
     pub fn charge_fee<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError> {
@@ -256,7 +256,7 @@ impl Declare {
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;

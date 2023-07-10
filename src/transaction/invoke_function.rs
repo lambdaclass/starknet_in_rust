@@ -11,8 +11,11 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::state_api::{State, StateReader},
-    state::{mut_ref_state::TransactionalState, ExecutionResourcesManager},
+    state::ExecutionResourcesManager,
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+    },
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -121,7 +124,7 @@ impl InvokeFunction {
 
     pub(crate) fn run_validate_entrypoint<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
@@ -168,7 +171,7 @@ impl InvokeFunction {
     /// Returns the CallInfo.
     fn run_execute_entrypoint<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
@@ -200,7 +203,7 @@ impl InvokeFunction {
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     pub fn apply<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
@@ -240,7 +243,7 @@ impl InvokeFunction {
 
     fn charge_fee<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>
@@ -276,7 +279,7 @@ impl InvokeFunction {
     /// then updates the transaction execution info with the data of the fee.
     pub fn execute<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {

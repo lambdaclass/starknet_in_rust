@@ -1,6 +1,6 @@
 use super::error::TransactionError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::mut_ref_state::TransactionalState;
+use crate::state::cached_state::CachedState;
 use crate::{
     definitions::{
         block_context::BlockContext,
@@ -22,7 +22,7 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
 pub(crate) fn execute_fee_transfer<S: StateReader>(
-    state: &mut TransactionalState<'_, S>,
+    state: &mut CachedState<S>,
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,

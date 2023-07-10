@@ -8,10 +8,7 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::{
-        state_api::{State, StateReader},
-        ExecutionResourcesManager,
-    },
+    state::{state_api::StateReader, ExecutionResourcesManager},
     transaction::{error::TransactionError, Transaction},
 };
 
@@ -116,11 +113,11 @@ pub fn estimate_fee<S: StateReader>(
     Ok(result)
 }
 
-pub fn call_contract<S: State + StateReader>(
+pub fn call_contract<S: StateReader>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
-    state: &mut TransactionalState<'_, S>,
+    state: &mut CachedState<S>,
     block_context: BlockContext,
     caller_address: Address,
 ) -> Result<Vec<Felt252>, TransactionError> {

@@ -1,5 +1,5 @@
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::mut_ref_state::TransactionalState;
+use crate::state::cached_state::CachedState;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
@@ -109,7 +109,7 @@ impl Deploy {
 
     pub fn apply<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
@@ -160,7 +160,7 @@ impl Deploy {
 
     pub fn invoke_constructor<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
@@ -215,7 +215,7 @@ impl Deploy {
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     pub fn execute<S: StateReader>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;

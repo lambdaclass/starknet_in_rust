@@ -1,6 +1,6 @@
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::mut_ref_state::TransactionalState;
+use crate::state::cached_state::CachedState;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -123,7 +123,7 @@ impl DeployAccount {
 
     pub fn execute<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
@@ -157,7 +157,7 @@ impl DeployAccount {
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
     fn apply<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError>
     where
@@ -197,7 +197,7 @@ impl DeployAccount {
     pub fn handle_constructor<S>(
         &self,
         contract_class: CompiledClass,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
@@ -239,7 +239,7 @@ impl DeployAccount {
 
     pub fn run_constructor_entrypoint<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError>
@@ -289,7 +289,7 @@ impl DeployAccount {
 
     pub fn run_validate_entrypoint<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError>
@@ -338,7 +338,7 @@ impl DeployAccount {
 
     fn charge_fee<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError>

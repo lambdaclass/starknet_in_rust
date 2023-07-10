@@ -1,6 +1,6 @@
 use crate::{
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
-    state::mut_ref_state::TransactionalState,
+    state::cached_state::CachedState,
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
@@ -76,7 +76,7 @@ impl L1Handler {
     /// Applies self to 'state' by executing the L1-handler entry point.
     pub fn execute<S>(
         &self,
-        state: &mut TransactionalState<'_, S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError>
