@@ -30,6 +30,7 @@ use num_traits::Zero;
 
 use super::Transaction;
 
+/// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
 pub struct Deploy {
     pub hash_value: Felt252,
@@ -88,6 +89,7 @@ impl Deploy {
         })
     }
 
+    /// Returns the class hash of the deployed contract
     pub fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }
@@ -105,7 +107,10 @@ impl Deploy {
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
         }
     }
-
+    /// Deploys the contract in the starknet network and calls its constructor if it has one.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -122,6 +127,9 @@ impl Deploy {
             self.invoke_constructor(state, block_context)
         }
     }
+    /// Executes the contract without constructor
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
 
     pub fn handle_empty_constructor<S: State + StateReader>(
         &self,
@@ -157,6 +165,10 @@ impl Deploy {
         ))
     }
 
+    /// Execute the contract using its constructor
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
     pub fn invoke_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -211,6 +223,9 @@ impl Deploy {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -226,6 +241,8 @@ impl Deploy {
     // ---------------
     //   Simulation
     // ---------------
+
+    /// Creates a Deploy transaction for simulate a deploy
     pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
