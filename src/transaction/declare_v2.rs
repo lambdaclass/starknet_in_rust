@@ -323,11 +323,12 @@ impl DeclareV2 {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        let casm_class = if self.casm_class.is_some() {
-            self.casm_class.as_ref().unwrap().clone()
-        } else {
-            CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
-                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
+        let casm_class = match self.casm_class.clone() {
+            Some(class) => class.clone(),
+            None => {
+                CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
+                    .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
+            }
         };
 
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
