@@ -60,26 +60,46 @@ impl InvokeFunction {
         signature: Vec<Felt252>,
         chain_id: Felt252,
         nonce: Option<Felt252>,
-        hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
             version.clone(),
         )?;
-        let hash_value = match hash_value {
-            Some(hash) => hash,
-            None => calculate_transaction_hash_common(
-                TransactionHashPrefix::Invoke,
-                version.clone(),
-                &contract_address,
-                entry_point_selector_field,
-                &calldata,
-                max_fee,
-                chain_id,
-                &additional_data,
-            )?,
-        };
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::Invoke,
+            version.clone(),
+            &contract_address,
+            entry_point_selector_field,
+            &calldata,
+            max_fee,
+            chain_id,
+            &additional_data,
+        )?;
+
+        InvokeFunction::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            max_fee,
+            version,
+            calldata,
+            signature,
+            nonce,
+            hash_value,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_hash(
+        contract_address: Address,
+        entry_point_selector: Felt252,
+        max_fee: u128,
+        version: Felt252,
+        calldata: Vec<Felt252>,
+        signature: Vec<Felt252>,
+        nonce: Option<Felt252>,
+        hash_value: Felt252,
+    ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InvokeFunction {

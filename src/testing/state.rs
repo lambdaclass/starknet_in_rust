@@ -277,17 +277,28 @@ impl StarknetState {
             None => self.state.get_nonce_at(&contract_address)?,
         };
 
-        InvokeFunction::new(
-            contract_address,
-            entry_point_selector,
-            max_fee,
-            TRANSACTION_VERSION.clone(),
-            calldata,
-            signature,
-            self.chain_id(),
-            Some(nonce),
-            hash_value,
-        )
+        match hash_value {
+            None => InvokeFunction::new(
+                contract_address,
+                entry_point_selector,
+                max_fee,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                signature,
+                self.chain_id(),
+                Some(nonce),
+            ),
+            Some(hash_value) => InvokeFunction::new_with_tx_hash(
+                contract_address,
+                entry_point_selector,
+                max_fee,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                signature,
+                Some(nonce),
+                hash_value,
+            ),
+        }
     }
 }
 

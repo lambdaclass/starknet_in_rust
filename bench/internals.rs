@@ -84,7 +84,6 @@ fn deploy_account() {
                 signature,
                 SALT.clone(),
                 StarknetChainId::TestNet.to_felt(),
-                None,
             )
             .unwrap();
             internal_deploy_account.execute(&mut state_copy, block_context)
@@ -207,7 +206,6 @@ fn invoke() {
                 signature,
                 StarknetChainId::TestNet.to_felt(),
                 Some(Felt252::zero()),
-                None,
             )
             .unwrap();
             internal_invoke.execute(&mut state_copy, block_context, 2_000_000)
