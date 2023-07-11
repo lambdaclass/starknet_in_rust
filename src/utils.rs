@@ -14,6 +14,7 @@ use crate::{
     transaction::error::TransactionError,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract::starknet_keccak;
 use cairo_lang_starknet::contract_class::ContractEntryPoint;
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
@@ -342,29 +343,69 @@ fn get_contract_entrypoints(
         .collect())
 }
 
-fn get_entrypoints_hashed(
+fn get_contract_entry_points_hashed(
     casm: CasmContractClass,
-    entrypoint_type: EntryPointType,
+    entrypoint_type: &EntryPointType,
 ) -> Result<FieldElement, ContractAddressError> {
-    let contract_entry_points = get_contract_entrypoints(casm, entrypoint_type)?;
+    let contract_entry_points = get_contract_entrypoints(casm, *entrypoint_type)?;
 
     let mut entry_points_flatted: Vec<FieldElement> =
         Vec::with_capacity(contract_entry_points.len() * 2);
 
     for entry_point in contract_entry_points {
-        entry_points_flatted.push(
-            FieldElement::from_bytes_be(&entry_point.selector.to_be_bytes()).map_err(|_err| {
-                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-            })?,
-        );
-        entry_points_flatted.push(FieldElement::from(entry_point.offset));
+        entry_points_flatted.push(entry_point.selector.into());
+        entry_points_flatted.push(FieldElement::from(entry_point.function_idx));
     }
 
     Ok(poseidon_hash_many(&entry_points_flatted))
 }
 
-fn compute_class_hash(casm: CasmContractClass) -> Felt252 {
-    let external_functions = get_entrypoints_hashed(casm, EntryPointType::External);
+fn compute_class_hash(contract_class: CasmContractClass) -> Felt252 {
+    // Entrypoints by type, hashed.
+    let external_functions =
+        get_contract_entry_points_hashed(contract_class, &EntryPointType::External)?;
+    let l1_handlers = get_contract_entry_points_hashed(contract_class, &EntryPointType::L1Handler)?;
+    let constructors =
+        get_contract_entry_points_hashed(contract_class, &EntryPointType::Constructor)?;
+
+    // Hash abi_hash.
+    let abi = contract_class
+        .abi
+        .clone()
+        .ok_or(ContractAddressError::MissingAbi)?
+        .json();
+
+    let abi_hash =
+        FieldElement::from_bytes_be(&Felt252::from(starknet_keccak(abi.as_bytes())).to_be_bytes())
+            .map_err(|_err| {
+                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+            })?;
+
+    let mut sierra_program_vector = Vec::with_capacity(contract_class.bytecode.len());
+    for number in &contract_class.bytecode {
+        sierra_program_vector.push(
+            FieldElement::from_bytes_be(&Felt252::from(number.value.clone()).to_be_bytes())
+                .map_err(|_err| {
+                    ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+                })?,
+        );
+    }
+
+    // Hash Sierra program.
+    let sierra_program_ptr = poseidon_hash_many(&sierra_program_vector);
+
+    let flatted_contract_class = vec![
+        api_version,
+        external_functions,
+        l1_handlers,
+        constructors,
+        abi_hash,
+        sierra_program_ptr,
+    ];
+
+    Ok(Felt252::from_bytes_be(
+        &poseidon_hash_many(&flatted_contract_class).to_bytes_be(),
+    ))
 }
 
 pub fn compute_compiled_class_hash(compiled_class: CompiledClass) -> Felt252 {
