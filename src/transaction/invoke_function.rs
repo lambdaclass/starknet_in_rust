@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -13,19 +11,16 @@ use crate::{
     },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-    },
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, verify_no_calls_to_other_contracts, Address},
 };
 
+use super::{common::*, Transaction};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-
-use super::{handle_nonce, Transaction};
+use std::collections::HashMap;
 
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {

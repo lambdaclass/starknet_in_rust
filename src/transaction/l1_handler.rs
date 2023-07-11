@@ -17,11 +17,11 @@ use crate::{
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, fee::calculate_tx_fee},
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
 
-use super::Transaction;
+use super::{common::calculate_tx_fee, Transaction};
 
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]

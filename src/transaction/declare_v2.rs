@@ -1,4 +1,5 @@
-use super::{verify_version, Transaction};
+use super::common::*;
+use super::Transaction;
 use crate::core::contract_address::compute_sierra_class_hash;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
@@ -16,10 +17,7 @@ use crate::{
     },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-    },
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -278,7 +276,7 @@ impl DeclareV2 {
             self.get_execution_context(block_context.validate_max_n_steps);
 
         if self.skip_execute {
-            return Err(TransactionError::CallInfoIsNone);
+            Err(TransactionError::CallInfoIsNone)
         } else {
             let execution_call_info = entry_point.execute(
                 state,

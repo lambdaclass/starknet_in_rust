@@ -1,4 +1,5 @@
-use super::{handle_nonce, Transaction};
+use super::common::*;
+use super::Transaction;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::utils::verify_no_calls_to_other_contracts;
 use crate::{
@@ -25,10 +26,7 @@ use crate::{
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-    },
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
