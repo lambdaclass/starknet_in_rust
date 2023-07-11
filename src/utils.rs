@@ -1,3 +1,5 @@
+use crate::core::errors::contract_address_errors::ContractAddressError;
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::transaction_type::TransactionType,
@@ -11,6 +13,8 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract_class::ContractEntryPoint;
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
@@ -18,7 +22,7 @@ use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
-use starknet_crypto::FieldElement;
+use starknet_crypto::{poseidon_hash_many, poseidon_hash_single, FieldElement};
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -305,6 +309,69 @@ pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result
+}
+
+//* -----------------------
+//*  Compute compile hash
+//* -----------------------
+
+fn get_contract_entrypoints(
+    casm: CasmContractClass,
+    entry_point_type: EntryPointType,
+) -> Result<Vec<ContractEntryPoint>, ContractAddressError> {
+    let program_length = casm.bytecode.len();
+
+    let entry_points = match entry_point_type {
+        EntryPointType::Constructor => casm.entry_points_by_type.constructor.clone(),
+        EntryPointType::External => casm.entry_points_by_type.external.clone(),
+        EntryPointType::L1Handler => casm.entry_points_by_type.l1_handler.clone(),
+    };
+
+    let program_len = program_length;
+    for entry_point in &entry_points {
+        if entry_point.offset > program_len {
+            return Err(ContractAddressError::InvalidOffset(entry_point.offset));
+        }
+    }
+
+    Ok(entry_points
+        .iter()
+        .map(|entry_point| {
+            ContractEntryPoint::new(entry_point.selector.clone().into(), entry_point.offset)
+        })
+        .collect())
+}
+
+fn get_entrypoints_hashed(
+    casm: CasmContractClass,
+    entrypoint_type: EntryPointType,
+) -> Result<FieldElement, ContractAddressError> {
+    let contract_entry_points = get_contract_entrypoints(casm, entrypoint_type)?;
+
+    let mut entry_points_flatted: Vec<FieldElement> =
+        Vec::with_capacity(contract_entry_points.len() * 2);
+
+    for entry_point in contract_entry_points {
+        entry_points_flatted.push(
+            FieldElement::from_bytes_be(&entry_point.selector.to_be_bytes()).map_err(|_err| {
+                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+            })?,
+        );
+        entry_points_flatted.push(FieldElement::from(entry_point.offset));
+    }
+
+    Ok(poseidon_hash_many(&entry_points_flatted))
+}
+
+fn compute_class_hash(casm: CasmContractClass) -> Felt252 {
+    let external_functions = get_entrypoints_hashed(casm, EntryPointType::External);
+}
+
+pub fn compute_compiled_class_hash(compiled_class: CompiledClass) -> Felt252 {
+    match compiled_class {
+        CompiledClass::Casm(class) => compute_class_hash(*class),
+        _ => unreachable!(),
+    }
 }
 
 //* ------------------------

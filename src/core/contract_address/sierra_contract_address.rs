@@ -21,7 +21,8 @@ fn get_contract_entry_points_hashed(
     let contract_entry_points = get_contract_entry_points(contract_class, entry_point_type)?;
 
     // for each entry_point, we need to store 2 FieldElements: selector and offset.
-    let mut entry_points_flatted = Vec::with_capacity(contract_entry_points.len() * 2);
+    let mut entry_points_flatted: Vec<FieldElement> =
+        Vec::with_capacity(contract_entry_points.len() * 2);
 
     for entry_point in contract_entry_points {
         entry_points_flatted.push(
