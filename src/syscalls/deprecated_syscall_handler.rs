@@ -1199,7 +1199,7 @@ mod tests {
 
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &BlockContext::default(), 0)
+            .apply(&mut s, &BlockContext::default(), 0)
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

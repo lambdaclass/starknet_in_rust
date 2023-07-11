@@ -35,13 +35,14 @@ pub struct StarknetState<'a> {
 }
 
 impl<'a> StarknetState<'a> {
-    pub fn new(context: Option<BlockContext>) -> Self {
+    pub fn new(
+        context: Option<BlockContext>,
+        cached_state: &'a mut CachedState<InMemoryStateReader>,
+    ) -> Self {
         let block_context = context.unwrap_or_default();
-        let state_reader = InMemoryStateReader::default();
 
-        let mut state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
         let state = TransactionalState::new(
-            MutRefState::new(&mut state),
+            MutRefState::new(cached_state),
             Some(Default::default()),
             Some(Default::default()),
         );
@@ -60,11 +61,10 @@ impl<'a> StarknetState<'a> {
 
     pub fn new_with_states(
         block_context: Option<BlockContext>,
-        state: CachedState<InMemoryStateReader>,
+        cached_state: &'a mut CachedState<InMemoryStateReader>,
     ) -> Self {
-        let mut state = state.clone();
         let state = TransactionalState::new(
-            MutRefState::new(&mut state),
+            MutRefState::new(cached_state),
             Some(Default::default()),
             Some(Default::default()),
         );
@@ -324,7 +324,8 @@ mod tests {
 
     #[test]
     fn test_deploy() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut cached_state = CachedState::new(InMemoryStateReader::default(), None, None);
+        let mut starknet_state = StarknetState::new(None, &mut cached_state);
 
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
@@ -454,10 +455,7 @@ mod tests {
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class);
 
-        let state = TransactionalState::new(MutRefState::new(&mut state), None, None);
-
-        let mut starknet_state = StarknetState::new(None);
-        starknet_state.state = state;
+        let mut starknet_state = StarknetState::new(None, &mut state);
 
         // --------------------------------------------
         //      Test declare with starknet state
@@ -507,7 +505,8 @@ mod tests {
         // 1) deploy fibonacci
         // 2) invoke call over fibonacci
 
-        let mut starknet_state = StarknetState::new(None);
+        let mut cached_state = CachedState::new(InMemoryStateReader::default(), None, None);
+        let mut starknet_state = StarknetState::new(None, &mut cached_state);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt: Felt252 = 1.into();
@@ -596,7 +595,8 @@ mod tests {
 
     #[test]
     fn test_execute_entry_point_raw() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut cached_state = CachedState::new(InMemoryStateReader::default(), None, None);
+        let mut starknet_state = StarknetState::new(None, &mut cached_state);
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::from_path(path).unwrap();
         let contract_address_salt = 1.into();
@@ -621,7 +621,8 @@ mod tests {
 
     #[test]
     fn test_add_messages_and_events() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut cached_state = CachedState::new(InMemoryStateReader::default(), None, None);
+        let mut starknet_state = StarknetState::new(None, &mut cached_state);
         let test_msg_1 = OrderedL2ToL1Message {
             order: 0,
             to_address: Address(0.into()),
@@ -651,7 +652,8 @@ mod tests {
 
     #[test]
     fn test_consume_message_hash() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut cached_state = CachedState::new(InMemoryStateReader::default(), None, None);
+        let mut starknet_state = StarknetState::new(None, &mut cached_state);
         let test_msg_1 = OrderedL2ToL1Message {
             order: 0,
             to_address: Address(0.into()),
@@ -684,7 +686,8 @@ mod tests {
 
     #[test]
     fn test_consume_message_hash_twice_should_fail() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut cached_state = CachedState::new(InMemoryStateReader::default(), None, None);
+        let mut starknet_state = StarknetState::new(None, &mut cached_state);
         let test_msg = OrderedL2ToL1Message {
             order: 0,
             to_address: Address(0.into()),
@@ -710,7 +713,8 @@ mod tests {
 
     #[test]
     fn test_create_invoke_function_should_fail_with_none_contract_state() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut cached_state = CachedState::new(InMemoryStateReader::default(), None, None);
+        let mut starknet_state = StarknetState::new(None, &mut cached_state);
 
         let err = starknet_state
             .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None, None)
