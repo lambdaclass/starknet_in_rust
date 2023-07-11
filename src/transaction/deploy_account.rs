@@ -32,7 +32,6 @@ use crate::{
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
-use cairo_vm::hint_processor::builtin_hint_processor::hint_code::USORT_VERIFY_MULTIPLICITY_ASSERT;
 use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
