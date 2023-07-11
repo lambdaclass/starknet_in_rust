@@ -27,6 +27,7 @@ use num_traits::Zero;
 
 use super::Transaction;
 
+/// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
     #[getset(get = "pub")]
@@ -139,6 +140,11 @@ impl InvokeFunction {
         ))
     }
 
+    /// Execute the validation entrypoint of the contract and returns the call info.
+    /// ## Parameters:
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - resources_manager: the resources that are in use by the contract
+    /// - block_context: The block's execution context
     pub(crate) fn run_validate_entrypoint<T>(
         &self,
         state: &mut T,
@@ -216,6 +222,10 @@ impl InvokeFunction {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
+    /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn apply<S>(
         &self,
         state: &mut S,
@@ -292,6 +302,10 @@ impl InvokeFunction {
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
     /// then updates the transaction execution info with the data of the fee.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
+    /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
