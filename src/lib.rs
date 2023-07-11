@@ -277,7 +277,6 @@ mod test {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(0.into()),
-            None,
         )
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
@@ -419,7 +418,6 @@ mod test {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             None,
-            None,
         )
         .unwrap();
 
@@ -510,7 +508,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 Some(1.into()),
-                None,
             )
             .unwrap(),
         );
@@ -525,7 +522,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 Some(2.into()),
-                None,
             )
             .unwrap(),
         );
@@ -540,7 +536,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 Some(3.into()),
-                None,
             )
             .unwrap(),
         );
@@ -638,7 +633,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 Some(1.into()),
-                None,
             )
             .unwrap(),
         );
@@ -682,7 +676,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 0.into(),
-                None,
             )
             .unwrap(),
         );
@@ -718,7 +711,6 @@ mod test {
                 0.into(),
                 vec![],
                 Felt252::zero(),
-                None,
             )
             .expect("couldn't create transaction"),
         );
@@ -756,7 +748,6 @@ mod test {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             0.into(),
-            None,
         )
         .unwrap();
 
@@ -779,7 +770,6 @@ mod test {
                 SIGNATURE.clone(),
                 StarknetChainId::TestNet.to_felt(),
                 Some(Felt252::zero()),
-                None,
             )
             .unwrap(),
         );
@@ -818,7 +808,6 @@ mod test {
                 SIGNATURE.clone(),
                 SALT.clone(),
                 StarknetChainId::TestNet.to_felt(),
-                None,
             )
             .unwrap(),
         );
@@ -968,7 +957,6 @@ mod test {
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
                 0.into(),
-                None,
             )
             .unwrap(),
         );
@@ -990,7 +978,6 @@ mod test {
                 SIGNATURE.clone(),
                 StarknetChainId::TestNet.to_felt(),
                 Some(Felt252::zero()),
-                None,
             )
             .unwrap(),
         );
