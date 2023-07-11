@@ -320,8 +320,8 @@ mod tests {
 
     #[test]
     fn write_get_caller_address_response() {
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();

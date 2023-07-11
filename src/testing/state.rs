@@ -430,36 +430,34 @@ mod tests {
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class.clone());
 
-        let state = CachedState::new(state_reader, Some(contract_class_cache), None);
-
         //* --------------------------------------------
         //*    Create starknet state with previous data
         //* --------------------------------------------
-
-        let mut starknet_state = StarknetState::new(None);
-
-        starknet_state.state = state;
-        starknet_state
-            .state
+        let mut state = CachedState::new(InMemoryStateReader::default(), None, None);
+        state
             .state_reader
             .address_to_class_hash_mut()
             .insert(sender_address.clone(), class_hash);
 
-        starknet_state
-            .state
+        state
             .state_reader
             .address_to_nonce_mut()
             .insert(sender_address.clone(), nonce);
-        starknet_state
-            .state
+
+        state
             .state_reader
             .address_to_storage_mut()
             .insert(storage_entry, storage);
-        starknet_state
-            .state
+
+        state
             .state_reader
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class);
+
+        let state = TransactionalState::new(MutRefState::new(&mut state), None, None);
+
+        let mut starknet_state = StarknetState::new(None);
+        starknet_state.state = state;
 
         // --------------------------------------------
         //      Test declare with starknet state

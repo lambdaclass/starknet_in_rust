@@ -251,8 +251,8 @@ mod tests {
 
     #[test]
     fn read_send_message_to_l1_request() {
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
@@ -275,8 +275,8 @@ mod tests {
 
     #[test]
     fn read_deploy_syscall_request() {
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
@@ -309,8 +309,8 @@ mod tests {
 
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
@@ -329,7 +329,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_BLOCK_TIMESTAMP.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -362,7 +364,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -415,7 +419,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(EMIT_EVENT_CODE.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -473,7 +479,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -581,7 +589,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -621,7 +631,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_CALLER_ADDRESS.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -668,7 +680,9 @@ mod tests {
         let hint_data = HintProcessorData::new_default(SEND_MESSAGE_TO_L1.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -716,7 +730,9 @@ mod tests {
             ]
         );
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -751,8 +767,8 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
 
         // invoke syscall
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -794,8 +810,8 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
 
         // invoke syscall
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -863,7 +879,9 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -927,7 +945,9 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_WRITE.to_string(), ids_data);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -1000,8 +1020,8 @@ mod tests {
         let hint_data = HintProcessorData::new_default(DEPLOY.to_string(), ids_data);
 
         // Create SyscallHintProcessor
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -1099,8 +1119,8 @@ mod tests {
         );
 
         // Create SyscallHintProcessor
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),

@@ -908,7 +908,10 @@ impl<'a, T: StateReader> DeprecatedBLSyscallHandler<'a, T> {
 mod tests {
     use crate::{
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            in_memory_state_reader::InMemoryStateReader,
+            mut_ref_state::{MutRefState, TransactionalState},
+        },
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };
@@ -950,7 +953,9 @@ mod tests {
 
     #[test]
     fn deploy_from_zero_error() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -976,7 +981,9 @@ mod tests {
 
     #[test]
     fn can_allocate_segment() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
@@ -992,7 +999,9 @@ mod tests {
 
     #[test]
     fn test_get_block_number() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -1012,8 +1021,8 @@ mod tests {
 
     #[test]
     fn test_get_contract_address_ok() {
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
@@ -1031,7 +1040,9 @@ mod tests {
 
     #[test]
     fn test_storage_read_empty() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
 
         assert_matches!(

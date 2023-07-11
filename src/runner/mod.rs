@@ -465,13 +465,14 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state =
-            TransactionalState::new(MutRefState::new(&mut CachedState::default()), None, None);
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
 
-        let hint_processor = DeprecatedSyscallHintProcessor::new(
-            DeprecatedBLSyscallHandler::default_with(&mut state),
-            RunResources::default(),
-        );
+        let hint_processor: DeprecatedSyscallHintProcessor<'_, InMemoryStateReader> =
+            DeprecatedSyscallHintProcessor::new(
+                DeprecatedBLSyscallHandler::default_with(&mut state),
+                RunResources::default(),
+            );
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert!(runner.run_from_entrypoint(1, &[], None).is_err())
@@ -483,11 +484,14 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor = DeprecatedSyscallHintProcessor::new(
-            DeprecatedBLSyscallHandler::default_with(&mut state),
-            RunResources::default(),
-        );
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
+        let hint_processor: DeprecatedSyscallHintProcessor<'_, InMemoryStateReader> =
+            DeprecatedSyscallHintProcessor::new(
+                DeprecatedBLSyscallHandler::default_with(&mut state),
+                RunResources::default(),
+            );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         assert_matches!(
@@ -502,11 +506,14 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor = DeprecatedSyscallHintProcessor::new(
-            DeprecatedBLSyscallHandler::default_with(&mut state),
-            RunResources::default(),
-        );
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
+        let hint_processor: DeprecatedSyscallHintProcessor<'_, InMemoryStateReader> =
+            DeprecatedSyscallHintProcessor::new(
+                DeprecatedBLSyscallHandler::default_with(&mut state),
+                RunResources::default(),
+            );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::RelocatableValue((0, 1).into());
@@ -524,11 +531,14 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor = DeprecatedSyscallHintProcessor::new(
-            DeprecatedBLSyscallHandler::default_with(&mut state),
-            RunResources::default(),
-        );
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
+        let hint_processor: DeprecatedSyscallHintProcessor<'_, InMemoryStateReader> =
+            DeprecatedSyscallHintProcessor::new(
+                DeprecatedBLSyscallHandler::default_with(&mut state),
+                RunResources::default(),
+            );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let relocatable = MaybeRelocatable::Int((1).into());
@@ -546,11 +556,14 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor = DeprecatedSyscallHintProcessor::new(
-            DeprecatedBLSyscallHandler::default_with(&mut state),
-            RunResources::default(),
-        );
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
+        let hint_processor: DeprecatedSyscallHintProcessor<'_, InMemoryStateReader> =
+            DeprecatedSyscallHintProcessor::new(
+                DeprecatedBLSyscallHandler::default_with(&mut state),
+                RunResources::default(),
+            );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());
@@ -568,11 +581,14 @@ mod test {
         vm.add_memory_segment();
         vm.compute_segments_effective_sizes();
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
-        let hint_processor = DeprecatedSyscallHintProcessor::new(
-            DeprecatedBLSyscallHandler::default_with(&mut state),
-            RunResources::default(),
-        );
+        let mut s = CachedState::default();
+        let mut state = TransactionalState::new(MutRefState::new(&mut s), None, None);
+
+        let hint_processor: DeprecatedSyscallHintProcessor<'_, InMemoryStateReader> =
+            DeprecatedSyscallHintProcessor::new(
+                DeprecatedBLSyscallHandler::default_with(&mut state),
+                RunResources::default(),
+            );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
         let base = MaybeRelocatable::RelocatableValue((0, 0).into());

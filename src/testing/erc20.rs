@@ -125,7 +125,7 @@ fn test_erc20_cairo2() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps() as u32,
+            block_context.invoke_tx_max_n_steps,
         )
         .unwrap();
     let erc20_address = call_info.retdata.get(0).unwrap().clone();
