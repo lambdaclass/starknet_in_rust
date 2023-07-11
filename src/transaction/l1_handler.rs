@@ -61,8 +61,26 @@ impl L1Handler {
             &[nonce.clone()],
         )?;
 
-        Ok(L1Handler {
+        L1Handler::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            calldata,
+            nonce,
+            paid_fee_on_l1,
             hash_value,
+        )
+    }
+
+    pub fn new_with_tx_hash(
+        contract_address: Address,
+        entry_point_selector: Felt252,
+        calldata: Vec<Felt252>,
+        nonce: Felt252,
+        paid_fee_on_l1: Option<Felt252>,
+        tx_hash: Felt252,
+    ) -> Result<L1Handler, TransactionError> {
+        Ok(L1Handler {
+            hash_value: tx_hash,
             contract_address,
             entry_point_selector,
             calldata,
