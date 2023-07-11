@@ -2,6 +2,7 @@ use super::{verify_version, Transaction};
 use crate::core::contract_address::compute_sierra_class_hash;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
+use crate::utils::verify_no_calls_to_other_contracts;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
@@ -18,7 +19,6 @@ use crate::{
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        invoke_function::verify_no_calls_to_other_contracts,
     },
     utils::{calculate_tx_resources, Address},
 };
@@ -277,21 +277,20 @@ impl DeclareV2 {
         let mut tx_execution_context =
             self.get_execution_context(block_context.validate_max_n_steps);
 
-        let call_info = if self.skip_execute {
-            None
+        if self.skip_execute {
+            return Err(TransactionError::CallInfoIsNone);
         } else {
-            Some(entry_point.execute(
+            let execution_call_info = entry_point.execute(
                 state,
                 block_context,
                 resources_manager,
                 &mut tx_execution_context,
                 false,
-            )?)
-        };
-        let call_info = verify_no_calls_to_other_contracts(&call_info)?;
-        remaining_gas -= call_info.gas_consumed;
-
-        Ok((call_info, remaining_gas))
+            )?;
+            verify_no_calls_to_other_contracts(&execution_call_info)?;
+            remaining_gas -= execution_call_info.gas_consumed;
+            Ok((execution_call_info, remaining_gas))
+        }
     }
 
     // ---------------

@@ -17,7 +17,7 @@ use crate::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
     },
-    utils::{calculate_tx_resources, Address},
+    utils::{calculate_tx_resources, verify_no_calls_to_other_contracts, Address},
 };
 
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
@@ -149,22 +149,20 @@ impl InvokeFunction {
             0,
         );
 
-        let call_info = Some(call.execute(
+        let call_info = call.execute(
             state,
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
-        )?);
+        )?;
 
-        let call_info = verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| TransactionError::InvalidContractCall)?;
+        verify_no_calls_to_other_contracts(&call_info)?;
 
         Ok(Some(call_info))
     }
 
-    /// Builds the transaction execution context and executes the entry point.
-    /// Returns the CallInfo.
+    /// Executes the invoke transaction's entry point.
     fn run_execute_entrypoint<T>(
         &self,
         state: &mut T,
@@ -208,8 +206,17 @@ impl InvokeFunction {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
-        // Execute transaction
-        let call_info = if self.skip_execute {
+
+        // check the nonce before executing
+        handle_nonce(
+            &self.nonce.clone().unwrap_or(0.into()),
+            &self.version,
+            self.contract_address(),
+            state,
+        )?;
+
+        // Execute the transaction
+        let execution_call_info = if self.skip_execute {
             None
         } else {
             Some(self.run_execute_entrypoint(
@@ -222,14 +229,15 @@ impl InvokeFunction {
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &vec![call_info.clone(), validate_info.clone()],
+            &vec![execution_call_info.clone(), validate_info.clone()],
             self.tx_type,
             changes,
             None,
         )?;
+
         let transaction_execution_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
-            call_info,
+            execution_call_info,
             actual_resources,
             Some(self.tx_type),
         );
@@ -280,13 +288,6 @@ impl InvokeFunction {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
 
-        handle_nonce(
-            &self.nonce.clone().unwrap_or(0.into()),
-            &self.version,
-            self.contract_address(),
-            state,
-        )?;
-
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -315,19 +316,6 @@ impl InvokeFunction {
 // ------------------------------------
 //  Invoke internal functions utils
 // ------------------------------------
-
-pub fn verify_no_calls_to_other_contracts(
-    call_info: &Option<CallInfo>,
-) -> Result<CallInfo, TransactionError> {
-    let call_info = call_info.clone().ok_or(TransactionError::CallInfoIsNone)?;
-    let invoked_contract_address = call_info.contract_address.clone();
-    for internal_call in call_info.gen_call_topology() {
-        if internal_call.contract_address != invoked_contract_address {
-            return Err(TransactionError::UnauthorizedActionOnValidate);
-        }
-    }
-    Ok(call_info)
-}
 
 // Performs validation on fields related to function invocation transaction.
 // InvokeFunction transaction.

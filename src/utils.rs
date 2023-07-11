@@ -298,6 +298,7 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     }
     Ok(())
 }
+
 pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
     let mut hasher = Keccak256::default();
     hasher.update(data);

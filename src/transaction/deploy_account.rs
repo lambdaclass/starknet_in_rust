@@ -1,6 +1,6 @@
-use super::handle_nonce;
-use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
+use super::{handle_nonce, Transaction};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::utils::verify_no_calls_to_other_contracts;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -164,14 +164,18 @@ impl DeployAccount {
     where
         S: State + StateReader,
     {
+        // get the account contract class from the state
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
+        // deploy the account contract in the calculated contract address.
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
+        // execute the constructor of the account.
         let mut resources_manager = ExecutionResourcesManager::default();
         let constructor_call_info =
             self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
 
+        // run the validation entrypoint
         let validate_info = if self.skip_validate {
             None
         } else {
@@ -240,21 +244,19 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = if self.skip_execute {
-            None
+        if self.skip_execute {
+            Err(TransactionError::InvalidContractCall)
         } else {
-            Some(entry_point.execute(
+            let constructor_call_info = entry_point.execute(
                 state,
                 block_context,
                 resources_manager,
                 &mut self.get_execution_context(block_context.validate_max_n_steps),
                 false,
-            )?)
-        };
-
-        let call_info = verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| TransactionError::InvalidContractCall)?;
-        Ok(call_info)
+            )?;
+            verify_no_calls_to_other_contracts(&constructor_call_info)?;
+            Ok(constructor_call_info)
+        }
     }
 
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
@@ -299,22 +301,17 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = if self.skip_execute {
-            None
-        } else {
-            Some(call.execute(
-                state,
-                block_context,
-                resources_manager,
-                &mut self.get_execution_context(block_context.validate_max_n_steps),
-                false,
-            )?)
-        };
+        let validate_call_info = call.execute(
+            state,
+            block_context,
+            resources_manager,
+            &mut self.get_execution_context(block_context.validate_max_n_steps),
+            false,
+        )?;
 
-        verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| TransactionError::InvalidContractCall)?;
+        verify_no_calls_to_other_contracts(&validate_call_info)?;
 
-        Ok(call_info)
+        Ok(Some(validate_call_info))
     }
 
     fn charge_fee<S>(
