@@ -65,7 +65,48 @@ impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sierra_contract_class: &SierraContractClass,
-        sierra_class_hash: Option<Felt252>,
+        compiled_class_hash: Felt252,
+        chain_id: Felt252,
+        sender_address: Address,
+        max_fee: u128,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+        hash_value: Option<Felt252>,
+    ) -> Result<Self, TransactionError> {
+        let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
+        Self::new_with_sierra_class_hash(
+            sierra_contract_class,
+            sierra_class_hash,
+            compiled_class_hash,
+            chain_id,
+            sender_address,
+            max_fee,
+            version,
+            signature,
+            nonce,
+            hash_value,
+        )
+    }
+
+    /// Creates a new instance of a declare with a precomputed sierra class hash.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - sierra_class_hash: The precomputed hash for the sierra contract
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
+    /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: refers to max amount of fee that a declare takes.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
+    /// - hash_value: The transaction hash_value.
+    /// SAFETY: if `sierra_class_hash` doesn't correspond to the `sierra_contract_class` invariants
+    /// may not hold.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_sierra_class_hash(
+        sierra_contract_class: &SierraContractClass,
+        sierra_class_hash: Felt252,
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
@@ -76,11 +117,6 @@ impl DeclareV2 {
         hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
-
-        let sierra_class_hash = match sierra_class_hash {
-            Some(h) => h,
-            None => compute_sierra_class_hash(sierra_contract_class)?,
-        };
 
         let hash_value = match hash_value {
             Some(hash) => hash,
@@ -340,7 +376,6 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::DeclareV2;
-    use crate::core::contract_address::compute_sierra_class_hash;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
@@ -372,7 +407,6 @@ mod tests {
         let reader = BufReader::new(file);
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
             serde_json::from_reader(reader).unwrap();
-        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         let sender_address = Address(1.into());
@@ -381,7 +415,6 @@ mod tests {
 
         let internal_declare = DeclareV2::new(
             &sierra_contract_class,
-            Some(sierra_class_hash),
             Felt252::one(),
             chain_id,
             sender_address,
