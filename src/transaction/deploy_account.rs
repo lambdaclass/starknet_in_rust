@@ -1,4 +1,5 @@
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
+use crate::definitions::constants::VERSION_QUERY;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
@@ -31,6 +32,7 @@ use crate::{
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
+use cairo_vm::hint_processor::builtin_hint_processor::hint_code::USORT_VERIFY_MULTIPLICITY_ASSERT;
 use getset::Getters;
 use num_traits::Zero;
 use std::collections::HashMap;
@@ -219,7 +221,7 @@ impl DeployAccount {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == VERSION_QUERY.clone() {
             return Ok(());
         }
 
@@ -294,7 +296,7 @@ impl DeployAccount {
     where
         S: State + StateReader,
     {
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == VERSION_QUERY.clone() {
             return Ok(None);
         }
 

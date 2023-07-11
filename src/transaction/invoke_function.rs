@@ -4,7 +4,7 @@ use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::BlockContext,
-        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
+        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VERSION_QUERY},
         transaction_type::TransactionType,
     },
     execution::{
@@ -131,7 +131,7 @@ impl InvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == VERSION_QUERY.clone() {
             return Ok(None);
         }
         if self.skip_validation {

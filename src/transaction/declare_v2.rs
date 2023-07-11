@@ -1,5 +1,6 @@
 use super::{verify_version, Transaction};
 use crate::core::contract_address::compute_sierra_class_hash;
+use crate::definitions::constants::VERSION_QUERY;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::{
@@ -188,7 +189,7 @@ impl DeclareV2 {
     // TODO: delete once used
     #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == VERSION_QUERY.clone() {
             return Ok(());
         }
 

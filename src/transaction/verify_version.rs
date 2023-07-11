@@ -1,6 +1,6 @@
 use cairo_vm::felt::Felt252;
 
-use crate::definitions::constants::SUPPORTED_VERSIONS;
+use crate::definitions::constants::{SUPPORTED_VERSIONS, VERSION_QUERY};
 
 use super::error::TransactionError;
 
@@ -14,7 +14,7 @@ pub fn verify_version(
         return Err(TransactionError::UnsupportedVersion(version.to_string()));
     }
 
-    if version == &0.into() {
+    if *version == 0.into() || *version == VERSION_QUERY.clone() {
         if max_fee != 0 {
             return Err(TransactionError::InvalidMaxFee);
         }
