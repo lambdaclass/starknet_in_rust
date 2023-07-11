@@ -59,7 +59,7 @@ fn test_contract(
     //*        Declare new contract class
     //* --------------------------------------------
     state
-        .declare(contract_class.clone(), None)
+        .declare(contract_class.clone())
         .expect("Could not declare the contract class");
 
     //* --------------------------------------------
