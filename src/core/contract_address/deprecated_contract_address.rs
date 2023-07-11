@@ -444,4 +444,36 @@ mod tests {
             )
         );
     }
+
+    #[test]
+    fn test_compute_class_hash_0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f_mainnet(
+    ) {
+        let contract_class = ContractClass::from_path(
+            "starknet_programs/raw_contract_classes/0x04d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f_mainnet.json"
+        ).unwrap();
+
+        assert_eq!(
+            compute_deprecated_class_hash(&contract_class).unwrap(),
+            felt_str!(
+                "4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f",
+                16
+            )
+        );
+    }
+
+    #[test]
+    fn test_compute_class_hash_0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f_goerli(
+    ) {
+        let contract_class = ContractClass::from_path(
+            "starknet_programs/raw_contract_classes/0x04d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f_goerli.json"
+        ).unwrap();
+
+        assert_eq!(
+            compute_deprecated_class_hash(&contract_class).unwrap(),
+            felt_str!(
+                "4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f",
+                16
+            )
+        );
+    }
 }
