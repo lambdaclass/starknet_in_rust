@@ -135,14 +135,22 @@ pub fn deploy(
 ) -> Result<(Address, [u8; 32]), TransactionError> {
     let contract_class = ContractClass::from_path(path).unwrap();
 
-    let internal_deploy = Deploy::new(
-        0.into(),
-        contract_class.clone(),
-        calldata.to_vec(),
-        StarknetChainId::TestNet.to_felt(),
-        0.into(),
-        hash_value,
-    )?;
+    let internal_deploy = match hash_value {
+        None => Deploy::new(
+            0.into(),
+            contract_class.clone(),
+            calldata.to_vec(),
+            StarknetChainId::TestNet.to_felt(),
+            0.into(),
+        )?,
+        Some(hash_value) => Deploy::new_with_tx_hash(
+            0.into(),
+            contract_class.clone(),
+            calldata.to_vec(),
+            0.into(),
+            hash_value,
+        )?,
+    };
     let class_hash = internal_deploy.class_hash();
     state.set_contract_class(&class_hash, &contract_class)?;
 

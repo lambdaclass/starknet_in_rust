@@ -64,22 +64,59 @@ impl Declare {
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
-        hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
-        let hash_value = match hash_value {
-            Some(hash) => hash,
-            None => calculate_declare_transaction_hash(
-                &contract_class,
-                chain_id,
-                &sender_address,
-                max_fee,
-                version.clone(),
-                nonce.clone(),
-            )?,
+        let hash_value = calculate_declare_transaction_hash(
+            &contract_class,
+            chain_id,
+            &sender_address,
+            max_fee,
+            version.clone(),
+            nonce.clone(),
+        )?;
+
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+
+        let internal_declare = Declare {
+            class_hash,
+            sender_address,
+            tx_type: TransactionType::Declare,
+            validate_entry_point_selector,
+            version,
+            max_fee,
+            signature,
+            nonce,
+            hash_value,
+            contract_class,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
         };
+
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
+
+        Ok(internal_declare)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_hash(
+        contract_class: ContractClass,
+        sender_address: Address,
+        max_fee: u128,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+        hash_value: Felt252,
+    ) -> Result<Self, TransactionError> {
+        let hash = compute_deprecated_class_hash(&contract_class)?;
+        let class_hash = felt_to_hash(&hash);
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
@@ -366,7 +403,6 @@ mod tests {
             1.into(),
             Vec::new(),
             Felt252::zero(),
-            None,
         )
         .unwrap();
 
@@ -477,7 +513,6 @@ mod tests {
             version,
             Vec::new(),
             Felt252::from(max_fee),
-            None,
         );
 
         // ---------------------
@@ -541,7 +576,6 @@ mod tests {
             version,
             Vec::new(),
             nonce,
-            None,
         );
 
         // ---------------------
@@ -604,7 +638,6 @@ mod tests {
             0.into(),
             signature,
             Felt252::zero(),
-            None,
         );
 
         // ---------------------
@@ -666,7 +699,6 @@ mod tests {
             1.into(),
             Vec::new(),
             Felt252::zero(),
-            None,
         )
         .unwrap();
 
@@ -678,7 +710,6 @@ mod tests {
             1.into(),
             Vec::new(),
             Felt252::one(),
-            None,
         )
         .unwrap();
 
@@ -744,7 +775,6 @@ mod tests {
             1.into(),
             Vec::new(),
             Felt252::zero(),
-            None,
         )
         .unwrap();
 
@@ -788,7 +818,6 @@ mod tests {
             1.into(),
             Vec::new(),
             Felt252::zero(),
-            None,
         )
         .unwrap();
 
@@ -850,7 +879,6 @@ mod tests {
             1.into(),
             Vec::new(),
             Felt252::zero(),
-            None,
         )
         .unwrap();
 
