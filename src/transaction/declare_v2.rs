@@ -93,7 +93,7 @@ impl DeclareV2 {
             )?,
         };
 
-        let internal_declare = DeclareV2 {
+        let declare = DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sierra_class_hash,
             sender_address,
@@ -111,19 +111,8 @@ impl DeclareV2 {
             skip_fee_transfer: false,
         };
 
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
-        Ok(internal_declare)
+        Ok(declare)
     }
-
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    //  Account Functions
-    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     /// creates the a new TransactionExecutionContexts which represent the state of the net after executing the contract.
     /// ## Parameter:
@@ -138,12 +127,6 @@ impl DeclareV2 {
             n_steps,
             self.version.clone(),
         )
-    }
-
-    /// returns the calldata with which the contract is executed
-    pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = self.compiled_class_hash.clone();
-        Vec::from([bytes])
     }
 
     /// Calculates and charges the actual fee.
@@ -192,7 +175,9 @@ impl DeclareV2 {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        // validate the transaction version and the nonce.
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
+        handle_nonce(&self.nonce, &self.version, &self.sender_address, state)?;
 
         let initial_gas = INITIAL_GAS_COST;
 
@@ -221,15 +206,19 @@ impl DeclareV2 {
 
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &actual_resources, block_context)?;
+
+        // if everything is ok compile the sierra contract class into
+        // a casm contract class and store it in the state.
         self.compile_and_store_casm_class(state)?;
 
-        let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
+        let tx_exec_info = TransactionExecutionInfo {
             validate_info,
-            None,
+            call_info: None,
+            fee_transfer_info,
+            actual_fee,
             actual_resources,
-            Some(self.tx_type),
-        );
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
+            tx_type: Some(self.tx_type),
+        };
 
         Ok(tx_exec_info)
     }
@@ -291,9 +280,6 @@ impl DeclareV2 {
         }
     }
 
-    // ---------------
-    //   Simulation
-    // ---------------
     pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
@@ -353,9 +339,8 @@ mod tests {
 
         let sender_address = Address(1.into());
 
-        // create internal declare v2
-
-        let internal_declare = DeclareV2::new(
+        // create a declareV2 transaction
+        let declare = DeclareV2::new(
             &sierra_contract_class,
             Some(sierra_class_hash),
             Felt252::one(),
@@ -369,25 +354,21 @@ mod tests {
         )
         .unwrap();
 
-        // crate state to store casm contract class
+        // create state to store the casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = InMemoryStateReader::default();
         let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
 
         // call compile and store
-        assert!(internal_declare
-            .compile_and_store_casm_class(&mut state)
-            .is_ok());
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
         // test we  can retreive the data
-        let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.clone(),
-            true,
-        )
-        .unwrap();
+        let expected_casm_class =
+            CasmContractClass::from_contract_class(declare.sierra_contract_class.clone(), true)
+                .unwrap();
 
         let casm_class = match state
-            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .get_contract_class(&declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
             CompiledClass::Casm(casm) => *casm,
