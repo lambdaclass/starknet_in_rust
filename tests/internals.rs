@@ -74,7 +74,7 @@ lazy_static! {
     static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
     static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
     static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str!("4112");
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("27727");
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1948962768849191111780391610229754715773924969841143100991524171924131413970");
 
     // Storage keys.
     // NOTE: this key corresponds to the lower 128 bits of an U256

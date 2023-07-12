@@ -1,5 +1,5 @@
 use super::{verify_version, Transaction};
-use crate::core::contract_address::compute_sierra_class_hash;
+use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::{
@@ -320,6 +320,13 @@ impl DeclareV2 {
             })
             .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
+        let casm_class_hash = compute_casm_class_hash(casm_class)?;
+        if casm_class_hash != self.compiled_class_hash {
+            return Err(TransactionError::InvalidCompiledClassHash(
+                casm_class_hash.to_string(),
+                self.compiled_class_hash.to_string(),
+            ));
+        }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
         state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
 
@@ -400,7 +407,7 @@ mod tests {
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::felt::{Felt252, felt_str};
     use num_traits::{One, Zero};
 
     #[test]
@@ -432,7 +439,7 @@ mod tests {
         let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
             Some(sierra_class_hash),
-            Felt252::one(),
+            felt_str!("1948962768849191111780391610229754715773924969841143100991524171924131413970"),
             sender_address,
             0,
             version,
