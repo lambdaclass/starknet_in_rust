@@ -505,7 +505,7 @@ mod tests {
             sender_address,
             0,
             version,
-            [1.into()].to_vec(),
+            vec![],
             Felt252::zero(),
             Felt252::one(),
         )
