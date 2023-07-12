@@ -129,8 +129,6 @@ impl DeployAccount {
     {
         let mut tx_info = self.apply(state, block_context)?;
 
-        handle_nonce(&self.nonce, &self.version, self.contract_address(), state)?;
-
         let (fee_transfer_info, actual_fee) =
             self.charge_fee(state, &tx_info.actual_resources, block_context)?;
         tx_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -162,6 +160,20 @@ impl DeployAccount {
     where
         S: State + StateReader,
     {
+        // check the transaction version
+        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
+
+        // check the nonce
+        handle_nonce(&self.nonce, &self.version, self.contract_address(), state)?;
+
+        // run the validation entrypoint
+        let mut resources_manager = ExecutionResourcesManager::default();
+        let validate_info = if self.skip_validate {
+            None
+        } else {
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+        };
+
         // get the account contract class from the state
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
@@ -169,16 +181,8 @@ impl DeployAccount {
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         // execute the constructor of the account.
-        let mut resources_manager = ExecutionResourcesManager::default();
         let constructor_call_info =
             self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
-
-        // run the validation entrypoint
-        let validate_info = if self.skip_validate {
-            None
-        } else {
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
-        };
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -430,7 +434,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = DeployAccount::new(
+        let deploy_account = DeployAccount::new(
             class_hash,
             0,
             0.into(),
@@ -443,7 +447,7 @@ mod tests {
         )
         .unwrap();
 
-        let internal_deploy_error = DeployAccount::new(
+        let deploy_account_error = DeployAccount::new(
             class_hash,
             0,
             0.into(),
@@ -456,11 +460,11 @@ mod tests {
         )
         .unwrap();
 
-        let class_hash = internal_deploy.class_hash();
+        let class_hash = deploy_account.class_hash();
         state.set_contract_class(class_hash, &contract).unwrap();
-        internal_deploy.execute(&mut state, &block_context).unwrap();
+        deploy_account.execute(&mut state, &block_context).unwrap();
         assert_matches!(
-            internal_deploy_error
+            deploy_account_error
                 .execute(&mut state, &block_context)
                 .unwrap_err(),
             TransactionError::State(StateError::ContractAddressUnavailable(..))
@@ -484,7 +488,7 @@ mod tests {
             None,
         );
 
-        let internal_deploy = DeployAccount::new(
+        let deploy_account = DeployAccount::new(
             class_hash,
             0,
             0.into(),
@@ -497,8 +501,8 @@ mod tests {
         )
         .unwrap();
 
-        let class_hash = internal_deploy.class_hash();
+        let class_hash = deploy_account.class_hash();
         state.set_contract_class(class_hash, &contract).unwrap();
-        internal_deploy.execute(&mut state, &block_context).unwrap();
+        deploy_account.execute(&mut state, &block_context).unwrap();
     }
 }
