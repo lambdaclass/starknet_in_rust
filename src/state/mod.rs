@@ -13,7 +13,7 @@ use crate::{
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     transaction::error::TransactionError,
@@ -166,7 +166,7 @@ impl StateDiff {
         })
     }
 
-    pub fn to_cached_state<T>(&self, state_reader: T) -> Result<CachedState<T>, StateError>
+    pub fn to_cached_state<T>(&self, state_reader: Arc<T>) -> Result<CachedState<T>, StateError>
     where
         T: StateReader + Clone,
     {

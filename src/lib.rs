@@ -1,7 +1,7 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     execution::{
@@ -57,7 +57,7 @@ pub fn simulate_transaction<S: StateReader>(
     skip_execute: bool,
     skip_fee_transfer: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
-    let mut cache_state = CachedState::new(state, None, Some(HashMap::new()));
+    let mut cache_state = CachedState::new(Arc::new(state), None, Some(HashMap::new()));
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         let tx_for_simulation =
@@ -80,7 +80,7 @@ where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(state, None, None);
+    let mut cached_state = CachedState::<T>::new(Arc::new(state), None, None);
 
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
@@ -164,7 +164,7 @@ where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(state, None, None);
+    let mut cached_state = CachedState::<T>::new(Arc::new(state), None, None);
 
     // Check if the contract is deployed.
     cached_state.get_class_hash_at(l1_handler.contract_address())?;

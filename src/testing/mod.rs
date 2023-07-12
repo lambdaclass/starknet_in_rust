@@ -3,7 +3,7 @@ pub mod state;
 pub mod state_error;
 pub mod type_utils;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use cairo_vm::felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -153,7 +153,7 @@ pub fn create_account_tx_test_state(
                     .class_hash_to_contract_class_mut()
                     .insert(class_hash, contract_class);
             }
-            state_reader
+            Arc::new(state_reader)
         },
         Some(HashMap::new()),
         Some(HashMap::new()),

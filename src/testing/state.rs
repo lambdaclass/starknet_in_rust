@@ -22,6 +22,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
@@ -36,7 +37,7 @@ pub struct StarknetState {
 impl StarknetState {
     pub fn new(context: Option<BlockContext>) -> Self {
         let block_context = context.unwrap_or_default();
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
 
         let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
 
