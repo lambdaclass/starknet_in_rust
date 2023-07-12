@@ -1,5 +1,5 @@
 #![allow(unused_imports)]
-use std::{collections::HashMap, io::Bytes, path::Path, vec, sync::Arc};
+use std::{collections::HashMap, io::Bytes, path::Path, sync::Arc};
 
 use crate::{
     call_contract,
