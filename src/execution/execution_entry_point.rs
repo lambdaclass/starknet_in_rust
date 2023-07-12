@@ -1,6 +1,7 @@
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
+use crate::state::cached_state::CachedState;
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -85,14 +86,15 @@ impl ExecutionEntryPoint {
     /// Returns a CallInfo object that represents the execution.
     pub fn execute<T>(
         &self,
-        state: &mut T,
+        state: &mut CachedState<T>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
+        max_steps: u64,
     ) -> Result<CallInfo, TransactionError>
     where
-        T: State + StateReader,
+        T: StateReader,
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
@@ -108,15 +110,25 @@ impl ExecutionEntryPoint {
                 contract_class,
                 class_hash,
             ),
-            CompiledClass::Casm(contract_class) => self._execute(
-                state,
-                resources_manager,
-                block_context,
-                tx_execution_context,
-                contract_class,
-                class_hash,
-                support_reverted,
-            ),
+            CompiledClass::Casm(contract_class) => {
+                let mut _tmp_state = CachedState::new(state.state_reader.clone(), None, None);
+                match self._execute(
+                    state,
+                    resources_manager,
+                    block_context,
+                    tx_execution_context,
+                    contract_class,
+                    class_hash,
+                    support_reverted,
+                ) {
+                    Ok(call_info) => Ok(call_info),
+                    Err(e) => {
+                        let _n_reverted_steps =
+                            (max_steps as usize) - resources_manager.cairo_usage.n_steps;
+                        Err(e)
+                    }
+                }
+            }
         }
     }
 
@@ -184,7 +196,7 @@ impl ExecutionEntryPoint {
             .ok_or(TransactionError::EntryPointNotFound)
     }
 
-    fn build_call_info_deprecated<S>(
+    fn build_call_info_deprecated<S: StateReader>(
         &self,
         previous_cairo_usage: ExecutionResources,
         resources_manager: &ExecutionResourcesManager,
@@ -193,10 +205,7 @@ impl ExecutionEntryPoint {
         l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
         internal_calls: Vec<CallInfo>,
         retdata: Vec<Felt252>,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         let execution_resources = &resources_manager.cairo_usage - &previous_cairo_usage;
 
         Ok(CallInfo {
@@ -220,7 +229,7 @@ impl ExecutionEntryPoint {
         })
     }
 
-    fn build_call_info<S>(
+    fn build_call_info<S: StateReader>(
         &self,
         previous_cairo_usage: ExecutionResources,
         resources_manager: &ExecutionResourcesManager,
@@ -229,10 +238,7 @@ impl ExecutionEntryPoint {
         l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
         internal_calls: Vec<CallInfo>,
         call_result: CallResult,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         let execution_resources = &resources_manager.cairo_usage - &previous_cairo_usage;
 
         Ok(CallInfo {
@@ -282,18 +288,15 @@ impl ExecutionEntryPoint {
         get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
     }
 
-    fn _execute_version0_class<T>(
+    fn _execute_version0_class<S: StateReader>(
         &self,
-        state: &mut T,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
         contract_class: Box<ContractClass>,
         class_hash: [u8; 32],
-    ) -> Result<CallInfo, TransactionError>
-    where
-        T: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
         // fetch selected entry point
         let entry_point = self.get_selected_entry_point_v0(&contract_class, class_hash)?;
@@ -308,7 +311,7 @@ impl ExecutionEntryPoint {
         // prepare OS context
         //let os_context = runner.prepare_os_context();
         let os_context =
-            StarknetRunner::<DeprecatedSyscallHintProcessor<T>>::prepare_os_context_cairo0(
+            StarknetRunner::<DeprecatedSyscallHintProcessor<S>>::prepare_os_context_cairo0(
                 &cairo_runner,
                 &mut vm,
             );
@@ -379,7 +382,7 @@ impl ExecutionEntryPoint {
 
         let retdata = runner.get_return_values()?;
 
-        self.build_call_info_deprecated::<T>(
+        self.build_call_info_deprecated::<S>(
             previous_cairo_usage,
             resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,
@@ -390,19 +393,16 @@ impl ExecutionEntryPoint {
         )
     }
 
-    fn _execute<T>(
+    fn _execute<S: StateReader>(
         &self,
-        state: &mut T,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
         contract_class: Box<CasmContractClass>,
         class_hash: [u8; 32],
         support_reverted: bool,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        T: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         // fetch selected entry point
@@ -421,7 +421,7 @@ impl ExecutionEntryPoint {
         )?;
         validate_contract_deployed(state, &self.contract_address)?;
         // prepare OS context
-        let os_context = StarknetRunner::<SyscallHintProcessor<T>>::prepare_os_context_cairo1(
+        let os_context = StarknetRunner::<SyscallHintProcessor<S>>::prepare_os_context_cairo1(
             &cairo_runner,
             &mut vm,
             self.initial_gas.into(),
@@ -532,7 +532,7 @@ impl ExecutionEntryPoint {
         resources_manager.cairo_usage += &runner.get_execution_resources()?;
 
         let call_result = runner.get_call_result(self.initial_gas)?;
-        self.build_call_info::<T>(
+        self.build_call_info::<S>(
             previous_cairo_usage,
             resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,

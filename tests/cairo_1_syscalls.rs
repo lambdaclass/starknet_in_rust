@@ -104,6 +104,7 @@ fn storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -124,6 +125,7 @@ fn storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(call_info.retdata, [25.into()]);
@@ -145,6 +147,7 @@ fn storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -165,6 +168,7 @@ fn storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(call_info.retdata, [125.into()])
@@ -317,6 +321,7 @@ fn library_call() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
+                block_context.invoke_tx_max_n_steps()
             )
             .unwrap(),
         expected_call_info
@@ -435,6 +440,7 @@ fn call_contract_storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -457,6 +463,7 @@ fn call_contract_storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(call_info.retdata, [25.into()]);
@@ -480,6 +487,7 @@ fn call_contract_storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -502,6 +510,7 @@ fn call_contract_storage_write_read() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(call_info.retdata, [125.into()])
@@ -572,6 +581,7 @@ fn emit_event() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(
@@ -688,6 +698,7 @@ fn deploy_cairo1_from_cairo1() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -789,6 +800,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -889,6 +901,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -990,6 +1003,7 @@ fn deploy_cairo0_and_invoke() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -1030,6 +1044,7 @@ fn deploy_cairo0_and_invoke() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1115,6 +1130,7 @@ fn test_send_message_to_l1_syscall() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1221,6 +1237,7 @@ fn test_get_execution_info() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1332,6 +1349,7 @@ fn replace_class_internal() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     // Check that the class was indeed replaced in storage
@@ -1453,6 +1471,7 @@ fn replace_class_contract_call() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(result.retdata, vec![25.into()]);
@@ -1479,6 +1498,7 @@ fn replace_class_contract_call() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1504,6 +1524,7 @@ fn replace_class_contract_call() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(result.retdata, vec![17.into()]);
@@ -1616,6 +1637,7 @@ fn replace_class_contract_call_same_transaction() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(result.retdata, vec![25.into(), 17.into()]);
@@ -1731,6 +1753,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(result.retdata, vec![33.into(), 17.into()]);
@@ -1844,6 +1867,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(result.retdata, vec![17.into(), 33.into()]);
@@ -1953,6 +1977,7 @@ fn call_contract_replace_class_cairo_0() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(result.retdata, vec![64.into(), 33.into()]);
@@ -2024,6 +2049,7 @@ fn test_out_of_gas_failure() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(
@@ -2098,6 +2124,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(
@@ -2182,6 +2209,7 @@ fn deploy_syscall_failure_in_constructor() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     // Check that we get the error from the constructor
@@ -2270,6 +2298,7 @@ fn storage_read_no_value() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     // As the value doesn't exist in storage, it's value will be 0
@@ -2354,6 +2383,7 @@ fn storage_read_unavailable_address_domain() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -2441,6 +2471,7 @@ fn storage_write_unavailable_address_domain() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -2541,6 +2572,7 @@ fn library_call_failure() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     assert_eq!(
@@ -2641,6 +2673,7 @@ fn send_messages_to_l1_different_contract_calls() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
@@ -2758,6 +2791,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
@@ -2873,6 +2907,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();

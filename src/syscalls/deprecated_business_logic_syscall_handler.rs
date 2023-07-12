@@ -10,7 +10,6 @@ use super::{
     syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_deprecated_syscall_size_from_name,
 };
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{
@@ -31,20 +30,23 @@ use crate::{
     transaction::error::TransactionError,
     utils::*,
 };
+use crate::{
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::cached_state::CachedState,
+};
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
 };
 use num_traits::{One, ToPrimitive, Zero};
-use std::borrow::{Borrow, BorrowMut};
 
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
 //* -----------------------------------
 /// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
-pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
+pub struct DeprecatedBLSyscallHandler<'a, S: StateReader> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -56,15 +58,15 @@ pub struct DeprecatedBLSyscallHandler<'a, T: State + StateReader> {
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) block_context: BlockContext,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
-    pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
+impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut T,
+        state: &'a mut CachedState<S>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -95,7 +97,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
         }
     }
 
-    pub fn default_with(state: &'a mut T) -> Self {
+    pub fn default_with(state: &'a mut CachedState<S>) -> Self {
         DeprecatedBLSyscallHandler::new_for_testing(BlockInfo::default(), Default::default(), state)
     }
 
@@ -108,7 +110,7 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut T,
+        state: &'a mut CachedState<S>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -234,34 +236,14 @@ impl<'a, T: State + StateReader> DeprecatedBLSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
     }
 }
 
-impl<'a, T> Borrow<T> for DeprecatedBLSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
-    fn borrow(&self) -> &T {
-        self.starknet_storage_state.state
-    }
-}
-
-impl<'a, T> BorrowMut<T> for DeprecatedBLSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
-    fn borrow_mut(&mut self) -> &mut T {
-        self.starknet_storage_state.state
-    }
-}
-
-impl<'a, T> DeprecatedBLSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
+impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     pub(crate) fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -458,6 +440,7 @@ where
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map(|x| {
                 let retdata = x.retdata.clone();
@@ -946,7 +929,7 @@ mod tests {
     use std::{any::Any, borrow::Cow, collections::HashMap};
 
     type DeprecatedBLSyscallHandler<'a> =
-        super::DeprecatedBLSyscallHandler<'a, CachedState<InMemoryStateReader>>;
+        super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader>;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {

@@ -19,7 +19,7 @@ pub use verify_version::verify_version;
 use crate::{
     definitions::block_context::BlockContext,
     execution::TransactionExecutionInfo,
-    state::state_api::{State, StateReader},
+    state::{cached_state::CachedState, state_api::StateReader},
     utils::Address,
 };
 use error::TransactionError;
@@ -66,9 +66,9 @@ impl Transaction {
     ///- state: a structure that implements State and StateReader traits.
     ///- block_context: The block context of the transaction that is about to be executed.
     ///- remaining_gas: The gas supplied to execute the transaction.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {

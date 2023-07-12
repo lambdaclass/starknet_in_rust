@@ -1,5 +1,6 @@
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::cached_state::CachedState;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -150,14 +151,11 @@ impl DeployAccount {
         }
     }
 
-    pub fn execute<S>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_info = self.apply(state, block_context)?;
 
         self.handle_nonce(state)?;
@@ -184,14 +182,11 @@ impl DeployAccount {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    fn apply<S>(
+    fn apply<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
@@ -223,16 +218,13 @@ impl DeployAccount {
         ))
     }
 
-    pub fn handle_constructor<S>(
+    pub fn handle_constructor<S: StateReader>(
         &self,
         contract_class: CompiledClass,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         if self.constructor_entry_points_empty(contract_class)? {
             if !self.constructor_calldata.is_empty() {
                 return Err(TransactionError::EmptyConstructorCalldata);
@@ -266,15 +258,12 @@ impl DeployAccount {
         Ok(())
     }
 
-    pub fn run_constructor_entrypoint<S>(
+    pub fn run_constructor_entrypoint<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
@@ -295,6 +284,7 @@ impl DeployAccount {
                 resources_manager,
                 &mut self.get_execution_context(block_context.validate_max_n_steps),
                 false,
+                block_context.validate_max_n_steps,
             )?)
         };
 
@@ -315,15 +305,12 @@ impl DeployAccount {
         )
     }
 
-    pub fn run_validate_entrypoint<S>(
+    pub fn run_validate_entrypoint<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-    ) -> Result<Option<CallInfo>, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version.is_zero() {
             return Ok(None);
         }
@@ -354,6 +341,7 @@ impl DeployAccount {
                 resources_manager,
                 &mut self.get_execution_context(block_context.validate_max_n_steps),
                 false,
+                block_context.validate_max_n_steps,
             )?)
         };
 
@@ -363,15 +351,12 @@ impl DeployAccount {
         Ok(call_info)
     }
 
-    fn charge_fee<S>(
+    fn charge_fee<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
         }

@@ -123,6 +123,7 @@ fn integration_test() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
+                block_context.invoke_tx_max_n_steps(),
             )
             .unwrap(),
         expected_call_info
@@ -216,6 +217,7 @@ fn integration_test_cairo1() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
+                block_context.invoke_tx_max_n_steps(),
             )
             .unwrap(),
         expected_call_info

@@ -12,7 +12,7 @@ use crate::{
         TransactionExecutionInfo,
     },
     state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{cached_state::CachedState, ExecutionResourcesManager},
     transaction::{
         error::TransactionError,
         fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
@@ -145,15 +145,12 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - resources_manager: the resources that are in use by the contract
     /// - block_context: The block's execution context
-    pub(crate) fn run_validate_entrypoint<T>(
+    pub(crate) fn run_validate_entrypoint<S: StateReader>(
         &self,
-        state: &mut T,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-    ) -> Result<Option<CallInfo>, TransactionError>
-    where
-        T: State + StateReader,
-    {
+    ) -> Result<Option<CallInfo>, TransactionError> {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
@@ -181,6 +178,7 @@ impl InvokeFunction {
             resources_manager,
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
+            block_context.validate_max_n_steps,
         )?);
 
         let call_info = verify_no_calls_to_other_contracts(&call_info)
@@ -191,16 +189,13 @@ impl InvokeFunction {
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    fn run_execute_entrypoint<T>(
+    fn run_execute_entrypoint<S: StateReader>(
         &self,
-        state: &mut T,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        T: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -217,6 +212,7 @@ impl InvokeFunction {
             resources_manager,
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
             false,
+            block_context.invoke_tx_max_n_steps,
         )
     }
 
@@ -226,15 +222,12 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    pub fn apply<S>(
+    pub fn apply<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
@@ -266,15 +259,12 @@ impl InvokeFunction {
         Ok(transaction_execution_info)
     }
 
-    fn charge_fee<S>(
+    fn charge_fee<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
         }
@@ -306,9 +296,9 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {

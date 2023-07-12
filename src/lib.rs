@@ -103,11 +103,11 @@ where
     Ok(result)
 }
 
-pub fn call_contract<T: State + StateReader>(
+pub fn call_contract<T: StateReader>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
-    state: &mut T,
+    state: &mut CachedState<T>,
     block_context: BlockContext,
     caller_address: Address,
 ) -> Result<Vec<Felt252>, TransactionError> {
@@ -149,6 +149,7 @@ pub fn call_contract<T: State + StateReader>(
         &mut ExecutionResourcesManager::default(),
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps,
     )?;
 
     Ok(call_info.retdata)
@@ -183,9 +184,9 @@ where
     }
 }
 
-pub fn execute_transaction<T: State + StateReader>(
+pub fn execute_transaction<S: StateReader>(
     tx: Transaction,
-    state: &mut T,
+    state: &mut CachedState<S>,
     block_context: BlockContext,
     remaining_gas: u128,
 ) -> Result<TransactionExecutionInfo, TransactionError> {

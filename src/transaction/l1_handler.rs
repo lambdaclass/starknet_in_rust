@@ -1,4 +1,7 @@
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::{
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::cached_state::CachedState,
+};
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
@@ -89,15 +92,12 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    pub fn execute<S>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let entrypoint = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -119,6 +119,7 @@ impl L1Handler {
                 &mut resources_manager,
                 &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
                 false,
+                block_context.invoke_tx_max_n_steps,
             )?)
         };
 

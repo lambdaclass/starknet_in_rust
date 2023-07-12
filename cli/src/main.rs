@@ -249,12 +249,14 @@ fn call_parser(
         None,
         0,
     );
+    let block_context = BlockContext::default();
     let call_info = execution_entry_point.execute(
         cached_state,
-        &BlockContext::default(),
+        &block_context,
         &mut ExecutionResourcesManager::default(),
         &mut TransactionExecutionContext::default(),
         false,
+        block_context.invoke_tx_max_n_steps(),
     )?;
     Ok(call_info.retdata)
 }

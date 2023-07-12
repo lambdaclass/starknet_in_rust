@@ -2,6 +2,7 @@ use super::{verify_version, Transaction};
 use crate::core::contract_address::compute_sierra_class_hash;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
+use crate::state::cached_state::CachedState;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
@@ -205,9 +206,9 @@ impl DeclareV2 {
     /// - state: An state that implements the State and StateReader traits.
     /// - resources: the resources that are in use by the contract
     /// - block_context: The block that contains the execution context
-    pub fn charge_fee<S: State + StateReader>(
+    pub fn charge_fee<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
     ) -> Result<FeeInfo, TransactionError> {
@@ -262,9 +263,9 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
@@ -326,10 +327,10 @@ impl DeclareV2 {
         Ok(())
     }
 
-    fn run_validate_entrypoint<S: State + StateReader>(
+    fn run_validate_entrypoint<S: StateReader>(
         &self,
         mut remaining_gas: u128,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<(CallInfo, u128), TransactionError> {
@@ -359,6 +360,7 @@ impl DeclareV2 {
                 resources_manager,
                 &mut tx_execution_context,
                 false,
+                block_context.validate_max_n_steps,
             )?)
         };
         let call_info = verify_no_calls_to_other_contracts(&call_info)?;

@@ -1216,7 +1216,7 @@ fn test_deploy_account() {
         state.casm_contract_classes(),
         state_after.casm_contract_classes()
     );
-    assert_eq!(state.state_reader(), state_after.state_reader());
+    assert_eq!(state.state_reader, state_after.state_reader);
     assert_eq!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
@@ -1458,7 +1458,7 @@ fn test_state_for_declare_tx() {
         .is_one());
 
     // Check state.state_reader
-    let state_reader = state.state_reader().clone();
+    let state_reader = state.state_reader.clone();
 
     assert_eq!(
         state_reader.address_to_class_hash,
@@ -1802,6 +1802,7 @@ fn test_library_call_with_declare_v2() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 

@@ -22,6 +22,7 @@ use super::{
 use crate::definitions::block_context::BlockContext;
 use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use crate::state::cached_state::CachedState;
 use crate::state::BlockInfo;
 use crate::transaction::error::TransactionError;
 use crate::utils::calculate_sn_keccak;
@@ -113,7 +114,7 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
+pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) expected_syscall_ptr: Relocatable,
     pub(crate) resources_manager: ExecutionResourcesManager,
@@ -124,7 +125,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) block_context: BlockContext,
-    pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
     pub(crate) support_reverted: bool,
     pub(crate) entry_point_selector: Felt252,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
@@ -132,11 +133,11 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut T,
+        state: &'a mut CachedState<S>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -168,7 +169,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
-    pub fn default_with_state(state: &'a mut T) -> Self {
+    pub fn default_with_state(state: &'a mut CachedState<S>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
             Default::default(),
@@ -179,7 +180,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut T,
+        state: &'a mut CachedState<S>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -244,6 +245,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
@@ -345,6 +347,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
@@ -521,10 +524,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T> BusinessLogicSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
+impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
