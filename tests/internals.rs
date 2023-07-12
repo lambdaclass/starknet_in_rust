@@ -21,8 +21,7 @@ use starknet_in_rust::execution::execution_entry_point::ExecutionEntryPoint;
 use starknet_in_rust::execution::TransactionExecutionContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::ExecutionResourcesManager;
-use starknet_in_rust::transaction::fee::calculate_tx_fee;
-use starknet_in_rust::transaction::{DeclareV2, Deploy};
+use starknet_in_rust::transaction::{calculate_tx_fee, DeclareV2, Deploy};
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{

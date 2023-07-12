@@ -72,7 +72,7 @@ impl Declare {
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
-        let internal_declare = Declare {
+        Ok(Declare {
             class_hash,
             sender_address,
             tx_type: TransactionType::Declare,
@@ -86,16 +86,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
-        };
-
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
-        Ok(internal_declare)
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -139,7 +130,9 @@ impl Declare {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        // verify the version and check the nonce
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
+        handle_nonce(&self.nonce, &self.version, &self.sender_address, state)?;
 
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
@@ -156,8 +149,6 @@ impl Declare {
             changes,
             None,
         )?;
-
-        handle_nonce(&self.nonce, &self.version, &self.sender_address, state)?;
 
         Ok(TransactionExecutionInfo::new_without_fee_info(
             validate_info,
