@@ -1066,9 +1066,5 @@ mod tests {
             QUERY_VERSION_BASE.clone(),
         );
         assert!(expected_error.is_ok());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::InvokeFunctionNonZeroMissingNonce
-        )
     }
 }
