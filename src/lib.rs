@@ -18,7 +18,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
 use state::cached_state::CachedState;
-use transaction::L1Handler;
+use transaction::{fee::calculate_tx_fee, L1Handler};
 use utils::Address;
 
 #[cfg(test)]
@@ -171,9 +171,13 @@ where
 
     // execute the transaction with the fake state.
     let transaction_result = l1_handler.execute(&mut cached_state, block_context, 1_000_000)?;
+    let tx_fee = calculate_tx_fee(
+        &transaction_result.actual_resources,
+        block_context.starknet_os_config.gas_price,
+        block_context,
+    )?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
-        let actual_fee = transaction_result.actual_fee;
-        Ok((actual_fee, *gas_usage))
+        Ok((tx_fee, *gas_usage))
     } else {
         Err(TransactionError::ResourcesError)
     }
@@ -375,7 +379,7 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
-        assert_eq!(estimated_fee, (0, 18471));
+        assert_eq!(estimated_fee, (20081, 18471));
     }
 
     #[test]
