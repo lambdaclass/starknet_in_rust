@@ -18,7 +18,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
 use state::cached_state::CachedState;
-use transaction::{fee::calculate_tx_fee, L1Handler};
+use transaction::{calculate_tx_fee, L1Handler};
 use utils::Address;
 
 #[cfg(test)]

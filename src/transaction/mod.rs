@@ -7,7 +7,7 @@ pub mod error;
 pub mod invoke_function;
 pub mod l1_handler;
 
-pub use common::{handle_nonce, verify_version};
+pub use common::{calculate_tx_fee, handle_nonce, verify_version};
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
 pub use deploy::Deploy;
