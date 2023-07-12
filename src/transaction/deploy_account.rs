@@ -73,7 +73,6 @@ impl DeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         chain_id: Felt252,
-        hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -82,19 +81,50 @@ impl DeployAccount {
             Address(Felt252::zero()),
         )?);
 
-        let hash_value = match hash_value {
-            Some(hash) => hash,
-            None => calculate_deploy_account_transaction_hash(
-                version.clone(),
-                &contract_address,
-                Felt252::from_bytes_be(&class_hash),
-                &constructor_calldata,
-                max_fee,
-                nonce.clone(),
-                contract_address_salt.clone(),
-                chain_id,
-            )?,
-        };
+        let hash_value = calculate_deploy_account_transaction_hash(
+            version.clone(),
+            &contract_address,
+            Felt252::from_bytes_be(&class_hash),
+            &constructor_calldata,
+            max_fee,
+            nonce.clone(),
+            contract_address_salt.clone(),
+            chain_id,
+        )?;
+
+        Ok(Self {
+            contract_address,
+            contract_address_salt,
+            class_hash,
+            constructor_calldata,
+            version,
+            nonce,
+            max_fee,
+            hash_value,
+            signature,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_hash(
+        class_hash: ClassHash,
+        max_fee: u128,
+        version: Felt252,
+        nonce: Felt252,
+        constructor_calldata: Vec<Felt252>,
+        signature: Vec<Felt252>,
+        contract_address_salt: Felt252,
+        hash_value: Felt252,
+    ) -> Result<Self, SyscallHandlerError> {
+        let contract_address = Address(calculate_contract_address(
+            &contract_address_salt,
+            &Felt252::from_bytes_be(&class_hash),
+            &constructor_calldata,
+            Address(Felt252::zero()),
+        )?);
 
         Ok(Self {
             contract_address,
@@ -406,7 +436,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 
@@ -443,7 +472,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 
@@ -456,7 +484,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 
@@ -497,7 +524,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 

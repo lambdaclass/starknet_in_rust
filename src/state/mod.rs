@@ -116,6 +116,20 @@ pub struct StateDiff {
 }
 
 impl StateDiff {
+    pub fn new(
+        address_to_class_hash: HashMap<Address, ClassHash>,
+        address_to_nonce: HashMap<Address, Felt252>,
+        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+        storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
+    ) -> Self {
+        StateDiff {
+            address_to_class_hash,
+            address_to_nonce,
+            class_hash_to_compiled_class,
+            storage_updates,
+        }
+    }
+
     pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
     where
         T: StateReader,
