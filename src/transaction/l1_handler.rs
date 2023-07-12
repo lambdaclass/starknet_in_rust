@@ -198,7 +198,10 @@ impl L1Handler {
 
 #[cfg(test)]
 mod test {
-    use std::collections::{HashMap, HashSet};
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    };
 
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use cairo_vm::{
@@ -255,7 +258,7 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();

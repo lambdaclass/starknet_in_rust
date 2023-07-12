@@ -1,5 +1,5 @@
 #![allow(unused_imports)]
-use std::{collections::HashMap, io::Bytes, path::Path, vec};
+use std::{collections::HashMap, io::Bytes, path::Path, vec, sync::Arc};
 
 use crate::{
     call_contract,
@@ -70,7 +70,7 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
+    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");

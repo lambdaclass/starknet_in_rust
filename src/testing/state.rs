@@ -436,7 +436,7 @@ mod tests {
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class.clone());
 
-        let state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* --------------------------------------------
         //*    Create starknet state with previous data

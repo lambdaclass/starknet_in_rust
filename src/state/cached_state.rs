@@ -458,7 +458,7 @@ mod tests {
             .address_to_storage_mut()
             .insert(storage_entry, storage_value);
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
         assert_eq!(
             cached_state.get_class_hash_at(&contract_address).unwrap(),
@@ -490,7 +490,7 @@ mod tests {
             .class_hash_to_contract_class
             .insert([1; 32], contract_class);
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
         cached_state.set_contract_classes(HashMap::new()).unwrap();
         assert!(cached_state.contract_classes.is_some());
@@ -506,18 +506,8 @@ mod tests {
 
     #[test]
     fn cached_state_storage_test() {
-        let mut cached_state = CachedState::new(
-            InMemoryStateReader::new(
-                HashMap::new(),
-                HashMap::new(),
-                HashMap::new(),
-                HashMap::new(),
-                HashMap::new(),
-                HashMap::new(),
-            ),
-            None,
-            None,
-        );
+        let mut cached_state =
+            CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
 
         let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
         let value = Felt252::new(10);
@@ -534,14 +524,7 @@ mod tests {
 
     #[test]
     fn cached_state_deploy_contract_test() {
-        let state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
+        let state_reader = Arc::new(InMemoryStateReader::default());
 
         let contract_address = Address(32123.into());
 
@@ -554,14 +537,7 @@ mod tests {
 
     #[test]
     fn get_and_set_storage() {
-        let state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
+        let state_reader = Arc::new(InMemoryStateReader::default());
 
         let contract_address = Address(31.into());
         let storage_key = [18; 32];
@@ -595,7 +571,7 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
         );
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
         cached_state.set_contract_classes(HashMap::new()).unwrap();
         let result = cached_state
@@ -618,7 +594,7 @@ mod tests {
 
         let contract_address = Address(0.into());
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
         let result = cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -643,7 +619,7 @@ mod tests {
 
         let contract_address = Address(42.into());
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
         cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -671,7 +647,7 @@ mod tests {
 
         let contract_address = Address(32123.into());
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
         cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -700,7 +676,7 @@ mod tests {
 
         let address_one = Address(Felt252::one());
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
         let state_diff = StateDiff {
             address_to_class_hash: HashMap::from([(

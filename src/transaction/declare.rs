@@ -336,7 +336,7 @@ mod tests {
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{One, Zero};
-    use std::{collections::HashMap, path::PathBuf};
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     use crate::{
         definitions::{
@@ -382,7 +382,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -482,16 +482,6 @@ mod tests {
         // Account contract (not the contract that we are currently declaring)
         // but for testing reasons its ok
 
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
-
-        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
-
         //* ---------------------------------------
         //*    Test declare with previous data
         //* ---------------------------------------
@@ -553,7 +543,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let _state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -616,7 +606,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let _state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -678,7 +668,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -754,7 +744,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -799,7 +789,7 @@ mod tests {
         // Instantiate CachedState
         let contract_class_cache = HashMap::new();
 
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
@@ -858,7 +848,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data

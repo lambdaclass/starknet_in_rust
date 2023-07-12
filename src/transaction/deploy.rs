@@ -273,7 +273,7 @@ impl Deploy {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, sync::Arc};
 
     use super::*;
     use crate::{
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn invoke_constructor_test() {
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         // Set contract_class
@@ -331,7 +331,7 @@ mod tests {
     #[test]
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         let contract_class =
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         let contract_path = "starknet_programs/amm.json";

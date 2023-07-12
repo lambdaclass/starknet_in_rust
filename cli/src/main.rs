@@ -21,15 +21,16 @@ use starknet_in_rust::{
     parser_errors::ParserError,
     serde_structs::read_abi,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-    },
+    state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::InvokeFunction,
     utils::{felt_to_hash, string_to_hash, Address},
 };
-use std::{collections::HashMap, path::PathBuf, sync::Mutex};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 #[derive(Parser)]
 struct Cli {
@@ -303,7 +304,7 @@ async fn call_req(data: web::Data<AppState>, args: web::Json<CallArgs>) -> HttpR
 pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(HashMap::new()),
             None,
         )),

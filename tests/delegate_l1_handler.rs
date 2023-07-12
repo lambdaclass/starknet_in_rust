@@ -17,6 +17,7 @@ use starknet_in_rust::{
     },
     utils::Address,
 };
+use std::sync::Arc;
 use std::{collections::HashMap, path::PathBuf};
 
 #[test]
@@ -72,7 +73,7 @@ fn delegate_l1_handler() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
     //* ------------------------------------
     //*    Create execution entry point

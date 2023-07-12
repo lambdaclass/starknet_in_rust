@@ -226,10 +226,7 @@ mod tests {
         memory_insert,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::in_memory_state_reader::InMemoryStateReader,
-        state::{
-            cached_state::CachedState,
-            state_api::{State, StateReader},
-        },
+        state::{cached_state::CachedState, state_api::State},
         syscalls::deprecated_syscall_request::{
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
             DeprecatedSyscallRequest,

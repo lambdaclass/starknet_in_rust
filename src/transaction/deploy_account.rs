@@ -417,7 +417,7 @@ impl DeployAccount {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{path::PathBuf, sync::Arc};
 
     use super::*;
     use crate::{
@@ -439,7 +439,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut _state = CachedState::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(Default::default()),
             None,
         );
@@ -475,7 +475,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(Default::default()),
             None,
         );
@@ -527,7 +527,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(Default::default()),
             None,
         );
