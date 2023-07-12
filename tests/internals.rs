@@ -550,7 +550,6 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(Felt252::zero()),
-        None,
     )
     .unwrap()
 }
@@ -1196,7 +1195,6 @@ fn test_deploy_account() {
         Default::default(),
         Default::default(),
         StarknetChainId::TestNet.to_felt(),
-        None,
     )
     .unwrap();
 
@@ -1679,7 +1677,6 @@ fn test_invoke_tx_wrong_entrypoint() {
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(Felt252::zero()),
-        None,
     )
     .unwrap();
 
@@ -1705,7 +1702,6 @@ fn test_deploy_undeclared_account() {
         Default::default(),
         Default::default(),
         StarknetChainId::TestNet.to_felt(),
-        None,
     )
     .unwrap();
 

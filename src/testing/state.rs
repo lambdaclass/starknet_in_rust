@@ -79,7 +79,6 @@ impl StarknetState {
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
-        hash_value: Option<Felt252>,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = Declare::new(
             contract_class,
@@ -89,7 +88,6 @@ impl StarknetState {
             0.into(),
             Vec::new(),
             0.into(),
-            hash_value,
         )?;
 
         let tx_execution_info = tx.execute(&mut self.state, &self.block_context)?;
@@ -176,14 +174,22 @@ impl StarknetState {
         remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.block_context.starknet_os_config.chain_id.to_felt();
-        let deploy = Deploy::new(
-            contract_address_salt,
-            contract_class.clone(),
-            constructor_calldata,
-            chain_id,
-            TRANSACTION_VERSION.clone(),
-            hash_value,
-        )?;
+        let deploy = match hash_value {
+            None => Deploy::new(
+                contract_address_salt,
+                contract_class.clone(),
+                constructor_calldata,
+                chain_id,
+                TRANSACTION_VERSION.clone(),
+            )?,
+            Some(hash_value) => Deploy::new_with_tx_hash(
+                contract_address_salt,
+                contract_class.clone(),
+                constructor_calldata,
+                TRANSACTION_VERSION.clone(),
+                hash_value,
+            )?,
+        };
         let contract_address = deploy.contract_address.clone();
         let contract_hash = deploy.contract_hash;
         let mut tx = Transaction::Deploy(deploy);
@@ -277,17 +283,28 @@ impl StarknetState {
             None => self.state.get_nonce_at(&contract_address)?,
         };
 
-        InvokeFunction::new(
-            contract_address,
-            entry_point_selector,
-            max_fee,
-            TRANSACTION_VERSION.clone(),
-            calldata,
-            signature,
-            self.chain_id(),
-            Some(nonce),
-            hash_value,
-        )
+        match hash_value {
+            None => InvokeFunction::new(
+                contract_address,
+                entry_point_selector,
+                max_fee,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                signature,
+                self.chain_id(),
+                Some(nonce),
+            ),
+            Some(hash_value) => InvokeFunction::new_with_tx_hash(
+                contract_address,
+                entry_point_selector,
+                max_fee,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                signature,
+                Some(nonce),
+                hash_value,
+            ),
+        }
     }
 }
 
@@ -456,9 +473,8 @@ mod tests {
         let fib_contract_class =
             ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
-        let (ret_class_hash, _exec_info) = starknet_state
-            .declare(fib_contract_class.clone(), None)
-            .unwrap();
+        let (ret_class_hash, _exec_info) =
+            starknet_state.declare(fib_contract_class.clone()).unwrap();
 
         //* ---------------------------------------
         //              Expected result

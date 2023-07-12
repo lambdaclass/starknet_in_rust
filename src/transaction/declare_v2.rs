@@ -69,7 +69,6 @@ impl DeclareV2 {
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
-        hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
@@ -78,17 +77,70 @@ impl DeclareV2 {
             None => compute_sierra_class_hash(sierra_contract_class)?,
         };
 
-        let hash_value = match hash_value {
-            Some(hash) => hash,
-            None => calculate_declare_v2_transaction_hash(
-                sierra_class_hash.clone(),
-                compiled_class_hash.clone(),
-                chain_id,
-                &sender_address,
-                max_fee,
-                version.clone(),
-                nonce.clone(),
-            )?,
+        let hash_value = calculate_declare_v2_transaction_hash(
+            sierra_class_hash.clone(),
+            compiled_class_hash.clone(),
+            chain_id,
+            &sender_address,
+            max_fee,
+            version.clone(),
+            nonce.clone(),
+        )?;
+
+        let internal_declare = DeclareV2 {
+            sierra_contract_class: sierra_contract_class.to_owned(),
+            sierra_class_hash,
+            sender_address,
+            tx_type: TransactionType::Declare,
+            validate_entry_point_selector,
+            version,
+            max_fee,
+            signature,
+            nonce,
+            compiled_class_hash,
+            hash_value,
+            casm_class: Default::default(),
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
+        };
+
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
+
+        Ok(internal_declare)
+    }
+
+    // creates a new instance of a declare but without the computation of the transaction hash.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: refers to max amount of fee that a declare takes.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_hash(
+        sierra_contract_class: &SierraContractClass,
+        sierra_class_hash: Option<Felt252>,
+        compiled_class_hash: Felt252,
+        sender_address: Address,
+        max_fee: u128,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+        hash_value: Felt252,
+    ) -> Result<Self, TransactionError> {
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+
+        let sierra_class_hash = match sierra_class_hash {
+            Some(h) => h,
+            None => compute_sierra_class_hash(sierra_contract_class)?,
         };
 
         let internal_declare = DeclareV2 {
@@ -312,8 +364,8 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
-        definitions::block_context::StarknetChainId, state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader, utils::Address,
+        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+        utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
@@ -341,23 +393,20 @@ mod tests {
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
             serde_json::from_reader(reader).unwrap();
         let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
         let sender_address = Address(1.into());
 
         // create internal declare v2
 
-        let internal_declare = DeclareV2::new(
+        let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
             Some(sierra_class_hash),
             Felt252::one(),
-            chain_id,
             sender_address,
             0,
             version,
             [1.into()].to_vec(),
             Felt252::zero(),
-            Some(Felt252::one()),
+            Felt252::one(),
         )
         .unwrap();
 
