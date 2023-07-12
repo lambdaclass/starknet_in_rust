@@ -2,6 +2,7 @@ use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -111,9 +112,15 @@ impl ExecutionEntryPoint {
                 class_hash,
             ),
             CompiledClass::Casm(contract_class) => {
-                let mut _tmp_state = CachedState::new(state.state_reader.clone(), None, None);
+                let mut tmp_state = CachedState::new(
+                    state.state_reader.clone(),
+                    state.contract_classes.clone(),
+                    state.casm_contract_classes.clone(),
+                );
+                tmp_state.cache = state.cache.clone();
+
                 match self._execute(
-                    state,
+                    &mut tmp_state,
                     resources_manager,
                     block_context,
                     tx_execution_context,
@@ -121,7 +128,11 @@ impl ExecutionEntryPoint {
                     class_hash,
                     support_reverted,
                 ) {
-                    Ok(call_info) => Ok(call_info),
+                    Ok(call_info) => {
+                        let state_diff = StateDiff::from_cached_state(tmp_state)?;
+                        state.apply_state_update(&state_diff)?;
+                        Ok(call_info)
+                    }
                     Err(e) => {
                         let _n_reverted_steps =
                             (max_steps as usize) - resources_manager.cairo_usage.n_steps;
