@@ -27,6 +27,7 @@ use num_traits::Zero;
 
 use super::Transaction;
 
+/// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
     #[getset(get = "pub")]
@@ -60,26 +61,46 @@ impl InvokeFunction {
         signature: Vec<Felt252>,
         chain_id: Felt252,
         nonce: Option<Felt252>,
-        hash_value: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
             entry_point_selector.clone(),
             nonce.clone(),
             version.clone(),
         )?;
-        let hash_value = match hash_value {
-            Some(hash) => hash,
-            None => calculate_transaction_hash_common(
-                TransactionHashPrefix::Invoke,
-                version.clone(),
-                &contract_address,
-                entry_point_selector_field,
-                &calldata,
-                max_fee,
-                chain_id,
-                &additional_data,
-            )?,
-        };
+        let hash_value = calculate_transaction_hash_common(
+            TransactionHashPrefix::Invoke,
+            version.clone(),
+            &contract_address,
+            entry_point_selector_field,
+            &calldata,
+            max_fee,
+            chain_id,
+            &additional_data,
+        )?;
+
+        InvokeFunction::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            max_fee,
+            version,
+            calldata,
+            signature,
+            nonce,
+            hash_value,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_hash(
+        contract_address: Address,
+        entry_point_selector: Felt252,
+        max_fee: u128,
+        version: Felt252,
+        calldata: Vec<Felt252>,
+        signature: Vec<Felt252>,
+        nonce: Option<Felt252>,
+        hash_value: Felt252,
+    ) -> Result<Self, TransactionError> {
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InvokeFunction {
@@ -119,6 +140,11 @@ impl InvokeFunction {
         ))
     }
 
+    /// Execute the validation entrypoint of the contract and returns the call info.
+    /// ## Parameters:
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - resources_manager: the resources that are in use by the contract
+    /// - block_context: The block's execution context
     pub(crate) fn run_validate_entrypoint<T>(
         &self,
         state: &mut T,
@@ -196,6 +222,10 @@ impl InvokeFunction {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
+    /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn apply<S>(
         &self,
         state: &mut S,
@@ -272,6 +302,10 @@ impl InvokeFunction {
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
     /// then updates the transaction execution info with the data of the fee.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
+    /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
