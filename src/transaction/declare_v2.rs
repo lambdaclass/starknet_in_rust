@@ -1,6 +1,6 @@
 use super::{verify_version, Transaction};
 use crate::core::contract_address::compute_sierra_class_hash;
-use crate::definitions::constants::VERSION_QUERY;
+use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::{
@@ -241,7 +241,7 @@ impl DeclareV2 {
     // TODO: delete once used
     #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == VERSION_QUERY.clone() {
+        if self.version.is_zero() || self.version == QUERY_VERSION_BASE.clone() {
             return Ok(());
         }
 
@@ -394,6 +394,7 @@ mod tests {
 
     use super::DeclareV2;
     use crate::core::contract_address::compute_sierra_class_hash;
+    use crate::definitions::constants::QUERY_VERSION_BASE;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
@@ -418,6 +419,73 @@ mod tests {
         #[cfg(feature = "cairo_1_tests")]
         {
             version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
+        let sender_address = Address(1.into());
+
+        // create internal declare v2
+
+        let internal_declare = DeclareV2::new_with_tx_hash(
+            &sierra_contract_class,
+            Some(sierra_class_hash),
+            Felt252::one(),
+            sender_address,
+            0,
+            version,
+            [1.into()].to_vec(),
+            Felt252::zero(),
+            Felt252::one(),
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = HashMap::new();
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(internal_declare
+            .compile_and_store_casm_class(&mut state)
+            .is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            internal_declare.sierra_contract_class.clone(),
+            true,
+        )
+        .unwrap();
+
+        let casm_class = match state
+            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .unwrap()
+        {
+            CompiledClass::Casm(casm) => *casm,
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_test_with_version_query() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = QUERY_VERSION_BASE.clone();
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 

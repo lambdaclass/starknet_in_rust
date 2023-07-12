@@ -4,7 +4,9 @@ use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::BlockContext,
-        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VERSION_QUERY},
+        constants::{
+            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
+        },
         transaction_type::TransactionType,
     },
     execution::{
@@ -157,7 +159,7 @@ impl InvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        if self.version.is_zero() || self.version == VERSION_QUERY.clone() {
+        if self.version.is_zero() || self.version == QUERY_VERSION_BASE.clone() {
             return Ok(None);
         }
         if self.skip_validation {
@@ -393,7 +395,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     nonce: Option<Felt252>,
     version: Felt252,
 ) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version.is_zero() {
+    if version.is_zero() || version == QUERY_VERSION_BASE.clone() {
         match nonce {
             Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {

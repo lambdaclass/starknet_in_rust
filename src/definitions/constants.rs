@@ -15,7 +15,7 @@ pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
     (L1_TO_L2_MSG_HEADER_SIZE + 1) - CONSUMED_MSG_TO_L2_N_TOPICS;
 
 lazy_static! {
-    pub(crate) static ref VERSION_QUERY: Felt252 =
+    pub(crate) static ref QUERY_VERSION_BASE: Felt252 =
         felt_str!("340282366920938463463374607431768211456");
 }
 
