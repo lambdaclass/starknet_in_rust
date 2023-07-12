@@ -429,7 +429,8 @@ mod tests {
             version,
             Vec::new(),
             Felt252::from(max_fee),
-        );
+        )
+        .unwrap();
 
         let validate_exec_info = declare.validate(&mut state, &BlockContext::default());
         assert!(validate_exec_info.is_err());
@@ -457,7 +458,8 @@ mod tests {
             version,
             Vec::new(),
             nonce,
-        );
+        )
+        .unwrap();
 
         // validate the transaction
         let validate_info = declare.validate(&mut state, &Default::default());
@@ -484,7 +486,8 @@ mod tests {
             0.into(),
             signature,
             Felt252::zero(),
-        );
+        )
+        .unwrap();
 
         let validate_info = declare.validate(&mut state, &Default::default());
         assert!(validate_info.is_err());
@@ -511,7 +514,8 @@ mod tests {
             1.into(),
             Vec::new(),
             1.into(),
-        );
+        )
+        .unwrap();
 
         let declare2 = Declare::new(
             fib_contract_class,
@@ -521,7 +525,8 @@ mod tests {
             1.into(),
             Vec::new(),
             2.into(),
-        );
+        )
+        .unwrap();
 
         // Execute the first declare transaction.
         let declare1_exec_info = declare1.execute(&mut state, &Default::default());
@@ -557,7 +562,8 @@ mod tests {
             1.into(),
             Vec::new(),
             1.into(),
-        );
+        )
+        .unwrap();
 
         // execute the transaction for the first time...
         let first_exec_info = declare.execute(&mut state, &BlockContext::default());
