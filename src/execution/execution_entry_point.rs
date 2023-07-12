@@ -261,10 +261,7 @@ impl ExecutionEntryPoint {
     }
 
     /// Returns the hash of the executed contract class.
-    fn get_code_class_hash<S: StateReader>(
-        &self,
-        state: &mut S,
-    ) -> Result<[u8; 32], TransactionError> {
+    fn get_code_class_hash<S: State>(&self, state: &mut S) -> Result<[u8; 32], TransactionError> {
         if self.class_hash.is_some() {
             match self.call_type {
                 CallType::Delegate => return Ok(self.class_hash.unwrap()),

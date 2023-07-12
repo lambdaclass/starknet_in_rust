@@ -34,6 +34,7 @@ use std::{
     collections::{HashMap, HashSet},
     iter::empty,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -115,7 +116,7 @@ fn test_contract<'a>(
 
         Some(contract_class_cache)
     };
-    let mut state = CachedState::new(state_reader, contract_class_cache, None);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache, None);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
@@ -1096,7 +1097,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1196,7 +1197,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1298,7 +1299,7 @@ fn deploy_cairo1_and_invoke() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1431,7 +1432,11 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(state_reader, Some(deprecated_contract_class_cache), None);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Some(deprecated_contract_class_cache),
+        None,
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
