@@ -447,25 +447,21 @@ mod tests {
         starknet_state.state = state;
         starknet_state
             .state
-            .state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
+            .set_class_hash_at(sender_address.clone(), class_hash)
+            .unwrap();
 
         starknet_state
             .state
-            .state_reader
-            .address_to_nonce_mut()
+            .cache
+            .nonce_writes
             .insert(sender_address.clone(), nonce);
+
+        starknet_state.state.set_storage_at(&storage_entry, storage);
+
         starknet_state
             .state
-            .state_reader
-            .address_to_storage_mut()
-            .insert(storage_entry, storage);
-        starknet_state
-            .state
-            .state_reader
-            .class_hash_to_contract_class_mut()
-            .insert(class_hash, contract_class);
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
 
         // --------------------------------------------
         //      Test declare with starknet state

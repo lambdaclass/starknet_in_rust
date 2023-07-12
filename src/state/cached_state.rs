@@ -84,7 +84,17 @@ impl<T: StateReader> CachedState<T> {
 impl<T: StateReader> StateReader for CachedState<T> {
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
-            return self.state_reader.get_class_hash_at(contract_address);
+            match self.state_reader.get_class_hash_at(contract_address) {
+                Ok(x) => {
+                    return Ok(x);
+                }
+                Err(StateError::NoneContractState(_)) => {
+                    return Ok([0; 32]);
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            }
         }
 
         self.cache
@@ -105,7 +115,20 @@ impl<T: StateReader> StateReader for CachedState<T> {
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
-            return self.state_reader.get_storage_at(storage_entry);
+            match self.state_reader.get_storage_at(storage_entry) {
+                Ok(x) => {
+                    return Ok(x);
+                }
+                Err(
+                    StateError::EmptyKeyInStorage
+                    | StateError::NoneStoragLeaf(_)
+                    | StateError::NoneStorage(_)
+                    | StateError::NoneContractState(_),
+                ) => return Ok(Felt252::zero()),
+                Err(e) => {
+                    return Err(e);
+                }
+            }
         }
 
         self.cache

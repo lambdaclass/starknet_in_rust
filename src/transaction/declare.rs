@@ -476,12 +476,6 @@ mod tests {
 
         contract_class_cache.insert(class_hash, contract_class);
 
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
         //* ---------------------------------------
         //*    Test declare with previous data
         //* ---------------------------------------

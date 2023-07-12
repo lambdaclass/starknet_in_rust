@@ -512,7 +512,7 @@ fn validate_final_balances<S>(
 
 #[test]
 fn test_create_account_tx_test_state() {
-    let (block_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, state) = create_account_tx_test_state().unwrap();
 
     assert_eq!(state, expected_state_before_tx());
 
@@ -1211,7 +1211,13 @@ fn test_deploy_account() {
         .execute(&mut state, &block_context)
         .unwrap();
 
-    assert_eq!(state, state_after);
+    assert_eq!(state.contract_classes(), state_after.contract_classes());
+    assert_eq!(
+        state.casm_contract_classes(),
+        state_after.casm_contract_classes()
+    );
+    assert_eq!(state.state_reader(), state_after.state_reader());
+    assert_eq!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
@@ -1452,7 +1458,7 @@ fn test_state_for_declare_tx() {
         .is_one());
 
     // Check state.state_reader
-    let mut state_reader = state.state_reader().clone();
+    let state_reader = state.state_reader().clone();
 
     assert_eq!(
         state_reader.address_to_class_hash,

@@ -327,12 +327,11 @@ mod test {
             .address_to_nonce
             .insert(contract_address.clone(), nonce);
 
-        let mut cached_state_original =
-            CachedState::new(Arc::new(state_reader.clone()), None, None);
+        let cached_state_original = CachedState::new(Arc::new(state_reader.clone()), None, None);
 
         let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
 
-        let mut cached_state = diff.to_cached_state(Arc::new(state_reader)).unwrap();
+        let cached_state = diff.to_cached_state(Arc::new(state_reader)).unwrap();
 
         assert_eq!(
             cached_state_original.contract_classes(),
