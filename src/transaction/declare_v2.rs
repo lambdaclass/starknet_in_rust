@@ -399,7 +399,7 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::DeclareV2;
-    use crate::core::contract_address::compute_sierra_class_hash;
+    use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
@@ -407,7 +407,7 @@ mod tests {
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_vm::felt::{Felt252, felt_str};
+    use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
 
     #[test]
@@ -433,13 +433,16 @@ mod tests {
             serde_json::from_reader(reader).unwrap();
         let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
         let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
             Some(sierra_class_hash),
-            felt_str!("1948962768849191111780391610229754715773924969841143100991524171924131413970"),
+            casm_class_hash,
             sender_address,
             0,
             version,
