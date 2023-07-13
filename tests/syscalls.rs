@@ -146,7 +146,9 @@ fn test_contract<'a>(
             false,
             block_context.invoke_tx_max_n_steps(),
         )
-        .expect("Could not execute contract");
+        .expect("Could not execute contract")
+        .call_info
+        .unwrap();
 
     assert_eq!(result.contract_address, contract_address);
     assert_eq!(result.contract_address, contract_address);
@@ -1386,6 +1388,8 @@ fn deploy_cairo1_and_invoke() {
             false,
             block_context.invoke_tx_max_n_steps(),
         )
+        .unwrap()
+        .call_info
         .unwrap();
 
     let retdata = call_info.retdata;
@@ -1481,6 +1485,8 @@ fn send_messages_to_l1_different_contract_calls() {
             false,
             block_context.invoke_tx_max_n_steps(),
         )
+        .unwrap()
+        .call_info
         .unwrap();
     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
     assert_eq!(

@@ -16,7 +16,10 @@ use crate::{
         block_context::BlockContext,
         constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST},
     },
-    execution::{execution_entry_point::ExecutionEntryPoint, *},
+    execution::{
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        *,
+    },
     hash_utils::calculate_contract_address,
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
@@ -433,7 +436,11 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         );
         entry_point.code_address = code_address;
 
-        entry_point
+        let ExecutionResult {
+            call_info,
+            error_message,
+            ..
+        } = entry_point
             .execute(
                 self.starknet_storage_state.state,
                 &self.block_context,
@@ -442,13 +449,16 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 false,
                 self.block_context.invoke_tx_max_n_steps,
             )
-            .map(|x| {
-                let retdata = x.retdata.clone();
-                self.internal_calls.push(x);
+            .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))?;
 
-                retdata
-            })
-            .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))
+        let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
+            error_message.unwrap_or("Execution error".to_string()),
+        ))?;
+
+        let retdata = call_info.retdata.clone();
+        self.internal_calls.push(call_info);
+
+        Ok(retdata)
     }
 
     pub(crate) fn get_block_info(&self) -> &BlockInfo {

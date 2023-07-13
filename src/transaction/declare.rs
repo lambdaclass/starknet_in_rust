@@ -1,3 +1,4 @@
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
 use crate::{
@@ -223,14 +224,17 @@ impl Declare {
             0,
         );
 
-        let call_info = entry_point.execute(
+        let ExecutionResult { call_info, .. } = entry_point.execute(
             state,
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
-            false,
+            true,
             block_context.validate_max_n_steps,
         )?;
+
+        // TODO: handle reverted transactions
+        let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
 
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::UnauthorizedActionOnValidate)?;

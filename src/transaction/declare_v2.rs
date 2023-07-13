@@ -1,5 +1,6 @@
 use super::{verify_version, Transaction};
 use crate::core::contract_address::compute_sierra_class_hash;
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::state::cached_state::CachedState;
@@ -351,17 +352,17 @@ impl DeclareV2 {
         let mut tx_execution_context =
             self.get_execution_context(block_context.validate_max_n_steps);
 
-        let call_info = if self.skip_execute {
-            None
+        let ExecutionResult { call_info, .. } = if self.skip_execute {
+            ExecutionResult::empty()
         } else {
-            Some(entry_point.execute(
+            entry_point.execute(
                 state,
                 block_context,
                 resources_manager,
                 &mut tx_execution_context,
-                false,
+                true,
                 block_context.validate_max_n_steps,
-            )?)
+            )?
         };
         let call_info = verify_no_calls_to_other_contracts(&call_info)?;
         remaining_gas -= call_info.gas_consumed;

@@ -17,6 +17,7 @@ use crate::{
 
 use cairo_vm::felt::Felt252;
 use definitions::block_context::BlockContext;
+use execution::execution_entry_point::ExecutionResult;
 use state::cached_state::CachedState;
 use transaction::{fee::calculate_tx_fee, L1Handler};
 use utils::Address;
@@ -143,7 +144,7 @@ pub fn call_contract<T: StateReader>(
         version.into(),
     );
 
-    let call_info = execution_entrypoint.execute(
+    let ExecutionResult { call_info, .. } = execution_entrypoint.execute(
         state,
         &block_context,
         &mut ExecutionResourcesManager::default(),
@@ -152,6 +153,7 @@ pub fn call_contract<T: StateReader>(
         block_context.invoke_tx_max_n_steps,
     )?;
 
+    let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
     Ok(call_info.retdata)
 }
 

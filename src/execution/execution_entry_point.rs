@@ -41,6 +41,23 @@ use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
 };
 
+#[derive(Debug)]
+pub struct ExecutionResult {
+    pub call_info: Option<CallInfo>,
+    pub error_message: Option<String>,
+    pub n_reverted_steps: usize,
+}
+
+impl ExecutionResult {
+    pub fn empty() -> Self {
+        Self {
+            call_info: None,
+            error_message: None,
+            n_reverted_steps: 0,
+        }
+    }
+}
+
 /// Represents a Cairo entry point execution of a StarkNet contract.
 
 // TODO:initial_gas is a new field added in the current changes, it should be checked if we delete it once the new execution entry point is done
@@ -93,7 +110,7 @@ impl ExecutionEntryPoint {
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
         max_steps: u64,
-    ) -> Result<CallInfo, TransactionError>
+    ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
     {
@@ -103,14 +120,21 @@ impl ExecutionEntryPoint {
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
         match contract_class {
-            CompiledClass::Deprecated(contract_class) => self._execute_version0_class(
-                state,
-                resources_manager,
-                block_context,
-                tx_execution_context,
-                contract_class,
-                class_hash,
-            ),
+            CompiledClass::Deprecated(contract_class) => {
+                let call_info = self._execute_version0_class(
+                    state,
+                    resources_manager,
+                    block_context,
+                    tx_execution_context,
+                    contract_class,
+                    class_hash,
+                )?;
+                Ok(ExecutionResult {
+                    call_info: Some(call_info),
+                    error_message: None,
+                    n_reverted_steps: 0,
+                })
+            }
             CompiledClass::Casm(contract_class) => {
                 let mut tmp_state = CachedState::new(
                     state.state_reader.clone(),
@@ -131,12 +155,24 @@ impl ExecutionEntryPoint {
                     Ok(call_info) => {
                         let state_diff = StateDiff::from_cached_state(tmp_state)?;
                         state.apply_state_update(&state_diff)?;
-                        Ok(call_info)
+                        Ok(ExecutionResult {
+                            call_info: Some(call_info),
+                            error_message: None,
+                            n_reverted_steps: 0,
+                        })
                     }
                     Err(e) => {
-                        let _n_reverted_steps =
+                        if !support_reverted {
+                            return Err(e);
+                        }
+
+                        let n_reverted_steps =
                             (max_steps as usize) - resources_manager.cairo_usage.n_steps;
-                        Err(e)
+                        Ok(ExecutionResult {
+                            call_info: None,
+                            error_message: Some(e.to_string()),
+                            n_reverted_steps,
+                        })
                     }
                 }
             }

@@ -76,6 +76,8 @@ fn test_internal_calls() {
         )
         .expect("Could not execute contract");
 
+    let call_info = call_info.call_info.unwrap();
+
     assert_eq!(call_info.internal_calls.len(), 1);
     assert_eq!(call_info.internal_calls[0].internal_calls.len(), 1);
     assert!(call_info.internal_calls[0].internal_calls[0]

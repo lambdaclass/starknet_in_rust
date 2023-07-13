@@ -6,6 +6,7 @@ extern crate honggfuzz;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
+use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -182,19 +183,17 @@ fn main() {
                 ..Default::default()
             };
 
-            assert_eq!(
-                exec_entry_point
-                    .execute(
-                        &mut state,
-                        &block_context,
-                        &mut resources_manager,
-                        &mut tx_execution_context,
-                        false,
-                        block_context.invoke_tx_max_n_steps()
-                    )
-                    .unwrap(),
-                expected_call_info
-            );
+            let ExecutionResult { call_info, .. } = exec_entry_point
+                .execute(
+                    &mut state,
+                    &block_context,
+                    &mut resources_manager,
+                    &mut tx_execution_context,
+                    false,
+                    block_context.invoke_tx_max_n_steps(),
+                )
+                .unwrap();
+            assert_eq!(call_info.unwrap(), expected_call_info);
 
             assert!(!state.cache().storage_writes().is_empty());
             assert_eq!(

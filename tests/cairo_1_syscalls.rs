@@ -128,7 +128,7 @@ fn storage_write_read() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(call_info.retdata, [25.into()]);
+    assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
@@ -171,7 +171,7 @@ fn storage_write_read() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(call_info.retdata, [125.into()])
+    assert_eq!(call_info.call_info.unwrap().retdata, [125.into()])
 }
 
 #[test]
@@ -323,6 +323,8 @@ fn library_call() {
                 false,
                 block_context.invoke_tx_max_n_steps()
             )
+            .unwrap()
+            .call_info
             .unwrap(),
         expected_call_info
     );
@@ -466,7 +468,7 @@ fn call_contract_storage_write_read() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(call_info.retdata, [25.into()]);
+    assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
@@ -513,7 +515,7 @@ fn call_contract_storage_write_read() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(call_info.retdata, [125.into()])
+    assert_eq!(call_info.call_info.unwrap().retdata, [125.into()])
 }
 
 #[test]
@@ -585,7 +587,7 @@ fn emit_event() {
         )
         .unwrap();
     assert_eq!(
-        call_info.events,
+        call_info.call_info.unwrap().events,
         vec![
             OrderedEvent {
                 order: 0,
@@ -1048,7 +1050,7 @@ fn deploy_cairo0_and_invoke() {
         )
         .unwrap();
 
-    let retdata = call_info.retdata;
+    let retdata = call_info.call_info.unwrap().retdata;
 
     // expected result 3! = 6
     assert_eq!(retdata, [6.into()].to_vec());
@@ -1159,7 +1161,7 @@ fn test_send_message_to_l1_syscall() {
         ..Default::default()
     };
 
-    assert_eq!(call_info, expected_call_info);
+    assert_eq!(call_info.call_info.unwrap(), expected_call_info);
 }
 
 #[test]
@@ -1267,7 +1269,7 @@ fn test_get_execution_info() {
         ..Default::default()
     };
 
-    assert_eq!(call_info, expected_call_info);
+    assert_eq!(call_info.call_info.unwrap(), expected_call_info);
 }
 
 #[test]
@@ -1474,7 +1476,7 @@ fn replace_class_contract_call() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(result.retdata, vec![25.into()]);
+    assert_eq!(result.call_info.unwrap().retdata, vec![25.into()]);
 
     // REPLACE_CLASS
 
@@ -1527,7 +1529,7 @@ fn replace_class_contract_call() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(result.retdata, vec![17.into()]);
+    assert_eq!(result.call_info.unwrap().retdata, vec![17.into()]);
 }
 
 #[test]
@@ -1640,7 +1642,10 @@ fn replace_class_contract_call_same_transaction() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(result.retdata, vec![25.into(), 17.into()]);
+    assert_eq!(
+        result.call_info.unwrap().retdata,
+        vec![25.into(), 17.into()]
+    );
 }
 
 #[test]
@@ -1756,7 +1761,10 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(result.retdata, vec![33.into(), 17.into()]);
+    assert_eq!(
+        result.call_info.unwrap().retdata,
+        vec![33.into(), 17.into()]
+    );
 }
 
 #[test]
@@ -1870,7 +1878,10 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(result.retdata, vec![17.into(), 33.into()]);
+    assert_eq!(
+        result.call_info.unwrap().retdata,
+        vec![17.into(), 33.into()]
+    );
 }
 
 #[test]
@@ -1980,7 +1991,10 @@ fn call_contract_replace_class_cairo_0() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(result.retdata, vec![64.into(), 33.into()]);
+    assert_eq!(
+        result.call_info.unwrap().retdata,
+        vec![64.into(), 33.into()]
+    );
 }
 
 #[test]
@@ -2052,6 +2066,7 @@ fn test_out_of_gas_failure() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
+    let call_info = call_info.call_info.unwrap();
     assert_eq!(
         call_info.retdata,
         vec![Felt252::from_bytes_be("Out of gas".as_bytes())]
@@ -2128,7 +2143,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         )
         .unwrap();
     assert_eq!(
-        std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
             .unwrap()
             .trim_start_matches('\0'),
         "CLASS_HASH_NOT_FOUND"
@@ -2215,7 +2230,7 @@ fn deploy_syscall_failure_in_constructor() {
     // Check that we get the error from the constructor
     // assert( 1 == 0 , 'Oops');
     assert_eq!(
-        std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
             .unwrap()
             .trim_start_matches('\0'),
         "Oops"
@@ -2302,7 +2317,7 @@ fn storage_read_no_value() {
         )
         .unwrap();
     // As the value doesn't exist in storage, it's value will be 0
-    assert_eq!(call_info.retdata, [0.into()]);
+    assert_eq!(call_info.call_info.unwrap().retdata, [0.into()]);
 }
 
 #[test]
@@ -2388,7 +2403,7 @@ fn storage_read_unavailable_address_domain() {
         .unwrap();
 
     assert_eq!(
-        call_info.retdata[0],
+        call_info.call_info.unwrap().retdata[0],
         Felt252::from_bytes_be(b"Unsupported address domain")
     );
 }
@@ -2476,7 +2491,7 @@ fn storage_write_unavailable_address_domain() {
         .unwrap();
 
     assert_eq!(
-        call_info.retdata[0],
+        call_info.call_info.unwrap().retdata[0],
         Felt252::from_bytes_be(b"Unsupported address domain")
     );
 }
@@ -2575,6 +2590,9 @@ fn library_call_failure() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
+
+    let call_info = call_info.call_info.unwrap();
+
     assert_eq!(
         std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
             .unwrap()
@@ -2676,7 +2694,11 @@ fn send_messages_to_l1_different_contract_calls() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
+    let l1_to_l2_messages = call_info
+        .call_info
+        .unwrap()
+        .get_sorted_l2_to_l1_messages()
+        .unwrap();
     assert_eq!(
         l1_to_l2_messages,
         vec![
@@ -2794,7 +2816,11 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
+    let l1_to_l2_messages = call_info
+        .call_info
+        .unwrap()
+        .get_sorted_l2_to_l1_messages()
+        .unwrap();
     assert_eq!(
         l1_to_l2_messages,
         vec![
@@ -2910,7 +2936,11 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
+    let l1_to_l2_messages = call_info
+        .call_info
+        .unwrap()
+        .get_sorted_l2_to_l1_messages()
+        .unwrap();
     assert_eq!(
         l1_to_l2_messages,
         vec![

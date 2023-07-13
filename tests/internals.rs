@@ -1855,5 +1855,5 @@ fn test_library_call_with_declare_v2() {
         ..Default::default()
     };
 
-    assert_eq!(call_info, expected_call_info);
+    assert_eq!(call_info.call_info.unwrap(), expected_call_info);
 }

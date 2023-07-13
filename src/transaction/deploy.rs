@@ -1,3 +1,4 @@
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
 use crate::{
@@ -225,19 +226,19 @@ impl Deploy {
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let call_info = call.execute(
+        let ExecutionResult { call_info, .. } = call.execute(
             state,
             block_context,
             &mut resources_manager,
             &mut tx_execution_context,
-            false,
+            true,
             block_context.validate_max_n_steps,
         )?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(call_info.clone())],
+            &[call_info.clone()],
             self.tx_type,
             changes,
             None,
@@ -245,7 +246,7 @@ impl Deploy {
 
         Ok(TransactionExecutionInfo::new_without_fee_info(
             None,
-            Some(call_info),
+            call_info,
             actual_resources,
             Some(self.tx_type),
         ))

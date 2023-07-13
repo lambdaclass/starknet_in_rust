@@ -128,7 +128,7 @@ fn test_erc20_cairo2() {
             block_context.invoke_tx_max_n_steps,
         )
         .unwrap();
-    let erc20_address = call_info.retdata.get(0).unwrap().clone();
+    let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
 
     // ACCOUNT 1
     let program_data_account =

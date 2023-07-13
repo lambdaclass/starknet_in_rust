@@ -135,6 +135,8 @@ fn integration_storage_test() {
                 false,
                 block_context.invoke_tx_max_n_steps()
             )
+            .unwrap()
+            .call_info
             .unwrap(),
         expected_call_info
     );

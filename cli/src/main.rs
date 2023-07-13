@@ -16,14 +16,17 @@ use starknet_in_rust::{
         block_context::BlockContext,
         constants::{DECLARE_VERSION, TRANSACTION_VERSION},
     },
-    execution::{execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext},
+    execution::{
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        TransactionExecutionContext,
+    },
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::read_abi,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    transaction::InvokeFunction,
+    transaction::{error::TransactionError, InvokeFunction},
     utils::{felt_to_hash, string_to_hash, Address},
 };
 use std::{
@@ -250,7 +253,7 @@ fn call_parser(
         0,
     );
     let block_context = BlockContext::default();
-    let call_info = execution_entry_point.execute(
+    let ExecutionResult { call_info, .. } = execution_entry_point.execute(
         cached_state,
         &block_context,
         &mut ExecutionResourcesManager::default(),
@@ -258,6 +261,9 @@ fn call_parser(
         false,
         block_context.invoke_tx_max_n_steps(),
     )?;
+
+    let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
+
     Ok(call_info.retdata)
 }
 

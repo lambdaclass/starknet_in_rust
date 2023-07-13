@@ -1,4 +1,5 @@
 use crate::{
+    execution::execution_entry_point::ExecutionResult,
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::cached_state::CachedState,
 };
@@ -110,17 +111,17 @@ impl L1Handler {
             remaining_gas,
         );
 
-        let call_info = if self.skip_execute {
-            None
+        let ExecutionResult { call_info, .. } = if self.skip_execute {
+            ExecutionResult::empty()
         } else {
-            Some(entrypoint.execute(
+            entrypoint.execute(
                 state,
                 block_context,
                 &mut resources_manager,
                 &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
-                false,
+                true,
                 block_context.invoke_tx_max_n_steps,
-            )?)
+            )?
         };
 
         let changes = state.count_actual_storage_changes();

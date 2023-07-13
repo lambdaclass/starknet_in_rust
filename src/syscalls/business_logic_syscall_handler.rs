@@ -21,6 +21,7 @@ use super::{
 };
 use crate::definitions::block_context::BlockContext;
 use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
 use crate::state::BlockInfo;
@@ -238,18 +239,26 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         remaining_gas: u128,
         execution_entry_point: ExecutionEntryPoint,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let result = execution_entry_point
+        let ExecutionResult {
+            call_info,
+            error_message,
+            ..
+        } = execution_entry_point
             .execute(
                 self.starknet_storage_state.state,
                 &self.block_context,
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
-                self.support_reverted,
+                false,
                 self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
-        let retdata_maybe_reloc = result
+        let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
+            error_message.unwrap_or("Execution error".to_string()),
+        ))?;
+
+        let retdata_maybe_reloc = call_info
             .retdata
             .clone()
             .into_iter()
@@ -257,12 +266,12 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             .collect::<Vec<MaybeRelocatable>>();
 
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
-        let retdata_end = (retdata_start + result.retdata.len())?;
+        let retdata_end = (retdata_start + call_info.retdata.len())?;
 
-        let remaining_gas = remaining_gas.saturating_sub(result.gas_consumed);
+        let remaining_gas = remaining_gas.saturating_sub(call_info.gas_consumed);
 
         let gas = remaining_gas;
-        let body = if result.failure_flag {
+        let body = if call_info.failure_flag {
             Some(ResponseBody::Failure(FailureReason {
                 retdata_start,
                 retdata_end,
@@ -274,7 +283,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             }))
         };
 
-        self.internal_calls.push(result);
+        self.internal_calls.push(call_info);
 
         Ok(SyscallResponse { gas, body })
     }
@@ -340,7 +349,11 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             remainig_gas,
         );
 
-        let call_info = call
+        let ExecutionResult {
+            call_info,
+            error_message,
+            ..
+        } = call
             .execute(
                 self.starknet_storage_state.state,
                 &self.block_context,
@@ -350,6 +363,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
+
+        let call_info = call_info.ok_or(StateError::CustomError(
+            error_message.unwrap_or("Execution error".to_string()),
+        ))?;
 
         self.internal_calls.push(call_info.clone());
 

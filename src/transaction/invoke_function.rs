@@ -8,8 +8,8 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
     state::state_api::{State, StateReader},
     state::{cached_state::CachedState, ExecutionResourcesManager},
@@ -172,14 +172,14 @@ impl InvokeFunction {
             0,
         );
 
-        let call_info = Some(call.execute(
+        let ExecutionResult { call_info, .. } = call.execute(
             state,
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
             block_context.validate_max_n_steps,
-        )?);
+        )?;
 
         let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
@@ -195,7 +195,7 @@ impl InvokeFunction {
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
-    ) -> Result<CallInfo, TransactionError> {
+    ) -> Result<ExecutionResult, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -211,7 +211,7 @@ impl InvokeFunction {
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
-            false,
+            true,
             block_context.invoke_tx_max_n_steps,
         )
     }
@@ -232,15 +232,15 @@ impl InvokeFunction {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
-        let call_info = if self.skip_execute {
-            None
+        let ExecutionResult { call_info, .. } = if self.skip_execute {
+            ExecutionResult::empty()
         } else {
-            Some(self.run_execute_entrypoint(
+            self.run_execute_entrypoint(
                 state,
                 block_context,
                 &mut resources_manager,
                 remaining_gas,
-            )?)
+            )?
         };
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(

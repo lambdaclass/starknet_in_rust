@@ -1,4 +1,5 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -147,7 +148,7 @@ impl StarknetState {
         let mut resources_manager = ExecutionResourcesManager::default();
 
         let mut tx_execution_context = TransactionExecutionContext::default();
-        let call_info = call.execute(
+        let ExecutionResult { call_info, .. } = call.execute(
             &mut self.state,
             &self.block_context,
             &mut resources_manager,
@@ -155,6 +156,10 @@ impl StarknetState {
             false,
             self.block_context.invoke_tx_max_n_steps,
         )?;
+
+        let call_info = call_info.ok_or(StarknetStateError::Transaction(
+            TransactionError::CallInfoIsNone,
+        ))?;
 
         let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));
         self.add_messages_and_events(&exec_info)?;
