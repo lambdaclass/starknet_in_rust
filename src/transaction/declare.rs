@@ -324,7 +324,7 @@ mod tests {
         let mut contract_class_cache = HashMap::new();
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        contract_class_cache.insert(class_hash, contract_class);
 
         // store sender_address into the state reader.
         let mut state_reader = InMemoryStateReader::default();
@@ -371,7 +371,7 @@ mod tests {
             entry_point_selector: VALIDATE_ENTRYPOINT_SELECTOR.clone(),
             entry_point_type: Some(EntryPointType::External),
             calldata,
-            class_hash: Some(ACCOUNT_CLASS_HASH.clone()),
+            class_hash: Some(*ACCOUNT_CLASS_HASH),
             execution_resources: ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
