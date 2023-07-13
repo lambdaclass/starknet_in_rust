@@ -11,6 +11,7 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
+use crate::core::errors::hash_errors::HashError;
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
@@ -96,7 +97,7 @@ pub fn get_felt_range(
 
 pub fn felt_to_field_element(value: &Felt252) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
-        .map_err(|_| SyscallHandlerError::FailToComputeHash)
+        .map_err(|_| SyscallHandlerError::HashError(HashError::FailedToComputeHash))
 }
 
 pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {

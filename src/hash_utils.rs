@@ -1,4 +1,5 @@
 use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use crate::core::errors::hash_errors::HashError;
 use cairo_vm::felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
@@ -114,7 +115,7 @@ pub fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandl
         .iter()
         .map(|num| {
             FieldElement::from_dec_str(&num.to_str_radix(10))
-                .map_err(|_| SyscallHandlerError::FailToComputeHash)
+                .map_err(|_| SyscallHandlerError::HashError(HashError::FailedToComputeHash))
         })
         .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
 
@@ -124,7 +125,7 @@ pub fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandl
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
-        .ok_or(SyscallHandlerError::FailToComputeHash)?;
+        .ok_or(SyscallHandlerError::HashError(HashError::FailedToComputeHash))?;
 
     let result = Felt252::from_bytes_be(&felt_result.to_bytes_be());
     Ok(result)

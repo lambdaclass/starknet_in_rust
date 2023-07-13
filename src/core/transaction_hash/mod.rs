@@ -4,6 +4,7 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address,
 };
+use crate::core::errors::hash_errors::HashError;
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
@@ -124,7 +125,7 @@ pub fn calculate_declare_transaction_hash(
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
     let class_hash = compute_deprecated_class_hash(contract_class)
-        .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+        .map_err(|_| SyscallHandlerError::HashError(HashError::FailedToComputeHash))?;
 
     let (calldata, additional_data) = if !version.is_zero() {
         (vec![class_hash], vec![nonce])
