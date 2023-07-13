@@ -805,7 +805,7 @@ mod test {
                 0.into(),
                 Felt252::zero(),
                 vec![],
-                SIGNATURE.clone(),
+                Vec::new(),
                 SALT.clone(),
                 StarknetChainId::TestNet.to_felt(),
             )
