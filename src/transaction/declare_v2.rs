@@ -360,6 +360,7 @@ impl DeclareV2 {
                 resources_manager,
                 &mut tx_execution_context,
                 false,
+                block_context.validate_max_n_steps,
             )?)
         };
         let call_info = verify_no_calls_to_other_contracts(&call_info)?;

@@ -229,6 +229,7 @@ impl Declare {
             resources_manager,
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
+            block_context.validate_max_n_steps,
         )?;
 
         verify_no_calls_to_other_contracts(&call_info)

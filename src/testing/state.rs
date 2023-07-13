@@ -153,6 +153,7 @@ impl StarknetState {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            self.block_context.invoke_tx_max_n_steps,
         )?;
 
         let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));

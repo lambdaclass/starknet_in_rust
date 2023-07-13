@@ -61,6 +61,7 @@ pub(crate) fn execute_fee_transfer<S: StateReader>(
         &mut resources_manager,
         tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps,
     );
     // TODO: Avoid masking the error from the fee transfer.
     fee_transfer_exec.map_err(|e| TransactionError::FeeTransferError(Box::new(e)))

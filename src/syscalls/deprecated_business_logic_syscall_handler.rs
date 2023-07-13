@@ -236,6 +236,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
         Ok(())
@@ -439,6 +440,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map(|x| {
                 let retdata = x.retdata.clone();

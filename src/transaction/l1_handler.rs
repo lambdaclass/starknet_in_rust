@@ -119,6 +119,7 @@ impl L1Handler {
                 &mut resources_manager,
                 &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
                 false,
+                block_context.invoke_tx_max_n_steps,
             )?)
         };
 
