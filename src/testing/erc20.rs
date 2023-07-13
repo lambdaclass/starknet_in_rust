@@ -158,7 +158,6 @@ fn test_erc20_cairo2() {
         ],
         contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
-        None,
     )
     .unwrap();
 
@@ -197,7 +196,6 @@ fn test_erc20_cairo2() {
         ],
         contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
-        None,
     )
     .unwrap();
 
