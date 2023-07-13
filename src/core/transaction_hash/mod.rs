@@ -1,10 +1,10 @@
+use crate::core::errors::hash_errors::HashError;
 use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address,
 };
-use crate::core::errors::hash_errors::HashError;
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 

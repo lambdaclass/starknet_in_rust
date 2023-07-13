@@ -1,3 +1,4 @@
+use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::transaction_type::TransactionType,
@@ -11,7 +12,6 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
-use crate::core::errors::hash_errors::HashError;
 use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
