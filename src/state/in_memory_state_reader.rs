@@ -14,7 +14,7 @@ use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
-/// A StateReader that holds all the data in memory.
+/// A [StateReader] that holds all the data in memory.
 ///
 /// This implementation is used for testing and debugging.
 /// It uses HashMaps to store the data.
