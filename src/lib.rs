@@ -1000,7 +1000,7 @@ mod test {
     }
 
     #[test]
-    fn test_declare_v2_with_invalid_compiled_clas_hash() {
+    fn test_declare_v2_with_invalid_compiled_class_hash() {
         let (block_context, mut state) = create_account_tx_test_state().unwrap();
         let mut declare_v2 = declarev2_tx();
         declare_v2.compiled_class_hash = Felt252::from(1);
