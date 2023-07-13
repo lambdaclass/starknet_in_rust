@@ -24,10 +24,14 @@ fn get_contract_entry_points_hashed(
                 })?,
         );
         entry_points_flatted.push(FieldElement::from(entry_point.offset));
-        let mut builtins_flatted = Vec::new();
-        entry_point.builtins.iter().for_each(|builtin| {
-            builtins_flatted.push(FieldElement::from_byte_slice_be(builtin.as_bytes()).unwrap());
-        });
+        let builtins_flatted = entry_point
+            .builtins
+            .iter()
+            .map(|builtin| FieldElement::from_byte_slice_be(builtin.as_bytes()))
+            .collect::<Result<Vec<FieldElement>, _>>()
+            .map_err(|_err| {
+                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+            })?;
         entry_points_flatted.push(poseidon_hash_many(&builtins_flatted));
     }
 
@@ -101,90 +105,164 @@ mod tests {
     #[test]
     fn test_compute_casm_class_hash_contract_a() {
         // Open the file in read-only mode with buffer.
-        let file = File::open("starknet_programs/cairo1/contract_a.casm").unwrap();
+        let file;
+        let expected_result;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            file = File::open("starknet_programs/cairo2/contract_a.casm").unwrap();
+            expected_result = felt_str!(
+                "321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f",
+                16
+            );
+        }
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            file = File::open("starknet_programs/cairo1/contract_a.casm").unwrap();
+            expected_result = felt_str!(
+                "3a4f00bf75ba3b9230a94f104c7a4605a1901c4bd475beb59eeeeb7aceb9795",
+                16
+            );
+        }
         let reader = BufReader::new(file);
 
-        // Read the JSON contents of the file as an instance of `User`.
+        // Read the JSON contents of the file as an instance of `CasmContractClass`.
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
 
         assert_eq!(
             compute_casm_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "3a4f00bf75ba3b9230a94f104c7a4605a1901c4bd475beb59eeeeb7aceb9795",
-                16
-            )
+            expected_result
         );
     }
 
     #[test]
     fn test_compute_casm_class_hash_deploy() {
         // Open the file in read-only mode with buffer.
-        let file = File::open("starknet_programs/cairo1/deploy.casm").unwrap();
+        let file;
+        let expected_result;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            file = File::open("starknet_programs/cairo2/deploy.casm").unwrap();
+            expected_result = felt_str!(
+                "53ad3bfb13f39cf1a9940108be4f9c6a8d9cc48a59d5f9b3c73432f877f8cf0",
+                16
+            );
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            file = File::open("starknet_programs/cairo1/deploy.casm").unwrap();
+            expected_result = felt_str!(
+                "3bd56f1c3c1c595ac2ee6d07bdedc027d09df56235e20374649f0b3535c1f15",
+                16
+            );
+        }
         let reader = BufReader::new(file);
 
-        // Read the JSON contents of the file as an instance of `User`.
+        // Read the JSON contents of the file as an instance of `CasmContractClass`.
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
 
         assert_eq!(
             compute_casm_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "3bd56f1c3c1c595ac2ee6d07bdedc027d09df56235e20374649f0b3535c1f15",
-                16
-            )
+            expected_result
         );
     }
 
     #[test]
     fn test_compute_casm_class_hash_fibonacci() {
         // Open the file in read-only mode with buffer.
-        let file = File::open("starknet_programs/cairo1/fibonacci.casm").unwrap();
+        let file;
+        let expected_result;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            file = File::open("starknet_programs/cairo2/fibonacci.casm").unwrap();
+            expected_result = felt_str!(
+                "6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89",
+                16
+            );
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            file = File::open("starknet_programs/cairo1/fibonacci.casm").unwrap();
+            expected_result = felt_str!(
+                "44f12e6e59232e9909d7428b913b3cc8d9059458e5027740a3ccdbdc4b1ffd2",
+                16
+            );
+        }
         let reader = BufReader::new(file);
 
-        // Read the JSON contents of the file as an instance of `User`.
+        // Read the JSON contents of the file as an instance of `CasmContractClass`.
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
 
         assert_eq!(
             compute_casm_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "44f12e6e59232e9909d7428b913b3cc8d9059458e5027740a3ccdbdc4b1ffd2",
-                16
-            )
+            expected_result
         );
     }
 
     #[test]
     fn test_compute_casm_class_hash_factorial() {
         // Open the file in read-only mode with buffer.
-        let file = File::open("starknet_programs/cairo1/factorial.casm").unwrap();
+        let file;
+        let expected_result;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            file = File::open("starknet_programs/cairo2/factorial.casm").unwrap();
+            expected_result = felt_str!(
+                "7c48d040ceb3183837a0aff2adf33d879f790e202eb2c4b8622005c12252641",
+                16
+            );
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            file = File::open("starknet_programs/cairo1/factorial.casm").unwrap();
+            expected_result = felt_str!(
+                "189a9b8b852aedbb225aa28dce9cfc3133145dd623e2d2ca5e962b7d4e61e15",
+                16
+            );
+        }
         let reader = BufReader::new(file);
 
-        // Read the JSON contents of the file as an instance of `User`.
+        // Read the JSON contents of the file as an instance of `CasmContractClass`.
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
 
         assert_eq!(
             compute_casm_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "189a9b8b852aedbb225aa28dce9cfc3133145dd623e2d2ca5e962b7d4e61e15",
-                16
-            )
+            expected_result
         );
     }
 
     #[test]
     fn test_compute_casm_class_hash_emit_event() {
         // Open the file in read-only mode with buffer.
-        let file = File::open("starknet_programs/cairo1/emit_event.casm").unwrap();
+        let file;
+        let expected_result;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            file = File::open("starknet_programs/cairo2/emit_event.casm").unwrap();
+            expected_result = felt_str!(
+                "3010533bd60cb0e70ac1bf776e171713f0e5229a084989d3894c171c160ace2",
+                16
+            );
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            file = File::open("starknet_programs/cairo1/emit_event.casm").unwrap();
+            expected_result = felt_str!(
+                "3335fe731ceda1116eda8bbc2e282953ce54618309ad474189e627c59328fff",
+                16
+            );
+        }
         let reader = BufReader::new(file);
 
-        // Read the JSON contents of the file as an instance of `User`.
+        // Read the JSON contents of the file as an instance of `CasmContractClass`.
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
 
         assert_eq!(
             compute_casm_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "3335fe731ceda1116eda8bbc2e282953ce54618309ad474189e627c59328fff",
-                16
-            )
+            expected_result
         );
     }
 }
