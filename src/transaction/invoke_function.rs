@@ -232,7 +232,11 @@ impl InvokeFunction {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
-        let ExecutionResult { call_info, .. } = if self.skip_execute {
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = if self.skip_execute {
             ExecutionResult::empty()
         } else {
             self.run_execute_entrypoint(
@@ -253,6 +257,7 @@ impl InvokeFunction {
         let transaction_execution_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             call_info,
+            revert_error,
             actual_resources,
             Some(self.tx_type),
         );

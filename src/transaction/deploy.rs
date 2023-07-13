@@ -190,6 +190,7 @@ impl Deploy {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             None,
             Some(call_info),
+            None,
             actual_resources,
             Some(self.tx_type),
         ))
@@ -226,7 +227,11 @@ impl Deploy {
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let ExecutionResult { call_info, .. } = call.execute(
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = call.execute(
             state,
             block_context,
             &mut resources_manager,
@@ -247,6 +252,7 @@ impl Deploy {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             None,
             call_info,
+            revert_error,
             actual_resources,
             Some(self.tx_type),
         ))

@@ -831,6 +831,7 @@ fn test_declare_tx() {
             ..Default::default()
         }),
         None,
+        None,
         Some(expected_declare_fee_transfer_info(fee)),
         fee,
         resources,
@@ -877,6 +878,7 @@ fn test_declarev2_tx() {
             },
             ..Default::default()
         }),
+        None,
         None,
         Some(expected_declare_fee_transfer_info(fee)),
         fee,
@@ -1064,6 +1066,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     TransactionExecutionInfo::new(
         Some(expected_validate_call_info_2()),
         Some(expected_execute_call_info()),
+        None,
         Some(expected_fee_transfer_info(fee)),
         fee,
         resources,
@@ -1083,6 +1086,7 @@ fn expected_fib_transaction_execution_info(
     TransactionExecutionInfo::new(
         Some(expected_fib_validate_call_info_2()),
         Some(expected_fib_execute_call_info()),
+        None,
         Some(expected_fib_fee_transfer_info(fee)),
         fee,
         resources,
@@ -1262,6 +1266,7 @@ fn test_deploy_account() {
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
         expected_execute_call_info.into(),
+        None,
         expected_fee_transfer_call_info.into(),
         fee,
         // Entry **not** in blockifier.

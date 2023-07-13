@@ -214,6 +214,7 @@ impl DeployAccount {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             Some(constructor_call_info),
+            None,
             actual_resources,
             Some(TransactionType::DeployAccount),
         ))

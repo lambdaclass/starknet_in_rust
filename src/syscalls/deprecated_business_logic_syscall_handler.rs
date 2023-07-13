@@ -438,7 +438,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 
         let ExecutionResult {
             call_info,
-            error_message,
+            revert_error,
             ..
         } = entry_point
             .execute(
@@ -452,7 +452,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))?;
 
         let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
-            error_message.unwrap_or("Execution error".to_string()),
+            revert_error.unwrap_or("Execution error".to_string()),
         ))?;
 
         let retdata = call_info.retdata.clone();

@@ -90,6 +90,7 @@ fn internal_deploy_account() {
                 ..Default::default()
             }),
             None,
+            None,
             0,
             [
                 ("pedersen_builtin", 23),
@@ -237,6 +238,7 @@ fn internal_deploy_account_cairo1() {
             },
                 ..Default::default()
             }),
+            None,
             None,
             0,
             [

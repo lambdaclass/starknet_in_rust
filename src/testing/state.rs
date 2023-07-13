@@ -371,6 +371,7 @@ mod tests {
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
             }),
+            revert_error: None,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources,

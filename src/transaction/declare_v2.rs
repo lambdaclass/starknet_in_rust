@@ -303,6 +303,7 @@ impl DeclareV2 {
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             None,
+            None,
             actual_resources,
             Some(self.tx_type),
         );

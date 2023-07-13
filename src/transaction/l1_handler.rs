@@ -111,7 +111,11 @@ impl L1Handler {
             remaining_gas,
         );
 
-        let ExecutionResult { call_info, .. } = if self.skip_execute {
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = if self.skip_execute {
             ExecutionResult::empty()
         } else {
             entrypoint.execute(
@@ -156,6 +160,7 @@ impl L1Handler {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             None,
             call_info,
+            revert_error,
             actual_resources,
             Some(TransactionType::L1Handler),
         ))
@@ -326,6 +331,7 @@ mod test {
                 gas_consumed: 0,
                 failure_flag: false,
             }),
+            revert_error: None,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources: HashMap::from([

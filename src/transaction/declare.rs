@@ -181,6 +181,7 @@ impl Declare {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             None,
+            None,
             actual_resources,
             Some(self.tx_type),
         ))
@@ -450,6 +451,7 @@ mod tests {
         let transaction_exec_info = TransactionExecutionInfo {
             validate_info,
             call_info: None,
+            revert_error: None,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources,

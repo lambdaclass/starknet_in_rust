@@ -427,6 +427,7 @@ impl TxInfoStruct {
 pub struct TransactionExecutionInfo {
     pub validate_info: Option<CallInfo>,
     pub call_info: Option<CallInfo>,
+    pub revert_error: Option<String>,
     pub fee_transfer_info: Option<CallInfo>,
     pub actual_fee: u128,
     pub actual_resources: HashMap<String, usize>,
@@ -437,6 +438,7 @@ impl TransactionExecutionInfo {
     pub fn new(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
+        revert_error: Option<String>,
         fee_transfer_info: Option<CallInfo>,
         actual_fee: u128,
         actual_resources: HashMap<String, usize>,
@@ -445,6 +447,7 @@ impl TransactionExecutionInfo {
         TransactionExecutionInfo {
             validate_info,
             call_info,
+            revert_error,
             fee_transfer_info,
             actual_fee,
             actual_resources,
@@ -483,6 +486,7 @@ impl TransactionExecutionInfo {
         TransactionExecutionInfo {
             validate_info,
             call_info: execute_call_info,
+            revert_error: None,
             fee_transfer_info,
             actual_fee: 0,
             actual_resources: HashMap::new(),
@@ -493,12 +497,14 @@ impl TransactionExecutionInfo {
     pub fn new_without_fee_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
+        revert_error: Option<String>,
         actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
     ) -> Self {
         TransactionExecutionInfo {
             validate_info,
             call_info,
+            revert_error,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources,

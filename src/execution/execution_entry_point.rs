@@ -44,7 +44,7 @@ use super::{
 #[derive(Debug)]
 pub struct ExecutionResult {
     pub call_info: Option<CallInfo>,
-    pub error_message: Option<String>,
+    pub revert_error: Option<String>,
     pub n_reverted_steps: usize,
 }
 
@@ -52,7 +52,7 @@ impl ExecutionResult {
     pub fn empty() -> Self {
         Self {
             call_info: None,
-            error_message: None,
+            revert_error: None,
             n_reverted_steps: 0,
         }
     }
@@ -131,7 +131,7 @@ impl ExecutionEntryPoint {
                 )?;
                 Ok(ExecutionResult {
                     call_info: Some(call_info),
-                    error_message: None,
+                    revert_error: None,
                     n_reverted_steps: 0,
                 })
             }
@@ -157,7 +157,7 @@ impl ExecutionEntryPoint {
                         state.apply_state_update(&state_diff)?;
                         Ok(ExecutionResult {
                             call_info: Some(call_info),
-                            error_message: None,
+                            revert_error: None,
                             n_reverted_steps: 0,
                         })
                     }
@@ -170,7 +170,7 @@ impl ExecutionEntryPoint {
                             (max_steps as usize) - resources_manager.cairo_usage.n_steps;
                         Ok(ExecutionResult {
                             call_info: None,
-                            error_message: Some(e.to_string()),
+                            revert_error: Some(e.to_string()),
                             n_reverted_steps,
                         })
                     }
