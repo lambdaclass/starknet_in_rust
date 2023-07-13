@@ -245,7 +245,6 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
-                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
@@ -347,7 +346,6 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
-                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 

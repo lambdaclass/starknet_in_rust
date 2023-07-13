@@ -144,7 +144,6 @@ fn test_contract<'a>(
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps(),
         )
         .expect("Could not execute contract");
 
@@ -1141,7 +1140,6 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
-        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -1243,7 +1241,6 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1345,7 +1342,6 @@ fn deploy_cairo1_and_invoke() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
-        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -1384,7 +1380,6 @@ fn deploy_cairo1_and_invoke() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1479,7 +1474,6 @@ fn send_messages_to_l1_different_contract_calls() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();

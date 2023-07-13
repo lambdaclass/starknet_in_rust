@@ -123,7 +123,6 @@ pub fn execute_entry_point(
         call_config.resources_manager,
         &mut tx_execution_context,
         false,
-        call_config.block_context.invoke_tx_max_n_steps(),
     )
 }
 

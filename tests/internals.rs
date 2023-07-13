@@ -1802,7 +1802,6 @@ fn test_library_call_with_declare_v2() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 

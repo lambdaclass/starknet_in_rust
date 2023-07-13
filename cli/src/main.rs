@@ -256,7 +256,6 @@ fn call_parser(
         &mut ExecutionResourcesManager::default(),
         &mut TransactionExecutionContext::default(),
         false,
-        block_context.invoke_tx_max_n_steps(),
     )?;
     Ok(call_info.retdata)
 }
