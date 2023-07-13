@@ -30,6 +30,7 @@ use num_traits::Zero;
 
 use super::Transaction;
 
+/// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
 pub struct Deploy {
     pub hash_value: Felt252,
@@ -51,7 +52,6 @@ impl Deploy {
         constructor_calldata: Vec<Felt252>,
         chain_id: Felt252,
         version: Felt252,
-        hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let class_hash = compute_deprecated_class_hash(&contract_class)
             .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
@@ -64,15 +64,12 @@ impl Deploy {
             Address(Felt252::zero()),
         )?);
 
-        let hash_value = match hash_value {
-            Some(hash) => hash,
-            None => calculate_deploy_transaction_hash(
-                version.clone(),
-                &contract_address,
-                &constructor_calldata,
-                chain_id,
-            )?,
-        };
+        let hash_value = calculate_deploy_transaction_hash(
+            version.clone(),
+            &contract_address,
+            &constructor_calldata,
+            chain_id,
+        )?;
 
         Ok(Deploy {
             hash_value,
@@ -88,6 +85,39 @@ impl Deploy {
         })
     }
 
+    pub fn new_with_tx_hash(
+        contract_address_salt: Felt252,
+        contract_class: ContractClass,
+        constructor_calldata: Vec<Felt252>,
+        version: Felt252,
+        hash_value: Felt252,
+    ) -> Result<Self, SyscallHandlerError> {
+        let class_hash = compute_deprecated_class_hash(&contract_class)
+            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
+
+        let contract_hash: ClassHash = felt_to_hash(&class_hash);
+        let contract_address = Address(calculate_contract_address(
+            &contract_address_salt,
+            &class_hash,
+            &constructor_calldata,
+            Address(Felt252::zero()),
+        )?);
+
+        Ok(Deploy {
+            hash_value,
+            version,
+            contract_address,
+            contract_address_salt,
+            contract_hash,
+            constructor_calldata,
+            tx_type: TransactionType::Deploy,
+            skip_validate: false,
+            skip_execute: false,
+            skip_fee_transfer: false,
+        })
+    }
+
+    /// Returns the class hash of the deployed contract
     pub fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }
@@ -105,7 +135,10 @@ impl Deploy {
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
         }
     }
-
+    /// Deploys the contract in the starknet network and calls its constructor if it has one.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
     pub fn apply<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -122,6 +155,9 @@ impl Deploy {
             self.invoke_constructor(state, block_context)
         }
     }
+    /// Executes the contract without constructor
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
 
     pub fn handle_empty_constructor<S: State + StateReader>(
         &self,
@@ -157,6 +193,10 @@ impl Deploy {
         ))
     }
 
+    /// Execute the contract using its constructor
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
     pub fn invoke_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -211,6 +251,9 @@ impl Deploy {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    /// ## Parameters
+    /// - state: A state that implements the [`State`] and [`StateReader`] traits.
+    /// - block_context: The block's execution context.
     pub fn execute<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -226,6 +269,8 @@ impl Deploy {
     // ---------------
     //   Simulation
     // ---------------
+
+    /// Creates a Deploy transaction for simulate a deploy
     pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
@@ -276,7 +321,6 @@ mod tests {
             vec![10.into()],
             0.into(),
             0.into(),
-            None,
         )
         .unwrap();
 
@@ -318,15 +362,8 @@ mod tests {
             .set_contract_class(&class_hash_bytes, &contract_class)
             .unwrap();
 
-        let internal_deploy = Deploy::new(
-            0.into(),
-            contract_class,
-            Vec::new(),
-            0.into(),
-            0.into(),
-            None,
-        )
-        .unwrap();
+        let internal_deploy =
+            Deploy::new(0.into(), contract_class, Vec::new(), 0.into(), 0.into()).unwrap();
 
         let block_context = Default::default();
 
@@ -358,7 +395,6 @@ mod tests {
             vec![10.into()],
             0.into(),
             0.into(),
-            None,
         )
         .unwrap();
 
@@ -392,7 +428,6 @@ mod tests {
             Vec::new(),
             0.into(),
             1.into(),
-            None,
         );
         assert_matches!(
             internal_deploy_error.unwrap_err(),
