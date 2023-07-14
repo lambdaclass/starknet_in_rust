@@ -19,7 +19,10 @@ mod multy_syscall {
     use starknet::class_hash::ClassHash;
     use traits::TryInto;
     use starknet::class_hash::Felt252TryIntoClassHash;
-
+    use box::Box;
+    use traits::Into;
+    use box::BoxTrait;
+    use zeroable::Zeroable;
    
     #[external]
     fn caller_address() -> ContractAddress {
@@ -42,8 +45,11 @@ mod multy_syscall {
     }
 
     #[external]
-    fn test_library_call_syscall_test(class_hash: ClassHash, function_selector: felt252, calldata: Array<felt252>) {
-        library_call_syscall(class_hash, function_selector, calldata.span());
+    fn test_library_call_syscall_test(class_hash: ClassHash, function_selector: felt252, number: felt252) ->  felt252 {
+        let mut calldata = ArrayTrait::new();
+        calldata.append(number);
+        let return_data = library_call_syscall(class_hash, function_selector, calldata.span()).unwrap();
+        *return_data.get(0_usize).unwrap().unbox()
     }
 
      #[external]
@@ -52,8 +58,12 @@ mod multy_syscall {
     }   
     
     #[external]
-    fn test_send_message_to_l1(to_address: felt252,payload: Array<felt252>){
-        send_message_to_l1_syscall(to_address, payload.span());
+    fn test_send_message_to_l1(to_address: felt252,payload_0: felt252, payload_1: felt252) ->  felt252 {
+        let mut calldata = ArrayTrait::new();
+        calldata.append(payload_0);
+        calldata.append(payload_1);
+        let return_data = send_message_to_l1_syscall(to_address, payload.span());
+        *return_data.get(0_usize).unwrap().unbox()
     }
 
      #[external]
