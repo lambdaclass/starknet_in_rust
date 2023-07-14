@@ -1,3 +1,4 @@
+use crate::core::errors::hash_errors::HashError;
 use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
@@ -68,7 +69,7 @@ pub fn calculate_transaction_hash_common(
 
     data_to_hash.extend(additional_data.iter().cloned());
 
-    compute_hash_on_elements(&data_to_hash)
+    Ok(compute_hash_on_elements(&data_to_hash)?)
 }
 
 pub fn calculate_deploy_transaction_hash(
@@ -123,8 +124,9 @@ pub fn calculate_declare_transaction_hash(
     version: Felt252,
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
-    let class_hash = compute_deprecated_class_hash(contract_class)
-        .map_err(|_| SyscallHandlerError::FailToComputeHash)?;
+    let class_hash = compute_deprecated_class_hash(contract_class).map_err(|e| {
+        SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+    })?;
 
     let (calldata, additional_data) = if !version.is_zero() {
         (vec![class_hash], vec![nonce])
