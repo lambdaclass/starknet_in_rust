@@ -21,7 +21,7 @@ pub enum SyscallHandlerError {
     ExecutionError(String),
     #[error("Couldn't convert from {0} to {1}")]
     Conversion(String, String),
-    #[error("Couldn't compute hash")]
+    #[error("Couldn't compute hash: {0}")]
     HashError(#[from] HashError),
     #[error("Expected a struct of type: {0:?}, received: {1:?}")]
     ExpectedStruct(String, String),

@@ -69,7 +69,7 @@ pub fn calculate_transaction_hash_common(
 
     data_to_hash.extend(additional_data.iter().cloned());
 
-    compute_hash_on_elements(&data_to_hash)
+    Ok(compute_hash_on_elements(&data_to_hash)?)
 }
 
 pub fn calculate_deploy_transaction_hash(
@@ -124,8 +124,9 @@ pub fn calculate_declare_transaction_hash(
     version: Felt252,
     nonce: Felt252,
 ) -> Result<Felt252, SyscallHandlerError> {
-    let class_hash = compute_deprecated_class_hash(contract_class)
-        .map_err(|_| SyscallHandlerError::HashError(HashError::FailedToComputeHash))?;
+    let class_hash = compute_deprecated_class_hash(contract_class).map_err(|e| {
+        SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+    })?;
 
     let (calldata, additional_data) = if !version.is_zero() {
         (vec![class_hash], vec![nonce])

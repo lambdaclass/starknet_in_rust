@@ -97,7 +97,7 @@ pub fn get_felt_range(
 
 pub fn felt_to_field_element(value: &Felt252) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
-        .map_err(|_| SyscallHandlerError::HashError(HashError::FailedToComputeHash))
+        .map_err(|e| SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string())))
 }
 
 pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
