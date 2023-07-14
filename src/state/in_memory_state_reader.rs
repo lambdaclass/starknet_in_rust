@@ -14,6 +14,10 @@ use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
+/// A [StateReader] that holds all the data in memory.
+///
+/// This implementation is used for testing and debugging.
+/// It uses HashMaps to store the data.
 #[derive(Debug, MutGetters, Getters, PartialEq, Clone, Default)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
@@ -31,6 +35,15 @@ pub struct InMemoryStateReader {
 }
 
 impl InMemoryStateReader {
+    /// Creates a new InMemoryStateReader.
+    ///
+    /// # Parameters
+    /// - `address_to_class_hash` - A HashMap from contract addresses to their class hashes.
+    /// - `address_to_nonce` - A HashMap from contract addresses to their nonces.
+    /// - `address_to_storage` - A HashMap from storage entries to their values.
+    /// - `class_hash_to_contract_class` - A HashMap from class hashes to their contract classes.
+    /// - `casm_contract_classes` - A [CasmClassCache].
+    /// - `class_hash_to_compiled_class_hash` - A HashMap from class hashes to their compiled class hashes.
     pub fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
@@ -49,6 +62,18 @@ impl InMemoryStateReader {
         }
     }
 
+    /// Gets the [CompiledClass] with the given [CompiledClassHash].
+    ///
+    /// It looks for the [CompiledClass] both in the cache and the storage.
+    ///
+    /// # Parameters
+    /// - `compiled_class_hash` - The [CompiledClassHash] of the [CompiledClass] to get.
+    ///
+    /// # Errors
+    /// - [StateError::NoneCompiledClass] - If the [CompiledClass] is not found.
+    ///
+    /// # Returns
+    /// The [CompiledClass] with the given [CompiledClassHash].
     fn get_compiled_class(
         &self,
         compiled_class_hash: &CompiledClassHash,
