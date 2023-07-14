@@ -314,7 +314,7 @@ impl TransactionExecutionContext {
         n_steps: u64,
         version: Felt252,
     ) -> Self {
-        let nonce = if version == 0.into() || version == QUERY_VERSION_BASE.clone() {
+        let nonce = if version == 0.into() || version == *QUERY_VERSION_BASE {
             0.into()
         } else {
             nonce

@@ -14,7 +14,7 @@ pub fn verify_version(
         return Err(TransactionError::UnsupportedVersion(version.to_string()));
     }
 
-    if *version == 0.into() || *version == QUERY_VERSION_BASE.clone() {
+    if *version == 0.into() || *version == *QUERY_VERSION_BASE {
         if max_fee != 0 {
             return Err(TransactionError::InvalidMaxFee);
         }
