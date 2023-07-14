@@ -55,6 +55,7 @@ impl DeclareV2 {
     /// It will calculate the sierra class hash and the transaction hash.
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
     /// - sender_address: The address of the account declaring the contract.
@@ -104,6 +105,7 @@ impl DeclareV2 {
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
     /// - sierra_class_hash: The precomputed hash for the sierra contract
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - sender_address: The address of the account declaring the contract.
     /// - max_fee: refers to max amount of fee that a declare takes.
@@ -158,7 +160,8 @@ impl DeclareV2 {
 
     // creates a new instance of a declare but without the computation of the transaction hash.
     /// ## Parameters:
-    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - sierra_contract_class: The sierra contract class of the contract to declare.
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - sender_address: The address of the account declaring the contract.
     /// - max_fee: refers to max amount of fee that a declare takes.
@@ -198,6 +201,7 @@ impl DeclareV2 {
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
     /// - sierra_class_hash: The precomputed hash for the sierra contract
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
     /// - sender_address: The address of the account declaring the contract.
