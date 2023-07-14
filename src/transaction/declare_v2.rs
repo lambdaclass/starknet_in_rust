@@ -479,7 +479,7 @@ mod tests {
     use num_traits::{One, Zero};
 
     #[test]
-    fn create_declare_v2_test() {
+    fn create_declare_v2_without_casm_contract_class_test() {
         // read file to create sierra contract class
         let version;
         let path;
@@ -509,6 +509,75 @@ mod tests {
         let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
             None,
+            casm_class_hash,
+            sender_address,
+            0,
+            version,
+            [1.into()].to_vec(),
+            Felt252::zero(),
+            Felt252::one(),
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = HashMap::new();
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(internal_declare
+            .compile_and_store_casm_class(&mut state)
+            .is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            internal_declare.sierra_contract_class.clone(),
+            true,
+        )
+        .unwrap();
+
+        let casm_class = match state
+            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .unwrap()
+        {
+            CompiledClass::Casm(casm) => *casm,
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_with_casm_contract_class_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        // create internal declare v2
+
+        let internal_declare = DeclareV2::new_with_tx_hash(
+            &sierra_contract_class,
+            Some(casm_class),
             casm_class_hash,
             sender_address,
             0,
