@@ -52,14 +52,7 @@ fn internal_deploy_account() {
         0.into(),
         Felt252::zero(),
         vec![],
-        vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
-        ],
+        Vec::new(),
         contract_address_salt.clone(),
         StarknetChainId::TestNet.to_felt(),
     )
