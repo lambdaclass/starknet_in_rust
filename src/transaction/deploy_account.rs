@@ -197,12 +197,10 @@ impl DeployAccount {
         handle_nonce(&self.nonce, &self.version, self.contract_address(), state)?;
 
         // get the account contract class from the state
-        let contract_class = state.get_contract_class(&self.class_hash).unwrap();
+        let contract_class = state.get_contract_class(&self.class_hash)?;
 
         // deploy the account contract in the calculated contract address.
-        state
-            .deploy_contract(self.contract_address.clone(), self.class_hash)
-            .unwrap();
+        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         // run the validation entrypoint
         let mut resources_manager = ExecutionResourcesManager::default();
