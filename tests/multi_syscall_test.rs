@@ -105,16 +105,20 @@ fn test_multiple_syscall() {
 
     // Block for call_contract_syscall
     {
+        let entrypoint_selector =
+        Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
+        let new_call_data = vec![Felt252::from_bytes_be(&class_hash), entrypoint_selector, Felt252::from(25)];
         let call_info = test_syscall(
             "test_library_call_syscall_test",
             address.clone(),
-            calldata.clone(),
+            new_call_data,
             caller_address.clone(),
             entry_point_type,
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![])
+        println!("{:?}", String::from_utf8(Felt252::to_be_bytes(&call_info.retdata[0]).to_vec()));
+        assert_eq!(call_info.retdata, vec![25.into()])
     }
 
     // Block for send_message_to_l1_syscall

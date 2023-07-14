@@ -86,4 +86,9 @@ mod multy_syscall {
         let (address0, _) = deploy_syscall(class_hash.try_into().unwrap(), contract_address_salt, calldata.span(), false).unwrap();
         address0
     }
+
+    #[external]
+    fn get_number(number: felt252) -> felt252 {
+        number
+    }
 }
