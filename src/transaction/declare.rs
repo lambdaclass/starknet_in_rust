@@ -230,11 +230,10 @@ impl Declare {
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
-            true,
+            false,
             block_context.validate_max_n_steps,
         )?;
 
-        // TODO: handle reverted transactions
         let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
 
         verify_no_calls_to_other_contracts(&call_info)
