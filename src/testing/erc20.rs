@@ -61,6 +61,10 @@ fn test_erc20_cairo2() {
     contract_class_cache.insert(class_hash, contract_class);
     contract_class_cache.insert(erc20_class_hash, test_contract_class);
 
+    let recipient =
+        felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
+    let receiver =
+        felt_str!("2393672330538697557471247783861853634894574496065854858976317206671551563029");
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -68,6 +72,12 @@ fn test_erc20_cairo2() {
     state_reader
         .address_to_nonce_mut()
         .insert(address.clone(), nonce);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(Address(recipient.clone()), Felt252::zero());
+    state_reader
+        .address_to_nonce_mut()
+        .insert(Address(receiver), Felt252::zero());
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(state_reader, None, Some(contract_class_cache));
@@ -76,8 +86,6 @@ fn test_erc20_cairo2() {
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");
     let decimals_ = Felt252::from(24);
     let initial_supply = Felt252::from(1000);
-    let recipient =
-        felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
     let erc20_salt = felt_str!("1234");
     // arguments of deploy contract
     let calldata = vec![

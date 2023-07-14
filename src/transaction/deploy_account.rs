@@ -196,6 +196,14 @@ impl DeployAccount {
         // check the nonce
         handle_nonce(&self.nonce, &self.version, self.contract_address(), state)?;
 
+        // get the account contract class from the state
+        let contract_class = state.get_contract_class(&self.class_hash).unwrap();
+
+        // deploy the account contract in the calculated contract address.
+        state
+            .deploy_contract(self.contract_address.clone(), self.class_hash)
+            .unwrap();
+
         // run the validation entrypoint
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = if self.skip_validate {
@@ -203,12 +211,6 @@ impl DeployAccount {
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
-
-        // get the account contract class from the state
-        let contract_class = state.get_contract_class(&self.class_hash)?;
-
-        // deploy the account contract in the calculated contract address.
-        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         // execute the constructor of the account.
         let constructor_call_info =
