@@ -106,6 +106,28 @@ impl ContractClass {
         })
     }
 
+    pub fn new_with_hinted_class_hash(
+        hinted_class_hash: Felt252,
+        program: Program,
+        entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+        abi: Option<AbiType>,
+    ) -> Result<Self, ContractClassError> {
+        for entry_points in entry_points_by_type.values() {
+            for i in 1..entry_points.len() {
+                if entry_points[i - 1].selector() > entry_points[i].selector() {
+                    return Err(ContractClassError::EntrypointError(entry_points.clone()));
+                }
+            }
+        }
+
+        Ok(ContractClass {
+            hinted_class_hash,
+            program,
+            entry_points_by_type,
+            abi,
+        })
+    }
+
     /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
     /// at the given file path.
     pub fn from_path<F>(path: F) -> Result<Self, ProgramError>
@@ -138,7 +160,7 @@ impl FromStr for ContractClass {
     fn from_str(program_json: &str) -> Result<Self, ProgramError> {
         let contract_class: starknet_api::deprecated_contract_class::ContractClass =
             serde_json::from_str(program_json)?;
-        let program = to_cairo_runner_program(&contract_class.program)?;
+        let program = to_cairo_runner_program(contract_class.program)?;
         let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
         let hinted_class_hash =
             compute_hinted_class_hash(&serde_json::from_str(program_json)?).unwrap();
@@ -178,9 +200,8 @@ pub(crate) fn convert_entry_points(
 }
 
 pub(crate) fn to_cairo_runner_program(
-    program: &starknet_api::deprecated_contract_class::Program,
+    program: starknet_api::deprecated_contract_class::Program,
 ) -> Result<Program, ProgramError> {
-    let program = program.clone();
     let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
 
     if program.prime != *PRIME_STR {

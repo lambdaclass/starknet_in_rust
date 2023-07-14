@@ -62,7 +62,6 @@ fn internal_deploy_account() {
         ],
         contract_address_salt.clone(),
         StarknetChainId::TestNet.to_felt(),
-        None,
     )
     .unwrap();
 
@@ -146,7 +145,6 @@ fn internal_deploy_account_cairo1() {
         ],
         contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
-        None,
     )
     .unwrap();
 

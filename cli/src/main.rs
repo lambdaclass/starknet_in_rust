@@ -181,16 +181,15 @@ fn invoke_parser(
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
         None => Vec::new(),
     };
-    let internal_invoke = InvokeFunction::new(
+    let internal_invoke = InvokeFunction::new_with_tx_hash(
         contract_address.clone(),
         entrypoint_selector.clone(),
         0,
         TRANSACTION_VERSION.clone(),
         calldata.clone(),
         vec![],
-        Felt252::zero(),
         Some(Felt252::zero()),
-        transaction_hash,
+        transaction_hash.unwrap(),
     )?;
     let _tx_info = internal_invoke.apply(cached_state, &BlockContext::default(), 0)?;
 
