@@ -572,10 +572,15 @@ mod tests {
 
     #[test]
     fn validate_transaction_should_fail() {
+        let address = Address(Felt252::one());
+
         // Instantiate CachedState
         let contract_class_cache = HashMap::new();
 
-        let state_reader = InMemoryStateReader::default();
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_nonce_mut()
+            .insert(address.clone(), Felt252::zero());
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
@@ -588,7 +593,7 @@ mod tests {
         let declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            address,
             0,
             1.into(),
             Vec::new(),
