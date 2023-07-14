@@ -106,6 +106,28 @@ impl ContractClass {
         })
     }
 
+    pub fn new_with_hinted_class_hash(
+        hinted_class_hash: Felt252,
+        program: Program,
+        entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
+        abi: Option<AbiType>,
+    ) -> Result<Self, ContractClassError> {
+        for entry_points in entry_points_by_type.values() {
+            for i in 1..entry_points.len() {
+                if entry_points[i - 1].selector() > entry_points[i].selector() {
+                    return Err(ContractClassError::EntrypointError(entry_points.clone()));
+                }
+            }
+        }
+
+        Ok(ContractClass {
+            hinted_class_hash,
+            program,
+            entry_points_by_type,
+            abi,
+        })
+    }
+
     /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
     /// at the given file path.
     pub fn from_path<F>(path: F) -> Result<Self, ProgramError>
