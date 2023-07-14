@@ -106,7 +106,14 @@ fn internal_deploy_account() {
 
 #[test]
 fn internal_deploy_account_cairo1() {
-    let state_reader = InMemoryStateReader::default();
+    let address = Address(felt_str!(
+        "397149464972449753182583229366244826403270781177748543857889179957856017275"
+    ));
+
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address, Felt252::zero());
     let mut state = CachedState::new(state_reader, None, Some(Default::default()));
 
     state.set_contract_classes(Default::default()).unwrap();
