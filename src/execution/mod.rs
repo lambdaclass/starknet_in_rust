@@ -2,6 +2,7 @@ pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
 
+use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{
@@ -313,6 +314,12 @@ impl TransactionExecutionContext {
         n_steps: u64,
         version: Felt252,
     ) -> Self {
+        let nonce = if version == 0.into() || version == *QUERY_VERSION_BASE {
+            0.into()
+        } else {
+            nonce
+        };
+
         TransactionExecutionContext {
             n_emitted_events: 0,
             account_contract_address,

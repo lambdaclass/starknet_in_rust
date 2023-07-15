@@ -6,7 +6,9 @@ use num_traits::{ToPrimitive, Zero};
 use crate::{
     definitions::{
         block_context::BlockContext,
-        constants::{INITIAL_GAS_COST, SUPPORTED_VERSIONS, TRANSFER_ENTRY_POINT_SELECTOR},
+        constants::{
+            INITIAL_GAS_COST, QUERY_VERSION_BASE, SUPPORTED_VERSIONS, TRANSFER_ENTRY_POINT_SELECTOR,
+        },
     },
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
@@ -151,7 +153,7 @@ pub fn handle_nonce<S: State + StateReader>(
     address: &Address,
     state: &mut S,
 ) -> Result<(), TransactionError> {
-    if version.is_zero() {
+    if version.is_zero() || *version == QUERY_VERSION_BASE.clone() {
         return Ok(());
     }
 
