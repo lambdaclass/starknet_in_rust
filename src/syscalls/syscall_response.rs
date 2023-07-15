@@ -1,6 +1,7 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 
+#[derive(Debug)]
 pub(crate) enum ResponseBody {
     StorageReadResponse { value: Option<Felt252> },
     GetBlockNumber { number: Felt252 },
@@ -69,12 +70,14 @@ pub struct GetBlockTimestampResponse {
     pub timestamp: Felt252,
 }
 
+#[derive(Debug)]
 pub struct DeployResponse {
     pub contract_address: Felt252,
     pub retdata_start: Relocatable,
     pub retdata_end: Relocatable,
 }
 
+#[derive(Debug)]
 pub struct FailureReason {
     pub retdata_start: Relocatable,
     pub retdata_end: Relocatable,

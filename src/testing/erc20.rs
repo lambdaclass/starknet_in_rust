@@ -137,6 +137,9 @@ fn test_erc20_cairo2() {
         .unwrap();
     let erc20_address = call_info.retdata.get(0).unwrap().clone();
 
+    // check that the deployer contract was deployed without failure.
+    assert!(!call_info.failure_flag);
+
     // ACCOUNT 1
     let program_data_account =
         include_bytes!("../../starknet_programs/cairo2/hello_world_account.casm");
@@ -217,7 +220,6 @@ fn test_erc20_cairo2() {
     // TRANSFER
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
     let calldata = vec![account_address_2.clone().0, Felt252::from(123)];
-
     let retdata = call_contract(
         erc20_address.clone(),
         entrypoint_selector,

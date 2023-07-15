@@ -802,10 +802,10 @@ mod test {
             DeployAccount::new(
                 *CLASS_HASH_BYTES,
                 0,
-                0.into(),
+                1.into(),
                 Felt252::zero(),
                 vec![],
-                Vec::new(),
+                SIGNATURE.clone(),
                 SALT.clone(),
                 StarknetChainId::TestNet.to_felt(),
             )
