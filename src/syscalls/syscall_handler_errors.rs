@@ -1,3 +1,4 @@
+use crate::core::errors::hash_errors::HashError;
 use crate::core::errors::state_errors::StateError;
 use cairo_vm::felt::Felt252;
 use cairo_vm::{
@@ -20,8 +21,8 @@ pub enum SyscallHandlerError {
     ExecutionError(String),
     #[error("Couldn't convert from {0} to {1}")]
     Conversion(String, String),
-    #[error("Couldn't compute hash")]
-    FailToComputeHash,
+    #[error("Couldn't compute hash: {0}")]
+    HashError(#[from] HashError),
     #[error("Expected a struct of type: {0:?}, received: {1:?}")]
     ExpectedStruct(String, String),
     #[error("Unsopported address domain: {0}")]
