@@ -135,6 +135,6 @@ pub enum TransactionError {
     CallInfoIsNone,
     #[error("Unsupported version {0:?}")]
     UnsupportedVersion(String),
-    #[error("Invalid compiled class, expected class hash: {0:?}, but received: {1:?}")]
+    #[error("Invalid compiled class, expected class hash: {0}, but received: {1}")]
     InvalidCompiledClassHash(String, String),
 }
