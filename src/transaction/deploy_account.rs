@@ -1,5 +1,6 @@
 use super::fee::charge_fee;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
+use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     core::{
@@ -257,7 +258,7 @@ impl DeployAccount {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(());
         }
 
@@ -332,7 +333,7 @@ impl DeployAccount {
     where
         S: State + StateReader,
     {
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(None);
         }
 

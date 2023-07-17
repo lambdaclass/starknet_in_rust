@@ -14,6 +14,11 @@ pub(crate) const N_DEFAULT_TOPICS: usize = 1; // Events have one default topic.
 pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
     (L1_TO_L2_MSG_HEADER_SIZE + 1) - CONSUMED_MSG_TO_L2_N_TOPICS;
 
+lazy_static! {
+    pub(crate) static ref QUERY_VERSION_BASE: Felt252 =
+        felt_str!("340282366920938463463374607431768211456");
+}
+
 pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
     (L2_TO_L1_MSG_HEADER_SIZE + 1) - LOG_MSG_TO_L1_N_TOPICS;
 
@@ -28,7 +33,8 @@ pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
 pub(crate) const L1_HANDLER_VERSION: u64 = 0;
 
 lazy_static! {
-    pub static ref SUPPORTED_VERSIONS: [Felt252; 3] = [0.into(), 1.into(), 2.into()];
+    pub static ref SUPPORTED_VERSIONS: [Felt252; 4] =
+        [0.into(), 1.into(), 2.into(), QUERY_VERSION_BASE.clone()];
 }
 
 lazy_static! {

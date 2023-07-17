@@ -2,7 +2,9 @@ use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::BlockContext,
-        constants::{EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR},
+        constants::{
+            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
+        },
         transaction_type::TransactionType,
     },
     execution::{
@@ -152,7 +154,7 @@ impl InvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(None);
         }
         if self.skip_validation {
@@ -294,7 +296,7 @@ impl InvokeFunction {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(());
         }
 
@@ -364,7 +366,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     nonce: Option<Felt252>,
     version: Felt252,
 ) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version.is_zero() {
+    if version.is_zero() || version == *QUERY_VERSION_BASE {
         match nonce {
             Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {
@@ -1010,5 +1012,19 @@ mod tests {
             expected_error.unwrap_err(),
             TransactionError::InvokeFunctionNonZeroMissingNonce
         )
+    }
+
+    #[test]
+    fn invoke_version_one_with_no_nonce_with_query_base() {
+        let expected_error = preprocess_invoke_function_fields(
+            Felt252::from_str_radix(
+                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+                16,
+            )
+            .unwrap(),
+            None,
+            QUERY_VERSION_BASE.clone(),
+        );
+        assert!(expected_error.is_ok());
     }
 }

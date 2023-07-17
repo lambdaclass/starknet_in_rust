@@ -1,3 +1,4 @@
+use crate::core::errors::hash_errors::HashError;
 use cairo_vm::{
     types::errors::program_errors::ProgramError,
     vm::errors::{
@@ -43,4 +44,12 @@ pub enum ContractAddressError {
     NoneIntMaybeRelocatable,
     #[error("Invalid program JSON, message: {0}")]
     InvalidProgramJson(String),
+    #[error("Couldn't compute hash: {0}")]
+    HashError(HashError),
+}
+
+impl From<HashError> for ContractAddressError {
+    fn from(error: HashError) -> Self {
+        ContractAddressError::HashError(error)
+    }
 }
