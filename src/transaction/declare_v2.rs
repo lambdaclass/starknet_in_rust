@@ -1,5 +1,5 @@
 use super::{verify_version, Transaction};
-use crate::core::contract_address::compute_sierra_class_hash;
+use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
@@ -384,6 +384,13 @@ impl DeclareV2 {
             })
             .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
 
+        let casm_class_hash = compute_casm_class_hash(casm_class)?;
+        if casm_class_hash != self.compiled_class_hash {
+            return Err(TransactionError::InvalidCompiledClassHash(
+                casm_class_hash.to_string(),
+                self.compiled_class_hash.to_string(),
+            ));
+        }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
         state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
 
@@ -458,7 +465,7 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
     use super::DeclareV2;
-    use crate::core::contract_address::compute_sierra_class_hash;
+    use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
     use crate::definitions::constants::QUERY_VERSION_BASE;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
@@ -492,12 +499,15 @@ mod tests {
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
             serde_json::from_reader(reader).unwrap();
         let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
-            Felt252::one(),
+            casm_class_hash,
             sender_address,
             0,
             version,
@@ -558,12 +568,16 @@ mod tests {
             serde_json::from_reader(reader).unwrap();
         let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
         let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         // create internal declare v2
 
-        let internal_declare = DeclareV2::new_with_tx_hash(
+        let internal_declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
             &sierra_contract_class,
             sierra_class_hash,
+            casm_class_hash,
             sender_address,
             0,
             version,
