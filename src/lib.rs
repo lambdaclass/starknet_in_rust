@@ -1007,7 +1007,7 @@ mod test {
         let declare_tx = Transaction::DeclareV2(Box::new(declare_v2));
 
         let err = declare_tx
-            .execute(&mut state, &block_context, 100_000_000)
+            .execute(&mut state, &block_context, INITIAL_GAS_COST)
             .unwrap_err();
 
         assert_eq!(err.to_string(), "Invalid compiled class, expected class hash: \"1948962768849191111780391610229754715773924969841143100991524171924131413970\", but received: \"1\"".to_string());
