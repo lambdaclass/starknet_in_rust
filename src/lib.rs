@@ -198,6 +198,7 @@ mod test {
     use std::path::PathBuf;
 
     use crate::core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash};
+    use crate::definitions::constants::INITIAL_GAS_COST;
     use crate::definitions::{
         block_context::StarknetChainId,
         constants::{
