@@ -654,6 +654,7 @@ mod tests {
         let internal_declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
             &sierra_contract_class,
             sierra_class_hash,
+            Some(casm_class),
             casm_class_hash,
             sender_address,
             0,
