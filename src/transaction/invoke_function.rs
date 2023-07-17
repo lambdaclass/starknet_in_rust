@@ -1133,6 +1133,7 @@ mod tests {
 
     #[test]
     fn invoke_version_one_with_no_nonce_with_query_base() {
+    fn invoke_version_one_with_no_nonce_with_query_base_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
             Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
@@ -1140,8 +1141,8 @@ mod tests {
             )
             .unwrap(),
             None,
-            QUERY_VERSION_BASE.clone(),
+            &1.into() | &QUERY_VERSION_BASE.clone(),
         );
-        assert!(expected_error.is_ok());
+        assert!(expected_error.is_err());
     }
 }

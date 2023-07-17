@@ -634,13 +634,13 @@ mod tests {
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = QUERY_VERSION_BASE.clone();
+            version = &2.into() | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = QUERY_VERSION_BASE.clone();
+            version = &1.into() | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 
