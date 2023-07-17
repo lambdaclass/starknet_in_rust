@@ -1,3 +1,7 @@
+//! # Starknet Block Context
+//!
+//! This module contains structs representing the context of a specific Starknet block.
+
 use crate::{state::BlockInfo, utils::Address};
 use cairo_vm::felt::Felt252;
 use getset::{CopyGetters, Getters, MutGetters};
@@ -10,10 +14,14 @@ use super::constants::{
     DEFAULT_SEQUENCER_ADDRESS, DEFAULT_STARKNET_OS_CONFIG, DEFAULT_VALIDATE_MAX_N_STEPS,
 };
 
+/// Unique identifier of a Starknet chain.
 #[derive(Debug, Clone, Copy)]
 pub enum StarknetChainId {
+    /// Starknet main chain
     MainNet,
+    /// Starknet first test chain (Goerli)
     TestNet,
+    /// Starknet second test chain (Goerli 2)
     TestNet2,
 }
 
@@ -29,21 +37,53 @@ impl ToString for StarknetChainId {
 }
 
 impl StarknetChainId {
+    /// Returns the chain ID's representation as a field element.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use starknet_in_rust::definitions::block_context::StarknetChainId;
+    /// use starknet_in_rust::felt::felt_str;
+    ///
+    /// assert_eq!(
+    ///     StarknetChainId::MainNet.to_felt(),
+    ///     felt_str!("23448594291968334"),
+    /// );
+    /// assert_eq!(
+    ///    StarknetChainId::TestNet.to_felt(),
+    ///    felt_str!("1536727068981429685321"),
+    /// );
+    /// assert_eq!(
+    ///     StarknetChainId::TestNet2.to_felt(),
+    ///     felt_str!("393402129659245999442226"),
+    /// );
+    /// ```
     pub fn to_felt(self) -> Felt252 {
         Felt252::from_bytes_be(self.to_string().as_bytes())
     }
 }
 
 #[derive(Debug, Clone, Getters, MutGetters)]
+/// Starknet OS configuration.
 pub struct StarknetOsConfig {
+    /// ID of the configured chain
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) chain_id: StarknetChainId,
+    /// Address of the token used when paying fees
     #[get = "pub"]
     pub(crate) fee_token_address: Address,
+    /// Price of gas
     pub(crate) gas_price: u128,
 }
 
 impl StarknetOsConfig {
+    /// Creates a new [`StarknetOsConfig`].
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - [`StarknetChainId`] of the configured chain.
+    /// * `fee_token_address` - Address of the token used when paying fees.
+    /// * `gas_price` - Price of gas.
     pub fn new(chain_id: StarknetChainId, fee_token_address: Address, gas_price: u128) -> Self {
         StarknetOsConfig {
             chain_id,
@@ -59,6 +99,7 @@ impl Default for StarknetOsConfig {
     }
 }
 
+/// Starknet block context.
 #[derive(Clone, Debug, CopyGetters, Getters, MutGetters)]
 pub struct BlockContext {
     #[getset(get = "pub", get_mut = "pub")]
@@ -75,13 +116,27 @@ pub struct BlockContext {
     pub(crate) validate_max_n_steps: u64,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) block_info: BlockInfo,
+    /// Contains the blocks in the range [ current_block - 1024, current_block - 10 ]
     #[getset(get = "pub", get_mut = "pub")]
-    // Contains the blocks in the range [ current_block - 1024, current_block - 10 ]
     pub(crate) blocks: HashMap<u64, Block>,
     pub(crate) enforce_l1_handler_fee: bool,
 }
 
 impl BlockContext {
+    /// Creates a new [`BlockContext`].
+    ///
+    /// # Arguments
+    ///
+    /// * `starknet_os_config` - Starknet OS configuration.
+    /// * `contract_storage_commitment_tree_height` - Height of the contract storage commitment tree.
+    /// * `global_state_commitment_tree_height` - Height of the global state commitment tree.
+    /// * `cairo_resource_fee_weights` - Weights used when calculating transaction fees.
+    /// * `invoke_tx_max_n_steps` - Maximum number of steps allowed when executing transactions.
+    /// * `validate_max_n_steps` - Maximum number of steps allowed when validating transactions.
+    /// * `block_info` - Information about the current block.
+    /// * `blocks` - Blocks in the range [ current_block - 1024, current_block - 10 ].
+    ///     Example: for block number 6351, this includes the blocks 5327, 5328, ..., 6340, 6341.
+    /// * `enforce_l1_handler_fee` - Whether to enforce the L1 handler fee.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         starknet_os_config: StarknetOsConfig,
@@ -134,16 +189,16 @@ mod tests {
     #[test]
     fn starknet_chain_to_felt() {
         assert_eq!(
+            StarknetChainId::MainNet.to_felt(),
             felt_str!("23448594291968334"),
-            StarknetChainId::MainNet.to_felt()
         );
         assert_eq!(
+            StarknetChainId::TestNet.to_felt(),
             felt_str!("1536727068981429685321"),
-            StarknetChainId::TestNet.to_felt()
         );
         assert_eq!(
+            StarknetChainId::TestNet2.to_felt(),
             felt_str!("393402129659245999442226"),
-            StarknetChainId::TestNet2.to_felt()
         );
     }
 }
