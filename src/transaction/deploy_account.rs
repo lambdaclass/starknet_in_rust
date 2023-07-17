@@ -1,5 +1,8 @@
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
+use crate::definitions::constants::QUERY_VERSION_BASE;
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::cached_state::CachedState;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -74,7 +77,6 @@ impl DeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         chain_id: Felt252,
-        hash_value: Option<Felt252>,
     ) -> Result<Self, SyscallHandlerError> {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -83,19 +85,50 @@ impl DeployAccount {
             Address(Felt252::zero()),
         )?);
 
-        let hash_value = match hash_value {
-            Some(hash) => hash,
-            None => calculate_deploy_account_transaction_hash(
-                version.clone(),
-                &contract_address,
-                Felt252::from_bytes_be(&class_hash),
-                &constructor_calldata,
-                max_fee,
-                nonce.clone(),
-                contract_address_salt.clone(),
-                chain_id,
-            )?,
-        };
+        let hash_value = calculate_deploy_account_transaction_hash(
+            version.clone(),
+            &contract_address,
+            Felt252::from_bytes_be(&class_hash),
+            &constructor_calldata,
+            max_fee,
+            nonce.clone(),
+            contract_address_salt.clone(),
+            chain_id,
+        )?;
+
+        Ok(Self {
+            contract_address,
+            contract_address_salt,
+            class_hash,
+            constructor_calldata,
+            version,
+            nonce,
+            max_fee,
+            hash_value,
+            signature,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_hash(
+        class_hash: ClassHash,
+        max_fee: u128,
+        version: Felt252,
+        nonce: Felt252,
+        constructor_calldata: Vec<Felt252>,
+        signature: Vec<Felt252>,
+        contract_address_salt: Felt252,
+        hash_value: Felt252,
+    ) -> Result<Self, SyscallHandlerError> {
+        let contract_address = Address(calculate_contract_address(
+            &contract_address_salt,
+            &Felt252::from_bytes_be(&class_hash),
+            &constructor_calldata,
+            Address(Felt252::zero()),
+        )?);
 
         Ok(Self {
             contract_address,
@@ -120,14 +153,11 @@ impl DeployAccount {
         }
     }
 
-    pub fn execute<S>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_info = self.apply(state, block_context)?;
 
         self.handle_nonce(state)?;
@@ -154,14 +184,11 @@ impl DeployAccount {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    fn apply<S>(
+    fn apply<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
@@ -188,21 +215,19 @@ impl DeployAccount {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             Some(constructor_call_info),
+            None,
             actual_resources,
             Some(TransactionType::DeployAccount),
         ))
     }
 
-    pub fn handle_constructor<S>(
+    pub fn handle_constructor<S: StateReader>(
         &self,
         contract_class: CompiledClass,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         if self.constructor_entry_points_empty(contract_class)? {
             if !self.constructor_calldata.is_empty() {
                 return Err(TransactionError::EmptyConstructorCalldata);
@@ -219,7 +244,7 @@ impl DeployAccount {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
+        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(());
         }
 
@@ -236,15 +261,12 @@ impl DeployAccount {
         Ok(())
     }
 
-    pub fn run_constructor_entrypoint<S>(
+    pub fn run_constructor_entrypoint<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<CallInfo, TransactionError> {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
@@ -256,16 +278,17 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = if self.skip_execute {
-            None
+        let ExecutionResult { call_info, .. } = if self.skip_execute {
+            ExecutionResult::default()
         } else {
-            Some(entry_point.execute(
+            entry_point.execute(
                 state,
                 block_context,
                 resources_manager,
                 &mut self.get_execution_context(block_context.validate_max_n_steps),
                 false,
-            )?)
+                block_context.validate_max_n_steps,
+            )?
         };
 
         let call_info = verify_no_calls_to_other_contracts(&call_info)
@@ -285,16 +308,13 @@ impl DeployAccount {
         )
     }
 
-    pub fn run_validate_entrypoint<S>(
+    pub fn run_validate_entrypoint<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-    ) -> Result<Option<CallInfo>, TransactionError>
-    where
-        S: State + StateReader,
-    {
-        if self.version.is_zero() {
+    ) -> Result<Option<CallInfo>, TransactionError> {
+        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(None);
         }
 
@@ -315,16 +335,17 @@ impl DeployAccount {
             INITIAL_GAS_COST,
         );
 
-        let call_info = if self.skip_execute {
-            None
+        let ExecutionResult { call_info, .. } = if self.skip_execute {
+            ExecutionResult::default()
         } else {
-            Some(call.execute(
+            call.execute(
                 state,
                 block_context,
                 resources_manager,
                 &mut self.get_execution_context(block_context.validate_max_n_steps),
                 false,
-            )?)
+                block_context.validate_max_n_steps,
+            )?
         };
 
         verify_no_calls_to_other_contracts(&call_info)
@@ -333,15 +354,12 @@ impl DeployAccount {
         Ok(call_info)
     }
 
-    fn charge_fee<S>(
+    fn charge_fee<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources: &HashMap<String, usize>,
         block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<FeeInfo, TransactionError> {
         if self.max_fee.is_zero() {
             return Ok((None, 0));
         }
@@ -387,7 +405,7 @@ impl DeployAccount {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::{path::PathBuf, sync::Arc};
 
     use super::*;
     use crate::{
@@ -409,7 +427,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut _state = CachedState::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(Default::default()),
             None,
         );
@@ -423,7 +441,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 
@@ -446,7 +463,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(Default::default()),
             None,
         );
@@ -460,7 +477,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 
@@ -473,7 +489,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 
@@ -500,7 +515,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(Default::default()),
             None,
         );
@@ -514,7 +529,6 @@ mod tests {
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
-            None,
         )
         .unwrap();
 

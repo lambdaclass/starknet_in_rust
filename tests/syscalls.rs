@@ -34,6 +34,7 @@ use std::{
     collections::{HashMap, HashSet},
     iter::empty,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -115,7 +116,7 @@ fn test_contract<'a>(
 
         Some(contract_class_cache)
     };
-    let mut state = CachedState::new(state_reader, contract_class_cache, None);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache, None);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
@@ -143,8 +144,11 @@ fn test_contract<'a>(
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
-        .expect("Could not execute contract");
+        .expect("Could not execute contract")
+        .call_info
+        .unwrap();
 
     assert_eq!(result.contract_address, contract_address);
     assert_eq!(result.contract_address, contract_address);
@@ -1096,7 +1100,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1139,6 +1143,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -1196,7 +1201,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1240,6 +1245,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1298,7 +1304,7 @@ fn deploy_cairo1_and_invoke() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1341,6 +1347,7 @@ fn deploy_cairo1_and_invoke() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -1379,7 +1386,10 @@ fn deploy_cairo1_and_invoke() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
+        .unwrap()
+        .call_info
         .unwrap();
 
     let retdata = call_info.retdata;
@@ -1431,7 +1441,11 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(state_reader, Some(deprecated_contract_class_cache), None);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Some(deprecated_contract_class_cache),
+        None,
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -1469,7 +1483,10 @@ fn send_messages_to_l1_different_contract_calls() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
+        .unwrap()
+        .call_info
         .unwrap();
     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
     assert_eq!(

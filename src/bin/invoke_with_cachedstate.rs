@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
@@ -62,7 +62,6 @@ fn main() {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(Felt252::from(i * 2)),
-            None,
         )
         .unwrap()
         .execute(&mut cached_state, &block_context, 0)
@@ -77,7 +76,6 @@ fn main() {
             vec![],
             StarknetChainId::TestNet.to_felt(),
             Some(Felt252::from((i * 2) + 1)),
-            None,
         )
         .unwrap()
         .execute(&mut cached_state, &block_context, 0)
@@ -108,7 +106,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
             state_reader
                 .address_to_storage_mut()
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
-            state_reader
+            Arc::new(state_reader)
         },
         Some(HashMap::new()),
         None,

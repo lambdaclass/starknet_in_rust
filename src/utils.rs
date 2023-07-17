@@ -1,13 +1,13 @@
+use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::state_api::State;
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
         gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
     },
     state::ExecutionResourcesManager,
-    state::{
-        cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader, state_cache::StorageEntry,
-    },
+    state::{cached_state::UNINITIALIZED_CLASS_HASH, state_cache::StorageEntry},
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
@@ -96,7 +96,7 @@ pub fn get_felt_range(
 
 pub fn felt_to_field_element(value: &Felt252) -> Result<FieldElement, SyscallHandlerError> {
     FieldElement::from_dec_str(&value.to_str_radix(10))
-        .map_err(|_| SyscallHandlerError::FailToComputeHash)
+        .map_err(|e| SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string())))
 }
 
 pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
@@ -259,7 +259,7 @@ where
 //* Execution entry point utils
 //* ----------------------------
 
-pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
+pub fn get_deployed_address_class_hash_at_address<S: State>(
     state: &mut S,
     contract_address: &Address,
 ) -> Result<ClassHash, TransactionError> {
@@ -276,7 +276,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     Ok(class_hash)
 }
 
-pub fn validate_contract_deployed<S: StateReader>(
+pub fn validate_contract_deployed<S: State>(
     state: &mut S,
     contract_address: &Address,
 ) -> Result<ClassHash, TransactionError> {

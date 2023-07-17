@@ -18,20 +18,33 @@ use crate::{
 // }
 // ```
 
+/// Abstracts every request variant for each syscall.
 #[allow(unused)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
+    /// Emits an event with a given set of keys and data.
     EmitEvent(EmitEventRequest),
+    /// Calls the requested function in any previously declared class.
     LibraryCall(LibraryCallRequest),
+    /// Calls a given contract.
     CallContract(CallContractRequest),
+    /// Deploys a new instance of a previously declared class.
     Deploy(DeployRequest),
+    /// Gets the number of the block in which the transaction is executed.
     GetBlockNumber,
+    /// Gets information about the original transaction.
     GetExecutionInfo,
+    /// Gets the value of a key in the storage of the calling contract.
     StorageRead(StorageReadRequest),
+    /// Sets the value of a key in the storage of the calling contract.
     StorageWrite(StorageWriteRequest),
+    /// Sends a message to L1.
     SendMessageToL1(SendMessageToL1Request),
+    /// Gets the timestamp of the block in which the transaction is executed.
     GetBlockTimestamp(GetBlockTimestampRequest),
+    /// Gets the hash value of a block.
     GetBlockHash(GetBlockHashRequest),
+    /// Replaces the class of the calling contract.
     ReplaceClass(ReplaceClassRequest),
 }
 
@@ -39,10 +52,12 @@ pub(crate) enum SyscallRequest {
 //  SyscallRequest variants
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+/// Gets the timestamp of the block in which the transaction is executed.
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampRequest {}
 
+/// Deploys a new instance of a previously declared class.
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeployRequest {
@@ -57,40 +72,71 @@ pub(crate) struct DeployRequest {
     pub(crate) deploy_from_zero: usize,
 }
 
+/// Gets the value of a key in the storage of the calling contract.
+///
+/// This system call provides direct access to any possible key in storage, in contrast
+/// with `balance.read()`, which enables you to read storage variables that are defined
+/// explicitly in the contract.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageReadRequest {
+    /// The key associated with the requested storage value.
     pub(crate) key: [u8; 32],
     pub(crate) reserved: Felt252,
 }
 
+/// Emits an event with a given set of keys and data.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EmitEventRequest {
+    /// The event's key segment start.
     pub(crate) keys_start: Relocatable,
+    /// The event's key segment end.
     pub(crate) keys_end: Relocatable,
+    /// The event's data segment start.
     pub(crate) data_start: Relocatable,
+    /// The event's data segment end.
     pub(crate) data_end: Relocatable,
 }
 
+/// Calls a given contract.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct CallContractRequest {
+    /// A selector for a function within that contract.
     pub(crate) selector: Felt252,
+    /// The address of the contract you want to call.
     pub(crate) contract_address: Address,
+    /// The calldata segment start.
     pub(crate) calldata_start: Relocatable,
+    /// The calldata segment end.
     pub(crate) calldata_end: Relocatable,
 }
 
+/// Calls the requested function in any previously declared class.
+///
+/// This system call replaces the known delegate call functionality from Ethereum,
+/// with the important difference that there is only one contract involved.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LibraryCallRequest {
+    /// The hash of the class you want to use.
     pub(crate) class_hash: Felt252,
+    /// A selector for a function within that class.
     pub(crate) selector: Felt252,
+    /// The calldata segment start.
     pub(crate) calldata_start: Relocatable,
+    /// The calldata segment end.
     pub(crate) calldata_end: Relocatable,
 }
 
+/// Sets the value of a key in the storage of the calling contract.
+///
+/// This system call provides direct access to any possible key in storage,
+/// in contrast with balance.write(), which enables you to write to storage variables
+/// that are defined explicitly in the contract.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageWriteRequest {
     pub(crate) reserved: Felt252,
+    /// The key associated with the requested storage value.
     pub(crate) key: Felt252,
+    /// The value to write to the key.
     pub(crate) value: Felt252,
 }
 
@@ -101,21 +147,36 @@ pub(crate) struct StorageWriteRequest {
 
 // payload
 // The array containing the message payload -> relocatable
+
+/// Sends a message to L1.
+///
+/// This system call includes the message parameters as part of the proof’s output,
+/// and exposes these parameters to the Starknet Core contract on L1 once the state update,
+/// including the transaction, is received.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct SendMessageToL1Request {
+    /// The recipient’s L1 address.
     pub(crate) to_address: Address,
+    /// The payload segment start.
     pub(crate) payload_start: Relocatable,
+    /// The payload segment end.
     pub(crate) payload_end: Relocatable,
 }
 
+/// Gets the hash value of a block.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockHashRequest {
+    /// The block's number
     pub(crate) block_number: u64,
 }
 
+/// Replaces the class of the calling contract (i.e. the contract whose address is
+/// returned by `get_contract_address` at the time the syscall is called) by the class
+/// of the given hash.
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ReplaceClassRequest {
+    /// The hash of the class that will replace the calling contract one.
     pub(crate) class_hash: Felt252,
 }
 

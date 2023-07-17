@@ -1,4 +1,5 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -22,6 +23,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
@@ -36,7 +38,7 @@ pub struct StarknetState {
 impl StarknetState {
     pub fn new(context: Option<BlockContext>) -> Self {
         let block_context = context.unwrap_or_default();
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
 
         let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
 
@@ -79,7 +81,6 @@ impl StarknetState {
     pub fn declare(
         &mut self,
         contract_class: ContractClass,
-        hash_value: Option<Felt252>,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
         let tx = Declare::new(
             contract_class,
@@ -89,7 +90,6 @@ impl StarknetState {
             0.into(),
             Vec::new(),
             0.into(),
-            hash_value,
         )?;
 
         let tx_execution_info = tx.execute(&mut self.state, &self.block_context)?;
@@ -148,13 +148,18 @@ impl StarknetState {
         let mut resources_manager = ExecutionResourcesManager::default();
 
         let mut tx_execution_context = TransactionExecutionContext::default();
-        let call_info = call.execute(
+        let ExecutionResult { call_info, .. } = call.execute(
             &mut self.state,
             &self.block_context,
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            self.block_context.invoke_tx_max_n_steps,
         )?;
+
+        let call_info = call_info.ok_or(StarknetStateError::Transaction(
+            TransactionError::CallInfoIsNone,
+        ))?;
 
         let exec_info = ExecutionInfo::Call(Box::new(call_info.clone()));
         self.add_messages_and_events(&exec_info)?;
@@ -176,14 +181,22 @@ impl StarknetState {
         remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
         let chain_id = self.block_context.starknet_os_config.chain_id.to_felt();
-        let deploy = Deploy::new(
-            contract_address_salt,
-            contract_class.clone(),
-            constructor_calldata,
-            chain_id,
-            TRANSACTION_VERSION.clone(),
-            hash_value,
-        )?;
+        let deploy = match hash_value {
+            None => Deploy::new(
+                contract_address_salt,
+                contract_class.clone(),
+                constructor_calldata,
+                chain_id,
+                TRANSACTION_VERSION.clone(),
+            )?,
+            Some(hash_value) => Deploy::new_with_tx_hash(
+                contract_address_salt,
+                contract_class.clone(),
+                constructor_calldata,
+                TRANSACTION_VERSION.clone(),
+                hash_value,
+            )?,
+        };
         let contract_address = deploy.contract_address.clone();
         let contract_hash = deploy.contract_hash;
         let mut tx = Transaction::Deploy(deploy);
@@ -277,17 +290,28 @@ impl StarknetState {
             None => self.state.get_nonce_at(&contract_address)?,
         };
 
-        InvokeFunction::new(
-            contract_address,
-            entry_point_selector,
-            max_fee,
-            TRANSACTION_VERSION.clone(),
-            calldata,
-            signature,
-            self.chain_id(),
-            Some(nonce),
-            hash_value,
-        )
+        match hash_value {
+            None => InvokeFunction::new(
+                contract_address,
+                entry_point_selector,
+                max_fee,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                signature,
+                self.chain_id(),
+                Some(nonce),
+            ),
+            Some(hash_value) => InvokeFunction::new_with_tx_hash(
+                contract_address,
+                entry_point_selector,
+                max_fee,
+                TRANSACTION_VERSION.clone(),
+                calldata,
+                signature,
+                Some(nonce),
+                hash_value,
+            ),
+        }
     }
 }
 
@@ -347,6 +371,7 @@ mod tests {
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
             }),
+            revert_error: None,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources,
@@ -418,7 +443,7 @@ mod tests {
             .class_hash_to_contract_class_mut()
             .insert(class_hash, contract_class.clone());
 
-        let state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* --------------------------------------------
         //*    Create starknet state with previous data
@@ -429,25 +454,21 @@ mod tests {
         starknet_state.state = state;
         starknet_state
             .state
-            .state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
+            .set_class_hash_at(sender_address.clone(), class_hash)
+            .unwrap();
 
         starknet_state
             .state
-            .state_reader
-            .address_to_nonce_mut()
+            .cache
+            .nonce_writes
             .insert(sender_address.clone(), nonce);
+
+        starknet_state.state.set_storage_at(&storage_entry, storage);
+
         starknet_state
             .state
-            .state_reader
-            .address_to_storage_mut()
-            .insert(storage_entry, storage);
-        starknet_state
-            .state
-            .state_reader
-            .class_hash_to_contract_class_mut()
-            .insert(class_hash, contract_class);
+            .set_contract_class(&class_hash, &contract_class)
+            .unwrap();
 
         // --------------------------------------------
         //      Test declare with starknet state
@@ -455,9 +476,8 @@ mod tests {
         let fib_contract_class =
             ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
-        let (ret_class_hash, _exec_info) = starknet_state
-            .declare(fib_contract_class.clone(), None)
-            .unwrap();
+        let (ret_class_hash, _exec_info) =
+            starknet_state.declare(fib_contract_class.clone()).unwrap();
 
         //* ---------------------------------------
         //              Expected result

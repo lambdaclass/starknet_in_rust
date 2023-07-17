@@ -42,7 +42,8 @@ mod Dispatcher {
         class_hash: felt252, selector: felt252, a: felt252, b: felt252, n: felt252
     ) -> felt252 {
         FibonacciLibraryDispatcher {
-            class_hash: starknet::class_hash_const::<27727>(),
+            // THIS VALUE IS THE HASH OF THE FIBONACCI CASM CLASS HASH. THE SAME AS THE CONSTANT: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH
+            class_hash: starknet::class_hash_const::<1948962768849191111780391610229754715773924969841143100991524171924131413970>(),
             selector
         }.fib(a, b, n)
     }

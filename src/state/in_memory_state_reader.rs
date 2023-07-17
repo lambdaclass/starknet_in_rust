@@ -14,6 +14,10 @@ use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
+/// A [StateReader] that holds all the data in memory.
+///
+/// This implementation is used for testing and debugging.
+/// It uses HashMaps to store the data.
 #[derive(Debug, MutGetters, Getters, PartialEq, Clone, Default)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
@@ -31,6 +35,15 @@ pub struct InMemoryStateReader {
 }
 
 impl InMemoryStateReader {
+    /// Creates a new InMemoryStateReader.
+    ///
+    /// # Parameters
+    /// - `address_to_class_hash` - A HashMap from contract addresses to their class hashes.
+    /// - `address_to_nonce` - A HashMap from contract addresses to their nonces.
+    /// - `address_to_storage` - A HashMap from storage entries to their values.
+    /// - `class_hash_to_contract_class` - A HashMap from class hashes to their contract classes.
+    /// - `casm_contract_classes` - A [CasmClassCache].
+    /// - `class_hash_to_compiled_class_hash` - A HashMap from class hashes to their compiled class hashes.
     pub fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
@@ -49,8 +62,20 @@ impl InMemoryStateReader {
         }
     }
 
+    /// Gets the [CompiledClass] with the given [CompiledClassHash].
+    ///
+    /// It looks for the [CompiledClass] both in the cache and the storage.
+    ///
+    /// # Parameters
+    /// - `compiled_class_hash` - The [CompiledClassHash] of the [CompiledClass] to get.
+    ///
+    /// # Errors
+    /// - [StateError::NoneCompiledClass] - If the [CompiledClass] is not found.
+    ///
+    /// # Returns
+    /// The [CompiledClass] with the given [CompiledClassHash].
     fn get_compiled_class(
-        &mut self,
+        &self,
         compiled_class_hash: &CompiledClassHash,
     ) -> Result<CompiledClass, StateError> {
         if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
@@ -64,7 +89,7 @@ impl InMemoryStateReader {
 }
 
 impl StateReader for InMemoryStateReader {
-    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
+    fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let class_hash = self
             .address_to_class_hash
             .get(contract_address)
@@ -72,7 +97,7 @@ impl StateReader for InMemoryStateReader {
         class_hash.cloned()
     }
 
-    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
+    fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
         let nonce = self
             .address_to_nonce
             .get(contract_address)
@@ -80,7 +105,7 @@ impl StateReader for InMemoryStateReader {
         nonce.cloned()
     }
 
-    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
+    fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         let storage = self
             .address_to_storage
             .get(storage_entry)
@@ -89,7 +114,7 @@ impl StateReader for InMemoryStateReader {
     }
 
     fn get_compiled_class_hash(
-        &mut self,
+        &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError> {
         self.class_hash_to_compiled_class_hash
@@ -98,7 +123,7 @@ impl StateReader for InMemoryStateReader {
             .copied()
     }
 
-    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+    fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // Deprecated contract classes dont have a compiled_class_hash, we dont need to fetch it
         if let Some(compiled_class) = self.class_hash_to_contract_class.get(class_hash) {
             return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
