@@ -1,5 +1,7 @@
 use super::error::TransactionError;
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::cached_state::CachedState;
 use crate::{
     definitions::{
         block_context::BlockContext,
@@ -8,7 +10,7 @@ use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
     },
-    state::state_api::{State, StateReader},
+    state::state_api::StateReader,
     state::ExecutionResourcesManager,
 };
 use cairo_vm::felt::Felt252;
@@ -20,8 +22,8 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-pub(crate) fn execute_fee_transfer<S: State + StateReader>(
-    state: &mut S,
+pub(crate) fn execute_fee_transfer<S: StateReader>(
+    state: &mut CachedState<S>,
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,
@@ -54,15 +56,18 @@ pub(crate) fn execute_fee_transfer<S: State + StateReader>(
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
-    let fee_transfer_exec = fee_transfer_call.execute(
-        state,
-        block_context,
-        &mut resources_manager,
-        tx_execution_context,
-        false,
-    );
-    // TODO: Avoid masking the error from the fee transfer.
-    fee_transfer_exec.map_err(|e| TransactionError::FeeTransferError(Box::new(e)))
+    let ExecutionResult { call_info, .. } = fee_transfer_call
+        .execute(
+            state,
+            block_context,
+            &mut resources_manager,
+            tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps,
+        )
+        .map_err(|e| TransactionError::FeeTransferError(Box::new(e)))?;
+
+    call_info.ok_or(TransactionError::CallInfoIsNone)
 }
 
 // ----------------------------------------------------------------------------------------

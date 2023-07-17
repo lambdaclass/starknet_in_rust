@@ -16,6 +16,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address},
 };
+use std::sync::Arc;
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -70,7 +71,7 @@ fn hello_starknet_increase_balance() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -137,7 +138,10 @@ fn hello_starknet_increase_balance() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
+                block_context.invoke_tx_max_n_steps()
             )
+            .unwrap()
+            .call_info
             .unwrap(),
         expected_call_info
     );

@@ -54,6 +54,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
@@ -190,7 +191,7 @@ fn create_account_tx_test_state(
                     .class_hash_to_contract_class_mut()
                     .insert(class_hash, contract_class);
             }
-            state_reader
+            Arc::new(state_reader)
         },
         Some(HashMap::new()),
         Some(HashMap::new()),
@@ -205,7 +206,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
     let state_cache = ContractClassCache::new();
 
     CachedState::new(
-        in_memory_state_reader,
+        Arc::new(in_memory_state_reader),
         Some(state_cache),
         Some(HashMap::new()),
     )
@@ -230,7 +231,7 @@ fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
     ]);
 
     CachedState::new_for_testing(
-        in_memory_state_reader,
+        Arc::new(in_memory_state_reader),
         Some(contract_classes_cache),
         state_cache_after_invoke_tx(fee),
         Some(HashMap::new()),
@@ -514,7 +515,7 @@ fn validate_final_balances<S>(
 
 #[test]
 fn test_create_account_tx_test_state() {
-    let (block_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, state) = create_account_tx_test_state().unwrap();
 
     assert_eq!(state, expected_state_before_tx());
 
@@ -845,6 +846,7 @@ fn test_declare_tx() {
             ..Default::default()
         }),
         None,
+        None,
         Some(expected_declare_fee_transfer_info(fee)),
         fee,
         resources,
@@ -900,6 +902,7 @@ fn test_declarev2_tx() {
             },
             ..Default::default()
         }),
+        None,
         None,
         Some(expected_declare_fee_transfer_info(fee)),
         fee,
@@ -1096,6 +1099,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     TransactionExecutionInfo::new(
         Some(expected_validate_call_info_2()),
         Some(expected_execute_call_info()),
+        None,
         Some(expected_fee_transfer_info(fee)),
         fee,
         resources,
@@ -1115,6 +1119,7 @@ fn expected_fib_transaction_execution_info(
     TransactionExecutionInfo::new(
         Some(expected_fib_validate_call_info_2()),
         Some(expected_fib_execute_call_info()),
+        None,
         Some(expected_fib_fee_transfer_info(fee)),
         fee,
         resources,
@@ -1243,7 +1248,13 @@ fn test_deploy_account() {
         .execute(&mut state, &block_context)
         .unwrap();
 
-    assert_eq!(state, state_after);
+    assert_eq!(state.contract_classes(), state_after.contract_classes());
+    assert_eq!(
+        state.casm_contract_classes(),
+        state_after.casm_contract_classes()
+    );
+    assert_eq!(state.state_reader, state_after.state_reader);
+    assert_eq!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
@@ -1288,6 +1299,7 @@ fn test_deploy_account() {
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
         expected_execute_call_info.into(),
+        None,
         expected_fee_transfer_call_info.into(),
         fee,
         // Entry **not** in blockifier.
@@ -1318,7 +1330,7 @@ fn expected_deploy_account_states() -> (
 ) {
     let fee = Felt252::from(3684);
     let mut state_before = CachedState::new(
-        InMemoryStateReader::new(
+        Arc::new(InMemoryStateReader::new(
             HashMap::from([
                 (Address(0x101.into()), felt_to_hash(&0x111.into())),
                 (Address(0x100.into()), felt_to_hash(&0x110.into())),
@@ -1352,7 +1364,7 @@ fn expected_deploy_account_states() -> (
             ]),
             HashMap::new(),
             HashMap::new(),
-        ),
+        )),
         Some(ContractClassCache::new()),
         Some(HashMap::new()),
     );
@@ -1484,11 +1496,11 @@ fn test_state_for_declare_tx() {
         .is_one());
 
     // Check state.state_reader
-    let mut state_reader = state.state_reader().clone();
+    let state_reader = state.state_reader.clone();
 
     assert_eq!(
-        state_reader.address_to_class_hash_mut(),
-        &mut HashMap::from([
+        state_reader.address_to_class_hash,
+        HashMap::from([
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
@@ -1505,8 +1517,8 @@ fn test_state_for_declare_tx() {
     );
 
     assert_eq!(
-        state_reader.address_to_nonce_mut(),
-        &mut HashMap::from([
+        state_reader.address_to_nonce,
+        HashMap::from([
             (TEST_ERC20_CONTRACT_ADDRESS.clone(), Felt252::zero()),
             (TEST_CONTRACT_ADDRESS.clone(), Felt252::zero()),
             (TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt252::zero()),
@@ -1514,8 +1526,8 @@ fn test_state_for_declare_tx() {
     );
 
     assert_eq!(
-        state_reader.address_to_storage_mut(),
-        &mut HashMap::from([(
+        state_reader.address_to_storage,
+        HashMap::from([(
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
@@ -1525,8 +1537,8 @@ fn test_state_for_declare_tx() {
     );
 
     assert_eq!(
-        state_reader.class_hash_to_contract_class_mut(),
-        &mut HashMap::from([
+        state_reader.class_hash_to_contract_class,
+        HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
                 ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
@@ -1837,6 +1849,7 @@ fn test_library_call_with_declare_v2() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1899,5 +1912,5 @@ fn test_library_call_with_declare_v2() {
         ..Default::default()
     };
 
-    assert_eq!(call_info, expected_call_info);
+    assert_eq!(call_info.call_info.unwrap(), expected_call_info);
 }

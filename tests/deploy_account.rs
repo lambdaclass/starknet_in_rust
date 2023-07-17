@@ -20,7 +20,7 @@ use starknet_in_rust::{
     utils::Address,
     CasmContractClass,
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -28,7 +28,7 @@ lazy_static! {
 
 #[test]
 fn internal_deploy_account() {
-    let state_reader = InMemoryStateReader::default();
+    let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(state_reader, None, None);
 
     state.set_contract_classes(Default::default()).unwrap();
@@ -90,6 +90,7 @@ fn internal_deploy_account() {
                 ..Default::default()
             }),
             None,
+            None,
             0,
             [
                 ("pedersen_builtin", 23),
@@ -106,7 +107,7 @@ fn internal_deploy_account() {
 
 #[test]
 fn internal_deploy_account_cairo1() {
-    let state_reader = InMemoryStateReader::default();
+    let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(state_reader, None, Some(Default::default()));
 
     state.set_contract_classes(Default::default()).unwrap();
@@ -237,6 +238,7 @@ fn internal_deploy_account_cairo1() {
             },
                 ..Default::default()
             }),
+            None,
             None,
             0,
             [

@@ -16,20 +16,24 @@ use starknet_in_rust::{
         block_context::BlockContext,
         constants::{DECLARE_VERSION, TRANSACTION_VERSION},
     },
-    execution::{execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext},
+    execution::{
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        TransactionExecutionContext,
+    },
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::read_abi,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{
-        cached_state::CachedState,
-        state_api::{State, StateReader},
-    },
+    state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    transaction::InvokeFunction,
+    transaction::{error::TransactionError, InvokeFunction},
     utils::{felt_to_hash, string_to_hash, Address},
 };
-use std::{collections::HashMap, path::PathBuf, sync::Mutex};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 #[derive(Parser)]
 struct Cli {
@@ -248,13 +252,18 @@ fn call_parser(
         None,
         0,
     );
-    let call_info = execution_entry_point.execute(
+    let block_context = BlockContext::default();
+    let ExecutionResult { call_info, .. } = execution_entry_point.execute(
         cached_state,
-        &BlockContext::default(),
+        &block_context,
         &mut ExecutionResourcesManager::default(),
         &mut TransactionExecutionContext::default(),
         false,
+        block_context.invoke_tx_max_n_steps(),
     )?;
+
+    let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
+
     Ok(call_info.retdata)
 }
 
@@ -303,7 +312,7 @@ async fn call_req(data: web::Data<AppState>, args: web::Json<CallArgs>) -> HttpR
 pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
-            InMemoryStateReader::default(),
+            Arc::new(InMemoryStateReader::default()),
             Some(HashMap::new()),
             None,
         )),

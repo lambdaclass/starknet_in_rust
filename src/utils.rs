@@ -1,14 +1,13 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::state_api::State;
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
         gas_usage::calculate_tx_gas_usage, os_usage::get_additional_os_resources, CallInfo,
     },
     state::ExecutionResourcesManager,
-    state::{
-        cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader, state_cache::StorageEntry,
-    },
+    state::{cached_state::UNINITIALIZED_CLASS_HASH, state_cache::StorageEntry},
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
@@ -260,7 +259,7 @@ where
 //* Execution entry point utils
 //* ----------------------------
 
-pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
+pub fn get_deployed_address_class_hash_at_address<S: State>(
     state: &mut S,
     contract_address: &Address,
 ) -> Result<ClassHash, TransactionError> {
@@ -277,7 +276,7 @@ pub fn get_deployed_address_class_hash_at_address<S: StateReader>(
     Ok(class_hash)
 }
 
-pub fn validate_contract_deployed<S: StateReader>(
+pub fn validate_contract_deployed<S: State>(
     state: &mut S,
     contract_address: &Address,
 ) -> Result<ClassHash, TransactionError> {
