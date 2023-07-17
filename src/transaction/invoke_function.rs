@@ -232,7 +232,7 @@ impl InvokeFunction {
         let ExecutionResult {
             call_info,
             revert_error,
-            ..
+            n_reverted_steps,
         } = if self.skip_execute {
             ExecutionResult::default()
         } else {
@@ -250,7 +250,7 @@ impl InvokeFunction {
             self.tx_type,
             changes,
             None,
-            0,
+            n_reverted_steps,
         )?;
         let transaction_execution_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,

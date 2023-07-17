@@ -14,8 +14,8 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-        TransactionExecutionContext, TransactionExecutionInfo,
+        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
@@ -306,8 +306,8 @@ impl DeclareV2 {
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let (validate_info, _remaining_gas) = if self.skip_validate {
-            (None, 0)
+        let (execution_result, _remaining_gas) = if self.skip_validate {
+            (ExecutionResult::default(), 0)
         } else {
             let (info, gas) = self.run_validate_entrypoint(
                 initial_gas,
@@ -315,17 +315,17 @@ impl DeclareV2 {
                 &mut resources_manager,
                 block_context,
             )?;
-            (Some(info), gas)
+            (info, gas)
         };
 
         let storage_changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[validate_info.clone()],
+            &[execution_result.call_info.clone()],
             self.tx_type,
             storage_changes,
             None,
-            0,
+            execution_result.n_reverted_steps,
         )?;
 
         let mut tx_execution_context =
@@ -341,7 +341,7 @@ impl DeclareV2 {
         self.compile_and_store_casm_class(state)?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
-            validate_info,
+            execution_result.call_info,
             None,
             None,
             actual_resources,
@@ -383,7 +383,7 @@ impl DeclareV2 {
         state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-    ) -> Result<(CallInfo, u128), TransactionError> {
+    ) -> Result<(ExecutionResult, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
         let entry_point = ExecutionEntryPoint {
@@ -401,7 +401,7 @@ impl DeclareV2 {
         let mut tx_execution_context =
             self.get_execution_context(block_context.validate_max_n_steps);
 
-        let ExecutionResult { call_info, .. } = if self.skip_execute {
+        let execution_result = if self.skip_execute {
             ExecutionResult::default()
         } else {
             entry_point.execute(
@@ -413,10 +413,13 @@ impl DeclareV2 {
                 block_context.validate_max_n_steps,
             )?
         };
-        let call_info = verify_no_calls_to_other_contracts(&call_info)?;
-        remaining_gas -= call_info.gas_consumed;
 
-        Ok((call_info, remaining_gas))
+        if execution_result.call_info.is_some() {
+            verify_no_calls_to_other_contracts(&execution_result.call_info)?;
+            remaining_gas -= execution_result.call_info.clone().unwrap().gas_consumed;
+        }
+
+        Ok((execution_result, remaining_gas))
     }
 
     // ---------------

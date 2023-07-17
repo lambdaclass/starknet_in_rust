@@ -231,7 +231,7 @@ impl Deploy {
         let ExecutionResult {
             call_info,
             revert_error,
-            ..
+            n_reverted_steps,
         } = call.execute(
             state,
             block_context,
@@ -248,7 +248,7 @@ impl Deploy {
             self.tx_type,
             changes,
             None,
-            0,
+            n_reverted_steps,
         )?;
 
         Ok(TransactionExecutionInfo::new_without_fee_info(
