@@ -1004,13 +1004,21 @@ mod test {
     fn test_declare_v2_with_invalid_compiled_class_hash() {
         let (block_context, mut state) = create_account_tx_test_state().unwrap();
         let mut declare_v2 = declarev2_tx();
-        declare_v2.compiled_class_hash = Felt252::from(1);
+        let real_casm_class_hash = declare_v2.compiled_class_hash;
+        let wrong_casm_class_hash = Felt252::from(1);
+        declare_v2.compiled_class_hash = wrong_casm_class_hash.clone();
         let declare_tx = Transaction::DeclareV2(Box::new(declare_v2));
 
         let err = declare_tx
             .execute(&mut state, &block_context, INITIAL_GAS_COST)
             .unwrap_err();
 
-        assert_eq!(err.to_string(), "Invalid compiled class, expected class hash: \"1948962768849191111780391610229754715773924969841143100991524171924131413970\", but received: \"1\"".to_string());
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Invalid compiled class, expected class hash: {}, but received: {}",
+                real_casm_class_hash, wrong_casm_class_hash
+            )
+        );
     }
 }
