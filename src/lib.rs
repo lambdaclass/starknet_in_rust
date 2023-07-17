@@ -198,6 +198,7 @@ mod test {
     use std::path::PathBuf;
 
     use crate::core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash};
+    use crate::definitions::constants::INITIAL_GAS_COST;
     use crate::definitions::{
         block_context::StarknetChainId,
         constants::{
@@ -836,7 +837,7 @@ mod test {
             tx_type: TransactionType::Declare,
             validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
             version: 1.into(),
-            max_fee: 2,
+            max_fee: INITIAL_GAS_COST,
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
@@ -996,6 +997,28 @@ mod test {
         assert_eq!(
             estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
             [(0, 1224), (0, 0)]
+        );
+    }
+
+    #[test]
+    fn test_declare_v2_with_invalid_compiled_class_hash() {
+        let (block_context, mut state) = create_account_tx_test_state().unwrap();
+        let mut declare_v2 = declarev2_tx();
+        let real_casm_class_hash = declare_v2.compiled_class_hash;
+        let wrong_casm_class_hash = Felt252::from(1);
+        declare_v2.compiled_class_hash = wrong_casm_class_hash.clone();
+        let declare_tx = Transaction::DeclareV2(Box::new(declare_v2));
+
+        let err = declare_tx
+            .execute(&mut state, &block_context, INITIAL_GAS_COST)
+            .unwrap_err();
+
+        assert_eq!(
+            err.to_string(),
+            format!(
+                "Invalid compiled class, expected class hash: {}, but received: {}",
+                real_casm_class_hash, wrong_casm_class_hash
+            )
         );
     }
 }
