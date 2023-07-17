@@ -170,6 +170,8 @@ test: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_
 	cargo test --release --all --all-targets --features=cairo_1_tests
 	echo "Cairo2 tests"
 	cargo test --release --all --all-targets
+	echo "doctests"
+	cargo test --release --all --doc
 
 coverage: compile-cairo compile-starknet compile-abi $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs' --release
