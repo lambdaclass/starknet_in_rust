@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use assert_matches::assert_matches;
 use cairo_vm::felt::Felt252;
@@ -24,7 +25,7 @@ use crate::complex_contracts::utils::*;
 fn erc721_constructor_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -71,7 +72,7 @@ fn erc721_constructor_test() {
 fn erc721_balance_of_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -162,7 +163,7 @@ fn erc721_balance_of_test() {
 fn erc721_test_owner_of() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -245,7 +246,7 @@ fn erc721_test_owner_of() {
 fn erc721_test_get_approved() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -345,7 +346,7 @@ fn erc721_test_get_approved() {
 fn erc721_test_is_approved_for_all() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -448,7 +449,7 @@ fn erc721_test_is_approved_for_all() {
 fn erc721_test_approve() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -553,7 +554,7 @@ fn erc721_test_approve() {
 fn erc721_set_approval_for_all() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -652,7 +653,7 @@ fn erc721_set_approval_for_all() {
 fn erc721_transfer_from_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -793,7 +794,7 @@ fn erc721_transfer_from_test() {
 fn erc721_transfer_from_and_get_owner_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -885,7 +886,7 @@ fn erc721_transfer_from_and_get_owner_test() {
 fn erc721_safe_transfer_from_should_fail_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -953,7 +954,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
 fn erc721_calling_constructor_twice_should_fail_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -1003,7 +1004,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
 fn erc721_constructor_should_fail_with_to_equal_zero() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -1031,7 +1032,7 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
 fn erc721_transfer_fail_to_zero_address() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );
@@ -1086,7 +1087,7 @@ fn erc721_transfer_fail_to_zero_address() {
 fn erc721_transfer_fail_not_owner() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        InMemoryStateReader::default(),
+        Arc::new(InMemoryStateReader::default()),
         Some(Default::default()),
         None,
     );

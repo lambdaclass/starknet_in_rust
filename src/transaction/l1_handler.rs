@@ -1,4 +1,8 @@
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::{
+    execution::execution_entry_point::ExecutionResult,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::cached_state::CachedState,
+};
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
@@ -89,15 +93,12 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    pub fn execute<S>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let entrypoint = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -110,16 +111,21 @@ impl L1Handler {
             remaining_gas,
         );
 
-        let call_info = if self.skip_execute {
-            None
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = if self.skip_execute {
+            ExecutionResult::default()
         } else {
-            Some(entrypoint.execute(
+            entrypoint.execute(
                 state,
                 block_context,
                 &mut resources_manager,
                 &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
-                false,
-            )?)
+                true,
+                block_context.invoke_tx_max_n_steps,
+            )?
         };
 
         let changes = state.count_actual_storage_changes();
@@ -155,6 +161,7 @@ impl L1Handler {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             None,
             call_info,
+            revert_error,
             actual_resources,
             Some(TransactionType::L1Handler),
         ))
@@ -199,7 +206,10 @@ impl L1Handler {
 
 #[cfg(test)]
 mod test {
-    use std::collections::{HashMap, HashSet};
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    };
 
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use cairo_vm::{
@@ -256,7 +266,7 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -317,6 +327,7 @@ mod test {
                 gas_consumed: 0,
                 failure_flag: false,
             }),
+            revert_error: None,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources: HashMap::from([

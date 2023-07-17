@@ -8,11 +8,11 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
     state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{cached_state::CachedState, ExecutionResourcesManager},
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
@@ -142,15 +142,12 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - resources_manager: the resources that are in use by the contract
     /// - block_context: The block's execution context
-    pub(crate) fn run_validate_entrypoint<T>(
+    pub(crate) fn run_validate_entrypoint<S: StateReader>(
         &self,
-        state: &mut T,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-    ) -> Result<Option<CallInfo>, TransactionError>
-    where
-        T: State + StateReader,
-    {
+    ) -> Result<Option<CallInfo>, TransactionError> {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
@@ -172,13 +169,14 @@ impl InvokeFunction {
             0,
         );
 
-        let call_info = Some(call.execute(
+        let ExecutionResult { call_info, .. } = call.execute(
             state,
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
-        )?);
+            block_context.validate_max_n_steps,
+        )?;
 
         let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
@@ -188,16 +186,13 @@ impl InvokeFunction {
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    fn run_execute_entrypoint<T>(
+    fn run_execute_entrypoint<S: StateReader>(
         &self,
-        state: &mut T,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
-    ) -> Result<CallInfo, TransactionError>
-    where
-        T: State + StateReader,
-    {
+    ) -> Result<ExecutionResult, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -213,7 +208,8 @@ impl InvokeFunction {
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
-            false,
+            true,
+            block_context.invoke_tx_max_n_steps,
         )
     }
 
@@ -223,28 +219,29 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    pub fn apply<S>(
+    pub fn apply<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
-    ) -> Result<TransactionExecutionInfo, TransactionError>
-    where
-        S: State + StateReader,
-    {
+    ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
-        let call_info = if self.skip_execute {
-            None
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = if self.skip_execute {
+            ExecutionResult::default()
         } else {
-            Some(self.run_execute_entrypoint(
+            self.run_execute_entrypoint(
                 state,
                 block_context,
                 &mut resources_manager,
                 remaining_gas,
-            )?)
+            )?
         };
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
@@ -258,6 +255,7 @@ impl InvokeFunction {
         let transaction_execution_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             call_info,
+            revert_error,
             actual_resources,
             Some(self.tx_type),
         );
@@ -270,9 +268,9 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
@@ -395,7 +393,7 @@ mod tests {
         state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
     };
     use num_traits::Num;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn test_invoke_apply_without_fees() {
@@ -436,7 +434,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -504,7 +502,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -568,7 +566,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -626,7 +624,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -690,7 +688,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -748,7 +746,7 @@ mod tests {
             skip_fee_transfer: false,
         };
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -804,7 +802,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -861,7 +859,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -923,7 +921,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(state_reader.clone(), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
@@ -1015,7 +1013,7 @@ mod tests {
     }
 
     #[test]
-    fn invoke_version_one_with_no_nonce_with_query_base() {
+    fn invoke_version_one_with_no_nonce_with_query_base_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
             Felt252::from_str_radix(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
@@ -1023,8 +1021,8 @@ mod tests {
             )
             .unwrap(),
             None,
-            QUERY_VERSION_BASE.clone(),
+            &1.into() | &QUERY_VERSION_BASE.clone(),
         );
-        assert!(expected_error.is_ok());
+        assert!(expected_error.is_err());
     }
 }

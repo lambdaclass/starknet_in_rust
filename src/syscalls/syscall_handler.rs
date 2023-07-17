@@ -1,5 +1,5 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use crate::state::state_api::{State, StateReader};
+use crate::state::state_api::StateReader;
 use crate::transaction::error::TransactionError;
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
@@ -32,15 +32,15 @@ pub(crate) trait HintProcessorPostRun {
 }
 
 #[allow(unused)]
-pub(crate) struct SyscallHintProcessor<'a, T: State + StateReader> {
+pub(crate) struct SyscallHintProcessor<'a, S: StateReader> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
-    pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, T>,
+    pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S>,
     pub(crate) run_resources: RunResources,
 }
 
-impl<'a, T: State + StateReader> SyscallHintProcessor<'a, T> {
+impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
     pub fn new(
-        syscall_handler: BusinessLogicSyscallHandler<'a, T>,
+        syscall_handler: BusinessLogicSyscallHandler<'a, S>,
         hints: &[(usize, Vec<Hint>)],
         run_resources: RunResources,
     ) -> Self {
@@ -52,7 +52,7 @@ impl<'a, T: State + StateReader> SyscallHintProcessor<'a, T> {
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessorLogic for SyscallHintProcessor<'a, T> {
+impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -111,7 +111,7 @@ impl<'a, T: State + StateReader> HintProcessorLogic for SyscallHintProcessor<'a,
     }
 }
 
-impl<'a, T: State + StateReader> ResourceTracker for SyscallHintProcessor<'a, T> {
+impl<'a, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, S> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -129,7 +129,7 @@ impl<'a, T: State + StateReader> ResourceTracker for SyscallHintProcessor<'a, T>
     }
 }
 
-impl<'a, T: State + StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, T> {
+impl<'a, S: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, S> {
     fn post_run(
         &self,
         runner: &mut VirtualMachine,

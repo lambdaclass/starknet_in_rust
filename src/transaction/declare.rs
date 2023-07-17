@@ -1,5 +1,7 @@
 use crate::definitions::constants::QUERY_VERSION_BASE;
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::cached_state::CachedState;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
@@ -150,9 +152,9 @@ impl Declare {
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: State + StateReader>(
+    pub fn apply<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
@@ -178,6 +180,7 @@ impl Declare {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             validate_info,
             None,
+            None,
             actual_resources,
             Some(self.tx_type),
         ))
@@ -198,9 +201,9 @@ impl Declare {
         )
     }
 
-    pub fn run_validate_entrypoint<S: State + StateReader>(
+    pub fn run_validate_entrypoint<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
@@ -221,13 +224,16 @@ impl Declare {
             0,
         );
 
-        let call_info = entry_point.execute(
+        let ExecutionResult { call_info, .. } = entry_point.execute(
             state,
             block_context,
             resources_manager,
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
+            block_context.validate_max_n_steps,
         )?;
+
+        let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
 
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::UnauthorizedActionOnValidate)?;
@@ -256,9 +262,9 @@ impl Declare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;
@@ -311,7 +317,7 @@ mod tests {
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{One, Zero};
-    use std::{collections::HashMap, path::PathBuf};
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     use crate::{
         definitions::{
@@ -357,7 +363,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -420,6 +426,7 @@ mod tests {
         let transaction_exec_info = TransactionExecutionInfo {
             validate_info,
             call_info: None,
+            revert_error: None,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources,
@@ -451,22 +458,6 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         contract_class_cache.insert(class_hash, contract_class);
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
-
-        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -529,7 +520,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let _state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -592,7 +583,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let _state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -654,7 +645,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -730,7 +721,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -775,7 +766,7 @@ mod tests {
         // Instantiate CachedState
         let contract_class_cache = HashMap::new();
 
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
 
         let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
 
@@ -834,7 +825,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
 
         //* ---------------------------------------
         //*    Test declare with previous data

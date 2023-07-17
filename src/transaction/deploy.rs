@@ -1,4 +1,6 @@
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::cached_state::CachedState;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
@@ -139,9 +141,9 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn apply<S: State + StateReader>(
+    pub fn apply<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
@@ -189,6 +191,7 @@ impl Deploy {
         Ok(TransactionExecutionInfo::new_without_fee_info(
             None,
             Some(call_info),
+            None,
             actual_resources,
             Some(self.tx_type),
         ))
@@ -198,9 +201,9 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn invoke_constructor<S: State + StateReader>(
+    pub fn invoke_constructor<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
@@ -225,18 +228,23 @@ impl Deploy {
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let call_info = call.execute(
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = call.execute(
             state,
             block_context,
             &mut resources_manager,
             &mut tx_execution_context,
-            false,
+            true,
+            block_context.validate_max_n_steps,
         )?;
 
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(call_info.clone())],
+            &[call_info.clone()],
             self.tx_type,
             changes,
             None,
@@ -245,7 +253,8 @@ impl Deploy {
 
         Ok(TransactionExecutionInfo::new_without_fee_info(
             None,
-            Some(call_info),
+            call_info,
+            revert_error,
             actual_resources,
             Some(self.tx_type),
         ))
@@ -256,9 +265,9 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn execute<S: State + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
-        state: &mut S,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;
@@ -292,7 +301,7 @@ impl Deploy {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, sync::Arc};
 
     use super::*;
     use crate::{
@@ -303,7 +312,7 @@ mod tests {
     #[test]
     fn invoke_constructor_test() {
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         // Set contract_class
@@ -350,7 +359,7 @@ mod tests {
     #[test]
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         let contract_class =
@@ -376,7 +385,7 @@ mod tests {
     #[test]
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
         let contract_path = "starknet_programs/amm.json";
