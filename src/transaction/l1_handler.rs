@@ -114,7 +114,7 @@ impl L1Handler {
         let ExecutionResult {
             call_info,
             revert_error,
-            ..
+            n_reverted_steps,
         } = if self.skip_execute {
             ExecutionResult::default()
         } else {
@@ -135,7 +135,7 @@ impl L1Handler {
             TransactionType::L1Handler,
             changes,
             Some(self.get_payload_size()),
-            0,
+            n_reverted_steps,
         )?;
 
         // Enforce L1 fees.
