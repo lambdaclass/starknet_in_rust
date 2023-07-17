@@ -1,6 +1,7 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 
+/// Abstracts every response variant body for each syscall.
 pub(crate) enum ResponseBody {
     StorageReadResponse { value: Option<Felt252> },
     GetBlockNumber { number: Felt252 },
@@ -11,6 +12,7 @@ pub(crate) enum ResponseBody {
     GetExecutionInfo { exec_info_ptr: Relocatable },
     GetBlockHash(GetBlockHashResponse),
 }
+/// Wraps around any response body.
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
@@ -20,6 +22,7 @@ pub(crate) struct SyscallResponse {
 }
 
 impl SyscallResponse {
+    /// Converts a response into cairo args for writing in memory.
     pub(crate) fn to_cairo_compatible_args(&self) -> Vec<MaybeRelocatable> {
         let mut cairo_args = Vec::<MaybeRelocatable>::with_capacity(5);
         cairo_args.push(Felt252::from(self.gas).into());
@@ -64,32 +67,46 @@ impl SyscallResponse {
 //   Response objects
 // ----------------------
 
+/// Gets the timestamp of the block in which the transaction is executed.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GetBlockTimestampResponse {
+    /// The returned timestamp.
     pub timestamp: Felt252,
 }
 
+/// Deploys a new instance of a previously declared class.
 pub struct DeployResponse {
+    /// Address of the deployed contract.
     pub contract_address: Felt252,
+    /// The redata segment start.
     pub retdata_start: Relocatable,
+    /// The redata segment end.
     pub retdata_end: Relocatable,
 }
 
+/// Represents error data of any syscall response.
 pub struct FailureReason {
+    /// The redata segment start.
     pub retdata_start: Relocatable,
+    /// The redata segment end.
     pub retdata_end: Relocatable,
     // Syscall specific response fields.
     // TODO: this cause circular dependency
     //pub(crate) body: Option<ResponseBody>,
 }
 
+/// Calls a given contract.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CallContractResponse {
+    /// The redata segment start.
     pub retdata_start: Relocatable,
+    /// The redata segment end.
     pub retdata_end: Relocatable,
 }
 
+/// Gets the hash value of a block.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GetBlockHashResponse {
+    /// The returned hash.
     pub block_hash: Felt252,
 }
