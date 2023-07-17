@@ -167,11 +167,11 @@ clippy: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIR
 
 test: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_1_COMPILED_SIERRA_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 	echo "Cairo1 tests"
-	cargo test --release --workspace --all-targets --features=cairo_1_tests
+	cargo test --workspace --all-targets --features=cairo_1_tests
 	echo "Cairo2 tests"
-	cargo test --release --workspace --all-targets
+	cargo test --workspace --all-targets
 	echo "doctests"
-	cargo test --release --workspace --doc
+	cargo test --workspace --doc
 
 coverage: compile-cairo compile-starknet compile-abi $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs' --release
