@@ -78,17 +78,17 @@ pub struct GetBlockTimestampResponse {
 pub struct DeployResponse {
     /// Address of the deployed contract.
     pub contract_address: Felt252,
-    /// The redata segment start.
+    /// The retdata segment start.
     pub retdata_start: Relocatable,
-    /// The redata segment end.
+    /// The retdata segment end.
     pub retdata_end: Relocatable,
 }
 
 /// Represents error data of any syscall response.
 pub struct FailureReason {
-    /// The redata segment start.
+    /// The retdata segment start.
     pub retdata_start: Relocatable,
-    /// The redata segment end.
+    /// The retdata segment end.
     pub retdata_end: Relocatable,
     // Syscall specific response fields.
     // TODO: this cause circular dependency
@@ -98,9 +98,9 @@ pub struct FailureReason {
 /// Calls a given contract.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CallContractResponse {
-    /// The redata segment start.
+    /// The retdata segment start.
     pub retdata_start: Relocatable,
-    /// The redata segment end.
+    /// The retdata segment end.
     pub retdata_end: Relocatable,
 }
 
