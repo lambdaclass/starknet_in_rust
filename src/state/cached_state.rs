@@ -84,8 +84,8 @@ impl<T: StateReader> StateReader for CachedState<T> {
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(x) => {
-                    return Ok(x);
+                Ok(class_hash) => {
+                    return Ok(class_hash);
                 }
                 Err(StateError::NoneContractState(_)) => {
                     return Ok([0; 32]);
@@ -115,8 +115,8 @@ impl<T: StateReader> StateReader for CachedState<T> {
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             match self.state_reader.get_storage_at(storage_entry) {
-                Ok(x) => {
-                    return Ok(x);
+                Ok(storage) => {
+                    return Ok(storage);
                 }
                 Err(
                     StateError::EmptyKeyInStorage
@@ -325,7 +325,7 @@ impl<T: StateReader> State for CachedState<T> {
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(x) => x,
+                Ok(class_hash) => class_hash,
                 Err(StateError::NoneContractState(_)) => [0; 32],
                 Err(e) => return Err(e),
             };
@@ -356,7 +356,7 @@ impl<T: StateReader> State for CachedState<T> {
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             let value = match self.state_reader.get_storage_at(storage_entry) {
-                Ok(x) => x,
+                Ok(value) => value,
                 Err(
                     StateError::EmptyKeyInStorage
                     | StateError::NoneStoragLeaf(_)
