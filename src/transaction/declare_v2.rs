@@ -47,7 +47,7 @@ pub struct DeclareV2 {
     pub sierra_contract_class: SierraContractClass,
     pub sierra_class_hash: Felt252,
     pub hash_value: Felt252,
-    pub casm_class: once_cell::unsync::OnceCell<CasmContractClass>,
+    pub casm_class: Option<CasmContractClass>,
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
@@ -58,6 +58,7 @@ impl DeclareV2 {
     /// It will calculate the sierra class hash and the transaction hash.
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
     /// - sender_address: The address of the account declaring the contract.
@@ -68,6 +69,7 @@ impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sierra_contract_class: &SierraContractClass,
+        casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
@@ -91,6 +93,7 @@ impl DeclareV2 {
         Self::new_with_sierra_class_hash_and_tx_hash(
             sierra_contract_class,
             sierra_class_hash,
+            casm_contract_class,
             compiled_class_hash,
             sender_address,
             max_fee,
@@ -105,6 +108,7 @@ impl DeclareV2 {
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
     /// - sierra_class_hash: The precomputed hash for the sierra contract
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - sender_address: The address of the account declaring the contract.
     /// - max_fee: refers to max amount of fee that a declare takes.
@@ -118,6 +122,7 @@ impl DeclareV2 {
     pub fn new_with_sierra_class_hash_and_tx_hash(
         sierra_contract_class: &SierraContractClass,
         sierra_class_hash: Felt252,
+        casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
         max_fee: u128,
@@ -140,7 +145,7 @@ impl DeclareV2 {
             nonce,
             compiled_class_hash,
             hash_value,
-            casm_class: Default::default(),
+            casm_class: casm_contract_class,
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
@@ -158,7 +163,8 @@ impl DeclareV2 {
 
     // creates a new instance of a declare but without the computation of the transaction hash.
     /// ## Parameters:
-    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - sierra_contract_class: The sierra contract class of the contract to declare.
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - sender_address: The address of the account declaring the contract.
     /// - max_fee: refers to max amount of fee that a declare takes.
@@ -169,6 +175,7 @@ impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
         sierra_contract_class: &SierraContractClass,
+        casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
         max_fee: u128,
@@ -182,6 +189,7 @@ impl DeclareV2 {
         Self::new_with_sierra_class_hash_and_tx_hash(
             sierra_contract_class,
             sierra_class_hash,
+            casm_contract_class,
             compiled_class_hash,
             sender_address,
             max_fee,
@@ -196,6 +204,7 @@ impl DeclareV2 {
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
     /// - sierra_class_hash: The precomputed hash for the sierra contract
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
     /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
     /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
     /// - sender_address: The address of the account declaring the contract.
@@ -207,6 +216,7 @@ impl DeclareV2 {
     pub fn new_with_sierra_class_hash(
         sierra_contract_class: &SierraContractClass,
         sierra_class_hash: Felt252,
+        casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
@@ -228,6 +238,7 @@ impl DeclareV2 {
         Self::new_with_sierra_class_hash_and_tx_hash(
             sierra_contract_class,
             sierra_class_hash,
+            casm_contract_class,
             compiled_class_hash,
             sender_address,
             max_fee,
@@ -377,14 +388,15 @@ impl DeclareV2 {
         &self,
         state: &mut S,
     ) -> Result<(), TransactionError> {
-        let casm_class = self
-            .casm_class
-            .get_or_try_init(|| {
+        let casm_class = match &self.casm_class {
+            None => {
                 CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
-            })
-            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?;
+                    .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
+            }
+            Some(casm_contract_class) => casm_contract_class.clone(),
+        };
 
-        let casm_class_hash = compute_casm_class_hash(casm_class)?;
+        let casm_class_hash = compute_casm_class_hash(&casm_class)?;
         if casm_class_hash != self.compiled_class_hash {
             return Err(TransactionError::InvalidCompiledClassHash(
                 casm_class_hash.to_string(),
@@ -392,7 +404,7 @@ impl DeclareV2 {
             ));
         }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
-        state.set_compiled_class(&self.compiled_class_hash, casm_class.clone())?;
+        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
 
         Ok(())
     }
@@ -478,7 +490,7 @@ mod tests {
     use num_traits::{One, Zero};
 
     #[test]
-    fn create_declare_v2_test() {
+    fn create_declare_v2_without_casm_contract_class_test() {
         // read file to create sierra contract class
         let version;
         let path;
@@ -507,6 +519,76 @@ mod tests {
 
         let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
+            None,
+            casm_class_hash,
+            sender_address,
+            0,
+            version,
+            [1.into()].to_vec(),
+            Felt252::zero(),
+            Felt252::one(),
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = HashMap::new();
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(internal_declare
+            .compile_and_store_casm_class(&mut state)
+            .is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            internal_declare.sierra_contract_class.clone(),
+            true,
+        )
+        .unwrap();
+
+        let casm_class = match state
+            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .unwrap()
+        {
+            CompiledClass::Casm(casm) => *casm,
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_with_casm_contract_class_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        // create internal declare v2
+
+        let internal_declare = DeclareV2::new_with_tx_hash(
+            &sierra_contract_class,
+            Some(casm_class),
             casm_class_hash,
             sender_address,
             0,
@@ -577,6 +659,7 @@ mod tests {
         let internal_declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
             &sierra_contract_class,
             sierra_class_hash,
+            Some(casm_class),
             casm_class_hash,
             sender_address,
             0,
@@ -613,5 +696,134 @@ mod tests {
         };
 
         assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_with_casm_contract_class_none_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        // create internal declare v2
+
+        let internal_declare = DeclareV2::new_with_tx_hash(
+            &sierra_contract_class,
+            None,
+            casm_class_hash,
+            sender_address,
+            0,
+            version,
+            [1.into()].to_vec(),
+            Felt252::zero(),
+            Felt252::one(),
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = HashMap::new();
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(internal_declare
+            .compile_and_store_casm_class(&mut state)
+            .is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            internal_declare.sierra_contract_class.clone(),
+            true,
+        )
+        .unwrap();
+
+        let casm_class = match state
+            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .unwrap()
+        {
+            CompiledClass::Casm(casm) => *casm,
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_wrong_casm_class_hash_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        let sended_class_hash = Felt252::from(5);
+        // create internal declare v2
+
+        let internal_declare = DeclareV2::new_with_tx_hash(
+            &sierra_contract_class,
+            None,
+            sended_class_hash.clone(),
+            sender_address,
+            0,
+            version,
+            [1.into()].to_vec(),
+            Felt252::zero(),
+            Felt252::one(),
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = HashMap::new();
+        let state_reader = InMemoryStateReader::default();
+        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+
+        let expected_err = format!(
+            "Invalid compiled class, expected class hash: {}, but received: {}",
+            casm_class_hash, sended_class_hash
+        );
+        assert_eq!(
+            internal_declare
+                .compile_and_store_casm_class(&mut state)
+                .unwrap_err()
+                .to_string(),
+            expected_err
+        );
     }
 }
