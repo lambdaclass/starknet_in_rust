@@ -836,7 +836,7 @@ mod test {
             tx_type: TransactionType::Declare,
             validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
             version: 1.into(),
-            max_fee: 100_000_000,
+            max_fee: INITIAL_GAS_COST,
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
