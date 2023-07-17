@@ -532,7 +532,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
 
         // call compile and store
@@ -741,7 +741,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
 
         // call compile and store
@@ -811,7 +811,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
 
         let expected_err = format!(
