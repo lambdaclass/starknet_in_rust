@@ -116,7 +116,7 @@ impl L1Handler {
             revert_error,
             ..
         } = if self.skip_execute {
-            ExecutionResult::empty()
+            ExecutionResult::default()
         } else {
             entrypoint.execute(
                 state,

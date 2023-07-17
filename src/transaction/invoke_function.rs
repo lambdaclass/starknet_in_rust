@@ -239,7 +239,7 @@ impl InvokeFunction {
             revert_error,
             ..
         } = if self.skip_execute {
-            ExecutionResult::empty()
+            ExecutionResult::default()
         } else {
             self.run_execute_entrypoint(
                 state,
@@ -1131,6 +1131,7 @@ mod tests {
         );
     }
 
+    #[test]
     fn invoke_version_one_with_no_nonce_with_query_base() {
         let expected_error = preprocess_invoke_function_fields(
             Felt252::from_str_radix(

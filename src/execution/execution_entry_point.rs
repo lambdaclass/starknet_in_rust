@@ -41,21 +41,11 @@ use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ExecutionResult {
     pub call_info: Option<CallInfo>,
     pub revert_error: Option<String>,
     pub n_reverted_steps: usize,
-}
-
-impl ExecutionResult {
-    pub fn empty() -> Self {
-        Self {
-            call_info: None,
-            revert_error: None,
-            n_reverted_steps: 0,
-        }
-    }
 }
 
 /// Represents a Cairo entry point execution of a StarkNet contract.

@@ -415,7 +415,7 @@ impl DeclareV2 {
             self.get_execution_context(block_context.validate_max_n_steps);
 
         let ExecutionResult { call_info, .. } = if self.skip_execute {
-            ExecutionResult::empty()
+            ExecutionResult::default()
         } else {
             entry_point.execute(
                 state,
@@ -575,7 +575,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
-        let state_reader = InMemoryStateReader::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
 
         // call compile and store

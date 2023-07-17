@@ -279,7 +279,7 @@ impl DeployAccount {
         );
 
         let ExecutionResult { call_info, .. } = if self.skip_execute {
-            ExecutionResult::empty()
+            ExecutionResult::default()
         } else {
             entry_point.execute(
                 state,
@@ -336,7 +336,7 @@ impl DeployAccount {
         );
 
         let ExecutionResult { call_info, .. } = if self.skip_execute {
-            ExecutionResult::empty()
+            ExecutionResult::default()
         } else {
             call.execute(
                 state,
