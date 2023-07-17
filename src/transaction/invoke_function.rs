@@ -417,9 +417,7 @@ mod tests {
     use crate::{
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        utils::calculate_sn_keccak,
     };
-    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
     use std::{collections::HashMap, sync::Arc};
 
