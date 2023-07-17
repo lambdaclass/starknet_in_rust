@@ -391,7 +391,9 @@ mod tests {
     use crate::{
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+        utils::calculate_sn_keccak,
     };
+    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
     use std::{collections::HashMap, sync::Arc};
 
@@ -1024,5 +1026,85 @@ mod tests {
             &1.into() | &QUERY_VERSION_BASE.clone(),
         );
         assert!(expected_error.is_err());
+    }
+
+    #[test]
+    fn test_reverted_transaction_wrong_entry_point() {
+        let internal_invoke_function = InvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_bytes_be(&calculate_sn_keccak(
+                "factorial_".as_bytes(),
+            )),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![],
+            tx_type: TransactionType::InvokeFunction,
+            version: 0.into(),
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: Some(0.into()),
+            skip_validation: true,
+            skip_execute: false,
+            skip_fee_transfer: true,
+        };
+
+        let mut state_reader = InMemoryStateReader::default();
+        let class_hash = [1; 32];
+        let program_data = include_bytes!("../../starknet_programs/cairo1/factorial.casm");
+        let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut casm_contract_class_cache = HashMap::new();
+
+        casm_contract_class_cache.insert(class_hash, contract_class);
+
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            None,
+            Some(casm_contract_class_cache),
+        );
+
+        let state_before_execution = state.clone();
+
+        let result = internal_invoke_function
+            .execute(&mut state, &BlockContext::default(), 0)
+            .unwrap();
+
+        assert!(result.call_info.is_none());
+        assert_eq!(
+            result.revert_error,
+            Some("Requested entry point was not found".to_string())
+        );
+        assert_eq!(
+            state.cache.class_hash_writes,
+            state_before_execution.cache.class_hash_writes
+        );
+        assert_eq!(
+            state.cache.compiled_class_hash_writes,
+            state_before_execution.cache.compiled_class_hash_writes
+        );
+        assert_eq!(
+            state.cache.nonce_writes,
+            state_before_execution.cache.nonce_writes
+        );
+        assert_eq!(
+            state.cache.storage_writes,
+            state_before_execution.cache.storage_writes
+        );
+        assert_eq!(
+            state.cache.class_hash_to_compiled_class_hash,
+            state_before_execution
+                .cache
+                .class_hash_to_compiled_class_hash
+        );
     }
 }
