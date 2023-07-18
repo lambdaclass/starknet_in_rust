@@ -263,9 +263,7 @@ impl DeployAccount {
                 self.nonce.to_string(),
             ));
         }
-        println!("before increment nonce");
         state.increment_nonce(&self.contract_address)?;
-        println!("after increment nonce");
         Ok(())
     }
 
