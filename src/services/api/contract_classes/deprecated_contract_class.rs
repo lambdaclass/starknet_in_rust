@@ -247,8 +247,6 @@ pub(crate) fn to_cairo_runner_program(
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use crate::core::contract_address::compute_deprecated_class_hash;
 
     use super::*;
@@ -415,10 +413,10 @@ mod tests {
 
     #[test]
     fn test_from_program_json_and_class_hash_should_equal_from_path() {
-        let path = "starknet_programs/fibonacci.json";
-        let contract_class_from_path =
-            ContractClass::from_path(path).expect("should be able to read file");
-        let program_json = fs::read_to_string(path).expect("should be able to read file");
+        let program_json = include_str!("../../../../starknet_programs/fibonacci.json");
+        let contract_class_from_path = ContractClass::from_path("starknet_programs/fibonacci.json")
+            .expect("should be able to read file");
+
         let contract_class_from_program_json_and_class_hash =
             ContractClass::from_program_json_and_class_hash(
                 &program_json,
