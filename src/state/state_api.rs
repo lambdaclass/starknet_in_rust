@@ -67,6 +67,7 @@ pub trait State {
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError>;
 
+    /// Default: 0 for an uninitialized contract address.
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError>;
 
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError>;
