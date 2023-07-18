@@ -12,7 +12,7 @@ pub(crate) enum ResponseBody {
     GetExecutionInfo { exec_info_ptr: Relocatable },
     GetBlockHash(GetBlockHashResponse),
 }
-/// Wraps around any response body.
+/// Wraps around any response body. It also contains the remaining gas after the execution.
 #[allow(unused)]
 pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
@@ -67,14 +67,14 @@ impl SyscallResponse {
 //   Response objects
 // ----------------------
 
-/// Gets the timestamp of the block in which the transaction is executed.
+/// Represents the response of get_block_timestamp syscall.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GetBlockTimestampResponse {
-    /// The returned timestamp.
+    /// The block timestamp.
     pub timestamp: Felt252,
 }
 
-/// Deploys a new instance of a previously declared class.
+/// Represents the response of deploy syscall.
 pub struct DeployResponse {
     /// Address of the deployed contract.
     pub contract_address: Felt252,
@@ -95,7 +95,7 @@ pub struct FailureReason {
     //pub(crate) body: Option<ResponseBody>,
 }
 
-/// Calls a given contract.
+/// Represents the response of call_contract syscall
 #[derive(Clone, Debug, PartialEq)]
 pub struct CallContractResponse {
     /// The retdata segment start.
@@ -104,7 +104,7 @@ pub struct CallContractResponse {
     pub retdata_end: Relocatable,
 }
 
-/// Gets the hash value of a block.
+/// Represents the response of get_block_hash syscall
 #[derive(Clone, Debug, PartialEq)]
 pub struct GetBlockHashResponse {
     /// The returned hash.
