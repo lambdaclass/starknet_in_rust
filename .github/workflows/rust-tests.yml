@@ -76,6 +76,8 @@ jobs:
       run: make deps
     - name: Run tests
       run: make test
+    - name: Run doctests
+      run: cargo test --workspace --doc
 
   # 28.06.2023: This job uses unmaintained actions-rs because dtolnay is giving linking errors with nightly
   coverage:
