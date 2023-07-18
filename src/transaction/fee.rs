@@ -152,7 +152,12 @@ pub fn charge_fee<S: StateReader>(
         block_context.starknet_os_config.gas_price,
         block_context,
     )?;
-    let actual_fee = min(actual_fee, max_fee) * FEE_FACTOR;
+
+    let actual_fee = if tx_execution_context.version != 0.into() {
+        min(actual_fee, max_fee) * FEE_FACTOR
+    } else {
+        actual_fee
+    };
 
     let fee_transfer_info = if skip_fee_transfer {
         None
