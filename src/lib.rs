@@ -287,7 +287,7 @@ mod test {
         let transaction = Transaction::InvokeFunction(invoke_function);
 
         let estimated_fee = estimate_fee(&[transaction], state, &block_context).unwrap();
-        assert_eq!(estimated_fee[0], (12, 0));
+        assert_eq!(estimated_fee[0], (30, 0));
     }
 
     #[test]
@@ -375,15 +375,10 @@ mod test {
         state.set_contract_classes(contract_classes).unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
         block_context.starknet_os_config.gas_price = 1;
 
         let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
-        assert_eq!(estimated_fee, (20081, 18471));
+        assert_eq!(estimated_fee, (18484, 18471));
     }
 
     #[test]
@@ -921,11 +916,6 @@ mod test {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
         block_context.starknet_os_config.gas_price = 1;
 
         simulate_transaction(
