@@ -34,7 +34,7 @@ use std::vec;
 /// # Examples
 ///
 /// ```
-/// use starknet_in_rust::{hash_utils::calculate_contract_address, utils::Address, Felt252};
+/// use starknet_in_rust::{hash_utils::calculate_contract_address, utils::Address, felt::Felt252};
 ///
 /// let salt = Felt252::from(123_u16);
 /// let class_hash = Felt252::from(456_u16);
@@ -92,7 +92,7 @@ pub fn calculate_contract_address(
 /// # Examples
 ///
 /// ```
-/// use starknet_in_rust::Felt252;
+/// use starknet_in_rust::felt::Felt252;
 /// use starknet_in_rust::hash_utils::compute_hash_on_elements;
 ///
 /// let input_vec = vec![
