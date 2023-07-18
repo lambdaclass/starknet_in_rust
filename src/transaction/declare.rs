@@ -267,8 +267,8 @@ impl Declare {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
+        let mut tx_exec_info = self.apply(state, block_context)?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);

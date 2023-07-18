@@ -274,8 +274,8 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
         self.handle_nonce(state)?;
+        let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
