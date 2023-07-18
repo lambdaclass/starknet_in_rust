@@ -129,10 +129,10 @@ $(cairo-repo-2-dir):
 # =================
 
 build: compile-cairo compile-starknet
-	cargo build --release --all
+	cargo build --release --workspace
 
 check: compile-cairo compile-starknet
-	cargo check --all --all-targets
+	cargo check --workspace --all-targets
 
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
@@ -163,13 +163,13 @@ clean:
 	-rm -rf cairo-1.1.1.tar
 
 clippy: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
-	cargo clippy --all --all-targets -- -D warnings
+	cargo clippy --workspace --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_1_COMPILED_SIERRA_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 	echo "Cairo1 tests"
-	cargo test --release --all --all-targets --features=cairo_1_tests
+	cargo test --workspace --all-targets --features=cairo_1_tests
 	echo "Cairo2 tests"
-	cargo test --release --all --all-targets
+	cargo test --workspace --all-targets
 
 coverage: compile-cairo compile-starknet compile-abi $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs' --release
