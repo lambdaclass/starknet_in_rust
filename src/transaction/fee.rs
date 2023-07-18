@@ -156,6 +156,11 @@ pub fn charge_fee<S: StateReader>(
     let actual_fee = if tx_execution_context.version != 0.into() {
         min(actual_fee, max_fee) * FEE_FACTOR
     } else {
+        if actual_fee > max_fee {
+            return Err(TransactionError::ActualFeeExceedsMaxFee(
+                actual_fee, max_fee,
+            ));
+        }
         actual_fee
     };
 
