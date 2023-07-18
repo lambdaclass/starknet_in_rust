@@ -1437,7 +1437,7 @@ dependencies = [
 
 [[package]]
 name = "fuzzer"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cairo-vm",
  "honggfuzz",
@@ -2792,7 +2792,7 @@ dependencies = [
 
 [[package]]
 name = "starknet-rs-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "actix-web",
  "assert_matches",
@@ -2826,7 +2826,7 @@ dependencies = [
 
 [[package]]
 name = "starknet_in_rust"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "assert_matches",
