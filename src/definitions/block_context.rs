@@ -1,5 +1,6 @@
 use crate::{state::BlockInfo, utils::Address};
 use cairo_vm::felt::Felt252;
+use core::fmt;
 use getset::{CopyGetters, Getters, MutGetters};
 use starknet_api::block::Block;
 use std::collections::HashMap;
@@ -17,14 +18,13 @@ pub enum StarknetChainId {
     TestNet2,
 }
 
-impl ToString for StarknetChainId {
-    fn to_string(&self) -> String {
+impl fmt::Display for StarknetChainId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StarknetChainId::MainNet => "SN_MAIN",
-            StarknetChainId::TestNet => "SN_GOERLI",
-            StarknetChainId::TestNet2 => "SN_GOERLI2",
+            StarknetChainId::MainNet => write!(f, "SN_MAIN"),
+            StarknetChainId::TestNet => write!(f, "SN_GOERLI"),
+            StarknetChainId::TestNet2 => write!(f, "SN_GOERLI2"),
         }
-        .to_string()
     }
 }
 
