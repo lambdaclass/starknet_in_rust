@@ -419,7 +419,7 @@ mod tests {
 
         let contract_class_from_program_json_and_class_hash =
             ContractClass::from_program_json_and_class_hash(
-                &program_json,
+                program_json,
                 contract_class_from_path.hinted_class_hash.clone(),
             )
             .expect("should be able to read file");
