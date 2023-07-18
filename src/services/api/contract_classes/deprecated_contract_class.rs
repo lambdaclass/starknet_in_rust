@@ -128,6 +128,23 @@ impl ContractClass {
         })
     }
 
+    pub fn from_program_json_and_class_hash(
+        program_json: &str,
+        hinted_class_hash: Felt252,
+    ) -> Result<Self, ContractClassError> {
+        let contract_class: starknet_api::deprecated_contract_class::ContractClass =
+            serde_json::from_str(program_json).map_err(|_| ContractClassError::ParseError)?;
+        let program = to_cairo_runner_program(contract_class.program)
+            .map_err(|e| ContractClassError::ProgramError(e.to_string()))?;
+        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
+        Ok(ContractClass {
+            hinted_class_hash,
+            program,
+            entry_points_by_type,
+            abi: contract_class.abi,
+        })
+    }
+
     /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
     /// at the given file path.
     pub fn from_path<F>(path: F) -> Result<Self, ProgramError>
@@ -230,6 +247,8 @@ pub(crate) fn to_cairo_runner_program(
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use crate::core::contract_address::compute_deprecated_class_hash;
 
     use super::*;
@@ -392,5 +411,23 @@ mod tests {
         );
 
         res.expect("should be able to read file");
+    }
+
+    #[test]
+    fn test_from_program_json_and_class_hash_should_equal_from_path() {
+        let path = "starknet_programs/fibonacci.json";
+        let contract_class_from_path =
+            ContractClass::from_path(path).expect("should be able to read file");
+        let program_json = fs::read_to_string(path).expect("should be able to read file");
+        let contract_class_from_program_json_and_class_hash =
+            ContractClass::from_program_json_and_class_hash(
+                &program_json,
+                contract_class_from_path.hinted_class_hash.clone(),
+            )
+            .expect("should be able to read file");
+        assert_eq!(
+            contract_class_from_path,
+            contract_class_from_program_json_and_class_hash
+        );
     }
 }
