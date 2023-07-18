@@ -1,3 +1,4 @@
+use super::fee::charge_fee;
 use super::{verify_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::constants::QUERY_VERSION_BASE;
@@ -13,23 +14,18 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType,
-        TransactionExecutionContext, TransactionExecutionInfo,
+        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-        invoke_function::verify_no_calls_to_other_contracts,
-    },
+    transaction::{error::TransactionError, invoke_function::verify_no_calls_to_other_contracts},
     utils::{calculate_tx_resources, Address},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use std::collections::HashMap;
 
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
@@ -274,43 +270,6 @@ impl DeclareV2 {
         Vec::from([bytes])
     }
 
-    /// Calculates and charges the actual fee.
-    /// ## Parameter:
-    /// - state: An state that implements the State and StateReader traits.
-    /// - resources: the resources that are in use by the contract
-    /// - block_context: The block that contains the execution context
-    pub fn charge_fee<S: StateReader>(
-        &self,
-        state: &mut CachedState<S>,
-        resources: &HashMap<String, usize>,
-        block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError> {
-        if self.max_fee.is_zero() {
-            return Ok((None, 0));
-        }
-
-        let actual_fee = calculate_tx_fee(
-            resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
-
-        let mut tx_execution_context =
-            self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info = if self.skip_fee_transfer {
-            None
-        } else {
-            Some(execute_fee_transfer(
-                state,
-                block_context,
-                &mut tx_execution_context,
-                actual_fee,
-            )?)
-        };
-
-        Ok((fee_transfer_info, actual_fee))
-    }
-
     // TODO: delete once used
     #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
@@ -347,8 +306,8 @@ impl DeclareV2 {
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let (validate_info, _remaining_gas) = if self.skip_validate {
-            (None, 0)
+        let (execution_result, _remaining_gas) = if self.skip_validate {
+            (ExecutionResult::default(), 0)
         } else {
             let (info, gas) = self.run_validate_entrypoint(
                 initial_gas,
@@ -356,24 +315,33 @@ impl DeclareV2 {
                 &mut resources_manager,
                 block_context,
             )?;
-            (Some(info), gas)
+            (info, gas)
         };
 
         let storage_changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[validate_info.clone()],
+            &[execution_result.call_info.clone()],
             self.tx_type,
             storage_changes,
             None,
+            execution_result.n_reverted_steps,
         )?;
 
-        let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &actual_resources, block_context)?;
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps);
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            &actual_resources,
+            block_context,
+            self.max_fee,
+            &mut tx_execution_context,
+            self.skip_fee_transfer,
+        )?;
         self.compile_and_store_casm_class(state)?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
-            validate_info,
+            execution_result.call_info,
             None,
             None,
             actual_resources,
@@ -415,7 +383,7 @@ impl DeclareV2 {
         state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
-    ) -> Result<(CallInfo, u128), TransactionError> {
+    ) -> Result<(ExecutionResult, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
         let entry_point = ExecutionEntryPoint {
@@ -433,7 +401,7 @@ impl DeclareV2 {
         let mut tx_execution_context =
             self.get_execution_context(block_context.validate_max_n_steps);
 
-        let ExecutionResult { call_info, .. } = if self.skip_execute {
+        let execution_result = if self.skip_execute {
             ExecutionResult::default()
         } else {
             entry_point.execute(
@@ -445,10 +413,13 @@ impl DeclareV2 {
                 block_context.validate_max_n_steps,
             )?
         };
-        let call_info = verify_no_calls_to_other_contracts(&call_info)?;
-        remaining_gas -= call_info.gas_consumed;
 
-        Ok((call_info, remaining_gas))
+        if execution_result.call_info.is_some() {
+            verify_no_calls_to_other_contracts(&execution_result.call_info)?;
+            remaining_gas -= execution_result.call_info.clone().unwrap().gas_consumed;
+        }
+
+        Ok((execution_result, remaining_gas))
     }
 
     // ---------------
