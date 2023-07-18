@@ -300,6 +300,8 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use crate::{
         add_segments,
@@ -312,12 +314,12 @@ mod tests {
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
-            CachedState<InMemoryStateReader>,
+            InMemoryStateReader,
         >;
 
     #[test]
     fn write_get_caller_address_response() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 

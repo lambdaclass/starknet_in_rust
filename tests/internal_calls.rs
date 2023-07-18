@@ -1,5 +1,7 @@
 #![deny(warnings)]
 
+use std::sync::Arc;
+
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use starknet_in_rust::EntryPointType;
@@ -44,7 +46,7 @@ fn test_internal_calls() {
         .insert(storage_entry, storage);
 
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some([([0x01; 32], contract_class)].into_iter().collect()),
         None,
     );
@@ -70,8 +72,11 @@ fn test_internal_calls() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .expect("Could not execute contract");
+
+    let call_info = call_info.call_info.unwrap();
 
     assert_eq!(call_info.internal_calls.len(), 1);
     assert_eq!(call_info.internal_calls[0].internal_calls.len(), 1);
