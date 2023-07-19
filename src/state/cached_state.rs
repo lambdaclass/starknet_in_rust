@@ -212,33 +212,6 @@ impl<T: StateReader> State for CachedState<T> {
         Ok(())
     }
 
-    fn deploy_contract(
-        &mut self,
-        deploy_contract_address: Address,
-        class_hash: ClassHash,
-    ) -> Result<(), StateError> {
-        if deploy_contract_address == Address(0.into()) {
-            return Err(StateError::ContractAddressOutOfRangeAddress(
-                deploy_contract_address.clone(),
-            ));
-        }
-
-        match self.get_class_hash_at(&deploy_contract_address) {
-            Ok(x) if x == [0; 32] => {}
-            Ok(_) => {
-                return Err(StateError::ContractAddressUnavailable(
-                    deploy_contract_address.clone(),
-                ))
-            }
-            _ => {}
-        }
-
-        self.cache
-            .class_hash_writes
-            .insert(deploy_contract_address.clone(), class_hash);
-        Ok(())
-    }
-
     fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError> {
         let new_nonce = self.get_nonce_at(contract_address)? + Felt252::from(1);
         self.cache
@@ -550,9 +523,11 @@ mod tests {
 
         let mut cached_state = CachedState::new(state_reader, None, None);
 
-        assert!(cached_state
-            .deploy_contract(contract_address, [10; 32])
-            .is_ok());
+        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
+
+        cached_state
+            .set_class_hash_at(contract_address.clone(), [10; 32])
+            .unwrap();
     }
 
     #[test]
@@ -616,8 +591,10 @@ mod tests {
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
+        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
+
         let result = cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
+            .set_class_hash_at(contract_address.clone(), [10; 32])
             .unwrap_err();
 
         assert_matches!(
@@ -640,13 +617,18 @@ mod tests {
         let contract_address = Address(42.into());
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
 
         cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
+            .set_class_hash_at(contract_address.clone(), [10; 32])
             .unwrap();
-        let result = cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
-            .unwrap_err();
+
+        let result = match cached_state.get_class_hash_at(&contract_address) {
+            Ok(x) if x == [0; 32] => Ok(()),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address.clone()).into()),
+            _ => Ok(()),
+        }
+        .unwrap_err();
 
         assert_matches!(
             result,
@@ -669,13 +651,15 @@ mod tests {
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
+        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
+
         cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
+            .set_class_hash_at(contract_address.clone(), [10; 32])
             .unwrap();
 
-        assert!(cached_state
+        cached_state
             .set_class_hash_at(contract_address.clone(), [12; 32])
-            .is_ok());
+            .unwrap();
 
         assert_matches!(
             cached_state.get_class_hash_at(&contract_address),

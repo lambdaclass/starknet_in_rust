@@ -146,8 +146,19 @@ impl Deploy {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
+        let contract_address = self.contract_address.clone();
         let class_hash: ClassHash = self.contract_hash;
+
+        match state.get_class_hash_at(&contract_address) {
+            Ok(x) if x == [0; 32] => {}
+            Ok(_) => {
+                return Err(StateError::ContractAddressUnavailable(contract_address.clone()).into())
+            }
+            _ => {}
+        }
+
+        state.set_class_hash_at(contract_address, class_hash)?;
+
         let contract_class = state.get_contract_class(&class_hash)?;
 
         if self.constructor_entry_points_empty(contract_class)? {

@@ -196,8 +196,17 @@ impl DeployAccount {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
+        let contract_address = self.contract_address();
 
-        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
+        match state.get_class_hash_at(contract_address) {
+            Ok(x) if x == [0; 32] => {}
+            Ok(_) => {
+                return Err(StateError::ContractAddressUnavailable(contract_address.clone()).into())
+            }
+            _ => {}
+        }
+
+        state.set_class_hash_at(contract_address.clone(), *self.class_hash())?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
         let constructor_call_info =

@@ -331,9 +331,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
-        self.starknet_storage_state
-            .state
-            .deploy_contract(deploy_contract_address.clone(), class_hash_bytes)?;
+        let state = &mut self.starknet_storage_state.state;
+        match state.get_class_hash_at(&deploy_contract_address) {
+            Ok(x) if x == [0; 32] => {}
+            Ok(_) => {
+                return Err(
+                    StateError::ContractAddressUnavailable(deploy_contract_address.clone()).into(),
+                )
+            }
+            _ => {}
+        }
+        state.set_class_hash_at(deploy_contract_address.clone(), class_hash_bytes)?;
 
         self.execute_constructor_entry_point(
             &deploy_contract_address,

@@ -759,10 +759,19 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&request.class_hash);
 
-        if (self
-            .starknet_storage_state
-            .state
-            .deploy_contract(contract_address.clone(), class_hash_bytes))
+        if {
+            let state = &mut self.starknet_storage_state.state;
+            match state.get_class_hash_at(&contract_address) {
+                Ok(x) if x == [0; 32] => {}
+                Ok(_) => {
+                    return Err(
+                        StateError::ContractAddressUnavailable(contract_address.clone()).into(),
+                    )
+                }
+                _ => {}
+            }
+            state.set_class_hash_at(contract_address.clone(), class_hash_bytes)
+        }
         .is_err()
         {
             return Ok((
