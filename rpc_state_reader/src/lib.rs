@@ -1,12 +1,13 @@
+use serde::Deserialize;
 use starknet_in_rust::SierraContractClass;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     felt::{felt_str, Felt252},
-    services::api::contract_classes::{compiled_class::CompiledClass, deprecated_contract_class::ContractClass},
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{state_api::StateReader, state_cache::StorageEntry},
-    utils::{Address, ClassHash, CompiledClassHash}, CasmContractClass,
+    utils::{Address, ClassHash, CompiledClassHash},
 };
-use std::{env, str::FromStr};
+use std::env;
 
 pub struct RpcState {
     chain: String,
@@ -22,7 +23,11 @@ impl RpcState {
         }
     }
 
-    fn rpc_call(self: &Self, rpc_method: String, params: &[String]) -> RpcResponseString {
+    fn rpc_call<T: for<'a> Deserialize<'a>>(
+        self: &Self,
+        rpc_method: String,
+        params: &[String],
+    ) -> T {
         ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
             self.chain, self.api_key
@@ -40,8 +45,6 @@ impl RpcState {
     }
 }
 
-use serde::Deserialize;
-
 #[derive(Deserialize, Debug)]
 struct RpcResponseString {
     result: String,
@@ -54,41 +57,19 @@ struct RpcResponseValue {
 
 impl StateReader for RpcState {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        // let _resp = self.rpc_call(
-        //     "starknet_getClass".to_string(),
-        //     &[
-        //         "latest".to_owned(),
-        //         format!("0x{}", Felt252::from_bytes_be(class_hash).to_str_radix(16)),
-        //     ],
-        // );
-
-        let _resp: RpcResponseValue = ureq::post(&format!(
-            "https://{}.infura.io/v3/{}",
-            self.chain, self.api_key
-        ))
-        .set("Content-Type", "application/json")
-        .send_json(ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getClass",
-            "params": [
+        let _resp: RpcResponseValue = self.rpc_call(
+            "starknet_getClass".to_string(),
+            &[
                 "latest".to_owned(),
                 format!("0x{}", Felt252::from_bytes_be(class_hash).to_str_radix(16)),
             ],
-            "id": 1
-        }))
-        .unwrap()
-        .into_json()
-        .unwrap();
+        );
         println!("SierraContractClass {:?}", _resp.result);
-
-        //println!("SierraContractClass: {:?}", SierraContractClass::deserialize(_resp.result));
-        // let deprecated_contract_class = starknet_api::deprecated_contract_class::ContractClass::deserialize(_resp.result).unwrap();
-        // println!("deprecated contract_class: {:?}", deprecated_contract_class);
         todo!()
     }
 
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        let resp = self.rpc_call(
+        let resp: RpcResponseString = self.rpc_call(
             "starknet_getClassHashAt".to_string(),
             &[
                 "latest".to_string(),
@@ -101,7 +82,7 @@ impl StateReader for RpcState {
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
-        let resp = self.rpc_call(
+        let resp: RpcResponseString = self.rpc_call(
             "starknet_getNonce".to_string(),
             &[
                 "latest".to_string(),
@@ -114,7 +95,7 @@ impl StateReader for RpcState {
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        let resp = self.rpc_call(
+        let resp: RpcResponseString = self.rpc_call(
             "starknet_getStorageAt".to_string(),
             &[
                 format!("0x{}", storage_entry.0 .0.to_str_radix(16)),
