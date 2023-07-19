@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -34,7 +34,7 @@ jobs:
       run: make build
 
   format:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -57,7 +57,7 @@ jobs:
       run: make clippy
 
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -76,10 +76,12 @@ jobs:
       run: make deps
     - name: Run tests
       run: make test
+    - name: Run doctests
+      run: cargo test --workspace --doc
 
   # 28.06.2023: This job uses unmaintained actions-rs because dtolnay is giving linking errors with nightly
   coverage:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout
       uses: actions/checkout@v3

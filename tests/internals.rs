@@ -1251,12 +1251,6 @@ fn test_deploy_account() {
 
     assert_eq!(state, state_before);
 
-    // Statement **not** in blockifier.
-    state.cache_mut().nonce_initial_values_mut().insert(
-        deploy_account_tx.contract_address().clone(),
-        Felt252::zero(),
-    );
-
     let tx_info = deploy_account_tx
         .execute(&mut state, &block_context)
         .unwrap();
