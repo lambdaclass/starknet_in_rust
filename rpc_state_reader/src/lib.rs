@@ -1,11 +1,12 @@
+use starknet_in_rust::SierraContractClass;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     felt::{felt_str, Felt252},
-    services::api::contract_classes::compiled_class::CompiledClass,
+    services::api::contract_classes::{compiled_class::CompiledClass, deprecated_contract_class::ContractClass},
     state::{state_api::StateReader, state_cache::StorageEntry},
-    utils::{Address, ClassHash, CompiledClassHash},
+    utils::{Address, ClassHash, CompiledClassHash}, CasmContractClass,
 };
-use std::env;
+use std::{env, str::FromStr};
 
 pub struct RpcState {
     chain: String,
@@ -21,7 +22,7 @@ impl RpcState {
         }
     }
 
-    fn rpc_call(self: &Self, rpc_method: String, params: &[String]) -> RpcResponse {
+    fn rpc_call(self: &Self, rpc_method: String, params: &[String]) -> RpcResponseString {
         ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
             self.chain, self.api_key
@@ -42,23 +43,47 @@ impl RpcState {
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-struct RpcResponse {
-    #[allow(dead_code)]
-    jsonrpc: String,
-    #[allow(dead_code)]
-    id: u32,
+struct RpcResponseString {
     result: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct RpcResponseValue {
+    result: SierraContractClass,
 }
 
 impl StateReader for RpcState {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let _resp = self.rpc_call(
-            "starknet_getClass".to_string(),
-            &[
+        // let _resp = self.rpc_call(
+        //     "starknet_getClass".to_string(),
+        //     &[
+        //         "latest".to_owned(),
+        //         format!("0x{}", Felt252::from_bytes_be(class_hash).to_str_radix(16)),
+        //     ],
+        // );
+
+        let _resp: RpcResponseValue = ureq::post(&format!(
+            "https://{}.infura.io/v3/{}",
+            self.chain, self.api_key
+        ))
+        .set("Content-Type", "application/json")
+        .send_json(ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getClass",
+            "params": [
                 "latest".to_owned(),
                 format!("0x{}", Felt252::from_bytes_be(class_hash).to_str_radix(16)),
             ],
-        );
+            "id": 1
+        }))
+        .unwrap()
+        .into_json()
+        .unwrap();
+        println!("SierraContractClass {:?}", _resp.result);
+
+        //println!("SierraContractClass: {:?}", SierraContractClass::deserialize(_resp.result));
+        // let deprecated_contract_class = starknet_api::deprecated_contract_class::ContractClass::deserialize(_resp.result).unwrap();
+        // println!("deprecated contract_class: {:?}", deprecated_contract_class);
         todo!()
     }
 
@@ -115,15 +140,33 @@ impl StateReader for RpcState {
 
 #[cfg(test)]
 mod tests {
-    use starknet_in_rust::felt::felt_str;
-
     use super::*;
 
     #[test]
-    fn test_get_contract_class() {
+    fn test_get_contract_class_cairo1() {
         let rpc_state = RpcState::new("starknet-mainnet".to_string());
+        // This belongs to
+        // https://starkscan.co/class/0x0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216
+        // which is cairo1.0
+
         let class_hash = felt_str!(
-            "03fb1d856d6c43f3c1ce4b385a1962f1e545a7efdabfec3210a4ad00afa7e73d",
+            "0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216",
+            16
+        );
+        rpc_state
+            .get_contract_class(&class_hash.to_be_bytes())
+            .unwrap();
+    }
+
+    #[test]
+    fn test_get_contract_class_cairo0() {
+        let rpc_state = RpcState::new("starknet-mainnet".to_string());
+        // This belongs to
+        // https://starkscan.co/class/0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3
+        // which is cairo0
+
+        let class_hash = felt_str!(
+            "00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3",
             16
         );
         rpc_state
