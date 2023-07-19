@@ -526,7 +526,7 @@ mod tests {
         assert!(cached_state.get_class_hash_at(&contract_address).is_err());
 
         cached_state
-            .set_class_hash_at(contract_address.clone(), [10; 32])
+            .set_class_hash_at(contract_address, [10; 32])
             .unwrap();
     }
 
