@@ -236,9 +236,6 @@ impl<T: StateReader> State for CachedState<T> {
         self.cache
             .class_hash_writes
             .insert(deploy_contract_address.clone(), class_hash);
-        self.cache
-            .nonce_writes_mut()
-            .insert(deploy_contract_address, Felt252::zero());
         Ok(())
     }
 
@@ -347,10 +344,11 @@ impl<T: StateReader> State for CachedState<T> {
                 .nonce_initial_values
                 .insert(contract_address.clone(), nonce);
         }
-        self.cache
+        Ok(self
+            .cache
             .get_nonce(contract_address)
-            .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))
-            .cloned()
+            .unwrap_or(&Felt252::zero())
+            .clone())
     }
 
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {

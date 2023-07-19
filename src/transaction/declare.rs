@@ -18,10 +18,7 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-    },
+    transaction::error::TransactionError,
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
         ClassHash,
@@ -29,8 +26,8 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use std::collections::HashMap;
 
+use super::fee::charge_fee;
 use super::{verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,6 +173,7 @@ impl Declare {
             TransactionType::Declare,
             changes,
             None,
+            0,
         )
         .map_err(|_| TransactionError::ResourcesCalculation)?;
 
@@ -243,38 +241,6 @@ impl Declare {
         Ok(Some(call_info))
     }
 
-    /// Calculates and charges the actual fee.
-    pub fn charge_fee<S: StateReader>(
-        &self,
-        state: &mut CachedState<S>,
-        resources: &HashMap<String, usize>,
-        block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError> {
-        if self.max_fee.is_zero() {
-            return Ok((None, 0));
-        }
-
-        let actual_fee = calculate_tx_fee(
-            resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
-
-        let mut tx_execution_context =
-            self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info = if self.skip_fee_transfer {
-            None
-        } else {
-            Some(execute_fee_transfer(
-                state,
-                block_context,
-                &mut tx_execution_context,
-                actual_fee,
-            )?)
-        };
-        Ok((fee_transfer_info, actual_fee))
-    }
-
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(());
@@ -301,11 +267,19 @@ impl Declare {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_exec_info = self.apply(state, block_context)?;
         self.handle_nonce(state)?;
+        let mut tx_exec_info = self.apply(state, block_context)?;
 
-        let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps);
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            &tx_exec_info.actual_resources,
+            block_context,
+            self.max_fee,
+            &mut tx_execution_context,
+            self.skip_fee_transfer,
+        )?;
 
         state.set_contract_class(&self.class_hash, &self.contract_class)?;
 
@@ -444,6 +418,7 @@ mod tests {
         });
 
         let actual_resources = HashMap::from([
+            ("n_steps".to_string(), 2348),
             ("l1_gas_usage".to_string(), 0),
             ("range_check_builtin".to_string(), 57),
             ("pedersen_builtin".to_string(), 15),

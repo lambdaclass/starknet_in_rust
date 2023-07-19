@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -15,10 +13,7 @@ use crate::{
     },
     state::state_api::{State, StateReader},
     state::{cached_state::CachedState, ExecutionResourcesManager},
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-    },
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
 
@@ -27,7 +22,7 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
-use super::Transaction;
+use super::{fee::charge_fee, Transaction};
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -237,7 +232,7 @@ impl InvokeFunction {
         let ExecutionResult {
             call_info,
             revert_error,
-            ..
+            n_reverted_steps,
         } = if self.skip_execute {
             ExecutionResult::default()
         } else {
@@ -255,6 +250,7 @@ impl InvokeFunction {
             self.tx_type,
             changes,
             None,
+            n_reverted_steps,
         )?;
         let transaction_execution_info = TransactionExecutionInfo::new_without_fee_info(
             validate_info,
@@ -264,37 +260,6 @@ impl InvokeFunction {
             Some(self.tx_type),
         );
         Ok(transaction_execution_info)
-    }
-
-    fn charge_fee<S: StateReader>(
-        &self,
-        state: &mut CachedState<S>,
-        resources: &HashMap<String, usize>,
-        block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError> {
-        if self.max_fee.is_zero() {
-            return Ok((None, 0));
-        }
-        let actual_fee = calculate_tx_fee(
-            resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
-
-        let mut tx_execution_context =
-            self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let fee_transfer_info = if self.skip_fee_transfer {
-            None
-        } else {
-            Some(execute_fee_transfer(
-                state,
-                block_context,
-                &mut tx_execution_context,
-                actual_fee,
-            )?)
-        };
-
-        Ok((fee_transfer_info, actual_fee))
     }
 
     /// Calculates actual fee used by the transaction using the execution info returned by apply(),
@@ -309,11 +274,20 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
         self.handle_nonce(state)?;
+        let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
 
-        let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &tx_exec_info.actual_resources, block_context)?;
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            &tx_exec_info.actual_resources,
+            block_context,
+            self.max_fee,
+            &mut tx_execution_context,
+            self.skip_fee_transfer,
+        )?;
+
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
@@ -417,7 +391,9 @@ mod tests {
     use crate::{
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+        utils::calculate_sn_keccak,
     };
+    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
     use std::{collections::HashMap, sync::Arc};
 
@@ -781,12 +757,7 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
-        let mut block_context = BlockContext::default();
-        block_context.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
+        let block_context = BlockContext::default();
 
         let result = internal_invoke_function.execute(&mut state, &block_context, 0);
         assert!(result.is_err());
@@ -794,7 +765,8 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_fail() {
+    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_charge_max_fee() {
+        let max_fee = 5;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
@@ -809,11 +781,11 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 1000,
+            max_fee,
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
-            skip_fee_transfer: false,
+            skip_fee_transfer: true,
         };
 
         // Instantiate CachedState
@@ -842,19 +814,12 @@ mod tests {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.cairo_resource_fee_weights = HashMap::from([
-            (String::from("l1_gas_usage"), 0.into()),
-            (String::from("pedersen_builtin"), 16.into()),
-            (String::from("range_check_builtin"), 70.into()),
-        ]);
         block_context.starknet_os_config.gas_price = 1;
 
-        let error = internal_invoke_function.execute(&mut state, &block_context, 0);
-        assert!(error.is_err());
-        assert_matches!(
-            error.unwrap_err(),
-            TransactionError::ActualFeeExceedsMaxFee(_, _)
-        );
+        let tx = internal_invoke_function
+            .execute(&mut state, &block_context, 0)
+            .unwrap();
+        assert_eq!(tx.actual_fee, max_fee);
     }
 
     #[test]
@@ -1061,5 +1026,85 @@ mod tests {
             &1.into() | &QUERY_VERSION_BASE.clone(),
         );
         assert!(expected_error.is_err());
+    }
+
+    #[test]
+    fn test_reverted_transaction_wrong_entry_point() {
+        let internal_invoke_function = InvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_bytes_be(&calculate_sn_keccak(
+                "factorial_".as_bytes(),
+            )),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![],
+            tx_type: TransactionType::InvokeFunction,
+            version: 0.into(),
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            max_fee: 0,
+            nonce: Some(0.into()),
+            skip_validation: true,
+            skip_execute: false,
+            skip_fee_transfer: true,
+        };
+
+        let mut state_reader = InMemoryStateReader::default();
+        let class_hash = [1; 32];
+        let program_data = include_bytes!("../../starknet_programs/cairo1/factorial.casm");
+        let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+        let contract_address = Address(0.into());
+        let nonce = Felt252::zero();
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut casm_contract_class_cache = HashMap::new();
+
+        casm_contract_class_cache.insert(class_hash, contract_class);
+
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            None,
+            Some(casm_contract_class_cache),
+        );
+
+        let state_before_execution = state.clone();
+
+        let result = internal_invoke_function
+            .execute(&mut state, &BlockContext::default(), 0)
+            .unwrap();
+
+        assert!(result.call_info.is_none());
+        assert_eq!(
+            result.revert_error,
+            Some("Requested entry point was not found".to_string())
+        );
+        assert_eq!(
+            state.cache.class_hash_writes,
+            state_before_execution.cache.class_hash_writes
+        );
+        assert_eq!(
+            state.cache.compiled_class_hash_writes,
+            state_before_execution.cache.compiled_class_hash_writes
+        );
+        assert_eq!(
+            state.cache.nonce_writes,
+            state_before_execution.cache.nonce_writes
+        );
+        assert_eq!(
+            state.cache.storage_writes,
+            state_before_execution.cache.storage_writes
+        );
+        assert_eq!(
+            state.cache.class_hash_to_compiled_class_hash,
+            state_before_execution
+                .cache
+                .class_hash_to_compiled_class_hash
+        );
     }
 }

@@ -652,9 +652,9 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(10),
+            INITIAL_BALANCE.clone() - Felt252::from(24),
             Felt252::zero(),
-            Felt252::from(10),
+            Felt252::from(24),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
@@ -825,6 +825,7 @@ fn test_declare_tx() {
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
     let resources = HashMap::from([
+        ("n_steps".to_string(), 2348),
         ("range_check_builtin".to_string(), 57),
         ("pedersen_builtin".to_string(), 15),
         ("l1_gas_usage".to_string(), 0),
@@ -873,6 +874,7 @@ fn test_declarev2_tx() {
         .is_ok());
 
     let resources = HashMap::from([
+        ("n_steps".to_string(), 2348),
         ("range_check_builtin".to_string(), 57),
         ("pedersen_builtin".to_string(), 15),
         ("l1_gas_usage".to_string(), 0),
@@ -1091,6 +1093,7 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
+        ("n_steps".to_string(), 2921),
         ("pedersen_builtin".to_string(), 16),
         ("l1_gas_usage".to_string(), 0),
         ("range_check_builtin".to_string(), 72),
@@ -1110,7 +1113,17 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
 fn expected_fib_transaction_execution_info(
     block_context: &BlockContext,
 ) -> TransactionExecutionInfo {
+    let n_steps;
+    #[cfg(not(feature = "cairo_1_tests"))]
+    {
+        n_steps = 3017;
+    }
+    #[cfg(feature = "cairo_1_tests")]
+    {
+        n_steps = 3020;
+    }
     let resources = HashMap::from([
+        ("n_steps".to_string(), n_steps),
         ("l1_gas_usage".to_string(), 4896),
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 75),
@@ -1238,12 +1251,6 @@ fn test_deploy_account() {
 
     assert_eq!(state, state_before);
 
-    // Statement **not** in blockifier.
-    state.cache_mut().nonce_initial_values_mut().insert(
-        deploy_account_tx.contract_address().clone(),
-        Felt252::zero(),
-    );
-
     let tx_info = deploy_account_tx
         .execute(&mut state, &block_context)
         .unwrap();
@@ -1287,6 +1294,7 @@ fn test_deploy_account() {
     );
 
     let resources = HashMap::from([
+        ("n_steps".to_string(), 3111),
         ("range_check_builtin".to_string(), 74),
         ("pedersen_builtin".to_string(), 23),
         ("l1_gas_usage".to_string(), 3672),
@@ -1294,14 +1302,14 @@ fn test_deploy_account() {
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, expected_fee);
+    assert_eq!(fee, 3704);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
         expected_execute_call_info.into(),
         None,
         expected_fee_transfer_call_info.into(),
-        fee,
+        expected_fee,
         // Entry **not** in blockifier.
         // Default::default(),
         resources,
@@ -1316,7 +1324,7 @@ fn test_deploy_account() {
 
     let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
-    validate_final_balances(&mut state, &block_context, &hash, fee);
+    validate_final_balances(&mut state, &block_context, &hash, expected_fee);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -1554,7 +1562,7 @@ fn test_state_for_declare_tx() {
         ])
     );
 
-    let fee = Felt252::from(10);
+    let fee = Felt252::from(24);
 
     // Check state.cache
     assert_eq!(

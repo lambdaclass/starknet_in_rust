@@ -324,7 +324,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
+        core::contract_address::compute_deprecated_class_hash,
         definitions::{
             constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType,
         },
@@ -358,6 +358,7 @@ mod tests {
 
         let mut actual_resources = HashMap::new();
         actual_resources.insert("l1_gas_usage".to_string(), 1224);
+        actual_resources.insert("n_steps".to_string(), 0);
 
         let transaction_exec_info = TransactionExecutionInfo {
             validate_info: None,
@@ -572,6 +573,7 @@ mod tests {
         )
         .unwrap();
         let actual_resources = HashMap::from([
+            ("n_steps".to_string(), 2933),
             ("l1_gas_usage".to_string(), 0),
             ("range_check_builtin".to_string(), 70),
             ("pedersen_builtin".to_string(), 16),
@@ -716,18 +718,5 @@ mod tests {
             .unwrap();
         let err = starknet_state.consume_message_hash(msg_hash).unwrap_err();
         assert_matches!(err, StarknetStateError::InvalidMessageHash);
-    }
-
-    #[test]
-    fn test_create_invoke_function_should_fail_with_none_contract_state() {
-        let mut starknet_state = StarknetState::new(None);
-
-        let err = starknet_state
-            .create_invoke_function(Address(0.into()), 0.into(), vec![], 0, None, None, None)
-            .unwrap_err();
-        assert_matches!(
-            err,
-            TransactionError::State(StateError::NoneContractState(_))
-        );
     }
 }

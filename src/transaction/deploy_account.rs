@@ -1,3 +1,4 @@
+use super::fee::charge_fee;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
@@ -27,16 +28,12 @@ use crate::{
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
     syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::{
-        error::TransactionError,
-        fee::{calculate_tx_fee, execute_fee_transfer, FeeInfo},
-    },
+    transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
@@ -158,11 +155,20 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        self.handle_nonce(state)?;
         let mut tx_info = self.apply(state, block_context)?;
 
-        self.handle_nonce(state)?;
-        let (fee_transfer_info, actual_fee) =
-            self.charge_fee(state, &tx_info.actual_resources, block_context)?;
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps);
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            &tx_info.actual_resources,
+            block_context,
+            self.max_fee,
+            &mut tx_execution_context,
+            self.skip_fee_transfer,
+        )?;
+
         tx_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_info)
@@ -209,6 +215,7 @@ impl DeployAccount {
             TransactionType::DeployAccount,
             state.count_actual_storage_changes(),
             None,
+            0,
         )
         .map_err::<TransactionError, _>(|_| TransactionError::ResourcesCalculation)?;
 
@@ -248,6 +255,7 @@ impl DeployAccount {
             return Ok(());
         }
 
+        // In blockifier, get_nonce_at returns zero if no entry is found.
         let current_nonce = state.get_nonce_at(&self.contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
@@ -255,9 +263,7 @@ impl DeployAccount {
                 self.nonce.to_string(),
             ));
         }
-
         state.increment_nonce(&self.contract_address)?;
-
         Ok(())
     }
 
@@ -352,38 +358,6 @@ impl DeployAccount {
             .map_err(|_| TransactionError::InvalidContractCall)?;
 
         Ok(call_info)
-    }
-
-    fn charge_fee<S: StateReader>(
-        &self,
-        state: &mut CachedState<S>,
-        resources: &HashMap<String, usize>,
-        block_context: &BlockContext,
-    ) -> Result<FeeInfo, TransactionError> {
-        if self.max_fee.is_zero() {
-            return Ok((None, 0));
-        }
-
-        let actual_fee = calculate_tx_fee(
-            resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
-
-        let mut tx_execution_context =
-            self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let fee_transfer_info = if self.skip_fee_transfer {
-            None
-        } else {
-            Some(execute_fee_transfer(
-                state,
-                block_context,
-                &mut tx_execution_context,
-                actual_fee,
-            )?)
-        };
-
-        Ok((fee_transfer_info, actual_fee))
     }
 
     pub(crate) fn create_for_simulation(

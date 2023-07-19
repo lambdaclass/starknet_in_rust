@@ -93,6 +93,7 @@ fn internal_deploy_account() {
             None,
             0,
             [
+                ("n_steps", 3098),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 74),
                 ("l1_gas_usage", 1224)
@@ -158,6 +159,16 @@ fn internal_deploy_account_cairo1() {
         17, 26, 0, 11, 90, 253, 83, 60, 230, 95, 87, 164,
     ];
     let keys: HashSet<[u8; 32]> = [accessed_keys].iter().copied().collect();
+
+    let n_steps;
+    #[cfg(not(feature = "cairo_1_tests"))]
+    {
+        n_steps = 3359;
+    }
+    #[cfg(feature = "cairo_1_tests")]
+    {
+        n_steps = 3363;
+    }
 
     assert_eq!(
         tx_info,
@@ -242,6 +253,7 @@ fn internal_deploy_account_cairo1() {
             None,
             0,
             [
+                ("n_steps", n_steps),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 78),
                 ("l1_gas_usage", 3672)
