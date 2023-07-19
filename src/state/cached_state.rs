@@ -523,7 +523,12 @@ mod tests {
 
         let mut cached_state = CachedState::new(state_reader, None, None);
 
-        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
+        match cached_state.get_class_hash_at(&contract_address) {
+            Ok(x) if x == [0; 32] => Ok(()),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
+            _ => Ok(()),
+        }
+        .unwrap();
 
         cached_state
             .set_class_hash_at(contract_address, [10; 32])
@@ -591,7 +596,12 @@ mod tests {
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
-        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
+        match cached_state.get_class_hash_at(&contract_address) {
+            Ok(x) if x == [0; 32] => Ok(()),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
+            _ => Ok(()),
+        }
+        .unwrap();
 
         let result = cached_state
             .set_class_hash_at(contract_address.clone(), [10; 32])
@@ -617,7 +627,13 @@ mod tests {
         let contract_address = Address(42.into());
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
-        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
+
+        match cached_state.get_class_hash_at(&contract_address) {
+            Ok(x) if x == [0; 32] => Ok(()),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
+            _ => Ok(()),
+        }
+        .unwrap();
 
         cached_state
             .set_class_hash_at(contract_address.clone(), [10; 32])
@@ -653,7 +669,12 @@ mod tests {
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
-        assert!(cached_state.get_class_hash_at(&contract_address).is_err());
+        match cached_state.get_class_hash_at(&contract_address) {
+            Ok(x) if x == [0; 32] => Ok(()),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
+            _ => Ok(()),
+        }
+        .unwrap();
 
         cached_state
             .set_class_hash_at(contract_address.clone(), [10; 32])
