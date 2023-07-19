@@ -538,8 +538,7 @@ mod tests {
                 .syscall_handler
                 .block_context
                 .starknet_os_config
-                .chain_id
-                .to_felt());
+                .chain_id);
 
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 7)),
