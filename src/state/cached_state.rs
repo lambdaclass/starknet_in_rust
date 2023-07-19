@@ -525,7 +525,9 @@ mod tests {
 
         match cached_state.get_class_hash_at(&contract_address) {
             Ok(x) if x == [0; 32] => Ok(()),
-            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(
+                contract_address.clone(),
+            )),
             _ => Ok(()),
         }
         .unwrap();
@@ -598,7 +600,9 @@ mod tests {
 
         match cached_state.get_class_hash_at(&contract_address) {
             Ok(x) if x == [0; 32] => Ok(()),
-            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(
+                contract_address.clone(),
+            )),
             _ => Ok(()),
         }
         .unwrap();
@@ -628,23 +632,24 @@ mod tests {
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
 
-        match cached_state.get_class_hash_at(&contract_address) {
-            Ok(x) if x == [0; 32] => Ok(()),
-            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
-            _ => Ok(()),
-        }
-        .unwrap();
-
         cached_state
             .set_class_hash_at(contract_address.clone(), [10; 32])
             .unwrap();
 
-        let result = match cached_state.get_class_hash_at(&contract_address) {
-            Ok(x) if x == [0; 32] => Ok(()),
-            Ok(_) => Err(StateError::ContractAddressUnavailable(
-                contract_address.clone(),
-            )),
-            _ => Ok(()),
+        let result = {
+            let check = match cached_state.get_class_hash_at(&contract_address.clone()) {
+                Ok(x) if x == [0; 32] => Ok(()),
+                Ok(_) => Err(StateError::ContractAddressUnavailable(
+                    contract_address.clone(),
+                )),
+                _ => Ok(()),
+            };
+
+            if check.is_err() {
+                check
+            } else {
+                cached_state.set_class_hash_at(contract_address.clone(), [10; 32])
+            }
         }
         .unwrap_err();
 
