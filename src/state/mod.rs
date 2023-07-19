@@ -32,8 +32,6 @@ pub struct BlockInfo {
     pub gas_price: u64,
     /// The sequencer address of this block.
     pub sequencer_address: Address,
-    /// The version of StarkNet system (e.g. "0.10.3").
-    pub starknet_version: String,
 }
 
 impl BlockInfo {
@@ -43,7 +41,6 @@ impl BlockInfo {
             block_timestamp: 0,
             gas_price: 0,
             sequencer_address,
-            starknet_version: "0.0.0".to_string(),
         }
     }
 
@@ -70,7 +67,6 @@ impl Default for BlockInfo {
             block_timestamp: 0,
             gas_price: 0,
             sequencer_address: Address(0.into()),
-            starknet_version: "0.0.0".to_string(),
         }
     }
 }
