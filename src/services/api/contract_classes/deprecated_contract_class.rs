@@ -128,6 +128,16 @@ impl ContractClass {
         })
     }
 
+    /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON and a class hash.
+    ///
+    /// This constructor avoids the need to recompute the class hash from the program JSON.
+    ///
+    /// # Parameters
+    /// - `program_json`: The JSON of the compiled Cairo 0 program.
+    /// - `hinted_class_hash`: The class hash of the program.
+    ///
+    /// # Returns
+    /// A [`ContractClass`] parsed from the given JSON and class hash.
     pub fn from_program_json_and_class_hash(
         program_json: &str,
         hinted_class_hash: Felt252,
