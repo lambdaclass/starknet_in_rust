@@ -11,7 +11,7 @@ with_mimalloc = ["mimalloc"]
 cairo_1_tests = []
 
 [workspace]
-members = ["cli", "fuzzer"]
+members = ["cli", "fuzzer", "rpc_state_reader"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"] }
