@@ -3,7 +3,7 @@
 
 ### 🦀 Starknet in Rust 🦀
 
-Starknet library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdaclass/cairo-vm)
+Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdaclass/cairo-vm)
 
 [Report Bug](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+) · [Request Feature](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+)
 
