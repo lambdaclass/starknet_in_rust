@@ -217,8 +217,10 @@ mod tests {
     #[test]
     fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_max_fee() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
-        let mut tx_execution_context = TransactionExecutionContext::default();
-        tx_execution_context.version = 1.into();
+        let mut tx_execution_context = TransactionExecutionContext {
+            version: 1.into(),
+            ..Default::default()
+        };
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
         let resources = HashMap::from([
