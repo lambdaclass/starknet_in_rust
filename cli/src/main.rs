@@ -140,14 +140,14 @@ fn deploy_parser(
     )?;
 
     let contract_address = Address(address.clone());
-    match state.get_class_hash_at(contract_address) {
+    match cached_state.get_class_hash_at(&contract_address) {
         Ok(x) if x == [0; 32] => {}
         Ok(_) => {
             return Err(StateError::ContractAddressUnavailable(contract_address.clone()).into())
         }
         _ => {}
     }
-    state.set_class_hash_at(contract_address.clone(), string_to_hash(&args.class_hash))?;
+    cached_state.set_class_hash_at(contract_address.clone(), string_to_hash(&args.class_hash))?;
 
     let tx_hash = calculate_deploy_transaction_hash(
         0.into(),
