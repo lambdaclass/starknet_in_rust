@@ -155,9 +155,8 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_info = self.apply(state, block_context)?;
-
         self.handle_nonce(state)?;
+        let mut tx_info = self.apply(state, block_context)?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
@@ -256,6 +255,7 @@ impl DeployAccount {
             return Ok(());
         }
 
+        // In blockifier, get_nonce_at returns zero if no entry is found.
         let current_nonce = state.get_nonce_at(&self.contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
@@ -263,9 +263,7 @@ impl DeployAccount {
                 self.nonce.to_string(),
             ));
         }
-
         state.increment_nonce(&self.contract_address)?;
-
         Ok(())
     }
 
