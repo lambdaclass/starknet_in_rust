@@ -676,7 +676,9 @@ mod tests {
 
         match cached_state.get_class_hash_at(&contract_address) {
             Ok(x) if x == [0; 32] => Ok(()),
-            Ok(_) => Err(StateError::ContractAddressUnavailable(contract_address)),
+            Ok(_) => Err(StateError::ContractAddressUnavailable(
+                contract_address.clone(),
+            )),
             _ => Ok(()),
         }
         .unwrap();
