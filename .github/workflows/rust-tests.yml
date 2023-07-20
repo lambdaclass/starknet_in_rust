@@ -254,11 +254,12 @@ jobs:
     - name: Run clippy
       run: cargo clippy --workspace --all-targets -- -D warnings
 
-  test:
+  tests:
     strategy:
       fail-fast: false
       matrix:
         target: [ test-cairo-1, test-cairo-2, test-doctests ]
+    name: Run tests
     needs: merge-caches
     runs-on: ubuntu-22.04
     steps:
@@ -299,6 +300,7 @@ jobs:
 
   coverage:
     needs: merge-caches
+    name: Generate and upload coverage report
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout
