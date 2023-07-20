@@ -33,13 +33,7 @@ STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/bin/starknet-sierra-compile
 #
 
 deps-venv:
-	pip install \
-		fastecdsa \
-		typeguard==2.13.0 \
-		openzeppelin-cairo-contracts==0.6.1 \
-		maturin \
-		cairo-lang==0.11 \
-		"urllib3 <=1.26.15"
+	pip install -r requirements.txt
 
 compile-cairo: $(CAIRO_TARGETS) $(CAIRO_ABI_TARGETS)
 compile-starknet: $(STARKNET_TARGETS) $(STARKNET_ABI_TARGETS)
