@@ -323,14 +323,14 @@ jobs:
         cache-on-failure: true
 
     - name: Cache coverage report
-      id: report-cache
-      uses: actions/cache@v3
+      id: restore-report
+      uses: actions/cache/restore@v3
       with:
         path: lcov.info
         key: coverage-cache-${{ github.sha }}
 
     - name: Fetch programs
-      if: steps.report-cache.outputs.cache-hit != 'true'
+      if: steps.restore-report.outputs.cache-hit != 'true'
       uses: actions/cache/restore@v3
       with:
         path: |
@@ -345,8 +345,15 @@ jobs:
         fail-on-cache-miss: true
 
     - name: Generate coverage report
-      if: steps.report-cache.outputs.cache-hit != 'true'
+      if: steps.restore-report.outputs.cache-hit != 'true'
       run: make coverage-report
+
+    - name: Save coverage report
+      if: steps.restore-report.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v3
+      with:
+        path: lcov.info
+        key: coverage-cache-${{ github.sha }}
 
     - name: Upload coverage to codecov.io
       uses: codecov/codecov-action@v3
