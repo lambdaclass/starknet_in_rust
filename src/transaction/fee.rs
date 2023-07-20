@@ -82,6 +82,7 @@ pub fn calculate_tx_fee(
     gas_price: u128,
     block_context: &BlockContext,
 ) -> Result<u128, TransactionError> {
+    println!("{}", gas_price.clone());
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
         .ok_or_else(|| TransactionError::FeeError("Invalid fee value".to_string()))?
