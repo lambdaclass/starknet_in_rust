@@ -185,8 +185,7 @@ coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-ca
 	$(MAKE) coverage-report
 
 coverage-report:
-	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs' --release
-	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
+	cargo +nightly llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
 heaptrack:
 	./scripts/heaptrack.sh
