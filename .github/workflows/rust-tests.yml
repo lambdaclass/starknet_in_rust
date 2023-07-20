@@ -15,7 +15,6 @@ jobs:
   build-programs:
     strategy:
       matrix:
-        # NOTE: we build cairo_proof_programs so clippy can check the benchmarks too
         program-target: [
           compile-cairo,
           compile-starknet,
@@ -66,7 +65,9 @@ jobs:
     - name: Build programs
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       run: make -j ${{ matrix.program-target }}
-  
+
+  # NOTE: used to reduce the amount of cache steps we need in later jobs
+  # TODO: remove this cache once the workflow finishes
   merge-caches:
     name: Merge Cairo programs cache
     runs-on: ubuntu-22.04
