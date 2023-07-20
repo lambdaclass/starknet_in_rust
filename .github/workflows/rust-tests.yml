@@ -81,7 +81,9 @@ jobs:
     - name: (Debug) print space usage
       run: du -h | sort -hr | head -n 10
     - name: Run tests
-      run: make test
+      run: |
+        make test
+        cargo clean
 
     - name: (Debug) print space usage
       run: du -h | sort -hr | head -n 10
