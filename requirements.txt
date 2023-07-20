@@ -1,5 +1,3 @@
 fastecdsa
-typeguard==2.13.3
 cairo-lang==0.11
-urllib3<=1.26.15
 openzeppelin-cairo-contracts==0.6.1
