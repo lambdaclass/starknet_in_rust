@@ -1,4 +1,5 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps test heaptrack check-python-version compile-abi
+.PHONY: build check clean clippy compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra \
+		 compile-cairo-2-casm compile-cairo-2-sierra coverage deps test heaptrack check-python-version
 
 export PATH:=$(shell pyenv root)/shims:$(PATH)
 export PYENV_VERSION=3.9
@@ -72,6 +73,9 @@ $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo
 $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra
 	$(STARKNET_SIERRA_COMPILE_CAIRO_1) --allowed-libfuncs-list-name experimental_v0.1.0 --add-pythonic-hints $< $@
 
+compile-cairo-1-sierra: $(CAIRO_1_COMPILED_SIERRA_CONTRACTS)
+compile-cairo-1-casm: $(CAIRO_1_COMPILED_CASM_CONTRACTS)
+
 
 cairo-repo-1-dir = cairo1
 cairo-repo-1-dir-macos = cairo1-macos
@@ -104,6 +108,9 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 	$(STARKNET_SIERRA_COMPILE_CAIRO_2) --add-pythonic-hints $< $@
+
+compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
+compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
 
 cairo-repo-2-dir = cairo2
@@ -162,16 +169,28 @@ clean:
 	-rm -rf cairo-2.0.0.tar
 	-rm -rf cairo-1.1.1.tar
 
-clippy: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
+clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
 	cargo clippy --workspace --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_1_COMPILED_SIERRA_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
+test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	echo "Cairo1 tests"
-	cargo test --workspace --all-targets --features=cairo_1_tests
+	$(MAKE) test-cairo-1
 	echo "Cairo2 tests"
-	cargo test --workspace --all-targets
+	$(MAKE) test-cairo-2
 
-coverage: compile-cairo compile-starknet compile-abi $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
+test-cairo-1:
+	cargo nextest run --workspace --all-targets --features=cairo_1_tests
+
+test-cairo-2:
+	cargo nextest run --workspace --all-targets
+
+test-doctests:
+	cargo test --workspace --doc
+
+coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
+	$(MAKE) coverage-report
+
+coverage-report:
 	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs' --release
 	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
