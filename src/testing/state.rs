@@ -180,7 +180,7 @@ impl StarknetState {
         hash_value: Option<Felt252>,
         remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
-        let chain_id = self.block_context.starknet_os_config.chain_id.to_felt();
+        let chain_id = self.block_context.starknet_os_config.chain_id.clone();
         let deploy = match hash_value {
             None => Deploy::new(
                 contract_address_salt,
@@ -266,7 +266,7 @@ impl StarknetState {
     // ------------------------
 
     fn chain_id(&self) -> Felt252 {
-        self.block_context.starknet_os_config.chain_id.to_felt()
+        self.block_context.starknet_os_config.chain_id.clone()
     }
 
     #[allow(clippy::too_many_arguments)]

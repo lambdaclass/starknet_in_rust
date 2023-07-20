@@ -5,10 +5,7 @@ pub mod os_usage;
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
-    definitions::{
-        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-        transaction_type::TransactionType,
-    },
+    definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
@@ -370,7 +367,7 @@ impl TxInfoStruct {
     pub(crate) fn new(
         tx: TransactionExecutionContext,
         signature: Relocatable,
-        chain_id: StarknetChainId,
+        chain_id: Felt252,
     ) -> TxInfoStruct {
         TxInfoStruct {
             version: tx.version,
@@ -379,7 +376,7 @@ impl TxInfoStruct {
             signature_len: tx.signature.len(),
             signature,
             transaction_hash: tx.transaction_hash,
-            chain_id: chain_id.to_felt(),
+            chain_id,
             nonce: tx.nonce,
         }
     }

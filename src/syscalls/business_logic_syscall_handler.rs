@@ -644,7 +644,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(
             res_segment,
-            self.block_context.starknet_os_config.chain_id.to_felt(),
+            self.block_context.starknet_os_config.chain_id.clone(),
         )?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;
