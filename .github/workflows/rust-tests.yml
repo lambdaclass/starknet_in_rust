@@ -72,12 +72,23 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: '3.9'
+
+    - name: (Debug) print space usage
+      run: du -h | sort -hr | head -n 10
     - name: Deps
       run: make deps
+
+    - name: (Debug) print space usage
+      run: du -h | sort -hr | head -n 10
     - name: Run tests
       run: make test
+
+    - name: (Debug) print space usage
+      run: du -h | sort -hr | head -n 10
     - name: Run doctests
       run: cargo test --workspace --doc
+    - name: (Debug) print space usage
+      run: du -h | sort -hr | head -n 10
 
   # 28.06.2023: This job uses unmaintained actions-rs because dtolnay is giving linking errors with nightly
   coverage:
