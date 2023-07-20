@@ -309,7 +309,7 @@ jobs:
       uses: dtolnay/rust-toolchain@nightly
       with:
         toolchain: ${{ env.RUST_TOOLCHAIN }}
-    
+
     - name: Set nightly as default
       run: rustup default nightly
 
@@ -317,14 +317,18 @@ jobs:
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-nextest,cargo-llvm-cov
-    
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+
     - name: Cache coverage report
       id: report-cache
       uses: actions/cache@v3
       with:
         path: lcov.info
         key: coverage-cache-${{ github.sha }}
-    
+
     - name: Fetch programs
       if: steps.report-cache.outputs.cache-hit != 'true'
       uses: actions/cache/restore@v3
