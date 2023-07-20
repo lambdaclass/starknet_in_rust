@@ -324,6 +324,21 @@ jobs:
       with:
         path: lcov.info
         key: coverage-cache-${{ github.sha }}
+    
+    - name: Fetch programs
+      if: steps.report-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
 
     - name: Generate coverage report
       if: steps.report-cache.outputs.cache-hit != 'true'
