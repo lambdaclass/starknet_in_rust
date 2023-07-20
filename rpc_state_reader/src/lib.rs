@@ -1,13 +1,16 @@
+use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use serde::Deserialize;
-use starknet_in_rust::SierraContractClass;
+use starknet_api::deprecated_contract_class::ContractClass as DeprecatedContractClass;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     felt::{felt_str, Felt252},
-    services::api::contract_classes::compiled_class::CompiledClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{state_api::StateReader, state_cache::StorageEntry},
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use std::env;
+use std::{env, str::FromStr};
 
 pub struct RpcState {
     chain: String,
@@ -43,6 +46,23 @@ impl RpcState {
         .into_json()
         .unwrap()
     }
+
+    fn rpc_call_string(self: &Self, rpc_method: String, params: &[String]) -> String {
+        ureq::post(&format!(
+            "https://{}.infura.io/v3/{}",
+            self.chain, self.api_key
+        ))
+        .set("Content-Type", "application/json")
+        .send_json(ureq::json!({
+            "jsonrpc": "2.0",
+            "method": rpc_method,
+            "params": params,
+            "id": 1
+        }))
+        .unwrap()
+        .into_string()
+        .unwrap()
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -51,20 +71,42 @@ struct RpcResponseString {
 }
 
 #[derive(Deserialize, Debug)]
-struct RpcResponseValue {
+struct RpcResponseSierraContractClass {
     result: SierraContractClass,
+}
+
+#[derive(Deserialize, Debug)]
+struct RpcResponseValue {
+    result: serde_json::Value,
+}
+
+#[derive(Deserialize, Debug)]
+struct RpcResponseDeprecatedContractClass {
+    result: DeprecatedContractClass,
 }
 
 impl StateReader for RpcState {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let _resp: RpcResponseValue = self.rpc_call(
+        let response: RpcResponseValue = self.rpc_call(
             "starknet_getClass".to_string(),
             &[
                 "latest".to_owned(),
                 format!("0x{}", Felt252::from_bytes_be(class_hash).to_str_radix(16)),
             ],
         );
-        println!("SierraContractClass {:?}", _resp.result);
+
+        println!(
+            "{:?}",
+            ContractClass::from_str(&response.result.to_string())
+        );
+        //println!("response:\n {:?}", response.result);
+        //println!("deprecated contract class:\n {:?}", response.result);
+        //println!("pretty print:\n{}", _resp.result);
+        // let contract_class = serde_json::to_string_pretty(&_resp).unwrap();
+        //println!("Pretty string: {}", contract_class);
+        // let contract_class: SierraContractClass = serde_json::from_value(_resp.result).unwrap();
+        //println!("SierraContractClass {:?}", _resp.result);
+
         todo!()
     }
 
@@ -142,12 +184,9 @@ mod tests {
     #[test]
     fn test_get_contract_class_cairo0() {
         let rpc_state = RpcState::new("starknet-mainnet".to_string());
-        // This belongs to
-        // https://starkscan.co/class/0x00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3
-        // which is cairo0
 
         let class_hash = felt_str!(
-            "00d0e183745e9dae3e4e78a8ffedcce0903fc4900beace4e0abf192d4c202da3",
+            "03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e",
             16
         );
         rpc_state
