@@ -63,7 +63,7 @@ lazy_static! {
         16
     ));
     pub static ref DEFAULT_STARKNET_OS_CONFIG: StarknetOsConfig = StarknetOsConfig {
-        chain_id: StarknetChainId::TestNet,
+        chain_id: StarknetChainId::TestNet.to_felt(),
         fee_token_address: Address(felt_str!(
             "4c07059285c2607d528a4c5220ef1f64d8f01273c23cfd9dec68759f61b544",
             16
