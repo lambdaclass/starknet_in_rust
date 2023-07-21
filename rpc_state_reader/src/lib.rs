@@ -101,12 +101,12 @@ impl StateReader for RpcState {
             ],
         );
 
-        println!(
-            "{:?}",
-            response.result
-        );
+        // println!(
+        //     "{:?}",
+        //     response.result
+        // );
 
-        todo!()
+        Ok(CompiledClass::from(response.result))
     }
 
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
@@ -185,7 +185,7 @@ mod tests {
         let rpc_state = RpcState::new("starknet-mainnet".to_string());
 
         let class_hash = felt_str!(
-            "03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e",
+            "025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
             16
         );
         rpc_state
