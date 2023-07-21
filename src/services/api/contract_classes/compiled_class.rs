@@ -1,10 +1,17 @@
+use std::collections::HashMap;
 use std::io::{self, Read};
 
+use crate::core::contract_address::{compute_hinted_class_hash, CairoProgramToHash};
+use crate::services::api::contract_classes::deprecated_contract_class::AbiType;
+use crate::{EntryPointType, ContractEntryPoint};
 use crate::services::api::contract_class_errors::ContractClassError;
 
 use super::deprecated_contract_class::ContractClass;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+use cairo_vm::felt::Felt252;
+use cairo_vm::types::program::Program;
+use serde::{Serialize, Deserialize};
 use starknet::core::types::ContractClass as StarknetRsContractClass;
 use starknet::core::types::ContractClass::{Sierra, Legacy};
 
@@ -36,44 +43,6 @@ impl TryInto<ContractClass> for CompiledClass {
 
 extern crate serde;
 extern crate serde_json;
-// use std::str::FromStr;
-// use serde::{de, Deserialize, Deserializer};
-
-/// Represents a contract in the Starknet network.
-// #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-// pub struct SierraV2ContractClass {
-//     pub sierra_program: Vec<BigUintAsHex>,
-//     pub sierra_program_debug_info: Option<cairo_lang_sierra::debug_info::DebugInfo>,
-//     pub contract_class_version: String,
-//     pub entry_points_by_type: ContractEntryPoints,
-//     #[serde(deserialize_with = "de_from_str")]
-//     pub abi: Option<Contract>,
-// }
-// fn de_from_str<'de, D>(deserializer: D) -> Result<Contract, D::Error>
-//     where D: Deserializer<'de>
-// {
-//     let s = String::deserialize(deserializer)?;
-//     Contract::from_str(&s).map_err(de::Error::custom)
-// }
-
-// use starknet::core::serde::byte_array::base64;
-
-/// Deprecated contract class.
-///
-/// The definition of a legacy (cairo 0) Starknet contract class.
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// #[cfg_attr(feature = "no_unknown_fields", serde(deny_unknown_fields))]
-// pub struct CompressedLegacyContractClass {
-//     /// A base64 representation of the compressed program code
-//     #[serde(with = "base64")]
-//     pub program: Vec<u8>,
-//     /// Deprecated entry points by type
-//     pub entry_points_by_type: LegacyEntryPointsByType,
-//     /// Contract abi
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub abi: Option<Vec<LegacyContractAbiEntry>>,
-// }
-
 
 impl From<StarknetRsContractClass> for CompiledClass {
     fn from(starknet_rs_contract_class: StarknetRsContractClass) -> Self {
@@ -86,11 +55,59 @@ impl From<StarknetRsContractClass> for CompiledClass {
             Legacy(_deprecated_contract_class) => {
                 // THIS WORKES!!!
                 let as_str = decode_reader(_deprecated_contract_class.program).unwrap();
-                println!("as_str: {}", as_str);
-                todo!()
+
+                let program = Program::from_bytes(&as_str.clone().as_bytes(), None).unwrap();
+
+                // let hinted_class_hash = compute_hinted_class_hash();
+                let mut entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>  = HashMap::new();
+
+                let constructor_entries = _deprecated_contract_class.entry_points_by_type.clone().constructor.into_iter().map(|entrypoint| 
+                    ContractEntryPoint::new(Felt252::from_bytes_be(&entrypoint.selector.to_bytes_be()), entrypoint.offset as usize)
+                ).collect::<Vec<ContractEntryPoint>>();
+                entry_points_by_type.insert(EntryPointType::Constructor, constructor_entries);
+
+                let external_entries = _deprecated_contract_class.entry_points_by_type.clone().external.into_iter().map(|entrypoint| 
+                    ContractEntryPoint::new(Felt252::from_bytes_be(&entrypoint.selector.to_bytes_be()), entrypoint.offset as usize)
+                ).collect::<Vec<ContractEntryPoint>>();
+                entry_points_by_type.insert(EntryPointType::External, external_entries);
+
+                let l1_handler_entries = _deprecated_contract_class.entry_points_by_type.clone().l1_handler.into_iter().map(|entrypoint| 
+                    ContractEntryPoint::new(Felt252::from_bytes_be(&entrypoint.selector.to_bytes_be()), entrypoint.offset as usize)
+                ).collect::<Vec<ContractEntryPoint>>();
+                entry_points_by_type.insert(EntryPointType::Constructor, l1_handler_entries);
+
+                let v = serde_json::to_value(&_deprecated_contract_class.abi).unwrap();
+                let abi: Option<AbiType> = serde_json::from_value(v).unwrap();
+
+                let cairo_program_to_hash: CairoProgramToHash = serde_json::from_str(as_str.as_str()).unwrap();
+                
+                let serialized_cc = SerializedContractClass { 
+                    program: cairo_program_to_hash,
+                    entry_points_by_type: serde_json::to_value(&_deprecated_contract_class.entry_points_by_type).unwrap(),
+                    abi: serde_json::to_value(&_deprecated_contract_class.abi).unwrap(),
+                };
+
+                let v = serde_json::to_value(&serialized_cc).unwrap();
+                let hinted_class_hash = compute_hinted_class_hash(&v).unwrap();
+
+                CompiledClass::Deprecated(Box::new(ContractClass {
+                    program,
+                    entry_points_by_type,
+                    abi,
+                    hinted_class_hash,
+                }))
             },
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct SerializedContractClass<'a> {
+    /// Main program definition.
+    #[serde(borrow)]
+    program: CairoProgramToHash<'a>,
+    entry_points_by_type: serde_json::Value,
+    abi: serde_json::Value,
 }
 
 use flate2::bufread;
