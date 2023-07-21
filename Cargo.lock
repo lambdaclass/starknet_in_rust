@@ -3486,6 +3486,7 @@ dependencies = [
  "cairo-lang-casm",
  "cairo-lang-sierra",
  "cairo-lang-starknet",
+ "cairo-lang-utils",
  "cairo-vm",
  "coverage-helper",
  "flate2",

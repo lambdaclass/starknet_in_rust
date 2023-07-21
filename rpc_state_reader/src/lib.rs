@@ -1,17 +1,15 @@
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use serde::Deserialize;
+use starknet::core::types::ContractClass;
 use starknet_api::deprecated_contract_class::ContractClass as DeprecatedContractClass;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     felt::{felt_str, Felt252},
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, //deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{state_api::StateReader, state_cache::StorageEntry},
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use std::{env, str::FromStr};
-use starknet::core::types::ContractClass;
+use std::env;
 
 pub struct RpcState {
     chain: String,
@@ -47,23 +45,6 @@ impl RpcState {
         .into_json()
         .unwrap()
     }
-
-    fn rpc_call_string(self: &Self, rpc_method: String, params: &[String]) -> String {
-        ureq::post(&format!(
-            "https://{}.infura.io/v3/{}",
-            self.chain, self.api_key
-        ))
-        .set("Content-Type", "application/json")
-        .send_json(ureq::json!({
-            "jsonrpc": "2.0",
-            "method": rpc_method,
-            "params": params,
-            "id": 1
-        }))
-        .unwrap()
-        .into_string()
-        .unwrap()
-    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -73,11 +54,13 @@ struct RpcResponseString {
 
 #[derive(Deserialize, Debug)]
 struct RpcResponseSierraContractClass {
+    #[allow(unused)]
     result: SierraContractClass,
 }
 
 #[derive(Deserialize, Debug)]
 struct RpcResponseValue {
+    #[allow(unused)]
     result: serde_json::Value,
 }
 
@@ -88,6 +71,7 @@ struct RpcResponseProgram {
 
 #[derive(Deserialize, Debug)]
 struct RpcResponseDeprecatedContractClass {
+    #[allow(unused)]
     result: DeprecatedContractClass,
 }
 
@@ -100,11 +84,6 @@ impl StateReader for RpcState {
                 format!("0x{}", Felt252::from_bytes_be(class_hash).to_str_radix(16)),
             ],
         );
-
-        // println!(
-        //     "{:?}",
-        //     response.result
-        // );
 
         Ok(CompiledClass::from(response.result))
     }
@@ -162,6 +141,13 @@ impl StateReader for RpcState {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use starknet_in_rust::{
+        definitions::block_context::{BlockContext, StarknetChainId},
+        state::cached_state::CachedState,
+        transaction::{InvokeFunction, Transaction},
+    };
     use super::*;
 
     #[test]
@@ -237,5 +223,73 @@ mod tests {
             rpc_state.get_storage_at(&storage_entry).unwrap(),
             felt_str!("0", 16)
         );
+    }
+
+    #[test]
+    fn test_invoke_execute() {
+        let contract_address = Address(felt_str!(
+            "074f91d284351a8603933b648684b6a990126d7c78a1b867353a57a3bc2097da",
+            16
+        ));
+        let entry_point_selector = felt_str!(
+            "01f64d317ff277789ba74de95db50418ab0fa47c09241400b7379b50d6334c3a",
+            16
+        );
+
+        let max_fee = 29000000000000;
+        let version = felt_str!("12");
+
+        let calldata = vec![
+            felt_str!("1", 16),
+            felt_str!("790c207de1360ca7c4eea647bf6a28ded62aa6323d3442f402424b8f71ce6a", 16),
+            felt_str!("1f64d317ff277789ba74de95db50418ab0fa47c09241400b7379b50d6334c3a", 16),
+            felt_str!("0", 16),
+            felt_str!("2", 16),
+            felt_str!("2", 16),
+            felt_str!("6", 16),
+            felt_str!("0", 16),
+        ];
+
+        let signature = vec![felt_str!("59db0f344064bbfe883df0272d3e31f6fdb7b4e37ca3c8e422adcde23e7b845", 16), felt_str!("473d2e72747964dd0d73d0a04607f3e964a6532b4b1441d689ecb0a31af3f6f", 16)];
+        let chain_id = StarknetChainId::TestNet.to_felt();
+        let nonce = Some(felt_str!("574"));
+
+        let internal_invoke_function = Transaction::InvokeFunction(
+            InvokeFunction::new(
+                contract_address,
+                entry_point_selector,
+                max_fee,
+                version,
+                calldata,
+                signature,
+                chain_id,
+                nonce,
+            )
+            .unwrap(),
+        );
+
+        // Instantiate CachedState
+        let state_reader = RpcState::new("starknet-goerli".to_owned());
+
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+
+        let _result = internal_invoke_function
+            .execute(&mut state, &BlockContext::default(), 0)
+            .unwrap();
+
+        // assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
+        // assert_eq!(
+        //     result.call_info.as_ref().unwrap().class_hash,
+        //     Some(class_hash)
+        // );
+        // assert_eq!(
+        //     result.call_info.as_ref().unwrap().entry_point_selector,
+        //     Some(internal_invoke_function.entry_point_selector)
+        // );
+        // assert_eq!(
+        //     result.call_info.as_ref().unwrap().calldata,
+        //     internal_invoke_function.calldata
+        // );
+        // assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
     }
 }
