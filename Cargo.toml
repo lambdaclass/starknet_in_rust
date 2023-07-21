@@ -17,6 +17,7 @@ members = ["cli", "fuzzer", "rpc_state_reader"]
 cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"] }
 starknet_api = "0.1.0"
 num-traits = "0.2.15"
+starknet = "0.5.0"
 
 [dependencies]
 cairo-lang-starknet = "2.0.0"
@@ -40,6 +41,7 @@ mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 anyhow = "1.0.66"
 once_cell = "1.17.1"
+starknet = { workspace = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

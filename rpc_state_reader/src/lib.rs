@@ -5,12 +5,13 @@ use starknet_in_rust::{
     core::errors::state_errors::StateError,
     felt::{felt_str, Felt252},
     services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        compiled_class::CompiledClass, //deprecated_contract_class::ContractClass,
     },
     state::{state_api::StateReader, state_cache::StorageEntry},
     utils::{Address, ClassHash, CompiledClassHash},
 };
 use std::{env, str::FromStr};
+use starknet::core::types::ContractClass;
 
 pub struct RpcState {
     chain: String,
@@ -80,6 +81,11 @@ struct RpcResponseValue {
     result: serde_json::Value,
 }
 
+#[derive(Debug, Deserialize)]
+struct RpcResponseProgram {
+    result: ContractClass,
+}
+
 #[derive(Deserialize, Debug)]
 struct RpcResponseDeprecatedContractClass {
     result: DeprecatedContractClass,
@@ -87,7 +93,7 @@ struct RpcResponseDeprecatedContractClass {
 
 impl StateReader for RpcState {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let response: RpcResponseValue = self.rpc_call(
+        let response: RpcResponseProgram = self.rpc_call(
             "starknet_getClass".to_string(),
             &[
                 "latest".to_owned(),
@@ -97,15 +103,8 @@ impl StateReader for RpcState {
 
         println!(
             "{:?}",
-            ContractClass::from_str(&response.result.to_string())
+            response.result
         );
-        //println!("response:\n {:?}", response.result);
-        //println!("deprecated contract class:\n {:?}", response.result);
-        //println!("pretty print:\n{}", _resp.result);
-        // let contract_class = serde_json::to_string_pretty(&_resp).unwrap();
-        //println!("Pretty string: {}", contract_class);
-        // let contract_class: SierraContractClass = serde_json::from_value(_resp.result).unwrap();
-        //println!("SierraContractClass {:?}", _resp.result);
 
         todo!()
     }
