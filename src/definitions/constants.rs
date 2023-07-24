@@ -14,8 +14,17 @@ pub(crate) const N_DEFAULT_TOPICS: usize = 1; // Events have one default topic.
 pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
     (L1_TO_L2_MSG_HEADER_SIZE + 1) - CONSUMED_MSG_TO_L2_N_TOPICS;
 
+lazy_static! {
+    pub(crate) static ref QUERY_VERSION_BASE: Felt252 =
+        felt_str!("340282366920938463463374607431768211456");
+}
+
 pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
     (L2_TO_L1_MSG_HEADER_SIZE + 1) - LOG_MSG_TO_L1_N_TOPICS;
+
+/// Fee factor used for the final fee calculation:
+/// actual_fee = min(max_fee, consumed_resources) * FEE_FACTOR
+pub(crate) const FEE_FACTOR: u128 = 1;
 
 /// The (empirical) L1 gas cost of each Cairo step.
 pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
@@ -24,7 +33,14 @@ pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
 pub(crate) const L1_HANDLER_VERSION: u64 = 0;
 
 lazy_static! {
-    pub static ref SUPPORTED_VERSIONS: [Felt252; 3] = [0.into(), 1.into(), 2.into()];
+    pub static ref SUPPORTED_VERSIONS: [Felt252; 6] = [
+        0.into(),
+        1.into(),
+        2.into(),
+        &0.into() | &QUERY_VERSION_BASE.clone(),
+        &1.into() | &QUERY_VERSION_BASE.clone(),
+        &2.into() | &QUERY_VERSION_BASE.clone(),
+    ];
 }
 
 lazy_static! {
@@ -46,7 +62,7 @@ lazy_static! {
         16
     ));
     pub static ref DEFAULT_STARKNET_OS_CONFIG: StarknetOsConfig = StarknetOsConfig {
-        chain_id: StarknetChainId::TestNet,
+        chain_id: StarknetChainId::TestNet.to_felt(),
         fee_token_address: Address(felt_str!(
             "4c07059285c2607d528a4c5220ef1f64d8f01273c23cfd9dec68759f61b544",
             16

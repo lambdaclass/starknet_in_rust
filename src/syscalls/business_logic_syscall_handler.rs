@@ -21,7 +21,9 @@ use super::{
 };
 use crate::definitions::block_context::BlockContext;
 use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use crate::state::cached_state::CachedState;
 use crate::state::BlockInfo;
 use crate::transaction::error::TransactionError;
 use crate::utils::calculate_sn_keccak;
@@ -113,7 +115,7 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
+pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) expected_syscall_ptr: Relocatable,
     pub(crate) resources_manager: ExecutionResourcesManager,
@@ -124,7 +126,7 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) block_context: BlockContext,
-    pub(crate) starknet_storage_state: ContractStorageState<'a, T>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
     pub(crate) support_reverted: bool,
     pub(crate) entry_point_selector: Felt252,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
@@ -132,11 +134,11 @@ pub struct BusinessLogicSyscallHandler<'a, T: State + StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
+impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut T,
+        state: &'a mut CachedState<S>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -168,7 +170,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
         }
     }
-    pub fn default_with_state(state: &'a mut T) -> Self {
+    pub fn default_with_state(state: &'a mut CachedState<S>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
             Default::default(),
@@ -179,7 +181,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut T,
+        state: &'a mut CachedState<S>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -237,17 +239,26 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
         remaining_gas: u128,
         execution_entry_point: ExecutionEntryPoint,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let result = execution_entry_point
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = execution_entry_point
             .execute(
                 self.starknet_storage_state.state,
                 &self.block_context,
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
-                self.support_reverted,
+                false,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
-        let retdata_maybe_reloc = result
+        let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
+            revert_error.unwrap_or("Execution error".to_string()),
+        ))?;
+
+        let retdata_maybe_reloc = call_info
             .retdata
             .clone()
             .into_iter()
@@ -255,12 +266,12 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             .collect::<Vec<MaybeRelocatable>>();
 
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
-        let retdata_end = (retdata_start + result.retdata.len())?;
+        let retdata_end = (retdata_start + call_info.retdata.len())?;
 
-        let remaining_gas = remaining_gas.saturating_sub(result.gas_consumed);
+        let remaining_gas = remaining_gas.saturating_sub(call_info.gas_consumed);
 
         let gas = remaining_gas;
-        let body = if result.failure_flag {
+        let body = if call_info.failure_flag {
             Some(ResponseBody::Failure(FailureReason {
                 retdata_start,
                 retdata_end,
@@ -272,7 +283,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             }))
         };
 
-        self.internal_calls.push(result);
+        self.internal_calls.push(call_info);
 
         Ok(SyscallResponse { gas, body })
     }
@@ -338,15 +349,24 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
             remainig_gas,
         );
 
-        let call_info = call
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = call
             .execute(
                 self.starknet_storage_state.state,
                 &self.block_context,
                 &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 self.support_reverted,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
+
+        let call_info = call_info.ok_or(StateError::CustomError(
+            revert_error.unwrap_or("Execution error".to_string()),
+        ))?;
 
         self.internal_calls.push(call_info.clone());
 
@@ -521,10 +541,7 @@ impl<'a, T: State + StateReader> BusinessLogicSyscallHandler<'a, T> {
     }
 }
 
-impl<'a, T> BusinessLogicSyscallHandler<'a, T>
-where
-    T: State + StateReader,
-{
+impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -627,7 +644,7 @@ where
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(
             res_segment,
-            self.block_context.starknet_os_config.chain_id.to_felt(),
+            self.block_context.starknet_os_config.chain_id.clone(),
         )?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;

@@ -1,3 +1,4 @@
+use crate::core::errors::hash_errors::HashError;
 use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
 use cairo_vm::felt::Felt252;
 use num_integer::Integer;
@@ -33,7 +34,7 @@ use std::vec;
 /// # Examples
 ///
 /// ```
-/// use starknet_in_rust::{hash_utils::calculate_contract_address, utils::Address, Felt252};
+/// use starknet_in_rust::{hash_utils::calculate_contract_address, utils::Address, felt::Felt252};
 ///
 /// let salt = Felt252::from(123_u16);
 /// let class_hash = Felt252::from(456_u16);
@@ -91,7 +92,7 @@ pub fn calculate_contract_address(
 /// # Examples
 ///
 /// ```
-/// use starknet_in_rust::Felt252;
+/// use starknet_in_rust::felt::Felt252;
 /// use starknet_in_rust::hash_utils::compute_hash_on_elements;
 ///
 /// let input_vec = vec![
@@ -109,14 +110,14 @@ pub fn calculate_contract_address(
 ///     }
 /// }
 /// ```
-pub fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandlerError> {
+pub fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, HashError> {
     let mut felt_vec = vec
         .iter()
         .map(|num| {
             FieldElement::from_dec_str(&num.to_str_radix(10))
-                .map_err(|_| SyscallHandlerError::FailToComputeHash)
+                .map_err(|e| HashError::FailedToComputeHash(e.to_string()))
         })
-        .collect::<Result<Vec<FieldElement>, SyscallHandlerError>>()?;
+        .collect::<Result<Vec<FieldElement>, HashError>>()?;
 
     felt_vec.push(FieldElement::from(felt_vec.len()));
     felt_vec.insert(0, FieldElement::from(0_u16));
@@ -124,7 +125,9 @@ pub fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, SyscallHandl
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
-        .ok_or(SyscallHandlerError::FailToComputeHash)?;
+        .ok_or(HashError::FailedToComputeHash(
+            "Failed to compute Pedersen hash.".to_string(),
+        ))?;
 
     let result = Felt252::from_bytes_be(&felt_result.to_bytes_be());
     Ok(result)

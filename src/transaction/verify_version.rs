@@ -1,6 +1,6 @@
 use cairo_vm::felt::Felt252;
 
-use crate::definitions::constants::SUPPORTED_VERSIONS;
+use crate::definitions::constants::{QUERY_VERSION_BASE, SUPPORTED_VERSIONS};
 
 use super::error::TransactionError;
 
@@ -14,7 +14,7 @@ pub fn verify_version(
         return Err(TransactionError::UnsupportedVersion(version.to_string()));
     }
 
-    if version == &0.into() {
+    if *version == 0.into() || *version == *QUERY_VERSION_BASE {
         if max_fee != 0 {
             return Err(TransactionError::InvalidMaxFee);
         }
@@ -31,7 +31,8 @@ pub fn verify_version(
 
 #[cfg(test)]
 mod test {
-    use crate::transaction::error::TransactionError;
+    // TODO: fixture tests would be better here
+    use crate::{definitions::constants::QUERY_VERSION_BASE, transaction::error::TransactionError};
 
     use super::verify_version;
 
@@ -103,5 +104,36 @@ mod test {
         let signature = vec![2.into()];
         let result = verify_version(&version, max_fee, &nonce, &signature).unwrap_err();
         assert_matches!(result, TransactionError::InvalidSignature);
+    }
+
+    #[test]
+    fn version_0_with_max_fee_0_nonce_0_and_empty_signature_and_query_version_set_should_return_ok()
+    {
+        let version = &0.into() | &QUERY_VERSION_BASE.clone();
+        let max_fee = 0;
+        let nonce = 0.into();
+        let signature = vec![];
+        let result = verify_version(&version, max_fee, &nonce, &signature);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn version_1_with_query_version_set_should_return_ok() {
+        let version = &1.into() | &QUERY_VERSION_BASE.clone();
+        let max_fee = 2;
+        let nonce = 3.into();
+        let signature = vec![5.into()];
+        let result = verify_version(&version, max_fee, &nonce, &signature);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn version_2_with_query_version_set_should_return_ok() {
+        let version = &2.into() | &QUERY_VERSION_BASE.clone();
+        let max_fee = 43;
+        let nonce = 4.into();
+        let signature = vec![6.into()];
+        let result = verify_version(&version, max_fee, &nonce, &signature);
+        assert!(result.is_ok());
     }
 }

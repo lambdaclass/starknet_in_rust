@@ -1,4 +1,5 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet coverage deps test heaptrack check-python-version compile-abi
+.PHONY: build check clean clippy compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra \
+		 compile-cairo-2-casm compile-cairo-2-sierra coverage deps test heaptrack check-python-version
 
 export PATH:=$(shell pyenv root)/shims:$(PATH)
 export PYENV_VERSION=3.9
@@ -32,13 +33,7 @@ STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/bin/starknet-sierra-compile
 #
 
 deps-venv:
-	pip install \
-		fastecdsa \
-		typeguard==2.13.0 \
-		openzeppelin-cairo-contracts==0.6.1 \
-		maturin \
-		cairo-lang==0.11 \
-		"urllib3 <=1.26.15"
+	pip install -r requirements.txt
 
 compile-cairo: $(CAIRO_TARGETS) $(CAIRO_ABI_TARGETS)
 compile-starknet: $(STARKNET_TARGETS) $(STARKNET_ABI_TARGETS)
@@ -71,6 +66,9 @@ $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo
 
 $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra
 	$(STARKNET_SIERRA_COMPILE_CAIRO_1) --allowed-libfuncs-list-name experimental_v0.1.0 --add-pythonic-hints $< $@
+
+compile-cairo-1-sierra: $(CAIRO_1_COMPILED_SIERRA_CONTRACTS)
+compile-cairo-1-casm: $(CAIRO_1_COMPILED_CASM_CONTRACTS)
 
 
 cairo-repo-1-dir = cairo1
@@ -105,6 +103,9 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 	$(STARKNET_SIERRA_COMPILE_CAIRO_2) --add-pythonic-hints $< $@
 
+compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
+compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
+
 
 cairo-repo-2-dir = cairo2
 cairo-repo-2-dir-macos = cairo2-macos
@@ -129,10 +130,10 @@ $(cairo-repo-2-dir):
 # =================
 
 build: compile-cairo compile-starknet
-	cargo build --release --all
+	cargo build --release --workspace
 
 check: compile-cairo compile-starknet
-	cargo check --all --all-targets
+	cargo check --workspace --all-targets
 
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
@@ -162,18 +163,29 @@ clean:
 	-rm -rf cairo-2.0.0.tar
 	-rm -rf cairo-1.1.1.tar
 
-clippy: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
-	cargo clippy --all --all-targets -- -D warnings
+clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
+	cargo clippy --workspace --all-targets -- -D warnings
 
-test: compile-cairo compile-starknet $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_1_COMPILED_SIERRA_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
+test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	echo "Cairo1 tests"
-	cargo test --release --all --all-targets --features=cairo_1_tests
+	$(MAKE) test-cairo-1
 	echo "Cairo2 tests"
-	cargo test --release --all --all-targets
+	$(MAKE) test-cairo-2
 
-coverage: compile-cairo compile-starknet compile-abi $(CAIRO_1_COMPILED_CASM_CONTRACTS) $(CAIRO_2_COMPILED_CASM_CONTRACTS)
-	cargo +nightly llvm-cov --ignore-filename-regex 'main.rs' --release
-	cargo +nightly llvm-cov report --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
+test-cairo-1:
+	cargo nextest run --workspace --all-targets --features=cairo_1_tests
+
+test-cairo-2:
+	cargo nextest run --workspace --all-targets
+
+test-doctests:
+	cargo test --workspace --doc
+
+coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
+	$(MAKE) coverage-report
+
+coverage-report:
+	cargo +nightly llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
 heaptrack:
 	./scripts/heaptrack.sh

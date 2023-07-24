@@ -17,7 +17,7 @@ use starknet_in_rust::{
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::hint::black_box;
+use std::{hint::black_box, sync::Arc};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
@@ -60,7 +60,7 @@ fn main() {
 fn deploy_account() {
     const RUNS: usize = 500;
 
-    let state_reader = InMemoryStateReader::default();
+    let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
@@ -96,7 +96,7 @@ fn deploy_account() {
 fn declare() {
     const RUNS: usize = 5;
 
-    let state_reader = InMemoryStateReader::default();
+    let state_reader = Arc::new(InMemoryStateReader::default());
     let state = CachedState::new(state_reader, Some(Default::default()), None);
 
     let block_context = &Default::default();
@@ -128,7 +128,7 @@ fn declare() {
 fn deploy() {
     const RUNS: usize = 8;
 
-    let state_reader = InMemoryStateReader::default();
+    let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state
@@ -163,7 +163,7 @@ fn deploy() {
 fn invoke() {
     const RUNS: usize = 100;
 
-    let state_reader = InMemoryStateReader::default();
+    let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(state_reader, Some(Default::default()), None);
 
     state

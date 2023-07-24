@@ -12,29 +12,186 @@ env:
   RUST_TOOLCHAIN: 1.70.0
 
 jobs:
-  build:
-    runs-on: ubuntu-20.04
+  build-programs:
+    strategy:
+      matrix:
+        program-target: [
+          compile-cairo,
+          compile-starknet,
+          compile-cairo-1-casm,
+          compile-cairo-1-sierra,
+          compile-cairo-2-casm,
+          compile-cairo-2-sierra,
+        ]
+    name: Build Cairo programs
+    runs-on: ubuntu-22.04
     steps:
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rustfmt, clippy
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
-    - uses: actions/setup-python@v2
       with:
-        python-version: '3.9'
-    - name: Deps
-      run: make deps
-    - name: Build
-      run: make build
+        fetch-depth: 0
 
-  format:
-    runs-on: ubuntu-20.04
+    - name: Fetch from cache
+      uses: actions/cache@v3
+      id: cache-programs
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        restore-keys: ${{ matrix.program-target }}-cache-
+
+    # This is not pretty, but we need `make` to see the compiled programs are
+    # actually newer than the sources, otherwise it will try to rebuild them
+    - name: Restore timestamps
+      uses: chetan/git-restore-mtime-action@v1
+
+    - name: Python3 Build
+      if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+
+    - name: Install deps
+      if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
+      run: make deps
+
+    - name: Build programs
+      if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
+      run: make -j ${{ matrix.program-target }}
+
+  # NOTE: used to reduce the amount of cache steps we need in later jobs
+  # TODO: remove this cache once the workflow finishes
+  merge-caches:
+    name: Merge Cairo programs cache
+    runs-on: ubuntu-22.04
+    needs: build-programs
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Fetch from cache (compile-cairo)
+      uses: actions/cache/restore@v3
+      id: cache-programs
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: compile-cairo-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+    
+    - name: Fetch from cache (compile-starknet)
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: compile-starknet-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
+    - name: Fetch from cache (compile-cairo-1-casm)
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: compile-cairo-1-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
+    - name: Fetch from cache (compile-cairo-1-sierra)
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: compile-cairo-1-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
+    - name: Fetch from cache (compile-cairo-2-casm)
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: compile-cairo-2-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
+    - name: Fetch from cache (compile-cairo-2-sierra)
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
+    - name: Fetch from cache (compile-cairo-2-sierra)
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+    
+    - name: Merge caches
+      uses: actions/cache/save@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+
+  build:
+    name: Build with release profile
+    needs: merge-caches
+    runs-on: ubuntu-22.04
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -46,18 +203,65 @@ jobs:
         cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
-    - uses: actions/setup-python@v2
+    - name: Fetch programs
+      uses: actions/cache/restore@v3
       with:
-        python-version: '3.9'
-    - name: Deps
-      run: make deps
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
+    - name: Build
+      run: cargo build --release --workspace
+
+  lint:
+    name: Lint with fmt and clippy
+    needs: merge-caches
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Fetch programs
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
     - name: Format
       run: cargo fmt --all -- --check
     - name: Run clippy
-      run: make clippy
+      run: cargo clippy --workspace --all-targets -- -D warnings
 
-  test:
-    runs-on: ubuntu-20.04
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ test-cairo-1, test-cairo-2, test-doctests ]
+    name: Run tests
+    needs: merge-caches
+    runs-on: ubuntu-22.04
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -69,33 +273,88 @@ jobs:
         cache-on-failure: true
     - name: Checkout
       uses: actions/checkout@v3
-    - uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-    - name: Deps
-      run: make deps
-    - name: Run tests
-      run: make test
 
-  # 28.06.2023: This job uses unmaintained actions-rs because dtolnay is giving linking errors with nightly
+    - name: Fetch programs
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+    
+    - name: Install testing tools
+      # TODO: remove `if` when nextest adds doctests support
+      if: ${{ matrix.target != 'test-doctests' }}
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-nextest
+
+    - name: Run tests (${{ matrix.target }})
+      run: make ${{ matrix.target }}
+
   coverage:
-    runs-on: ubuntu-20.04
+    needs: merge-caches
+    name: Generate and upload coverage report
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-    - name: Deps
-      run: make deps
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@nightly
       with:
-        toolchain: nightly
-        override: true
-        components: rustfmt, clippy
-    - name: Coverage
-      run: make coverage
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+    - name: Set nightly as default
+      run: rustup default nightly
+
+    - name: Install testing tools
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-nextest,cargo-llvm-cov
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+
+    - name: Cache coverage report
+      id: restore-report
+      uses: actions/cache/restore@v3
+      with:
+        path: lcov.info
+        key: coverage-cache-${{ github.sha }}
+
+    - name: Fetch programs
+      if: steps.restore-report.outputs.cache-hit != 'true'
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          cairo_programs/**/*.casm
+          cairo_programs/**/*.sierra
+          cairo_programs/**/*.json
+          starknet_programs/**/*.casm
+          starknet_programs/**/*.sierra
+          starknet_programs/**/*.json
+          !starknet_programs/raw_contract_classes/*
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+
+    - name: Generate coverage report
+      if: steps.restore-report.outputs.cache-hit != 'true'
+      run: make coverage-report
+
+    - name: Save coverage report
+      if: steps.restore-report.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v3
+      with:
+        path: lcov.info
+        key: coverage-cache-${{ github.sha }}
+
     - name: Upload coverage to codecov.io
       uses: codecov/codecov-action@v3
       with:

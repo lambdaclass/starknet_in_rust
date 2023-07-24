@@ -34,6 +34,7 @@ use std::{
     collections::{HashMap, HashSet},
     iter::empty,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -115,7 +116,7 @@ fn test_contract<'a>(
 
         Some(contract_class_cache)
     };
-    let mut state = CachedState::new(state_reader, contract_class_cache, None);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache, None);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
@@ -143,8 +144,11 @@ fn test_contract<'a>(
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
-        .expect("Could not execute contract");
+        .expect("Could not execute contract")
+        .call_info
+        .unwrap();
 
     assert_eq!(result.contract_address, contract_address);
     assert_eq!(result.contract_address, contract_address);
@@ -484,10 +488,10 @@ fn get_tx_info_syscall() {
                max_fee,
                signature: Vec<Felt252>,
                transaction_hash: Felt252,
-               chain_id,
+               chain_id: Felt252,
                execution_resources: ExecutionResources| {
         let mut block_context = BlockContext::default();
-        *block_context.starknet_os_config_mut().chain_id_mut() = chain_id;
+        *block_context.starknet_os_config_mut().chain_id_mut() = chain_id.clone();
 
         let n_steps = block_context.invoke_tx_max_n_steps();
         test_contract(
@@ -523,7 +527,7 @@ fn get_tx_info_syscall() {
                     .reduce(|a, b| a + b)
                     .unwrap_or_default(),
                 transaction_hash,
-                chain_id.to_felt(),
+                chain_id,
             ],
             execution_resources,
         );
@@ -535,7 +539,7 @@ fn get_tx_info_syscall() {
         12,
         vec![],
         0.into(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         ExecutionResources {
             n_steps: 49,
             ..Default::default()
@@ -547,7 +551,7 @@ fn get_tx_info_syscall() {
         12,
         vec![],
         0.into(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         ExecutionResources {
             n_steps: 49,
             ..Default::default()
@@ -559,7 +563,7 @@ fn get_tx_info_syscall() {
         12,
         vec![],
         0.into(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         ExecutionResources {
             n_steps: 49,
             ..Default::default()
@@ -571,7 +575,7 @@ fn get_tx_info_syscall() {
         50,
         vec![],
         0.into(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         ExecutionResources {
             n_steps: 49,
             ..Default::default()
@@ -583,7 +587,7 @@ fn get_tx_info_syscall() {
         50,
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         0.into(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         ExecutionResources {
             n_steps: 77,
             ..Default::default()
@@ -595,7 +599,7 @@ fn get_tx_info_syscall() {
         50,
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
-        StarknetChainId::TestNet,
+        StarknetChainId::TestNet.to_felt(),
         ExecutionResources {
             n_steps: 77,
             ..Default::default()
@@ -607,7 +611,7 @@ fn get_tx_info_syscall() {
         50,
         [0x12, 0x34, 0x56, 0x78].map(Felt252::from).to_vec(),
         12345678.into(),
-        StarknetChainId::TestNet2,
+        StarknetChainId::TestNet2.to_felt(),
         ExecutionResources {
             n_steps: 77,
             ..Default::default()
@@ -1096,7 +1100,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1139,6 +1143,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -1196,7 +1201,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1240,6 +1245,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
 
@@ -1298,7 +1304,7 @@ fn deploy_cairo1_and_invoke() {
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
-        state_reader,
+        Arc::new(state_reader),
         Some(contract_class_cache),
         Some(casm_contract_class_cache),
     );
@@ -1341,6 +1347,7 @@ fn deploy_cairo1_and_invoke() {
         &mut resources_manager,
         &mut tx_execution_context,
         false,
+        block_context.invoke_tx_max_n_steps(),
     );
 
     assert!(call_info.is_ok());
@@ -1379,7 +1386,10 @@ fn deploy_cairo1_and_invoke() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
+        .unwrap()
+        .call_info
         .unwrap();
 
     let retdata = call_info.retdata;
@@ -1431,7 +1441,11 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(state_reader, Some(deprecated_contract_class_cache), None);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Some(deprecated_contract_class_cache),
+        None,
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -1469,7 +1483,10 @@ fn send_messages_to_l1_different_contract_calls() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps(),
         )
+        .unwrap()
+        .call_info
         .unwrap();
     let l1_to_l2_messages = call_info.get_sorted_l2_to_l1_messages().unwrap();
     assert_eq!(
@@ -1501,7 +1518,6 @@ fn run_rabbitx_withdraw() {
     // https://starkscan.co/tx/0x0568988e97ba4be44fd345421a61026b64a2e759bd8a2c6568b6af97d8e91b29
     let mut context = BlockContext::default();
     context.block_info_mut().block_number = 68422;
-    context.block_info_mut().starknet_version = "0.11.2".to_owned();
 
     let class_hash = felt_to_hash(&felt_str!(
         "36e5b6081df2174189fb83800d2a09132286dcd1004ad960a0c8d69364e6e9a",

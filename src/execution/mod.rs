@@ -2,12 +2,10 @@ pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
 
+use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
-    definitions::{
-        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-        transaction_type::TransactionType,
-    },
+    definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
@@ -313,6 +311,12 @@ impl TransactionExecutionContext {
         n_steps: u64,
         version: Felt252,
     ) -> Self {
+        let nonce = if version == 0.into() || version == *QUERY_VERSION_BASE {
+            0.into()
+        } else {
+            nonce
+        };
+
         TransactionExecutionContext {
             n_emitted_events: 0,
             account_contract_address,
@@ -363,7 +367,7 @@ impl TxInfoStruct {
     pub(crate) fn new(
         tx: TransactionExecutionContext,
         signature: Relocatable,
-        chain_id: StarknetChainId,
+        chain_id: Felt252,
     ) -> TxInfoStruct {
         TxInfoStruct {
             version: tx.version,
@@ -372,7 +376,7 @@ impl TxInfoStruct {
             signature_len: tx.signature.len(),
             signature,
             transaction_hash: tx.transaction_hash,
-            chain_id: chain_id.to_felt(),
+            chain_id,
             nonce: tx.nonce,
         }
     }
@@ -427,6 +431,7 @@ impl TxInfoStruct {
 pub struct TransactionExecutionInfo {
     pub validate_info: Option<CallInfo>,
     pub call_info: Option<CallInfo>,
+    pub revert_error: Option<String>,
     pub fee_transfer_info: Option<CallInfo>,
     pub actual_fee: u128,
     pub actual_resources: HashMap<String, usize>,
@@ -437,6 +442,7 @@ impl TransactionExecutionInfo {
     pub fn new(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
+        revert_error: Option<String>,
         fee_transfer_info: Option<CallInfo>,
         actual_fee: u128,
         actual_resources: HashMap<String, usize>,
@@ -445,6 +451,7 @@ impl TransactionExecutionInfo {
         TransactionExecutionInfo {
             validate_info,
             call_info,
+            revert_error,
             fee_transfer_info,
             actual_fee,
             actual_resources,
@@ -483,6 +490,7 @@ impl TransactionExecutionInfo {
         TransactionExecutionInfo {
             validate_info,
             call_info: execute_call_info,
+            revert_error: None,
             fee_transfer_info,
             actual_fee: 0,
             actual_resources: HashMap::new(),
@@ -493,12 +501,14 @@ impl TransactionExecutionInfo {
     pub fn new_without_fee_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
+        revert_error: Option<String>,
         actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
     ) -> Self {
         TransactionExecutionInfo {
             validate_info,
             call_info,
+            revert_error,
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources,
