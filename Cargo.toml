@@ -18,6 +18,7 @@ cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"] }
 starknet_api = "0.1.0"
 num-traits = "0.2.15"
 starknet = { path = "../starknet-rs" }
+thiserror = "1.0.32"
 
 [dependencies]
 cairo-lang-starknet = "2.0.0"
@@ -38,7 +39,7 @@ serde_json = { version = "1.0", features = [
 sha3 = "0.10.1"
 starknet_api = { workspace = true }
 starknet-crypto = "0.5.1"
-thiserror = "1.0.32"
+thiserror = { workspace = true }
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
 hex = "0.4.3"
 anyhow = "1.0.66"
