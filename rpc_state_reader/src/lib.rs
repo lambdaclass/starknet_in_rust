@@ -1,5 +1,6 @@
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
+use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::ContractClass;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
@@ -10,7 +11,6 @@ use starknet_in_rust::{
 };
 use std::env;
 use thiserror::Error;
-use serde_with::{serde_as, DeserializeAs};
 
 /// State that implements [`StateReader`], using the RPC endpoints through Infura.
 pub struct RpcState {
@@ -182,7 +182,7 @@ mod tests {
         definitions::{block_context::BlockContext, constants::EXECUTE_ENTRY_POINT_SELECTOR},
         felt::felt_str,
         state::cached_state::CachedState,
-        transaction::{InvokeFunction, Transaction},
+        transaction::InvokeFunction,
     };
 
     #[test]
@@ -278,79 +278,68 @@ mod tests {
     #[test]
     fn test_invoke_execute() {
         let contract_address = Address(felt_str!(
-            "0213887f63ac94d220d3e0e1052e1037e084ae683112116965335af5115f37cc",
+            "06fcccb8c9c5bc490600d0d3a95134d3b2aacec7461fc1930178215803fa8d0c",
             16
         ));
         let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
 
-        let max_fee = 542063243332116;
+        let max_fee = 103000000000000;
         let version = felt_str!("100000000000000000000000000000001", 16);
 
         let calldata = vec![
             felt_str!("1", 16),
             felt_str!(
-                "1b22f7a9d18754c994ae0ee9adb4628d414232e3ebd748c386ac286f86c3066",
+                "49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
                 16
             ),
             felt_str!(
-                "2f0b3c5710379609eb5495f1ecd348cb28167711b73609fe565a72734550354",
+                "83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e",
                 16
             ),
             felt_str!("0", 16),
-            felt_str!("7", 16),
-            felt_str!("7", 16),
+            felt_str!("3", 16),
+            felt_str!("3", 16),
             felt_str!(
-                "213887f63ac94d220d3e0e1052e1037e084ae683112116965335af5115f37cc",
+                "54ae4dbc24999badc9a161f6f4b72156ca7da92da93046fcbb48680a324ac7c",
                 16
             ),
-            felt_str!("d772d", 16),
-            felt_str!("4", 16),
-            felt_str!("7a120", 16),
-            felt_str!("66591300", 16),
-            felt_str!(
-                "4404f9322daa95e6fa2bc4bd424e7ba45d18b117b7515e209531486b7479d70",
-                16
-            ),
-            felt_str!(
-                "2f1cae21f2618ac89b90e24c7b7316a471cabdb1655475648c5415007b94262",
-                16
-            ),
+            felt_str!("26f00fdabd0000", 16),
+            felt_str!("0", 16),
         ];
 
         let signature = vec![
             felt_str!(
-                "20cb013c9848c0639d76861d69e527c4f1d315298a62731c794be7ebf82e857",
+                "63cdad41f8f99362b181296492597edef76083a23a71e890c150eda0a848ce2",
                 16
             ),
             felt_str!(
-                "6d250d217ac57658ac98b5df7ad52dce4f98180315ab76c3f36d787c92dc35a",
+                "3064c7d20438426f1384ddb09cc2bdc1304cfc5dd9d7f7c46de8173f2bc71cf",
                 16
             ),
         ];
-        // let chain_id = StarknetChainId::Mainnet.to_felt();
-        let nonce = Some(felt_str!("9"));
 
-        let internal_invoke_function = Transaction::InvokeFunction(
-            InvokeFunction::new_with_tx_hash(
-                contract_address,
-                entry_point_selector,
-                max_fee,
-                version,
-                calldata,
-                signature,
-                nonce,
-                felt_str!(
-                    "02afa4f3399d11419b1ebc6b0af9abcb9c6dc25e5754f52522a16deba1971120",
-                    16
-                ),
-            )
-            .unwrap(),
-        );
+        let nonce = Some(felt_str!("8"));
+
+        let internal_invoke_function = InvokeFunction::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            max_fee,
+            version,
+            calldata,
+            signature,
+            nonce,
+            felt_str!(
+                "014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+                16
+            ),
+        )
+        .unwrap()
+        .create_for_simulation(false, false, true); // we could include the fee transfer by setting up correctly the BlockContext
 
         // Instantiate CachedState
         let state_reader = RpcState::new(
             "starknet-mainnet".to_string(),
-            BlockValue::BlockNumber(serde_json::to_value(69_999).unwrap()),
+            BlockValue::BlockNumber(serde_json::to_value(90_006).unwrap()),
         );
 
         let mut state = CachedState::new(Arc::new(state_reader), None, None);
