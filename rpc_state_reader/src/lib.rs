@@ -57,7 +57,7 @@ enum RpcError {
 
 /// [`BlockValue`] is an Enum that represent which block we are going to use to retrieve information.
 #[allow(dead_code)]
-enum BlockValue {
+pub enum BlockValue {
     /// String one of: ["latest", "pending"]
     Tag(serde_json::Value),
     /// Integer
@@ -105,8 +105,7 @@ struct RpcResponseFelt252 {
 }
 
 impl RpcState {
-    #[allow(dead_code)]
-    fn new(chain: RpcChain, block: BlockValue) -> Self {
+    pub fn new(chain: RpcChain, block: BlockValue) -> Self {
         Self {
             chain,
             api_key: env::var("INFURA_API_KEY")
