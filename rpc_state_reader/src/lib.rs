@@ -59,19 +59,19 @@ enum RpcError {
 #[allow(dead_code)]
 enum BlockValue {
     /// String one of: ["latest", "pending"]
-    BlockTag(serde_json::Value),
+    Tag(serde_json::Value),
     /// Integer
-    BlockNumber(serde_json::Value),
+    Number(serde_json::Value),
     /// String with format: 0x{felt252}
-    BlockHash(serde_json::Value),
+    Hash(serde_json::Value),
 }
 
 impl BlockValue {
-    fn to_value(self: &Self) -> serde_json::Value {
+    fn to_value(&self) -> serde_json::Value {
         match self {
-            BlockValue::BlockTag(block_tag) => block_tag.clone(),
-            BlockValue::BlockNumber(block_number) => json!({ "block_number": block_number }),
-            BlockValue::BlockHash(block_hash) => json!({ "block_hash": block_hash }),
+            BlockValue::Tag(block_tag) => block_tag.clone(),
+            BlockValue::Number(block_number) => json!({ "block_number": block_number }),
+            BlockValue::Hash(block_hash) => json!({ "block_hash": block_hash }),
         }
     }
 }
@@ -116,13 +116,12 @@ impl RpcState {
     }
 
     fn rpc_call<T: for<'a> Deserialize<'a>>(
-        self: &Self,
+        &self,
         params: &serde_json::Value,
     ) -> Result<T, RpcError> {
         let response = ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
-            self.chain.to_string(),
-            self.api_key
+            self.chain, self.api_key
         ))
         .set("Content-Type", "application/json")
         .set("accept", "application/json")
@@ -224,7 +223,7 @@ mod tests {
     fn test_get_contract_class_cairo1() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
-            BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
         // This belongs to
         // https://starkscan.co/class/0x0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216
@@ -243,7 +242,7 @@ mod tests {
     fn test_get_contract_class_cairo0() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
-            BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
 
         let class_hash = felt_str!(
@@ -259,7 +258,7 @@ mod tests {
     fn test_get_class_hash_at() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
-            BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
         let address = Address(felt_str!(
             "00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9",
@@ -279,7 +278,7 @@ mod tests {
     fn test_get_nonce_at() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
-            BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
         let address = Address(felt_str!(
             "00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9",
@@ -295,7 +294,7 @@ mod tests {
     fn test_get_storage_at() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
-            BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
         let storage_entry = (
             Address(felt_str!(
@@ -374,7 +373,7 @@ mod tests {
         // Instantiate CachedState
         let state_reader = RpcState::new(
             RpcChain::MainNet,
-            BlockValue::BlockNumber(serde_json::to_value(90_006).unwrap()),
+            BlockValue::Number(serde_json::to_value(90_006).unwrap()),
         );
 
         let mut state = CachedState::new(Arc::new(state_reader), None, None);

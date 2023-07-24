@@ -68,10 +68,10 @@ impl From<StarknetRsContractClass> for CompiledClass {
                 let middle_sierra: MiddleSierraContractClass = serde_json::from_value(v).unwrap();
 
                 let sierra_cc = SierraContractClass {
-                    sierra_program: middle_sierra.sierra_program.into(),
-                    sierra_program_debug_info: middle_sierra.sierra_program_debug_info.into(),
-                    contract_class_version: middle_sierra.contract_class_version.into(),
-                    entry_points_by_type: middle_sierra.entry_points_by_type.into(),
+                    sierra_program: middle_sierra.sierra_program,
+                    sierra_program_debug_info: middle_sierra.sierra_program_debug_info,
+                    contract_class_version: middle_sierra.contract_class_version,
+                    entry_points_by_type: middle_sierra.entry_points_by_type,
                     abi,
                 };
 
@@ -80,10 +80,9 @@ impl From<StarknetRsContractClass> for CompiledClass {
                 CompiledClass::Casm(Box::new(casm_cc))
             }
             Legacy(_deprecated_contract_class) => {
-                // THIS WORKES!!!
                 let as_str = decode_reader(_deprecated_contract_class.program).unwrap();
 
-                let program = Program::from_bytes(&as_str.clone().as_bytes(), None).unwrap();
+                let program = Program::from_bytes(as_str.as_bytes(), None).unwrap();
 
                 // let hinted_class_hash = compute_hinted_class_hash();
                 let mut entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>> =
@@ -146,7 +145,7 @@ impl From<StarknetRsContractClass> for CompiledClass {
                     abi: serde_json::to_value(&_deprecated_contract_class.abi).unwrap(),
                 };
 
-                let v = serde_json::to_value(&serialized_cc).unwrap();
+                let v = serde_json::to_value(serialized_cc).unwrap();
                 let hinted_class_hash = compute_hinted_class_hash(&v).unwrap();
 
                 CompiledClass::Deprecated(Box::new(ContractClass {

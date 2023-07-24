@@ -17,7 +17,7 @@ members = ["cli", "fuzzer", "rpc_state_reader"]
 cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"] }
 starknet_api = "0.1.0"
 num-traits = "0.2.15"
-starknet = { path = "../starknet-rs" }
+starknet = "0.5.0"
 thiserror = "1.0.32"
 
 [dependencies]
