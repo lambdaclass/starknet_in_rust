@@ -68,7 +68,7 @@ impl StarknetChainId {
 pub struct StarknetOsConfig {
     /// ID of the configured chain
     #[getset(get = "pub", get_mut = "pub")]
-    pub(crate) chain_id: StarknetChainId,
+    pub(crate) chain_id: Felt252,
     /// Address of the token used when paying fees
     #[get = "pub"]
     pub(crate) fee_token_address: Address,
@@ -81,10 +81,10 @@ impl StarknetOsConfig {
     ///
     /// # Arguments
     ///
-    /// * `chain_id` - [`StarknetChainId`] of the configured chain.
+    /// * `chain_id` - [`Felt252`] of the configured chain.
     /// * `fee_token_address` - Address of the token used when paying fees.
     /// * `gas_price` - Price of gas.
-    pub fn new(chain_id: StarknetChainId, fee_token_address: Address, gas_price: u128) -> Self {
+    pub fn new(chain_id: Felt252, fee_token_address: Address, gas_price: u128) -> Self {
         StarknetOsConfig {
             chain_id,
             fee_token_address,
