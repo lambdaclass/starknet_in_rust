@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [features]
 default = ["with_mimalloc"]
-with_mimalloc = ["mimalloc"]
+with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 
 [workspace]
