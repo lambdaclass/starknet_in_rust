@@ -23,6 +23,10 @@ pub struct RpcState {
 enum RpcError {
     #[error("RPC call failed with error: {0}")]
     RpcCall(String),
+    #[error("Request failed with error: {0}")]
+    Request(String),
+    #[error("Failed to cast from: {0} to: {1} with error: {2}")]
+    Cast(String, String, String),
 }
 
 #[allow(dead_code)]
@@ -77,7 +81,7 @@ impl RpcState {
     fn new(chain: String, block: BlockValue) -> Self {
         Self {
             chain,
-            api_key: env::var("INFURA_API_KEY").unwrap(),
+            api_key: env::var("INFURA_API_KEY").expect("Missing API Key in environment: INFURA_API_KEY"),
             block,
         }
     }
@@ -94,9 +98,9 @@ impl RpcState {
         .set("Content-Type", "application/json")
         .set("accept", "application/json")
         .send_json(params)
-        .unwrap()
+        .map_err(|err| RpcError::Request(err.to_string()))?
         .into_string()
-        .unwrap();
+        .map_err(|err| RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string()))?;
         serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
     }
 }
