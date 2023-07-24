@@ -9,12 +9,35 @@ use starknet_in_rust::{
     state::{state_api::StateReader, state_cache::StorageEntry},
     utils::{Address, ClassHash, CompiledClassHash},
 };
+use core::fmt;
 use std::env;
 use thiserror::Error;
 
-/// State that implements [`StateReader`], using the RPC endpoints through Infura.
+/// Starknet chains supported in Infura.
+#[derive(Debug, Clone, Copy)]
+pub enum RpcChain {
+    MainNet,
+    TestNet,
+    TestNet2
+}
+
+impl fmt::Display for RpcChain {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RpcChain::MainNet => write!(f, "starknet-mainnet"),
+            RpcChain::TestNet => write!(f, "starknet-goerli"),
+            RpcChain::TestNet2 => write!(f, "starknet-goerli2"),
+        }
+    }
+}
+
+/// A [StateReader] that holds all the data in memory.
+///
+/// This implementation is uses HTTP requests to call the RPC endpoint,
+/// using Infura.
+/// In order to use it an Infura API key is necessary.
 pub struct RpcState {
-    chain: String,
+    chain: RpcChain,
     api_key: String,
     block: BlockValue,
 }
@@ -78,7 +101,7 @@ struct RpcResponseFelt252 {
 
 impl RpcState {
     #[allow(dead_code)]
-    fn new(chain: String, block: BlockValue) -> Self {
+    fn new(chain: RpcChain, block: BlockValue) -> Self {
         Self {
             chain,
             api_key: env::var("INFURA_API_KEY")
@@ -89,12 +112,11 @@ impl RpcState {
 
     fn rpc_call<T: for<'a> Deserialize<'a>>(
         self: &Self,
-        _rpc_method: String,
         params: &serde_json::Value,
     ) -> Result<T, RpcError> {
         let response = ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
-            self.chain, self.api_key
+            self.chain.to_string(), self.api_key
         ))
         .set("Content-Type", "application/json")
         .set("accept", "application/json")
@@ -118,7 +140,7 @@ impl StateReader for RpcState {
         });
 
         let response: RpcResponseProgram = self
-            .rpc_call("starknet_getClass".to_string(), &params)
+            .rpc_call(&params)
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(CompiledClass::from(response.result))
@@ -133,7 +155,7 @@ impl StateReader for RpcState {
         });
 
         let resp: RpcResponseFelt252 = self
-            .rpc_call("starknet_getClassHashAt".to_string(), &params)
+            .rpc_call(&params)
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(resp.result.to_be_bytes())
@@ -148,7 +170,7 @@ impl StateReader for RpcState {
         });
 
         let resp: RpcResponseFelt252 = self
-            .rpc_call("starknet_getNonce".to_string(), &params)
+            .rpc_call(&params)
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(resp.result)
@@ -166,7 +188,7 @@ impl StateReader for RpcState {
         });
 
         let resp: RpcResponseFelt252 = self
-            .rpc_call("starknet_getStorageAt".to_string(), &params)
+            .rpc_call(&params)
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(resp.result)
@@ -195,7 +217,7 @@ mod tests {
     #[test]
     fn test_get_contract_class_cairo1() {
         let rpc_state = RpcState::new(
-            "starknet-mainnet".to_string(),
+            RpcChain::MainNet,
             BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
         );
         // This belongs to
@@ -214,7 +236,7 @@ mod tests {
     #[test]
     fn test_get_contract_class_cairo0() {
         let rpc_state = RpcState::new(
-            "starknet-mainnet".to_string(),
+            RpcChain::MainNet,
             BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
         );
 
@@ -230,7 +252,7 @@ mod tests {
     #[test]
     fn test_get_class_hash_at() {
         let rpc_state = RpcState::new(
-            "starknet-mainnet".to_string(),
+            RpcChain::MainNet,
             BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
         );
         let address = Address(felt_str!(
@@ -250,7 +272,7 @@ mod tests {
     #[test]
     fn test_get_nonce_at() {
         let rpc_state = RpcState::new(
-            "starknet-mainnet".to_string(),
+            RpcChain::MainNet,
             BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
         );
         let address = Address(felt_str!(
@@ -266,7 +288,7 @@ mod tests {
     #[test]
     fn test_get_storage_at() {
         let rpc_state = RpcState::new(
-            "starknet-mainnet".to_string(),
+            RpcChain::MainNet,
             BlockValue::BlockTag(serde_json::to_value("latest").unwrap()),
         );
         let storage_entry = (
@@ -345,7 +367,7 @@ mod tests {
 
         // Instantiate CachedState
         let state_reader = RpcState::new(
-            "starknet-mainnet".to_string(),
+            RpcChain::MainNet,
             BlockValue::BlockNumber(serde_json::to_value(90_006).unwrap()),
         );
 
