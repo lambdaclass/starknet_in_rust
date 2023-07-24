@@ -81,7 +81,8 @@ impl RpcState {
     fn new(chain: String, block: BlockValue) -> Self {
         Self {
             chain,
-            api_key: env::var("INFURA_API_KEY").expect("Missing API Key in environment: INFURA_API_KEY"),
+            api_key: env::var("INFURA_API_KEY")
+                .expect("Missing API Key in environment: INFURA_API_KEY"),
             block,
         }
     }
@@ -100,7 +101,9 @@ impl RpcState {
         .send_json(params)
         .map_err(|err| RpcError::Request(err.to_string()))?
         .into_string()
-        .map_err(|err| RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string()))?;
+        .map_err(|err| {
+            RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
+        })?;
         serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
     }
 }
