@@ -1,3 +1,4 @@
+use core::fmt;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
@@ -9,7 +10,6 @@ use starknet_in_rust::{
     state::{state_api::StateReader, state_cache::StorageEntry},
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use core::fmt;
 use std::env;
 use thiserror::Error;
 
@@ -18,7 +18,7 @@ use thiserror::Error;
 pub enum RpcChain {
     MainNet,
     TestNet,
-    TestNet2
+    TestNet2,
 }
 
 impl fmt::Display for RpcChain {
@@ -37,8 +37,11 @@ impl fmt::Display for RpcChain {
 /// using Infura.
 /// In order to use it an Infura API key is necessary.
 pub struct RpcState {
+    /// Enum with one of the supported Infura chains/
     chain: RpcChain,
+    /// Infura API key.
     api_key: String,
+    /// Struct that holds information on the block where we are going to use to read the state.
     block: BlockValue,
 }
 
@@ -52,6 +55,7 @@ enum RpcError {
     Cast(String, String, String),
 }
 
+/// [`BlockValue`] is an Enum that represent which block we are going to use to retrieve information.
 #[allow(dead_code)]
 enum BlockValue {
     /// String one of: ["latest", "pending"]
@@ -77,7 +81,8 @@ struct RpcResponseProgram {
     result: ContractClass,
 }
 
-pub struct FeltHex;
+// We use this new struct to cast the string that contains a [`Felt252`] in hex to a [`Felt252`]
+struct FeltHex;
 
 impl<'de> DeserializeAs<'de, Felt252> for FeltHex {
     fn deserialize_as<D>(deserializer: D) -> Result<Felt252, D::Error>
@@ -116,7 +121,8 @@ impl RpcState {
     ) -> Result<T, RpcError> {
         let response = ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
-            self.chain.to_string(), self.api_key
+            self.chain.to_string(),
+            self.api_key
         ))
         .set("Content-Type", "application/json")
         .set("accept", "application/json")
