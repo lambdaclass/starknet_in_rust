@@ -554,7 +554,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         let tx_info = TxInfoStruct::new(
             tx,
             signature,
-            self.block_context.starknet_os_config.chain_id,
+            self.block_context.starknet_os_config.chain_id.clone(),
         );
 
         let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
