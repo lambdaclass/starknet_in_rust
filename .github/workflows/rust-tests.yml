@@ -10,6 +10,14 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_TOOLCHAIN: 1.70.0
+  CAIRO_PROGRAMS_PATH: |
+    cairo_programs/**/*.casm
+    cairo_programs/**/*.sierra
+    cairo_programs/**/*.json
+    starknet_programs/**/*.casm
+    starknet_programs/**/*.sierra
+    starknet_programs/**/*.json
+    !starknet_programs/raw_contract_classes/*
 
 jobs:
   build-programs:
@@ -35,14 +43,7 @@ jobs:
       uses: actions/cache@v3
       id: cache-programs
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         restore-keys: ${{ matrix.program-target }}-cache-
 
@@ -80,112 +81,56 @@ jobs:
       uses: actions/cache/restore@v3
       id: cache-programs
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
     
     - name: Fetch from cache (compile-starknet)
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-starknet-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-1-casm)
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-1-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-1-sierra)
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-1-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-casm)
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-2-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-sierra)
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-sierra)
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
     
     - name: Merge caches
       uses: actions/cache/save@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
 
   build:
@@ -206,14 +151,7 @@ jobs:
     - name: Fetch programs
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
@@ -238,14 +176,7 @@ jobs:
     - name: Fetch programs
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
@@ -279,14 +210,7 @@ jobs:
     - name: Fetch programs
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
     
@@ -335,14 +259,7 @@ jobs:
       if: steps.restore-report.outputs.cache-hit != 'true'
       uses: actions/cache/restore@v3
       with:
-        path: |
-          cairo_programs/**/*.casm
-          cairo_programs/**/*.sierra
-          cairo_programs/**/*.json
-          starknet_programs/**/*.casm
-          starknet_programs/**/*.sierra
-          starknet_programs/**/*.json
-          !starknet_programs/raw_contract_classes/*
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
 
