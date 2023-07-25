@@ -599,7 +599,9 @@ fn get_cairo0_layout(contract_class: &ContractClass) -> &str {
 }
 
 fn get_cairo1_layout(entry_point: &CasmContractEntryPoint) -> &str {
-    let uses_keccak = entry_point.builtins.contains(&"keccak".to_string());
+    let uses_keccak = entry_point
+        .builtins
+        .contains(&BuiltinName::keccak.name().to_string());
     get_layout(uses_keccak)
 }
 
