@@ -13,16 +13,18 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, vec, sync::Arc};
 
 #[test]
 fn test_multiple_syscall() {
+
     //  Create program and entry point types for contract class
     let program_data = include_bytes!("../starknet_programs/cairo1/multi_syscall_test.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut contract_class_cache: HashMap<[u8; 32], _> = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -38,11 +40,8 @@ fn test_multiple_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        state_reader.clone(),
-        None,
-        Some(contract_class_cache.clone()),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache.clone()));
+
     // Create an execution entry point
     let calldata = [].to_vec();
     let caller_address = Address(0000.into());
@@ -121,33 +120,42 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        println!(
-            "{:?}",
-            String::from_utf8(Felt252::to_be_bytes(&call_info.retdata[0]).to_vec())
-        );
         assert_eq!(call_info.retdata, vec![25.into()])
     }
 
-    // Block for send_message_to_l1_syscall
+    // Block for replace_class_syscall
     {
+        let entrypoint_selector =
+            Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
+        let new_call_data = vec![
+            entrypoint_selector,
+            Felt252::from(25),
+        ];
         let call_info = test_syscall(
             "test_call_contract_syscall",
             address.clone(),
-            calldata.clone(),
+            new_call_data,
             caller_address.clone(),
             entry_point_type,
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![])
+        println!("{:?}", "test to check print");
+        println!("{:?}", String::from_utf8(Felt252::to_be_bytes(&call_info.retdata[0]).to_vec()));
+        assert_eq!(call_info.retdata, vec![25.into()])
     }
 
-    // Block for replace_class_syscall
+    // Block for send_message_to_l1_syscall
     {
+        let new_call_data = vec![
+            2222.into(),
+            Felt252::from(25),
+            Felt252::from(30),
+        ];
         let call_info = test_syscall(
             "test_send_message_to_l1",
             address.clone(),
-            calldata.clone(),
+            new_call_data,
             caller_address.clone(),
             entry_point_type,
             class_hash,
@@ -279,6 +287,9 @@ fn test_syscall(
             &mut resources_manager,
             &mut tx_execution_context,
             false,
+            block_context.invoke_tx_max_n_steps()
         )
+        .unwrap()
+        .call_info
         .unwrap()
 }

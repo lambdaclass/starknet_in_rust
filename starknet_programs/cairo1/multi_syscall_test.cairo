@@ -53,17 +53,21 @@ mod multy_syscall {
     }
 
      #[external]
-    fn test_call_contract_syscall(address: ContractAddress, function_selector: felt252, calldata: Array<felt252>) {
-        call_contract_syscall(address, function_selector, calldata.span());
+    fn test_call_contract_syscall(function_selector: felt252, number: felt252) ->  felt252 {
+        let mut calldata = ArrayTrait::new();
+        calldata.append(number);
+        let return_data =  call_contract_syscall(get_contract_address(), function_selector, calldata.span()).unwrap();
+        *return_data.get(0_usize).unwrap().unbox()
+       
     }   
     
     #[external]
-    fn test_send_message_to_l1(to_address: felt252,payload_0: felt252, payload_1: felt252) ->  felt252 {
+    fn test_send_message_to_l1(to_address: felt252, payload_0: felt252, payload_1: felt252) ->  () {
         let mut calldata = ArrayTrait::new();
         calldata.append(payload_0);
         calldata.append(payload_1);
-        let return_data = send_message_to_l1_syscall(to_address, payload.span());
-        *return_data.get(0_usize).unwrap().unbox()
+        let return_data = send_message_to_l1_syscall(to_address,  calldata.span()).unwrap();
+        return_data
     }
 
      #[external]
