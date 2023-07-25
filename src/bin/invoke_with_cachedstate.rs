@@ -117,7 +117,11 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
 
 pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
-        StarknetOsConfig::new(StarknetChainId::TestNet, Address(Felt252::zero()), 0),
+        StarknetOsConfig::new(
+            StarknetChainId::TestNet.to_felt(),
+            Address(Felt252::zero()),
+            0,
+        ),
         0,
         0,
         Default::default(),

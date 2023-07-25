@@ -102,7 +102,7 @@ lazy_static! {
 pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
-            StarknetChainId::TestNet,
+            StarknetChainId::TestNet.to_felt(),
             TEST_ERC20_CONTRACT_ADDRESS.clone(),
             *GAS_PRICE,
         ),
