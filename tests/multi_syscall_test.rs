@@ -140,8 +140,6 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        println!("{:?}", "test to check print");
-        println!("{:?}", String::from_utf8(Felt252::to_be_bytes(&call_info.retdata[0]).to_vec()));
         assert_eq!(call_info.retdata, vec![25.into()])
     }
 
