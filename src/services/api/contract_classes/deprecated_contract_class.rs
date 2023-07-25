@@ -130,7 +130,10 @@ impl ContractClass {
 
     /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON and a class hash.
     ///
-    /// This constructor avoids the need to recompute the class hash from the program JSON.
+    /// This constructor avoids the need to recompute the class hash from the program JSON,
+    /// but it does not verify that the given class hash is correct.
+    ///
+    /// This could return a wrong [`ContractClass`] if the given class hash is wrong.
     ///
     /// # Parameters
     /// - `program_json`: The JSON of the compiled Cairo 0 program.
