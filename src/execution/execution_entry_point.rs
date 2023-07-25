@@ -612,3 +612,17 @@ fn get_layout(uses_keccak: bool) -> &'static str {
         "starknet"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_cairo0_layout() {
+        let contract = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+        assert_eq!(get_cairo0_layout(&contract), "starknet");
+
+        let contract = ContractClass::from_path("starknet_programs/keccak_builtin.json").unwrap();
+        assert_eq!(get_cairo0_layout(&contract), "starknet"); // TODO: this should be `starknet_with_keccak`?
+    }
+}
