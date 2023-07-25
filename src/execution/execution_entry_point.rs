@@ -25,6 +25,7 @@ use crate::{
     },
 };
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
+use cairo_vm::serde::deserialize_program::BuiltinName;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -340,7 +341,18 @@ impl ExecutionEntryPoint {
 
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
-        let mut cairo_runner = CairoRunner::new(&contract_class.program, "starknet", false)?;
+
+        let layout = if contract_class
+            .program()
+            .iter_builtins()
+            .any(|b| b == &BuiltinName::keccak)
+        {
+            "starknet_with_keccak"
+        } else {
+            "starknet"
+        };
+
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, layout, false)?;
         cairo_runner.initialize_function_runner(&mut vm)?;
 
         validate_contract_deployed(state, &self.contract_address)?;
