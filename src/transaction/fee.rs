@@ -1,5 +1,5 @@
 use super::error::TransactionError;
-use crate::definitions::constants::FEE_FACTOR;
+use crate::definitions::constants::{FEE_FACTOR, QUERY_VERSION_BASE};
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
@@ -152,7 +152,19 @@ pub fn charge_fee<S: StateReader>(
         block_context.starknet_os_config.gas_price,
         block_context,
     )?;
-    let actual_fee = min(actual_fee, max_fee) * FEE_FACTOR;
+
+    let actual_fee = if tx_execution_context.version != 0.into()
+        && tx_execution_context.version != *QUERY_VERSION_BASE
+    {
+        min(actual_fee, max_fee) * FEE_FACTOR
+    } else {
+        if actual_fee > max_fee {
+            return Err(TransactionError::ActualFeeExceedsMaxFee(
+                actual_fee, max_fee,
+            ));
+        }
+        actual_fee
+    };
 
     let fee_transfer_info = if skip_fee_transfer {
         None
@@ -165,4 +177,71 @@ pub fn charge_fee<S: StateReader>(
         )?)
     };
     Ok((fee_transfer_info, actual_fee))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, sync::Arc};
+
+    use crate::{
+        definitions::block_context::BlockContext,
+        execution::TransactionExecutionContext,
+        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
+        transaction::{error::TransactionError, fee::charge_fee},
+    };
+
+    #[test]
+    fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut tx_execution_context = TransactionExecutionContext::default();
+        let mut block_context = BlockContext::default();
+        block_context.starknet_os_config.gas_price = 1;
+        let resources = HashMap::from([
+            ("l1_gas_usage".to_string(), 200_usize),
+            ("pedersen_builtin".to_string(), 10000_usize),
+        ]);
+        let max_fee = 100;
+        let skip_fee_transfer = true;
+
+        let result = charge_fee(
+            &mut state,
+            &resources,
+            &block_context,
+            max_fee,
+            &mut tx_execution_context,
+            skip_fee_transfer,
+        )
+        .unwrap_err();
+
+        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+    }
+
+    #[test]
+    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_max_fee() {
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut tx_execution_context = TransactionExecutionContext {
+            version: 1.into(),
+            ..Default::default()
+        };
+        let mut block_context = BlockContext::default();
+        block_context.starknet_os_config.gas_price = 1;
+        let resources = HashMap::from([
+            ("l1_gas_usage".to_string(), 200_usize),
+            ("pedersen_builtin".to_string(), 10000_usize),
+        ]);
+        let max_fee = 100;
+        let skip_fee_transfer = true;
+
+        let result = charge_fee(
+            &mut state,
+            &resources,
+            &block_context,
+            max_fee,
+            &mut tx_execution_context,
+            skip_fee_transfer,
+        )
+        .unwrap();
+
+        assert_eq!(result.1, max_fee);
+    }
 }
