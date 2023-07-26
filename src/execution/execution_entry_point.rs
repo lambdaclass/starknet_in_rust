@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
@@ -24,6 +26,7 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+use cairo_lang_casm::hints::Hint;
 use cairo_lang_runner::{CairoHintProcessor, StarknetState};
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::{
@@ -483,9 +486,18 @@ impl ExecutionEntryPoint {
             self.entry_point_selector.clone(),
         );
 
+        let a = contract_class.hints;
+        let mut b: HashMap<String, Hint>;
+
+        for (pc, hints) in a {
+            for hint in hints {
+                b.insert(hint.representing_string(), hint.clone());
+            }
+        }
+
         let cairo1_hint_processor: CairoHintProcessor<'_> = CairoHintProcessor {
             runner: None,
-            string_to_hint: contract_class.hints,
+            string_to_hint: b,
             starknet_state: StarknetState::default(),
             run_resources: RunResources::default(),
         };

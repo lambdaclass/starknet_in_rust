@@ -55,7 +55,8 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
-        self.cairo1_hint_processor.execute_hint(vm, exec_scopes, hint_data, constants)
+        self.cairo1_hint_processor
+            .execute_hint(vm, exec_scopes, hint_data, constants)
     }
 
     // Ignores all data except for the code that should contain
