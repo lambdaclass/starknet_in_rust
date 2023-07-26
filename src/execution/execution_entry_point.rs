@@ -341,11 +341,7 @@ impl ExecutionEntryPoint {
 
         // create starknet runner
         let mut vm = VirtualMachine::new(false);
-
-        // get the correct VM layout
-        let layout = get_cairo0_layout(&contract_class);
-
-        let mut cairo_runner = CairoRunner::new(&contract_class.program, layout, false)?;
+        let mut cairo_runner = CairoRunner::new(&contract_class.program, "starknet", false)?;
         cairo_runner.initialize_function_runner(&mut vm)?;
 
         validate_contract_deployed(state, &self.contract_address)?;
@@ -454,12 +450,8 @@ impl ExecutionEntryPoint {
         let mut vm = VirtualMachine::new(false);
         // get a program from the casm contract class
         let program: Program = contract_class.as_ref().clone().try_into()?;
-
-        // get the correct VM layout
-        // TODO: add test for this
-        let layout = get_cairo1_layout(&entry_point);
         // create and initialize a cairo runner for running cairo 1 programs.
-        let mut cairo_runner = CairoRunner::new(&program, layout, false)?;
+        let mut cairo_runner = CairoRunner::new(&program, "starknet", false)?;
 
         cairo_runner.initialize_function_runner_cairo_1(
             &mut vm,
@@ -587,42 +579,5 @@ impl ExecutionEntryPoint {
             runner.hint_processor.syscall_handler.internal_calls,
             call_result,
         )
-    }
-}
-
-fn get_cairo0_layout(contract_class: &ContractClass) -> &str {
-    let uses_keccak = contract_class
-        .program()
-        .iter_builtins()
-        .any(|b| b == &BuiltinName::keccak);
-    get_layout(uses_keccak)
-}
-
-fn get_cairo1_layout(entry_point: &CasmContractEntryPoint) -> &str {
-    let uses_keccak = entry_point
-        .builtins
-        .contains(&BuiltinName::keccak.name().to_string());
-    get_layout(uses_keccak)
-}
-
-fn get_layout(uses_keccak: bool) -> &'static str {
-    if uses_keccak {
-        "starknet_with_keccak"
-    } else {
-        "starknet"
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_cairo0_layout() {
-        let contract = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        assert_eq!(get_cairo0_layout(&contract), "starknet");
-
-        let contract = ContractClass::from_path("starknet_programs/keccak_builtin.json").unwrap();
-        assert_eq!(get_cairo0_layout(&contract), "starknet"); // TODO: this should be `starknet_with_keccak`?
     }
 }
