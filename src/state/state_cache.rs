@@ -178,6 +178,30 @@ impl StateCache {
         set.extend(self.storage_writes.keys().map(|x| x.0.clone()));
         set
     }
+
+    pub fn update_initial_values(&mut self) {
+        for (k, v) in self.nonce_writes.iter() {
+            self.nonce_initial_values.insert(k.clone(), v.clone());
+        }
+
+        for (k, v) in self.class_hash_writes.iter() {
+            self.class_hash_initial_values.insert(k.clone(), *v);
+        }
+
+        for (k, v) in self.compiled_class_hash_writes.iter() {
+            self.compiled_class_hash_initial_values
+                .insert(*k, v.clone());
+        }
+
+        for (k, v) in self.storage_writes.iter() {
+            self.storage_initial_values.insert(k.clone(), v.clone());
+        }
+
+        self.nonce_writes = HashMap::new();
+        self.class_hash_writes = HashMap::new();
+        self.compiled_class_hash_writes = HashMap::new();
+        self.storage_writes = HashMap::new();
+    }
 }
 
 #[cfg(test)]
