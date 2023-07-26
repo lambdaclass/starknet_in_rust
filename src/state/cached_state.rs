@@ -14,7 +14,10 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 // K: class_hash V: ContractClass
 pub type ContractClassCache = HashMap<ClassHash, ContractClass>;
@@ -315,8 +318,35 @@ impl<T: StateReader> State for CachedState<T> {
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
         );
-        let modified_contracts = storage_updates.keys().map(|k| k.0.clone()).len();
-        (modified_contracts, storage_updates.len())
+
+        let n_modified_contracts = {
+            let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
+
+            let class_hash_updates: Vec<_> = subtract_mappings(
+                self.cache.class_hash_writes.clone(),
+                self.cache.class_hash_initial_values.clone(),
+            )
+            .keys()
+            .cloned()
+            .collect();
+
+            let nonce_updates: Vec<_> = subtract_mappings(
+                self.cache.nonce_writes.clone(),
+                self.cache.nonce_initial_values.clone(),
+            )
+            .keys()
+            .cloned()
+            .collect();
+
+            let mut modified_contracts: HashSet<Address> = HashSet::new();
+            modified_contracts.extend(storage_unique_updates);
+            modified_contracts.extend(class_hash_updates);
+            modified_contracts.extend(nonce_updates);
+
+            modified_contracts.len()
+        };
+
+        (n_modified_contracts, storage_updates.len())
     }
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
