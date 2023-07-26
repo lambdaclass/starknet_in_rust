@@ -40,7 +40,7 @@ fn create_execute_extrypoint(
         entry_point_type,
         Some(CallType::Delegate),
         Some(class_hash),
-        100000,
+        100000000,
     )
 }
 
@@ -2908,7 +2908,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 #[test]
 #[cfg(not(feature = "cairo_1_tests"))]
 fn keccak_syscall() {
-    let program_data = include_bytes!("../starknet_programs/cairo2/keccak_syscall.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/test_cairo_keccak.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2968,8 +2968,7 @@ fn keccak_syscall() {
         )
         .unwrap();
 
-    assert_eq!(
-        call_info.call_info.unwrap().retdata[0],
-        felt_str!("375233589013918064796019"),
-    );
+    let retdata = call_info.call_info.unwrap().retdata;
+
+    assert_eq!(retdata[0], Felt252::one());
 }
