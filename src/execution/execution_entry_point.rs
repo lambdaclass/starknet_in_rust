@@ -24,6 +24,7 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+use cairo_lang_runner::{CairoHintProcessor, StarknetState};
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::{
     felt::Felt252,
@@ -481,10 +482,17 @@ impl ExecutionEntryPoint {
             support_reverted,
             self.entry_point_selector.clone(),
         );
-        // create and attach a syscall hint processor to the starknet runner.
+
+        let cairo1_hint_processor: CairoHintProcessor<'_> = CairoHintProcessor {
+            runner: None,
+            string_to_hint: contract_class.hints,
+            starknet_state: StarknetState::default(),
+            run_resources: RunResources::default(),
+        };
+
         let hint_processor = SyscallHintProcessor::new(
+            cairo1_hint_processor,
             syscall_handler,
-            &contract_class.hints,
             RunResources::default(),
         );
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);

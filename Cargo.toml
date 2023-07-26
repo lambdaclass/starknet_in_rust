@@ -14,14 +14,15 @@ cairo_1_tests = []
 members = ["cli", "fuzzer"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"] }
+cairo-vm = { version = "0.8.2" }
 starknet_api = "0.1.0"
 num-traits = "0.2.15"
 
 [dependencies]
-cairo-lang-starknet = "2.0.0"
-cairo-lang-casm = "2.0.0"
-cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
+cairo-lang-starknet = { git = "https://github.com/starkware-libs/cairo", tag = "v2.1.0-rc2", package = "cairo-lang-starknet" }
+cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", tag = "v2.1.0-rc2", package = "cairo-lang-casm" }
+cairo-lang-runner = { git = "https://github.com/starkware-libs/cairo", tag = "v2.1.0-rc2", package = "cairo-lang-runner" }
+cairo-vm = { workspace = true }
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }

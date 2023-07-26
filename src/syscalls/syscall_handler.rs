@@ -1,17 +1,12 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
 use crate::state::state_api::StateReader;
 use crate::transaction::error::TransactionError;
-use cairo_lang_casm::{
-    hints::{Hint, StarknetHint},
-    operand::{CellRef, DerefOrImmediate, Register, ResOperand},
-};
+use cairo_lang_casm::operand::{CellRef, DerefOrImmediate, Register, ResOperand};
+use cairo_lang_runner::casm_run::CairoHintProcessor;
 use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
     felt::Felt252,
-    hint_processor::{
-        cairo_1_hint_processor::hint_processor::Cairo1HintProcessor,
-        hint_processor_definition::{HintProcessorLogic, HintReference},
-    },
+    hint_processor::hint_processor_definition::{HintProcessorLogic, HintReference},
     types::{
         errors::math_errors::MathError, exec_scope::ExecutionScopes, relocatable::Relocatable,
     },
@@ -33,19 +28,19 @@ pub(crate) trait HintProcessorPostRun {
 
 #[allow(unused)]
 pub(crate) struct SyscallHintProcessor<'a, S: StateReader> {
-    pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
+    pub(crate) cairo1_hint_processor: CairoHintProcessor<'a>,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S>,
     pub(crate) run_resources: RunResources,
 }
 
 impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
     pub fn new(
+        cairo1_hint_processor: CairoHintProcessor<'a>,
         syscall_handler: BusinessLogicSyscallHandler<'a, S>,
-        hints: &[(usize, Vec<Hint>)],
         run_resources: RunResources,
     ) -> Self {
         SyscallHintProcessor {
-            cairo1_hint_processor: Cairo1HintProcessor::new(hints, run_resources.clone()),
+            cairo1_hint_processor,
             syscall_handler,
             run_resources,
         }
@@ -58,35 +53,9 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
-        _constants: &HashMap<String, Felt252>,
+        constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
-        let hints: &Vec<Hint> = hint_data.downcast_ref().ok_or(HintError::WrongHintData)?;
-        for hint in hints {
-            match hint {
-                Hint::Core(_core_hint) => {
-                    self.cairo1_hint_processor.execute(vm, exec_scopes, hint)?
-                }
-                Hint::Starknet(starknet_hint) => match starknet_hint {
-                    StarknetHint::SystemCall { system } => {
-                        let syscall_ptr = as_relocatable(vm, system)?;
-                        self.syscall_handler
-                            .syscall(vm, syscall_ptr)
-                            .map_err(|err| {
-                                HintError::CustomHint(
-                                    format!("Syscall handler invocation error: {err}")
-                                        .into_boxed_str(),
-                                )
-                            })?;
-                    }
-                    other => {
-                        return Err(HintError::UnknownHint(
-                            format!("{:?}", other).into_boxed_str(),
-                        ))
-                    }
-                },
-            };
-        }
-        Ok(())
+        self.cairo1_hint_processor.execute_hint(vm, exec_scopes, hint_data, constants)
     }
 
     // Ignores all data except for the code that should contain
