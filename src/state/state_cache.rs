@@ -243,5 +243,20 @@ mod tests {
             state_cache.get_accessed_contract_addresses(),
             HashSet::from([Address(10.into()), Address(9.into()), Address(4.into())])
         );
+
+        state_cache.update_initial_values();
+
+        assert_eq!(state_cache.class_hash_writes, HashMap::new());
+        assert_eq!(state_cache.compiled_class_hash_writes, HashMap::new());
+        assert_eq!(state_cache.nonce_writes, HashMap::new());
+        assert_eq!(state_cache.storage_writes, HashMap::new());
+
+        assert_eq!(state_cache.class_hash_initial_values, address_to_class_hash);
+        assert_eq!(
+            state_cache.compiled_class_hash_initial_values,
+            class_hash_to_compiled_class_hash
+        );
+        assert_eq!(state_cache.nonce_initial_values, address_to_nonce);
+        assert_eq!(state_cache.storage_initial_values, storage_updates);
     }
 }
