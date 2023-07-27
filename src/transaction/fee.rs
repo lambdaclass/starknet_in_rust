@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_max_fee() {
+    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
@@ -242,9 +242,8 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
-        )
-        .unwrap();
+        ).unwrap_err();
 
-        assert_eq!(result.1, max_fee);
+        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
     }
 }
