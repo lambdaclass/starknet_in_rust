@@ -287,7 +287,7 @@ mod test {
         let transaction = Transaction::InvokeFunction(invoke_function);
 
         let estimated_fee = estimate_fee(&[transaction], state, &block_context).unwrap();
-        assert_eq!(estimated_fee[0], (30, 0));
+        assert_eq!(estimated_fee[0], (2483, 2448));
     }
 
     #[test]
@@ -378,7 +378,7 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
-        assert_eq!(estimated_fee, (18484, 18471));
+        assert_eq!(estimated_fee, (19708, 19695));
     }
 
     #[test]
@@ -990,7 +990,7 @@ mod test {
 
         assert_eq!(
             estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
-            [(0, 1224), (0, 0)]
+            [(0, 3672), (0, 2448)]
         );
     }
 
