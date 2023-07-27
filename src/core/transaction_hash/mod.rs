@@ -2,8 +2,7 @@ use crate::core::errors::hash_errors::HashError;
 use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address,
+    services::api::contract_classes::deprecated_contract_class::ContractClass, utils::Address,
 };
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
@@ -54,7 +53,7 @@ pub fn calculate_transaction_hash_common(
     max_fee: u128,
     chain_id: Felt252,
     additional_data: &[Felt252],
-) -> Result<Felt252, SyscallHandlerError> {
+) -> Result<Felt252, HashError> {
     let calldata_hash = compute_hash_on_elements(calldata)?;
 
     let mut data_to_hash: Vec<Felt252> = vec![
@@ -69,7 +68,7 @@ pub fn calculate_transaction_hash_common(
 
     data_to_hash.extend(additional_data.iter().cloned());
 
-    Ok(compute_hash_on_elements(&data_to_hash)?)
+    compute_hash_on_elements(&data_to_hash)
 }
 
 pub fn calculate_deploy_transaction_hash(
@@ -77,7 +76,7 @@ pub fn calculate_deploy_transaction_hash(
     contract_address: &Address,
     constructor_calldata: &[Felt252],
     chain_id: Felt252,
-) -> Result<Felt252, SyscallHandlerError> {
+) -> Result<Felt252, HashError> {
     calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
         version,
@@ -100,7 +99,7 @@ pub fn calculate_deploy_account_transaction_hash(
     nonce: Felt252,
     salt: Felt252,
     chain_id: Felt252,
-) -> Result<Felt252, SyscallHandlerError> {
+) -> Result<Felt252, HashError> {
     let mut calldata: Vec<Felt252> = vec![class_hash, salt];
     calldata.extend_from_slice(constructor_calldata);
 
@@ -123,10 +122,9 @@ pub fn calculate_declare_transaction_hash(
     max_fee: u128,
     version: Felt252,
     nonce: Felt252,
-) -> Result<Felt252, SyscallHandlerError> {
-    let class_hash = compute_deprecated_class_hash(contract_class).map_err(|e| {
-        SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
-    })?;
+) -> Result<Felt252, HashError> {
+    let class_hash = compute_deprecated_class_hash(contract_class)
+        .map_err(|e| HashError::FailedToComputeHash(e.to_string()))?;
 
     let (calldata, additional_data) = if !version.is_zero() {
         (vec![class_hash], vec![nonce])
@@ -158,7 +156,7 @@ pub fn calculate_declare_v2_transaction_hash(
     max_fee: u128,
     version: Felt252,
     nonce: Felt252,
-) -> Result<Felt252, SyscallHandlerError> {
+) -> Result<Felt252, HashError> {
     let calldata = [sierra_class_hash].to_vec();
     let additional_data = [nonce, compiled_class_hash].to_vec();
 

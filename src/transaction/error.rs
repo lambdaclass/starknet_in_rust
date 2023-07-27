@@ -1,5 +1,8 @@
 use crate::{
-    core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
+    core::errors::{
+        contract_address_errors::ContractAddressError, hash_errors::HashError,
+        state_errors::StateError,
+    },
     definitions::transaction_type::TransactionType,
     execution::os_usage::OsResources,
     syscalls::syscall_handler_errors::SyscallHandlerError,
@@ -47,6 +50,8 @@ pub enum TransactionError {
     ContractAddress(#[from] ContractAddressError),
     #[error(transparent)]
     Syscall(#[from] SyscallHandlerError),
+    #[error(transparent)]
+    HashError(#[from] HashError),
     #[error(transparent)]
     State(#[from] StateError),
     #[error("Calling other contracts during validate execution is forbidden")]
