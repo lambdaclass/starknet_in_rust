@@ -242,7 +242,8 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
-        ).unwrap_err();
+        )
+        .unwrap_err();
 
         assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
     }
