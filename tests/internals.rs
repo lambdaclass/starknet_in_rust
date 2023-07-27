@@ -1164,7 +1164,16 @@ fn test_invoke_tx() {
 fn test_invoke_tx_state() {
     let (starknet_general_context, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
-    assert_eq!(state, &expected_initial_state);
+    assert_eq!(&state.cache(), &expected_initial_state.cache());
+    assert_eq!(&state.contract_classes(), &expected_initial_state.contract_classes());
+    assert_eq!(&state.casm_contract_classes(), &expected_initial_state.casm_contract_classes());
+    assert_eq!(&state.state_reader.address_to_class_hash, &expected_initial_state.state_reader.address_to_class_hash);
+    assert_eq!(&state.state_reader.address_to_nonce, &expected_initial_state.state_reader.address_to_nonce);
+    assert_eq!(&state.state_reader.address_to_storage, &expected_initial_state.state_reader.address_to_storage);
+    assert_eq!(&state.state_reader.class_hash_to_contract_class.get(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]), &expected_initial_state.state_reader.class_hash_to_contract_class.get(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]));
+    assert_eq!(&state.state_reader.class_hash_to_contract_class.get(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]), &expected_initial_state.state_reader.class_hash_to_contract_class.get(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]));
+    assert_eq!(&state.state_reader.class_hash_to_contract_class.get(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]), &expected_initial_state.state_reader.class_hash_to_contract_class.get(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]));
+
 
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![

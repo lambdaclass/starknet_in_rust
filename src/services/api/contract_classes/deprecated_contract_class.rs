@@ -309,27 +309,7 @@ mod tests {
         let expected_abi = Some(vec![ContractClassAbiEntry::Function(
             FunctionAbiEntryWithType {
                 r#type: FunctionAbiEntryType::Function,
-                entry: FunctionAbiEntry {
-                    name: "fib".to_string(),
-                    inputs: vec![
-                        TypedParameter {
-                            name: "first_element".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                        TypedParameter {
-                            name: "second_element".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                        TypedParameter {
-                            name: "n".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                    ],
-                    outputs: vec![TypedParameter {
-                        name: "res".to_string(),
-                        r#type: "felt".to_string(),
-                    }],
-                },
+                entry: FunctionAbiEntry {name:"fib".to_string(),inputs:vec![TypedParameter{name:"first_element".to_string(),r#type:"felt".to_string(),},TypedParameter{name:"second_element".to_string(),r#type:"felt".to_string(),},TypedParameter{name:"n".to_string(),r#type:"felt".to_string(),},],outputs:vec![TypedParameter{name:"res".to_string(),r#type:"felt".to_string(),}], state_mutability: None },
             },
         )]);
         assert_eq!(contract_class.abi, expected_abi);
