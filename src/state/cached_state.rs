@@ -768,11 +768,11 @@ mod tests {
         let storage_key_two = Felt252::from(2).to_be_bytes();
 
         cached_state.cache.storage_initial_values =
-            HashMap::from([((address_one, storage_key_one), Felt252::from(1))]);
+            HashMap::from([((address_one.clone(), storage_key_one), Felt252::from(1))]);
         cached_state.cache.storage_writes = HashMap::from([
-            ((address_one, storage_key_one), Felt252::from(1)),
+            ((address_one.clone(), storage_key_one), Felt252::from(1)),
             ((address_one, storage_key_two), Felt252::from(1)),
-            ((address_two, storage_key_one), Felt252::from(1)),
+            ((address_two.clone(), storage_key_one), Felt252::from(1)),
             ((address_two, storage_key_two), Felt252::from(1)),
         ]);
 
