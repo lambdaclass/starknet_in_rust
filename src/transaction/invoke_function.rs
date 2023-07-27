@@ -765,7 +765,7 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_charge_max_fee() {
+    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_fail() {
         let max_fee = 5;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
@@ -818,8 +818,8 @@ mod tests {
 
         let tx = internal_invoke_function
             .execute(&mut state, &block_context, 0)
-            .unwrap();
-        assert_eq!(tx.actual_fee, max_fee);
+            .unwrap_err();
+        assert_matches!(tx, TransactionError::ActualFeeExceedsMaxFee(_, _));
     }
 
     #[test]
