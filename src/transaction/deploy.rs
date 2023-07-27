@@ -160,6 +160,7 @@ impl Deploy {
                 state.set_contract_class(&self.contract_hash, &contract_class)?;
             }
         }
+
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
 
         if self.constructor_entry_points_empty(self.contract_class.clone())? {
