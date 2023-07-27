@@ -158,11 +158,6 @@ pub fn charge_fee<S: StateReader>(
     {
         min(actual_fee, max_fee) * FEE_FACTOR
     } else {
-        if actual_fee > max_fee {
-            return Err(TransactionError::ActualFeeExceedsMaxFee(
-                actual_fee, max_fee,
-            ));
-        }
         actual_fee
     };
 
@@ -176,6 +171,14 @@ pub fn charge_fee<S: StateReader>(
             actual_fee,
         )?)
     };
+
+    // TODO: We need to be sure if we want to charge max_fee or actual_fee before failing.
+    if actual_fee > max_fee {
+        return Err(TransactionError::ActualFeeExceedsMaxFee(
+            actual_fee, max_fee,
+        ));
+    }
+
     Ok((fee_transfer_info, actual_fee))
 }
 
