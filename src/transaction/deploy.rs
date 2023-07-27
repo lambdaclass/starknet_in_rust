@@ -161,11 +161,8 @@ impl Deploy {
             }
         }
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
-        let class_hash: ClassHash = self.contract_hash;
 
-        let contract_class = state.get_contract_class(&class_hash)?;
-
-        if self.constructor_entry_points_empty(contract_class)? {
+        if self.constructor_entry_points_empty(self.contract_class.clone())? {
             // Contract has no constructors
             Ok(self.handle_empty_constructor(state)?)
         } else {
