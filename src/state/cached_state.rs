@@ -756,4 +756,34 @@ mod tests {
         assert!(cached_state.cache.nonce_initial_values.is_empty());
         assert!(cached_state.cache.class_hash_initial_values.is_empty());
     }
+
+    #[test]
+    fn count_actual_storage_changes_test() {
+        let state_reader = InMemoryStateReader::default();
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+
+        let address_one = Address(1.into());
+        let address_two = Address(2.into());
+        let storage_key_one = Felt252::from(1).to_be_bytes();
+        let storage_key_two = Felt252::from(2).to_be_bytes();
+
+        cached_state.cache.storage_initial_values =
+            HashMap::from([((address_one, storage_key_one), Felt252::from(1))]);
+        cached_state.cache.storage_writes = HashMap::from([
+            ((address_one, storage_key_one), Felt252::from(1)),
+            ((address_one, storage_key_two), Felt252::from(1)),
+            ((address_two, storage_key_one), Felt252::from(1)),
+            ((address_two, storage_key_two), Felt252::from(1)),
+        ]);
+
+        let expected_changes = {
+            let n_storage_updates = 3;
+            let n_modified_contracts = 2;
+
+            (n_modified_contracts, n_storage_updates)
+        };
+        let changes = cached_state.count_actual_storage_changes();
+
+        assert_eq!(changes, expected_changes);
+    }
 }

@@ -282,3 +282,20 @@ pub fn get_additional_os_resources(
 
     Ok(additional_os_resources)
 }
+
+#[test]
+fn get_additional_os_resources_test() {
+    let mut syscall_counter =
+        HashMap::from([("storage_read".into(), 1), ("storage_write".into(), 1)]);
+
+    let tx_type = TransactionType::InvokeFunction; // rand
+
+    let additional_os_resources = get_additional_os_resources(syscall_counter, &tx_type).unwrap();
+    let expected_additional_os_resources = ExecutionResources {
+        n_steps: 100,
+        n_memory_holes: 0,
+        builtin_instance_counter: HashMap::new(),
+    };
+
+    assert_eq!(additional_os_resources, expected_additional_os_resources);
+}
