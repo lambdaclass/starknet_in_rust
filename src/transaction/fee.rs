@@ -153,9 +153,14 @@ pub fn charge_fee<S: StateReader>(
         block_context,
     )?;
 
-    let fee_exceeded_max = actual_fee > max_fee;
-
     // TODO: We need to be sure if we want to charge max_fee or actual_fee before failing.
+    if actual_fee > max_fee {
+        // TODO: Charge fee
+        return Err(TransactionError::ActualFeeExceedsMaxFee(
+            actual_fee, max_fee,
+        ));
+    }
+
     let actual_fee = if tx_execution_context.version != 0.into()
         && tx_execution_context.version != *QUERY_VERSION_BASE
     {
@@ -175,13 +180,7 @@ pub fn charge_fee<S: StateReader>(
         )?)
     };
 
-    if fee_exceeded_max {
-        Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee, max_fee,
-        ))
-    } else {
-        Ok((fee_transfer_info, actual_fee))
-    }
+    Ok((fee_transfer_info, actual_fee))
 }
 
 #[cfg(test)]
