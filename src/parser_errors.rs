@@ -1,6 +1,9 @@
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
-    core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
+    core::errors::{
+        contract_address_errors::ContractAddressError, hash_errors::HashError,
+        state_errors::StateError,
+    },
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
 };
@@ -14,6 +17,8 @@ pub enum ParserError {
     ContractAddress(#[from] ContractAddressError),
     #[error(transparent)]
     Syscall(#[from] SyscallHandlerError),
+    #[error(transparent)]
+    Hashes(#[from] HashError),
     #[error("Failed to convert {0} to Felt")]
     ParseFelt(String),
     #[error("Failed to get entry point for function `{0}`")]

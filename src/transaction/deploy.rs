@@ -1,10 +1,11 @@
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
+use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
 use crate::{
     core::{
-        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
-        transaction_hash::calculate_deploy_transaction_hash,
+        contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
+        errors::state_errors::StateError, transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
         block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
@@ -23,7 +24,6 @@ use crate::{
     },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
@@ -55,8 +55,9 @@ impl Deploy {
         chain_id: Felt252,
         version: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_deprecated_class_hash(&contract_class)
-            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
+        let class_hash = compute_deprecated_class_hash(&contract_class).map_err(|e| {
+            SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+        })?;
 
         let contract_hash: ClassHash = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
@@ -94,9 +95,9 @@ impl Deploy {
         version: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_deprecated_class_hash(&contract_class)
-            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
-
+        let class_hash = compute_deprecated_class_hash(&contract_class).map_err(|e| {
+            SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+        })?;
         let contract_hash: ClassHash = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -442,7 +443,7 @@ mod tests {
         );
         assert_matches!(
             internal_deploy_error.unwrap_err(),
-            SyscallHandlerError::ErrorComputingHash
+            SyscallHandlerError::HashError(HashError::FailedToComputeHash(_))
         )
     }
 }
