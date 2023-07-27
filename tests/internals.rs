@@ -21,6 +21,7 @@ use starknet_in_rust::definitions::constants::{
 };
 use starknet_in_rust::execution::execution_entry_point::ExecutionEntryPoint;
 use starknet_in_rust::execution::TransactionExecutionContext;
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::ExecutionResourcesManager;
 use starknet_in_rust::transaction::fee::calculate_tx_fee;
@@ -727,6 +728,15 @@ fn declarev2_tx() -> DeclareV2 {
 }
 
 fn deploy_fib_syscall() -> Deploy {
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
+    #[cfg(feature = "cairo_1_tests")]
+    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+    let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
+    let casm_class =
+        CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+    let contract_class = CompiledClass::Casm(Box::new(casm_class));
+
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
@@ -742,6 +752,7 @@ fn deploy_fib_syscall() -> Deploy {
         contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
         contract_address_salt: 0.into(),
         contract_hash,
+        contract_class,
         constructor_calldata: Vec::new(),
         tx_type: TransactionType::Deploy,
         skip_execute: false,

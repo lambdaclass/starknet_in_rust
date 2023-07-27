@@ -933,11 +933,7 @@ mod test {
     #[test]
     fn test_deploy_and_invoke_simulation() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
-
-        state
-            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
-            .unwrap();
+        let state = CachedState::new(state_reader, Some(Default::default()), None);
 
         let block_context = &Default::default();
 
