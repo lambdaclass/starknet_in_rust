@@ -353,4 +353,3 @@ mod tests {
         assert_matches!(get_integer(&vm, relocatable!(1, 1)), Ok(x) if x == caller_address);
     }
 }
-
