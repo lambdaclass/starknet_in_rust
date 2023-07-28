@@ -98,7 +98,7 @@ CAIRO_2_COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.ca
 CAIRO_2_COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm, $(CAIRO_2_COMPILED_SIERRA_CONTRACTS))
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo
-	$(STARKNET_COMPILE_CAIRO_2) $< $@
+	$(STARKNET_COMPILE_CAIRO_2) --single-file $< $@
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 	$(STARKNET_SIERRA_COMPILE_CAIRO_2) --add-pythonic-hints $< $@
@@ -107,22 +107,31 @@ compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
 
+CAIRO_2_VERSION=2.1.0-rc2
+
 cairo-repo-2-dir = cairo2
 cairo-repo-2-dir-macos = cairo2-macos
 
 build-cairo-2-compiler-macos: | $(cairo-repo-2-dir-macos)
 
-$(cairo-repo-2-dir-macos):
-	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0/release-aarch64-apple-darwin.tar \
-	&& tar -xzvf cairo-2.0.0.tar \
-	&& mv cairo/ cairo2/
+$(cairo-repo-2-dir-macos): cairo-${CAIRO_2_VERSION}-macos.tar
+	$(MAKE) decompress-cairo SOURCE=$< TARGET=cairo2/
 
 build-cairo-2-compiler: | $(cairo-repo-2-dir)
 
-$(cairo-repo-2-dir):
-	curl -L -o cairo-2.0.0.tar https://github.com/starkware-libs/cairo/releases/download/v2.0.0/release-x86_64-unknown-linux-musl.tar.gz \
-	&& tar -xzvf cairo-2.0.0.tar \
-	&& mv cairo/ cairo2/
+$(cairo-repo-2-dir): cairo-${CAIRO_2_VERSION}.tar
+	$(MAKE) decompress-cairo SOURCE=$< TARGET=cairo2/
+
+decompress-cairo:
+	rm -rf $(TARGET) \
+	&& tar -xzvf $(SOURCE) \
+	&& mv cairo/ $(TARGET)
+
+cairo-%-macos.tar:
+	curl -L -o "$@" "https://github.com/starkware-libs/cairo/releases/download/v$*/release-aarch64-apple-darwin.tar"
+
+cairo-%.tar:
+	curl -L -o "$@" "https://github.com/starkware-libs/cairo/releases/download/v$*/release-x86_64-unknown-linux-musl.tar.gz"
 
 
 # =================
@@ -140,12 +149,14 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install cargo-llvm-cov --version 0.5.14
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
+	cargo install nextest
 
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
+	cargo install nextest
 
 clean:
 	-rm -rf starknet-venv/
@@ -160,8 +171,7 @@ clean:
 	-rm -f tests/*.json
 	-rm -rf cairo1/
 	-rm -rf cairo2/
-	-rm -rf cairo-2.0.0.tar
-	-rm -rf cairo-1.1.1.tar
+	-rm -rf cairo-*.tar
 
 clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
 	cargo clippy --workspace --all-targets -- -D warnings
