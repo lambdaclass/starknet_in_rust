@@ -9,8 +9,8 @@ use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Addres
 use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt252;
 
-// Trait to write the response of a deprecated system call
-// Takes in a mutable reference to a VirtualMachine and a Relocatable pointer to the system
+/// Trait to write the response of a deprecated system call
+/// Takes in a mutable reference to a VirtualMachine and a Relocatable pointer to the system
 ///## Parameters:
 ///- vm: mutable reference to a VirtualMachine.
 ///- syscall_ptr: Relocatable pointer to the system.
@@ -22,7 +22,7 @@ pub(crate) trait DeprecatedWriteSyscallResponse {
     ) -> Result<(), SyscallHandlerError>;
 }
 
-// Structs to hold response data for different deprecated system calls
+/// Structs to hold response data for different deprecated system calls
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedCallContractResponse {
     retdata_size: usize,
@@ -149,8 +149,8 @@ impl DeprecatedDeployResponse {
     }
 }
 
-// Implementation of the DeprecatedWriteSyscallResponse trait for the different structs.
-// Each struct writes the response of its corresponding system call in the VM's memory.
+/// Implementation of the DeprecatedWriteSyscallResponse trait for the different structs.
+/// Each struct writes the response of its corresponding system call in the VM's memory.
 
 impl DeprecatedWriteSyscallResponse for DeprecatedCallContractResponse {
     fn write_syscall_response(
@@ -326,7 +326,7 @@ mod tests {
             InMemoryStateReader,
         >;
 
-    // Unit test to check the write_get_caller_address_response function
+    /// Unit test to check the write_get_caller_address_response function
     #[test]
     fn write_get_caller_address_response() {
         // Initialize a VM and syscall handler
