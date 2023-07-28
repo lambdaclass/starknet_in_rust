@@ -212,9 +212,9 @@ mod tests {
 
     use super::*;
     use starknet_in_rust::{
-        definitions::{block_context::BlockContext, constants::EXECUTE_ENTRY_POINT_SELECTOR},
+        definitions::{block_context::{BlockContext, StarknetOsConfig, StarknetChainId}, constants::{EXECUTE_ENTRY_POINT_SELECTOR, DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT, DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, DEFAULT_INVOKE_TX_MAX_N_STEPS, DEFAULT_VALIDATE_MAX_N_STEPS}},
         felt::felt_str,
-        state::cached_state::CachedState,
+        state::{cached_state::CachedState, BlockInfo},
         transaction::InvokeFunction,
     };
 
@@ -381,4 +381,100 @@ mod tests {
             .execute(&mut state, &BlockContext::default(), 0)
             .unwrap();
     }
+
+    /// Invoke transaction test using the transaction:
+    /// https://starkscan.co/tx/0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955
+    #[test]
+    fn test_invoke_mainnet_0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955() {
+        // Tx Hash without the "0x" prefix.
+        let tx_hash_str = "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"; 
+
+        // Retrieve the transaction information from the RPC endpoint.
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockValue::Number(90003.into()));
+        let get_tx_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getTransactionByHash",
+            "params": [format!("0x{}", tx_hash_str)],
+            "id": 1
+        });
+        let tx_mainnet: serde_json::Value = rpc_state.rpc_call(&get_tx_params).unwrap();
+        let get_block_info_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getBlockWithTxHashes",
+            "params": [rpc_state.block.to_value()],
+            "id": 1
+        });
+        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
+
+        // Convert returned data from the tx to our types.
+        let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
+        let contract_address = Address(felt_str!(tx_mainnet["result"]["sender_address"].as_str().unwrap().strip_prefix("0x").unwrap(), 16));
+        let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+        let max_fee = u128::from_str_radix(tx_mainnet["result"]["max_fee"].as_str().unwrap().strip_prefix("0x").unwrap(), 16).unwrap();
+        let version = felt_str!(tx_mainnet["result"]["version"].as_str().unwrap().strip_prefix("0x").unwrap(), 16);
+        let calldata = tx_mainnet["result"]["calldata"].as_array().unwrap().into_iter().map(|felt_as_value| felt_str!(felt_as_value.as_str().unwrap().strip_prefix("0x").unwrap(), 16)).collect::<Vec<Felt252>>();
+        let signature = tx_mainnet["result"]["signature"].as_array().unwrap().into_iter().map(|felt_as_value| felt_str!(felt_as_value.as_str().unwrap().strip_prefix("0x").unwrap(), 16)).collect::<Vec<Felt252>>();
+        let nonce = Some(felt_str!(tx_mainnet["result"]["nonce"].as_str().unwrap().strip_prefix("0x").unwrap(), 16));
+
+        // Create InvokeFunction with the converted data.
+        let internal_invoke_function = InvokeFunction::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            max_fee,
+            version,
+            calldata,
+            signature,
+            nonce,
+            tx_hash,
+        )
+        .unwrap()
+        .create_for_simulation(false, false, false);
+
+        // Instantiate CachedState
+        let state_reader = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Number(serde_json::to_value(90_002).unwrap()),
+        );
+
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+
+        // BlockContext with mainnet data.
+        // TODO look how to get this value from RPC call.
+        let gas_price_str = "13575501577";
+        let gas_price_u128 = u128::from_str_radix(gas_price_str, 10).unwrap();
+        let gas_price_u64 = u64::from_str_radix(gas_price_str, 10).unwrap();
+
+        // TODO: is right to use the sequencer address?
+        // let fee_token_address = Address(felt_str!(block_info["result"]["sequencer_address"].as_str().unwrap().strip_prefix("0x").unwrap(), 16));
+        println!("{}", block_info["result"]["sequencer_address"]);
+        let fee_token_address = Address(felt_str!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", 16));
+        let starknet_os_config = StarknetOsConfig::new(StarknetChainId::MainNet.to_felt(), fee_token_address.clone(), gas_price_u128);
+
+        let block_info = BlockInfo {
+            block_number: u64::from_str_radix(&block_info["result"]["block_number"].to_string(), 10).unwrap(),
+            block_timestamp: u64::from_str_radix(&block_info["result"]["timestamp"].to_string(), 10).unwrap(),
+            gas_price: gas_price_u64,
+            sequencer_address: fee_token_address,
+        };
+
+        let block_context = BlockContext::new(
+            starknet_os_config,
+            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info,
+            Default::default(),
+            true,
+        );
+
+        let _result = internal_invoke_function
+            .execute(&mut state, &block_context, 0)
+            .unwrap();
+
+        println!("{:?}", _result);
+        assert!(false);
+    }
+
 }

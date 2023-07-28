@@ -96,7 +96,7 @@ lazy_static! {
         felt_str!("617075754465154585683856897856256838130216341506379215893724690153393808813");
     /// Value generated from `get_selector_from_name('transfer')`.
     pub static ref TRANSFER_ENTRY_POINT_SELECTOR: Felt252 =
-        felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
+        felt_str!("83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e", 16);
 
     /// Value generated from get_selector_from_name('__validate_declare__')
     pub static ref VALIDATE_DECLARE_ENTRY_POINT_SELECTOR: Felt252 =
