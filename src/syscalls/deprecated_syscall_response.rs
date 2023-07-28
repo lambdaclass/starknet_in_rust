@@ -9,6 +9,11 @@ use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Addres
 use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use felt::Felt252;
 
+// Trait to write the response of a deprecated system call
+// Takes in a mutable reference to a VirtualMachine and a Relocatable pointer to the system
+///## Parameters:
+///- vm: mutable reference to a VirtualMachine.
+///- syscall_ptr: Relocatable pointer to the system.
 pub(crate) trait DeprecatedWriteSyscallResponse {
     fn write_syscall_response(
         &self,
@@ -17,6 +22,7 @@ pub(crate) trait DeprecatedWriteSyscallResponse {
     ) -> Result<(), SyscallHandlerError>;
 }
 
+// Structs to hold response data for different deprecated system calls
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedCallContractResponse {
     retdata_size: usize,
@@ -142,6 +148,9 @@ impl DeprecatedDeployResponse {
         }
     }
 }
+
+// Implementation of the DeprecatedWriteSyscallResponse trait for the different structs.
+// Each struct writes the response of its corresponding system call in the VM's memory.
 
 impl DeprecatedWriteSyscallResponse for DeprecatedCallContractResponse {
     fn write_syscall_response(
@@ -317,12 +326,15 @@ mod tests {
             InMemoryStateReader,
         >;
 
+    // Unit test to check the write_get_caller_address_response function
     #[test]
     fn write_get_caller_address_response() {
+        // Initialize a VM and syscall handler
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
+        // Write the response of get_caller_address into the VM's memory
         add_segments!(vm, 2);
 
         let caller_address = 3;
@@ -330,6 +342,7 @@ mod tests {
             caller_address: caller_address.into(),
         };
 
+        // Check if the correct value is written in the expected memory location
         assert!(syscall
             .write_syscall_response(&response, &mut vm, relocatable!(1, 0))
             .is_ok());
@@ -340,3 +353,4 @@ mod tests {
         assert_matches!(get_integer(&vm, relocatable!(1, 1)), Ok(x) if x == caller_address);
     }
 }
+
