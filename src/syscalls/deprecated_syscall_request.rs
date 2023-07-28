@@ -5,7 +5,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
-// Enum representing different types of deprecated syscall requests
+/// Enum representing different types of deprecated syscall requests
 #[derive(Debug, PartialEq)]
 pub(crate) enum DeprecatedSyscallRequest {
     EmitEvent(DeprecatedEmitEventRequest),
@@ -25,7 +25,7 @@ pub(crate) enum DeprecatedSyscallRequest {
     ReplaceClass(DeprecatedReplaceClassRequest),
 }
 
-// Struct representing the request for a call contract syscall
+/// Struct representing the request for a call contract syscall
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedCallContractRequest {
     pub(crate) selector: Felt252,
@@ -35,13 +35,13 @@ pub(crate) struct DeprecatedCallContractRequest {
     pub(crate) calldata: Relocatable,
 }
 
-// Struct representing the request for getting sequencer address
+/// Struct representing the request for getting sequencer address
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedGetSequencerAddressRequest {
     _selector: Felt252,
 }
 
-// Struct representing the request to emit an event
+/// Struct representing the request to emit an event
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedEmitEventRequest {
     pub(crate) selector: Felt252,
@@ -51,7 +51,7 @@ pub(crate) struct DeprecatedEmitEventRequest {
     pub(crate) data: Relocatable,
 }
 
-// Struct representing the request for deployment
+/// Struct representing the request for deployment
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedDeployRequest {
     // The system call selector (= DEPLOY_SELECTOR).
@@ -68,7 +68,7 @@ pub(crate) struct DeprecatedDeployRequest {
     pub(crate) deploy_from_zero: usize,
 }
 
-// Struct representing a deprecated system call request to send a message to L1.
+/// Struct representing a deprecated system call request to send a message to L1.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedSendMessageToL1SysCallRequest {
     pub(crate) _selector: Felt252,
@@ -77,7 +77,7 @@ pub(crate) struct DeprecatedSendMessageToL1SysCallRequest {
     pub(crate) payload_ptr: Relocatable,
 }
 
-// Struct representing a deprecated library call request.
+/// Struct representing a deprecated library call request.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedLibraryCallRequest {
     pub(crate) selector: Felt252,
@@ -87,37 +87,37 @@ pub(crate) struct DeprecatedLibraryCallRequest {
     pub(crate) calldata: Relocatable,
 }
 
-// Struct representing a deprecated system call request to get block time stamp request.
+/// Struct representing a deprecated system call request to get block time stamp request.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedGetBlockTimestampRequest {
     pub(crate) selector: Felt252,
 }
 
-// Struct representing a deprecated system call request to get caller address .
+/// Struct representing a deprecated system call request to get caller address .
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedGetCallerAddressRequest {
     pub(crate) _selector: Felt252,
 }
 
-// Struct representing a deprecated system call request to get transaction signature.
+/// Struct representing a deprecated system call request to get transaction signature.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedGetTxSignatureRequest {
     pub(crate) _selector: Felt252,
 }
 
-// Struct representing a deprecated system call request to get transaction info.
+/// Struct representing a deprecated system call request to get transaction info.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct DeprecatedGetTxInfoRequest {
     pub(crate) selector: Felt252,
 }
 
-// Struct representing a deprecated system call request to get contract address.
+/// Struct representing a deprecated system call request to get contract address.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedGetContractAddressRequest {
     pub(crate) _selector: Felt252,
 }
 
-// Struct representing a deprecated system call request to get block number.
+/// Struct representing a deprecated system call request to get block number.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedGetBlockNumberRequest {
     pub(crate) _selector: Felt252,
@@ -130,7 +130,7 @@ pub(crate) struct DeprecatedStorageReadRequest {
     pub(crate) address: Address,
 }
 
-// Struct representing the StorageWrite system call format.
+/// Struct representing the StorageWrite system call format.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedStorageWriteRequest {
     pub(crate) selector: Felt252,
@@ -138,13 +138,13 @@ pub(crate) struct DeprecatedStorageWriteRequest {
     pub(crate) value: Felt252,
 }
 
-// Struct representing a deprecated system call request to replace class.
+/// Struct representing a deprecated system call request to replace class.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedReplaceClassRequest {
     pub(crate) class_hash: Felt252,
 }
 
-// Struct representing a deprecated delegate call request.
+/// Struct representing a deprecated delegate call request.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeprecatedDelegateCallRequest {
     pub(crate) selector: Felt252,
@@ -154,8 +154,8 @@ pub(crate) struct DeprecatedDelegateCallRequest {
     pub(crate) calldata: Relocatable,
 }
 
-// We are implementing a converter from different types to  DeprecatedSyscallRequest
-// This trait provides functionality to convert from a specific deprecated system call request to DeprecatedSyscallRequest
+/// We are implementing a converter from different types to  DeprecatedSyscallRequest
+/// This trait provides functionality to convert from a specific deprecated system call request to DeprecatedSyscallRequest
 impl From<DeprecatedEmitEventRequest> for DeprecatedSyscallRequest {
     fn from(emit_event_struct: DeprecatedEmitEventRequest) -> DeprecatedSyscallRequest {
         DeprecatedSyscallRequest::EmitEvent(emit_event_struct)
@@ -246,9 +246,9 @@ impl From<DeprecatedReplaceClassRequest> for DeprecatedSyscallRequest {
 //  FromPtr implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// We are implementing DeprecatedFromPtr trait for various types
-// This trait provides functionality to convert from a raw pointer
-// to a specific deprecated system call request.
+/// We are implementing DeprecatedFromPtr trait for various types
+/// This trait provides functionality to convert from a raw pointer
+/// to a specific deprecated system call request.
 /// # Arguments
 ///
 /// * `vm` - Virtual machine.
@@ -505,8 +505,8 @@ impl DeprecatedFromPtr for DeprecatedReplaceClassRequest {
 //  CountFields implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// This trait provides functionality to count the number of fields
-// in the struct implementing it.
+/// This trait provides functionality to count the number of fields
+/// in the struct implementing it.
 
 pub(crate) trait CountFields {
     /// Returns the amount of fields of a struct
