@@ -531,12 +531,12 @@ mod tests {
 
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
-        let gas_price_str = "13575501577";
+        let gas_price_str = "2888823561";
         let gas_price_u128 = u128::from_str_radix(gas_price_str, 10).unwrap();
         let gas_price_u64 = u64::from_str_radix(gas_price_str, 10).unwrap();
 
         let fee_token_address = Address(felt_str!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", 16));
-        let starknet_os_config = StarknetOsConfig::new(StarknetChainId::MainNet.to_felt(), fee_token_address.clone(), gas_price_u128);
+        let starknet_os_config = StarknetOsConfig::new(StarknetChainId::TestNet.to_felt(), fee_token_address.clone(), gas_price_u128);
 
         let block_info = BlockInfo {
             block_number: 838684,
@@ -561,7 +561,17 @@ mod tests {
             .execute(&mut state, &block_context, 0)
             .unwrap();
 
-        println!("{:?}", _result);
+        println!("SiR: {:?}", _result);
+        // Retrieve the transaction information from the RPC endpoint.
+        let rpc_state = RpcState::new(RpcChain::TestNet, BlockValue::Number(838684.into()));
+        let get_tx_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getTransactionReceipt",
+            "params": [format!("0x{}", tx_hash_str)],
+            "id": 1
+        });
+        let tx_mainnet: serde_json::Value = rpc_state.rpc_call(&get_tx_params).unwrap();
+        println!("Testnet: {}", tx_mainnet);
         assert!(false);
     }
 
