@@ -154,8 +154,7 @@ pub(crate) struct DeprecatedDelegateCallRequest {
     pub(crate) calldata: Relocatable,
 }
 
-/// We are implementing a converter from different types to  DeprecatedSyscallRequest
-/// This trait provides functionality to convert from a specific deprecated system call request to DeprecatedSyscallRequest
+/// Implementation of a converter from different types to  DeprecatedSyscallRequest
 impl From<DeprecatedEmitEventRequest> for DeprecatedSyscallRequest {
     fn from(emit_event_struct: DeprecatedEmitEventRequest) -> DeprecatedSyscallRequest {
         DeprecatedSyscallRequest::EmitEvent(emit_event_struct)
@@ -246,13 +245,8 @@ impl From<DeprecatedReplaceClassRequest> for DeprecatedSyscallRequest {
 //  FromPtr implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-/// We are implementing DeprecatedFromPtr trait for various types
 /// This trait provides functionality to convert from a raw pointer
 /// to a specific deprecated system call request.
-/// # Arguments
-///
-/// * `vm` - Virtual machine.
-/// * `syscall_ptr` - Pointer to a syscall.
 pub(crate) trait DeprecatedFromPtr {
     fn from_ptr(
         vm: &VirtualMachine,
