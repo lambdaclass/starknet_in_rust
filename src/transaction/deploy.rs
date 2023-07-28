@@ -1,10 +1,13 @@
 use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::services::api::contract_classes::deprecated_contract_class::{
+    ContractClass, EntryPointType,
+};
 use crate::state::cached_state::CachedState;
+use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
 use crate::{
     core::{
-        contract_address::compute_deprecated_class_hash, errors::state_errors::StateError,
-        transaction_hash::calculate_deploy_transaction_hash,
+        contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
+        errors::state_errors::StateError, transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
         block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
@@ -16,14 +19,10 @@ use crate::{
     },
     hash_utils::calculate_contract_address,
     services::api::{
-        contract_class_errors::ContractClassError,
-        contract_classes::{
-            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-        },
+        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
-    syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
@@ -40,6 +39,7 @@ pub struct Deploy {
     pub contract_address: Address,
     pub contract_address_salt: Felt252,
     pub contract_hash: ClassHash,
+    pub contract_class: CompiledClass,
     pub constructor_calldata: Vec<Felt252>,
     pub tx_type: TransactionType,
     pub skip_validate: bool,
@@ -55,8 +55,9 @@ impl Deploy {
         chain_id: Felt252,
         version: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_deprecated_class_hash(&contract_class)
-            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
+        let class_hash = compute_deprecated_class_hash(&contract_class).map_err(|e| {
+            SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+        })?;
 
         let contract_hash: ClassHash = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
@@ -79,6 +80,7 @@ impl Deploy {
             contract_address,
             contract_address_salt,
             contract_hash,
+            contract_class: CompiledClass::Deprecated(Box::new(contract_class)),
             constructor_calldata,
             tx_type: TransactionType::Deploy,
             skip_validate: false,
@@ -94,9 +96,9 @@ impl Deploy {
         version: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
-        let class_hash = compute_deprecated_class_hash(&contract_class)
-            .map_err(|_| SyscallHandlerError::ErrorComputingHash)?;
-
+        let class_hash = compute_deprecated_class_hash(&contract_class).map_err(|e| {
+            SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+        })?;
         let contract_hash: ClassHash = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -112,6 +114,7 @@ impl Deploy {
             contract_address_salt,
             contract_hash,
             constructor_calldata,
+            contract_class: CompiledClass::Deprecated(Box::new(contract_class)),
             tx_type: TransactionType::Deploy,
             skip_validate: false,
             skip_execute: false,
@@ -146,11 +149,21 @@ impl Deploy {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
-        let class_hash: ClassHash = self.contract_hash;
-        let contract_class = state.get_contract_class(&class_hash)?;
+        match self.contract_class.clone() {
+            CompiledClass::Casm(contract_class) => {
+                state.set_compiled_class(
+                    &Felt252::from_bytes_be(&self.contract_hash),
+                    *contract_class,
+                )?;
+            }
+            CompiledClass::Deprecated(contract_class) => {
+                state.set_contract_class(&self.contract_hash, &contract_class)?;
+            }
+        }
 
-        if self.constructor_entry_points_empty(contract_class)? {
+        state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
+
+        if self.constructor_entry_points_empty(self.contract_class.clone())? {
             // Contract has no constructors
             Ok(self.handle_empty_constructor(state)?)
         } else {
@@ -322,13 +335,9 @@ mod tests {
         //transform class_hash to [u8; 32]
         let class_hash_bytes = class_hash.to_be_bytes();
 
-        state
-            .set_contract_class(&class_hash_bytes, &contract_class)
-            .unwrap();
-
         let internal_deploy = Deploy::new(
             0.into(),
-            contract_class,
+            contract_class.clone(),
             vec![10.into()],
             0.into(),
             0.into(),
@@ -338,6 +347,11 @@ mod tests {
         let block_context = Default::default();
 
         let _result = internal_deploy.apply(&mut state, &block_context).unwrap();
+
+        assert_eq!(
+            state.get_contract_class(&class_hash_bytes).unwrap(),
+            CompiledClass::Deprecated(Box::new(contract_class))
+        );
 
         assert_eq!(
             state
@@ -442,7 +456,7 @@ mod tests {
         );
         assert_matches!(
             internal_deploy_error.unwrap_err(),
-            SyscallHandlerError::ErrorComputingHash
+            SyscallHandlerError::HashError(HashError::FailedToComputeHash(_))
         )
     }
 }
