@@ -549,7 +549,7 @@ fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        5000,
+        50000000,
         TRANSACTION_VERSION.clone(),
         calldata,
         vec![],
@@ -653,9 +653,9 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(24),
+            INITIAL_BALANCE.clone() - Felt252::from(1252),
             Felt252::zero(),
-            Felt252::from(24),
+            Felt252::from(1252),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
@@ -713,7 +713,7 @@ fn declarev2_tx() -> DeclareV2 {
         tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
-        max_fee: 5000,
+        max_fee: 50000000,
         signature: vec![],
         nonce: 0.into(),
         hash_value: 0.into(),
@@ -835,10 +835,10 @@ fn test_declare_tx() {
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 2348),
-        ("range_check_builtin".to_string(), 57),
+        ("n_steps".to_string(), 2715),
+        ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 0),
+        ("l1_gas_usage".to_string(), 2448),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -885,10 +885,10 @@ fn test_declarev2_tx() {
         .is_ok());
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 2348),
-        ("range_check_builtin".to_string(), 57),
+        ("n_steps".to_string(), 2715),
+        ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 0),
+        ("l1_gas_usage".to_string(), 1224),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1105,10 +1105,10 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
-        ("n_steps".to_string(), 2921),
+        ("n_steps".to_string(), 3445),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 0),
-        ("range_check_builtin".to_string(), 72),
+        ("l1_gas_usage".to_string(), 2448),
+        ("range_check_builtin".to_string(), 82),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
@@ -1129,17 +1129,17 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3017;
+        n_steps = 3541;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3020;
+        n_steps = 3544;
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 4896),
+        ("l1_gas_usage".to_string(), 7344),
         ("pedersen_builtin".to_string(), 16),
-        ("range_check_builtin".to_string(), 75),
+        ("range_check_builtin".to_string(), 85),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
@@ -1308,15 +1308,15 @@ fn test_deploy_account() {
     );
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3111),
-        ("range_check_builtin".to_string(), 74),
+        ("n_steps".to_string(), 3625),
+        ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 6120),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 3704);
+    assert_eq!(fee, 6157);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
@@ -1577,7 +1577,7 @@ fn test_state_for_declare_tx() {
         ])
     );
 
-    let fee = Felt252::from(24);
+    let fee = Felt252::from(2476);
 
     // Check state.cache
     assert_eq!(
