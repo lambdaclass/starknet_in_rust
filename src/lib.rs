@@ -57,12 +57,17 @@ pub fn simulate_transaction<S: StateReader>(
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
+    ignore_max_fee: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
     let mut cache_state = CachedState::new(Arc::new(state), None, Some(HashMap::new()));
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
-        let tx_for_simulation =
-            transaction.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer);
+        let tx_for_simulation = transaction.create_for_simulation(
+            skip_validate,
+            skip_execute,
+            skip_fee_transfer,
+            ignore_max_fee,
+        );
         let tx_result =
             tx_for_simulation.execute(&mut cache_state, block_context, remaining_gas)?;
         result.push(tx_result);
@@ -90,7 +95,7 @@ where
         // execute the transaction with the fake state.
 
         // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
-        let tx_for_simulation = transaction.create_for_simulation(false, false, true);
+        let tx_for_simulation = transaction.create_for_simulation(false, false, true, true);
 
         let transaction_result =
             tx_for_simulation.execute(&mut cached_state, block_context, 100_000_000)?;
@@ -423,7 +428,7 @@ mod test {
 
         let block_context = BlockContext::default();
         let Transaction::InvokeFunction(simul_invoke) =
-            invoke.create_for_simulation(true, false, false) else {
+            invoke.create_for_simulation(true, false, false, false) else {
                 unreachable!()
             };
 

@@ -293,11 +293,17 @@ impl Declare {
         skip_validate: bool,
         skip_execute: bool,
         skip_fee_transfer: bool,
+        ignore_max_fee: bool,
     ) -> Transaction {
         let tx = Declare {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
+            max_fee: if ignore_max_fee {
+                u128::MAX
+            } else {
+                self.max_fee
+            },
             ..self.clone()
         };
 
