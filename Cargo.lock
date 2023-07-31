@@ -3508,6 +3508,7 @@ dependencies = [
  "cairo-lang-utils",
  "cairo-vm",
  "coverage-helper",
+ "flate2",
  "getset",
  "hex",
  "lazy_static",

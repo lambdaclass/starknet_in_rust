@@ -1,10 +1,9 @@
-use std::collections::HashMap;
-use std::io::{self, Read};
-
 use crate::core::contract_address::{compute_hinted_class_hash, CairoProgramToHash};
 use crate::services::api::contract_class_errors::ContractClassError;
 use crate::services::api::contract_classes::deprecated_contract_class::AbiType;
 use crate::{ContractEntryPoint, EntryPointType};
+use std::collections::HashMap;
+use std::io::{self, Read};
 
 use super::deprecated_contract_class::ContractClass;
 use cairo_lang_starknet::abi::Contract;
@@ -15,6 +14,7 @@ use cairo_lang_starknet::contract_class::{
 use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::felt::Felt252;
 use cairo_vm::types::program::Program;
+use flate2::bufread;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::ContractClass as StarknetRsContractClass;
 use starknet::core::types::ContractClass::{Legacy, Sierra};
@@ -168,7 +168,6 @@ struct SerializedContractClass<'a> {
     abi: serde_json::Value,
 }
 
-use flate2::bufread;
 // Uncompresses a Gz Encoded vector of bytes and returns a string or error
 // Here &[u8] implements BufRead
 fn decode_reader(bytes: Vec<u8>) -> io::Result<String> {
