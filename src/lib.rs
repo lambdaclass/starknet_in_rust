@@ -281,7 +281,7 @@ mod test {
         let invoke_function = InvokeFunction::new(
             TEST_CONTRACT_ADDRESS.clone(),
             entrypoint_selector.clone(),
-            100_000_000,
+            0, // should be ignored.
             1.into(),
             calldata,
             vec![],
