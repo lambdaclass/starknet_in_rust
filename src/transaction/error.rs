@@ -28,6 +28,8 @@ pub enum TransactionError {
     InvalidMaxFee,
     #[error("The nonce field in Declare transactions of version 0 must be 0.")]
     InvalidNonce,
+    #[error("Couldn't convert from {0} to {1}")]
+    Conversion(String, String),
     #[error("The signature field in Declare transactions of version 0 must be an empty list.")]
     InvalidSignature,
     #[error("An InvokeFunction transaction (version != 0) must have a nonce.")]
