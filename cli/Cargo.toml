@@ -5,7 +5,7 @@ edition = "2021"
 
 [features]
 default = ["with_mimalloc"]
-with_mimalloc = ["mimalloc"]
+with_mimalloc = ["dep:mimalloc"]
 
 [dependencies]
 starknet_in_rust = { path = "../", version = "0.3.0" }
