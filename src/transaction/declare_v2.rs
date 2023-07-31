@@ -1,4 +1,4 @@
-use super::fee::charge_fee;
+use super::fee::{charge_fee, FeeInfo};
 use super::{verify_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::constants::QUERY_VERSION_BASE;
@@ -330,7 +330,12 @@ impl DeclareV2 {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let (fee_transfer_info, actual_fee) = charge_fee(
+
+        let FeeInfo {
+            actual_fee,
+            fee_transfer_info,
+            fee_error,
+        } = charge_fee(
             state,
             &actual_resources,
             block_context,
@@ -338,7 +343,10 @@ impl DeclareV2 {
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
-        self.compile_and_store_casm_class(state)?;
+
+        if fee_error.is_none() {
+            self.compile_and_store_casm_class(state)?;
+        }
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
             execution_result.call_info,
@@ -347,7 +355,7 @@ impl DeclareV2 {
             actual_resources,
             Some(self.tx_type),
         );
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
 
         Ok(tx_exec_info)
     }

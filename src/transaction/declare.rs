@@ -27,7 +27,8 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
-use super::fee::charge_fee;
+use super::error::FeeError;
+use super::fee::{charge_fee, FeeInfo};
 use super::{verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -272,7 +273,12 @@ impl Declare {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let (fee_transfer_info, actual_fee) = charge_fee(
+
+        let FeeInfo {
+            actual_fee,
+            fee_transfer_info,
+            fee_error,
+        } = charge_fee(
             state,
             &tx_exec_info.actual_resources,
             block_context,
@@ -281,9 +287,11 @@ impl Declare {
             self.skip_fee_transfer,
         )?;
 
-        state.set_contract_class(&self.class_hash, &self.contract_class)?;
+        if fee_error.is_none() {
+            state.set_contract_class(&self.class_hash, &self.contract_class)?;
+        }
 
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
 
         Ok(tx_exec_info)
     }
@@ -431,6 +439,7 @@ mod tests {
             actual_fee: 0,
             actual_resources,
             tx_type: Some(TransactionType::Declare),
+            fee_error: None,
         };
 
         // ---------------------

@@ -377,6 +377,7 @@ mod tests {
             actual_fee: 0,
             actual_resources,
             tx_type: Some(TransactionType::Deploy),
+            fee_error: None,
         };
 
         // check result is correct

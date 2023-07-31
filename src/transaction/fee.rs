@@ -16,11 +16,14 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
-use std::cmp::min;
 use std::collections::HashMap;
 
-// second element is the actual fee that the transaction uses
-pub type FeeInfo = (Option<CallInfo>, u128);
+#[derive(Debug)]
+pub struct FeeInfo {
+    pub actual_fee: u128,
+    pub fee_transfer_info: Option<CallInfo>,
+    pub fee_error: Option<String>,
+}
 
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
@@ -30,13 +33,6 @@ pub(crate) fn execute_fee_transfer<S: StateReader>(
     tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,
 ) -> Result<CallInfo, TransactionError> {
-    if actual_fee > tx_execution_context.max_fee {
-        return Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee,
-            tx_execution_context.max_fee,
-        ));
-    }
-
     let fee_token_address = block_context.starknet_os_config.fee_token_address.clone();
 
     let calldata = [
@@ -144,7 +140,11 @@ pub fn charge_fee<S: StateReader>(
     skip_fee_transfer: bool,
 ) -> Result<FeeInfo, TransactionError> {
     if max_fee.is_zero() {
-        return Ok((None, 0));
+        return Ok(FeeInfo {
+            actual_fee: 0,
+            fee_transfer_info: None,
+            fee_error: None,
+        });
     }
 
     let actual_fee = calculate_tx_fee(
@@ -153,34 +153,37 @@ pub fn charge_fee<S: StateReader>(
         block_context,
     )?;
 
-    // TODO: We need to be sure if we want to charge max_fee or actual_fee before failing.
-    if actual_fee > max_fee {
-        // TODO: Charge fee
-        return Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee, max_fee,
-        ));
-    }
+    let fee_transfer_info = {
+        let version_0 = tx_execution_context.version == 0.into()
+            || tx_execution_context.version == *QUERY_VERSION_BASE;
 
-    let actual_fee = if tx_execution_context.version != 0.into()
-        && tx_execution_context.version != *QUERY_VERSION_BASE
-    {
-        min(actual_fee, max_fee) * FEE_FACTOR
-    } else {
-        actual_fee
+        if skip_fee_transfer || actual_fee > max_fee && version_0 {
+            None
+        } else {
+            Some(execute_fee_transfer(
+                state,
+                block_context,
+                tx_execution_context,
+                actual_fee.min(max_fee) * FEE_FACTOR,
+            )?)
+        }
     };
-
-    let fee_transfer_info = if skip_fee_transfer {
+    let fee_error = if actual_fee > max_fee {
+        Some(format!(
+            "Actual fee exceeds max fee: actual = {}, max = {}",
+            actual_fee, max_fee
+        ))
+    } else {
         None
-    } else {
-        Some(execute_fee_transfer(
-            state,
-            block_context,
-            tx_execution_context,
-            actual_fee,
-        )?)
     };
 
-    Ok((fee_transfer_info, actual_fee))
+    let fee_info = FeeInfo {
+        actual_fee,
+        fee_transfer_info,
+        fee_error,
+    };
+
+    Ok(fee_info)
 }
 
 #[cfg(test)]
@@ -191,7 +194,10 @@ mod tests {
         definitions::block_context::BlockContext,
         execution::TransactionExecutionContext,
         state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
-        transaction::{error::TransactionError, fee::charge_fee},
+        transaction::{
+            error::TransactionError,
+            fee::{charge_fee, FeeInfo},
+        },
     };
 
     #[test]
@@ -244,8 +250,13 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(
+            result,
+            FeeInfo {
+                fee_transfer_info: None,
+            }
+        );
     }
 }

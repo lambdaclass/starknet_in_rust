@@ -1,4 +1,5 @@
-use super::fee::charge_fee;
+use super::error::FeeError;
+use super::fee::{charge_fee, FeeInfo};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
@@ -160,7 +161,12 @@ impl DeployAccount {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let (fee_transfer_info, actual_fee) = charge_fee(
+
+        let FeeInfo {
+            actual_fee,
+            fee_transfer_info,
+            fee_error,
+        } = charge_fee(
             state,
             &tx_info.actual_resources,
             block_context,
@@ -169,8 +175,7 @@ impl DeployAccount {
             self.skip_fee_transfer,
         )?;
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info);
-
+        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
         Ok(tx_info)
     }
 

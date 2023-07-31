@@ -22,7 +22,11 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
-use super::{fee::charge_fee, Transaction};
+use super::{
+    error::FeeError,
+    fee::{charge_fee, FeeInfo},
+    Transaction,
+};
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -279,7 +283,12 @@ impl InvokeFunction {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let (fee_transfer_info, actual_fee) = charge_fee(
+
+        let FeeInfo {
+            actual_fee,
+            fee_transfer_info,
+            fee_error,
+        } = charge_fee(
             state,
             &tx_exec_info.actual_resources,
             block_context,
@@ -288,7 +297,7 @@ impl InvokeFunction {
             self.skip_fee_transfer,
         )?;
 
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
 
         Ok(tx_exec_info)
     }

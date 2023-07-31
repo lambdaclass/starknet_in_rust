@@ -102,6 +102,7 @@ fn internal_deploy_account() {
             .map(|(k, v)| (k.to_string(), v))
             .collect(),
             Some(TransactionType::DeployAccount),
+            None,
         ),
     );
 }
@@ -262,6 +263,7 @@ fn internal_deploy_account_cairo1() {
             .map(|(k, v)| (k.to_string(), v))
             .collect(),
             Some(TransactionType::DeployAccount),
+            None,
         ),
     );
 }
