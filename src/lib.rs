@@ -554,6 +554,7 @@ mod test {
             false,
             true,
             true,
+            false,
         )
         .unwrap();
 
@@ -652,6 +653,7 @@ mod test {
             true,
             true,
             true,
+            false,
         )
         .unwrap();
 
@@ -693,6 +695,7 @@ mod test {
             false,
             false,
             false,
+            false,
         )
         .unwrap();
     }
@@ -725,6 +728,7 @@ mod test {
             state,
             block_context,
             100_000_000,
+            false,
             false,
             false,
             false,
@@ -787,6 +791,7 @@ mod test {
             false,
             false,
             false,
+            false,
         )
         .unwrap();
     }
@@ -822,6 +827,7 @@ mod test {
             state,
             block_context,
             100_000_000,
+            false,
             false,
             false,
             false,
@@ -868,6 +874,7 @@ mod test {
             false,
             false,
             true,
+            false,
         )
         .unwrap();
     }
@@ -931,6 +938,7 @@ mod test {
             false,
             false,
             false,
+            false, // won't have any effect
         )
         .unwrap();
     }
