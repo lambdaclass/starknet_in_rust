@@ -1,8 +1,8 @@
 use thiserror::Error;
 
 use crate::{
-    core::errors::state_errors::StateError, syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::error::TransactionError,
+    core::errors::hash_errors::HashError, core::errors::state_errors::StateError,
+    syscalls::syscall_handler_errors::SyscallHandlerError, transaction::error::TransactionError,
 };
 
 #[derive(Debug, Error)]
@@ -15,4 +15,6 @@ pub enum StarknetStateError {
     State(#[from] StateError),
     #[error(transparent)]
     Transaction(#[from] TransactionError),
+    #[error(transparent)]
+    HashError(#[from] HashError),
 }
