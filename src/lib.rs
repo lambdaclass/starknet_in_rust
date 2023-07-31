@@ -49,6 +49,7 @@ pub mod testing;
 pub mod transaction;
 pub mod utils;
 
+#[allow(clippy::too_many_arguments)]
 pub fn simulate_transaction<S: StateReader>(
     transactions: &[&Transaction],
     state: S,
