@@ -1,7 +1,7 @@
 use super::error::TransactionError;
 use crate::definitions::constants::{FEE_FACTOR, QUERY_VERSION_BASE};
-use crate::execution::CallType;
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::execution::CallType;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
 use crate::{
