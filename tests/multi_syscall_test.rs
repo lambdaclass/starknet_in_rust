@@ -54,7 +54,7 @@ fn test_multiple_syscall() {
         let call_info = test_syscall(
             "caller_address",
             address.clone(),
-            calldata.clone(),
+            vec![],
             caller_address.clone(),
             entry_point_type,
             class_hash,
@@ -68,7 +68,7 @@ fn test_multiple_syscall() {
         let call_info = test_syscall(
             "contract_address",
             address.clone(),
-            calldata.clone(),
+            vec![],
             caller_address.clone(),
             entry_point_type,
             class_hash,
