@@ -581,11 +581,6 @@ fn test_create_account_tx_test_state() {
         .unwrap()
         .try_into()
         .unwrap();
-
-    // assert_eq!(
-    //     contract_class,
-    //     ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
-    // );
 }
 
 fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
