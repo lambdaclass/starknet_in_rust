@@ -560,14 +560,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bincode"
-version = "2.0.0-rc.3"
-source = "git+https://github.com/bincode-org/bincode.git?tag=v2.0.0-rc.3#aada4bb4cb457677a4b8e47572ae7ca8dd44927c"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -671,21 +663,9 @@ dependencies = [
 
 [[package]]
 name = "cairo-felt"
-version = "0.8.2"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f8de851723a7d13ed8b0b588a78ffa6b38d8e1f3eb4b6e71a96376510e5504a"
-dependencies = [
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.15",
- "serde",
-]
-
-[[package]]
-name = "cairo-felt"
-version = "0.8.2"
-source = "git+http://github.com/lambdaclass/cairo-vm?branch=update-cairo-deps-to-2.1.0-rc2#04a8facb34b1c65db05db948cefc5991c8e09808"
+checksum = "ed22664386f178bf9ca7b9ae7235727d92fa37b731a9063b5122488a1f699834"
 dependencies = [
  "lazy_static",
  "num-bigint",
@@ -904,7 +884,7 @@ dependencies = [
  "ark-secp256k1",
  "ark-secp256r1",
  "ark-std",
- "cairo-felt 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-compiler",
  "cairo-lang-defs",
@@ -920,7 +900,7 @@ dependencies = [
  "cairo-lang-sierra-type-size",
  "cairo-lang-starknet",
  "cairo-lang-utils",
- "cairo-vm 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cairo-vm",
  "itertools 0.11.0",
  "keccak",
  "num-bigint",
@@ -1037,7 +1017,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32af568d896f497bc7154b6b38cf3a63634cd1a49625e788132b897b206aa117"
 dependencies = [
  "assert_matches",
- "cairo-felt 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-sierra",
  "cairo-lang-sierra-ap-change",
@@ -1069,7 +1049,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fc16911988deeaa242f3b9111d27a07033c09c720af10970ea30c3091a7cfe7"
 dependencies = [
  "anyhow",
- "cairo-felt 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-compiler",
  "cairo-lang-defs",
@@ -1148,45 +1128,16 @@ dependencies = [
 
 [[package]]
 name = "cairo-vm"
-version = "0.8.2"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "656c25c13b6ffcc75e081292f3c23f27e429b3d4b8d69ecdc327a441798e91f4"
-dependencies = [
- "anyhow",
- "bincode 2.0.0-rc.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "bitvec",
- "cairo-felt 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "generic-array",
- "hashbrown 0.14.0",
- "hex",
- "keccak",
- "lazy_static",
- "mimalloc",
- "nom",
- "num-bigint",
- "num-integer",
- "num-prime",
- "num-traits 0.2.15",
- "rand",
- "serde",
- "serde_json",
- "sha2",
- "sha3",
- "starknet-crypto",
- "thiserror-no-std",
-]
-
-[[package]]
-name = "cairo-vm"
-version = "0.8.2"
-source = "git+http://github.com/lambdaclass/cairo-vm?branch=update-cairo-deps-to-2.1.0-rc2#04a8facb34b1c65db05db948cefc5991c8e09808"
+checksum = "74af2798567c670dc274245ca135c4501100fc5639e91c83b8527d9e46a97249"
 dependencies = [
  "anyhow",
  "ark-ff",
  "ark-std",
- "bincode 2.0.0-rc.3 (git+https://github.com/bincode-org/bincode.git?tag=v2.0.0-rc.3)",
+ "bincode",
  "bitvec",
- "cairo-felt 0.8.2 (git+http://github.com/lambdaclass/cairo-vm?branch=update-cairo-deps-to-2.1.0-rc2)",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-starknet",
  "generic-array",
@@ -1586,7 +1537,7 @@ dependencies = [
 name = "fuzzer"
 version = "0.3.0"
 dependencies = [
- "cairo-vm 0.8.2 (git+http://github.com/lambdaclass/cairo-vm?branch=update-cairo-deps-to-2.1.0-rc2)",
+ "cairo-vm",
  "honggfuzz",
  "num-traits 0.2.15",
  "serde_json",
@@ -2965,7 +2916,7 @@ dependencies = [
  "actix-web",
  "assert_matches",
  "awc",
- "cairo-vm 0.8.2 (git+http://github.com/lambdaclass/cairo-vm?branch=update-cairo-deps-to-2.1.0-rc2)",
+ "cairo-vm",
  "clap",
  "coverage-helper",
  "mimalloc",
@@ -3001,7 +2952,7 @@ dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
  "cairo-lang-starknet",
- "cairo-vm 0.8.2 (git+http://github.com/lambdaclass/cairo-vm?branch=update-cairo-deps-to-2.1.0-rc2)",
+ "cairo-vm",
  "coverage-helper",
  "getset",
  "hex",

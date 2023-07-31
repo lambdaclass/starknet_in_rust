@@ -519,14 +519,47 @@ fn test_create_account_tx_test_state() {
 
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
-    assert_eq!(&state.contract_classes(), &expected_initial_state.contract_classes());
-    assert_eq!(&state.casm_contract_classes(), &expected_initial_state.casm_contract_classes());
-    assert_eq!(&state.state_reader.address_to_class_hash, &expected_initial_state.state_reader.address_to_class_hash);
-    assert_eq!(&state.state_reader.address_to_nonce, &expected_initial_state.state_reader.address_to_nonce);
-    assert_eq!(&state.state_reader.address_to_storage, &expected_initial_state.state_reader.address_to_storage);
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]));
+    assert_eq!(
+        &state.contract_classes(),
+        &expected_initial_state.contract_classes()
+    );
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &expected_initial_state.casm_contract_classes()
+    );
+    assert_eq!(
+        &state.state_reader.address_to_class_hash,
+        &expected_initial_state.state_reader.address_to_class_hash
+    );
+    assert_eq!(
+        &state.state_reader.address_to_nonce,
+        &expected_initial_state.state_reader.address_to_nonce
+    );
+    assert_eq!(
+        &state.state_reader.address_to_storage,
+        &expected_initial_state.state_reader.address_to_storage
+    );
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 16, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 17
+        ]));
 
     let value = state
         .get_storage_at(&(
@@ -827,14 +860,47 @@ fn test_declare_tx() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
-    assert_eq!(&state.contract_classes(), &expected_initial_state.contract_classes());
-    assert_eq!(&state.casm_contract_classes(), &expected_initial_state.casm_contract_classes());
-    assert_eq!(&state.state_reader.address_to_class_hash, &expected_initial_state.state_reader.address_to_class_hash);
-    assert_eq!(&state.state_reader.address_to_nonce, &expected_initial_state.state_reader.address_to_nonce);
-    assert_eq!(&state.state_reader.address_to_storage, &expected_initial_state.state_reader.address_to_storage);
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]));
+    assert_eq!(
+        &state.contract_classes(),
+        &expected_initial_state.contract_classes()
+    );
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &expected_initial_state.casm_contract_classes()
+    );
+    assert_eq!(
+        &state.state_reader.address_to_class_hash,
+        &expected_initial_state.state_reader.address_to_class_hash
+    );
+    assert_eq!(
+        &state.state_reader.address_to_nonce,
+        &expected_initial_state.state_reader.address_to_nonce
+    );
+    assert_eq!(
+        &state.state_reader.address_to_storage,
+        &expected_initial_state.state_reader.address_to_storage
+    );
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 16, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 17
+        ]));
 
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
@@ -882,14 +948,47 @@ fn test_declarev2_tx() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
-    assert_eq!(&state.contract_classes(), &expected_initial_state.contract_classes());
-    assert_eq!(&state.casm_contract_classes(), &expected_initial_state.casm_contract_classes());
-    assert_eq!(&state.state_reader.address_to_class_hash, &expected_initial_state.state_reader.address_to_class_hash);
-    assert_eq!(&state.state_reader.address_to_nonce, &expected_initial_state.state_reader.address_to_nonce);
-    assert_eq!(&state.state_reader.address_to_storage, &expected_initial_state.state_reader.address_to_storage);
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]));
+    assert_eq!(
+        &state.contract_classes(),
+        &expected_initial_state.contract_classes()
+    );
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &expected_initial_state.casm_contract_classes()
+    );
+    assert_eq!(
+        &state.state_reader.address_to_class_hash,
+        &expected_initial_state.state_reader.address_to_class_hash
+    );
+    assert_eq!(
+        &state.state_reader.address_to_nonce,
+        &expected_initial_state.state_reader.address_to_nonce
+    );
+    assert_eq!(
+        &state.state_reader.address_to_storage,
+        &expected_initial_state.state_reader.address_to_storage
+    );
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 16, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 17
+        ]));
 
     let declare_tx = declarev2_tx();
     // Check ContractClass is not set before the declare_tx
@@ -1195,15 +1294,47 @@ fn test_invoke_tx_state() {
     let (starknet_general_context, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
-    assert_eq!(&state.contract_classes(), &expected_initial_state.contract_classes());
-    assert_eq!(&state.casm_contract_classes(), &expected_initial_state.casm_contract_classes());
-    assert_eq!(&state.state_reader.address_to_class_hash, &expected_initial_state.state_reader.address_to_class_hash);
-    assert_eq!(&state.state_reader.address_to_nonce, &expected_initial_state.state_reader.address_to_nonce);
-    assert_eq!(&state.state_reader.address_to_storage, &expected_initial_state.state_reader.address_to_storage);
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]));
-
+    assert_eq!(
+        &state.contract_classes(),
+        &expected_initial_state.contract_classes()
+    );
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &expected_initial_state.casm_contract_classes()
+    );
+    assert_eq!(
+        &state.state_reader.address_to_class_hash,
+        &expected_initial_state.state_reader.address_to_class_hash
+    );
+    assert_eq!(
+        &state.state_reader.address_to_nonce,
+        &expected_initial_state.state_reader.address_to_nonce
+    );
+    assert_eq!(
+        &state.state_reader.address_to_storage,
+        &expected_initial_state.state_reader.address_to_storage
+    );
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 16, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 17
+        ]));
 
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
@@ -1221,10 +1352,22 @@ fn test_invoke_tx_state() {
     let expected_final_state = expected_state_after_tx(result.actual_fee);
 
     assert_eq!(&state.cache(), &expected_final_state.cache());
-    assert_eq!(&state.casm_contract_classes(), &expected_final_state.casm_contract_classes());
-    assert_eq!(&state.state_reader.address_to_class_hash, &expected_final_state.state_reader.address_to_class_hash);
-    assert_eq!(&state.state_reader.address_to_nonce, &expected_final_state.state_reader.address_to_nonce);
-    assert_eq!(&state.state_reader.address_to_storage, &expected_final_state.state_reader.address_to_storage);
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &expected_final_state.casm_contract_classes()
+    );
+    assert_eq!(
+        &state.state_reader.address_to_class_hash,
+        &expected_final_state.state_reader.address_to_class_hash
+    );
+    assert_eq!(
+        &state.state_reader.address_to_nonce,
+        &expected_final_state.state_reader.address_to_nonce
+    );
+    assert_eq!(
+        &state.state_reader.address_to_storage,
+        &expected_final_state.state_reader.address_to_storage
+    );
 }
 
 #[test]
@@ -1232,14 +1375,47 @@ fn test_invoke_with_declarev2_tx() {
     let (block_context, state) = &mut create_account_tx_test_state().unwrap();
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
-    assert_eq!(&state.contract_classes(), &expected_initial_state.contract_classes());
-    assert_eq!(&state.casm_contract_classes(), &expected_initial_state.casm_contract_classes());
-    assert_eq!(&state.state_reader.address_to_class_hash, &expected_initial_state.state_reader.address_to_class_hash);
-    assert_eq!(&state.state_reader.address_to_nonce, &expected_initial_state.state_reader.address_to_nonce);
-    assert_eq!(&state.state_reader.address_to_storage, &expected_initial_state.state_reader.address_to_storage);
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 16]));
-    assert!(&state.state_reader.class_hash_to_contract_class.contains_key(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 17]));
+    assert_eq!(
+        &state.contract_classes(),
+        &expected_initial_state.contract_classes()
+    );
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &expected_initial_state.casm_contract_classes()
+    );
+    assert_eq!(
+        &state.state_reader.address_to_class_hash,
+        &expected_initial_state.state_reader.address_to_class_hash
+    );
+    assert_eq!(
+        &state.state_reader.address_to_nonce,
+        &expected_initial_state.state_reader.address_to_nonce
+    );
+    assert_eq!(
+        &state.state_reader.address_to_storage,
+        &expected_initial_state.state_reader.address_to_storage
+    );
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 16, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 16
+        ]));
+    assert!(&state
+        .state_reader
+        .class_hash_to_contract_class
+        .contains_key(&[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 1, 17
+        ]));
 
     // Declare the fibonacci contract
     let declare_tx = declarev2_tx();
@@ -1302,7 +1478,10 @@ fn test_deploy_account() {
 
     assert_eq!(&state.cache(), &state_before.cache());
     assert_eq!(&state.contract_classes(), &state_before.contract_classes());
-    assert_eq!(&state.casm_contract_classes(), &state_before.casm_contract_classes());
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &state_before.casm_contract_classes()
+    );
 
     let tx_info = deploy_account_tx
         .execute(&mut state, &block_context)

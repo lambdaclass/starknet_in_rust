@@ -14,7 +14,7 @@ cairo_1_tests = []
 members = ["cli", "fuzzer"]
 
 [workspace.dependencies]
-cairo-vm = { git = "http://github.com/lambdaclass/cairo-vm", features = ["cairo-1-hints"], package = "cairo-vm", branch = "update-cairo-deps-to-2.1.0-rc2" }
+cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
 starknet_api = "0.3.0"
 num-traits = "0.2.15"
 
