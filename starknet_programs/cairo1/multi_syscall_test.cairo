@@ -45,7 +45,7 @@ mod multy_syscall {
     }
 
     #[external]
-    fn test_library_call_syscall_test(class_hash: ClassHash, function_selector: felt252, number: felt252) ->  felt252 {
+    fn test_library_call_syscall(class_hash: ClassHash, function_selector: felt252, number: felt252) ->  felt252 {
         let mut calldata = ArrayTrait::new();
         calldata.append(number);
         let return_data = library_call_syscall(class_hash, function_selector, calldata.span()).unwrap();

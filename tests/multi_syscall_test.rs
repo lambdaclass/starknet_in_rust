@@ -90,7 +90,7 @@ fn test_multiple_syscall() {
         assert_eq!(call_info.events, vec![]);
     }
 
-    // Block for library_call_syscall
+    // Block for replace_class_syscall
     {
         let call_info = test_syscall(
             "replace_class_syscall_test",
@@ -104,7 +104,7 @@ fn test_multiple_syscall() {
         assert_eq!(call_info.events, vec![])
     }
 
-    // Block for call_contract_syscall
+    // Block for library_call_syscall
     {
         let entrypoint_selector =
             Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
@@ -114,7 +114,7 @@ fn test_multiple_syscall() {
             Felt252::from(25),
         ];
         let call_info = test_syscall(
-            "test_library_call_syscall_test",
+            "test_library_call_syscall",
             address.clone(),
             new_call_data,
             caller_address.clone(),
@@ -125,7 +125,7 @@ fn test_multiple_syscall() {
         assert_eq!(call_info.retdata, vec![25.into()])
     }
 
-    // Block for replace_class_syscall
+    // Block for call_contract_syscall
     {
         let entrypoint_selector =
             Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
@@ -154,7 +154,7 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![])
+        assert_eq!(call_info.retdata, vec![])
     }
 
     // Block for read write
