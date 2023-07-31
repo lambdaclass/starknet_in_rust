@@ -581,6 +581,11 @@ fn test_create_account_tx_test_state() {
         .unwrap()
         .try_into()
         .unwrap();
+    // We cant compare this until a new implementation of Eq for programs, due to a change in the hints_ranges.
+    // assert_eq!(
+    //     _contract_class,
+    //     ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
+    // );
 }
 
 fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
