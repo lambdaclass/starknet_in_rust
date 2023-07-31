@@ -238,11 +238,9 @@ pub(crate) fn to_cairo_runner_program(
         return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
     };
 
-    let error_message_attributes = serde_json::from_value::<Vec<Attribute>>(program.attributes)
-        .unwrap_or(Vec::new())
-        .into_iter()
-        .filter(|attr| attr.name == "error_message")
-        .collect();
+    let mut error_message_attributes =
+        serde_json::from_value::<Vec<Attribute>>(program.attributes).unwrap_or_default();
+    error_message_attributes.retain(|attr| attr.name == "error_message");
 
     let program = Program::new(
         serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
