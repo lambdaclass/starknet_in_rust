@@ -3502,7 +3502,6 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "assert_matches",
- "base64 0.21.2",
  "cairo-lang-casm",
  "cairo-lang-sierra",
  "cairo-lang-starknet",

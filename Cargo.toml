@@ -45,7 +45,6 @@ hex = "0.4.3"
 anyhow = "1.0.66"
 once_cell = "1.17.1"
 starknet = { workspace = true }
-base64 = { version = "0.21.0", default-features = false, features = ["alloc"] }
 flate2 = "1.0.25"
 
 [dev-dependencies]
