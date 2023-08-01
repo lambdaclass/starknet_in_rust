@@ -340,7 +340,6 @@ mod tests {
             FunctionAbiEntryWithType {
                 r#type: FunctionAbiEntryType::Function,
                 entry: FunctionAbiEntry {
-                    state_mutability: None,
                     name: "fib".to_string(),
                     inputs: vec![
                         TypedParameter {
@@ -360,6 +359,7 @@ mod tests {
                         name: "res".to_string(),
                         r#type: "felt".to_string(),
                     }],
+                    state_mutability: None,
                 },
             },
         )]);
