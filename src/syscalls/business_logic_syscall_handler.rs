@@ -969,6 +969,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let n_chunks = length / 17;
         let mut state = [0u64; 25];
         for i in 0..n_chunks {
+            // TODO: check this before the loop, taking care to preserve functionality.
             if gas < KECCAK_ROUND_COST {
                 let response = self.failure_from_error_msg(vm, b"Syscall out of gas")?;
                 return Ok(SyscallResponse {
@@ -995,6 +996,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
+    // TODO: refactor code to use this function
     fn failure_from_error_msg(
         &mut self,
         vm: &mut VirtualMachine,
