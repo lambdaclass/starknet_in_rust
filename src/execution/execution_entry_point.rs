@@ -25,7 +25,6 @@ use crate::{
     },
 };
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_vm::serde::deserialize_program::BuiltinName;
 use cairo_vm::{
     felt::Felt252,
     types::{
