@@ -11,8 +11,11 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    state::state_api::{State, StateReader},
     state::{cached_state::CachedState, ExecutionResourcesManager},
+    state::{
+        state_api::{State, StateReader},
+        StateDiff,
+    },
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
@@ -23,7 +26,7 @@ use getset::Getters;
 use num_traits::Zero;
 
 use super::{
-    fee::{charge_fee, FeeInfo},
+    fee::{calculate_tx_fee, charge_fee, FeeInfo},
     Transaction,
 };
 
@@ -231,6 +234,9 @@ impl InvokeFunction {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
+
+        self.handle_nonce(state)?;
+
         // Execute transaction
         let ExecutionResult {
             call_info,
@@ -277,28 +283,61 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.handle_nonce(state)?;
-        let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
-
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
 
+        let (mut tx_info, state_diff, actual_fee) =
+            self.try_execute(state, block_context, remaining_gas)?;
+
         let FeeInfo {
-            actual_fee,
             fee_transfer_info,
             fee_error,
         } = charge_fee(
             state,
-            &tx_exec_info.actual_resources,
+            actual_fee,
             block_context,
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
 
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+        if let Some(fee_error) = fee_error {
+            tx_info = tx_info.to_revert_error(fee_error);
+        } else {
+            state.apply_state_update(&state_diff);
+        }
 
-        Ok(tx_exec_info)
+        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+
+        Ok(tx_info)
+    }
+
+    fn try_execute<S: StateReader>(
+        &self,
+        state: &mut CachedState<S>,
+        block_context: &BlockContext,
+        remaining_gas: u128,
+    ) -> Result<(TransactionExecutionInfo, StateDiff, u128), TransactionError> {
+        let mut tmp_state = CachedState::new(
+            state.state_reader.clone(),
+            state.contract_classes.clone(),
+            state.casm_contract_classes.clone(),
+        );
+        tmp_state.cache = state.cache.clone();
+
+        let tx_info = self.apply(state, block_context, remaining_gas)?;
+
+        let actual_fee = calculate_tx_fee(
+            &tx_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+
+        Ok((
+            tx_info,
+            StateDiff::from_cached_state(tmp_state)?,
+            actual_fee,
+        ))
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {

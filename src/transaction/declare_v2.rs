@@ -1,4 +1,4 @@
-use super::fee::{charge_fee, FeeInfo};
+use super::fee::{calculate_tx_fee, charge_fee, FeeInfo};
 use super::{verify_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::constants::QUERY_VERSION_BASE;
@@ -6,6 +6,7 @@ use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
@@ -300,6 +301,47 @@ impl DeclareV2 {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps);
+
+        let (mut tx_info, state_diff, actual_fee) = self.try_execute(state, block_context)?;
+
+        let FeeInfo {
+            fee_transfer_info,
+            fee_error,
+        } = charge_fee(
+            state,
+            actual_fee,
+            block_context,
+            self.max_fee,
+            &mut tx_execution_context,
+            self.skip_fee_transfer,
+        )?;
+
+        if let Some(fee_error) = fee_error {
+            tx_info = tx_info.to_revert_error(fee_error);
+        } else {
+            state.apply_state_update(&state_diff);
+            self.compile_and_store_casm_class(state)?;
+        }
+
+        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+
+        Ok(tx_info)
+    }
+
+    fn try_execute<S: StateReader>(
+        &self,
+        state: &mut CachedState<S>,
+        block_context: &BlockContext,
+    ) -> Result<(TransactionExecutionInfo, StateDiff, u128), TransactionError> {
+        let mut tmp_state = CachedState::new(
+            state.state_reader.clone(),
+            state.contract_classes.clone(),
+            state.casm_contract_classes.clone(),
+        );
+        tmp_state.cache = state.cache.clone();
+
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
 
         let initial_gas = INITIAL_GAS_COST;
@@ -311,53 +353,46 @@ impl DeclareV2 {
         } else {
             let (info, gas) = self.run_validate_entrypoint(
                 initial_gas,
-                state,
+                &mut tmp_state,
                 &mut resources_manager,
                 block_context,
             )?;
             (info, gas)
         };
 
-        let storage_changes = state.count_actual_storage_changes();
-        let actual_resources = calculate_tx_resources(
-            resources_manager,
-            &[execution_result.call_info.clone()],
-            self.tx_type,
-            storage_changes,
-            None,
-            execution_result.n_reverted_steps,
-        )?;
+        let (tx_info, actual_fee) = {
+            let storage_changes = tmp_state.count_actual_storage_changes();
+            let actual_resources = calculate_tx_resources(
+                resources_manager,
+                &[execution_result.call_info.clone()],
+                self.tx_type,
+                storage_changes,
+                None,
+                execution_result.n_reverted_steps,
+            )?;
 
-        let mut tx_execution_context =
-            self.get_execution_context(block_context.invoke_tx_max_n_steps);
+            let tx_info = TransactionExecutionInfo::new_without_fee_info(
+                execution_result.call_info,
+                None,
+                None,
+                actual_resources,
+                Some(self.tx_type),
+            );
 
-        let FeeInfo {
+            let actual_fee = calculate_tx_fee(
+                &actual_resources,
+                block_context.starknet_os_config.gas_price,
+                block_context,
+            )?;
+
+            (tx_info, actual_fee)
+        };
+
+        Ok((
+            tx_info,
+            StateDiff::from_cached_state(tmp_state)?,
             actual_fee,
-            fee_transfer_info,
-            fee_error,
-        } = charge_fee(
-            state,
-            &actual_resources,
-            block_context,
-            self.max_fee,
-            &mut tx_execution_context,
-            self.skip_fee_transfer,
-        )?;
-
-        if fee_error.is_none() {
-            self.compile_and_store_casm_class(state)?;
-        }
-
-        let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
-            execution_result.call_info,
-            None,
-            None,
-            actual_resources,
-            Some(self.tx_type),
-        );
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
-
-        Ok(tx_exec_info)
+        ))
     }
 
     pub(crate) fn compile_and_store_casm_class<S: State + StateReader>(

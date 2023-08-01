@@ -196,7 +196,7 @@ impl DeployAccount {
         );
         tmp_state.cache = state.cache.clone();
 
-        let mut tx_info = self.apply(&mut tmp_state, block_context)?;
+        let tx_info = self.apply(&mut tmp_state, block_context)?;
 
         let actual_fee = calculate_tx_fee(
             &tx_info.actual_resources,

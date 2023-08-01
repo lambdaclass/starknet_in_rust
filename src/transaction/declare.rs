@@ -2,6 +2,7 @@ use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
@@ -27,7 +28,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
-use super::fee::{charge_fee, FeeInfo};
+use super::fee::{calculate_tx_fee, charge_fee, FeeInfo};
 use super::{verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,6 +167,7 @@ impl Declare {
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
+        self.handle_nonce(state)?;
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -262,37 +264,66 @@ impl Declare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    /// If a fee error occurs, state won't be updated.
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.handle_nonce(state)?;
-        let mut tx_exec_info = self.apply(state, block_context)?;
-
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
 
+        let (mut tx_info, state_diff, actual_fee) = self.try_execute(state, block_context)?;
+
         let FeeInfo {
-            actual_fee,
             fee_transfer_info,
             fee_error,
         } = charge_fee(
             state,
-            &tx_exec_info.actual_resources,
+            actual_fee,
             block_context,
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
 
-        if fee_error.is_none() {
+        if let Some(fee_error) = fee_error {
+            tx_info = tx_info.to_revert_error(fee_error);
+        } else {
+            state.apply_state_update(&state_diff);
             state.set_contract_class(&self.class_hash, &self.contract_class)?;
         }
 
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
 
-        Ok(tx_exec_info)
+        Ok(tx_info)
+    }
+
+    fn try_execute<S: StateReader>(
+        &self,
+        state: &mut CachedState<S>,
+        block_context: &BlockContext,
+    ) -> Result<(TransactionExecutionInfo, StateDiff, u128), TransactionError> {
+        let mut tmp_state = CachedState::new(
+            state.state_reader.clone(),
+            state.contract_classes.clone(),
+            state.casm_contract_classes.clone(),
+        );
+        tmp_state.cache = state.cache.clone();
+
+        let tx_info = self.apply(state, block_context)?;
+
+        let actual_fee = calculate_tx_fee(
+            &tx_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+
+        Ok((
+            tx_info,
+            StateDiff::from_cached_state(tmp_state)?,
+            actual_fee,
+        ))
     }
 
     pub(crate) fn create_for_simulation(
