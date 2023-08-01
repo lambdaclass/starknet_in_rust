@@ -436,7 +436,7 @@ pub struct TransactionExecutionInfo {
     pub actual_fee: u128,
     pub actual_resources: HashMap<String, usize>,
     pub tx_type: Option<TransactionType>,
-    pub fee_error: Option<String>,
+    pub fee_error: Option<String>, // FIXME: Remove
 }
 
 impl TransactionExecutionInfo {
@@ -518,6 +518,17 @@ impl TransactionExecutionInfo {
             actual_resources,
             tx_type,
             fee_error: None,
+        }
+    }
+
+    pub fn to_revert_error(self, revert_error: String) -> Self {
+        TransactionExecutionInfo {
+            validate_info: None,
+            call_info: None,
+            revert_error: Some(revert_error),
+            fee_transfer_info: None,
+            fee_error: None,
+            ..self
         }
     }
 

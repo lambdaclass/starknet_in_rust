@@ -27,7 +27,6 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
-use super::error::FeeError;
 use super::fee::{charge_fee, FeeInfo};
 use super::{verify_version, Transaction};
 

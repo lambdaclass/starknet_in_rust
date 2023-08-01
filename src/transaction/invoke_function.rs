@@ -23,7 +23,6 @@ use getset::Getters;
 use num_traits::Zero;
 
 use super::{
-    error::FeeError,
     fee::{charge_fee, FeeInfo},
     Transaction,
 };

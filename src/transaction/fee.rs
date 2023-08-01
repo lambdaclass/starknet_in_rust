@@ -21,7 +21,6 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct FeeInfo {
-    pub actual_fee: u128,
     pub fee_transfer_info: Option<CallInfo>,
     pub fee_error: Option<String>,
 }
@@ -134,7 +133,7 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 ///
 pub fn charge_fee<S: StateReader>(
     state: &mut CachedState<S>,
-    resources: &HashMap<String, usize>,
+    actual_fee: u128,
     block_context: &BlockContext,
     max_fee: u128,
     tx_execution_context: &mut TransactionExecutionContext,
@@ -142,17 +141,10 @@ pub fn charge_fee<S: StateReader>(
 ) -> Result<FeeInfo, TransactionError> {
     if max_fee.is_zero() {
         return Ok(FeeInfo {
-            actual_fee: 0,
             fee_transfer_info: None,
             fee_error: None,
         });
     }
-
-    let actual_fee = calculate_tx_fee(
-        resources,
-        block_context.starknet_os_config.gas_price,
-        block_context,
-    )?;
 
     let fee_transfer_info = {
         let version_0 = tx_execution_context.version == 0.into()
@@ -179,7 +171,6 @@ pub fn charge_fee<S: StateReader>(
     };
 
     let fee_info = FeeInfo {
-        actual_fee,
         fee_transfer_info,
         fee_error,
     };

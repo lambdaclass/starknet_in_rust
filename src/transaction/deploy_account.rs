@@ -1,10 +1,10 @@
-use super::error::FeeError;
-use super::fee::{charge_fee, FeeInfo};
+use super::fee::{calculate_tx_fee, charge_fee, FeeInfo};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -156,27 +156,59 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.handle_nonce(state)?;
-        let mut tx_info = self.apply(state, block_context)?;
-
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
 
+        let (mut tx_info, state_diff, actual_fee) = self.try_execute(state, block_context)?;
+
         let FeeInfo {
-            actual_fee,
             fee_transfer_info,
             fee_error,
         } = charge_fee(
             state,
-            &tx_info.actual_resources,
+            actual_fee,
             block_context,
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+        if let Some(fee_error) = fee_error {
+            tx_info = tx_info.to_revert_error(fee_error);
+        } else {
+            state.apply_state_update(&state_diff);
+        }
+
+        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error); // FIXME: REMOVE FEE_ERR
+
         Ok(tx_info)
+    }
+
+    fn try_execute<S: StateReader>(
+        &self,
+        state: &mut CachedState<S>,
+        block_context: &BlockContext,
+    ) -> Result<(TransactionExecutionInfo, StateDiff, u128), TransactionError> {
+        let mut tmp_state = CachedState::new(
+            state.state_reader.clone(),
+            state.contract_classes.clone(),
+            state.casm_contract_classes.clone(),
+        );
+        tmp_state.cache = state.cache.clone();
+
+        let mut tx_info = self.apply(&mut tmp_state, block_context)?;
+
+        let actual_fee = calculate_tx_fee(
+            &tx_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+
+        Ok((
+            tx_info,
+            StateDiff::from_cached_state(tmp_state)?,
+            actual_fee,
+        ))
     }
 
     fn constructor_entry_points_empty(
