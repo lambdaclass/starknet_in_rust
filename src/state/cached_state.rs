@@ -14,7 +14,10 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 // K: class_hash V: ContractClass
 pub type ContractClassCache = HashMap<ClassHash, ContractClass>;
@@ -315,8 +318,35 @@ impl<T: StateReader> State for CachedState<T> {
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
         );
-        let modified_contracts = storage_updates.keys().map(|k| k.0.clone()).len();
-        (modified_contracts, storage_updates.len())
+
+        let n_modified_contracts = {
+            let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
+
+            let class_hash_updates: Vec<_> = subtract_mappings(
+                self.cache.class_hash_writes.clone(),
+                self.cache.class_hash_initial_values.clone(),
+            )
+            .keys()
+            .cloned()
+            .collect();
+
+            let nonce_updates: Vec<_> = subtract_mappings(
+                self.cache.nonce_writes.clone(),
+                self.cache.nonce_initial_values.clone(),
+            )
+            .keys()
+            .cloned()
+            .collect();
+
+            let mut modified_contracts: HashSet<Address> = HashSet::new();
+            modified_contracts.extend(storage_unique_updates);
+            modified_contracts.extend(class_hash_updates);
+            modified_contracts.extend(nonce_updates);
+
+            modified_contracts.len()
+        };
+
+        (n_modified_contracts, storage_updates.len())
     }
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
@@ -725,5 +755,35 @@ mod tests {
         assert!(cached_state.cache.storage_writes.is_empty());
         assert!(cached_state.cache.nonce_initial_values.is_empty());
         assert!(cached_state.cache.class_hash_initial_values.is_empty());
+    }
+
+    #[test]
+    fn count_actual_storage_changes_test() {
+        let state_reader = InMemoryStateReader::default();
+        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+
+        let address_one = Address(1.into());
+        let address_two = Address(2.into());
+        let storage_key_one = Felt252::from(1).to_be_bytes();
+        let storage_key_two = Felt252::from(2).to_be_bytes();
+
+        cached_state.cache.storage_initial_values =
+            HashMap::from([((address_one.clone(), storage_key_one), Felt252::from(1))]);
+        cached_state.cache.storage_writes = HashMap::from([
+            ((address_one.clone(), storage_key_one), Felt252::from(1)),
+            ((address_one, storage_key_two), Felt252::from(1)),
+            ((address_two.clone(), storage_key_one), Felt252::from(1)),
+            ((address_two, storage_key_two), Felt252::from(1)),
+        ]);
+
+        let expected_changes = {
+            let n_storage_updates = 3;
+            let n_modified_contracts = 2;
+
+            (n_modified_contracts, n_storage_updates)
+        };
+        let changes = cached_state.count_actual_storage_changes();
+
+        assert_eq!(changes, expected_changes);
     }
 }

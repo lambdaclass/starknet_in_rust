@@ -357,6 +357,7 @@ mod tests {
                         name: "res".to_string(),
                         r#type: "felt".to_string(),
                     }],
+                    state_mutability: None,
                 },
             },
         )]);
