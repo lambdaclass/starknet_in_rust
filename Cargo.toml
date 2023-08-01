@@ -14,17 +14,18 @@ cairo_1_tests = []
 members = ["cli", "fuzzer", "rpc_state_reader"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.8.1", features = ["cairo-1-hints"] }
-starknet_api = "0.1.0"
+cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
+starknet_api = "0.3.0"
 num-traits = "0.2.15"
 starknet = "0.5.0"
 thiserror = "1.0.32"
 
 [dependencies]
-cairo-lang-starknet = "2.0.0"
-cairo-lang-casm = "2.0.0"
-cairo-lang-sierra = "2.0.0"
-cairo-lang-utils = "2.0.0"
+cairo-lang-starknet = "2.1.0-rc2"
+cairo-lang-casm = "2.1.0-rc2"
+cairo-lang-runner = "2.1.0-rc2"
+cairo-lang-sierra = "2.1.0-rc2"
+cairo-lang-utils = "2.1.0-rc2"
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 getset = "0.1.2"
 lazy_static = "1.4.0"

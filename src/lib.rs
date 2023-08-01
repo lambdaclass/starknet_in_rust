@@ -105,6 +105,8 @@ where
         } else {
             return Err(TransactionError::ResourcesError);
         };
+
+        cached_state.cache.update_initial_values();
     }
 
     Ok(result)
