@@ -21,11 +21,11 @@ starknet = "0.5.0"
 thiserror = "1.0.32"
 
 [dependencies]
-cairo-lang-starknet = "2.1.0-rc2"
-cairo-lang-casm = "2.1.0-rc2"
-cairo-lang-runner = "2.1.0-rc2"
-cairo-lang-sierra = "2.1.0-rc2"
-cairo-lang-utils = "2.1.0-rc2"
+cairo-lang-starknet = "2.1.0-rc4"
+cairo-lang-casm = "2.1.0-rc4"
+cairo-lang-runner = "2.1.0-rc4"
+cairo-lang-sierra = "2.1.0-rc4"
+cairo-lang-utils = "2.1.0-rc4"
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 getset = "0.1.2"
 lazy_static = "1.4.0"
