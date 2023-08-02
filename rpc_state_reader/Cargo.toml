@@ -18,3 +18,4 @@ cairo-lang-starknet = "2.1.0-rc2"
 starknet = { workspace = true }
 thiserror = { workspace = true }
 serde_with = "3.0.0"
+dotenv = "0.15.0"
