@@ -46,6 +46,8 @@ pub(crate) enum SyscallRequest {
     GetBlockHash(GetBlockHashRequest),
     /// Replaces the class of the calling contract.
     ReplaceClass(ReplaceClassRequest),
+    /// Computes the Keccak256 hash of the given data.
+    Keccak(KeccakRequest),
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -180,6 +182,16 @@ pub(crate) struct ReplaceClassRequest {
     pub(crate) class_hash: Felt252,
 }
 
+/// Computes the Keccak256 hash of the given data.
+#[allow(unused)]
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct KeccakRequest {
+    /// The input data start.
+    pub(crate) input_start: Relocatable,
+    /// The input data end.
+    pub(crate) input_end: Relocatable,
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  Into<SyscallRequest> implementations
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,6 +247,12 @@ impl From<StorageReadRequest> for SyscallRequest {
 impl From<GetBlockHashRequest> for SyscallRequest {
     fn from(get_block_hash_request: GetBlockHashRequest) -> SyscallRequest {
         SyscallRequest::GetBlockHash(get_block_hash_request)
+    }
+}
+
+impl From<KeccakRequest> for SyscallRequest {
+    fn from(request: KeccakRequest) -> SyscallRequest {
+        SyscallRequest::Keccak(request)
     }
 }
 
@@ -406,6 +424,22 @@ impl FromPtr for StorageWriteRequest {
             reserved,
             key,
             value,
+        }
+        .into())
+    }
+}
+
+impl FromPtr for KeccakRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+        let input_start = get_relocatable(vm, syscall_ptr)?;
+        let input_end = get_relocatable(vm, &syscall_ptr + 1)?;
+
+        Ok(KeccakRequest {
+            input_start,
+            input_end,
         }
         .into())
     }

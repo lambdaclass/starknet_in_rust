@@ -1,7 +1,5 @@
 #![deny(warnings)]
 
-mod cairo_1_syscalls;
-
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 use starknet_in_rust::EntryPointType;
