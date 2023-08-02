@@ -219,7 +219,7 @@ jobs:
       if: ${{ matrix.target != 'test-doctests' }}
       uses: taiki-e/install-action@v2
       with:
-        tool: cargo-nextest
+        tool: cargo-nextest@0.9.49
 
     - name: Run tests (${{ matrix.target }})
       run: make ${{ matrix.target }}
@@ -242,7 +242,7 @@ jobs:
     - name: Install testing tools
       uses: taiki-e/install-action@v2
       with:
-        tool: cargo-nextest,cargo-llvm-cov
+        tool: cargo-nextest@0.9.49,cargo-llvm-cov
 
     - uses: Swatinem/rust-cache@v2
       with:
