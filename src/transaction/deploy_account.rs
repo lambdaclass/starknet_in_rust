@@ -1,4 +1,4 @@
-use super::fee::{calculate_tx_fee, charge_fee, FeeInfo};
+use super::fee::{charge_fee, FeeInfo};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
@@ -159,24 +159,25 @@ impl DeployAccount {
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
 
-        let (mut tx_info, state_diff, actual_fee) = self.try_execute(state, block_context)?;
+        let (mut tx_info, state_diff) = self.try_execute(state, block_context)?;
 
         let FeeInfo {
+            actual_fee,
             fee_transfer_info,
             fee_error,
         } = charge_fee(
             state,
-            actual_fee,
+            &tx_info.actual_resources,
             block_context,
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
 
-        if let Some(fee_error) = fee_error {
+        if let Some(fee_error) = fee_error.clone() {
             tx_info = tx_info.to_revert_error(fee_error);
         } else {
-            state.apply_state_update(&state_diff);
+            state.apply_state_update(&state_diff)?;
         }
 
         tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error); // FIXME: REMOVE FEE_ERR
@@ -188,7 +189,7 @@ impl DeployAccount {
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
-    ) -> Result<(TransactionExecutionInfo, StateDiff, u128), TransactionError> {
+    ) -> Result<(TransactionExecutionInfo, StateDiff), TransactionError> {
         let mut tmp_state = CachedState::new(
             state.state_reader.clone(),
             state.contract_classes.clone(),
@@ -198,17 +199,7 @@ impl DeployAccount {
 
         let tx_info = self.apply(&mut tmp_state, block_context)?;
 
-        let actual_fee = calculate_tx_fee(
-            &tx_info.actual_resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
-
-        Ok((
-            tx_info,
-            StateDiff::from_cached_state(tmp_state)?,
-            actual_fee,
-        ))
+        Ok((tx_info, StateDiff::from_cached_state(tmp_state)?))
     }
 
     fn constructor_entry_points_empty(
@@ -233,18 +224,20 @@ impl DeployAccount {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
-
-        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
-
         let mut resources_manager = ExecutionResourcesManager::default();
-        let constructor_call_info =
-            self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
 
         let validate_info = if self.skip_validate {
             None
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
+
+        self.handle_nonce(state)?;
+
+        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
+
+        let constructor_call_info =
+            self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
 
         let actual_resources = calculate_tx_resources(
             resources_manager,

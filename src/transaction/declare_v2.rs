@@ -1,4 +1,4 @@
-use super::fee::{calculate_tx_fee, charge_fee, FeeInfo};
+use super::fee::{charge_fee, FeeInfo};
 use super::{verify_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::constants::QUERY_VERSION_BASE;
@@ -304,24 +304,25 @@ impl DeclareV2 {
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
 
-        let (mut tx_info, state_diff, actual_fee) = self.try_execute(state, block_context)?;
+        let (mut tx_info, state_diff) = self.try_execute(state, block_context)?;
 
         let FeeInfo {
+            actual_fee,
             fee_transfer_info,
             fee_error,
         } = charge_fee(
             state,
-            actual_fee,
+            &tx_info.actual_resources,
             block_context,
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
 
-        if let Some(fee_error) = fee_error {
+        if let Some(fee_error) = fee_error.clone() {
             tx_info = tx_info.to_revert_error(fee_error);
         } else {
-            state.apply_state_update(&state_diff);
+            state.apply_state_update(&state_diff)?;
             self.compile_and_store_casm_class(state)?;
         }
 
@@ -334,7 +335,7 @@ impl DeclareV2 {
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
-    ) -> Result<(TransactionExecutionInfo, StateDiff, u128), TransactionError> {
+    ) -> Result<(TransactionExecutionInfo, StateDiff), TransactionError> {
         let mut tmp_state = CachedState::new(
             state.state_reader.clone(),
             state.contract_classes.clone(),
@@ -360,7 +361,7 @@ impl DeclareV2 {
             (info, gas)
         };
 
-        let (tx_info, actual_fee) = {
+        let tx_info = {
             let storage_changes = tmp_state.count_actual_storage_changes();
             let actual_resources = calculate_tx_resources(
                 resources_manager,
@@ -371,28 +372,16 @@ impl DeclareV2 {
                 execution_result.n_reverted_steps,
             )?;
 
-            let tx_info = TransactionExecutionInfo::new_without_fee_info(
+            TransactionExecutionInfo::new_without_fee_info(
                 execution_result.call_info,
                 None,
                 None,
                 actual_resources,
                 Some(self.tx_type),
-            );
-
-            let actual_fee = calculate_tx_fee(
-                &actual_resources,
-                block_context.starknet_os_config.gas_price,
-                block_context,
-            )?;
-
-            (tx_info, actual_fee)
+            )
         };
 
-        Ok((
-            tx_info,
-            StateDiff::from_cached_state(tmp_state)?,
-            actual_fee,
-        ))
+        Ok((tx_info, StateDiff::from_cached_state(tmp_state)?))
     }
 
     pub(crate) fn compile_and_store_casm_class<S: State + StateReader>(
