@@ -306,7 +306,7 @@ impl InvokeFunction {
             state.apply_state_update(&state_diff)?;
         }
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+        tx_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_info)
     }
@@ -434,7 +434,7 @@ mod tests {
     use crate::{
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-        utils::calculate_sn_keccak,
+        transaction::fee::calculate_tx_fee, utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
@@ -808,8 +808,8 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_fail() {
-        let max_fee = 5;
+    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_revert() {
+        let max_fee = 1;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_str_radix(
@@ -859,10 +859,38 @@ mod tests {
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
 
-        let tx = internal_invoke_function
+        let tx_info = internal_invoke_function
             .execute(&mut state, &block_context, 0)
-            .unwrap_err();
-        assert_matches!(tx, TransactionError::ActualFeeExceedsMaxFee(_, _));
+            .unwrap();
+
+        let actual_resources = HashMap::from([
+            ("l1_gas_usage".to_string(), 2448),
+            ("pedersen_builtin".to_string(), 16),
+            ("range_check_builtin".to_string(), 80),
+            ("n_steps".to_string(), 3457),
+        ]);
+        let actual_fee = calculate_tx_fee(
+            &actual_resources,
+            block_context.starknet_os_config.gas_price,
+            &block_context,
+        )
+        .unwrap();
+
+        let expected_tx_info = TransactionExecutionInfo {
+            validate_info: None,
+            call_info: None,
+            revert_error: Some(format!(
+                "Actual fee exceeds max fee: actual = {}, max = {}",
+                actual_fee, max_fee
+            )),
+            fee_transfer_info: None,
+            actual_fee,
+            actual_resources,
+            tx_type: Some(TransactionType::InvokeFunction),
+            //fee_error: Some("Actual fee exceeds max fee: actual = 2483, max = 5"),
+        };
+
+        assert_eq!(tx_info, expected_tx_info);
     }
 
     #[test]

@@ -180,7 +180,7 @@ impl DeployAccount {
             state.apply_state_update(&state_diff)?;
         }
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error); // FIXME: REMOVE FEE_ERR
+        tx_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_info)
     }

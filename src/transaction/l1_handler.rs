@@ -337,7 +337,6 @@ mod test {
                 ("l1_gas_usage".to_string(), 19695),
             ]),
             tx_type: Some(TransactionType::L1Handler),
-            fee_error: None,
         }
     }
 }

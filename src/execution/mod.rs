@@ -436,7 +436,6 @@ pub struct TransactionExecutionInfo {
     pub actual_fee: u128,
     pub actual_resources: HashMap<String, usize>,
     pub tx_type: Option<TransactionType>,
-    pub fee_error: Option<String>, // FIXME: Remove
 }
 
 impl TransactionExecutionInfo {
@@ -448,7 +447,6 @@ impl TransactionExecutionInfo {
         actual_fee: u128,
         actual_resources: HashMap<String, usize>,
         tx_type: Option<TransactionType>,
-        fee_error: Option<String>,
     ) -> Self {
         TransactionExecutionInfo {
             validate_info,
@@ -458,7 +456,6 @@ impl TransactionExecutionInfo {
             actual_fee,
             actual_resources,
             tx_type,
-            fee_error,
         }
     }
 
@@ -498,7 +495,6 @@ impl TransactionExecutionInfo {
             actual_fee: 0,
             actual_resources: HashMap::new(),
             tx_type,
-            fee_error: None,
         }
     }
 
@@ -517,7 +513,6 @@ impl TransactionExecutionInfo {
             actual_fee: 0,
             actual_resources,
             tx_type,
-            fee_error: None,
         }
     }
 
@@ -527,20 +522,13 @@ impl TransactionExecutionInfo {
             call_info: None,
             revert_error: Some(revert_error),
             fee_transfer_info: None,
-            fee_error: None,
             ..self
         }
     }
 
-    pub fn set_fee_info(
-        &mut self,
-        actual_fee: u128,
-        fee_transfer_call_info: Option<CallInfo>,
-        fee_error: Option<String>,
-    ) {
+    pub fn set_fee_info(&mut self, actual_fee: u128, fee_transfer_call_info: Option<CallInfo>) {
         self.actual_fee = actual_fee;
         self.fee_transfer_info = fee_transfer_call_info;
-        self.fee_error = fee_error;
     }
 
     pub fn get_visited_storage_entries_of_many(

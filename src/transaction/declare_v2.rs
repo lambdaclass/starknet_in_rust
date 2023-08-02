@@ -327,7 +327,7 @@ impl DeclareV2 {
             self.compile_and_store_casm_class(state)?;
         }
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+        tx_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_info)
     }

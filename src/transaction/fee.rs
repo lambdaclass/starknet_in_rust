@@ -195,14 +195,11 @@ mod tests {
         definitions::block_context::BlockContext,
         execution::TransactionExecutionContext,
         state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
-        transaction::{
-            error::TransactionError,
-            fee::{charge_fee, FeeInfo},
-        },
+        transaction::fee::{charge_fee, FeeInfo},
     };
 
     #[test]
-    fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
+    fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_err_and_charge_nothing() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
@@ -212,9 +209,10 @@ mod tests {
             ("pedersen_builtin".to_string(), 10000_usize),
         ]);
         let max_fee = 100;
+        let actual_fee = 3400;
         let skip_fee_transfer = true;
 
-        let result = charge_fee(
+        let info = charge_fee(
             &mut state,
             &resources,
             &block_context,
@@ -222,13 +220,22 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        let expected_info = FeeInfo {
+            actual_fee,
+            fee_transfer_info: None,
+            fee_error: Some(format!(
+                "Actual fee exceeds max fee: actual = {}, max = {}",
+                actual_fee, max_fee
+            )),
+        };
+
+        assert_eq!(info, expected_info);
     }
 
     #[test]
-    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
+    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_err() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
@@ -241,9 +248,10 @@ mod tests {
             ("pedersen_builtin".to_string(), 10000_usize),
         ]);
         let max_fee = 100;
+        let actual_fee = 3400;
         let skip_fee_transfer = true;
 
-        let result = charge_fee(
+        let info = charge_fee(
             &mut state,
             &resources,
             &block_context,
@@ -253,13 +261,15 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            result,
-            FeeInfo {
-                actual_fee: 200,
-                fee_transfer_info: None,
-                fee_error: None,
-            }
-        );
+        let expected_info = FeeInfo {
+            actual_fee,
+            fee_transfer_info: None, // if skip_fee_transfer == true, this is Some()
+            fee_error: Some(format!(
+                "Actual fee exceeds max fee: actual = {}, max = {}",
+                actual_fee, max_fee
+            )),
+        };
+
+        assert_eq!(info, expected_info);
     }
 }

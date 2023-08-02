@@ -284,8 +284,8 @@ impl Deploy {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;
-        let (fee_transfer_info, actual_fee, fee_error) = (None, 0, None);
-        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+        let (fee_transfer_info, actual_fee) = (None, 0);
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
     }

@@ -948,7 +948,6 @@ fn test_declare_tx() {
         fee,
         resources,
         Some(TransactionType::Declare),
-        None,
     );
 
     assert_eq!(result, expected_execution_info);
@@ -1050,7 +1049,6 @@ fn test_declarev2_tx() {
         fee,
         resources,
         Some(TransactionType::Declare),
-        None,
     );
 
     assert_eq!(result, expected_execution_info);
@@ -1248,7 +1246,6 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
         fee,
         resources,
         Some(TransactionType::InvokeFunction),
-        None,
     )
 }
 
@@ -1279,7 +1276,6 @@ fn expected_fib_transaction_execution_info(
         fee,
         resources,
         Some(TransactionType::InvokeFunction),
-        None,
     )
 }
 
@@ -1558,7 +1554,6 @@ fn test_deploy_account() {
         // Default::default(),
         resources,
         TransactionType::DeployAccount.into(),
-        None,
     );
     assert_eq!(tx_info, expected_execution_info);
 

@@ -294,7 +294,7 @@ impl Declare {
             state.set_contract_class(&self.class_hash, &self.contract_class)?;
         }
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info, fee_error);
+        tx_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_info)
     }
@@ -466,7 +466,6 @@ mod tests {
             actual_fee: 0,
             actual_resources,
             tx_type: Some(TransactionType::Declare),
-            fee_error: None,
         };
 
         // ---------------------
