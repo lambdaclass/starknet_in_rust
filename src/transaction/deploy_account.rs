@@ -159,6 +159,7 @@ impl DeployAccount {
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
 
+        self.handle_nonce(state)?;
         let (mut tx_info, state_diff) = self.try_execute(state, block_context)?;
 
         let FeeInfo {

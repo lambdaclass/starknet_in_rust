@@ -1459,7 +1459,7 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 3704;
+    let expected_fee = 6157;
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -1625,12 +1625,6 @@ fn expected_deploy_account_states() -> (
     );
 
     let mut state_after = state_before.clone();
-    state_after.cache_mut().nonce_initial_values_mut().insert(
-        Address(felt_str!(
-            "386181506763903095743576862849245034886954647214831045800703908858571591162"
-        )),
-        Felt252::zero(),
-    );
     state_after
         .cache_mut()
         .class_hash_initial_values_mut()
