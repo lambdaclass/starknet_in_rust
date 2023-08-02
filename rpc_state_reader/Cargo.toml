@@ -14,7 +14,7 @@ serde_json = { version = "1.0", features = [
     "raw_value",
 ] }
 starknet_api = { workspace = true }
-cairo-lang-starknet = "2.1.0-rc4"
+cairo-lang-starknet = { workspace = true }
 starknet = { workspace = true }
 thiserror = { workspace = true }
 serde_with = "3.0.0"
