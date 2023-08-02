@@ -111,7 +111,7 @@ lazy_static! {
         map.insert("emit_event", SYSCALL_BASE + 10 * STEP);
         map.insert("send_message_to_l1", SYSCALL_BASE + 50 * STEP);
         map.insert("get_block_timestamp", 0);
-        map.insert("keccak", SYSCALL_BASE); // TODO: revisit this
+        map.insert("keccak", 0);
 
         map
     };
@@ -404,7 +404,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
             .get(syscall_name)
-            .map(|&x| x - SYSCALL_BASE)
+            .map(|&x| {
+                if x > SYSCALL_BASE {
+                    x - SYSCALL_BASE
+                } else {
+                    0
+                }
+            })
             .ok_or(SyscallHandlerError::SelectorDoesNotHaveAssociatedGas(
                 selector.to_string(),
             ))?;
