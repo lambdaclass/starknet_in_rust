@@ -404,13 +404,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
             .get(syscall_name)
-            .map(|&x| {
-                if x > SYSCALL_BASE {
-                    x - SYSCALL_BASE
-                } else {
-                    0
-                }
-            })
+            .map(|&x| x.saturating_sub(SYSCALL_BASE))
             .ok_or(SyscallHandlerError::SelectorDoesNotHaveAssociatedGas(
                 selector.to_string(),
             ))?;
@@ -987,7 +981,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             let chunk_start = (request.input_start + i * 17)?;
             let chunk = get_felt_range(vm, chunk_start, (chunk_start + 17)?)?;
             for (i, val) in chunk.iter().enumerate() {
-                state[i] ^= val.to_u64().unwrap();
+                state[i] ^= val.to_u64().ok_or_else(|| {
+                    SyscallHandlerError::Conversion("Felt252".to_string(), "u64".to_string())
+                })?;
             }
             keccak::f1600(&mut state)
         }
