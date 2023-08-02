@@ -1,4 +1,5 @@
 use core::fmt;
+use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
@@ -106,6 +107,9 @@ struct RpcResponseFelt252 {
 
 impl RpcState {
     pub fn new(chain: RpcChain, block: BlockValue) -> Self {
+        if env::var("INFURA_API_KEY").is_err() {
+            dotenv().expect("Missing .env file");
+        }
         Self {
             chain,
             api_key: env::var("INFURA_API_KEY")
