@@ -235,8 +235,6 @@ impl InvokeFunction {
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
 
-        self.handle_nonce(state)?;
-
         // Execute transaction
         let ExecutionResult {
             call_info,
@@ -277,6 +275,7 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
+    /// If a fee error occurs, state won't be updated.
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -325,7 +324,8 @@ impl InvokeFunction {
         );
         tmp_state.cache = state.cache.clone();
 
-        let tx_info = self.apply(state, block_context, remaining_gas)?;
+        self.handle_nonce(&mut tmp_state)?;
+        let tx_info = self.apply(&mut tmp_state, block_context, remaining_gas)?;
 
         Ok((tx_info, StateDiff::from_cached_state(tmp_state)?))
     }

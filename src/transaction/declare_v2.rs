@@ -296,6 +296,7 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
+    /// If a fee error occurs, state won't be updated.
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,

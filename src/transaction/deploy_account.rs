@@ -226,6 +226,8 @@ impl DeployAccount {
         let contract_class = state.get_contract_class(&self.class_hash)?;
         let mut resources_manager = ExecutionResourcesManager::default();
 
+        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
+
         let validate_info = if self.skip_validate {
             None
         } else {
@@ -233,8 +235,6 @@ impl DeployAccount {
         };
 
         self.handle_nonce(state)?;
-
-        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         let constructor_call_info =
             self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;

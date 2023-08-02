@@ -167,7 +167,6 @@ impl Declare {
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
-        self.handle_nonce(state)?;
         let changes = state.count_actual_storage_changes();
         let actual_resources = calculate_tx_resources(
             resources_manager,
@@ -312,7 +311,8 @@ impl Declare {
         );
         tmp_state.cache = state.cache.clone();
 
-        let tx_info = self.apply(state, block_context)?;
+        self.handle_nonce(state)?;
+        let tx_info = self.apply(&mut tmp_state, block_context)?;
 
         Ok((tx_info, StateDiff::from_cached_state(tmp_state)?))
     }

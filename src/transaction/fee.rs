@@ -19,7 +19,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct FeeInfo {
     pub actual_fee: u128,
     pub fee_transfer_info: Option<CallInfo>,
@@ -256,7 +256,9 @@ mod tests {
         assert_eq!(
             result,
             FeeInfo {
+                actual_fee: 200,
                 fee_transfer_info: None,
+                fee_error: None,
             }
         );
     }
