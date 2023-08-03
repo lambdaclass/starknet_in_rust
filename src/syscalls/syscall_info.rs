@@ -9,6 +9,7 @@ pub fn get_syscall_size_from_name(syscall_name: &str) -> usize {
         "get_execution_info" => 0,
         "call_contract" => 4,
         "replace_class" => 1,
+        "keccak" => 2,
         _ => unimplemented!(),
     }
 }

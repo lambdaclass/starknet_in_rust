@@ -321,16 +321,22 @@ impl InvokeFunction {
 
     // Simulation function
 
-    pub(crate) fn create_for_simulation(
+    pub fn create_for_simulation(
         &self,
         skip_validation: bool,
         skip_execute: bool,
         skip_fee_transfer: bool,
+        ignore_max_fee: bool,
     ) -> Transaction {
         let tx = InvokeFunction {
             skip_validation,
             skip_execute,
             skip_fee_transfer,
+            max_fee: if ignore_max_fee {
+                u128::MAX
+            } else {
+                self.max_fee
+            },
             ..self.clone()
         };
 
