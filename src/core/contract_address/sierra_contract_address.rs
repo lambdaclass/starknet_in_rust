@@ -122,3 +122,27 @@ fn get_contract_entry_points(
         })
         .collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{fs::File, io::BufReader};
+    use cairo_vm::felt::felt_str;
+    use crate::core::contract_address::compute_sierra_class_hash;
+    use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+
+    #[test]
+    fn test_declare_tx_from_testnet() {
+        let file = File::open("starknet_programs/cairo2/declare_tx_from_testnet.sierra").unwrap();
+        let reader = BufReader::new(file);
+
+        let sierra_contract_class: SierraContractClass = serde_json::from_reader(reader).unwrap();
+
+        // this is the class_hash from: https://alpha4.starknet.io/feeder_gateway/get_transaction?transactionHash=0x01b852f1fe2b13db21a44f8884bc4b7760dc277bb3820b970dba929860275617
+        let expected_result = felt_str!("487202222862199115032202787294865701687663153957776561394399544814644144883");
+
+        assert_eq!(
+            compute_sierra_class_hash(&sierra_contract_class).unwrap(),
+            expected_result
+        )
+    }
+}
