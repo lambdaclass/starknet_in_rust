@@ -22,13 +22,16 @@ use cairo_vm::{
 };
 use std::{any::Any, collections::HashMap};
 
+/// Definition of the deprecated syscall hint processor with associated structs
 pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
     run_resources: RunResources,
 }
 
+/// Implementations and methods for DeprecatedSyscallHintProcessor
 impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
+    /// Constructor for DeprecatedSyscallHintProcessor
     pub fn new(
         syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
         run_resources: RunResources,
@@ -40,6 +43,7 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
         }
     }
 
+    /// Method to determine if a syscall hint should be run
     pub fn should_run_syscall_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -57,6 +61,7 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
         }
     }
 
+    /// Method to execute a syscall hint
     fn execute_syscall_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -64,6 +69,7 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, Felt252>,
     ) -> Result<(), SyscallHandlerError> {
+        // Match against specific syscall hint codes and call the appropriate handler
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
             .ok_or(SyscallHandlerError::WrongHintData)?;
@@ -149,7 +155,9 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
     }
 }
 
+/// Implement the HintProcessorLogic trait for DeprecatedSyscallHintProcessor
 impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'a, S> {
+    /// Define how to execute a hint for this processor
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -171,6 +179,7 @@ impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'
     }
 }
 
+/// Implement the ResourceTracker trait for DeprecatedSyscallHintProcessor
 impl<'a, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, S> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
@@ -189,7 +198,9 @@ impl<'a, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, 
     }
 }
 
+/// Implement the HintProcessorPostRun trait for DeprecatedSyscallHintProcessor
 impl<'a, S: StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor<'a, S> {
+    /// Define what happens after a run
     fn post_run(
         &self,
         runner: &mut VirtualMachine,
@@ -199,6 +210,7 @@ impl<'a, S: StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor
     }
 }
 
+/// Helper function to get the syscall pointer
 fn get_syscall_ptr(
     vm: &VirtualMachine,
     ids_data: &HashMap<String, HintReference>,
@@ -209,6 +221,7 @@ fn get_syscall_ptr(
     Ok(syscall_ptr)
 }
 
+/// Unit tests for this module
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -247,6 +260,7 @@ mod tests {
         >;
     type SyscallHintProcessor<'a, T> = super::DeprecatedSyscallHintProcessor<'a, T>;
 
+    /// Test checks if the send_message_to_l1 syscall is read correctly.
     #[test]
     fn read_send_message_to_l1_request() {
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -269,6 +283,7 @@ mod tests {
         )
     }
 
+    /// Test verifies if the read syscall can correctly read a deploy request.
     #[test]
     fn read_deploy_syscall_request() {
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -301,6 +316,7 @@ mod tests {
         )
     }
 
+    /// Test checks the get block timestamp for business logic.
     #[test]
     fn get_block_timestamp_for_business_logic() {
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -342,6 +358,7 @@ mod tests {
         );
     }
 
+    /// Test checks the get sequencer address for business logic.
     #[test]
     fn get_sequencer_address_for_business_logic() {
         let mut vm = vm!();
@@ -372,6 +389,7 @@ mod tests {
         assert_eq!(get_big_int(&vm, relocatable!(1, 2)).unwrap(), 0.into())
     }
 
+    /// Test checks that the correct event has been emited witht th right parameters.
     #[test]
     fn emit_event_test() {
         // create data and variables to execute hint
@@ -445,6 +463,7 @@ mod tests {
         );
     }
 
+    /// Test checks the get transaction information for business logic.
     #[test]
     fn get_tx_info_for_business_logic_test() {
         let mut vm = vm!();
@@ -552,6 +571,7 @@ mod tests {
         );
     }
 
+    /// Test checks the get transaction information for business logic given the transaction info pointer.
     #[test]
     fn get_tx_info_for_business_logic_with_tx_info_ptr() {
         let mut vm = vm!();
@@ -597,6 +617,7 @@ mod tests {
         );
     }
 
+    /// Test checks the get caller address is the correct one.
     #[test]
     fn test_get_caller_address_ok() {
         let mut vm = vm!();
@@ -633,6 +654,7 @@ mod tests {
         )
     }
 
+    /// Test checks the message send to l1 is the correct one.
     #[test]
     fn test_send_message_to_l1_ok() {
         let mut vm = vm!();
@@ -694,6 +716,7 @@ mod tests {
         );
     }
 
+    /// Test checks that the block number that we get is the correct one.
     #[test]
     fn test_get_block_number() {
         let mut vm = vm!();
@@ -727,6 +750,7 @@ mod tests {
         assert_matches!(get_integer(&vm, relocatable!(2, 1)), Ok(0));
     }
 
+    /// Test checks the contract address we get is the correct one.
     #[test]
     fn test_get_contract_address_ok() {
         let mut vm = vm!();
@@ -763,6 +787,7 @@ mod tests {
         )
     }
 
+    /// Test checks the transaction signature we get is the correct one.
     #[test]
     fn test_gt_tx_signature() {
         let mut vm = vm!();
@@ -822,6 +847,7 @@ mod tests {
         );
     }
 
+    /// Tests the correct behavior of a storage read operation within a blockchain.  
     #[test]
     fn test_bl_storage_read_hint_ok() {
         let mut vm = vm!();
@@ -885,6 +911,7 @@ mod tests {
         assert_matches!(get_big_int(&vm, relocatable!(2, 2)), Ok(response) if response == storage_value );
     }
 
+    /// Tests the correct behavior of a storage write operation within a blockchain.  
     #[test]
     fn test_bl_storage_write_hint_ok() {
         let mut vm = vm!();
@@ -953,6 +980,7 @@ mod tests {
         assert_eq!(write, Felt252::new(45));
     }
 
+    /// Tests the correct behavior of a deploy operation within a blockchain.  
     #[test]
     fn test_bl_deploy_ok() {
         let mut vm = vm!();
@@ -1043,6 +1071,7 @@ mod tests {
         );
     }
 
+    /// Tests the correct behavior of a storage deploy and invoke operations within a blockchain.  
     #[test]
     fn test_deploy_and_invoke() {
         /*
