@@ -261,7 +261,7 @@ fn test_syscall(
         100000,
     );
 
-    // Execute the entrypoint 
+    // Execute the entrypoint
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
