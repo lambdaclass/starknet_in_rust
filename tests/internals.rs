@@ -1576,7 +1576,7 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader>,
     CachedState<InMemoryStateReader>,
 ) {
-    let fee = Felt252::from(3704);
+    let fee = Felt252::from(6157);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
@@ -1629,38 +1629,6 @@ fn expected_deploy_account_states() -> (
         .cache_mut()
         .class_hash_initial_values_mut()
         .insert(Address(0x1001.into()), felt_to_hash(&0x1010.into()));
-    state_after
-        .cache_mut()
-        .class_hash_initial_values_mut()
-        .insert(
-            Address(felt_str!(
-                "386181506763903095743576862849245034886954647214831045800703908858571591162"
-            )),
-            [0; 32],
-        );
-    state_after.cache_mut().storage_initial_values_mut().insert(
-        (
-            Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "2542253978940891427830343982984992363331567580652119103860970381451088310290"
-            )),
-        ),
-        Felt252::zero(),
-    );
-    state_after.cache_mut().storage_initial_values_mut().insert(
-        (
-            Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
-        ),
-        Felt252::zero(),
-    );
-    state_after.cache_mut().storage_initial_values_mut().insert(
-        (
-            Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
-        ),
-        Felt252::zero(),
-    );
     state_after.cache_mut().nonce_writes_mut().insert(
         Address(felt_str!(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
@@ -1676,25 +1644,9 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
-                "2542253978940891427830343982984992363331567580652119103860970381451088310290"
-            )),
-        ),
-        Felt252::zero(),
-    );
-    state_after.cache_mut().storage_writes_mut().insert(
-        (
-            Address(0x1001.into()),
             felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
         ),
         INITIAL_BALANCE.clone() - &fee,
-    );
-    state_after.cache_mut().storage_writes_mut().insert(
-        (
-            Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
-        ),
-        Felt252::zero(),
     );
     state_after.cache_mut().storage_writes_mut().insert(
         (

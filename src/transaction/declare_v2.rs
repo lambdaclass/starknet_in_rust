@@ -307,11 +307,11 @@ impl DeclareV2 {
 
         let (mut tx_info, state_diff) = self.try_execute(state, block_context)?;
 
-        let FeeInfo {
+        let (FeeInfo {
             actual_fee,
             fee_transfer_info,
             fee_error,
-        } = charge_fee(
+        }, _) = charge_fee(
             state,
             &tx_info.actual_resources,
             block_context,

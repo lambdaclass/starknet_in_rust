@@ -159,14 +159,13 @@ impl DeployAccount {
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
 
-        self.handle_nonce(state)?;
-        let (mut tx_info, state_diff) = self.try_execute(state, block_context)?;
+        let (mut tx_info, mut state_diff) = self.try_execute(state, block_context)?;
 
-        let FeeInfo {
+        let (FeeInfo {
             actual_fee,
             fee_transfer_info,
             fee_error,
-        } = charge_fee(
+        }, charge_fee_state_diff) = charge_fee(
             state,
             &tx_info.actual_resources,
             block_context,
@@ -176,8 +175,11 @@ impl DeployAccount {
         )?;
 
         if let Some(fee_error) = fee_error.clone() {
+            state.apply_state_update(&charge_fee_state_diff)?;
             tx_info = tx_info.to_revert_error(fee_error);
         } else {
+            let state_diff = state_diff.squash(charge_fee_state_diff);
+            //state.apply_state_update(&charge_fee_state_diff)?;
             state.apply_state_update(&state_diff)?;
         }
 

@@ -4,6 +4,7 @@ use crate::execution::execution_entry_point::ExecutionResult;
 use crate::execution::CallType;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     definitions::{
         block_context::BlockContext,
@@ -133,20 +134,30 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// - `skip_fee_transfer`: Whether to skip the fee transfer.
 ///
 pub fn charge_fee<S: StateReader>(
-    state: &mut CachedState<S>,
+    state: &CachedState<S>,
     actual_resources: &HashMap<String, usize>,
     block_context: &BlockContext,
     max_fee: u128,
     tx_execution_context: &mut TransactionExecutionContext,
     skip_fee_transfer: bool,
-) -> Result<FeeInfo, TransactionError> {
+) -> Result<(FeeInfo, StateDiff), TransactionError> {
     if max_fee.is_zero() {
-        return Ok(FeeInfo {
-            actual_fee: 0,
-            fee_transfer_info: None,
-            fee_error: None,
-        });
+        return Ok((
+            FeeInfo {
+                actual_fee: 0,
+                fee_transfer_info: None,
+                fee_error: None,
+            },
+            StateDiff::default(),
+        ));
     }
+
+    let mut tmp_state = CachedState::new(
+        state.state_reader.clone(),
+        state.contract_classes.clone(),
+        state.casm_contract_classes.clone(),
+    );
+    tmp_state.cache = state.cache.clone();
 
     let actual_fee = calculate_tx_fee(
         actual_resources,
@@ -162,7 +173,7 @@ pub fn charge_fee<S: StateReader>(
             None
         } else {
             Some(execute_fee_transfer(
-                state,
+                &mut tmp_state,
                 block_context,
                 tx_execution_context,
                 actual_fee.min(max_fee) * FEE_FACTOR,
@@ -183,8 +194,7 @@ pub fn charge_fee<S: StateReader>(
         fee_transfer_info,
         fee_error,
     };
-
-    Ok(fee_info)
+    Ok((fee_info, StateDiff::from_cached_state(tmp_state)?))
 }
 
 #[cfg(test)]
@@ -220,7 +230,8 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap();
+        .unwrap()
+        .0;
 
         let expected_info = FeeInfo {
             actual_fee,
@@ -259,7 +270,8 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap();
+        .unwrap()
+        .0;
 
         let expected_info = FeeInfo {
             actual_fee,
