@@ -29,6 +29,7 @@ use super::Transaction;
 
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
+/// L1Handler represents a handler for L1 transactions within the StarkNet protocol.
 pub struct L1Handler {
     #[getset(get = "pub")]
     hash_value: Felt252,
@@ -42,6 +43,7 @@ pub struct L1Handler {
     skip_execute: bool,
 }
 
+/// Constructor creates a new L1Handler instance.
 impl L1Handler {
     pub fn new(
         contract_address: Address,
@@ -71,7 +73,7 @@ impl L1Handler {
             hash_value,
         )
     }
-
+    /// Creates a new L1Handler instance with a specified transaction hash.
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
@@ -189,6 +191,8 @@ impl L1Handler {
             L1_HANDLER_VERSION.into(),
         ))
     }
+
+    /// Creates a L1Handler for simulation purposes.
     pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
@@ -230,6 +234,7 @@ mod test {
         utils::Address,
     };
 
+    /// Test the correct execution of the L1Handler.
     #[test]
     fn test_execute_l1_handler() {
         let l1_handler = L1Handler::new(
@@ -286,6 +291,8 @@ mod test {
         assert_eq!(tx_exec, expected_tx_exec)
     }
 
+    /// Helper function to construct the expected transaction execution info.
+    /// Expected output of the L1Handler's execution.
     fn expected_tx_exec_info() -> TransactionExecutionInfo {
         TransactionExecutionInfo {
             validate_info: None,
