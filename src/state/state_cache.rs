@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 // TODO: Change [u8; 32] to Felt252.
 pub type StorageEntry = (Address, [u8; 32]);
 
+/// Struct that keeps track of initial and written state of contracts
 #[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
 pub struct StateCache {
     // Reader's cached information; initial values, read before any write operation (per cell)
@@ -38,6 +39,8 @@ pub struct StateCache {
 
 impl StateCache {
     #[allow(clippy::too_many_arguments)]
+
+    /// Create a new StateCache with given initial and written values for testing
     pub fn new(
         class_hash_initial_values: HashMap<Address, ClassHash>,
         compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
@@ -62,6 +65,7 @@ impl StateCache {
         }
     }
 
+    /// Define a default state for testing
     pub(crate) fn default() -> Self {
         Self {
             class_hash_initial_values: HashMap::new(),
@@ -76,6 +80,7 @@ impl StateCache {
         }
     }
 
+    /// Creates a new instance of `StateCache` for testing purposes with the provided initial values and writes.
     #[allow(clippy::too_many_arguments)]
     pub fn new_for_testing(
         class_hash_initial_values: HashMap<Address, [u8; 32]>,
@@ -101,6 +106,7 @@ impl StateCache {
         }
     }
 
+    /// Get the class hash for a given address
     pub(crate) fn get_class_hash(&self, contract_address: &Address) -> Option<&ClassHash> {
         if self.class_hash_writes.contains_key(contract_address) {
             return self.class_hash_writes.get(contract_address);
@@ -108,6 +114,7 @@ impl StateCache {
         self.class_hash_initial_values.get(contract_address)
     }
 
+    /// Get the compiled hash for a given class hash
     #[allow(dead_code)]
     pub(crate) fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Option<&CompiledClass> {
         if self.compiled_class_hash_writes.contains_key(class_hash) {
@@ -116,6 +123,7 @@ impl StateCache {
         self.compiled_class_hash_initial_values.get(class_hash)
     }
 
+    /// Get the nonce for a given address
     pub(crate) fn get_nonce(&self, contract_address: &Address) -> Option<&Felt252> {
         if self.nonce_writes.contains_key(contract_address) {
             return self.nonce_writes.get(contract_address);
@@ -123,6 +131,7 @@ impl StateCache {
         self.nonce_initial_values.get(contract_address)
     }
 
+    /// Get the storage for a given storage entry
     pub(crate) fn get_storage(&self, storage_entry: &StorageEntry) -> Option<&Felt252> {
         if self.storage_writes.contains_key(storage_entry) {
             return self.storage_writes.get(storage_entry);
@@ -130,6 +139,7 @@ impl StateCache {
         self.storage_initial_values.get(storage_entry)
     }
 
+    /// Update written values
     pub(crate) fn update_writes(
         &mut self,
         address_to_class_hash: &HashMap<Address, ClassHash>,
@@ -144,6 +154,7 @@ impl StateCache {
         self.storage_writes.extend(storage_updates.clone());
     }
 
+    /// Set initial values
     pub fn set_initial_values(
         &mut self,
         address_to_class_hash: &HashMap<Address, ClassHash>,
@@ -170,6 +181,7 @@ impl StateCache {
     }
 
     // TODO: Remove warning inhibitor when finally used.
+    /// Get all contract addresses that have been accessed
     #[allow(dead_code)]
     pub(crate) fn get_accessed_contract_addresses(&self) -> HashSet<Address> {
         let mut set: HashSet<Address> = HashSet::with_capacity(self.class_hash_writes.len());
@@ -178,8 +190,33 @@ impl StateCache {
         set.extend(self.storage_writes.keys().map(|x| x.0.clone()));
         set
     }
+
+    pub fn update_initial_values(&mut self) {
+        for (k, v) in self.nonce_writes.iter() {
+            self.nonce_initial_values.insert(k.clone(), v.clone());
+        }
+
+        for (k, v) in self.class_hash_writes.iter() {
+            self.class_hash_initial_values.insert(k.clone(), *v);
+        }
+
+        for (k, v) in self.compiled_class_hash_writes.iter() {
+            self.compiled_class_hash_initial_values
+                .insert(*k, v.clone());
+        }
+
+        for (k, v) in self.storage_writes.iter() {
+            self.storage_initial_values.insert(k.clone(), v.clone());
+        }
+
+        self.nonce_writes = HashMap::new();
+        self.class_hash_writes = HashMap::new();
+        self.compiled_class_hash_writes = HashMap::new();
+        self.storage_writes = HashMap::new();
+    }
 }
 
+/// Unit tests for StateCache
 #[cfg(test)]
 mod tests {
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
@@ -219,5 +256,20 @@ mod tests {
             state_cache.get_accessed_contract_addresses(),
             HashSet::from([Address(10.into()), Address(9.into()), Address(4.into())])
         );
+
+        state_cache.update_initial_values();
+
+        assert_eq!(state_cache.class_hash_writes, HashMap::new());
+        assert_eq!(state_cache.compiled_class_hash_writes, HashMap::new());
+        assert_eq!(state_cache.nonce_writes, HashMap::new());
+        assert_eq!(state_cache.storage_writes, HashMap::new());
+
+        assert_eq!(state_cache.class_hash_initial_values, address_to_class_hash);
+        assert_eq!(
+            state_cache.compiled_class_hash_initial_values,
+            class_hash_to_compiled_class_hash
+        );
+        assert_eq!(state_cache.nonce_initial_values, address_to_nonce);
+        assert_eq!(state_cache.storage_initial_values, storage_updates);
     }
 }
