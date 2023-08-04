@@ -57,15 +57,14 @@ pub fn compute_sierra_class_hash(
     hasher.update(l1_handlers);
     hasher.update(constructors);
 
-    // Hash abi_hash.
+    // Hash abi
     let abi = serde_json_pythonic::to_string_pythonic(
         &contract_class
             .abi
             .clone()
             .ok_or(ContractAddressError::MissingAbi)?
-            .items,
-    )
-    .unwrap();
+            .items
+    ).map_err(|_| ContractAddressError::MissingAbi)?;
 
     let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
         .map_err(|_err| {
@@ -122,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_declare_tx_from_testnet() {
-        let file = File::open("starknet_programs/cairo2/declare_tx_from_testnet.sierra").unwrap();
+        let file = File::open("starknet_programs/cairo2/events.sierra").unwrap();
         let reader = BufReader::new(file);
 
         let sierra_contract_class: SierraContractClass = serde_json::from_reader(reader).unwrap();

@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn test_declare_tx_class_hash() {
-        let file = File::open("starknet_programs/cairo2/declare_tx_from_testnet.casm").unwrap();
+        let file = File::open("starknet_programs/cairo2/events.casm").unwrap();
         let reader = BufReader::new(file);
 
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
