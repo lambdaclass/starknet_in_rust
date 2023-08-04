@@ -2908,7 +2908,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 #[test]
 #[cfg(not(feature = "cairo_1_tests"))]
 fn keccak_syscall() {
-    let program_data = include_bytes!("../starknet_programs/cairo2/test_cairo_keccak.casm");
+    let program_data = include_bytes!("../starknet_programs/keccak/test_cairo_keccak.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
