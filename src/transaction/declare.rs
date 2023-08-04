@@ -55,6 +55,7 @@ pub struct Declare {
 // ------------------------------------------------------------
 impl Declare {
     #[allow(clippy::too_many_arguments)]
+    /// Constructor creates a new Declare instance.
     pub fn new(
         contract_class: ContractClass,
         chain_id: Felt252,
@@ -104,6 +105,7 @@ impl Declare {
         Ok(internal_declare)
     }
 
+    /// Creates a new Declare instance with a given transaction hash.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
         contract_class: ContractClass,
@@ -145,13 +147,13 @@ impl Declare {
         Ok(internal_declare)
     }
 
+    /// Returns the calldata.
     pub fn get_calldata(&self) -> Vec<Felt252> {
         let bytes = Felt252::from_bytes_be(&self.class_hash);
         Vec::from([bytes])
     }
 
-    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
-    /// the contract that is being declared. Then it returns the transaction execution info of the run.
+    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate the contract that is being declared.
     pub fn apply<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -189,6 +191,8 @@ impl Declare {
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // Internal Account Functions
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    /// Return the transaction execution context.
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
@@ -201,6 +205,7 @@ impl Declare {
         )
     }
 
+    /// Runs the validation entry point for the contract that is being declared.
     pub fn run_validate_entrypoint<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -241,6 +246,7 @@ impl Declare {
         Ok(Some(call_info))
     }
 
+    /// Handles the nonce value, verifies that the transaction nonce is correct.
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(());
@@ -260,8 +266,8 @@ impl Declare {
         Ok(())
     }
 
-    /// Calculates actual fee used by the transaction using the execution
-    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    /// Calculates actual fee used by the transaction using the execution info returned by apply(),
+    /// then updates the transaction execution info with the data of the fee.
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -288,6 +294,7 @@ impl Declare {
         Ok(tx_exec_info)
     }
 
+    /// Creates a transaction for simulation.
     pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
@@ -340,6 +347,7 @@ mod tests {
 
     use super::Declare;
 
+    /// This test verifies the declaration of a Fibonacci contract.
     #[test]
     fn declare_fibonacci() {
         // accounts contract class must be stored before running declaration of fibonacci
@@ -450,6 +458,7 @@ mod tests {
         );
     }
 
+    /// This test checks that declaring a contract with version zero and a max fee greater than zero should fail.
     #[test]
     fn verify_version_zero_should_fail_max_fee() {
         // accounts contract class must be stored before running declaration of fibonacci
@@ -497,6 +506,7 @@ mod tests {
         );
     }
 
+    /// This test checks that declaring a contract with version zero and a nonce greater than zero should fail.
     #[test]
     fn verify_version_zero_should_fail_nonce() {
         // accounts contract class must be stored before running declaration of fibonacci
@@ -560,6 +570,7 @@ mod tests {
         );
     }
 
+    /// This test verifies that a contract declaration should fail if the signature list is not empty.
     #[test]
     fn verify_signature_should_fail_not_empty_list() {
         // accounts contract class must be stored before running declaration of fibonacci
@@ -622,6 +633,7 @@ mod tests {
         );
     }
 
+    /// This test checks that redeclaring a contract class that has already been declared succeed.
     #[test]
     fn execute_class_already_declared_should_redeclare() {
         // accounts contract class must be stored before running declaration of fibonacci
@@ -698,6 +710,7 @@ mod tests {
         assert!(state.get_contract_class(&class_hash).is_ok());
     }
 
+    /// This test verifies that executing the same transaction twice should fail.
     #[test]
     fn execute_transaction_twice_should_fail() {
         // accounts contract class must be stored before running declaration of fibonacci
@@ -767,6 +780,7 @@ mod tests {
         )
     }
 
+    /// This test checks that a contract declaration should fail if there are no account contracts in the state.
     #[test]
     fn validate_transaction_should_fail() {
         // Instantiate CachedState
@@ -802,6 +816,7 @@ mod tests {
         );
     }
 
+    // This test verifies that a contract declaration should fail if the fee token contract is not set up.
     #[test]
     fn execute_transaction_charge_fee_should_fail() {
         // accounts contract class must be stored before running declaration of fibonacci
