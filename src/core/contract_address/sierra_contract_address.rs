@@ -67,8 +67,6 @@ pub fn compute_sierra_class_hash(
     )
     .unwrap();
 
-    // let abi = b"[{\"type\": \"constructor\", \"name\": \"constructor\", \"inputs\": []}, {\"type\": \"enum\", \"name\": \"core::bool\", \"variants\": [{\"name\": \"False\", \"type\": \"()\"}, {\"name\": \"True\", \"type\": \"()\"}]}, {\"type\": \"function\", \"name\": \"emit_event\", \"inputs\": [{\"name\": \"incremental\", \"type\": \"core::bool\"}], \"outputs\": [], \"state_mutability\": \"external\"}, {\"type\": \"event\", \"name\": \"events::events::ContractWithEvent::IncrementalEvent\", \"kind\": \"struct\", \"members\": [{\"name\": \"value\", \"type\": \"core::integer::u128\", \"kind\": \"data\"}]}, {\"type\": \"event\", \"name\": \"events::events::ContractWithEvent::StaticEvent\", \"kind\": \"struct\", \"members\": []}, {\"type\": \"event\", \"name\": \"events::events::ContractWithEvent::Event\", \"kind\": \"enum\", \"variants\": [{\"name\": \"IncrementalEvent\", \"type\": \"events::events::ContractWithEvent::IncrementalEvent\", \"kind\": \"nested\"}, {\"name\": \"StaticEvent\", \"type\": \"events::events::ContractWithEvent::StaticEvent\", \"kind\": \"nested\"}]}]";
-
     let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
         .map_err(|_err| {
             ContractAddressError::Cast("&[u8]".to_string(), "FieldElement".to_string())
