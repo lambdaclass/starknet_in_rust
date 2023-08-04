@@ -35,12 +35,13 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
+/// Struct representing the state selector, containing contract addresses and class hashes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
     pub contract_addresses: Vec<Address>,
     pub class_hashes: Vec<ClassHash>,
 }
-
+/// Struct representing the deploy account, containing various fields related to the deployment.
 #[derive(Clone, Debug, Getters)]
 pub struct DeployAccount {
     #[getset(get = "pub")]
@@ -65,6 +66,7 @@ pub struct DeployAccount {
 
 impl DeployAccount {
     #[allow(clippy::too_many_arguments)]
+    /// Constructor creatte a new DeployAccount.
     pub fn new(
         class_hash: ClassHash,
         max_fee: u128,
@@ -109,6 +111,7 @@ impl DeployAccount {
         })
     }
 
+    /// Creates a new L1Handler instance with a specified transaction hash.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
         class_hash: ClassHash,
@@ -143,6 +146,7 @@ impl DeployAccount {
         })
     }
 
+    /// Get the state selector based on the contract address and class hash.
     pub fn get_state_selector(&self, _block_context: BlockContext) -> StateSelector {
         StateSelector {
             contract_addresses: vec![self.contract_address.clone()],
@@ -150,6 +154,7 @@ impl DeployAccount {
         }
     }
 
+    /// Execute a deployment transaction.
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -174,6 +179,7 @@ impl DeployAccount {
         Ok(tx_info)
     }
 
+    /// Check if the constructor entry points are empty.
     fn constructor_entry_points_empty(
         &self,
         contract_class: CompiledClass,
@@ -228,6 +234,7 @@ impl DeployAccount {
         ))
     }
 
+    /// Handles the constructor of a contract, executes it if necessary.
     pub fn handle_constructor<S: StateReader>(
         &self,
         contract_class: CompiledClass,
@@ -250,6 +257,7 @@ impl DeployAccount {
         }
     }
 
+    /// Handles the nonce of a transaction, verifies if it is valid.
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
             return Ok(());
@@ -267,6 +275,7 @@ impl DeployAccount {
         Ok(())
     }
 
+    /// Executes the constructor entry point.
     pub fn run_constructor_entrypoint<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -302,6 +311,7 @@ impl DeployAccount {
         Ok(call_info)
     }
 
+    /// Get the transaction execution context.
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
@@ -314,6 +324,7 @@ impl DeployAccount {
         )
     }
 
+    /// Executes a validation entry point for a contract.
     pub fn run_validate_entrypoint<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -360,6 +371,7 @@ impl DeployAccount {
         Ok(call_info)
     }
 
+    /// Creates a transaction for simulation.
     pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
@@ -397,6 +409,7 @@ mod tests {
         utils::felt_to_hash,
     };
 
+    /// Tests that for a given contract we get the correct state selector.
     #[test]
     fn get_state_selector() {
         let path = PathBuf::from("starknet_programs/constructor.json");
@@ -433,6 +446,7 @@ mod tests {
         assert_eq!(state_selector.class_hashes, vec![class_hash]);
     }
 
+    /// Tests that deploying the same contract twice should fail with a ContractAddressUnavailable error.
     #[test]
     fn deploy_account_twice_should_fail() {
         let path = PathBuf::from("starknet_programs/constructor.json");
@@ -483,6 +497,7 @@ mod tests {
         )
     }
 
+    /// Tests that deploying an account without calldata for the constructor should panic.
     #[test]
     #[should_panic]
     // Should panic at no calldata for constructor. Error managment not implemented yet.
