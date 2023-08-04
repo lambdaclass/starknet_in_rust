@@ -656,4 +656,110 @@ mod tests {
             .execute(&mut state, &block_context, 0)
             .unwrap();
     }
+
+    /// Invoke transaction test using the transaction:
+    /// https://testnet-2.starkscan.co/tx/0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
+    #[test]
+    fn test_invoke_testnet2_0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc() {
+        // Tx Hash without the "0x" prefix.
+        let tx_hash_str = "019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc";
+
+        let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
+        let contract_address = Address(felt_str!(
+            "0690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
+            16
+        ));
+        let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+        let max_fee = 10811422177042;
+        let version = felt_str!("1", 16);
+        let calldata = [
+            felt_str!("4", 16),
+            felt_str!("4254432d55534443", 16),
+            felt_str!("f02e7324ecbd65ce267", 16),
+            felt_str!("5754492d55534443", 16),
+            felt_str!("8e13050d06d8f514c", 16),
+            felt_str!("4554482d55534443", 16),
+            felt_str!("f0e4a142c3551c149d", 16),
+            felt_str!("4a50592d55534443", 16),
+            felt_str!("38bd34c31a0a5c", 16),
+        ]
+        .to_vec();
+
+        let signature = [
+            felt_str!(
+                "ffab1c47d8d5e5b76bdcc4af79e98205716c36b440f20244c69599a91ace58",
+                16
+            ),
+            felt_str!(
+                "6aa48a0906c9c1f7381c1a040c043b649eeac1eea08f24a9d07813f6b1d05fe",
+                16
+            ),
+        ]
+        .to_vec();
+        let nonce = Some(felt_str!("16930", 16));
+
+        // Create InvokeFunction with the converted data.
+        let internal_invoke_function = InvokeFunction::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            max_fee,
+            version,
+            calldata,
+            signature,
+            nonce,
+            tx_hash,
+        )
+        .unwrap()
+        .create_for_simulation(false, false, false, false);
+
+        // Instantiate CachedState
+        let state_reader = RpcState::new(
+            RpcChain::TestNet,
+            BlockValue::Number(serde_json::to_value(123002).unwrap()),
+        );
+
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+
+        // BlockContext with mainnet data.
+        // TODO look how to get this value from RPC call.
+        let gas_price_str = "2888823561";
+        let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
+        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
+
+        let fee_token_address = Address(felt_str!(
+            "49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            16
+        ));
+        let starknet_os_config = StarknetOsConfig::new(
+            StarknetChainId::TestNet.to_felt(),
+            fee_token_address,
+            gas_price_u128,
+        );
+
+        let block_info = BlockInfo {
+            block_number: 123002,
+            block_timestamp: 10,
+            gas_price: gas_price_u64,
+            sequencer_address: Address(felt_str!(
+                "01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+                16
+            )),
+        };
+
+        let block_context = BlockContext::new(
+            starknet_os_config,
+            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info,
+            Default::default(),
+            true,
+        );
+
+        let _result = internal_invoke_function
+            .execute(&mut state, &block_context, 0)
+            .unwrap();
+    }
 }
