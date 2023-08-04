@@ -666,7 +666,7 @@ mod tests {
 
         let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
         let contract_address = Address(felt_str!(
-            "0690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
+            "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
             16
         ));
         let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
@@ -714,7 +714,7 @@ mod tests {
 
         // Instantiate CachedState
         let state_reader = RpcState::new(
-            RpcChain::TestNet,
+            RpcChain::TestNet2,
             BlockValue::Number(serde_json::to_value(123002).unwrap()),
         );
 
