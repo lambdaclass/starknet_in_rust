@@ -154,9 +154,8 @@ pub fn charge_fee<S: StateReader>(
         block_context,
     )?;
 
-    // TODO: We need to be sure if we want to charge max_fee or actual_fee before failing.
     if actual_fee > max_fee {
-        // TODO: Charge fee
+        // TODO: Charge max_fee
         return Err(TransactionError::ActualFeeExceedsMaxFee(
             actual_fee, max_fee,
         ));
