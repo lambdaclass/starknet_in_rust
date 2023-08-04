@@ -25,6 +25,25 @@ use starknet_in_rust::{
     utils::{Address, ClassHash},
 };
 
+fn create_execute_extrypoint(
+    address: Address,
+    class_hash: ClassHash,
+    selector: &BigUint,
+    calldata: Vec<Felt252>,
+    entry_point_type: EntryPointType,
+) -> ExecutionEntryPoint {
+    ExecutionEntryPoint::new(
+        address,
+        calldata,
+        Felt252::new(selector.clone()),
+        Address(0000.into()),
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100000000,
+    )
+}
+
 #[test]
 fn storage_write_read() {
     //  Create program and entry point types for contract class
@@ -71,26 +90,12 @@ fn storage_write_read() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            100000,
-        )
-    };
-
     // RUN CONSTRUCTOR
     // Create an execution entry point
     let calldata = [25.into()].to_vec();
     let constructor_exec_entry_point = create_execute_extrypoint(
+        address.clone(),
+        class_hash,
         constructor_entrypoint_selector,
         calldata,
         EntryPointType::Constructor,
@@ -112,6 +117,8 @@ fn storage_write_read() {
     // Create an execution entry point
     let calldata = [].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
+        address.clone(),
+        class_hash,
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -134,6 +141,8 @@ fn storage_write_read() {
     // Create an execution entry point
     let calldata = [100.into()].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
+        address.clone(),
+        class_hash,
         increase_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -155,6 +164,8 @@ fn storage_write_read() {
     // Create an execution entry point
     let calldata = [].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
+        address,
+        class_hash,
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -1087,25 +1098,11 @@ fn test_send_message_to_l1_syscall() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
 
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            100000,
-        )
-    };
-
     // RUN SEND_MSG
     // Create an execution entry point
     let send_message_exec_entry_point = create_execute_extrypoint(
+        address.clone(),
+        class_hash,
         external_entrypoint_selector,
         vec![],
         EntryPointType::External,
@@ -1151,7 +1148,7 @@ fn test_send_message_to_l1_syscall() {
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
-        contract_address: address.clone(),
+        contract_address: address,
         class_hash: Some(class_hash),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
@@ -1207,25 +1204,11 @@ fn test_get_execution_info() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            100000,
-        )
-    };
-
     // RUN GET_INFO
     // Create an execution entry point
     let get_info_exec_entry_point = create_execute_extrypoint(
+        address.clone(),
+        class_hash,
         external_entrypoint_selector,
         vec![],
         EntryPointType::External,
@@ -1259,7 +1242,7 @@ fn test_get_execution_info() {
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
-        contract_address: address.clone(),
+        contract_address: address,
         class_hash: Some(class_hash),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
@@ -2280,26 +2263,12 @@ fn storage_read_no_value() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            100000,
-        )
-    };
-
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
+        address,
+        class_hash,
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -2365,26 +2334,12 @@ fn storage_read_unavailable_address_domain() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            100000,
-        )
-    };
-
     // RUN READ_STORAGE
     // Create an execution entry point
     let calldata = [].to_vec();
     let read_storage_exec_entry_point = create_execute_extrypoint(
+        address,
+        class_hash,
         read_storage_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -2453,26 +2408,12 @@ fn storage_write_unavailable_address_domain() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address.clone(),
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            100000,
-        )
-    };
-
     // RUN READ_STORAGE
     // Create an execution entry point
     let calldata = [].to_vec();
     let read_storage_exec_entry_point = create_execute_extrypoint(
+        address,
+        class_hash,
         read_storage_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -2962,4 +2903,72 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
             )
         ],
     )
+}
+
+#[test]
+#[cfg(not(feature = "cairo_1_tests"))]
+fn keccak_syscall() {
+    let program_data = include_bytes!("../starknet_programs/keccak/test_cairo_keccak.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(class_hash, contract_class);
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // RUN READ_STORAGE
+    // Create an execution entry point
+    let calldata = [].to_vec();
+    let read_storage_exec_entry_point = create_execute_extrypoint(
+        address,
+        class_hash,
+        read_storage_entrypoint_selector,
+        calldata,
+        EntryPointType::External,
+    );
+
+    // Run read_storage entrypoint
+    let call_info = read_storage_exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+        )
+        .unwrap();
+
+    let retdata = call_info.call_info.unwrap().retdata;
+
+    assert_eq!(retdata[0], Felt252::one());
 }

@@ -63,6 +63,7 @@ lazy_static! {
             ("ec_op_builtin".to_string(), N_STEPS_FEE_WEIGHT * 1024.0),
             ("poseidon_builtin".to_string(), N_STEPS_FEE_WEIGHT * 32.0),
             ("segment_arena_builtin".to_string(), N_STEPS_FEE_WEIGHT * 10.0),
+            ("keccak_builtin".to_string(), N_STEPS_FEE_WEIGHT * 2048.0), // 2**11
     ]);
     pub static ref DEFAULT_SEQUENCER_ADDRESS: Address = Address(felt_str!(
         "3711666a3506c99c9d78c4d4013409a87a962b7a0880a1c24af9fe193dafc01",
