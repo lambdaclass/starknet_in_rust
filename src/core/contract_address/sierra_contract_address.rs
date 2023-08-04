@@ -63,8 +63,9 @@ pub fn compute_sierra_class_hash(
             .abi
             .clone()
             .ok_or(ContractAddressError::MissingAbi)?
-            .items
-    ).map_err(|_| ContractAddressError::MissingAbi)?;
+            .items,
+    )
+    .map_err(|_| ContractAddressError::MissingAbi)?;
 
     let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
         .map_err(|_err| {
