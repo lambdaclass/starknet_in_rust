@@ -274,7 +274,9 @@ mod tests {
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
 
         // this is the compiled_class_hash from: https://alpha4.starknet.io/feeder_gateway/get_transaction?transactionHash=0x01b852f1fe2b13db21a44f8884bc4b7760dc277bb3820b970dba929860275617
-        let expected_result = felt_str!("2011836827876139258613930428521012424481847645471980617287552173098289225455");
+        let expected_result = felt_str!(
+            "2011836827876139258613930428521012424481847645471980617287552173098289225455"
+        );
 
         assert_eq!(
             compute_casm_class_hash(&contract_class).unwrap(),

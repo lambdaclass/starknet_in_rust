@@ -1,12 +1,10 @@
-use crate::core::errors::contract_address_errors::ContractAddressError;
-use crate::services::api::contract_classes::deprecated_contract_class::{
-    ContractEntryPoint, EntryPointType,
-};
+use crate::{core::errors::contract_address_errors::ContractAddressError, EntryPointType};
 use cairo_lang_starknet::{
-    contract::starknet_keccak, contract_class::ContractClass as SierraContractClass,
+    contract::starknet_keccak,
+    contract_class::{ContractClass as SierraContractClass, ContractEntryPoint},
 };
 use cairo_vm::felt::Felt252;
-use starknet_crypto::{poseidon_hash_many, FieldElement};
+use starknet_crypto::{poseidon_hash_many, FieldElement, PoseidonHasher};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 
@@ -19,30 +17,33 @@ fn get_contract_entry_points_hashed(
     entry_point_type: &EntryPointType,
 ) -> Result<FieldElement, ContractAddressError> {
     let contract_entry_points = get_contract_entry_points(contract_class, entry_point_type)?;
-
-    // for each entry_point, we need to store 2 FieldElements: selector and offset.
-    let mut entry_points_flatted = Vec::with_capacity(contract_entry_points.len() * 2);
+    let mut hasher = PoseidonHasher::new();
 
     for entry_point in contract_entry_points {
-        entry_points_flatted.push(
-            FieldElement::from_bytes_be(&entry_point.selector().to_be_bytes()).map_err(|_err| {
-                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-            })?,
-        );
-        entry_points_flatted.push(FieldElement::from(entry_point.offset()));
+        let selector =
+            FieldElement::from_dec_str(&entry_point.selector.to_str_radix(10)).map_err(|_err| {
+                ContractAddressError::Cast("String".to_string(), "FieldElement".to_string())
+            })?;
+        let function_idx = FieldElement::from(entry_point.function_idx);
+
+        hasher.update(selector);
+        hasher.update(function_idx);
     }
 
-    Ok(poseidon_hash_many(&entry_points_flatted))
+    Ok(hasher.finalize())
 }
 
 pub fn compute_sierra_class_hash(
     contract_class: &SierraContractClass,
 ) -> Result<Felt252, ContractAddressError> {
-    let api_version =
-        FieldElement::from_bytes_be(&Felt252::from_bytes_be(CONTRACT_CLASS_VERSION).to_be_bytes())
-            .map_err(|_err| {
-                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-            })?;
+    let mut hasher = PoseidonHasher::new();
+
+    // hash the API version
+    let api_version = FieldElement::from_byte_slice_be(CONTRACT_CLASS_VERSION).map_err(|_err| {
+        ContractAddressError::Cast("&[u8]".to_string(), "FieldElement".to_string())
+    })?;
+
+    hasher.update(api_version);
 
     // Entrypoints by type, hashed.
     let external_functions =
@@ -51,44 +52,44 @@ pub fn compute_sierra_class_hash(
     let constructors =
         get_contract_entry_points_hashed(contract_class, &EntryPointType::Constructor)?;
 
-    // Hash abi_hash.
-    let abi = contract_class
-        .abi
-        .clone()
-        .ok_or(ContractAddressError::MissingAbi)?
-        .json();
+    // hash the entrypoint hashes
+    hasher.update(external_functions);
+    hasher.update(l1_handlers);
+    hasher.update(constructors);
 
-    let abi_hash =
-        FieldElement::from_bytes_be(&Felt252::from(starknet_keccak(abi.as_bytes())).to_be_bytes())
-            .map_err(|_err| {
-                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-            })?;
+    // Hash abi_hash.
+    let abi = serde_json_pythonic::to_string_pythonic(
+        &contract_class
+            .abi
+            .clone()
+            .ok_or(ContractAddressError::MissingAbi)?
+            .items,
+    )
+    .unwrap();
+
+    // let abi = b"[{\"type\": \"constructor\", \"name\": \"constructor\", \"inputs\": []}, {\"type\": \"enum\", \"name\": \"core::bool\", \"variants\": [{\"name\": \"False\", \"type\": \"()\"}, {\"name\": \"True\", \"type\": \"()\"}]}, {\"type\": \"function\", \"name\": \"emit_event\", \"inputs\": [{\"name\": \"incremental\", \"type\": \"core::bool\"}], \"outputs\": [], \"state_mutability\": \"external\"}, {\"type\": \"event\", \"name\": \"events::events::ContractWithEvent::IncrementalEvent\", \"kind\": \"struct\", \"members\": [{\"name\": \"value\", \"type\": \"core::integer::u128\", \"kind\": \"data\"}]}, {\"type\": \"event\", \"name\": \"events::events::ContractWithEvent::StaticEvent\", \"kind\": \"struct\", \"members\": []}, {\"type\": \"event\", \"name\": \"events::events::ContractWithEvent::Event\", \"kind\": \"enum\", \"variants\": [{\"name\": \"IncrementalEvent\", \"type\": \"events::events::ContractWithEvent::IncrementalEvent\", \"kind\": \"nested\"}, {\"name\": \"StaticEvent\", \"type\": \"events::events::ContractWithEvent::StaticEvent\", \"kind\": \"nested\"}]}]";
+
+    let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
+        .map_err(|_err| {
+            ContractAddressError::Cast("&[u8]".to_string(), "FieldElement".to_string())
+        })?;
+
+    hasher.update(abi_hash);
 
     let mut sierra_program_vector = Vec::with_capacity(contract_class.sierra_program.len());
     for number in &contract_class.sierra_program {
-        sierra_program_vector.push(
-            FieldElement::from_bytes_be(&Felt252::from(number.value.clone()).to_be_bytes())
-                .map_err(|_err| {
-                    ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-                })?,
-        );
+        let fe = FieldElement::from_dec_str(&number.value.to_str_radix(10)).map_err(|_err| {
+            ContractAddressError::Cast("String".to_string(), "FieldElement".to_string())
+        })?;
+        sierra_program_vector.push(fe);
     }
 
     // Hash Sierra program.
     let sierra_program_ptr = poseidon_hash_many(&sierra_program_vector);
 
-    let flatted_contract_class = vec![
-        api_version,
-        external_functions,
-        l1_handlers,
-        constructors,
-        abi_hash,
-        sierra_program_ptr,
-    ];
-
-    Ok(Felt252::from_bytes_be(
-        &poseidon_hash_many(&flatted_contract_class).to_bytes_be(),
-    ))
+    hasher.update(sierra_program_ptr);
+    let hash = hasher.finalize();
+    Ok(Felt252::from_bytes_be(&hash.to_bytes_be()))
 }
 
 fn get_contract_entry_points(
@@ -103,32 +104,23 @@ fn get_contract_entry_points(
         EntryPointType::L1Handler => contract_class.entry_points_by_type.l1_handler.clone(),
     };
 
-    let program_len = program_length;
     for entry_point in &entry_points {
-        if entry_point.function_idx > program_len {
+        if entry_point.function_idx > program_length {
             return Err(ContractAddressError::InvalidOffset(
                 entry_point.function_idx,
             ));
         }
     }
 
-    Ok(entry_points
-        .iter()
-        .map(|entry_point| {
-            ContractEntryPoint::new(
-                entry_point.selector.clone().into(),
-                entry_point.function_idx,
-            )
-        })
-        .collect())
+    Ok(entry_points)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::BufReader};
-    use cairo_vm::felt::felt_str;
     use crate::core::contract_address::compute_sierra_class_hash;
     use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+    use cairo_vm::felt::felt_str;
+    use std::{fs::File, io::BufReader};
 
     #[test]
     fn test_declare_tx_from_testnet() {
@@ -138,7 +130,9 @@ mod tests {
         let sierra_contract_class: SierraContractClass = serde_json::from_reader(reader).unwrap();
 
         // this is the class_hash from: https://alpha4.starknet.io/feeder_gateway/get_transaction?transactionHash=0x01b852f1fe2b13db21a44f8884bc4b7760dc277bb3820b970dba929860275617
-        let expected_result = felt_str!("487202222862199115032202787294865701687663153957776561394399544814644144883");
+        let expected_result = felt_str!(
+            "487202222862199115032202787294865701687663153957776561394399544814644144883"
+        );
 
         assert_eq!(
             compute_sierra_class_hash(&sierra_contract_class).unwrap(),
