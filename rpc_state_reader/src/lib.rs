@@ -731,7 +731,7 @@ mod tests {
             16
         ));
         let starknet_os_config = StarknetOsConfig::new(
-            StarknetChainId::TestNet.to_felt(),
+            StarknetChainId::TestNet2.to_felt(),
             fee_token_address,
             gas_price_u128,
         );
