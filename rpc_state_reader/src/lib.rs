@@ -228,6 +228,7 @@ mod tests {
         felt::felt_str,
         state::{cached_state::CachedState, BlockInfo},
         transaction::InvokeFunction,
+        utils::calculate_sn_keccak,
     };
 
     #[test]
@@ -669,7 +670,9 @@ mod tests {
             "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
             16
         ));
-        let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+        let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(
+            "update_multiple_market_prices".as_bytes(),
+        ));
         let max_fee = 10811422177042;
         let version = felt_str!("1", 16);
         let calldata = [
@@ -696,7 +699,7 @@ mod tests {
             ),
         ]
         .to_vec();
-        let nonce = Some(felt_str!("16930", 16));
+        let nonce = Some(felt_str!("0", 16));
 
         // Create InvokeFunction with the converted data.
         let internal_invoke_function = InvokeFunction::new_with_tx_hash(
