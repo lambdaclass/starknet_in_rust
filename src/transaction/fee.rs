@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn charge_fee_v1_max_fee_exceeded_should_return_error_and_charge_max_fee() {
+    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
