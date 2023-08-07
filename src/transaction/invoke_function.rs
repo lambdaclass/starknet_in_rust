@@ -771,64 +771,6 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_invoke_actual_fee_exceeded_max_fee_should_fail() {
-        let max_fee = 5;
-        let internal_invoke_function = InvokeFunction {
-            contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
-            entry_point_type: EntryPointType::External,
-            calldata: vec![1.into(), 1.into(), 10.into()],
-            tx_type: TransactionType::InvokeFunction,
-            version: 1.into(),
-            validate_entry_point_selector: 0.into(),
-            hash_value: 0.into(),
-            signature: Vec::new(),
-            max_fee,
-            nonce: Some(0.into()),
-            skip_validation: false,
-            skip_execute: false,
-            skip_fee_transfer: true,
-        };
-
-        // Instantiate CachedState
-        let mut state_reader = InMemoryStateReader::default();
-        // Set contract_class
-        let class_hash = [1; 32];
-        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
-        let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
-
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(contract_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce
-            .insert(contract_address, nonce);
-
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
-
-        state
-            .set_contract_class(&class_hash, &contract_class)
-            .unwrap();
-
-        let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
-
-        let tx = internal_invoke_function
-            .execute(&mut state, &block_context, 0)
-            .unwrap_err();
-        assert_matches!(tx, TransactionError::ActualFeeExceedsMaxFee(_, _));
-    }
-
-    #[test]
     fn test_execute_invoke_twice_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),

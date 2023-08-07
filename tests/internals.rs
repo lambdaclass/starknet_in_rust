@@ -588,11 +588,11 @@ fn test_create_account_tx_test_state() {
     // );
 }
 
-fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
+fn invoke_tx(calldata: Vec<Felt252>, max_fee: u128) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        50000000,
+        max_fee,
         TRANSACTION_VERSION.clone(),
         calldata,
         vec![],
@@ -1289,7 +1289,7 @@ fn test_invoke_tx() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
@@ -1297,6 +1297,43 @@ fn test_invoke_tx() {
     let expected_execution_info = expected_transaction_execution_info(block_context);
 
     assert_eq!(result, expected_execution_info);
+}
+
+#[test]
+fn test_invoke_tx_exceeded_max_fee() {
+    let (block_context, state) = &mut create_account_tx_test_state().unwrap();
+    let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+    let calldata = vec![
+        test_contract_address, // CONTRACT_ADDRESS
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
+        Felt252::from(2),                                               // CONTRACT_CALLDATA
+    ];
+    let max_fee = 3;
+    let invoke_tx = invoke_tx(calldata, max_fee);
+
+    // Extract invoke transaction fields for testing, as it is consumed when creating an account
+    // transaction.
+    let err = invoke_tx.execute(state, block_context, 0).unwrap_err();
+
+    assert_matches!(err, TransactionError::ActualFeeExceedsMaxFee(_, _));
+
+    // Check final balance
+    let test_erc20_address = block_context
+        .starknet_os_config()
+        .fee_token_address()
+        .clone();
+    let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+
+    let balance = state
+        .get_storage_at(&(
+            test_erc20_address,
+            felt_to_hash(&test_erc20_account_balance_key),
+        ))
+        .unwrap();
+    let expected_balance = INITIAL_BALANCE.clone() - Felt252::from(max_fee);
+
+    assert_eq!(balance, expected_balance);
 }
 
 #[test]
@@ -1353,7 +1390,7 @@ fn test_invoke_tx_state() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     let result = invoke_tx
         .execute(state, starknet_general_context, 0)
@@ -1444,7 +1481,7 @@ fn test_invoke_with_declarev2_tx() {
         Felt252::from(0),                                     // b
         Felt252::from(0),                                     // n
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     let expected_gas_consumed = 4908;
     let result = invoke_tx
@@ -1918,7 +1955,7 @@ fn test_invoke_tx_wrong_call_data() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
                                                                         // CONTRACT_CALLDATA
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     // Execute transaction
     let result = invoke_tx.execute(state, starknet_general_context, 0);
