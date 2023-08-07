@@ -156,6 +156,7 @@ pub fn charge_fee<S: StateReader>(
 
     if actual_fee > max_fee {
         // TODO: Charge max_fee
+        execute_fee_transfer(state, block_context, tx_execution_context, max_fee)?;
         return Err(TransactionError::ActualFeeExceedsMaxFee(
             actual_fee, max_fee,
         ));
