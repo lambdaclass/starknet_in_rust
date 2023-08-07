@@ -17,7 +17,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
-use std::cmp::min;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses
@@ -154,20 +153,18 @@ pub fn charge_fee<S: StateReader>(
         block_context,
     )?;
 
-    if actual_fee > max_fee {
-        // TODO: Charge max_fee
-        execute_fee_transfer(state, block_context, tx_execution_context, max_fee)?;
-        return Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee, max_fee,
-        ));
-    }
+    let actual_fee = {
+        let version_0 = tx_execution_context.version != 0.into()
+            && tx_execution_context.version != *QUERY_VERSION_BASE;
+        let fee_exceeded_max = actual_fee > max_fee;
 
-    let actual_fee = if tx_execution_context.version != 0.into()
-        && tx_execution_context.version != *QUERY_VERSION_BASE
-    {
-        min(actual_fee, max_fee) * FEE_FACTOR
-    } else {
-        actual_fee
+        if version_0 && fee_exceeded_max {
+            0
+        } else if version_0 && !fee_exceeded_max {
+            actual_fee
+        } else {
+            actual_fee.min(max_fee) * FEE_FACTOR
+        }
     };
 
     let fee_transfer_info = if skip_fee_transfer {

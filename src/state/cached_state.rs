@@ -81,6 +81,17 @@ impl<T: StateReader> CachedState<T> {
             .as_ref()
             .ok_or(StateError::MissingCasmClassCache)
     }
+
+    pub fn create_copy(&self) -> Self {
+        let mut state = CachedState::new(
+            self.state_reader.clone(),
+            self.contract_classes.clone(),
+            self.casm_contract_classes.clone(),
+        );
+        state.cache = self.cache.clone();
+
+        state
+    }
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {

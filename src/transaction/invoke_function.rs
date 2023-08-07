@@ -11,8 +11,11 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    state::state_api::{State, StateReader},
     state::{cached_state::CachedState, ExecutionResourcesManager},
+    state::{
+        state_api::{State, StateReader},
+        StateDiff,
+    },
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
@@ -22,7 +25,10 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
-use super::{fee::charge_fee, Transaction};
+use super::{
+    fee::{calculate_tx_fee, charge_fee},
+    Transaction,
+};
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -275,7 +281,20 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
-        let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
+
+        let mut transactional_state = state.create_copy();
+        let mut tx_exec_info =
+            self.apply(&mut transactional_state, block_context, remaining_gas)?;
+
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+
+        if actual_fee <= self.max_fee {
+            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+        }
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
