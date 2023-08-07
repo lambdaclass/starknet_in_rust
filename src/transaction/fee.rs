@@ -154,8 +154,8 @@ pub fn charge_fee<S: StateReader>(
     )?;
 
     let actual_fee = {
-        let version_0 = tx_execution_context.version != 0.into()
-            && tx_execution_context.version != *QUERY_VERSION_BASE;
+        let version_0 = tx_execution_context.version == 0.into()
+            || tx_execution_context.version == *QUERY_VERSION_BASE;
         let fee_exceeded_max = actual_fee > max_fee;
 
         if version_0 && fee_exceeded_max {
@@ -189,11 +189,11 @@ mod tests {
         definitions::block_context::BlockContext,
         execution::TransactionExecutionContext,
         state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
-        transaction::{error::TransactionError, fee::charge_fee},
+        transaction::fee::charge_fee,
     };
 
     #[test]
-    fn charge_fee_v0_max_fee_exceeded_should_return_error_and_charge_max_fee() {
+    fn charge_fee_v0_max_fee_exceeded_should_charge_nothing() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
@@ -213,13 +213,13 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(result.1, 0);
     }
 
     #[test]
-    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
+    fn charge_fee_v1_max_fee_exceeded_should_charge_max_fee() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
@@ -242,8 +242,8 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(result.1, max_fee);
     }
 }
