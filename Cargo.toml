@@ -55,6 +55,7 @@ once_cell = "1.17.1"
 starknet = { workspace = true }
 base64 = { version = "0.21.0", default-features = false, features = ["alloc"] }
 flate2 = "1.0.25"
+serde_json_pythonic = { git = "https://github.com/xJonathanLEI/serde_json_pythonic", tag = "v0.1.2"}
 
 [dev-dependencies]
 assert_matches = "1.5.0"
