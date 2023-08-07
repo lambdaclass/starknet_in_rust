@@ -259,16 +259,6 @@ impl Default for OsResources {
 
 /// Calculate the additional operating system resources required to execute a transaction
 /// given a set of syscalls invoked and a transaction type.
-///
-/// # Arguments
-///
-/// * `syscall_counter` - A map that counts how many times each syscall was invoked.
-/// * `tx_type` - The type of transaction to be executed.
-///
-/// # Returns
-///
-/// Returns the total execution resources required to process the transaction given
-/// the syscalls invoked, or a `TransactionError` if there's an issue.
 pub fn get_additional_os_resources(
     syscall_counter: HashMap<String, u64>,
     tx_type: &TransactionType,
