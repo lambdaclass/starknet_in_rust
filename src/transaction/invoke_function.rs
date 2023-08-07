@@ -294,6 +294,10 @@ impl InvokeFunction {
 
         if actual_fee <= self.max_fee {
             state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+            tx_exec_info = tx_exec_info.to_revert_error(format!(
+                "Calculated fee ({}) exceeds max fee ({})",
+                actual_fee, self.max_fee
+            ));
         }
 
         let mut tx_execution_context =
