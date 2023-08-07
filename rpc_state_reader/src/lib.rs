@@ -666,16 +666,23 @@ mod tests {
         let tx_hash_str = "019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc";
 
         let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
-        let contract_address = Address(felt_str!(
-            "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
-            16
-        ));
-        let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(
-            "update_multiple_market_prices".as_bytes(),
-        ));
+        let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
         let max_fee = 10811422177042;
         let version = felt_str!("1", 16);
+
         let calldata = [
+            felt_str!("1", 16),
+            felt_str!(
+                "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
+                16
+            ),
+            felt_str!(
+                "1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573",
+                16
+            ),
+            felt_str!("0", 16),
+            felt_str!("9", 16),
+            felt_str!("9", 16),
             felt_str!("4", 16),
             felt_str!("4254432d55534443", 16),
             felt_str!("f02e7324ecbd65ce267", 16),
@@ -699,7 +706,37 @@ mod tests {
             ),
         ]
         .to_vec();
-        let nonce = Some(felt_str!("0", 16));
+        let nonce = Some(16930.into());
+
+        // Instantiate CachedState
+        let state_reader = RpcState::new(
+            RpcChain::TestNet2,
+            BlockValue::Number(serde_json::to_value(123001).unwrap()),
+        );
+
+        let get_tx_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getTransactionByHash",
+            "params": [format!("0x{}", tx_hash_str)],
+            "id": 1
+        });
+        let tx_testnet2: serde_json::Value = state_reader.rpc_call(&get_tx_params).unwrap();
+        let get_block_info_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getBlockWithTxHashes",
+            "params": [state_reader.block.to_value()],
+            "id": 1
+        });
+        let block_info: serde_json::Value = state_reader.rpc_call(&get_block_info_params).unwrap();
+
+        let contract_address = Address(felt_str!(
+            tx_testnet2["result"]["sender_address"]
+                .as_str()
+                .unwrap()
+                .strip_prefix("0x")
+                .unwrap(),
+            16
+        ));
 
         // Create InvokeFunction with the converted data.
         let internal_invoke_function = InvokeFunction::new_with_tx_hash(
@@ -713,15 +750,7 @@ mod tests {
             tx_hash,
         )
         .unwrap()
-        .create_for_simulation(false, false, false, false);
-
-        // Instantiate CachedState
-        let state_reader = RpcState::new(
-            RpcChain::TestNet2,
-            BlockValue::Number(serde_json::to_value(123002).unwrap()),
-        );
-
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        .create_for_simulation(true, false, true, true);
 
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
@@ -733,21 +762,27 @@ mod tests {
             "49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
             16
         ));
+
+        let block_info = BlockInfo {
+            block_number: block_info["result"]["block_number"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            block_timestamp: block_info["result"]["timestamp"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            gas_price: gas_price_u64,
+            sequencer_address: fee_token_address.clone(),
+        };
+
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+
         let starknet_os_config = StarknetOsConfig::new(
             StarknetChainId::TestNet2.to_felt(),
             fee_token_address,
             gas_price_u128,
         );
-
-        let block_info = BlockInfo {
-            block_number: 123002,
-            block_timestamp: 10,
-            gas_price: gas_price_u64,
-            sequencer_address: Address(felt_str!(
-                "01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
-                16
-            )),
-        };
 
         let block_context = BlockContext::new(
             starknet_os_config,

@@ -18,7 +18,7 @@ use crate::{
 };
 
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
@@ -197,9 +197,7 @@ impl InvokeFunction {
             self.contract_address.clone(),
             self.calldata.clone(),
             self.entry_point_selector.clone(),
-            Address(felt_str!(
-                "3222564338061399053623172432902067064730239984418882785915953906928184514078"
-            )),
+            Address(Felt252::zero()),
             EntryPointType::External,
             None,
             None,
