@@ -4,6 +4,7 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 
 use crate::{definitions::transaction_type::TransactionType, transaction::error::TransactionError};
 
+/// Represents the operating system resources associated with syscalls and transactions.
 #[derive(Debug, Clone)]
 pub struct OsResources {
     execute_syscalls: HashMap<String, ExecutionResources>,
@@ -11,6 +12,7 @@ pub struct OsResources {
 }
 
 impl Default for OsResources {
+    /// Provide default values for `OsResources`.
     fn default() -> Self {
         let execute_txs_inner: HashMap<TransactionType, ExecutionResources> = HashMap::from([
             (
@@ -255,6 +257,18 @@ impl Default for OsResources {
     }
 }
 
+/// Calculate the additional operating system resources required to execute a transaction
+/// given a set of syscalls invoked and a transaction type.
+///
+/// # Arguments
+///
+/// * `syscall_counter` - A map that counts how many times each syscall was invoked.
+/// * `tx_type` - The type of transaction to be executed.
+///
+/// # Returns
+///
+/// Returns the total execution resources required to process the transaction given
+/// the syscalls invoked, or a `TransactionError` if there's an issue.
 pub fn get_additional_os_resources(
     syscall_counter: HashMap<String, u64>,
     tx_type: &TransactionType,
@@ -283,6 +297,7 @@ pub fn get_additional_os_resources(
     Ok(additional_os_resources)
 }
 
+/// Test for the `get_additional_os_resources` function.
 #[test]
 fn get_additional_os_resources_test() {
     let syscall_counter = HashMap::from([("storage_read".into(), 2), ("storage_write".into(), 3)]);
