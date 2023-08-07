@@ -35,6 +35,7 @@ pub struct BlockInfo {
 }
 
 impl BlockInfo {
+    /// Creates an empty BlockInfo with given sequencer address.
     pub fn empty(sequencer_address: Address) -> Self {
         BlockInfo {
             block_number: 0, // To do: In cairo-lang, this value is set to -1
@@ -44,6 +45,7 @@ impl BlockInfo {
         }
     }
 
+    /// Validates that the progression from the current block to the next is legal.
     pub fn validate_legal_progress(
         &self,
         next_block_info: &BlockInfo,
@@ -60,6 +62,7 @@ impl BlockInfo {
     }
 }
 
+/// Provides a default implementation for `BlockInfo`.
 impl Default for BlockInfo {
     fn default() -> Self {
         Self {
@@ -71,13 +74,17 @@ impl Default for BlockInfo {
     }
 }
 
+/// Manages execution resources and keeps track of syscall invocations.
 #[derive(Clone, Debug, Default)]
 pub struct ExecutionResourcesManager {
+    /// Counter for each syscall invocation.
     pub(crate) syscall_counter: HashMap<String, u64>,
+    /// Represents the resources used for Cairo execution.
     pub(crate) cairo_usage: ExecutionResources,
 }
 
 impl ExecutionResourcesManager {
+    /// Initializes a new `ExecutionResourcesManager` with given syscalls and cairo usage.
     pub fn new(syscalls: Vec<String>, cairo_usage: ExecutionResources) -> Self {
         let mut syscall_counter = HashMap::new();
         for syscall in syscalls {
@@ -89,12 +96,14 @@ impl ExecutionResourcesManager {
         }
     }
 
+    /// Increments the syscall counter for a given syscall name by a specified amount.
     pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) -> Option<()> {
         self.syscall_counter
             .get_mut(syscall_name)
             .map(|val| *val += amount)
     }
 
+    /// Returns the current count for a given syscall name.
     pub fn get_syscall_counter(&self, syscall_name: &str) -> Option<u64> {
         self.syscall_counter
             .get(syscall_name)
@@ -102,16 +111,22 @@ impl ExecutionResourcesManager {
     }
 }
 
+/// Represents a difference in state between two points in time.
 #[derive(Default, Clone, PartialEq, Debug, Getters)]
 #[getset(get = "pub")]
 pub struct StateDiff {
+    /// Mapping of address to class hash.
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
+    /// Mapping of address to nonce value.
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
+    /// Mapping of class hash to its compiled representation.
     pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+    /// Represents changes in storage values for different addresses.
     pub(crate) storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
 }
 
 impl StateDiff {
+    /// Constructs a new StateDiff.
     pub fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
@@ -126,6 +141,7 @@ impl StateDiff {
         }
     }
 
+    /// Creates a `StateDiff` from a cached state.
     pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
     where
         T: StateReader,
@@ -162,6 +178,7 @@ impl StateDiff {
         })
     }
 
+    /// Converts the current `StateDiff` to a `CachedState`.
     pub fn to_cached_state<T>(&self, state_reader: Arc<T>) -> Result<CachedState<T>, StateError>
     where
         T: StateReader + Clone,
@@ -178,6 +195,7 @@ impl StateDiff {
         Ok(cache_state)
     }
 
+    /// Combines the current state diff with another to form a single cumulative diff.
     pub fn squash(&mut self, other: StateDiff) -> Self {
         self.address_to_class_hash
             .extend(other.address_to_class_hash);
@@ -220,6 +238,7 @@ impl StateDiff {
     }
 }
 
+/// Validates that block progression from a default block to the next one is legal.
 #[test]
 fn test_validate_legal_progress() {
     let first_block = BlockInfo::default();
@@ -248,6 +267,7 @@ mod test {
     };
     use cairo_vm::felt::Felt252;
 
+    /// Ensures that a StateDiff constructed from a CachedState without any updates has no storage updates.
     #[test]
     fn test_from_cached_state_without_updates() {
         let mut state_reader = InMemoryStateReader::default();
@@ -270,6 +290,7 @@ mod test {
         assert_eq!(0, diff.storage_updates.len());
     }
 
+    /// Tests that a new ExecutionResourcesManager starts with zero syscall counters.
     #[test]
     fn execution_resources_manager_should_start_with_zero_syscall_counter() {
         let execution_resources_manager = super::ExecutionResourcesManager::new(
@@ -287,6 +308,7 @@ mod test {
         );
     }
 
+    /// Ensures that incrementing a syscall counter of the `ExecutionResourcesManager` by one works as expected.
     #[test]
     fn execution_resources_manager_should_increment_one_to_the_syscall_counter() {
         let mut execution_resources_manager = super::ExecutionResourcesManager::new(
@@ -308,6 +330,7 @@ mod test {
         );
     }
 
+    /// Verifies that converting a `StateDiff` back to a `CachedState` results in an equivalent `CachedState` to the original.
     #[test]
     fn state_diff_to_cached_state_should_return_correct_cached_state() {
         let mut state_reader = InMemoryStateReader::default();
@@ -341,6 +364,7 @@ mod test {
         );
     }
 
+    /// Ensures that squashing a StateDiff with itself results in an equivalent StateDiff.
     #[test]
     fn state_diff_squash_with_itself_should_return_same_diff() {
         let mut state_reader = InMemoryStateReader::default();
