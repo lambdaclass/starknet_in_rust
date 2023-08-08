@@ -228,7 +228,6 @@ mod tests {
         felt::felt_str,
         state::{cached_state::CachedState, BlockInfo},
         transaction::InvokeFunction,
-        utils::calculate_sn_keccak,
     };
 
     #[test]
