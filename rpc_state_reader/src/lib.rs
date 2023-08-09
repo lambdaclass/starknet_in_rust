@@ -297,7 +297,7 @@ mod tests {
         ));
         assert_eq!(
             rpc_state.get_nonce_at(&address).unwrap(),
-            felt_str!("1", 16)
+            felt_str!("2", 16)
         );
     }
 
