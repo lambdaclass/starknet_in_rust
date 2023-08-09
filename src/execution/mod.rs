@@ -128,7 +128,10 @@ impl CallInfo {
             for ordered_event in call.events {
                 let event = Event::new(ordered_event.clone(), call.contract_address.clone());
                 starknet_events.remove((ordered_event.order as isize - 1).max(0) as usize);
-                starknet_events.insert((ordered_event.order as isize - 1).max(0) as usize, Some(event));
+                starknet_events.insert(
+                    (ordered_event.order as isize - 1).max(0) as usize,
+                    Some(event),
+                );
             }
         }
 
@@ -618,7 +621,10 @@ mod tests {
         let address = Address(Felt252::zero());
         let ordered_event = OrderedEvent::new(0, vec![], vec![]);
         let event = Event::new(ordered_event.clone(), address.clone());
-        let internal_calls = vec![CallInfo { events: vec![ordered_event.clone()], ..Default::default()}];
+        let internal_calls = vec![CallInfo {
+            events: vec![ordered_event.clone()],
+            ..Default::default()
+        }];
         let call_info = CallInfo {
             contract_address: address,
             internal_calls,
