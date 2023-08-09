@@ -294,6 +294,7 @@ impl InvokeFunction {
 
         if actual_fee <= self.max_fee {
             state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+        } else {
             tx_exec_info = tx_exec_info.to_revert_error(format!(
                 "Calculated fee ({}) exceeds max fee ({})",
                 actual_fee, self.max_fee
@@ -845,10 +846,16 @@ mod tests {
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
 
-        let tx = internal_invoke_function
+        let tx_info = internal_invoke_function
             .execute(&mut state, &block_context, 0)
-            .unwrap_err();
-        assert_matches!(tx, TransactionError::ActualFeeExceedsMaxFee(_, _));
+            .unwrap();
+        let expected_actual_fee = 2483;
+        let expected_tx_info = tx_info.clone().to_revert_error(format!(
+            "Calculated fee ({}) exceeds max fee ({})",
+            expected_actual_fee, max_fee
+        ));
+
+        assert_eq!(tx_info, expected_tx_info);
     }
 
     #[test]

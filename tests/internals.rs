@@ -240,20 +240,10 @@ fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
 }
 
 fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
-    let class_hash_initial_values = HashMap::from([
-        (
-            TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-            felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
-        ),
-        (
-            TEST_CONTRACT_ADDRESS.clone(),
-            felt_to_hash(&TEST_CLASS_HASH.clone()),
-        ),
-        (
-            TEST_ERC20_CONTRACT_ADDRESS.clone(),
-            felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
-        ),
-    ]);
+    let class_hash_initial_values = HashMap::from([(
+        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+        felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+    )]);
 
     let nonce_initial_values =
         HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt252::zero())]);
