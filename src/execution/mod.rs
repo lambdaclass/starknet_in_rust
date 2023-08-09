@@ -622,7 +622,7 @@ mod tests {
         let ordered_event = OrderedEvent::new(0, vec![], vec![]);
         let event = Event::new(ordered_event.clone(), address.clone());
         let internal_calls = vec![CallInfo {
-            events: vec![ordered_event.clone()],
+            events: vec![ordered_event],
             ..Default::default()
         }];
         let call_info = CallInfo {
