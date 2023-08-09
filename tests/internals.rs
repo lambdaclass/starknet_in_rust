@@ -1300,13 +1300,20 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
     let max_fee = 3;
+    let actual_fee = 2483;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
-    let err = invoke_tx.execute(state, block_context, 0).unwrap_err();
+    let result = invoke_tx.execute(state, block_context, 0).unwrap();
+    let mut expected_result =
+        expected_transaction_execution_info(block_context).to_revert_error(format!(
+            "Calculated fee ({}) exceeds max fee ({})",
+            actual_fee, max_fee
+        ));
+    expected_result.set_fee_info(max_fee, Some(expected_fee_transfer_info(max_fee)));
 
-    assert_matches!(err, TransactionError::ActualFeeExceedsMaxFee(_, _));
+    assert_eq!(result, expected_result);
 
     // Check final balance
     let test_erc20_address = block_context
