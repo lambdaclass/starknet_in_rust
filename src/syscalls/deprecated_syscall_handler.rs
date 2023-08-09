@@ -157,7 +157,7 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
 
 /// Implement the HintProcessorLogic trait for DeprecatedSyscallHintProcessor
 impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'a, S> {
-    /// Define how to execute a hint for this processor
+    /// Executes the received hint
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
