@@ -134,7 +134,25 @@ impl RpcState {
         .map_err(|err| {
             RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
         })?;
+        dbg!(response.clone());
         serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
+    }
+}
+
+#[cfg(test)]
+impl RpcState {
+    /// Calls the RPC endpoint `starknet_getTransactionReceipt` and returns the transaction receipt
+    pub fn get_transaction_receipt(&self, hash: Felt252) {
+        let params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getTransactionReceipt",
+            "params": [format!("0x{}", hash.to_str_radix(16))],
+            "id": 1
+        });
+        let response: RpcResponseProgram = self
+            .rpc_call(&params)
+            .map_err(|err| StateError::CustomError(err.to_string()))
+            .unwrap();
     }
 }
 
@@ -655,5 +673,19 @@ mod tests {
         let _result = internal_invoke_function
             .execute(&mut state, &block_context, 0)
             .unwrap();
+    }
+
+    #[test]
+    fn test_get_transaction_receipt() {
+        let state_reader = RpcState::new(
+            RpcChain::TestNet,
+            BlockValue::Number(serde_json::to_value(838683).unwrap()),
+        );
+
+        let tx_hash_str = "074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf";
+        let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
+
+        state_reader.get_transaction_receipt(tx_hash);
+        assert!(false);
     }
 }
