@@ -200,7 +200,7 @@ impl<'a, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, 
 
 /// Implement the HintProcessorPostRun trait for DeprecatedSyscallHintProcessor
 impl<'a, S: StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor<'a, S> {
-    /// Define what happens after a run
+    /// Validates the execution post run
     fn post_run(
         &self,
         runner: &mut VirtualMachine,
