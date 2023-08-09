@@ -116,7 +116,7 @@ impl CallInfo {
         calls
     }
 
-    /// Returns a list of StarkNet Event objects collected during the execution, sorted by the order
+    /// Returns a list of Starknet Event objects collected during the execution, sorted by the order
     /// in which they were emitted.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
         let calls = self.gen_call_topology();
@@ -127,8 +127,8 @@ impl CallInfo {
         for call in calls {
             for ordered_event in call.events {
                 let event = Event::new(ordered_event.clone(), call.contract_address.clone());
-                starknet_events.remove(ordered_event.order as usize - 1);
-                starknet_events.insert(ordered_event.order as usize - 1, Some(event));
+                starknet_events.remove((ordered_event.order as isize - 1).max(0) as usize);
+                starknet_events.insert((ordered_event.order as isize - 1).max(0) as usize, Some(event));
             }
         }
 
@@ -140,7 +140,7 @@ impl CallInfo {
         Ok(starknet_events.into_iter().flatten().collect())
     }
 
-    /// Returns a list of StarkNet L2ToL1MessageInfo objects collected during the execution, sorted
+    /// Returns a list of Starknet L2ToL1MessageInfo objects collected during the execution, sorted
     /// by the order in which they were sent.
     pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, TransactionError> {
         let calls = self.gen_call_topology();
@@ -612,6 +612,23 @@ impl L2toL1MessageInfo {
 mod tests {
     use super::*;
     use crate::utils::{string_to_hash, Address};
+
+    #[test]
+    fn test_get_sorted_single_event() {
+        let address = Address(Felt252::zero());
+        let ordered_event = OrderedEvent::new(0, vec![], vec![]);
+        let event = Event::new(ordered_event.clone(), address.clone());
+        let internal_calls = vec![CallInfo { events: vec![ordered_event.clone()], ..Default::default()}];
+        let call_info = CallInfo {
+            contract_address: address,
+            internal_calls,
+            ..Default::default()
+        };
+
+        let sorted_events = call_info.get_sorted_events().unwrap();
+
+        assert_eq!(sorted_events, vec![event]);
+    }
 
     #[test]
     fn non_optional_calls_test() {
