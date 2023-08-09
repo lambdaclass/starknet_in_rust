@@ -6,6 +6,7 @@ use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::ContractClass;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
+    execution::CallInfo,
     felt::Felt252,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{state_api::StateReader, state_cache::StorageEntry},
@@ -134,25 +135,60 @@ impl RpcState {
         .map_err(|err| {
             RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
         })?;
-        dbg!(response.clone());
         serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
     }
 }
 
-#[cfg(test)]
+#[derive(Debug)]
+pub struct TransactionTrace {
+    pub validate_invocation: CallInfo,
+    pub function_invocation: CallInfo,
+    pub fee_transfer_invocation: CallInfo,
+    pub signature: Vec<Felt252>,
+}
+
+impl<'de> Deserialize<'de> for TransactionTrace {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        let validate_invocation = value["validate_invocation"].clone();
+        let function_invocation = value["function_invocation"].clone();
+        let fee_transfer_invocation = value["fee_transfer_invocation"].clone();
+        let signature_raw = value["signature"].clone();
+        let mut signature = vec![];
+
+        for felt in signature_raw.as_array().unwrap() {
+            let felt_string = felt.as_str().unwrap();
+            signature.push(match felt_string.starts_with("0x") {
+                true => Felt252::parse_bytes(felt_string[2..].as_bytes(), 16).unwrap(),
+                false => Felt252::parse_bytes(felt_string.as_bytes(), 16).unwrap(),
+            })
+        }
+
+        Ok(TransactionTrace {
+            validate_invocation: serde_json::from_value(validate_invocation)
+                .map_err(serde::de::Error::custom)?,
+            function_invocation: serde_json::from_value(function_invocation)
+                .map_err(serde::de::Error::custom)?,
+            fee_transfer_invocation: serde_json::from_value(fee_transfer_invocation)
+                .map_err(serde::de::Error::custom)?,
+            signature,
+        })
+    }
+}
+
 impl RpcState {
-    /// Calls the RPC endpoint `starknet_getTransactionReceipt` and returns the transaction receipt
-    pub fn get_transaction_receipt(&self, hash: Felt252) {
-        let params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getTransactionReceipt",
-            "params": [format!("0x{}", hash.to_str_radix(16))],
-            "id": 1
-        });
-        let response: RpcResponseProgram = self
-            .rpc_call(&params)
-            .map_err(|err| StateError::CustomError(err.to_string()))
-            .unwrap();
+    pub fn get_transaction_trace(&self, hash: Felt252) -> TransactionTrace {
+        let response =
+            ureq::get("https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace")
+                .query("transactionHash", &format!("0x{}", hash.to_str_radix(16)))
+                .call()
+                .unwrap();
+
+        serde_json::from_str(&response.into_string().unwrap()).unwrap()
     }
 }
 
@@ -682,10 +718,11 @@ mod tests {
             BlockValue::Number(serde_json::to_value(838683).unwrap()),
         );
 
-        let tx_hash_str = "074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf";
+        let tx_hash_str = "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc";
         let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
 
-        state_reader.get_transaction_receipt(tx_hash);
+        let tx_trace = state_reader.get_transaction_trace(tx_hash);
+        dbg!(tx_trace);
         assert!(false);
     }
 }

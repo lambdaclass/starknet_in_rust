@@ -18,6 +18,7 @@ use cairo_vm::{
 };
 use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
+use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -226,6 +227,17 @@ impl Default for CallInfo {
             gas_consumed: 0,
             failure_flag: false,
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for CallInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let _value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        Ok(CallInfo::default())
     }
 }
 
