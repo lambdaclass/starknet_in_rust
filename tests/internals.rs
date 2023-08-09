@@ -1842,16 +1842,10 @@ fn test_state_for_declare_tx() {
     assert_eq!(
         state.cache(),
         &StateCache::new(
-            HashMap::from([
-                (
-                    TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)
-                ),
-                (
-                    TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
-                )
-            ]),
+            HashMap::from([(
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
+            )]),
             HashMap::new(),
             HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), 0.into())]),
             HashMap::from([

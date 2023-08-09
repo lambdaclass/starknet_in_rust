@@ -2,6 +2,7 @@ use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
@@ -27,7 +28,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
-use super::fee::charge_fee;
+use super::fee::{calculate_tx_fee, charge_fee};
 use super::{verify_version, Transaction};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -268,7 +269,25 @@ impl Declare {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
-        let mut tx_exec_info = self.apply(state, block_context)?;
+
+        let mut transactional_state = state.create_copy();
+        let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
+
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+
+        if actual_fee <= self.max_fee {
+            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+            state.set_contract_class(&self.class_hash, &self.contract_class)?;
+        } else {
+            tx_exec_info = tx_exec_info.to_revert_error(format!(
+                "Calculated fee ({}) exceeds max fee ({})",
+                actual_fee, self.max_fee
+            ));
+        }
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
@@ -280,8 +299,6 @@ impl Declare {
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
-
-        state.set_contract_class(&self.class_hash, &self.contract_class)?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
