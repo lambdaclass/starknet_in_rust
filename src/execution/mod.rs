@@ -237,23 +237,37 @@ impl<'de> Deserialize<'de> for CallInfo {
     {
         let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
 
-        let execution_resources_raw = value["execution_resources"].clone();
+        // Parse execution_resources
+        let execution_resources_value = value["execution_resources"].clone();
 
         let execution_resources = ExecutionResources {
-            n_steps: serde_json::from_value(execution_resources_raw["n_steps"].clone())
+            n_steps: serde_json::from_value(execution_resources_value["n_steps"].clone())
                 .map_err(serde::de::Error::custom)?,
             n_memory_holes: serde_json::from_value(
-                execution_resources_raw["n_memory_holes"].clone(),
+                execution_resources_value["n_memory_holes"].clone(),
             )
             .map_err(serde::de::Error::custom)?,
             builtin_instance_counter: serde_json::from_value(
-                execution_resources_raw["builtin_instance_counter"].clone(),
+                execution_resources_value["builtin_instance_counter"].clone(),
             )
             .map_err(serde::de::Error::custom)?,
         };
 
+        // Parse retdata
+        let retdata_value = value["result"].clone();
+        let mut retdata = vec![];
+
+        for felt in retdata_value.as_array().unwrap() {
+            let felt_string = felt.as_str().unwrap();
+            retdata.push(match felt_string.starts_with("0x") {
+                true => Felt252::parse_bytes(felt_string[2..].as_bytes(), 16).unwrap(),
+                false => Felt252::parse_bytes(felt_string.as_bytes(), 16).unwrap(),
+            })
+        }
+
         Ok(CallInfo {
             execution_resources,
+            retdata,
             ..Default::default()
         })
     }
