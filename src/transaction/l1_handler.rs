@@ -29,7 +29,7 @@ use super::Transaction;
 
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
-/// L1Handler represents a handler for L1 transactions within the StarkNet protocol.
+/// Represents an L1Handler transaction in the StarkNet network.
 pub struct L1Handler {
     #[getset(get = "pub")]
     hash_value: Felt252,
@@ -43,8 +43,8 @@ pub struct L1Handler {
     skip_execute: bool,
 }
 
-/// Constructor creates a new L1Handler instance.
 impl L1Handler {
+    /// Constructor creates a new [L1Handler] instance.
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,
@@ -73,7 +73,7 @@ impl L1Handler {
             hash_value,
         )
     }
-    /// Creates a new L1Handler instance with a specified transaction hash.
+    /// Creates a new [L1Handler] instance with a specified transaction hash.
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
