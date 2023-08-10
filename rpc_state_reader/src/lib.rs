@@ -139,7 +139,7 @@ impl RpcState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TransactionTrace {
     pub validate_invocation: CallInfo,
     pub function_invocation: CallInfo,
@@ -258,7 +258,8 @@ impl StateReader for RpcState {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+    use std::{collections::HashMap, sync::Arc};
 
     use super::*;
     use starknet_in_rust::{
@@ -714,7 +715,122 @@ mod tests {
         let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
 
         let tx_trace = state_reader.get_transaction_trace(tx_hash);
-        dbg!(tx_trace);
-        assert!(false);
+
+        assert_eq!(
+            tx_trace.signature,
+            vec![
+                felt_str!(
+                    "ffab1c47d8d5e5b76bdcc4af79e98205716c36b440f20244c69599a91ace58",
+                    16
+                ),
+                felt_str!(
+                    "6aa48a0906c9c1f7381c1a040c043b649eeac1eea08f24a9d07813f6b1d05fe",
+                    16
+                ),
+            ]
+        );
+
+        assert_eq!(
+            tx_trace.validate_invocation.calldata,
+            vec![
+                felt_str!("1", 16),
+                felt_str!(
+                    "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
+                    16
+                ),
+                felt_str!(
+                    "1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573",
+                    16
+                ),
+                felt_str!("0", 16),
+                felt_str!("9", 16),
+                felt_str!("9", 16),
+                felt_str!("4", 16),
+                felt_str!("4254432d55534443", 16),
+                felt_str!("f02e7324ecbd65ce267", 16),
+                felt_str!("5754492d55534443", 16),
+                felt_str!("8e13050d06d8f514c", 16),
+                felt_str!("4554482d55534443", 16),
+                felt_str!("f0e4a142c3551c149d", 16),
+                felt_str!("4a50592d55534443", 16),
+                felt_str!("38bd34c31a0a5c", 16),
+            ]
+        );
+        assert_eq!(tx_trace.validate_invocation.retdata, vec![]);
+        assert_eq!(
+            tx_trace.validate_invocation.execution_resources,
+            ExecutionResources {
+                n_steps: 790,
+                n_memory_holes: 51,
+                builtin_instance_counter: HashMap::from([
+                    ("range_check_builtin".to_string(), 20),
+                    ("ecdsa_builtin".to_string(), 1),
+                    ("pedersen_builtin".to_string(), 2),
+                ]),
+            }
+        );
+
+        assert_eq!(
+            tx_trace.function_invocation.calldata,
+            vec![
+                felt_str!("1", 16),
+                felt_str!(
+                    "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
+                    16
+                ),
+                felt_str!(
+                    "1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573",
+                    16
+                ),
+                felt_str!("0", 16),
+                felt_str!("9", 16),
+                felt_str!("9", 16),
+                felt_str!("4", 16),
+                felt_str!("4254432d55534443", 16),
+                felt_str!("f02e7324ecbd65ce267", 16),
+                felt_str!("5754492d55534443", 16),
+                felt_str!("8e13050d06d8f514c", 16),
+                felt_str!("4554482d55534443", 16),
+                felt_str!("f0e4a142c3551c149d", 16),
+                felt_str!("4a50592d55534443", 16),
+                felt_str!("38bd34c31a0a5c", 16),
+            ]
+        );
+        assert_eq!(tx_trace.function_invocation.retdata, vec![0.into()]);
+        assert_eq!(
+            tx_trace.function_invocation.execution_resources,
+            ExecutionResources {
+                n_steps: 2808,
+                n_memory_holes: 136,
+                builtin_instance_counter: HashMap::from([
+                    ("range_check_builtin".to_string(), 49),
+                    ("pedersen_builtin".to_string(), 14),
+                ]),
+            }
+        );
+
+        assert_eq!(
+            tx_trace.fee_transfer_invocation.calldata,
+            vec![
+                felt_str!(
+                    "1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+                    16
+                ),
+                felt_str!("2b0322a23ba4", 16),
+                felt_str!("0", 16),
+            ]
+        );
+        assert_eq!(tx_trace.fee_transfer_invocation.retdata, vec![1.into()]);
+        assert_eq!(
+            tx_trace.fee_transfer_invocation.execution_resources,
+            ExecutionResources {
+                n_steps: 586,
+                n_memory_holes: 42,
+                builtin_instance_counter: HashMap::from([
+                    ("range_check_builtin".to_string(), 21),
+                    ("pedersen_builtin".to_string(), 4),
+                ]),
+            }
+        );
     }
 }

@@ -2934,6 +2934,7 @@ name = "rpc_state_reader"
 version = "0.3.1"
 dependencies = [
  "cairo-lang-starknet",
+ "cairo-vm",
  "dotenv",
  "serde",
  "serde_json",
