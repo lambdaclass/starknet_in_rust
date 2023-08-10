@@ -414,7 +414,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         self.starknet_storage_state.write(&key.to_be_bytes(), value)
     }
 
-    /// Reads the syscall request, checks and reduces gas, executes the syscall, and write the syscall response.
+    /// Reads the syscall request, checks and reduces gas, executes the syscall, and writes the syscall response.
     pub fn syscall(
         &mut self,
         vm: &mut VirtualMachine,
