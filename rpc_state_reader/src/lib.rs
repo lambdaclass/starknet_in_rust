@@ -288,16 +288,18 @@ mod tests {
     #[test]
     fn test_get_nonce_at() {
         let rpc_state = RpcState::new(
-            RpcChain::MainNet,
+            RpcChain::TestNet,
             BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
+        // Contract deployed by xqft which will not be used again, so nonce changes will not break
+        // this test.
         let address = Address(felt_str!(
-            "00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9",
+            "07185f2a350edcc7ea072888edb4507247de23e710cbd56084c356d265626bea",
             16
         ));
         assert_eq!(
             rpc_state.get_nonce_at(&address).unwrap(),
-            felt_str!("1", 16)
+            felt_str!("0", 16)
         );
     }
 
