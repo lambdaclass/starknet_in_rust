@@ -70,14 +70,14 @@ pub struct DeprecatedBLSyscallHandler<'a, S: StateReader> {
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     /// State of the storage related to Starknet contract
     pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
-    /// Information about internal calls
+    /// List of internal calls during the syscall execution
     pub(crate) internal_calls: Vec<CallInfo>,
-    /// Pointer to the expected system call
+    /// Get the expected pointer to the syscall
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
 impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
-    /// Constructor creates a new DeprecatedBLSyscallHandler instance
+    /// Constructor creates a new [DeprecatedBLSyscallHandler] instance
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut CachedState<S>,
@@ -656,7 +656,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         Ok(())
     }
 
-    /// Executes the contract call and fills the DeprecatedCallContractResponse struct.
+    /// Executes the contract call and fills the [DeprecatedCallContractResponse] struct.
     pub(crate) fn call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
@@ -699,7 +699,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             .write_syscall_response(vm, syscall_ptr)
     }
 
-    /// Get the transactino info.
+    /// Get the transaction info.
     pub(crate) fn get_tx_info(
         &mut self,
         vm: &mut VirtualMachine,
