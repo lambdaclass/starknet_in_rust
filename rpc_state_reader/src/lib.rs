@@ -172,6 +172,7 @@ impl<'de> Deserialize<'de> for TransactionTrace {
     }
 }
 
+#[cfg(test)]
 impl RpcState {
     pub fn get_transaction_trace(&self, hash: Felt252) -> TransactionTrace {
         let chain_name = self.get_chain_name();
