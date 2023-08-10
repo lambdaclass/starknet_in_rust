@@ -706,6 +706,7 @@ mod tests {
             .unwrap();
     }
 
+    // https://alpha-mainnet.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x0191e9fe0fe84997561c019c644e47b06e53a3f2cf6fbde57d831c26c390ef2b
     #[test]
     fn test_get_transaction_receipt() {
         let state_reader = RpcState::new(
