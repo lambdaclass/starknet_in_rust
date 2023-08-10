@@ -235,9 +235,27 @@ impl<'de> Deserialize<'de> for CallInfo {
     where
         D: Deserializer<'de>,
     {
-        let _value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
 
-        Ok(CallInfo::default())
+        let execution_resources_raw = value["execution_resources"].clone();
+
+        let execution_resources = ExecutionResources {
+            n_steps: serde_json::from_value(execution_resources_raw["n_steps"].clone())
+                .map_err(serde::de::Error::custom)?,
+            n_memory_holes: serde_json::from_value(
+                execution_resources_raw["n_memory_holes"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+            builtin_instance_counter: serde_json::from_value(
+                execution_resources_raw["builtin_instance_counter"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+        };
+
+        Ok(CallInfo {
+            execution_resources,
+            ..Default::default()
+        })
     }
 }
 
