@@ -122,6 +122,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             .increment_syscall_counter(syscall_name, 1);
     }
 
+    ///  System calls allow a contract to requires services from the Starknet OS
+    ///  See further documentation on https://docs.starknet.io/documentation/architecture_and_concepts/Contracts/system-calls/
     /// Constructor for testing purposes
     pub fn new_for_testing(
         block_info: BlockInfo,
@@ -129,14 +131,23 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         state: &'a mut CachedState<S>,
     ) -> Self {
         let syscalls = Vec::from([
+            // Emits an event with a given set of keys and data.
             "emit_event".to_string(),
+            // Deploys a new instance of a previously declared class.
             "deploy".to_string(),
+            // Gets information about the original transaction.
             "get_tx_info".to_string(),
+            // Sends a message to L1.
             "send_message_to_l1".to_string(),
+            // Calls the requested function in any previously declared class.
             "library_call".to_string(),
+            // Returns the address of the calling contract, or 0 if the call was not initiated by another contract.
             "get_caller_address".to_string(),
+            // Gets the address of the contract who raised the system call.
             "get_contract_address".to_string(),
+            // Returns the address of the sequencer that generated the current block.
             "get_sequencer_address".to_string(),
+            // Gets the timestamp of the block in which the transaction is executed.
             "get_block_timestamp".to_string(),
         ]);
         let events = Vec::new();
