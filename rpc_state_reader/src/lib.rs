@@ -706,11 +706,11 @@ mod tests {
             .unwrap();
     }
 
-    // https://alpha-mainnet.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x0191e9fe0fe84997561c019c644e47b06e53a3f2cf6fbde57d831c26c390ef2b
+    // https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
     fn test_get_transaction_receipt() {
         let state_reader = RpcState::new(
-            RpcChain::TestNet,
+            RpcChain::TestNet2,
             BlockValue::Number(serde_json::to_value(838683).unwrap()),
         );
 
