@@ -149,16 +149,18 @@ pub fn charge_fee<S: StateReader>(
         block_context,
     )?;
 
+    if actual_fee > max_fee {
+        // TODO: Charge max_fee
+        return Err(TransactionError::ActualFeeExceedsMaxFee(
+            actual_fee, max_fee,
+        ));
+    }
+
     let actual_fee = if tx_execution_context.version != 0.into()
         && tx_execution_context.version != *QUERY_VERSION_BASE
     {
         min(actual_fee, max_fee) * FEE_FACTOR
     } else {
-        if actual_fee > max_fee {
-            return Err(TransactionError::ActualFeeExceedsMaxFee(
-                actual_fee, max_fee,
-            ));
-        }
         actual_fee
     };
 
@@ -172,6 +174,7 @@ pub fn charge_fee<S: StateReader>(
             actual_fee,
         )?)
     };
+
     Ok((fee_transfer_info, actual_fee))
 }
 
@@ -217,7 +220,7 @@ mod tests {
     /// Tests the behavior of the charge_fee function when the actual fee exceeds the maximum fee
     /// for version 1. It expects the function to return the maximum fee.
     #[test]
-    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_max_fee() {
+    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
@@ -240,8 +243,8 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap();
+        .unwrap_err();
 
-        assert_eq!(result.1, max_fee);
+        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
     }
 }
