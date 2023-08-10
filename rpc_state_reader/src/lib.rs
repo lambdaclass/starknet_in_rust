@@ -174,13 +174,24 @@ impl<'de> Deserialize<'de> for TransactionTrace {
 
 impl RpcState {
     pub fn get_transaction_trace(&self, hash: Felt252) -> TransactionTrace {
-        let response =
-            ureq::get("https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace")
-                .query("transactionHash", &format!("0x{}", hash.to_str_radix(16)))
-                .call()
-                .unwrap();
+        let chain_name = self.get_chain_name();
+        let response = ureq::get(&format!(
+            "https://{}.starknet.io/feeder_gateway/get_transaction_trace",
+            chain_name
+        ))
+        .query("transactionHash", &format!("0x{}", hash.to_str_radix(16)))
+        .call()
+        .unwrap();
 
         serde_json::from_str(&response.into_string().unwrap()).unwrap()
+    }
+
+    fn get_chain_name(&self) -> String {
+        match self.chain {
+            RpcChain::MainNet => "alpha-mainnet".to_string(),
+            RpcChain::TestNet => "alpha4".to_string(),
+            RpcChain::TestNet2 => "alpha4-2".to_string(),
+        }
     }
 }
 
