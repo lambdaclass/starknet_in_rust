@@ -720,7 +720,7 @@ mod tests {
 
     // https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
-    fn test_get_transaction_receipt() {
+    fn test_get_transaction_trace() {
         let state_reader = RpcState::new(
             RpcChain::TestNet2,
             BlockValue::Number(serde_json::to_value(838683).unwrap()),
