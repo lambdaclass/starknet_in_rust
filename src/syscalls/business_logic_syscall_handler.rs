@@ -117,29 +117,43 @@ lazy_static! {
     };
 }
 
-/// Structure representing the Business Logic Syscall Handler.
+/// Structure representing the [BusinessLogicSyscallHandler].
 #[derive(Debug)]
 pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
+    /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
+    /// Get the expected pointer to the syscall
     pub(crate) expected_syscall_ptr: Relocatable,
+    /// Manages execution resources
     pub(crate) resources_manager: ExecutionResourcesManager,
+    /// Context of the transaction being executed
     pub(crate) tx_execution_context: TransactionExecutionContext,
+    /// Messages from L2 to L1
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    /// Address of the contract
     pub(crate) contract_address: Address,
+    /// Address of the caller
     pub(crate) caller_address: Address,
+    /// A list of dynamically allocated segments that are expected to be read-only.
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
+    /// List of internal calls during the syscall execution
     pub(crate) internal_calls: Vec<CallInfo>,
+    /// Context information related to the current block
     pub(crate) block_context: BlockContext,
+    /// State of the storage related to Starknet contract
     pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    /// Indicates whether the current execution supports the "reverted" status.
     pub(crate) support_reverted: bool,
+    /// Get the selector for the entry point of the contract.
     pub(crate) entry_point_selector: Felt252,
+    /// Map selectors to their corresponding syscall names.
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
 }
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
 impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
-    /// Constructor create a new BusinessLogicSyscallHandler.
+    /// Constructor creates a new [BusinessLogicSyscallHandler] instance
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
@@ -176,7 +190,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         }
     }
 
-    /// Create a default BusinessLogicSyscallHandler with state.
+    /// Constructor with default values, used for testing
     pub fn default_with_state(state: &'a mut CachedState<S>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
@@ -185,21 +199,32 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         )
     }
 
-    /// Create a new BusinessLogicSyscallHandler for testing.
+    ///  System calls allow a contract to requires services from the Starknet OS
+    ///  See further documentation on https://docs.starknet.io/documentation/architecture_and_concepts/Contracts/system-calls/
+    /// Constructor for testing purposes
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
         state: &'a mut CachedState<S>,
     ) -> Self {
         let syscalls = Vec::from([
+            // Emits an event with a given set of keys and data.
             "emit_event".to_string(),
+            // Deploys a new instance of a previously declared class.
             "deploy".to_string(),
+            // Gets information about the original transaction.
             "get_tx_info".to_string(),
+            // Sends a message to L1.
             "send_message_to_l1".to_string(),
+            // Calls the requested function in any previously declared class.
             "library_call".to_string(),
+            // Returns the address of the calling contract, or 0 if the call was not initiated by another contract.
             "get_caller_address".to_string(),
+            // Gets the address of the contract who raised the system call.
             "get_contract_address".to_string(),
+            // Returns the address of the sequencer that generated the current block.
             "get_sequencer_address".to_string(),
+            // Gets the timestamp of the block in which the transaction is executed.
             "get_block_timestamp".to_string(),
         ]);
         let events = Vec::new();
@@ -297,7 +322,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         Ok(SyscallResponse { gas, body })
     }
 
-    /// Check if the constructor entry points are empty for the given contract class
+    /// Checks if constructor entry points are empty
     fn constructor_entry_points_empty(
         &self,
         contract_class: CompiledClass,
@@ -312,7 +337,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         }
     }
 
-    /// Execute the constructor entry point for a contract
+    /// Execute a constructor entry point
     fn execute_constructor_entry_point(
         &mut self,
         contract_address: &Address,
@@ -384,7 +409,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         Ok(call_info.result())
     }
 
-    /// Writes the given key-value pair to the StarkNet storage state.
+    /// Writes a value to the storage state using the specified address.
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
         self.starknet_storage_state.write(&key.to_be_bytes(), value)
     }
@@ -533,8 +558,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         self.validate_read_only_segments(runner)
     }
 
-    /// Validates that there were no out of bounds writes to read-only segments and marks
-    /// them as accessed.
+    /// Validates that there were no out of bounds writes to read-only segments and marks them as accessed.
     pub(crate) fn validate_read_only_segments(
         &self,
         runner: &mut VirtualMachine,
@@ -559,7 +583,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
 }
 
 impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
-    /// Emits an event by collecting event keys and data, then appending them to the events list.
+    /// Emit an event.
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -579,7 +603,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
-    /// Returns the current block number.
+    /// Returns the block number.
     fn get_block_number(
         &mut self,
         _vm: &mut VirtualMachine,
@@ -602,7 +626,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         }
     }
 
-    /// Writes the given key-value pair to the storage state and checks for unsupported address domains.
+    /// Performs a storage write operation.
     fn storage_write(
         &mut self,
         vm: &mut VirtualMachine,
@@ -633,7 +657,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
-    /// Gets execution information about the current transaction, block context, and contract details.
+    /// Gets execution info about the current transaction, block context, and contract details.
     fn get_execution_info(
         &self,
         vm: &mut VirtualMachine,
@@ -697,7 +721,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
-    /// Calls a contract with provided data and selector, returns the call result.
+    /// Executes a contract call
     fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
@@ -719,7 +743,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
     }
 
-    /// Reads a value from the storage state, checks for unsupported address domains, and returns it in a SyscallResponse.
+    /// Performs a storage read operation.
     fn storage_read(
         &mut self,
         vm: &mut VirtualMachine,
@@ -750,7 +774,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
-    /// Deploys a contract, initializes its address, class hash, and executs its constructor.
+    /// Deploys a contract.
     fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
@@ -809,7 +833,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         Ok((contract_address, result))
     }
 
-    /// Deploys a new contract.
+    /// Deploys a contract to the virtual machine.
     fn deploy(
         &mut self,
         vm: &mut VirtualMachine,
@@ -848,7 +872,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         Ok(response)
     }
 
-    /// Reads a system call request from the virtual machine.
+    /// Reads and validates syscall requests. Matches syscall names to their corresponding requests.
     fn read_syscall_request(
         &self,
         vm: &VirtualMachine,
@@ -872,7 +896,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             )),
         }
     }
-    /// Allocates a new segment of memory in the VM.
+    /// Allocate a segment in memory.
     pub(crate) fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -887,7 +911,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         Ok(segment_start)
     }
 
-    /// Sends a message from Layer 2 to Layer 1.
+    /// Sends a message from L2 to L1, including the destination address and payload.
     fn send_message_to_l1(
         &mut self,
         vm: &mut VirtualMachine,
@@ -910,7 +934,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
-    /// Reads and validates a system call request from the VM.
+    /// Reads and validates a syscall request, and updates the expected syscall pointer offset.
     fn read_and_validate_syscall_request(
         &mut self,
         vm: &VirtualMachine,
@@ -924,7 +948,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         Ok(syscall_request)
     }
 
-    /// Executes a library call.
+    /// Executes a library call
     fn library_call(
         &mut self,
         vm: &mut VirtualMachine,
@@ -946,7 +970,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         self.call_contract_helper(vm, remaining_gas, execution_entry_point)
     }
 
-    /// Retrieves the timestamp of the current block.
+    /// Get the time stamp of the block.
     fn get_block_timestamp(
         &mut self,
         _vm: &VirtualMachine,
@@ -961,7 +985,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
-    /// Replaces a class.
+    /// Replaces class at the specified address with a new one based on the request.
     fn replace_class(
         &mut self,
         _vm: &VirtualMachine,
