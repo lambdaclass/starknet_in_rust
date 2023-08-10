@@ -10,7 +10,7 @@ use starknet_in_rust::{
     felt::Felt252,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{state_api::StateReader, state_cache::StorageEntry},
-    utils::{Address, ClassHash, CompiledClassHash},
+    utils::{parse_felt_array, Address, ClassHash, CompiledClassHash},
 };
 use std::env;
 use thiserror::Error;
@@ -157,16 +157,8 @@ impl<'de> Deserialize<'de> for TransactionTrace {
         let validate_invocation = value["validate_invocation"].clone();
         let function_invocation = value["function_invocation"].clone();
         let fee_transfer_invocation = value["fee_transfer_invocation"].clone();
-        let signature_raw = value["signature"].clone();
-        let mut signature = vec![];
-
-        for felt in signature_raw.as_array().unwrap() {
-            let felt_string = felt.as_str().unwrap();
-            signature.push(match felt_string.starts_with("0x") {
-                true => Felt252::parse_bytes(felt_string[2..].as_bytes(), 16).unwrap(),
-                false => Felt252::parse_bytes(felt_string.as_bytes(), 16).unwrap(),
-            })
-        }
+        let signature_value = value["signature"].clone();
+        let signature = parse_felt_array(signature_value.as_array().unwrap());
 
         Ok(TransactionTrace {
             validate_invocation: serde_json::from_value(validate_invocation)

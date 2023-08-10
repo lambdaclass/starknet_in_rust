@@ -4,6 +4,7 @@ pub mod os_usage;
 
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::utils::parse_felt_array;
 use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
@@ -255,19 +256,16 @@ impl<'de> Deserialize<'de> for CallInfo {
 
         // Parse retdata
         let retdata_value = value["result"].clone();
-        let mut retdata = vec![];
+        let retdata = parse_felt_array(retdata_value.as_array().unwrap());
 
-        for felt in retdata_value.as_array().unwrap() {
-            let felt_string = felt.as_str().unwrap();
-            retdata.push(match felt_string.starts_with("0x") {
-                true => Felt252::parse_bytes(felt_string[2..].as_bytes(), 16).unwrap(),
-                false => Felt252::parse_bytes(felt_string.as_bytes(), 16).unwrap(),
-            })
-        }
+        // Parse calldata
+        let calldata_value = value["calldata"].clone();
+        let calldata = parse_felt_array(calldata_value.as_array().unwrap());
 
         Ok(CallInfo {
             execution_resources,
             retdata,
+            calldata,
             ..Default::default()
         })
     }
