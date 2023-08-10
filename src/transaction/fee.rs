@@ -124,6 +124,7 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 }
 
 /// Calculates and charges the actual fee.
+///
 /// # Parameters:
 /// - `state`: A [CachedState].
 /// - `resources`: The resources that are in use by the contract
@@ -131,6 +132,12 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// - `max_fee`: The maximum fee that the transaction is allowed to charge.
 /// - `tx_execution_context`: The transaction's execution context.
 /// - `skip_fee_transfer`: Whether to skip the fee transfer.
+///
+/// # Errors
+/// - [TransactionError::ActualFeeExceedsMaxFee] - If the actual fee is bigger than the maximal fee.
+///
+/// # Returns
+/// The [FeeInfo] with the given actual fee.
 pub fn charge_fee<S: StateReader>(
     state: &mut CachedState<S>,
     resources: &HashMap<String, usize>,
