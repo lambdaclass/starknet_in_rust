@@ -666,7 +666,7 @@ mod transaction_tests {
         let get_block_info_params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getBlockWithTxHashes",
-            "params": [rpc_state.clone().block.to_value()],
+            "params": [rpc_state.block.to_value()],
             "id": 1
         });
         let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
@@ -736,7 +736,7 @@ mod transaction_tests {
         let get_block_info_params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getBlockWithTxHashes",
-            "params": [rpc_state.clone().block.to_value()],
+            "params": [rpc_state.block.to_value()],
             "id": 1
         });
         let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
@@ -909,12 +909,12 @@ mod transaction_tests {
             Default::default(),
             true,
         );
-        let tx = rpc_state.clone().get_transaction(tx_hash_str);
+        let tx = rpc_state.get_transaction(tx_hash_str);
         let result = tx.execute(&mut state, &block_context, 0).unwrap();
         dbg!(&result.actual_resources);
         dbg!(&result.actual_fee);
         dbg!(&result.call_info.clone().unwrap().events);
         dbg!(&result.call_info.clone().unwrap().execution_resources);
-        dbg!(&result.call_info.clone().unwrap().gas_consumed);
+        dbg!(&result.call_info.unwrap().gas_consumed);
     }
 }
