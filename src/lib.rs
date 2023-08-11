@@ -80,15 +80,12 @@ pub fn simulate_transaction<S: StateReader>(
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
     transactions: &[Transaction],
-    state: T,
+    mut cached_state: CachedState<T>,
     block_context: &BlockContext,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
 {
-    // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(Arc::new(state), None, None);
-
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         // Check if the contract is deployed.
