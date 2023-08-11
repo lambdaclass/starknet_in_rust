@@ -385,24 +385,11 @@ impl StateReader for RpcState {
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-    use std::{collections::HashMap, sync::Arc};
+    use std::collections::HashMap;
 
     use super::*;
-    use starknet_in_rust::{
-        definitions::{
-            block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
-            constants::{
-                DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
-                DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
-                DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
-                DEFAULT_VALIDATE_MAX_N_STEPS, EXECUTE_ENTRY_POINT_SELECTOR,
-            },
-        },
-        felt::felt_str,
-        state::{cached_state::CachedState, BlockInfo},
-        transaction::InvokeFunction,
-    };
+    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+    use starknet_in_rust::felt::felt_str;
 
     #[test]
     fn test_get_contract_class_cairo1() {
@@ -507,226 +494,7 @@ mod tests {
         rpc_state.get_transaction(tx_hash);
     }
 
-    // Link to Explorer: https://starkscan.co/tx/0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5
-    #[test]
-    fn test_invoke_0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5() {
-        let tx_hash = "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5";
-
-        // Instantiate CachedState
-        let rpc_state = Arc::new(RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Number(serde_json::to_value(90_006).unwrap()),
-        ));
-
-        let mut state = CachedState::new(rpc_state.clone(), None, None);
-        let tx = rpc_state.get_transaction(tx_hash);
-        let _result = tx.execute(&mut state, &BlockContext::default(), 0).unwrap();
-    }
-
-    /// Invoke transaction test using the transaction:
-    /// https://starkscan.co/tx/0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955
-    #[test]
-    fn test_invoke_mainnet_0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955() {
-        // Tx Hash without the "0x" prefix.
-        let tx_hash_str = "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955";
-
-        // Instantiate CachedState
-        let rpc_state = Arc::new(RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Number(serde_json::to_value(90_002).unwrap()),
-        ));
-
-        let mut state = CachedState::new(rpc_state.clone(), None, None);
-
-        // Retrieve the transaction information from the RPC endpoint.
-        let get_block_info_params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
-            "params": [rpc_state.clone().block.to_value()],
-            "id": 1
-        });
-        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
-
-        // BlockContext with mainnet data.
-        // TODO look how to get this value from RPC call.
-        let gas_price_str = "13575501577";
-        let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
-        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
-
-        let fee_token_address = Address(felt_str!(
-            "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-            16
-        ));
-        let starknet_os_config = StarknetOsConfig::new(
-            StarknetChainId::MainNet.to_felt(),
-            fee_token_address.clone(),
-            gas_price_u128,
-        );
-
-        let block_info = BlockInfo {
-            block_number: block_info["result"]["block_number"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            block_timestamp: block_info["result"]["timestamp"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            gas_price: gas_price_u64,
-            sequencer_address: fee_token_address,
-        };
-
-        let block_context = BlockContext::new(
-            starknet_os_config,
-            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
-            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
-            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
-            DEFAULT_INVOKE_TX_MAX_N_STEPS,
-            DEFAULT_VALIDATE_MAX_N_STEPS,
-            block_info,
-            Default::default(),
-            true,
-        );
-
-        let tx = rpc_state.get_transaction(tx_hash_str);
-        let _result1 = tx.execute(&mut state, &block_context, 0).unwrap();
-    }
-
-    /// Invoke transaction test using the transaction:
-    /// https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
-    #[test]
-    fn test_invoke_mainnet_0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf() {
-        // Tx Hash without the "0x" prefix.
-        let tx_hash_str = "074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf";
-
-        let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
-
-        // Instantiate CachedState
-        let rpc_state = Arc::new(RpcState::new(
-            RpcChain::TestNet,
-            BlockValue::Number(serde_json::to_value(838683).unwrap()),
-        ));
-
-        let mut state = CachedState::new(rpc_state.clone(), None, None);
-
-        // BlockContext with mainnet data.
-        // TODO look how to get this value from RPC call.
-        let gas_price_str = "2888823561";
-        let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
-        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
-
-        let fee_token_address = Address(felt_str!(
-            "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-            16
-        ));
-        let network: StarknetChainId = rpc_state.chain.into();
-        let starknet_os_config =
-            StarknetOsConfig::new(network.to_felt(), fee_token_address, gas_price_u128);
-
-        let block_info = BlockInfo {
-            block_number: 838684,
-            block_timestamp: 10,
-            gas_price: gas_price_u64,
-            sequencer_address: Address(felt_str!(
-                "01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
-                16
-            )),
-        };
-
-        let block_context = BlockContext::new(
-            starknet_os_config,
-            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
-            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
-            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
-            DEFAULT_INVOKE_TX_MAX_N_STEPS,
-            DEFAULT_VALIDATE_MAX_N_STEPS,
-            block_info,
-            Default::default(),
-            true,
-        );
-        let tx = rpc_state.get_transaction(tx_hash_str);
-
-        let _result = tx.execute(&mut state, &block_context, 0).unwrap();
-    }
-
-    /// Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
-    /// Network: testnet-2
-    /// Type: Invoke
-    /// Contract: 0x0690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232
-    /// Entrypoint: update_multiple_market_prices(market_prices_list_len, market_prices_list)
-    /// Link to Explorer: https://testnet-2.starkscan.co/tx/0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
-    #[test]
-    fn test_invoke_testnet2_0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc() {
-        // Tx Hash without the "0x" prefix.
-        let tx_hash_str = "019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc";
-
-        // Instantiate the RPC StateReader and the CachedState
-        let rpc_state = Arc::new(RpcState::new(
-            RpcChain::TestNet2,
-            BlockValue::Number(serde_json::to_value(123001).unwrap()),
-        ));
-
-        let get_block_info_params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
-            "params": [rpc_state.block.to_value()],
-            "id": 1
-        });
-        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
-
-        // BlockContext with mainnet data.
-        // TODO look how to get this value from RPC call.
-        let gas_price_str = "2888823561";
-        let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
-        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
-
-        let fee_token_address = Address(felt_str!(
-            "49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-            16
-        ));
-
-        let block_info = BlockInfo {
-            block_number: block_info["result"]["block_number"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            block_timestamp: block_info["result"]["timestamp"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            gas_price: gas_price_u64,
-            sequencer_address: fee_token_address.clone(),
-        };
-
-        let mut state = CachedState::new(rpc_state.clone(), None, None);
-
-        let starknet_os_config = StarknetOsConfig::new(
-            StarknetChainId::TestNet2.to_felt(),
-            fee_token_address,
-            gas_price_u128,
-        );
-
-        let block_context = BlockContext::new(
-            starknet_os_config,
-            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
-            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
-            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
-            DEFAULT_INVOKE_TX_MAX_N_STEPS,
-            DEFAULT_VALIDATE_MAX_N_STEPS,
-            block_info,
-            Default::default(),
-            true,
-        );
-        let tx = rpc_state.clone().get_transaction(tx_hash_str);
-        let result = tx.execute(&mut state, &block_context, 0).unwrap();
-        dbg!(&result.actual_resources);
-        dbg!(&result.actual_fee);
-        dbg!(&result.call_info.clone().unwrap().events);
-        dbg!(&result.call_info.clone().unwrap().execution_resources);
-        dbg!(&result.call_info.clone().unwrap().gas_consumed);
-    }
-
-    /// Tested with the following query to the Feeder Gateway API:
+     /// Tested with the following query to the Feeder Gateway API:
     /// https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
     fn test_get_transaction_trace() {
@@ -857,4 +625,247 @@ mod tests {
             }
         );
     }
+}
+
+#[cfg(test)]
+mod transaction_tests {
+    use std::sync::Arc;
+    use super::*;
+    use starknet_in_rust::{
+        definitions::{
+            block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+            constants::{
+                DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
+                DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+                DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
+                DEFAULT_VALIDATE_MAX_N_STEPS,
+            },
+        },
+        felt::felt_str,
+        state::{cached_state::CachedState, BlockInfo},
+    };
+
+    /// - Transaction Hash: `0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5`
+    /// - Network: `mainnet`
+    /// - Type: `Invoke`
+    /// - Contract: StarkGate `0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7`
+    /// - Entrypoint: `transfer(recipient, amount)`
+    /// - Link to Explorer: https://starkscan.co/tx/0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5
+    #[test]
+    fn test_invoke_0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5() {
+        let tx_hash = "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5";
+
+        // Instantiate CachedState
+        let rpc_state = Arc::new(RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Number(serde_json::to_value(90_006).unwrap()),
+        ));
+
+        let mut state = CachedState::new(rpc_state.clone(), None, None);
+        let tx = rpc_state.get_transaction(tx_hash);
+        let _result = tx.execute(&mut state, &BlockContext::default(), 0).unwrap();
+    }
+
+    /// Invoke transaction test using the transaction:
+    /// https://starkscan.co/tx/0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955
+    #[test]
+    fn test_invoke_mainnet_0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955() {
+        // Tx Hash without the "0x" prefix.
+        let tx_hash_str = "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955";
+
+        // Instantiate CachedState
+        let rpc_state = Arc::new(RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Number(serde_json::to_value(90_002).unwrap()),
+        ));
+
+        let mut state = CachedState::new(rpc_state.clone(), None, None);
+
+        // Retrieve the transaction information from the RPC endpoint.
+        let get_block_info_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getBlockWithTxHashes",
+            "params": [rpc_state.clone().block.to_value()],
+            "id": 1
+        });
+        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
+
+        // BlockContext with mainnet data.
+        // TODO look how to get this value from RPC call.
+        let gas_price_str = "13575501577";
+        let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
+        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
+
+        let fee_token_address = Address(felt_str!(
+            "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            16
+        ));
+        let starknet_os_config = StarknetOsConfig::new(
+            StarknetChainId::MainNet.to_felt(),
+            fee_token_address.clone(),
+            gas_price_u128,
+        );
+
+        let block_info = BlockInfo {
+            block_number: block_info["result"]["block_number"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            block_timestamp: block_info["result"]["timestamp"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            gas_price: gas_price_u64,
+            sequencer_address: fee_token_address,
+        };
+
+        let block_context = BlockContext::new(
+            starknet_os_config,
+            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info,
+            Default::default(),
+            true,
+        );
+
+        let tx = rpc_state.get_transaction(tx_hash_str);
+        let _result1 = tx.execute(&mut state, &block_context, 0).unwrap();
+    }
+
+    /// Invoke transaction test using the transaction:
+    /// https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
+    #[test]
+    fn test_invoke_mainnet_0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf() {
+        // Tx Hash without the "0x" prefix.
+        let tx_hash_str = "074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf";
+
+        // Instantiate CachedState
+        let rpc_state = Arc::new(RpcState::new(
+            RpcChain::TestNet,
+            BlockValue::Number(serde_json::to_value(838683).unwrap()),
+        ));
+
+        let mut state = CachedState::new(rpc_state.clone(), None, None);
+
+        // BlockContext with mainnet data.
+        // TODO look how to get this value from RPC call.
+        let gas_price_str = "2888823561";
+        let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
+        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
+
+        let fee_token_address = Address(felt_str!(
+            "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            16
+        ));
+        let network: StarknetChainId = rpc_state.chain.into();
+        let starknet_os_config =
+            StarknetOsConfig::new(network.to_felt(), fee_token_address, gas_price_u128);
+
+        let block_info = BlockInfo {
+            block_number: 838684,
+            block_timestamp: 10,
+            gas_price: gas_price_u64,
+            sequencer_address: Address(felt_str!(
+                "01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
+                16
+            )),
+        };
+
+        let block_context = BlockContext::new(
+            starknet_os_config,
+            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info,
+            Default::default(),
+            true,
+        );
+        let tx = rpc_state.get_transaction(tx_hash_str);
+
+        let _result = tx.execute(&mut state, &block_context, 0).unwrap();
+    }
+
+    /// Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
+    /// Network: testnet-2
+    /// Type: Invoke
+    /// Contract: 0x0690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232
+    /// Entrypoint: update_multiple_market_prices(market_prices_list_len, market_prices_list)
+    /// Link to Explorer: https://testnet-2.starkscan.co/tx/0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
+    #[test]
+    fn test_invoke_testnet2_0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc() {
+        // Tx Hash without the "0x" prefix.
+        let tx_hash_str = "019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc";
+
+        // Instantiate the RPC StateReader and the CachedState
+        let rpc_state = Arc::new(RpcState::new(
+            RpcChain::TestNet2,
+            BlockValue::Number(serde_json::to_value(123001).unwrap()),
+        ));
+
+        let get_block_info_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getBlockWithTxHashes",
+            "params": [rpc_state.block.to_value()],
+            "id": 1
+        });
+        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
+
+        // BlockContext with mainnet data.
+        // TODO look how to get this value from RPC call.
+        let gas_price_str = "2888823561";
+        let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
+        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
+
+        let fee_token_address = Address(felt_str!(
+            "49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            16
+        ));
+
+        let block_info = BlockInfo {
+            block_number: block_info["result"]["block_number"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            block_timestamp: block_info["result"]["timestamp"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            gas_price: gas_price_u64,
+            sequencer_address: fee_token_address.clone(),
+        };
+
+        let mut state = CachedState::new(rpc_state.clone(), None, None);
+
+        let network: StarknetChainId = rpc_state.chain.into();
+        let starknet_os_config = StarknetOsConfig::new(
+            network.to_felt(),
+            fee_token_address,
+            gas_price_u128,
+        );
+
+        let block_context = BlockContext::new(
+            starknet_os_config,
+            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info,
+            Default::default(),
+            true,
+        );
+        let tx = rpc_state.clone().get_transaction(tx_hash_str);
+        let result = tx.execute(&mut state, &block_context, 0).unwrap();
+        dbg!(&result.actual_resources);
+        dbg!(&result.actual_fee);
+        dbg!(&result.call_info.clone().unwrap().events);
+        dbg!(&result.call_info.clone().unwrap().execution_resources);
+        dbg!(&result.call_info.clone().unwrap().gas_consumed);
+    }
+
 }
