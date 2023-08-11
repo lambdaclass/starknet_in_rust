@@ -28,7 +28,7 @@ fn test_multiple_syscall() {
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class.clone());
+    contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -171,9 +171,9 @@ fn test_multiple_syscall() {
     {
         let call_info = test_syscall(
             "trigger_events",
-            address.clone(),
-            calldata.clone(),
-            caller_address.clone(),
+            address,
+            calldata,
+            caller_address,
             entry_point_type,
             class_hash,
             &mut state,
