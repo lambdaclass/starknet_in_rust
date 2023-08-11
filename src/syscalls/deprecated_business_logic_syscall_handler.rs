@@ -273,7 +273,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 }
 
 impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
-    /// Emit an event.
+    /// Emits an event with a given set of keys and data.
     pub(crate) fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -312,7 +312,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         Ok(segment_start)
     }
 
-    /// Deploy a contract.
+    /// Deploys a new instance of a previously declared class.
     pub(crate) fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
@@ -497,7 +497,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &self.block_context.block_info
     }
 
-    /// Get the caller's address from a virtual machine, using the syscall pointer.
+    /// Returns the address of the calling contract, or 0 if the call was not initiated by another contract.
     pub(crate) fn syscall_get_caller_address(
         &mut self,
         vm: &VirtualMachine,
@@ -525,7 +525,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         self.call_contract_and_write_response("delegate_l1_handler", vm, syscall_ptr)
     }
 
-    /// Get the contract address from a virtual machine, using the syscall pointer.
+    /// Gets the address of the contract who raised the system call.
     pub(crate) fn syscall_get_contract_address(
         &mut self,
         vm: &VirtualMachine,
@@ -544,7 +544,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         Ok(self.contract_address.clone())
     }
 
-    /// Sends a message from L2 to L1, including the destination address and payload.
+    /// Sends a message to L1.
     pub(crate) fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
@@ -710,7 +710,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             .write_syscall_response(vm, syscall_ptr)
     }
 
-    /// Get the transaction info.
+    /// Gets information about the original transaction
     pub(crate) fn get_tx_info(
         &mut self,
         vm: &mut VirtualMachine,
@@ -752,7 +752,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
-    /// Get the time stamp of the block.
+    /// Gets the timestamp of the block in which the transaction is executed.
     pub(crate) fn get_block_timestamp(
         &mut self,
         vm: &mut VirtualMachine,
@@ -797,7 +797,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
-    /// Get the sequencer address
+    /// Returns the address of the sequencer that generated the current block.
     pub(crate) fn get_sequencer_address(
         &mut self,
         vm: &mut VirtualMachine,
@@ -820,7 +820,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         response.write_syscall_response(vm, syscall_ptr)
     }
 
-    /// Executes a library call
+    /// Calls the requested function in any previously declared class.
     pub(crate) fn library_call(
         &mut self,
         vm: &mut VirtualMachine,
@@ -829,7 +829,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         self.call_contract_and_write_response("library_call", vm, syscall_ptr)
     }
 
-    /// Executes a library call specific to an L1 handler
+    /// Calls the requested function specific to an L1 handler
     pub(crate) fn library_call_l1_handler(
         &mut self,
         vm: &mut VirtualMachine,
