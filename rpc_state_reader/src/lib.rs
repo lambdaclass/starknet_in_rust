@@ -714,8 +714,12 @@ mod transaction_tests {
         let _result = tx.execute(&mut state, &block_context, 0).unwrap();
     }
 
-    /// Invoke transaction test using the transaction:
-    /// https://starkscan.co/tx/0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955
+    /// - Transaction Hash: `0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955`
+    /// - Network: `mainnet`
+    /// - Type: `Invoke`
+    /// - Contract: mySwap: `0x022b05f9396d2c48183f6deaf138a57522bcc8b35b67dee919f76403d1783136` and `0x010884171baf1914edc28d7afb619b40a4051cfae78a094a55d230f19e944a28`
+    /// - Entrypoint: 1 call to `approve(spender, amount)` and 1 call to `withdraw_liquidity(pool_id, shares_amount, amount_min_a, amount_min_b)`
+    /// - Link to Explorer: https://starkscan.co/tx/0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955
     #[test]
     fn test_invoke_mainnet_0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955() {
         // Tx Hash without the "0x" prefix.
@@ -739,7 +743,7 @@ mod transaction_tests {
 
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
-        let gas_price_str = "13575501577";
+        let gas_price_str = "13572248835"; // from block 90_002
         let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
         let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
 
@@ -780,8 +784,13 @@ mod transaction_tests {
         let _result1 = tx.execute(&mut state, &block_context, 0).unwrap();
     }
 
-    /// Invoke transaction test using the transaction:
-    /// https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
+    
+    /// - Transaction Hash: `0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf`
+    /// - Network: `testnet`
+    /// - Type: `Invoke`
+    /// - Contract: Fibonacci `0x012d37c39a385cf56801b57626e039147abce1183ce55e419e4296398b81d9e2`
+    /// - Entrypoint: `fib(first_element, second_element, n)`
+    /// - Link to Explorer: https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
     #[test]
     fn test_invoke_mainnet_0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf() {
         // Tx Hash without the "0x" prefix.
@@ -797,7 +806,7 @@ mod transaction_tests {
 
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
-        let gas_price_str = "2888823561";
+        let gas_price_str = "2917470325"; // from block 838683
         let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
         let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
 
@@ -835,12 +844,12 @@ mod transaction_tests {
         let _result = tx.execute(&mut state, &block_context, 0).unwrap();
     }
 
-    /// Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
-    /// Network: testnet-2
-    /// Type: Invoke
-    /// Contract: 0x0690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232
-    /// Entrypoint: update_multiple_market_prices(market_prices_list_len, market_prices_list)
-    /// Link to Explorer: https://testnet-2.starkscan.co/tx/0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
+    /// - Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
+    /// - Network: testnet-2
+    /// - Type: Invoke
+    /// - Contract: 0x0690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232
+    /// - Entrypoint: update_multiple_market_prices(market_prices_list_len, market_prices_list)
+    /// - Link to Explorer: https://testnet-2.starkscan.co/tx/0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
     fn test_invoke_testnet2_0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc() {
         // Tx Hash without the "0x" prefix.
@@ -862,7 +871,7 @@ mod transaction_tests {
 
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
-        let gas_price_str = "2888823561";
+        let gas_price_str = "272679647"; // from block 123001
         let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
         let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
 
