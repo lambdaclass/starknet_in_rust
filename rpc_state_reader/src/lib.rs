@@ -711,7 +711,11 @@ mod transaction_tests {
         );
 
         let tx = rpc_state.get_transaction(tx_hash);
-        let _result = tx.execute(&mut state, &block_context, 0).unwrap();
+        let result = tx.execute(&mut state, &block_context, 0).unwrap();
+        dbg!(&result.actual_resources);
+        dbg!(&result.actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+        dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
     }
 
     /// - Transaction Hash: `0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955`
@@ -781,7 +785,11 @@ mod transaction_tests {
         );
 
         let tx = rpc_state.get_transaction(tx_hash);
-        let _result1 = tx.execute(&mut state, &block_context, 0).unwrap();
+        let result = tx.execute(&mut state, &block_context, 0).unwrap();
+        dbg!(&result.actual_resources);
+        dbg!(&result.actual_fee); // test=267319013054160, explorer=219298652474858, diff=48020360579302 (22%)
+        dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // distinct, explorer=7, test=1 
     }
 
     /// - Transaction Hash: `0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf`
@@ -840,7 +848,11 @@ mod transaction_tests {
         );
         let tx = rpc_state.get_transaction(tx_hash_str);
 
-        let _result = tx.execute(&mut state, &block_context, 0).unwrap();
+        let result = tx.execute(&mut state, &block_context, 0).unwrap();
+        dbg!(&result.actual_resources);
+        dbg!(&result.actual_fee); // test=7252831227950, explorer=7207614784695, diff=45216443255 (0.06%)
+        dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer 
     }
 
     /// - Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
@@ -912,9 +924,8 @@ mod transaction_tests {
         let tx = rpc_state.get_transaction(tx_hash_str);
         let result = tx.execute(&mut state, &block_context, 0).unwrap();
         dbg!(&result.actual_resources);
-        dbg!(&result.actual_fee);
-        dbg!(&result.call_info.clone().unwrap().events);
-        dbg!(&result.call_info.clone().unwrap().execution_resources);
-        dbg!(&result.call_info.unwrap().gas_consumed);
+        dbg!(&result.actual_fee); // test=6361070805216, explorer=47292465953700, diff=5888146145679 (0.13%)
+        dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer 
     }
 }
