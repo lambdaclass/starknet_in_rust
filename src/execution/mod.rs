@@ -265,10 +265,20 @@ impl<'de> Deserialize<'de> for CallInfo {
         let calldata_value = value["calldata"].clone();
         let calldata = parse_felt_array(calldata_value.as_array().unwrap());
 
+        // Parse internal calls
+        let internal_calls_value = value["internal_calls"].clone();
+        let mut internal_calls = vec![];
+
+        for call in internal_calls_value.as_array().unwrap() {
+            internal_calls
+                .push(serde_json::from_value(call.clone()).map_err(serde::de::Error::custom)?);
+        }
+
         Ok(CallInfo {
             execution_resources,
             retdata,
             calldata,
+            internal_calls,
             ..Default::default()
         })
     }

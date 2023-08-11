@@ -926,6 +926,7 @@ mod tests {
                 ]),
             }
         );
+        assert_eq!(tx_trace.validate_invocation.internal_calls.len(), 1);
 
         assert_eq!(
             tx_trace.function_invocation.calldata,
@@ -965,6 +966,19 @@ mod tests {
                 ]),
             }
         );
+        assert_eq!(tx_trace.function_invocation.internal_calls.len(), 1);
+        assert_eq!(
+            tx_trace.function_invocation.internal_calls[0]
+                .internal_calls
+                .len(),
+            1
+        );
+        assert_eq!(
+            tx_trace.function_invocation.internal_calls[0].internal_calls[0]
+                .internal_calls
+                .len(),
+            7
+        );
 
         assert_eq!(
             tx_trace.fee_transfer_invocation.calldata,
@@ -989,5 +1003,6 @@ mod tests {
                 ]),
             }
         );
+        assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
     }
 }
