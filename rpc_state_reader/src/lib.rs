@@ -784,7 +784,6 @@ mod transaction_tests {
         let _result1 = tx.execute(&mut state, &block_context, 0).unwrap();
     }
 
-    
     /// - Transaction Hash: `0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf`
     /// - Network: `testnet`
     /// - Type: `Invoke`
