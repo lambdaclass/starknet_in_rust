@@ -282,9 +282,11 @@ impl InvokeFunction {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_copy();
+        let mut transactional_state = state.create_transactional();
+
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
+        transactional_state.update_initial_values_write_only(state)?;
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
