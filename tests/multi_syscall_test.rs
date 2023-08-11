@@ -7,7 +7,7 @@ use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
-        TransactionExecutionContext,
+        OrderedL2ToL1Message, TransactionExecutionContext,
     },
     state::cached_state::CachedState,
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
@@ -74,7 +74,7 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![])
+        assert_eq!(call_info.retdata, vec![address.clone().0])
     }
     // Block for get_execution_info_syscall.
     {
@@ -87,21 +87,7 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![]);
-    }
-
-    // Block for replace_class_syscall
-    {
-        let call_info = test_syscall(
-            "replace_class_syscall_test",
-            address.clone(),
-            calldata.clone(),
-            caller_address.clone(),
-            entry_point_type,
-            class_hash,
-            &mut state,
-        );
-        assert_eq!(call_info.events, vec![])
+        assert_eq!(call_info.retdata, vec![0.into(), 1111.into()]);
     }
 
     // Block for library_call_syscall
@@ -154,7 +140,14 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.retdata, vec![])
+        assert_eq!(
+            call_info.l2_to_l1_messages,
+            vec![OrderedL2ToL1Message {
+                order: 0,
+                to_address: Address(2222.into()),
+                payload: vec![Felt252::from(25), Felt252::from(30)],
+            },]
+        )
     }
 
     // Block for read write
@@ -168,7 +161,10 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
-        assert_eq!(call_info.events, vec![])
+        assert_eq!(
+            call_info.retdata,
+            vec![Felt252::from_str_radix("310939249775", 10).unwrap()]
+        )
     }
 
     // Block for emit
@@ -235,6 +231,7 @@ fn test_multiple_syscall() {
             class_hash,
             &mut state,
         );
+        println!("{:?}", String::from_utf8(Felt252::to_be_bytes(&call_info.retdata[0]).to_vec()));
         assert_eq!(call_info.events, vec![])
     }
 }

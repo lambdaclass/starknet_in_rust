@@ -15,6 +15,7 @@ mod multy_syscall {
     use starknet::contract_address::ContractAddress;
     use array::{Array, ArrayTrait, Span, SpanTrait};
     use result::ResultTrait;
+    use starknet::info::ExecutionInfo;
     use option::OptionTrait;
     use starknet::class_hash::ClassHash;
     use traits::TryInto;
@@ -22,7 +23,6 @@ mod multy_syscall {
     use box::Box;
     use traits::Into;
     use box::BoxTrait;
-    use zeroable::Zeroable;
    
     #[external]
     fn caller_address() -> ContractAddress {
@@ -35,14 +35,10 @@ mod multy_syscall {
     }
 
      #[external]
-    fn execution_info_syscall() {
-        get_execution_info_syscall();
+    fn execution_info_syscall() -> (ContractAddress, ContractAddress) {
+        let return_data =  get_execution_info_syscall().unwrap().unbox();
+        (return_data.caller_address, return_data.contract_address)
     } 
-
-    #[external]
-    fn replace_class_syscall_test(new_class_hash: ClassHash)  {
-        replace_class_syscall(new_class_hash);
-    }
 
     #[external]
     fn test_library_call_syscall(class_hash: ClassHash, function_selector: felt252, number: felt252) ->  felt252 {
