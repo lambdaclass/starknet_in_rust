@@ -791,7 +791,7 @@ mod transaction_tests {
         dbg!(&result.actual_resources);
         dbg!(&result.actual_fee); // test=267319013054160, explorer=219298652474858, diff=48020360579302 (22%)
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
-        dbg!(&result.call_info.unwrap().internal_calls.len()); // distinct, explorer=7, test=1 
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // distinct, explorer=7, test=1
     }
 
     /// - Transaction Hash: `0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf`
@@ -855,7 +855,7 @@ mod transaction_tests {
         dbg!(&result.actual_resources);
         dbg!(&result.actual_fee); // test=7252831227950, explorer=7207614784695, diff=45216443255 (0.06%)
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
-        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer 
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
     }
 
     /// - Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
@@ -930,6 +930,6 @@ mod transaction_tests {
         dbg!(&result.actual_resources);
         dbg!(&result.actual_fee); // test=6361070805216, explorer=47292465953700, diff=5888146145679 (0.13%)
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
-        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer 
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
     }
 }
