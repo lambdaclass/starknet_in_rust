@@ -16,6 +16,14 @@ use starknet_in_rust::{
 use std::env;
 use thiserror::Error;
 
+#[cfg(test)]
+use cairo_vm::felt::felt_str;
+#[cfg(test)]
+use starknet_in_rust::{
+    definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR,
+    transaction::{InvokeFunction, Transaction},
+};
+
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy)]
 pub enum RpcChain {
