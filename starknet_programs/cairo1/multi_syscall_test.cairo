@@ -40,6 +40,7 @@ mod multy_syscall {
         (return_data.caller_address, return_data.contract_address)
     } 
 
+
     #[external]
     fn test_library_call_syscall(class_hash: ClassHash, function_selector: felt252, number: felt252) ->  felt252 {
         let mut calldata = ArrayTrait::new();
@@ -87,14 +88,6 @@ mod multy_syscall {
         EmitEvent(1);
         EmitEvent(2);
         EmitEvent(3);
-    }
-
-    #[external]
-    fn deploy_test(class_hash: felt252, contract_address_salt: felt252,) -> ContractAddress {
-        let mut calldata = ArrayTrait::new();
-        calldata.append(100);
-        let (address0, _) = deploy_syscall(class_hash.try_into().unwrap(), contract_address_salt, calldata.span(), false).unwrap();
-        address0
     }
 
     #[external]

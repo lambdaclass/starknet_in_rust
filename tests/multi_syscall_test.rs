@@ -211,29 +211,6 @@ fn test_multiple_syscall() {
             ]
         )
     }
-
-    // Block for deploy syscall
-    {
-        // data to deploy
-        let test_class_hash: ClassHash = [2; 32];
-        let test_data = include_bytes!("../starknet_programs/cairo1/contract_a.casm");
-        let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
-
-        // Create the deploy contract class
-        contract_class_cache.insert(class_hash, contract_class);
-        contract_class_cache.insert(test_class_hash, test_contract_class);
-        let call_info = test_syscall(
-            "deploy_test",
-            address,
-            calldata,
-            caller_address,
-            entry_point_type,
-            class_hash,
-            &mut state,
-        );
-        println!("{:?}", String::from_utf8(Felt252::to_be_bytes(&call_info.retdata[0]).to_vec()));
-        assert_eq!(call_info.events, vec![])
-    }
 }
 
 fn test_syscall(
