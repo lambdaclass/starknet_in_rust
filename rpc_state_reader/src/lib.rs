@@ -778,7 +778,6 @@ mod transaction_tests {
 
         let block_info = rpc_state.get_block_info(fee_token_address, gas_price_u64);
 
-
         let block_context = BlockContext::new(
             starknet_os_config,
             DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
