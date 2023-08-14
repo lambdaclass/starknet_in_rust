@@ -851,7 +851,7 @@ mod tests {
         let tx_info = internal_invoke_function
             .execute(&mut state, &block_context, 0)
             .unwrap();
-        let expected_actual_fee = 2483;
+        let expected_actual_fee = 1259;
         let expected_tx_info = tx_info.clone().to_revert_error(format!(
             "Calculated fee ({}) exceeds max fee ({})",
             expected_actual_fee, max_fee
@@ -1100,6 +1100,10 @@ mod tests {
         state_reader
             .address_to_nonce
             .insert(contract_address, nonce);
+        state_reader
+            .class_hash_to_compiled_class_hash
+            .insert(class_hash, class_hash);
+        // last is necessary so the transactional state can cache the class
 
         let mut casm_contract_class_cache = HashMap::new();
 

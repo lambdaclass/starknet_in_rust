@@ -510,10 +510,10 @@ impl<T: StateReader> State for CachedState<T> {
         match contract {
             CompiledClass::Casm(ref class) => {
                 // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
-                let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
+                //let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
                 self.casm_contract_classes
                     .as_mut()
-                    .and_then(|m| m.insert(compiled_class_hash, *class.clone()));
+                    .and_then(|m| m.insert(*class_hash, *class.clone()));
             }
             CompiledClass::Deprecated(ref contract) => {
                 self.set_contract_class(class_hash, &contract.clone())?

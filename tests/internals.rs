@@ -1224,7 +1224,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     let resources = HashMap::from([
         ("n_steps".to_string(), 3445),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 1224),
         ("range_check_builtin".to_string(), 82),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
@@ -1300,7 +1300,7 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
     let max_fee = 3;
-    let actual_fee = 2483;
+    let actual_fee = 1259;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
