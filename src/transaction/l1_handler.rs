@@ -74,6 +74,11 @@ impl L1Handler {
         )
     }
     /// Creates a new [L1Handler] instance with a specified transaction hash.
+    ///
+    /// # Safety
+    ///
+    /// `tx_hash` will be assumed to be the same as would result from calling
+    /// `calculate_transaction_hash_common`. Non-compliance will result in silent misbehavior.
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
