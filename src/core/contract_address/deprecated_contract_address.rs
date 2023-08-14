@@ -21,6 +21,7 @@ use std::{borrow::Cow, collections::BTreeMap, io};
 /// Instead of doing a Mask with 250 bits, we are only masking the most significant byte.
 pub const MASK_3: u8 = 0x03;
 
+/// Returns the contract entry points.
 fn get_contract_entry_points(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
@@ -40,6 +41,7 @@ fn get_contract_entry_points(
     Ok(entry_points.to_owned())
 }
 
+/// Recursively add extra spaces to Cairo named tuple representations in a JSON structure.
 fn add_extra_space_to_cairo_named_tuples(value: &mut serde_json::Value) {
     match value {
         serde_json::Value::Array(v) => walk_array(v),
@@ -48,12 +50,14 @@ fn add_extra_space_to_cairo_named_tuples(value: &mut serde_json::Value) {
     }
 }
 
+/// Helper function to walk through a JSON array and apply extra space to cairo named tuples.
 fn walk_array(array: &mut [serde_json::Value]) {
     for v in array.iter_mut() {
         add_extra_space_to_cairo_named_tuples(v);
     }
 }
 
+/// Helper function to walk through a JSON map and apply extra space to cairo named tuples.
 fn walk_map(object: &mut serde_json::Map<String, serde_json::Value>) {
     for (k, v) in object.iter_mut() {
         match v {
@@ -68,6 +72,7 @@ fn walk_map(object: &mut serde_json::Map<String, serde_json::Value>) {
     }
 }
 
+/// Add extra space to named tuple type definition.
 fn add_extra_space_to_named_tuple_type_definition<'a>(
     key: &str,
     value: &'a str,
@@ -79,6 +84,7 @@ fn add_extra_space_to_named_tuple_type_definition<'a>(
     }
 }
 
+/// Replaces ": " with " : " and "  :" with " :" for Cairo-specific formatting.
 fn add_extra_space_before_colon(v: &str) -> String {
     // This is required because if we receive an already correct ` : `, we will still
     // "repair" it to `  : ` which we then fix at the end.
@@ -88,11 +94,13 @@ fn add_extra_space_before_colon(v: &str) -> String {
 struct KeccakWriter(sha3::Keccak256);
 
 impl std::io::Write for KeccakWriter {
+    /// Write data into the Keccak256 hasher.
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.0.update(buf);
         Ok(buf.len())
     }
 
+    /// No operation is required for flushing, as we finalize after writing.
     fn flush(&mut self) -> std::io::Result<()> {
         // noop is fine, we'll finalize after the write phase
         Ok(())
@@ -104,6 +112,7 @@ impl std::io::Write for KeccakWriter {
 struct PythonDefaultFormatter;
 
 impl serde_json::ser::Formatter for PythonDefaultFormatter {
+    /// Handles formatting for array values.
     fn begin_array_value<W>(&mut self, writer: &mut W, first: bool) -> std::io::Result<()>
     where
         W: ?Sized + std::io::Write,
@@ -115,6 +124,7 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
         }
     }
 
+    /// Handles formatting for object keys.
     fn begin_object_key<W>(&mut self, writer: &mut W, first: bool) -> std::io::Result<()>
     where
         W: ?Sized + std::io::Write,
@@ -126,6 +136,7 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
         }
     }
 
+    /// Handles formatting for object values.
     fn begin_object_value<W>(&mut self, writer: &mut W) -> std::io::Result<()>
     where
         W: ?Sized + std::io::Write,
@@ -133,6 +144,7 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
         writer.write_all(b": ")
     }
 
+    /// Custom logic for writing string fragments, handling non-ASCII characters.
     #[inline]
     fn write_string_fragment<W>(&mut self, writer: &mut W, fragment: &str) -> io::Result<()>
     where
@@ -157,6 +169,7 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
+
 pub struct CairoContractDefinition<'a> {
     /// Contract ABI, which has no schema definition.
     pub abi: serde_json::Value,
@@ -268,6 +281,7 @@ pub(crate) fn compute_hinted_class_hash(
     Ok(truncated_keccak(<[u8; 32]>::from(hash.finalize())))
 }
 
+/// Truncate the given Keccak hash to fit within Felt252's constraints.
 pub(crate) fn truncated_keccak(mut plain: [u8; 32]) -> Felt252 {
     // python code masks with (2**250 - 1) which starts 0x03 and is followed by 31 0xff in be
     // truncation is needed not to overflow the field element.
@@ -275,6 +289,7 @@ pub(crate) fn truncated_keccak(mut plain: [u8; 32]) -> Felt252 {
     Felt252::from_bytes_be(&plain)
 }
 
+/// Returns the hashed entry points of a contract class.
 fn get_contract_entry_points_hashed(
     contract_class: &ContractClass,
     entry_point_type: &EntryPointType,
@@ -292,6 +307,7 @@ fn get_contract_entry_points_hashed(
     )?)
 }
 
+/// Compute the hash for a deprecated contract class.
 pub fn compute_deprecated_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {

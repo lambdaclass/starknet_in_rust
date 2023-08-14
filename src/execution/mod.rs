@@ -4,6 +4,7 @@ pub mod os_usage;
 
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::utils::parse_felt_array;
 use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
@@ -18,6 +19,7 @@ use cairo_vm::{
 };
 use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
+use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -229,6 +231,56 @@ impl Default for CallInfo {
             gas_consumed: 0,
             failure_flag: false,
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for CallInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        // Parse execution_resources
+        let execution_resources_value = value["execution_resources"].clone();
+
+        let execution_resources = ExecutionResources {
+            n_steps: serde_json::from_value(execution_resources_value["n_steps"].clone())
+                .map_err(serde::de::Error::custom)?,
+            n_memory_holes: serde_json::from_value(
+                execution_resources_value["n_memory_holes"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+            builtin_instance_counter: serde_json::from_value(
+                execution_resources_value["builtin_instance_counter"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+        };
+
+        // Parse retdata
+        let retdata_value = value["result"].clone();
+        let retdata = parse_felt_array(retdata_value.as_array().unwrap());
+
+        // Parse calldata
+        let calldata_value = value["calldata"].clone();
+        let calldata = parse_felt_array(calldata_value.as_array().unwrap());
+
+        // Parse internal calls
+        let internal_calls_value = value["internal_calls"].clone();
+        let mut internal_calls = vec![];
+
+        for call in internal_calls_value.as_array().unwrap() {
+            internal_calls
+                .push(serde_json::from_value(call.clone()).map_err(serde::de::Error::custom)?);
+        }
+
+        Ok(CallInfo {
+            execution_resources,
+            retdata,
+            calldata,
+            internal_calls,
+            ..Default::default()
+        })
     }
 }
 

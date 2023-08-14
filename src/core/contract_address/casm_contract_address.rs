@@ -6,6 +6,7 @@ use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"COMPILED_CLASS_V1";
 
+/// Return hashed entry points for a given contract class and entry point type.
 fn get_contract_entry_points_hashed(
     contract_class: &CasmContractClass,
     entry_point_type: &EntryPointType,
@@ -38,6 +39,7 @@ fn get_contract_entry_points_hashed(
     Ok(poseidon_hash_many(&entry_points_flatted))
 }
 
+/// Compute hash for the entire CASM contract class.
 pub fn compute_casm_class_hash(
     contract_class: &CasmContractClass,
 ) -> Result<Felt252, ContractAddressError> {
@@ -80,6 +82,7 @@ pub fn compute_casm_class_hash(
     ))
 }
 
+/// Helper function to fetch entry points based on their type.
 fn get_contract_entry_points(
     contract_class: &CasmContractClass,
     entry_point_type: &EntryPointType,
