@@ -12,6 +12,7 @@ const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 //  Version 2 functions and structs
 // ---------------------------------
 
+/// Computes the hash of contract entry points.
 fn get_contract_entry_points_hashed(
     contract_class: &SierraContractClass,
     entry_point_type: &EntryPointType,
@@ -33,6 +34,7 @@ fn get_contract_entry_points_hashed(
     Ok(hasher.finalize())
 }
 
+/// Computes the hash of a given Sierra contract class.
 pub fn compute_sierra_class_hash(
     contract_class: &SierraContractClass,
 ) -> Result<Felt252, ContractAddressError> {
@@ -90,6 +92,7 @@ pub fn compute_sierra_class_hash(
     Ok(Felt252::from_bytes_be(&hash.to_bytes_be()))
 }
 
+/// Returns the contract entry points.
 fn get_contract_entry_points(
     contract_class: &SierraContractClass,
     entry_point_type: &EntryPointType,
@@ -120,6 +123,7 @@ mod tests {
     use cairo_vm::felt::felt_str;
     use std::{fs::File, io::BufReader};
 
+    /// Test the correctness of the compute_sierra_class_hash function for a specific testnet contract.
     #[test]
     fn test_declare_tx_from_testnet() {
         let file = File::open("starknet_programs/cairo2/events.sierra").unwrap();
