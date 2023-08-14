@@ -707,15 +707,6 @@ mod transaction_tests {
         ));
         let mut state = CachedState::new(rpc_state.clone(), None, None);
 
-        // Retrieve the block context
-        let get_block_info_params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
-            "params": [rpc_state.block.to_value()],
-            "id": 1
-        });
-        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
-
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
         let gas_price_str = "13563643256";
@@ -730,18 +721,7 @@ mod transaction_tests {
         let starknet_os_config =
             StarknetOsConfig::new(network.to_felt(), fee_token_address.clone(), gas_price_u128);
 
-        let block_info = BlockInfo {
-            block_number: block_info["result"]["block_number"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            block_timestamp: block_info["result"]["timestamp"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            gas_price: gas_price_u64,
-            sequencer_address: fee_token_address,
-        };
+        let block_info = rpc_state.get_block_info(fee_token_address, gas_price_u64);
 
         let block_context = BlockContext::new(
             starknet_os_config,
@@ -782,15 +762,6 @@ mod transaction_tests {
         ));
         let mut state = CachedState::new(rpc_state.clone(), None, None);
 
-        // Retrieve the block context
-        let get_block_info_params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
-            "params": [rpc_state.block.to_value()],
-            "id": 1
-        });
-        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
-
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
         let gas_price_str = "13572248835"; // from block 90_002
@@ -805,18 +776,8 @@ mod transaction_tests {
         let starknet_os_config =
             StarknetOsConfig::new(network.to_felt(), fee_token_address.clone(), gas_price_u128);
 
-        let block_info = BlockInfo {
-            block_number: block_info["result"]["block_number"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            block_timestamp: block_info["result"]["timestamp"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            gas_price: gas_price_u64,
-            sequencer_address: fee_token_address,
-        };
+        let block_info = rpc_state.get_block_info(fee_token_address, gas_price_u64);
+
 
         let block_context = BlockContext::new(
             starknet_os_config,
@@ -920,14 +881,6 @@ mod transaction_tests {
             BlockValue::Number(serde_json::to_value(123001).unwrap()),
         ));
 
-        let get_block_info_params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
-            "params": [rpc_state.block.to_value()],
-            "id": 1
-        });
-        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
-
         // BlockContext with mainnet data.
         // TODO look how to get this value from RPC call.
         let gas_price_str = "272679647"; // from block 123001
@@ -939,24 +892,13 @@ mod transaction_tests {
             16
         ));
 
-        let block_info = BlockInfo {
-            block_number: block_info["result"]["block_number"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            block_timestamp: block_info["result"]["timestamp"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            gas_price: gas_price_u64,
-            sequencer_address: fee_token_address.clone(),
-        };
-
         let mut state = CachedState::new(rpc_state.clone(), None, None);
 
         let network: StarknetChainId = rpc_state.chain.into();
         let starknet_os_config =
-            StarknetOsConfig::new(network.to_felt(), fee_token_address, gas_price_u128);
+            StarknetOsConfig::new(network.to_felt(), fee_token_address.clone(), gas_price_u128);
+
+        let block_info = rpc_state.get_block_info(fee_token_address, gas_price_u64);
 
         let block_context = BlockContext::new(
             starknet_os_config,
