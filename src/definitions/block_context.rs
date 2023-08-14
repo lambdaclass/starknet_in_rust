@@ -73,6 +73,7 @@ pub struct StarknetOsConfig {
     #[get = "pub"]
     pub(crate) fee_token_address: Address,
     /// Price of gas
+    #[get = "pub"]
     pub(crate) gas_price: u128,
 }
 

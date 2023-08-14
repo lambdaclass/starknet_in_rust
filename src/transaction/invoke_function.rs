@@ -206,7 +206,7 @@ impl InvokeFunction {
             self.contract_address.clone(),
             self.calldata.clone(),
             self.entry_point_selector.clone(),
-            Address(0.into()),
+            Address(Felt252::zero()),
             EntryPointType::External,
             None,
             None,
