@@ -4,9 +4,6 @@ use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::ContractClass;
-use starknet_in_rust::definitions::block_context::StarknetOsConfig;
-use starknet_in_rust::felt::felt_str;
-use starknet_in_rust::state::BlockInfo;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     execution::CallInfo,
@@ -198,23 +195,21 @@ impl RpcState {
         }
     }
 
-    pub fn get_block_info(&self, starknet_os_config: StarknetOsConfig) -> BlockInfo {
+    pub fn get_block_info(
+        &self,
+        fee_token_address: Address,
+        gas_price_u64: u64,
+    ) -> starknet_in_rust::state::BlockInfo {
         let get_block_info_params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getBlockWithTxHashes",
             "params": [self.block.to_value()],
             "id": 1
         });
-        let gas_price_str = "2888823561";
-        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
 
-        let fee_token_address = Address(felt_str!(
-            "49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-            16
-        ));
         let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
 
-        let block_info = BlockInfo {
+        starknet_in_rust::state::BlockInfo {
             block_number: block_info["result"]["block_number"]
                 .to_string()
                 .parse::<u64>()
@@ -224,9 +219,8 @@ impl RpcState {
                 .parse::<u64>()
                 .unwrap(),
             gas_price: gas_price_u64,
-            sequencer_address: fee_token_address.clone(),
-        };
-        block_info
+            sequencer_address: fee_token_address,
+        }
     }
 }
 
@@ -304,10 +298,8 @@ impl StateReader for RpcState {
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-    use std::{collections::HashMap, sync::Arc};
-
     use super::*;
+    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use starknet_in_rust::{
         definitions::{
             block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -319,9 +311,10 @@ mod tests {
             },
         },
         felt::felt_str,
-        state::{cached_state::CachedState, BlockInfo},
+        state::cached_state::CachedState,
         transaction::InvokeFunction,
     };
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn test_get_contract_class_cairo1() {
@@ -505,7 +498,7 @@ mod tests {
             "id": 1
         });
         let tx_mainnet: serde_json::Value = rpc_state.rpc_call(&get_tx_params).unwrap();
-        let get_block_info_params = ureq::json!({
+        let _get_block_info_params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getBlockWithTxHashes",
             "params": [rpc_state.block.to_value()],
@@ -597,6 +590,7 @@ mod tests {
         // TODO look how to get this value from RPC call.
         let gas_price_str = "13575501577";
         let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
+        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
@@ -607,7 +601,7 @@ mod tests {
             fee_token_address.clone(),
             gas_price_u128,
         );
-        let block_info = rpc_state.get_block_info(starknet_os_config.clone());
+        let block_info = rpc_state.get_block_info(fee_token_address, gas_price_u64);
 
         let block_context = BlockContext::new(
             starknet_os_config,
@@ -699,6 +693,7 @@ mod tests {
         // TODO look how to get this value from RPC call.
         let gas_price_str = "2888823561";
         let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
+        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
@@ -706,7 +701,7 @@ mod tests {
         ));
         let starknet_os_config = StarknetOsConfig::new(
             StarknetChainId::TestNet.to_felt(),
-            fee_token_address,
+            fee_token_address.clone(),
             gas_price_u128,
         );
 
@@ -714,7 +709,7 @@ mod tests {
             RpcChain::MainNet,
             BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
-        let block_info = rpc_state.get_block_info(starknet_os_config.clone());
+        let block_info = rpc_state.get_block_info(fee_token_address, gas_price_u64);
 
         let block_context = BlockContext::new(
             starknet_os_config,
@@ -825,6 +820,8 @@ mod tests {
         let gas_price_str = "2888823561";
         let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
 
+        let gas_price_u64 = gas_price_str.parse::<u64>().unwrap();
+
         let fee_token_address = Address(felt_str!(
             "49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
             16
@@ -833,20 +830,16 @@ mod tests {
             RpcChain::MainNet,
             BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
-        let starknet_os_config = StarknetOsConfig::new(
-            StarknetChainId::TestNet.to_felt(),
-            fee_token_address.clone(),
-            gas_price_u128,
-        );
-        let block_info = rpc_state.get_block_info(starknet_os_config.clone());
-
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         let starknet_os_config = StarknetOsConfig::new(
             StarknetChainId::TestNet2.to_felt(),
-            fee_token_address,
+            fee_token_address.clone(),
             gas_price_u128,
         );
+
+        let block_info = rpc_state.get_block_info(fee_token_address, gas_price_u64);
+
+        let mut state = CachedState::new(Arc::new(state_reader), None, None);
 
         let block_context = BlockContext::new(
             starknet_os_config,
