@@ -1253,7 +1253,7 @@ fn expected_fib_transaction_execution_info(
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 7344),
+        ("l1_gas_usage".to_string(), 1224),
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 85),
     ]);
