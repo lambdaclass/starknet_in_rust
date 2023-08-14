@@ -11,7 +11,10 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    state::{cached_state::CachedState, ExecutionResourcesManager},
+    state::{
+        cached_state::{CachedState, TransactionalCachedState},
+        ExecutionResourcesManager,
+    },
     state::{
         state_api::{State, StateReader},
         StateDiff,
@@ -227,11 +230,12 @@ impl InvokeFunction {
     /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn apply<S: StateReader>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut TransactionalCachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
+        // FIXME: why are we ignoring revert in the validation step?
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
@@ -249,7 +253,7 @@ impl InvokeFunction {
                 remaining_gas,
             )?
         };
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes()?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![call_info.clone(), validate_info.clone()],
@@ -286,7 +290,6 @@ impl InvokeFunction {
 
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
-        transactional_state.update_initial_values_write_only(state)?;
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
@@ -294,14 +297,22 @@ impl InvokeFunction {
             block_context,
         )?;
 
-        if actual_fee <= self.max_fee {
-            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+        if let Some(revert_error) = tx_exec_info.revert_error.clone() {
+            // execution error
+            tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
+        } else if actual_fee > self.max_fee {
+            // max_fee exceeded
+            tx_exec_info = tx_exec_info.to_revert_error(
+                format!(
+                    "Calculated fee ({}) exceeds max fee ({})",
+                    actual_fee, self.max_fee
+                )
+                .as_str(),
+            );
         } else {
-            tx_exec_info = tx_exec_info.to_revert_error(format!(
-                "Calculated fee ({}) exceeds max fee ({})",
-                actual_fee, self.max_fee
-            ));
+            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
         }
+        // TODO: add balance not enough case.
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
@@ -477,8 +488,13 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
+        let mut transactional = state.create_transactional();
+        // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &BlockContext::default(), 0)
+            .apply(&mut transactional, &BlockContext::default(), 0)
+            .unwrap();
+        state
+            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -609,8 +625,9 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
+        let mut transactional = state.create_transactional();
         let expected_error =
-            internal_invoke_function.apply(&mut state, &BlockContext::default(), 0);
+            internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -667,8 +684,13 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
+        let mut transactional = state.create_transactional();
+        // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &BlockContext::default(), 0)
+            .apply(&mut transactional, &BlockContext::default(), 0)
+            .unwrap();
+        state
+            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -731,8 +753,10 @@ mod tests {
             .set_contract_class(&class_hash, &contract_class)
             .unwrap();
 
+        let mut transactional = state.create_transactional();
+        // Invoke result
         let expected_error =
-            internal_invoke_function.apply(&mut state, &BlockContext::default(), 0);
+            internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -852,10 +876,13 @@ mod tests {
             .execute(&mut state, &block_context, 0)
             .unwrap();
         let expected_actual_fee = 1259;
-        let expected_tx_info = tx_info.clone().to_revert_error(format!(
-            "Calculated fee ({}) exceeds max fee ({})",
-            expected_actual_fee, max_fee
-        ));
+        let expected_tx_info = tx_info.clone().to_revert_error(
+            format!(
+                "Calculated fee ({}) exceeds max fee ({})",
+                expected_actual_fee, max_fee
+            )
+            .as_str(),
+        );
 
         assert_eq!(tx_info, expected_tx_info);
     }

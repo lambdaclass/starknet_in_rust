@@ -93,44 +93,6 @@ impl<T: StateReader> CachedState<T> {
             casm_contract_classes: Default::default(),
         }
     }
-
-    pub fn update_initial_values_write_only(
-        &mut self,
-        other_state: &CachedState<impl StateReader>,
-    ) -> Result<(), StateError> {
-        for k in self.cache.nonce_writes.keys() {
-            if !self.cache.nonce_initial_values.contains_key(k) {
-                self.cache
-                    .nonce_initial_values
-                    .insert(k.clone(), other_state.get_nonce_at(k)?);
-            }
-        }
-
-        for k in self.cache.class_hash_writes.keys() {
-            if !self.cache.class_hash_initial_values.contains_key(k) {
-                self.cache
-                    .class_hash_initial_values
-                    .insert(k.clone(), other_state.get_class_hash_at(k)?);
-            }
-        }
-
-        for k in self.cache.storage_writes.keys() {
-            if !self.cache.storage_initial_values.contains_key(k) {
-                self.cache
-                    .storage_initial_values
-                    .insert(k.clone(), other_state.get_storage_at(k)?);
-            }
-        }
-
-        // FIXME:
-        // for k in self.cache.compiled_class_hash_writes.keys() {
-        //     if !self.cache.compiled_class_hash_initial_values.contains_key(k) {
-        //         self.cache.compiled_class_hash_initial_values.insert(k.clone(), other_state.get_storage_at(k)?);
-        //     }
-        // }
-
-        Ok(())
-    }
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
@@ -525,7 +487,84 @@ impl<T: StateReader> State for CachedState<T> {
 
 /// A CachedState which has access to another, "parent" state, used for executing transactions
 /// without commiting changes to the parent.
-type TransactionalCachedState<'a, T> = CachedState<TransactionalCachedStateReader<'a, T>>;
+pub type TransactionalCachedState<'a, T> = CachedState<TransactionalCachedStateReader<'a, T>>;
+
+impl<'a, T: StateReader> TransactionalCachedState<'a, T> {
+    pub fn update_initial_values_write_only(&mut self) -> Result<(), StateError> {
+        let transactional_reader = &self.state_reader;
+
+        for k in self.cache.nonce_writes.keys() {
+            if !self.cache.nonce_initial_values.contains_key(k) {
+                self.cache
+                    .nonce_initial_values
+                    .insert(k.clone(), transactional_reader.get_nonce_at(k)?);
+            }
+        }
+
+        for k in self.cache.class_hash_writes.keys() {
+            if !self.cache.class_hash_initial_values.contains_key(k) {
+                self.cache
+                    .class_hash_initial_values
+                    .insert(k.clone(), transactional_reader.get_class_hash_at(k)?);
+            }
+        }
+
+        for k in self.cache.storage_writes.keys() {
+            if !self.cache.storage_initial_values.contains_key(k) {
+                self.cache
+                    .storage_initial_values
+                    .insert(k.clone(), transactional_reader.get_storage_at(k)?);
+            }
+        }
+
+        // FIXME:
+        // for k in self.cache.compiled_class_hash_writes.keys() {
+        //     if !self.cache.compiled_class_hash_initial_values.contains_key(k) {
+        //         self.cache.compiled_class_hash_initial_values.insert(k.clone(), transactional_reader.get_storage_at(k)?);
+        //     }
+        // }
+
+        Ok(())
+    }
+
+    pub fn count_actual_storage_changes(&mut self) -> Result<(usize, usize), StateError> {
+        self.update_initial_values_write_only()?;
+
+        let storage_updates = subtract_mappings(
+            self.cache.storage_writes.clone(),
+            self.cache.storage_initial_values.clone(),
+        );
+
+        let n_modified_contracts = {
+            let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
+
+            let class_hash_updates: Vec<_> = subtract_mappings(
+                self.cache.class_hash_writes.clone(),
+                self.cache.class_hash_initial_values.clone(),
+            )
+            .keys()
+            .cloned()
+            .collect();
+
+            let nonce_updates: Vec<_> = subtract_mappings(
+                self.cache.nonce_writes.clone(),
+                self.cache.nonce_initial_values.clone(),
+            )
+            .keys()
+            .cloned()
+            .collect();
+
+            let mut modified_contracts: HashSet<Address> = HashSet::new();
+            modified_contracts.extend(storage_unique_updates);
+            modified_contracts.extend(class_hash_updates);
+            modified_contracts.extend(nonce_updates);
+
+            modified_contracts.len()
+        };
+
+        Ok((n_modified_contracts, storage_updates.len()))
+    }
+}
 
 /// State reader used for transactional states which allows to check the parent state's cache and
 /// state reader if a transactional cache miss happens.
