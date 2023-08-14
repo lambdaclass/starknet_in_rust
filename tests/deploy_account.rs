@@ -93,7 +93,7 @@ fn internal_deploy_account() {
             None,
             0,
             [
-                ("n_steps", 3612),
+                ("n_steps", 3607),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 83),
                 ("l1_gas_usage", 3672)
@@ -163,11 +163,11 @@ fn internal_deploy_account_cairo1() {
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3873;
+        n_steps = 3868;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3877;
+        n_steps = 3872;
     }
 
     assert_eq!(

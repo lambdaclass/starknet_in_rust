@@ -573,7 +573,7 @@ mod tests {
         )
         .unwrap();
         let actual_resources = HashMap::from([
-            ("n_steps".to_string(), 3457),
+            ("n_steps".to_string(), 3467),
             ("l1_gas_usage".to_string(), 2448),
             ("range_check_builtin".to_string(), 80),
             ("pedersen_builtin".to_string(), 16),

@@ -1232,7 +1232,7 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3445),
+        ("n_steps".to_string(), 3455),
         ("pedersen_builtin".to_string(), 16),
         ("l1_gas_usage".to_string(), 2448),
         ("range_check_builtin".to_string(), 82),
@@ -1255,11 +1255,11 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3541;
+        n_steps = 3551;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3544;
+        n_steps = 3554;
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
@@ -1534,7 +1534,7 @@ fn test_deploy_account() {
     );
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3625),
+        ("n_steps".to_string(), 3620),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
         ("l1_gas_usage".to_string(), 6120),

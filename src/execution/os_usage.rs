@@ -16,7 +16,7 @@ impl Default for OsResources {
             (
                 TransactionType::InvokeFunction,
                 ExecutionResources {
-                    n_steps: 3363,
+                    n_steps: 3373,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("pedersen_builtin".to_string(), 16),
@@ -46,7 +46,7 @@ impl Default for OsResources {
             (
                 TransactionType::DeployAccount,
                 ExecutionResources {
-                    n_steps: 3612,
+                    n_steps: 3607,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("pedersen_builtin".to_string(), 23),
@@ -104,7 +104,7 @@ impl Default for OsResources {
             (
                 "deploy".to_string(),
                 ExecutionResources {
-                    n_steps: 936,
+                    n_steps: 935,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("range_check_builtin".to_string(), 18),
@@ -134,9 +134,12 @@ impl Default for OsResources {
             (
                 "get_block_hash".to_string(),
                 ExecutionResources {
-                    n_steps: 44,
+                    n_steps: 74,
                     n_memory_holes: 0,
-                    builtin_instance_counter: HashMap::new(),
+                    builtin_instance_counter: HashMap::from([(
+                        "range_check_builtin".to_string(),
+                        2,
+                    )]),
                 },
             ),
             (
@@ -246,6 +249,18 @@ impl Default for OsResources {
                     builtin_instance_counter: HashMap::new(),
                 },
             ),
+            (
+                "keccak".to_string(),
+                ExecutionResources {
+                    n_steps: 381,
+                    n_memory_holes: 0,
+                    builtin_instance_counter: HashMap::from([
+                        ("range_check_builtin".to_string(), 56),
+                        ("bitwise_builtin".to_string(), 6),
+                        ("keccak_builtin".to_string(), 1),
+                    ]),
+                },
+            ),
         ]);
 
         OsResources {
@@ -291,7 +306,7 @@ fn get_additional_os_resources_test() {
 
     let additional_os_resources = get_additional_os_resources(syscall_counter, &tx_type).unwrap();
     let expected_additional_os_resources = ExecutionResources {
-        n_steps: 3589,
+        n_steps: 3599,
         n_memory_holes: 0,
         builtin_instance_counter: HashMap::from([
             ("range_check_builtin".to_string(), 80),
