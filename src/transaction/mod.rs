@@ -92,6 +92,7 @@ impl Transaction {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Self {
         match self {
             Transaction::Declare(tx) => tx.create_for_simulation(
@@ -120,6 +121,7 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
         }
