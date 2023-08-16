@@ -8,6 +8,7 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 #[derive(Debug)]
+/// Enum representing the different types of transaction hash prefixes.
 pub enum TransactionHashPrefix {
     Declare,
     Deploy,
@@ -16,6 +17,7 @@ pub enum TransactionHashPrefix {
     L1Handler,
 }
 
+// Returns the associated prefix value for a given transaction type.
 impl TransactionHashPrefix {
     fn get_prefix(&self) -> Felt252 {
         match self {
@@ -71,6 +73,7 @@ pub fn calculate_transaction_hash_common(
     compute_hash_on_elements(&data_to_hash)
 }
 
+/// Calculate the hash for deploying a transaction.
 pub fn calculate_deploy_transaction_hash(
     version: Felt252,
     contract_address: &Address,
@@ -89,6 +92,7 @@ pub fn calculate_deploy_transaction_hash(
     )
 }
 
+/// Calculate the hash for deploying an account transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
     version: Felt252,
@@ -115,6 +119,7 @@ pub fn calculate_deploy_account_transaction_hash(
     )
 }
 
+/// Calculate the hash for a declared transaction.
 pub fn calculate_declare_transaction_hash(
     contract_class: &ContractClass,
     chain_id: Felt252,
