@@ -287,8 +287,12 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         };
 
         // update syscall handler information
-        self.starknet_storage_state.read_values.extend(call_info.storage_read_values.clone());
-        self.starknet_storage_state.accessed_keys.extend(call_info.accessed_storage_keys.clone());
+        self.starknet_storage_state
+            .read_values
+            .extend(call_info.storage_read_values.clone());
+        self.starknet_storage_state
+            .accessed_keys
+            .extend(call_info.accessed_storage_keys.clone());
 
         self.internal_calls.push(call_info);
 
