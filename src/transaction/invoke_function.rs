@@ -45,6 +45,7 @@ pub struct InvokeFunction {
     skip_validation: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
+    skip_nonce_check: bool,
 }
 
 impl InvokeFunction {
@@ -115,6 +116,7 @@ impl InvokeFunction {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -274,7 +276,9 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.handle_nonce(state)?;
+        if !self.skip_nonce_check {
+            self.handle_nonce(state)?;
+        }
         let mut tx_exec_info = self.apply(state, block_context, remaining_gas)?;
 
         let mut tx_execution_context =
@@ -301,6 +305,7 @@ impl InvokeFunction {
         let contract_address = self.contract_address();
 
         let current_nonce = state.get_nonce_at(contract_address)?;
+        dbg!(&current_nonce);
         match &self.nonce {
             None => {
                 // TODO: Remove this once we have a better way to handle the nonce.
@@ -327,11 +332,13 @@ impl InvokeFunction {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = InvokeFunction {
             skip_validation,
             skip_execute,
             skip_fee_transfer,
+            skip_nonce_check,
             max_fee: if ignore_max_fee {
                 u128::MAX
             } else {
@@ -424,6 +431,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -492,6 +500,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -556,6 +565,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -614,6 +624,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -678,6 +689,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -752,6 +764,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         let mut state = CachedState::new(Arc::new(state_reader), None, None);
@@ -792,6 +805,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: true,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -849,6 +863,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -911,6 +926,7 @@ mod tests {
             skip_validation: false,
             skip_execute: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         // Instantiate CachedState
@@ -1053,6 +1069,7 @@ mod tests {
             skip_validation: true,
             skip_execute: false,
             skip_fee_transfer: true,
+            skip_nonce_check: false,
         };
 
         let mut state_reader = InMemoryStateReader::default();
