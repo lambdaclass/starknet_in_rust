@@ -232,7 +232,7 @@ mod test {
     use crate::transaction::{
         Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
     };
-    use crate::utils::felt_to_hash;
+    use crate::utils::{calculate_sn_keccak, felt_to_hash};
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
     use cairo_vm::felt::{felt_str, Felt252};
@@ -338,6 +338,83 @@ mod test {
         .unwrap();
 
         assert_eq!(retdata, vec![89.into()]);
+    }
+
+    //#[cfg(feature = "cairo_1_tests")]
+    #[test]
+    fn test_writes() {
+        let program_data = include_bytes!("../starknet_programs/cairo1/test_writes.casm");
+
+        let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+        let mut contract_class_cache = HashMap::new();
+
+        let address = Address(1024.into());
+        let class_hash: ClassHash = [1; 32];
+        let nonce = Felt252::zero();
+
+        contract_class_cache.insert(class_hash, contract_class);
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(address.clone(), nonce);
+
+        let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+        let block_context = BlockContext::default();
+
+        let invoke = |name: &str, calldata: Vec<Felt252>, nonce: Felt252| -> Transaction {
+            InvokeFunction::new(
+                address.clone(),
+                Felt252::from_bytes_be(&calculate_sn_keccak(name.as_bytes())),
+                0,
+                1.into(),
+                calldata,
+                vec![],
+                StarknetChainId::TestNet.to_felt(),
+                Some(nonce),
+            )
+            .unwrap()
+            .create_for_simulation(false, false, true, true)
+        };
+
+        let keccak_from_str = |string: &str| -> Felt252 {
+            Felt252::from_bytes_be(&calculate_sn_keccak(string.as_bytes()))
+        };
+
+        // first write
+        let first_write = invoke("write_foo", vec![42.into(), keccak_from_str("foo")], 0.into())
+            .execute(&mut state, &block_context, 99999999999)
+            .unwrap();
+
+        assert_eq!(state.cache.storage_writes.len(), 1);
+        assert!(first_write.revert_error.is_none());
+
+        // second write
+        let second_write = invoke(
+            "call_other",
+            vec![
+                keccak_from_str("write_foo"),
+                25.into(),
+                keccak_from_str("foo"),
+            ],
+            1.into(),
+        )
+        .execute(&mut state, &block_context, 99999999999)
+        .unwrap();
+
+        assert_eq!(state.cache.storage_writes.len(), 2);
+        assert!(second_write.revert_error.is_none());
+
+        // read storage
+        let read = invoke("get_foo", vec![], 2.into())
+            .execute(&mut state, &block_context, 99999999999)
+            .unwrap();
+
+        dbg!(&second_write);
+        assert_eq!(read.call_info.unwrap().retdata, vec![25.into()]);
     }
 
     #[test]
