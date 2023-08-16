@@ -59,6 +59,7 @@ pub fn simulate_transaction<S: StateReader>(
     skip_execute: bool,
     skip_fee_transfer: bool,
     ignore_max_fee: bool,
+    skip_nonce_check: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
     let mut cache_state = CachedState::new(Arc::new(state), None, Some(HashMap::new()));
     let mut result = Vec::with_capacity(transactions.len());
@@ -68,6 +69,7 @@ pub fn simulate_transaction<S: StateReader>(
             skip_execute,
             skip_fee_transfer,
             ignore_max_fee,
+            skip_nonce_check,
         );
         let tx_result =
             tx_for_simulation.execute(&mut cache_state, block_context, remaining_gas)?;
@@ -93,7 +95,7 @@ where
         // execute the transaction with the fake state.
 
         // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
-        let tx_for_simulation = transaction.create_for_simulation(false, false, true, true);
+        let tx_for_simulation = transaction.create_for_simulation(false, false, true, true, false);
 
         let transaction_result =
             tx_for_simulation.execute(&mut cached_state, block_context, 100_000_000)?;
@@ -428,7 +430,7 @@ mod test {
 
         let block_context = BlockContext::default();
         let Transaction::InvokeFunction(simul_invoke) =
-            invoke.create_for_simulation(true, false, false, false) else {
+            invoke.create_for_simulation(true, false, false, false, false) else {
                 unreachable!()
             };
 
@@ -555,6 +557,7 @@ mod test {
             true,
             true,
             false,
+            false,
         )
         .unwrap();
 
@@ -654,6 +657,7 @@ mod test {
             true,
             true,
             false,
+            false,
         )
         .unwrap();
 
@@ -696,6 +700,7 @@ mod test {
             false,
             false,
             false,
+            false,
         )
         .unwrap();
     }
@@ -728,6 +733,7 @@ mod test {
             state,
             block_context,
             100_000_000,
+            false,
             false,
             false,
             false,
@@ -792,6 +798,7 @@ mod test {
             false,
             false,
             false,
+            false,
         )
         .unwrap();
     }
@@ -827,6 +834,7 @@ mod test {
             state,
             block_context,
             100_000_000,
+            false,
             false,
             false,
             false,
@@ -874,6 +882,7 @@ mod test {
             false,
             false,
             true,
+            false,
             false,
         )
         .unwrap();
@@ -939,6 +948,7 @@ mod test {
             false,
             false,
             false, // won't have any effect
+            false,
         )
         .unwrap();
     }
@@ -991,6 +1001,7 @@ mod test {
             state.clone(),
             block_context,
             100_000_000,
+            false,
             false,
             false,
             false,
