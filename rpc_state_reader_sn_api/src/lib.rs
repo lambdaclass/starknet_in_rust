@@ -1,12 +1,11 @@
+use cairo_vm::felt::Felt252;
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
-use cairo_vm::felt::Felt252;
 use std::env;
 use thiserror::Error;
-
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum ContractClass {
@@ -202,8 +201,10 @@ impl RpcState {
             "id": 1
         });
         let response: serde_json::Value = self.rpc_call(&params).unwrap();
-        let it: starknet_api::transaction::InvokeTransactionV1 = serde_json::from_value(response["result"].clone()).unwrap();
-        let sn_api_invoke: starknet_api::transaction::InvokeTransaction = starknet_api::transaction::InvokeTransaction::V1(it);
+        let it: starknet_api::transaction::InvokeTransactionV1 =
+            serde_json::from_value(response["result"].clone()).unwrap();
+        let sn_api_invoke: starknet_api::transaction::InvokeTransaction =
+            starknet_api::transaction::InvokeTransaction::V1(it);
         starknet_api::transaction::Transaction::Invoke(sn_api_invoke)
     }
 
@@ -249,30 +250,28 @@ impl RpcState {
             "params": [self.block.to_value(), class_hash.0.to_string()],
             "id": 1
         });
-    
-        let response: RpcResponseProgram = self
-            .rpc_call(&params).unwrap();
-    
+
+        let response: RpcResponseProgram = self.rpc_call(&params).unwrap();
+
         response.result
     }
+
+    pub fn get_class_hash_at(
+        &self,
+        contract_address: &starknet_api::core::ContractAddress,
+    ) -> starknet_api::core::ClassHash {
+        let params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getClassHashAt",
+            "params": [self.block.to_value(), contract_address.0.key().clone().to_string()],
+            "id": 1
+        });
+
+        let response: starknet_api::core::ClassHash = self.rpc_call(&params).unwrap();
+
+        response
+    }
 }
-
-
-
-//     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-//         let params = ureq::json!({
-//             "jsonrpc": "2.0",
-//             "method": "starknet_getClassHashAt",
-//             "params": [self.block.to_value(), format!("0x{}", contract_address.0.to_str_radix(16))],
-//             "id": 1
-//         });
-
-//         let resp: RpcResponseFelt252 = self
-//             .rpc_call(&params)
-//             .map_err(|err| StateError::CustomError(err.to_string()))?;
-
-//         Ok(resp.result.to_be_bytes())
-//     }
 
 //     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
 //         let params = ureq::json!({
