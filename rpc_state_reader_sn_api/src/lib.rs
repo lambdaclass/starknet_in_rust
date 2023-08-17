@@ -4,6 +4,7 @@ use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
+use starknet_api::core::ContractAddress;
 use std::env;
 use thiserror::Error;
 
@@ -270,6 +271,20 @@ impl RpcState {
         let response: starknet_api::core::ClassHash = self.rpc_call(&params).unwrap();
 
         response
+    }
+
+    pub fn get_nonce_at(&self, contract_address: &ContractAddress) -> Felt252 {
+        let contract_address = Felt252::from_bytes_be(contract_address.0.key().bytes());
+        let params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getNonce",
+            "params": [self.block.to_value(), format!("0x{}", contract_address.to_str_radix(16))],
+            "id": 1
+        });
+
+        let resp: RpcResponseFelt252 = self.rpc_call(&params).unwrap();
+
+        resp.result
     }
 }
 
