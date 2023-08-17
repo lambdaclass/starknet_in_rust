@@ -306,39 +306,6 @@ impl RpcState {
     }
 }
 
-//     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
-//         let params = ureq::json!({
-//             "jsonrpc": "2.0",
-//             "method": "starknet_getNonce",
-//             "params": [self.block.to_value(), format!("0x{}", contract_address.0.to_str_radix(16))],
-//             "id": 1
-//         });
-
-//         let resp: RpcResponseFelt252 = self
-//             .rpc_call(&params)
-//             .map_err(|err| StateError::CustomError(err.to_string()))?;
-
-//         Ok(resp.result)
-//     }
-
-//     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-//         let params = ureq::json!({
-//             "jsonrpc": "2.0",
-//             "method": "starknet_getStorageAt",
-//             "params": [format!("0x{}", storage_entry.0 .0.to_str_radix(16)), format!(
-//                 "0x{}",
-//                 Felt252::from_bytes_be(&storage_entry.1).to_str_radix(16)
-//             ), self.block.to_value()],
-//             "id": 1
-//         });
-
-//         let resp: RpcResponseFelt252 = self
-//             .rpc_call(&params)
-//             .map_err(|err| StateError::CustomError(err.to_string()))?;
-
-//         Ok(resp.result)
-//     }
-
 //     fn get_compiled_class_hash(
 //         &self,
 //         _class_hash: &ClassHash,
