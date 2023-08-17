@@ -4,7 +4,7 @@ use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
-use starknet_api::core::ContractAddress;
+use starknet_api::{core::ContractAddress, state::StorageKey};
 use std::env;
 use thiserror::Error;
 
@@ -279,6 +279,24 @@ impl RpcState {
             "jsonrpc": "2.0",
             "method": "starknet_getNonce",
             "params": [self.block.to_value(), format!("0x{}", contract_address.to_str_radix(16))],
+            "id": 1
+        });
+
+        let resp: RpcResponseFelt252 = self.rpc_call(&params).unwrap();
+
+        resp.result
+    }
+
+    fn get_storage_at(&self, contract_address: &ContractAddress, key: &StorageKey) -> Felt252 {
+        let contract_address = Felt252::from_bytes_be(contract_address.0.key().bytes());
+        let key = Felt252::from_bytes_be(key.0.key().bytes());
+        let params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getStorageAt",
+            "params": [format!("0x{}", contract_address.to_str_radix(16)), format!(
+                "0x{}",
+                key.to_str_radix(16)
+            ), self.block.to_value()],
             "id": 1
         });
 
